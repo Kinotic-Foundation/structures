@@ -1,0 +1,27 @@
+# YAML Reference http://www.yaml.org/refcard.html
+continuum:
+  discovery: sharedfs
+  debug: true
+
+continuum-gateway:
+  disableIam: true
+
+logging:
+  level:
+    com:
+      kinotic: TRACE
+    io:
+      vertx: TRACE
+
+spring:
+  devtools:
+    livereload:
+      port: 35730
+
+elastic:
+  hosts: localhost:9200
+  useSSL: false
+  user:
+  password:
+
+

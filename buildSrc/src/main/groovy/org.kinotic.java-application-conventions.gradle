@@ -1,0 +1,51 @@
+plugins {
+	// Apply the common convention plugin for shared build configuration between library and application projects.
+	id 'org.kinotic.java-common-conventions'
+
+	id 'org.springframework.boot'
+	id 'groovy'
+	id 'application'
+	id 'io.freefair.lombok'
+}
+
+configurations {
+	developmentOnly
+	runtimeClasspath {
+		extendsFrom developmentOnly
+	}
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+}
+
+
+ext {
+	set('groovy.version', "${groovyVersion}")
+}
+
+dependencies {
+	implementation 'org.codehaus.groovy:groovy'
+	implementation 'org.springframework.boot:spring-boot-starter'
+
+	implementation "org.kinotic:continuum-core:${continuumVersion}"
+	implementation "org.kinotic:continuum-core-vertx:${continuumVersion}"
+
+	annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'io.projectreactor:reactor-test'
+}
+
+
+/**
+ * Default Environment Vars
+ */
+applicationDefaultJvmArgs = [
+		"-Djava.awt.headless=true",
+		"-Djava.net.preferIPv4Stack=true",
+		"-Dvertx.disableDnsResolver=true", // done because of this issue.. https://github.com/eclipse/vert.x/issues/1753 http://stackoverflow.com/questions/42110790/vertx-httpclient-getnow-not-working
+		"-server",
+		"-XX:+AlwaysPreTouch",
+		"-XX:+UseG1GC",
+		"-XX:+ScavengeBeforeFullGC",
+		"-XX:+DisableExplicitGC"
+]

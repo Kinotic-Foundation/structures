@@ -1,0 +1,12 @@
+plugins {
+    // Apply the common convention plugin for shared build configuration between library and application projects.
+    id 'org.kinotic.java-common-conventions'
+
+    id 'java-library'
+}
+
+dependencies {
+    api "org.kinotic:continuum-core:${continuumVersion}"
+
+    implementation 'org.springframework.boot:spring-boot-autoconfigure'
+}

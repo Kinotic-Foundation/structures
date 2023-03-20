@@ -1,0 +1,13 @@
+spring:
+  profiles:
+    active: test
+  main:
+    allow-circular-references: true
+
+logging:
+  level:
+    org:
+      kinotic: DEBUG
+
+structures:
+  prefix:

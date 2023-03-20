@@ -1,0 +1,25 @@
+# YAML Reference http://www.yaml.org/refcard.html
+continuum:
+  discovery: sharedfs
+  debug: true
+
+continuum-gateway:
+  disableIam: true
+
+logging:
+  level:
+    org:
+      springframework:
+        web: DEBUG
+      kinotic: TRACE
+    io:
+      vertx: TRACE
+
+elastic:
+  hosts: localhost:9200
+  useSSL: false
+  user:
+  password:
+
+server:
+  port: 8088

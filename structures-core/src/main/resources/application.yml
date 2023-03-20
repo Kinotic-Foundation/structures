@@ -1,0 +1,17 @@
+spring:
+  main:
+    allow-circular-references: true
+
+logging:
+  level:
+    org:
+      kinotic: DEBUG
+
+elastic:
+  hosts: localhost:9200
+  useSSL: false
+  user:
+  password:
+
+structures:
+  prefix:

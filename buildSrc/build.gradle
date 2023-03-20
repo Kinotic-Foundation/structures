@@ -1,0 +1,33 @@
+plugins {
+    // Support convention plugins written in Groovy. Convention plugins are build scripts in 'src/main' that automatically become available as plugins in the main build.
+    id 'groovy-gradle-plugin'
+}
+
+repositories {
+    // Use the plugin portal to apply community plugins in convention plugins.
+    gradlePluginPortal()
+
+    mavenCentral()
+}
+
+/**
+ * Resolve properties in gradle.properties
+ */
+def properties = new Properties()
+rootDir.toPath()
+        .resolveSibling(GRADLE_PROPERTIES)
+        .toFile()
+        .withInputStream {
+            properties.load(it)
+        }
+properties.each { key, val -> project.ext."$key" = val }
+
+dependencies {
+    implementation "org.springframework.boot:org.springframework.boot.gradle.plugin:${springBootVersion}"
+
+    // see https://docs.spring.io/dependency-management-plugin/docs/current-SNAPSHOT/reference/html5/
+    implementation "io.spring.gradle:dependency-management-plugin:${springDependencyManagementVersion}"
+
+    // lombok
+    implementation("io.freefair.gradle:lombok-plugin:${lombokPluginVersion}")
+}
