@@ -21,5 +21,5 @@ Structures is an open-source framework for data storage and retrieval, supportin
    1. `./gradlew bootBuildImage`
 5. Run Docker Compose.
    1. `docker-compose up -d` (You should see the application listed under containers in docker desktop)
-6. You can now view the application by going [here](http://localhost:8080/) in a browser. (This may not be available for at least a minute while the backend services finish starting.)
-   1. [http://localhost:8080/](http://localhost:8080/)
+6. You can now view the application by going [here](http://localhost:8099/) in a browser. (This may not be available for at least a minute while the backend services finish starting.)
+   1. [http://localhost:8099/](http://localhost:8099/)

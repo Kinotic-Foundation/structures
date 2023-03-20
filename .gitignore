@@ -64,3 +64,5 @@ out/
 /continuum-iam/ignite/
 
 structures-server/src/main/resources/webroot/
+
+structures-server/src/main/resources/public/

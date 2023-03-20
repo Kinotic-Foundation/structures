@@ -21,5 +21,3 @@ elastic:
   user:
   password:
 
-server:
-  port: 8080

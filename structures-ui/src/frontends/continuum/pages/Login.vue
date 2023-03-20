@@ -34,6 +34,7 @@
                                             required
                                             v-model="password"
                                             :rules="passwordRules"
+                                            @keyup.enter.capture="handleLogin"
                                             @focus="hideAlert">
                                     </v-text-field>
                                 </v-form>

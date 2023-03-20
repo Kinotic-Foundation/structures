@@ -8,8 +8,8 @@ import io.swagger.v3.oas.models.parameters.Parameter;
 import io.swagger.v3.oas.models.parameters.RequestBody;
 import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.responses.ApiResponses;
-import org.kinotic.continuum.api.jsonSchema.*;
 import org.kinotic.continuum.api.jsonSchema.JsonSchema;
+import org.kinotic.continuum.api.jsonSchema.*;
 import org.kinotic.continuum.api.jsonSchema.datestyles.MillsDateStyle;
 import org.kinotic.continuum.api.jsonSchema.datestyles.StringDateStyle;
 import org.kinotic.continuum.api.jsonSchema.datestyles.UnixDateStyle;
@@ -53,7 +53,7 @@ public class DefaultOpenApiService implements OpenApiService {
         openAPI.setInfo(info);
 
 //        List<Server> servers = new ArrayList<>();
-//        servers.add(new Server().url("http://127.0.0.1:8088"));
+//        servers.add(new Server().url("http://127.0.0.1:8090"));
 //        openAPI.setServers(servers);
 
         Structures structures = structureManager.getAllPublished(100, 0, "id", false);

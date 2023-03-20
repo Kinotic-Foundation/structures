@@ -97,6 +97,7 @@ public class DefaultStructureService implements StructureService {
                 temp.setSchema("{ \"type\": \"string\" }");
                 temp.setEsSchema("{ \"type\": \"keyword\" }");
                 temp.setRequired(true);
+                temp.setSystemManaged(true);
                 this.id = traitService.save(temp);
             }else{
                 this.id = idOptional.get();

@@ -21,7 +21,7 @@ services:
     ports:
       - "127.0.0.1:58503:58503"
       - "127.0.0.1:58504:58504"
-      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:8989:8989"
     environment:
       SPRING_PROFILES_DEFAULT: docker
     stdin_open: true # docker run -i
