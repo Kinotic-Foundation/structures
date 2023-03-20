@@ -12,8 +12,8 @@ class TemporarySecurityService implements SecurityService {
 
     private static final String PASSWORD = "structures"
 
-    private static final Map<String, Participant> participantMap = Map.of("testuser@kinotic.org",
-            new DefaultParticipant("testuser@kinotic.org",
+    private static final Map<String, Participant> participantMap = Map.of("admin",
+            new DefaultParticipant("admin",
                     Map.ofEntries(MetadataConstants.USER_TYPE),
                     new Permissions(List.of(EventConstants.SERVICE_DESTINATION_SCHEME + "://*.**",
                             EventConstants.STREAM_DESTINATION_SCHEME + "://*.**"),
