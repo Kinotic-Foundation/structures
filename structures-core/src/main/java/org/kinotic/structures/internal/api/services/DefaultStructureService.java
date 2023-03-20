@@ -96,8 +96,6 @@ public class DefaultStructureService implements StructureService {
                 temp.setDescribeTrait("String field that defines the ID given to it in ElasticSearch.");
                 temp.setSchema("{ \"type\": \"string\" }");
                 temp.setEsSchema("{ \"type\": \"keyword\" }");
-                temp.setRequired(true);
-                temp.setSystemManaged(true);
                 this.id = traitService.save(temp);
             }else{
                 this.id = idOptional.get();

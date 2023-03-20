@@ -80,32 +80,38 @@
 
 
                     <template v-slot:item.action="{ item }" >
-                        <v-icon medium
-                                class="mr-2"
-                                @click="editItem(item)"
-                                title="Edit">
-                          {{icons.edit}}
-                        </v-icon>
-                        <v-icon medium
-                                class="mr-2"
-                                @click="deleteItem(item)"
-                                title="Delete">
-                          {{icons.delete}}
-                        </v-icon>
-                        <v-icon medium
-                                class="mr-2"
-                                @click="publish(item)"
-                                v-show="!item.structure.published"
-                                title="Publish">
-                            fab fa-product-hunt
-                        </v-icon>
-                        <v-icon medium
-                                class="mr-2"
-                                @click="toStructureItemsPage(item)"
-                                v-show="item.structure.published"
-                                title="Manage">
-                          {{icons.database}}
-                        </v-icon>
+                        <v-btn icon >
+                            <v-icon medium
+                                    class="mr-2"
+                                    @click="editItem(item)"
+                                    title="Edit">
+                                {{icons.edit}}
+                            </v-icon>
+                        </v-btn>
+                        <v-btn icon >
+                            <v-icon medium
+                                    class="mr-2"
+                                    @click="deleteItem(item)"
+                                    title="Delete">
+                                {{icons.delete}}
+                            </v-icon>
+                        </v-btn>
+                        <v-btn icon v-show="!item.structure.published" :loading="publishing">
+                            <v-icon medium
+                                    class="mr-2"
+                                    @click="publish(item)"
+                                    title="Publish">
+                                fab fa-product-hunt
+                            </v-icon>
+                        </v-btn>
+                        <v-btn icon v-show="item.structure.published">
+                            <v-icon medium
+                                    class="mr-2"
+                                    @click="toStructureItemsPage(item)"
+                                    title="Manage">
+                                {{icons.database}}
+                            </v-icon>
+                        </v-btn>
                     </template>
 
                     <template v-slot:no-data >
@@ -150,7 +156,7 @@
                                         <v-spacer></v-spacer>
                                         <v-spacer></v-spacer>
                                         <v-btn dark text @click="close" >Cancel</v-btn>
-                                        <v-btn dark text @click="save" >Save</v-btn>
+                                        <v-btn dark text @click="save" :disabled="editedItem.structure.published && !structureChanged" >Save</v-btn>
                                     </v-app-bar>
 
                                     <v-list two-line rounded >
@@ -172,7 +178,7 @@
                                         </v-list-item>
                                         <v-list-item>
                                             <v-list-item-content>
-                                                <v-text-field v-model="editedItem.structure.description" label="Description"></v-text-field>
+                                                <v-text-field @change="structureChanged = true" v-model="editedItem.structure.description" label="Description"></v-text-field>
                                             </v-list-item-content>
                                         </v-list-item>
 
@@ -182,6 +188,7 @@
                                                     v-model="editedItem.structure.primaryKey"
                                                     :items="primaryKeys"
                                                     :error-messages="primaryKeyErrorMessage"
+                                                    :readonly="editedItem.structure.published"
                                                     chips
                                                     label="Primary Key"
                                                     multiple
@@ -192,7 +199,7 @@
 <!--                                      FIXME: Need to Support Uploading of image/logo-->
 <!--                                        <v-list-item>-->
 <!--                                            <v-list-item-content>-->
-<!--                                                <v-text-field v-model="pathToIcon" label="Path To Icon"></v-text-field>-->
+<!--                                                <v-text-field @change="structureChanged = true" v-model="pathToIcon" label="Path To Icon"></v-text-field>-->
 <!--                                            </v-list-item-content>-->
 <!--                                        </v-list-item>-->
                                     </v-list>
@@ -222,13 +229,16 @@
                                                             <th class="text-left">Field Name</th>
                                                             <th class="text-left">Trait</th>
                                                             <th class="text-left" v-show="!editedItem.structure.published">Actions</th>
+                                                            <th></th>
                                                         </tr>
                                                         </thead>
                                                         <draggable :list="editedItem.traits"
                                                                    @end="onMoveCallback"
-                                                                   tag="tbody" >
+                                                                   tag="tbody"
+                                                                   handle=".handle">
                                                             <tr v-for="entry in editedItem.traits"
-                                                                :key="entry.fieldTrait.id">
+                                                                :key="entry.fieldTrait.id"
+                                                                style="cursor: grab;">
                                                                 <td></td>
                                                                 <td>{{ entry.fieldName }}</td>
                                                                 <td>{{ entry.fieldTrait.name }}</td>
@@ -240,6 +250,7 @@
                                                                       {{icons.delete}}
                                                                     </v-icon>
                                                                 </td>
+                                                                <td><i class="fa fa-align-justify handle"></i></td>
                                                             </tr>
                                                         </draggable>
                                                     </template>
@@ -368,6 +379,8 @@ export default class Traits extends Vue {
     public dummyTrait: Trait = new Trait("","","","","",0,0,true,true,true,true)
     public defaultTraits: TraitHolder[] = []
     public editedItem: StructureHolder = new StructureHolder(new Structure("","",0,false,0,[], false,0,new Map<string, Trait>(),new Map<string, string>(),0),this.defaultTraits)
+    public structureChanged: boolean = false
+    public publishing: boolean = false
 
     public nameErrorMessage: string = ""
     public traitFieldNameErrorMessage: string = ""
@@ -445,9 +458,9 @@ export default class Traits extends Vue {
     }
 
     get primaryKeys() {
-        let keys: string[] = []
+        let keys: string[] = ["id"]
         this.editedItem.traits.forEach((value) => {
-            if(value.fieldTrait.required){
+            if(value.fieldTrait.required && !value.fieldTrait.systemManaged){
                 let schema: any = JSON.parse(value.fieldTrait.esSchema)
                 if(schema.type === "keyword"
                     || schema.type === "short"
@@ -564,7 +577,7 @@ export default class Traits extends Vue {
         })
     }
 
-    public addNewTrait(name: string, trait: Trait){
+    public async addNewTrait(name: string, trait: Trait){
         this.traitFieldNameErrorMessage = ""
         let proceed: boolean = true
         if(this.editedItem.structure.published){
@@ -583,14 +596,15 @@ export default class Traits extends Vue {
                 this.traitFieldNameErrorMessage = "Structure already has a field with provided name, please change Trait Field Name to be unique."
             }else{
                 if(this.editedItem.structure.published){
-                    this.structureManager.addTraitToStructure(this.editedItem.structure.id, name, trait).then((data) => {
+                    try{
+                        await this.structureManager.addTraitToStructure(this.editedItem.structure.id, name, trait)
                         // happened successfully.. add to local object.
                         this.editedItem.traits.unshift(new TraitHolder(this.editedItem.traits.length+1,name, Object.assign({}, trait)))
                         this.resetEditedItem()
-                    }).catch((error: any) => {
+                    }catch (error: any){
                         console.log(error.stack)
                         this.serverErrors = error.message
-                    })
+                    }
                 }else{
                     this.editedItem.traits.unshift(new TraitHolder(this.editedItem.traits.length+1,name, Object.assign({}, trait)))
                     this.resetEditedItem()
@@ -607,15 +621,19 @@ export default class Traits extends Vue {
         this.traitFieldNameErrorMessage = ""
     }
 
-    public publish(item: StructureHolder){
+    public async publish(item: StructureHolder){
         if(confirm('Are you sure you want to Publish this Structure?')) {
-            this.structureManager.publish(item.structure.id).then((data) => {
+            try {
+                this.publishing = true
+                await this.structureManager.publish(item.structure.id)
                 this.getAllTraits()
                 this.getAll()// get updated list
-            }).catch((error: any) => {
+                this.publishing = false
+            }catch (error: any){
+                this.publishing = false
                 console.log(error.stack)
                 this.serverErrors = error.message
-            })
+            }
         }
     }
 
@@ -623,20 +641,24 @@ export default class Traits extends Vue {
       this.$router.push({ path: `/structure-items/${structureHolder.structure.id}` })
     }
 
-    public editItem(item: StructureHolder) {
+    public async editItem(item: StructureHolder) {
         this.editedIndex = this.items.indexOf(item)
-        this.structureManager.getStructureById(item.structure.id).then((fresh) => {
-          this.editedItem = fresh
-          let meta: any = this.editedItem.structure.metadata
-          this.pathToIcon = meta.pathToIcon // this is okay.. being javascript an all. :)
-          this.dialog = true
-        })
+        try {
+            this.editedItem = await this.structureManager.getStructureById(item.structure.id)
+            let meta: any = this.editedItem.structure.metadata
+            this.pathToIcon = meta.pathToIcon // this is okay.. being javascript an all. :)
+            this.dialog = true
+        }catch(error: any){
+            console.log(error.stack)
+            this.serverErrors = error.message
+        }
     }
 
-    public deleteItem(item: StructureHolder) {
+    public async deleteItem(item: StructureHolder) {
         const index = this.items.indexOf(item)
         if(confirm('Are you sure you want to Delete this Structure?')) {
-            this.structureManager.delete(item.structure.id).then((data) => {
+            try {
+                await this.structureManager.delete(item.structure.id)
                 this.items.splice(index, 1)
                 this.options.totalItems--
                 if((this.options.totalItems/this.options.itemsPerPage) < this.options.page && this.options.page > 1){
@@ -644,32 +666,35 @@ export default class Traits extends Vue {
                     this.getAllTraits()
                     this.getAll()
                 }
-            })
-            .catch((error: any) => {
+            }catch(error: any){
                 console.log(error.stack)
                 this.serverErrors = error.message
-            })
+            }
         }
     }
 
-    public onMoveCallback(evt: any) {
+    public async onMoveCallback(evt: any) {
         // this is only needed if we are already published - since we save everything before publish.
         if(evt.oldIndex !== -1 && evt.newIndex !== -1 && this.editedItem.structure.published){
             let movingItem: TraitHolder = this.editedItem.traits[evt.newIndex]
 
-            if((this.editedItem.traits.length-1) === evt.newIndex){
-                // if we are moving to the end we use insertAfter
-                let movingAfterItem: TraitHolder = this.editedItem.traits[this.editedItem.traits.length-2]
-                this.structureManager.insertTraitAfterAnotherForStructure(this.editedItem.structure.id, movingItem.fieldName, movingAfterItem.fieldName)
-            }else{
-                let movingBeforeItem: TraitHolder = this.editedItem.traits[evt.newIndex+1]
-                this.structureManager.insertTraitBeforeAnotherForStructure(this.editedItem.structure.id, movingItem.fieldName, movingBeforeItem.fieldName)
+            try {
+                if((this.editedItem.traits.length-1) === evt.newIndex){
+                    // if we are moving to the end we use insertAfter
+                    let movingAfterItem: TraitHolder = this.editedItem.traits[this.editedItem.traits.length-2]
+                    await this.structureManager.insertTraitAfterAnotherForStructure(this.editedItem.structure.id, movingItem.fieldName, movingAfterItem.fieldName)
+                }else{
+                    let movingBeforeItem: TraitHolder = this.editedItem.traits[evt.newIndex+1]
+                    await this.structureManager.insertTraitBeforeAnotherForStructure(this.editedItem.structure.id, movingItem.fieldName, movingBeforeItem.fieldName)
+                }
+            }catch (error: any){
+                console.log(error.stack)
+                this.serverErrors = error.message
             }
-
         }
     }
 
-    public save() {
+    public async save() {
         this.nameErrorMessage = ""
         this.primaryKeyErrorMessage = ""
         let illegalStructureNameChars: RegExp = new RegExp(/[.]|[.][.]|[\\][\\]|[/]|[*]|[?]|[\\]|<|>|[|]|[ ]|[,]|[#]|[:]|[;]|[+]|[=]|[(]|[)]|[{]|[}]/)
@@ -713,7 +738,8 @@ export default class Traits extends Vue {
 
             this.editedItem.structure.metadata = Object.assign(this.editedItem.structure.metadata, {pathToIcon: this.pathToIcon})
 
-            this.structureManager.save(this.editedItem).then((item) => {
+            try {
+                let item: StructureHolder = await this.structureManager.save(this.editedItem)
                 if (this.editedIndex > -1) {
                     Object.assign(this.items[this.editedIndex], item)
                 } else {
@@ -721,17 +747,21 @@ export default class Traits extends Vue {
                     this.options.totalItems++
                 }
                 this.close()
-            })
-            .catch((error: any) => {
+            }catch(error: any){
                 console.log(error.stack)
                 this.serverErrors = error.message
-            })
+            }
         }
 
     }
 
     public close () {
+        if(this.editedItem.structure.published && !this.structureChanged){
+            // possible trait reorder.. just update item
+            Object.assign(this.items[this.editedIndex], this.editedItem)
+        }
         this.dialog = false
+        this.structureChanged = false
         setTimeout(() => {
             this.getAllTraits()
             this.editedIndex = -1
@@ -746,5 +776,9 @@ export default class Traits extends Vue {
 
 <style scoped>
 
+.handle {
+    cursor: grabbing;
+    float: left;
+}
 
 </style>
