@@ -17,9 +17,11 @@
 
 package org.kinotic.structures.item;
 
+import org.kinotic.structures.ElasticsearchTestBase;
+
 //@ExtendWith(SpringExtension.class)
 //@SpringBootTest
-public class ObjectReferenceTests {
+public class ObjectReferenceTests extends ElasticsearchTestBase {
 
 //    @Autowired
 //    private ItemService itemService;

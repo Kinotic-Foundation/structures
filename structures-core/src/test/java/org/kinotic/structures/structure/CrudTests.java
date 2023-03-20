@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.kinotic.structures.ElasticsearchTestBase;
 import org.kinotic.structures.api.domain.*;
 import org.kinotic.structures.api.services.ItemService;
 import org.kinotic.structures.api.services.StructureService;
@@ -35,7 +36,7 @@ import java.util.*;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest
-public class CrudTests {
+public class CrudTests extends ElasticsearchTestBase {
 
     @Autowired
     private TraitService traitService;

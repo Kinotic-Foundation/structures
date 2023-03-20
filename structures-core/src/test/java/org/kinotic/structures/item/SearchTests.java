@@ -22,6 +22,7 @@ import org.elasticsearch.search.SearchHits;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.kinotic.structures.ElasticsearchTestBase;
 import org.kinotic.structures.api.domain.*;
 import org.kinotic.structures.api.services.ItemService;
 import org.kinotic.structures.api.services.StructureService;
@@ -37,7 +38,7 @@ import java.util.Optional;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest
-public class SearchTests {
+public class SearchTests extends ElasticsearchTestBase {
 
     @Autowired
     private ItemService itemService;

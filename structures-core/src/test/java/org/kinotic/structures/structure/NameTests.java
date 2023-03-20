@@ -17,6 +17,7 @@
 
 package org.kinotic.structures.structure;
 
+import org.kinotic.structures.ElasticsearchTestBase;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.StructureService;
 import org.junit.jupiter.api.Assertions;
@@ -28,7 +29,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest
-public class NameTests {
+public class NameTests extends ElasticsearchTestBase {
 
     @Autowired
     private StructureService structureService;

@@ -3,6 +3,7 @@ package org.kinotic.structures;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;
+import org.kinotic.continuum.api.annotations.EnableContinuum;
 import org.kinotic.structures.api.domain.AlreadyExistsException;
 import org.kinotic.structures.api.domain.PermenentTraitException;
 import org.kinotic.structures.api.domain.Trait;
@@ -23,11 +24,6 @@ public abstract class ElasticsearchTestBase {
     private TraitService traitService;
     @BeforeAll
     public void setUp() throws IOException, PermenentTraitException, AlreadyExistsException {
-//        container = new ElasticsearchContainer(ELASTICSEARCH_IMAGE)
-//                .withExposedPorts(9200)
-//                .withEnv("discovery.type", "single-node");
-//        container.start();
-
         Optional<Trait> ipOptional = traitService.getTraitByName("VpnIp");
         if(ipOptional.isEmpty()){
             Trait temp = new Trait();
@@ -40,7 +36,5 @@ public abstract class ElasticsearchTestBase {
         }
     }
     @AfterAll
-    public void tearDown() {
-//        container.stop();
-    }
+    public void tearDown() {}
 }

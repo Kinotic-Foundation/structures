@@ -20,6 +20,7 @@ package org.kinotic.structures.structure;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.kinotic.structures.ElasticsearchTestBase;
 import org.kinotic.structures.api.domain.AlreadyExistsException;
 import org.kinotic.structures.api.domain.PermenentTraitException;
 import org.kinotic.structures.api.domain.Structure;
@@ -37,7 +38,7 @@ import java.util.Optional;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest
-public class SchemaTests {
+public class SchemaTests extends ElasticsearchTestBase {
 
     @Autowired
     private TraitService traitService;
