@@ -1,0 +1,18 @@
+version: "3.9"
+services:
+  elastic:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.9
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+  structures-server:
+    image: kinotic/structures-server:latest
+    depends_on:
+      - "elastic"
+    ports:
+      - "127.0.0.1:58503:58503"
+      - "127.0.0.1:58504:58504"
+      - "127.0.0.1:8080:8080"
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+    restart: unless-stopped

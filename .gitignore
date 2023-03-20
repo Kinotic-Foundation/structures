@@ -62,3 +62,5 @@ out/
 /continuum-orbiter/ignite/
 
 /continuum-iam/ignite/
+
+structures-server/src/main/resources/webroot/
