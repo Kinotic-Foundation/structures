@@ -39,7 +39,7 @@ dependencies {
 // bootBuildImage task source https://github.com/spring-projects/spring-boot/blob/main/spring-boot-project/spring-boot-tools/spring-boot-gradle-plugin/src/main/java/org/springframework/boot/gradle/tasks/bundling/BootBuildImage.java
 bootBuildImage {
 	network = "host"
-	//publish = true
+	publish = true
 	imageName = "kinotic/${project.name}:${project.version}"
 	tags = [
 			"kinotic/${project.name}:latest"
