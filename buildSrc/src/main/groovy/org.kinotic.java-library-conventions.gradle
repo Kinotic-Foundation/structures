@@ -3,10 +3,77 @@ plugins {
     id 'org.kinotic.java-common-conventions'
 
     id 'java-library'
+    id 'maven-publish'
+    id 'signing'
 }
 
 dependencies {
     api "org.kinotic:continuum-core:${continuumVersion}"
 
     implementation 'org.springframework.boot:spring-boot-autoconfigure'
+}
+
+
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+
+            from components.java
+
+            pom {
+                name = 'Structures Framework'
+                description = 'Framework for data storage and retrieval, supporting schema evolution!'
+                url = 'https://continuumframework.org'
+
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+                developers {
+                    developer {
+                        name = 'Kinotic Developers'
+                        email = 'develop@kinotic.org'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:https://github.com/Kinotic-Foundation/structures.git'
+                    developerConnection = 'scm:git:https://github.com/Kinotic-Foundation/structures.git'
+                    url = 'https://github.com/Kinotic-Foundation/structures'
+                }
+            }
+        }
+    }
+    repositories {
+        maven {
+            def releasesRepoUrl = 'https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/'
+            def snapshotsRepoUrl = 'https://s01.oss.sonatype.org/content/repositories/snapshots/'
+            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+            credentials {
+                username = System.getenv('MAVEN_USERNAME')
+                password = System.getenv('MAVEN_PASSWORD')
+            }
+        }
+    }
+}
+
+signing {
+    useGpgCmd()
+    sign publishing.publications.mavenJava
+}
+
+
+javadoc {
+    // suppress warnings
+    options.addStringOption('Xdoclint:none', '-quiet')
+
+    if(JavaVersion.current().isJava9Compatible()) {
+        options.addBooleanOption('html5', true)
+    }
 }

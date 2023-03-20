@@ -31,7 +31,6 @@ import java.lang.annotation.*;
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@StructuresPackage
 @Import(StructuresConfiguration.class)
 public @interface EnableStructures {
 }

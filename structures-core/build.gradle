@@ -15,8 +15,6 @@ dependencies {
 	implementation 'org.springframework:spring-web'
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
-	// Used for conditionally wiring beans
-	implementation 'org.springframework.boot:spring-boot-autoconfigure'
 
 	// reactive https://github.com/reactive-streams/reactive-streams-jvm
 	// these should be the only reactive interfaces exposed by the Core API!

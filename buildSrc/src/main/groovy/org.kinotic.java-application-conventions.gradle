@@ -35,6 +35,26 @@ dependencies {
 	testImplementation 'io.projectreactor:reactor-test'
 }
 
+// Options to configure here https://docs.spring.io/spring-boot/docs/current/gradle-plugin/reference/htmlsingle/#build-image
+// bootBuildImage task source https://github.com/spring-projects/spring-boot/blob/main/spring-boot-project/spring-boot-tools/spring-boot-gradle-plugin/src/main/java/org/springframework/boot/gradle/tasks/bundling/BootBuildImage.java
+bootBuildImage {
+	network = "host"
+	publish = true
+	imageName = "kinotic/${project.name}:${project.version}"
+	tags = [
+			"kinotic/${project.name}:latest"
+	]
+	environment = [
+			"BPE_DELIM_JAVA_TOOL_OPTIONS" : " ",
+			"BPE_APPEND_JAVA_TOOL_OPTIONS" : "-XX:+UseG1GC -XX:+ScavengeBeforeFullGC -XX:+DisableExplicitGC"
+	]
+	docker {
+		publishRegistry {
+			username = System.getenv("DOCKER_HUB_USERNAME")
+			password = System.getenv("DOCKER_HUB_PASSWORD")
+		}
+	}
+}
 
 /**
  * Default Environment Vars
