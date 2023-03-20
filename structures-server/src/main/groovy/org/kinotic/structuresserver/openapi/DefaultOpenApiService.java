@@ -116,6 +116,8 @@ public class DefaultOpenApiService implements OpenApiService {
 
         structurePathItem.post(createOperation);
 
+        paths.put("/api/"+structure.getId(), structurePathItem);
+
 
         // Create a path item for all the operations with "/api/"+structure.getId()+"/{id}"
         PathItem byIdPathItem = new PathItem();

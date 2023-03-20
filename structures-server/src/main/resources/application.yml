@@ -1,25 +1,9 @@
-# YAML Reference http://www.yaml.org/refcard.html
-continuum:
-  discovery: sharedfs
-  debug: true
-
-continuum-gateway:
-  disableIam: true
+# General properties shared by all profiles
 
 logging:
   level:
-    org:
-      springframework:
-        web: DEBUG
-      kinotic: TRACE
-    io:
-      vertx: TRACE
-
-elastic:
-  hosts: elasticsearch:9200
-  useSSL: false
-  user:
-  password:
+    com:
+      kinotic: INFO
 
 server:
   port: 8080

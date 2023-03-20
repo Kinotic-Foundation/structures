@@ -1,7 +1,7 @@
 version: "3.9"
 services:
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.16.2
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.9
     container_name: elasticsearch
     environment:
       - discovery.type=single-node
@@ -11,8 +11,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
-    ports:
-      - "127.0.0.1:9200:9200"
     stdin_open: true
     tty: true
   structures-server:
@@ -24,5 +22,7 @@ services:
       - "127.0.0.1:58503:58503"
       - "127.0.0.1:58504:58504"
       - "127.0.0.1:8080:8080"
+    environment:
+      SPRING_PROFILES_DEFAULT: docker
     stdin_open: true # docker run -i
     tty: true        # docker run -t
