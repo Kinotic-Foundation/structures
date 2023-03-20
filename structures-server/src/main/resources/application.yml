@@ -16,7 +16,7 @@ logging:
       vertx: TRACE
 
 elastic:
-  hosts: 127.0.0.1:9200
+  hosts: elasticsearch:9200
   useSSL: false
   user:
   password:
