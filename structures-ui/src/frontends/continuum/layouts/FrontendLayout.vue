@@ -42,6 +42,11 @@
                          :frontends="frontendState.frontends"
                          @frontend-selected="onFrontendSelected"/>
 
+      <v-btn href="/openapi-ui.html" target="_blank" flat >
+          <span class="mr-2">OpenAPI</span>
+          <v-icon>{{icons.window}}</v-icon>
+      </v-btn>
+
       <v-btn icon @click="toggleDarkMode">
         <v-icon>{{icons.toggleTheme}}</v-icon>
       </v-btn>
@@ -103,7 +108,10 @@ import { Component, Vue } from 'vue-property-decorator'
 import { inject } from 'inversify-props'
 import { IFrontendState } from '../states'
 import { RouteConfig, RouteRecord } from 'vue-router'
-import { mdiThemeLightDark } from '@mdi/js'
+import {
+    mdiThemeLightDark,
+    mdiDockWindow
+} from '@mdi/js'
 import FrontendLauncher from '../components/FrontendLauncher.vue'
 
 /**
@@ -119,7 +127,8 @@ export default class FrontendLayout extends Vue {
   private frontendState!: IFrontendState
 
   private icons = {
-    toggleTheme: mdiThemeLightDark
+    toggleTheme: mdiThemeLightDark,
+    window: mdiDockWindow
   }
 
   constructor() {
