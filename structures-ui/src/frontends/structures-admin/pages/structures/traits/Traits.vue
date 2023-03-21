@@ -162,7 +162,7 @@
                                                 <v-switch v-model="editedItem.required"
                                                           class="ma-2"
                                                           label="Required"
-                                                          messages="Makes field required on all input forms.">
+                                                          messages="Makes field required">
                                                 </v-switch>
                                                 <v-switch v-model="editedItem.operational"
                                                           class="ma-2"

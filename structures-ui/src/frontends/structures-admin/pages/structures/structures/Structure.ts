@@ -7,7 +7,6 @@ export class Structure {
     public created: number
     public published: boolean
     public publishedTimestamp: number
-    public primaryKey: string[]
     public traits: Map<string, Trait>
     public metadata: Map<string, string>
     public updated: number
@@ -18,7 +17,6 @@ export class Structure {
                 created: number,
                 published: boolean,
                 publishedTimestamp: number,
-                primaryKey: string[],
                 deleted: boolean,
                 deletedTimestamp: number,
                 traits: Map<string, Trait>,
@@ -29,7 +27,6 @@ export class Structure {
         this.created = created
         this.published = published
         this.publishedTimestamp = publishedTimestamp
-        this.primaryKey = primaryKey
         this.traits = traits
         this.metadata = metadata
         this.updated = updated

@@ -273,7 +273,7 @@ export default class Traits extends Vue {
     public defaultSortBy: string = ""
     public valid: boolean = true
     public serverErrors: string = ""
-    public defaultTraitRegex: RegExp = new RegExp(/^id|createdTime|updatedTime|deleted|deletedTime|structureId|structureName$/)
+    public defaultTraitRegex: RegExp = new RegExp(/^createdTime|updatedTime|deleted|deletedTime|structureId|structureName$/)
 
     public structureHasRefs: boolean = false
 

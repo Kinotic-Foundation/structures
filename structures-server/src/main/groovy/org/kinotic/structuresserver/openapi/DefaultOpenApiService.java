@@ -275,7 +275,12 @@ public class DefaultOpenApiService implements OpenApiService {
                 ret.setMinimum(BigDecimal.valueOf(numberJsonSchema.getMinimum().get()));
             }
             if (numberJsonSchema.getMaximum().isPresent()) {
-                ret.setMaximum(BigDecimal.valueOf(numberJsonSchema.getMaximum().get()));
+                Float max = numberJsonSchema.getMaximum().get();
+                if(max.isInfinite()){
+                    ret.setMaximum(BigDecimal.valueOf(Double.MAX_VALUE));
+                }else{
+                    ret.setMaximum(BigDecimal.valueOf(numberJsonSchema.getMaximum().get()));
+                }
             }
         }else if(schema instanceof BooleanJsonSchema){
             ret = new BooleanSchema();

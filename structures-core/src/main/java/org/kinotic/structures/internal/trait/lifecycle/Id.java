@@ -31,17 +31,7 @@ public class Id implements HasOnBeforeModify {
     @Override
     public TypeCheckMap beforeModify(TypeCheckMap obj, Structure structure, String fieldName) throws Exception {
         if (!obj.has("id")) {
-            if(structure.getPrimaryKey().size() == 1 && Objects.equals(structure.getPrimaryKey().get(0), "id")){
-                obj.amend("id", UUID.randomUUID().toString());
-            }else{
-                // FIXME: should we sluggify this?
-                StringBuilder id = new StringBuilder();
-                for(String field : structure.getPrimaryKey()){
-                    if(id.length() > 0) id.append('-');
-                    id.append(obj.getString(field).trim().replace(" ", "_"));
-                }
-                obj.amend("id", id.toString().trim().toLowerCase());
-            }
+            obj.amend("id", UUID.randomUUID().toString());
         }
         return obj;
     }

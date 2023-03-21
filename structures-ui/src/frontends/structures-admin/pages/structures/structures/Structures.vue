@@ -30,9 +30,6 @@
                     <template v-slot:item.id="{ item }">
                         {{ item.structure.id }}
                     </template>
-                    <template v-slot:item.primaryKey="{ item }">
-                        {{ item.structure.primaryKey.join(',') }}
-                    </template>
                     <template v-slot:item.description="{ item }">
                         {{ item.structure.description }}
                     </template>
@@ -64,6 +61,7 @@
                                         <th></th>
                                         <th class="text-left">Field Name</th>
                                         <th class="text-left">Trait Name</th>
+                                        <th class="text-left">Required</th>
                                     </tr>
                                     </thead>
                                     <tbody>
@@ -71,6 +69,13 @@
                                             <td></td>
                                             <td>{{ entry.fieldName }}</td>
                                             <td>{{ entry.fieldTrait.name }}</td>
+                                            <td>
+                                                <v-icon small
+                                                        class="mr-2"
+                                                        title="Required">
+                                                    {{ entry.fieldTrait.required ? "fas fa-check" : "" }}
+                                                </v-icon>
+                                            </td>
                                         </tr>
                                     </tbody>
                                 </template>
@@ -96,7 +101,7 @@
                                 {{icons.delete}}
                             </v-icon>
                         </v-btn>
-                        <v-btn icon v-show="!item.structure.published" :loading="publishing">
+                        <v-btn icon v-show="!item.structure.published" :loading="publishingId === item.structure.id" :key="item.structure.id" >
                             <v-icon medium
                                     class="mr-2"
                                     @click="publish(item)"
@@ -181,19 +186,14 @@
                                                 <v-text-field @change="structureChanged = true" v-model="editedItem.structure.description" label="Description"></v-text-field>
                                             </v-list-item-content>
                                         </v-list-item>
-
                                         <v-list-item>
                                             <v-list-item-content>
-                                                <v-select
-                                                    v-model="editedItem.structure.primaryKey"
-                                                    :items="primaryKeys"
-                                                    :error-messages="primaryKeyErrorMessage"
-                                                    :readonly="editedItem.structure.published"
-                                                    chips
-                                                    label="Primary Key"
-                                                    multiple
-                                                    outlined
-                                                ></v-select>
+                                                <v-switch v-model="requireIdForEditedItem"
+                                                          label="Require 'id' field in all requests"
+                                                          class="ma-2"
+                                                          :readonly="editedItem.structure.published"
+                                                          @change="updateEditedItemWithIdRequiredValue">
+                                                </v-switch>
                                             </v-list-item-content>
                                         </v-list-item>
 <!--                                      FIXME: Need to Support Uploading of image/logo-->
@@ -228,6 +228,7 @@
                                                             </th>
                                                             <th class="text-left">Field Name</th>
                                                             <th class="text-left">Trait</th>
+                                                            <th class="text-left">Required</th>
                                                             <th class="text-left" v-show="!editedItem.structure.published">Actions</th>
                                                             <th></th>
                                                         </tr>
@@ -242,6 +243,13 @@
                                                                 <td></td>
                                                                 <td>{{ entry.fieldName }}</td>
                                                                 <td>{{ entry.fieldTrait.name }}</td>
+                                                                <td>
+                                                                    <v-icon small
+                                                                            class="mr-2"
+                                                                            title="Required">
+                                                                        {{ entry.fieldTrait.required ? "fas fa-check" : "" }}
+                                                                    </v-icon>
+                                                                </td>
                                                                 <td>
                                                                     <v-icon medium
                                                                             @click="deleteTrait(entry.fieldName)"
@@ -378,13 +386,13 @@ export default class Traits extends Vue {
     public newTrait: Trait = new Trait("","","","","",0,0,true,true,true,true)
     public dummyTrait: Trait = new Trait("","","","","",0,0,true,true,true,true)
     public defaultTraits: TraitHolder[] = []
-    public editedItem: StructureHolder = new StructureHolder(new Structure("","",0,false,0,[], false,0,new Map<string, Trait>(),new Map<string, string>(),0),this.defaultTraits)
+    public editedItem: StructureHolder = new StructureHolder(new Structure("","",0,false,0, false,0,new Map<string, Trait>(),new Map<string, string>(),0),this.defaultTraits)
     public structureChanged: boolean = false
-    public publishing: boolean = false
+    public publishingId: string = ""
+    public requireIdForEditedItem: boolean = false
 
     public nameErrorMessage: string = ""
     public traitFieldNameErrorMessage: string = ""
-    public primaryKeyErrorMessage: string = ""
     public serverErrors: string = ""
 
     public options: any = {
@@ -401,7 +409,6 @@ export default class Traits extends Vue {
     public headers: any = [
         { text: '', value: 'data-table-expand', sortable: false },
         { text: 'Id',align: 'left',value: 'id'},
-        { text: 'Primary Key',align: 'left',value: 'primaryKey', sortable: false},
         { text: 'Description', value: 'description', sortable: false },
         { text: 'Created', value: 'created' },
         { text: 'Last Updated', value: 'updated' },
@@ -457,22 +464,13 @@ export default class Traits extends Vue {
         return this.editedIndex === -1 ? 'New Structure' : 'Edit Structure'
     }
 
-    get primaryKeys() {
-        let keys: string[] = ["id"]
-        this.editedItem.traits.forEach((value) => {
-            if(value.fieldTrait.required && !value.fieldTrait.systemManaged){
-                let schema: any = JSON.parse(value.fieldTrait.esSchema)
-                if(schema.type === "keyword"
-                    || schema.type === "short"
-                    || schema.type === "integer"
-                    || schema.type === "long"){
-                    keys.push(value.fieldName)
-                }else if(schema.type === "date" && schema.format === "epoch_millis"){
-                    keys.push(value.fieldName)
-                }
+    public updateEditedItemWithIdRequiredValue(){
+        for(let entry of this.editedItem.traits){
+            if(entry.fieldName === 'id'){
+                entry.fieldTrait.required = this.requireIdForEditedItem
+                break
             }
-        })
-        return keys
+        }
     }
 
     public defaultTrait(item: any){
@@ -541,7 +539,7 @@ export default class Traits extends Vue {
                     return true
                 }
             })
-            this.editedItem = new StructureHolder(new Structure("","",0,false,0,[], false,0,new Map<string, Trait>(),new Map<string, string>(),0),this.defaultTraits)
+            this.editedItem = new StructureHolder(new Structure("","",0,false,0, false,0,new Map<string, Trait>(),new Map<string, string>(),0),this.defaultTraits)
         })
         .catch((error: any) => {
             console.log(error.stack)
@@ -624,13 +622,13 @@ export default class Traits extends Vue {
     public async publish(item: StructureHolder){
         if(confirm('Are you sure you want to Publish this Structure?')) {
             try {
-                this.publishing = true
+                this.publishingId = item.structure.id
                 await this.structureManager.publish(item.structure.id)
                 this.getAllTraits()
                 this.getAll()// get updated list
-                this.publishing = false
+                this.publishingId = ""
             }catch (error: any){
-                this.publishing = false
+                this.publishingId = ""
                 console.log(error.stack)
                 this.serverErrors = error.message
             }
@@ -645,6 +643,12 @@ export default class Traits extends Vue {
         this.editedIndex = this.items.indexOf(item)
         try {
             this.editedItem = await this.structureManager.getStructureById(item.structure.id)
+            for(let entry of this.editedItem.traits){
+                if(entry.fieldName === 'id'){
+                    this.requireIdForEditedItem = entry.fieldTrait.required
+                    break
+                }
+            }
             let meta: any = this.editedItem.structure.metadata
             this.pathToIcon = meta.pathToIcon // this is okay.. being javascript an all. :)
             this.dialog = true
@@ -696,7 +700,6 @@ export default class Traits extends Vue {
 
     public async save() {
         this.nameErrorMessage = ""
-        this.primaryKeyErrorMessage = ""
         let illegalStructureNameChars: RegExp = new RegExp(/[.]|[.][.]|[\\][\\]|[/]|[*]|[?]|[\\]|<|>|[|]|[ ]|[,]|[#]|[:]|[;]|[+]|[=]|[(]|[)]|[{]|[}]/)
 
         if(this.editedItem.structure.id.length === 0) {
@@ -713,18 +716,7 @@ export default class Traits extends Vue {
             this.nameErrorMessage = 'Id must not contain these characters . .. \\ / * ? \ < > | , # : ; + = ( ) { } or spaces'
         }
 
-        if(this.editedItem.structure.primaryKey === null
-            || this.editedItem.structure.primaryKey === undefined
-            || this.editedItem.structure.primaryKey.length === 0){
-            this.primaryKeyErrorMessage = "Primary Key must be provided"
-        }
-
-        if(this.editedItem.structure.primaryKey.length > 1
-            && this.editedItem.structure.primaryKey.indexOf('id') !== -1){
-            this.primaryKeyErrorMessage = "Primary Key must not contain ID Trait if using other Traits for composite key, i.e. ID Trait can only be used by itself"
-        }
-
-        if(this.nameErrorMessage.length === 0 && this.primaryKeyErrorMessage.length === 0){
+        if(this.nameErrorMessage.length === 0){
             // NOTE: save once published only saves the description
             let list: TraitHolder[] = []
             let order: number = 0
@@ -762,6 +754,7 @@ export default class Traits extends Vue {
         }
         this.dialog = false
         this.structureChanged = false
+        this.requireIdForEditedItem = false
         setTimeout(() => {
             this.getAllTraits()
             this.editedIndex = -1

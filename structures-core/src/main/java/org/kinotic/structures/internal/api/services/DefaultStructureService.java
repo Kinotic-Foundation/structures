@@ -327,13 +327,6 @@ public class DefaultStructureService implements StructureService {
             checkFieldNameFormat(traitEntry.getKey());
         }
 
-        if(structure.getPrimaryKey() == null || structure.getPrimaryKey().size() == 0){
-            throw new IllegalStateException("primaryKey must have at least one value");
-        }
-
-        //FIXME: we need to check to ensure our primary key is made up of required fields and
-        // base primitives, keyword string and integers/longs
-
         if(structure.getCreated() == 0){// new structure, name must be unique
             Optional<Structure> alreadyCreated = structureElasticRepository.findById(structure.getId());
             if(alreadyCreated.isPresent()){
