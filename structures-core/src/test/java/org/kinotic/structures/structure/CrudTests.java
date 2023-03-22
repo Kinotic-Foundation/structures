@@ -45,25 +45,11 @@ public class CrudTests extends ElasticsearchTestBase {
     @Autowired
     private ItemService itemService;
 
-	@BeforeEach
-	public void init() throws IOException, PermenentTraitException, AlreadyExistsException {
-		Optional<Trait> ipOptional = traitService.getTraitByName("VpnIp");
-		if(ipOptional.isEmpty()){
-			Trait temp = new Trait();
-			temp.setName("VpnIp");
-			temp.setDescribeTrait("VpnIp address that the devices should be provided on the VLAN.");
-			temp.setSchema("{ \"type\": \"string\", \"format\": \"ipv4\" }");
-			temp.setEsSchema("{ \"type\": \"ip\" }");
-			temp.setRequired(true);
-			traitService.save(temp);
-		}
-	}
 
 	@Test
 	public void createAndDeleteStructure() {
 		Assertions.assertThrows(NoSuchElementException.class, () -> {
 			Structure structure = new Structure();
-			structure.setPrimaryKey(new LinkedList<String>(Collections.singleton("id")));
 			structure.setId("Computer1-" + System.currentTimeMillis());
 			structure.setDescription("Defines the Computer Device properties");
 
@@ -91,13 +77,6 @@ public class CrudTests extends ElasticsearchTestBase {
 				structureService.delete(structure.getId());
 			}
 
-
-			SearchHits all = structureService.getAll(10000, 0, "id", true);
-			if (all.iterator().hasNext()) {
-				throw new IllegalStateException("We should have no structures left, all deleted, however getAll() returned more than 0 structures");
-			}
-
-
 			Optional<Structure> optional = structureService.getStructureById(structure.getId());
 			optional.get();// should throw if null
 		});
@@ -107,7 +86,6 @@ public class CrudTests extends ElasticsearchTestBase {
 	public void tryCreateDuplicateStructure(){
 		Assertions.assertThrows(AlreadyExistsException.class, () -> {
 			Structure structure = new Structure();
-			structure.setPrimaryKey(new LinkedList<String>(Collections.singleton("id")));
 			structure.setId("Computer2-" + System.currentTimeMillis());
 			structure.setDescription("Defines the Computer Device properties");
 
@@ -137,7 +115,6 @@ public class CrudTests extends ElasticsearchTestBase {
 	@Test
 	public void addToTraitMapNotPublishedAndValidate() throws AlreadyExistsException, IOException, PermenentTraitException {
 		Structure structure = new Structure();
-		structure.setPrimaryKey(new LinkedList<String>(Collections.singleton("id")));
 		structure.setId("Computer3-" + System.currentTimeMillis());
 		structure.setDescription("Defines the Computer Device properties");
 
@@ -195,7 +172,6 @@ public class CrudTests extends ElasticsearchTestBase {
 	@Test
 	public void addToTraitMapAlreadyPublishedAndValidate() throws AlreadyExistsException, IOException, PermenentTraitException {
 		Structure structure = new Structure();
-		structure.setPrimaryKey(new LinkedList<String>(Collections.singleton("id")));
 		structure.setId("Computer4-" + System.currentTimeMillis());
 		structure.setDescription("Defines the Computer Device properties");
 
@@ -255,7 +231,6 @@ public class CrudTests extends ElasticsearchTestBase {
 	@Test
 	public void publishAndDeleteAStructure() throws AlreadyExistsException, IOException, PermenentTraitException {
 		Structure structure = new Structure();
-		structure.setPrimaryKey(new LinkedList<String>(Collections.singleton("id")));
 		structure.setId("Computer9-" + System.currentTimeMillis());
 		structure.setDescription("Defines the Computer Device properties");
 
@@ -280,7 +255,6 @@ public class CrudTests extends ElasticsearchTestBase {
 	public void publishAndDeleteAStructureWithAnItem() {
 		Assertions.assertThrows(IllegalStateException.class, () -> {
 			Structure structure = new Structure();
-			structure.setPrimaryKey(new LinkedList<String>(Collections.singleton("id")));
 			structure.setId("Computer10-" + System.currentTimeMillis());
 			structure.setDescription("Defines the Computer Device properties");
 

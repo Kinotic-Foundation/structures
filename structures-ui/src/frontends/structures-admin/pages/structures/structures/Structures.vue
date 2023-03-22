@@ -101,7 +101,11 @@
                                 {{icons.delete}}
                             </v-icon>
                         </v-btn>
-                        <v-btn icon v-show="!item.structure.published" :loading="publishingId === item.structure.id" :key="item.structure.id" >
+                        <v-btn icon
+                               v-show="!item.structure.published"
+                               :disabled="publishingId.length > 0"
+                               :loading="publishingId === item.structure.id"
+                               :key="item.structure.id" >
                             <v-icon medium
                                     class="mr-2"
                                     @click="publish(item)"

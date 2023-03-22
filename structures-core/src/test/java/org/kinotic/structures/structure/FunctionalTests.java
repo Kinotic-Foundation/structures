@@ -47,25 +47,11 @@ public class FunctionalTests extends ElasticsearchTestBase {
     @Autowired
     private ItemService itemService;
 
-    @BeforeEach
-    public void init() throws IOException, PermenentTraitException, AlreadyExistsException {
-        Optional<Trait> ipOptional = traitService.getTraitByName("VpnIp");
-        if(ipOptional.isEmpty()){
-            Trait temp = new Trait();
-            temp.setName("VpnIp");
-            temp.setDescribeTrait("VpnIp address that the devices should be provided on the VLAN.");
-            temp.setSchema("{ \"type\": \"string\", \"format\": \"ipv4\" }");
-            temp.setEsSchema("{ \"type\": \"ip\" }");
-            temp.setRequired(true);
-            traitService.save(temp);
-        }
-    }
 
     @Test
     public void tryAddAdditionalFieldOutsideSchema() throws Exception {
         Assertions.assertThrows(ElasticsearchStatusException.class, () -> {
             Structure structure = new Structure();
-            structure.setPrimaryKey(new LinkedList<String>(Collections.singleton("id")));
             structure.setId("Computer7-" + System.currentTimeMillis());
             structure.setDescription("Defines the Computer Device properties");
 
@@ -100,7 +86,6 @@ public class FunctionalTests extends ElasticsearchTestBase {
     @Test
     public void addTraitAfterPublishedAndNewItemAddedThenUpdateItem() throws Exception {
         Structure structure = new Structure();
-        structure.setPrimaryKey(new LinkedList<String>(Collections.singleton("id")));
         structure.setId("Computer8-" + System.currentTimeMillis());
         structure.setDescription("Defines the Computer Device properties");
 
@@ -160,7 +145,6 @@ public class FunctionalTests extends ElasticsearchTestBase {
     @Test
     public void addTraitAfterPublishedAndNewItems() throws Exception {
         Structure structure = new Structure();
-        structure.setPrimaryKey(new LinkedList<String>(Collections.singleton("id")));
         structure.setId("Computer9-"+System.currentTimeMillis());
         structure.setDescription("Defines the Computer Device properties");
 

@@ -47,25 +47,11 @@ public class SearchTests extends ElasticsearchTestBase {
     @Autowired
     private StructureService structureService;
 
-    @BeforeEach
-    public void init() throws IOException, PermenentTraitException, AlreadyExistsException {
-        Optional<Trait> ipOptional = traitService.getTraitByName("VpnIp");
-        if(ipOptional.isEmpty()){
-            Trait temp = new Trait();
-            temp.setName("VpnIp");
-            temp.setDescribeTrait("VpnIp address that the devices should be provided on the VLAN.");
-            temp.setSchema("{ \"type\": \"string\", \"format\": \"ipv4\" }");
-            temp.setEsSchema("{ \"type\": \"ip\" }");
-            temp.setRequired(true);
-            traitService.save(temp);
-        }
-    }
 
     @Test
     public void tryCreateFiveItemsAndGetAll() throws Exception {
 
         Structure structure = new Structure();
-        structure.setPrimaryKey(new LinkedList<String>(Collections.singleton("id")));
         structure.setId("Search1-" + System.currentTimeMillis());
         structure.setDescription("Defines an Item1");
 
@@ -123,7 +109,6 @@ public class SearchTests extends ElasticsearchTestBase {
     public void createFiveItemsAndSearchExact() throws Exception {
 
         Structure structure = new Structure();
-        structure.setPrimaryKey(new LinkedList<String>(Collections.singleton("id")));
         structure.setId("Search2-" + System.currentTimeMillis());
         structure.setDescription("Defines an Item1");
 
@@ -192,7 +177,6 @@ public class SearchTests extends ElasticsearchTestBase {
     public void createFiveItemsAndSearchForText() throws Exception {
 
         Structure structure = new Structure();
-        structure.setPrimaryKey(new LinkedList<String>(Collections.singleton("id")));
         structure.setId("Search3-" + System.currentTimeMillis());
         structure.setDescription("Defines an Item1");
 
@@ -285,7 +269,6 @@ public class SearchTests extends ElasticsearchTestBase {
     public void createFiveItemsAndSearchUsingLuceneSyntax() throws Exception {
 
         Structure structure = new Structure();
-        structure.setPrimaryKey(new LinkedList<String>(Collections.singleton("id")));
         structure.setId("Search4-" + System.currentTimeMillis());
         structure.setDescription("Defines an Item1");
 
@@ -364,7 +347,6 @@ public class SearchTests extends ElasticsearchTestBase {
     public void tryCreate5ItemsThenDelete2AndPerformGetAll() throws Exception {
 
         Structure structure = new Structure();
-        structure.setPrimaryKey(new LinkedList<String>(Collections.singleton("id")));
         structure.setId("Search5-" + System.currentTimeMillis());
         structure.setDescription("Defines an Item1");
 
@@ -432,7 +414,6 @@ public class SearchTests extends ElasticsearchTestBase {
     public void tryCreate5ItemsThenDelete2AndPerformSearchExact() throws Exception {
 
         Structure structure = new Structure();
-        structure.setPrimaryKey(new LinkedList<String>(Collections.singleton("id")));
         structure.setId("Search6-" + System.currentTimeMillis());
         structure.setDescription("Defines an Item1");
 
@@ -517,7 +498,6 @@ public class SearchTests extends ElasticsearchTestBase {
     public void tryCreate5ItemsThenDelete2AndPerformSearchText() throws Exception {
 
         Structure structure = new Structure();
-        structure.setPrimaryKey(new LinkedList<String>(Collections.singleton("id")));
         structure.setId("Search7-" + System.currentTimeMillis());
         structure.setDescription("Defines an Item1");
 
@@ -624,7 +604,6 @@ public class SearchTests extends ElasticsearchTestBase {
     public void tryCreate5ItemsThenDelete2AndPerformSearchLucene() throws Exception {
 
         Structure structure = new Structure();
-        structure.setPrimaryKey(new LinkedList<String>(Collections.singleton("id")));
         structure.setId("Search8-" + System.currentTimeMillis());
         structure.setDescription("Defines an Item1");
 

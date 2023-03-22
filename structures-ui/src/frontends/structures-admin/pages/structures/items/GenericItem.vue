@@ -428,15 +428,24 @@ export default class Traits extends Vue {
         return this.editedIndex === -1 ? `New ${this.structureName}` : `Edit ${this.structureName}`
     }
 
-    public checkForData(){
+    public async checkForData(){
         this.loading = true
-        this.itemManager.count(this.$props.structureId).then((count) => {
-            if(count > 0){
-                this.getItemList()
-            }else{
-                this.loading = false
-            }
-        })
+
+        // await this.itemManager.requestBulkUpdatesForStructure(this.$props.structureId)
+        // for (let i: number = 0; i < 6000; i++){
+        //     let obj: any = {}
+        //     obj.name = `Device-${i}`
+        //     obj.description = `This is a description for Device-${i}`
+        //     await this.itemManager.pushItemForBulkUpdate(this.$props.structureId, obj)
+        // }
+        // await this.itemManager.flushAndCloseBulkUpdate(this.$props.structureId)
+
+        let count: number = await this.itemManager.count(this.$props.structureId)
+        if(count > 0){
+            await this.getItemList()
+        }else{
+            this.loading = false
+        }
     }
 
     public checkData(key: string, value: any) {

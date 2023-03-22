@@ -2,6 +2,7 @@ package org.kinotic.structuresserver.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.codec.ServerCodecConfigurer;
 import org.springframework.web.reactive.config.CorsRegistry;
 import org.springframework.web.reactive.config.EnableWebFlux;
 import org.springframework.web.reactive.config.ResourceHandlerRegistry;
@@ -40,4 +41,8 @@ public class WebConfig implements WebFluxConfigurer {
         return ServerResponse.permanentRedirect(URI.create("/index.html")).build();
     }
 
+    @Override
+    public void configureHttpMessageCodecs(ServerCodecConfigurer configurer) {
+        configurer.defaultCodecs().maxInMemorySize(25 * 1024 * 1024);
+    }
 }

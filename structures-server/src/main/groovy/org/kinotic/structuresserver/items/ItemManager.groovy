@@ -2,9 +2,11 @@ package org.kinotic.structuresserver.items
 
 import org.elasticsearch.search.SearchHits
 import org.elasticsearch.search.sort.SortOrder
+import org.kinotic.structures.api.domain.NotFoundException
 import org.kinotic.structures.api.domain.Structure
 import org.kinotic.structures.api.domain.TypeCheckMap
 import org.kinotic.structures.api.services.ItemService
+import org.kinotic.structures.api.services.StructureService
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
@@ -17,6 +19,8 @@ class ItemManager implements IItemManager {
 
     @Autowired
     ItemService itemService
+    @Autowired
+    StructureService structureService
 
     @Override
     TypeCheckMap upsertItem(String structureId, TypeCheckMap item) throws Exception {
@@ -72,5 +76,25 @@ class ItemManager implements IItemManager {
     @Override
     void delete(String structureId, String itemId) throws Exception {
         itemService.delete(structureId, itemId)
+    }
+
+    @Override
+    void requestBulkUpdatesForStructure(String structureId) {
+        Optional<Structure> structureOptional = this.structureService.getStructureById(structureId)
+        if(structureOptional.isPresent()){
+            itemService.requestBulkUpdatesForStructure(structureId)
+        }else{
+            throw new NotFoundException("Not able to find requested Structure")
+        }
+    }
+
+    @Override
+    void pushItemForBulkUpdate(String structureId, TypeCheckMap item) throws Exception {
+        itemService.pushItemForBulkUpdate(structureId, item)
+    }
+
+    @Override
+    void flushAndCloseBulkUpdate(String structureId) throws Exception {
+        itemService.flushAndCloseBulkUpdate(structureId)
     }
 }

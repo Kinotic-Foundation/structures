@@ -23,6 +23,12 @@ export interface IItemManager {
     searchWithSort(structureId: string, search: string, numberPerPage: number, from: number, sortField: string, sortOrder: string): Promise<any>
 
     delete(structureId: string, itemId: string): Promise<void>
+
+    requestBulkUpdatesForStructure(structureId: string): Promise<void>
+
+    pushItemForBulkUpdate(structureId: string, item: any): Promise<void>
+
+    flushAndCloseBulkUpdate(structureId: string): Promise<void>
 }
 
 @injectable()
@@ -71,13 +77,25 @@ class ItemManager implements IItemManager {
     }
 
     public searchWithSort(structureId: string, search: string, numberPerPage: number, from: number, sortField: string, sortOrder: string): Promise<any> {
-        console.log(`running search.. ${search.trim()}`)
         return this.serviceProxy.invoke('searchWithSort', [structureId, search, numberPerPage, from, sortField, sortOrder])
     }
 
     public delete(structureId: string, itemId: string): Promise<void> {
         return this.serviceProxy.invoke('delete', [structureId, itemId])
     }
+
+    public requestBulkUpdatesForStructure(structureId: string): Promise<void> {
+        return this.serviceProxy.invoke('requestBulkUpdatesForStructure', [structureId])
+    }
+
+    public pushItemForBulkUpdate(structureId: string, item: any): Promise<void> {
+        return this.serviceProxy.invoke('pushItemForBulkUpdate', [structureId, item])
+    }
+
+    public flushAndCloseBulkUpdate(structureId: string): Promise<void> {
+        return this.serviceProxy.invoke('flushAndCloseBulkUpdate', [structureId])
+    }
+
 }
 
 container.addSingleton<IItemManager>(ItemManager)

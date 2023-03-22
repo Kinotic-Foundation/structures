@@ -2,6 +2,7 @@ package org.kinotic.structuresserver.controllers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.elasticsearch.search.SearchHits;
+import org.kinotic.structures.api.domain.NotFoundException;
 import org.kinotic.structures.api.domain.TypeCheckMap;
 import org.kinotic.structures.api.services.ItemService;
 import org.springframework.http.MediaType;
@@ -9,7 +10,9 @@ import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
+import java.io.IOException;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -52,6 +55,24 @@ public class StructureItemController {
                 return Mono.error(e);
             }
         }).subscribeOn(Schedulers.boundedElastic());
+    }
+
+    @PostMapping("/bulk/{structureId}")
+    public void bulkUpsertItem(@PathVariable String structureId, @RequestBody List<Map<String, Object>> itemList) throws Exception {
+        try {
+            itemService.requestBulkUpdatesForStructure(structureId);
+            itemList.forEach(item -> {
+                try {
+                    itemService.pushItemForBulkUpdate(structureId, new TypeCheckMap(item));
+                } catch (Exception e) {
+                    // FIXME: how to handle this, we will not know where we had issues.. we could capture all the ones that errored out
+                    //  and pass them back - or we fail fast and just respond with the id or some other identifiable info for debugging
+                    throw new RuntimeException(e);
+                }
+            });
+        } finally {
+            itemService.flushAndCloseBulkUpdate(structureId);
+        }
     }
 
     @GetMapping("/{structureId}/{id}")

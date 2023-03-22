@@ -31,4 +31,10 @@ interface IItemManager {
     SearchHits searchWithSort(String structureId, String search, int numberPerPage, int from, String sortField, boolean descending)
 
     void delete(String structureId, String itemId) throws Exception
+
+    void requestBulkUpdatesForStructure(String structureId);
+
+    void pushItemForBulkUpdate(String structureId, TypeCheckMap item) throws Exception;
+
+    void flushAndCloseBulkUpdate(String structureId) throws Exception;
 }

@@ -41,12 +41,14 @@ import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.sort.SortOrder;
 import org.elasticsearch.xcontent.XContentType;
+import org.kinotic.structures.api.domain.NotFoundException;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.domain.Trait;
 import org.kinotic.structures.api.domain.TypeCheckMap;
 import org.kinotic.structures.api.domain.traitlifecycle.*;
 import org.kinotic.structures.api.services.ItemService;
 import org.kinotic.structures.api.services.StructureService;
+import org.kinotic.structures.internal.api.services.util.BulkUpdate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -72,7 +74,7 @@ public class DefaultItemService implements ItemService {
 
     private HashMap<String, TraitLifecycle> traitLifecycleMap = new HashMap<>();
 
-    private ConcurrentHashMap<String, BulkProcessor> bulkRequests = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<String, BulkUpdate> bulkRequests = new ConcurrentHashMap<>();
     private ConcurrentHashMap<String, AtomicLong> activeBulkRequests = new ConcurrentHashMap<>();
 
     public DefaultItemService(RestHighLevelClient highLevelClient, StructureService structureService, List<TraitLifecycle> traitLifecycles) {
@@ -93,9 +95,9 @@ public class DefaultItemService implements ItemService {
     @PreDestroy
     void cleanup() {
         // if we have any outstanding bulk requests, flush and close them.
-        for(Map.Entry<String, BulkProcessor> entry : bulkRequests.entrySet()){
+        for(Map.Entry<String, BulkUpdate> entry : bulkRequests.entrySet()){
             try {
-                BulkProcessor processor = this.bulkRequests.remove(entry.getKey());
+                BulkProcessor processor = this.bulkRequests.remove(entry.getKey()).getBulkProcessor();
                 processor.awaitClose(10, TimeUnit.SECONDS);
             } catch (InterruptedException e) {
                 log.warn("Encountered an error when trying to flush/close bulk update.",e);
@@ -142,30 +144,34 @@ public class DefaultItemService implements ItemService {
     }
 
     @Override
-    public void requestBulkUpdatesForStructure(Structure structure) {
-        if(!this.bulkRequests.containsKey(structure.getId())){
+    public void requestBulkUpdatesForStructure(String structureId) throws IOException, NotFoundException {
+        if(!this.bulkRequests.containsKey(structureId)){
+            Optional<Structure> structureOptional = this.structureService.getStructureById(structureId);
+            if(structureOptional.isEmpty()){
+                throw new NotFoundException("Not able to find requested Structure");
+            }
             BiConsumer<BulkRequest, ActionListener<BulkResponse>> bulkConsumer =
                     (request, bulkListener) -> highLevelClient.bulkAsync(request, RequestOptions.DEFAULT, bulkListener);
             BulkProcessor bulkProcessor = BulkProcessor.builder(bulkConsumer, new BulkProcessor.Listener() {
-                        private AtomicLong count = new AtomicLong(0);
+                        private final AtomicLong count = new AtomicLong(0);
+
                         @Override
                         public void beforeBulk(long executionId,
                                                BulkRequest request) {
-
                         }
 
                         @Override
                         public void afterBulk(long executionId,
                                               BulkRequest request,
                                               BulkResponse response) {
-                            if(response.hasFailures()){
-                                for(BulkItemResponse itemResponse: response.getItems()){
-                                    log.error("DefaultItemService: Encountered an error while ingesting data.  for Structure: '" + structure.getId() + "'    Index: " + itemResponse.getIndex() + " \n\r    "+itemResponse.getFailureMessage(), itemResponse.getFailure());
+                            if (response.hasFailures()) {
+                                for (BulkItemResponse itemResponse : response.getItems()) {
+                                    log.error("DefaultItemService: Encountered an error while ingesting data.  for Structure: '" + structureId + "'    Index: " + itemResponse.getIndex() + " \n\r    " + itemResponse.getFailureMessage(), itemResponse.getFailure());
                                 }
                             }
 
                             long currentCount = count.addAndGet(request.numberOfActions());
-                            log.debug("DefaultItemService: bulk processing for Structure '" + structure.getId() + "' finished indexing : " + currentCount);
+                            log.debug("DefaultItemService: bulk processing for Structure '" + structureId + "' finished indexing : " + currentCount);
                         }
 
                         @Override
@@ -179,42 +185,44 @@ public class DefaultItemService implements ItemService {
                     .setBulkActions(2500)
                     .build();
 
-            this.bulkRequests.put(structure.getId(), bulkProcessor);
-            this.activeBulkRequests.put(structure.getId(), new AtomicLong(1));
+            this.bulkRequests.put(structureId, new BulkUpdate(bulkProcessor, structureOptional.get()));
+            this.activeBulkRequests.put(structureId, new AtomicLong(1));
         }else{
-            AtomicLong number = this.activeBulkRequests.get(structure.getId());
+            AtomicLong number = this.activeBulkRequests.get(structureId);
             number.addAndGet(1);
-            this.activeBulkRequests.put(structure.getId(), number);
+            this.activeBulkRequests.put(structureId, number);
         }
     }
 
     @Override
-    public void pushItemForBulkUpdate(Structure structure, TypeCheckMap item) throws Exception {
-        Assert.notNull(structure, "Must provide valid structure");
-        Assert.isTrue(this.bulkRequests.containsKey(structure.getId()), "Your structure not set up for bulk processing, please request new bulk updates for structure");
+    public void pushItemForBulkUpdate(String structureId, TypeCheckMap item) throws Exception {
+        Assert.isTrue(structureId != null || !structureId.isBlank(), "Must provide valid structureId.");
+        Assert.isTrue(this.bulkRequests.containsKey(structureId), "Your structure not set up for bulk processing, please request new bulk updates for structure");
 
-        for (Map.Entry<String, Trait> traitEntry : structure.getTraits().entrySet()) {
+        //FIXME: what if the structure changes mid bulk update?
+        BulkUpdate bulkUpdate = this.bulkRequests.get(structureId);
+        for (Map.Entry<String, Trait> traitEntry : bulkUpdate.getStructure().getTraits().entrySet()) {
             if (!traitEntry.getValue().isSystemManaged() && traitEntry.getValue().isRequired() && !item.has(traitEntry.getKey())) {
-                throw new IllegalStateException("\'" + structure.getId() + "\' Structure create/modify has been called without all required fields");
+                throw new IllegalStateException("\'" + structureId + "\' Structure create/modify has been called without all required fields");
             }
         }
 
-        TypeCheckMap ret = (TypeCheckMap) processLifecycle(item, structure, (hook, obj, fieldName) -> {
+        TypeCheckMap ret = (TypeCheckMap) processLifecycle(item, bulkUpdate.getStructure(), (hook, obj, fieldName) -> {
             if(hook instanceof HasOnBeforeModify){
-                obj = ((HasOnBeforeModify)hook).beforeModify((TypeCheckMap) obj, structure, fieldName);
+                obj = ((HasOnBeforeModify)hook).beforeModify((TypeCheckMap) obj, bulkUpdate.getStructure(), fieldName);
             }
             return obj;
         });
 
-        UpdateRequest request = new UpdateRequest(structure.getId().toLowerCase(), item.getString("id"));
+        UpdateRequest request = new UpdateRequest(structureId.toLowerCase(), item.getString("id"));
         request.docAsUpsert(true);
         request.doc(item, XContentType.JSON);
 
-        this.bulkRequests.get(structure.getId()).add(request);
+        this.bulkRequests.get(structureId).getBulkProcessor().add(request);
 
-        ret = (TypeCheckMap) processLifecycle(ret, structure, (hook, obj, fieldName) -> {
+        ret = (TypeCheckMap) processLifecycle(ret, bulkUpdate.getStructure(), (hook, obj, fieldName) -> {
             if(hook instanceof HasOnAfterModify){
-                obj = ((HasOnAfterModify)hook).afterModify((TypeCheckMap) obj, structure, fieldName);
+                obj = ((HasOnAfterModify)hook).afterModify((TypeCheckMap) obj, bulkUpdate.getStructure(), fieldName);
             }
             return obj;
         });
@@ -222,19 +230,19 @@ public class DefaultItemService implements ItemService {
     }
 
     @Override
-    public void flushAndCloseBulkUpdate(Structure structure) throws Exception {
-        Assert.notNull(structure, "Must provide structure. ");
-        Assert.isTrue(this.bulkRequests.containsKey(structure.getId()), "Your structure not set up for bulk processing, please request new bulk update for structure.");
-        if(this.activeBulkRequests.get(structure.getId()).get() == 1){
-            this.bulkRequests.get(structure.getId()).awaitClose(30, TimeUnit.SECONDS);
-            this.bulkRequests.remove(structure.getId());
-            this.activeBulkRequests.remove(structure.getId());
+    public void flushAndCloseBulkUpdate(String structureId) throws Exception {
+        Assert.isTrue(structureId != null && !structureId.isBlank(), "Must provide valid structureId.");
+        Assert.isTrue(this.bulkRequests.containsKey(structureId), "Your structure not set up for bulk processing, please request new bulk update for structure.");
+        if(this.activeBulkRequests.get(structureId).get() == 1){
+            this.bulkRequests.get(structureId).getBulkProcessor().awaitClose(30, TimeUnit.SECONDS);
+            this.bulkRequests.remove(structureId);
+            this.activeBulkRequests.remove(structureId);
         }else{
             // current bulk updates will continue to work, any items pushed by closing process
             // will be processed at the next threshold or interval
-            AtomicLong number = this.activeBulkRequests.get(structure.getId());
+            AtomicLong number = this.activeBulkRequests.get(structureId);
             number.addAndGet(-1);
-            this.activeBulkRequests.put(structure.getId(), number);
+            this.activeBulkRequests.put(structureId, number);
         }
     }
 

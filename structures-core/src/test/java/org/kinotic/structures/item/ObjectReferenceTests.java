@@ -346,7 +346,6 @@ public class ObjectReferenceTests extends ElasticsearchTestBase {
 //
 //    public Structure getComputerStructure() throws Exception {
 //        Structure structure = new Structure();
-//        structure.setPrimaryKey(new LinkedList<String>(Collections.singleton("id")));
 //        structure.setId("Computer-" + String.valueOf(System.currentTimeMillis()));
 //        structure.setDescription("Defines an Computer");
 //
@@ -365,7 +364,6 @@ public class ObjectReferenceTests extends ElasticsearchTestBase {
 //
 //    public Structure getDeviceStructure() throws Exception {
 //        Structure structure = new Structure();
-//        structure.setPrimaryKey(new LinkedList<String>(Collections.singleton("id")));
 //        structure.setId("EmbeddedDevice-" + String.valueOf(System.currentTimeMillis()));
 //        structure.setDescription("Defines an EmbeddedDevice");
 //
@@ -387,7 +385,6 @@ public class ObjectReferenceTests extends ElasticsearchTestBase {
 //
 //    public Structure getOfficeStructure(Structure deviceStructure, Structure computerStructure) throws Exception {
 //        Structure structure = new Structure();
-//        structure.setPrimaryKey(new LinkedList<String>(Collections.singleton("id")));
 //        structure.setId("Office-" + String.valueOf(System.currentTimeMillis()));
 //        structure.setDescription("Defines a Office");
 //

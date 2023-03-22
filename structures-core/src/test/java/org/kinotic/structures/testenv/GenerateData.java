@@ -88,7 +88,6 @@ public class GenerateData extends ElasticsearchTestBase {
         Structure structure = new Structure();
         structure.setId("Computer-" + System.currentTimeMillis());
         structure.setDescription("Defines an Computer");
-        structure.setPrimaryKey(new LinkedList<String>(Collections.singleton("id")));
 
         Optional<Trait> vpnIpOptional = traitService.getTraitByName("VpnIp");
         Optional<Trait> ipOptional = traitService.getTraitByName("Ip");
@@ -107,7 +106,6 @@ public class GenerateData extends ElasticsearchTestBase {
         Structure structure = new Structure();
         structure.setId("Device-" + System.currentTimeMillis());
         structure.setDescription("Defines an Device");
-        structure.setPrimaryKey(new LinkedList<String>(Collections.singleton("id")));
 
         Optional<Trait> vpnIpOptional = traitService.getTraitByName("VpnIp");
         Optional<Trait> ipOptional = traitService.getTraitByName("Ip");
@@ -129,7 +127,6 @@ public class GenerateData extends ElasticsearchTestBase {
         Structure structure = new Structure();
         structure.setId("Office-" + System.currentTimeMillis());
         structure.setDescription("Defines a Office");
-        structure.setPrimaryKey(new LinkedList<String>(Collections.singleton("id")));
 
         Optional<Trait> textOptional = traitService.getTraitByName("KeywordString");
         Optional<Trait> objRefOptional = traitService.getTraitByName("ObjectReference");

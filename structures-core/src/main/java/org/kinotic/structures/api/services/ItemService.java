@@ -17,10 +17,7 @@
 
 package org.kinotic.structures.api.services;
 
-import org.kinotic.structures.api.domain.Structure;
-import org.kinotic.structures.api.domain.Trait;
-import org.kinotic.structures.api.domain.TriFunction;
-import org.kinotic.structures.api.domain.TypeCheckMap;
+import org.kinotic.structures.api.domain.*;
 import org.kinotic.structures.api.domain.traitlifecycle.TraitLifecycle;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.sort.SortOrder;
@@ -34,9 +31,11 @@ import java.util.Optional;
 public interface ItemService {
     TypeCheckMap upsertItem(String structureId, TypeCheckMap item) throws Exception;
 
-    void requestBulkUpdatesForStructure(Structure structure);
-    void pushItemForBulkUpdate(Structure structure, TypeCheckMap item) throws Exception;
-    void flushAndCloseBulkUpdate(Structure structure) throws Exception;
+    void requestBulkUpdatesForStructure(String structureId) throws IOException, NotFoundException;
+
+    void pushItemForBulkUpdate(String structureId, TypeCheckMap item) throws Exception;
+
+    void flushAndCloseBulkUpdate(String structureId) throws Exception;
 
     long count(String structureId) throws IOException;
 

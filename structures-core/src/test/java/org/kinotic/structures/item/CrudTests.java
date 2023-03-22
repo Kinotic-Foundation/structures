@@ -45,25 +45,10 @@ public class CrudTests extends ElasticsearchTestBase {
     @Autowired
     private StructureService structureService;
 
-    @BeforeEach
-    public void init() throws IOException, PermenentTraitException, AlreadyExistsException {
-        Optional<Trait> ipOptional = traitService.getTraitByName("VpnIp");
-        if(ipOptional.isEmpty()){
-            Trait temp = new Trait();
-            temp.setName("VpnIp");
-            temp.setDescribeTrait("VpnIp address that the devices should be provided on the VLAN.");
-            temp.setSchema("{ \"type\": \"string\", \"format\": \"ipv4\" }");
-            temp.setEsSchema("{ \"type\": \"ip\" }");
-            temp.setRequired(true);
-            traitService.save(temp);
-        }
-    }
-
     @Test
     public void createAndDeleteItem() throws Exception {
 
         Structure structure = new Structure();
-        structure.setPrimaryKey(new LinkedList<String>(Collections.singleton("id")));
         structure.setId("Item1-" + String.valueOf(System.currentTimeMillis()));
         structure.setDescription("Defines an Item1");
 
@@ -98,7 +83,6 @@ public class CrudTests extends ElasticsearchTestBase {
     public void createAndupsertItem() throws Exception {
 
         Structure structure = new Structure();
-        structure.setPrimaryKey(new LinkedList<String>(Collections.singleton("id")));
         structure.setId("Item3-" + String.valueOf(System.currentTimeMillis()));
         structure.setDescription("Defines an Item1");
 
@@ -155,11 +139,6 @@ public class CrudTests extends ElasticsearchTestBase {
     public void validatePrimaryKeyWithTwoFields() throws Exception {
 
         Structure structure = new Structure();
-        LinkedList<String> primaryKey = new LinkedList<>();
-        primaryKey.add("state");
-        primaryKey.add("city");
-        primaryKey.add("address");
-        structure.setPrimaryKey(primaryKey);
         structure.setId("Item3-" + System.currentTimeMillis());
         structure.setDescription("Defines an Person");
 
@@ -184,6 +163,7 @@ public class CrudTests extends ElasticsearchTestBase {
         obj.put("address", "111 Las Vegas Blvd");
         obj.put("firstName", "Marco");
         obj.put("lastName", "Polo");
+        obj.put("id", "nevada-las_vegas-111_las_vegas_blvd");
 
         structureService.save(structure);
         structureService.publish(structure.getId());
@@ -233,7 +213,6 @@ public class CrudTests extends ElasticsearchTestBase {
     @Test
     public void upsertItemThenAddFieldAndupsertItem() throws Exception {
         Structure structure = new Structure();
-        structure.setPrimaryKey(new LinkedList<String>(Collections.singleton("id")));
         structure.setId("Item4-" + String.valueOf(System.currentTimeMillis()));
         structure.setDescription("Defines an Item1");
 
@@ -292,7 +271,6 @@ public class CrudTests extends ElasticsearchTestBase {
     @Test
     public void upsertItemThenPerformPartialUpdate() throws Exception {
         Structure structure = new Structure();
-        structure.setPrimaryKey(new LinkedList<String>(Collections.singleton("id")));
         structure.setId("Item5-" + String.valueOf(System.currentTimeMillis()));
         structure.setDescription("Defines an Item1");
 
