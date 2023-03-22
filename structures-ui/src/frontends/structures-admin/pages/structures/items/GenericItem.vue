@@ -133,7 +133,25 @@
                                                 v-model="valid"
                                                 lazy-validation>
                                             <v-list-item v-for="(key, index) in keys">
-                                                <v-list-item-content v-if="types.get(key).type === 'string'">
+                                                <v-list-item-content v-if="key === 'id' && types.get(key).type === 'string'">
+                                                    <v-text-field clearable
+                                                                  :clear-icon="icons.closeCircle"
+                                                                  :ref="key"
+                                                                  :key="editedIndex+key"
+                                                                  :name="editedIndex+key"
+                                                                  :autofocus="Number(index) === 0"
+                                                                  :label="headers[index].text"
+                                                                  :disabled="systemManaged.indexOf(key) !== -1"
+                                                                  :required="required.indexOf(key) === -1"
+                                                                  :rules="[checkData(key, editedItem[key])]"
+                                                                  :maxlength="typeof(types.get(key).maxLength) === 'undefined' ? -1 : types.get(key).maxLength"
+                                                                  :minlength="typeof(types.get(key).minLength) === 'undefined' ? -1 : types.get(key).minLength"
+                                                                  v-model="editedItem[key]"
+                                                                  @keydown.space.prevent
+                                                                  @keydown.enter.prevent>
+                                                    </v-text-field>
+                                                </v-list-item-content>
+                                                <v-list-item-content v-else-if="key !== 'id' && types.get(key).type === 'string'">
                                                     <v-textarea clearable
                                                                 :clear-icon="icons.closeCircle"
                                                                 :ref="key"
@@ -148,8 +166,7 @@
                                                                 :minlength="typeof(types.get(key).minLength) === 'undefined' ? -1 : types.get(key).minLength"
                                                                 auto-grow
                                                                 rows="1"
-                                                                v-model="editedItem[key]"
-                                                                @keydown.space="(event) => { if(key === 'id') { event.preventDefault() } } ">
+                                                                v-model="editedItem[key]">
                                                     </v-textarea>
                                                 </v-list-item-content>
                                                 <v-list-item-content v-else-if="types.get(key).type === 'boolean'">

@@ -27,6 +27,9 @@
                           'items-per-page-options':options.rowsPerPageItems
                         }" >
 
+                    <template v-slot:item.id="{ item }">
+                        {{ item.structure.id }}
+                    </template>
                     <template v-slot:item.name="{ item }">
                         {{ item.structure.name }}
                     </template>
@@ -434,6 +437,7 @@ export default class Traits extends Vue {
         { text: '', value: 'data-table-expand', sortable: false },
         { text: 'Id',align: 'left',value: 'id'},
         { text: 'Namespace',align: 'left',value: 'namespace'},
+        { text: 'Name',align: 'left',value: 'name'},
         { text: 'Description', value: 'description', sortable: false },
         { text: 'Created', value: 'created' },
         { text: 'Last Updated', value: 'updated' },
