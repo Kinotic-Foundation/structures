@@ -19,11 +19,12 @@ package org.kinotic.structures.structure;
 
 import org.elasticsearch.ElasticsearchStatusException;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.kinotic.structures.ElasticsearchTestBase;
-import org.kinotic.structures.api.domain.*;
+import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.api.domain.Trait;
+import org.kinotic.structures.api.domain.TypeCheckMap;
 import org.kinotic.structures.api.services.ItemService;
 import org.kinotic.structures.api.services.StructureService;
 import org.kinotic.structures.api.services.TraitService;
@@ -31,9 +32,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
-import java.io.IOException;
-import java.util.Collections;
-import java.util.LinkedList;
 import java.util.Optional;
 
 @ExtendWith(SpringExtension.class)
@@ -52,7 +50,8 @@ public class FunctionalTests extends ElasticsearchTestBase {
     public void tryAddAdditionalFieldOutsideSchema() throws Exception {
         Assertions.assertThrows(ElasticsearchStatusException.class, () -> {
             Structure structure = new Structure();
-            structure.setId("Computer7-" + System.currentTimeMillis());
+            structure.setName("Computer7-" + System.currentTimeMillis());
+            structure.setNamespace("some_other_org_");
             structure.setDescription("Defines the Computer Device properties");
 
             Optional<Trait> vpnIpOptional = traitService.getTraitByName("VpnIp");
@@ -62,7 +61,7 @@ public class FunctionalTests extends ElasticsearchTestBase {
             structure.getTraits().put("ip", ipOptional.get());
             // should also get createdTime, updateTime, and deleted by default
 
-            structureService.save(structure);
+            structure = structureService.save(structure);
 
             try {
 
@@ -86,7 +85,8 @@ public class FunctionalTests extends ElasticsearchTestBase {
     @Test
     public void addTraitAfterPublishedAndNewItemAddedThenUpdateItem() throws Exception {
         Structure structure = new Structure();
-        structure.setId("Computer8-" + System.currentTimeMillis());
+        structure.setName("Computer8-" + System.currentTimeMillis());
+        structure.setNamespace("some_other_org_");
         structure.setDescription("Defines the Computer Device properties");
 
 
@@ -98,7 +98,7 @@ public class FunctionalTests extends ElasticsearchTestBase {
         structure.getTraits().put("ip", ipOptional.get());
         // should also get createdTime, updateTime, and deleted by default
 
-        structureService.save(structure);
+        structure = structureService.save(structure);
         structureService.publish(structure.getId());
 
 
@@ -145,7 +145,8 @@ public class FunctionalTests extends ElasticsearchTestBase {
     @Test
     public void addTraitAfterPublishedAndNewItems() throws Exception {
         Structure structure = new Structure();
-        structure.setId("Computer9-"+System.currentTimeMillis());
+        structure.setName("Computer9-"+System.currentTimeMillis());
+        structure.setNamespace("some_other_org_");
         structure.setDescription("Defines the Computer Device properties");
 
 
@@ -157,7 +158,7 @@ public class FunctionalTests extends ElasticsearchTestBase {
         structure.getTraits().put("ip", ipOptional.get());
         // should also get createdTime, updateTime, and deleted by default
 
-        structureService.save(structure);
+        structure = structureService.save(structure);
         structureService.publish(structure.getId());
 
 

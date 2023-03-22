@@ -148,7 +148,8 @@
                                                                 :minlength="typeof(types.get(key).minLength) === 'undefined' ? -1 : types.get(key).minLength"
                                                                 auto-grow
                                                                 rows="1"
-                                                                v-model="editedItem[key]">
+                                                                v-model="editedItem[key]"
+                                                                @keydown.space="(event) => { if(key === 'id') { event.preventDefault() } } ">
                                                     </v-textarea>
                                                 </v-list-item-content>
                                                 <v-list-item-content v-else-if="types.get(key).type === 'boolean'">
@@ -474,6 +475,9 @@ export default class Traits extends Vue {
                     if (!regex.test(value)) {
                         messages.push(fieldName + ' is not in correct format. ')
                     }
+                }
+                if(key === 'id' && String(value).includes(' ')){
+                    messages.push('id must not have spaces')
                 }
             }
 

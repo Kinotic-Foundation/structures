@@ -19,22 +19,18 @@ package org.kinotic.structures.item;
 
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.kinotic.structures.ElasticsearchTestBase;
-import org.kinotic.structures.api.domain.*;
+import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.api.domain.TypeCheckMap;
 import org.kinotic.structures.api.services.ItemService;
 import org.kinotic.structures.api.services.StructureService;
 import org.kinotic.structures.api.services.TraitService;
+import org.kinotic.structures.util.StructureTestHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
-
-import java.io.IOException;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.Optional;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest
@@ -46,27 +42,14 @@ public class SearchTests extends ElasticsearchTestBase {
     private TraitService traitService;
     @Autowired
     private StructureService structureService;
+    @Autowired
+    private StructureTestHelper structureTestHelper;
 
 
     @Test
     public void tryCreateFiveItemsAndGetAll() throws Exception {
 
-        Structure structure = new Structure();
-        structure.setId("Search1-" + System.currentTimeMillis());
-        structure.setDescription("Defines an Item1");
-
-
-        Optional<Trait> vpnIpOptional = traitService.getTraitByName("VpnIp");
-        Optional<Trait> ipOptional = traitService.getTraitByName("Ip");
-        Optional<Trait> macOptional = traitService.getTraitByName("Mac");
-
-        structure.getTraits().put("vpnIp", vpnIpOptional.get());
-        structure.getTraits().put("ip", ipOptional.get());
-        structure.getTraits().put("mac", macOptional.get());
-        // should also get createdTime, updateTime, and deleted by default
-
-        structureService.save(structure);
-        structureService.publish(structure.getId());
+        Structure structure = structureTestHelper.getSimpleItemStructure();
 
         int index = 0;
         while (index < 5) {
@@ -108,20 +91,7 @@ public class SearchTests extends ElasticsearchTestBase {
     @Test
     public void createFiveItemsAndSearchExact() throws Exception {
 
-        Structure structure = new Structure();
-        structure.setId("Search2-" + System.currentTimeMillis());
-        structure.setDescription("Defines an Item1");
-
-
-        Optional<Trait> ipOptional = traitService.getTraitByName("Ip");
-        Optional<Trait> macOptional = traitService.getTraitByName("Mac");
-
-        structure.getTraits().put("ip", ipOptional.get());
-        structure.getTraits().put("mac", macOptional.get());
-        // should also get createdTime, updateTime, and deleted by default
-
-        structureService.save(structure);
-        structureService.publish(structure.getId());
+        Structure structure = structureTestHelper.getSimpleItemStructure();
 
         int index = 0;
         while (index < 5) {
@@ -176,24 +146,7 @@ public class SearchTests extends ElasticsearchTestBase {
     @Test
     public void createFiveItemsAndSearchForText() throws Exception {
 
-        Structure structure = new Structure();
-        structure.setId("Search3-" + System.currentTimeMillis());
-        structure.setDescription("Defines an Item1");
-
-        Trait vpnIpOptional = traitService.getTraitByName("VpnIp").get();
-        vpnIpOptional.setRequired(false);
-        Optional<Trait> ipOptional = traitService.getTraitByName("Ip");
-        Optional<Trait> macOptional = traitService.getTraitByName("Mac");
-        Optional<Trait> descriptionOptional = traitService.getTraitByName("TextString");
-
-        structure.getTraits().put("vpnIp", vpnIpOptional);
-        structure.getTraits().put("ip", ipOptional.get());
-        structure.getTraits().put("mac", macOptional.get());
-        structure.getTraits().put("description", descriptionOptional.get());
-        // should also get createdTime, updateTime, and deleted by default
-
-        structureService.save(structure);
-        structureService.publish(structure.getId());
+        Structure structure = structureTestHelper.getSimpleItemStructure();
 
         int index = 0;
         while (index < 5) {
@@ -268,24 +221,7 @@ public class SearchTests extends ElasticsearchTestBase {
     @Test
     public void createFiveItemsAndSearchUsingLuceneSyntax() throws Exception {
 
-        Structure structure = new Structure();
-        structure.setId("Search4-" + System.currentTimeMillis());
-        structure.setDescription("Defines an Item1");
-
-        Optional<Trait> vpnIpOptional = traitService.getTraitByName("VpnIp");
-        Optional<Trait> ipOptional = traitService.getTraitByName("Ip");
-        Optional<Trait> macOptional = traitService.getTraitByName("Mac");
-        Trait descriptionOptional = traitService.getTraitByName("TextString").get();
-        descriptionOptional.setRequired(false);
-
-        structure.getTraits().put("vpnIp", vpnIpOptional.get());
-        structure.getTraits().put("ip", ipOptional.get());
-        structure.getTraits().put("mac", macOptional.get());
-        structure.getTraits().put("description", descriptionOptional);
-        // should also get createdTime, updateTime, and deleted by default
-
-        structureService.save(structure);
-        structureService.publish(structure.getId());
+        Structure structure = structureTestHelper.getSimpleItemStructure();
 
         int index = 0;
         while (index < 5) {
@@ -346,20 +282,7 @@ public class SearchTests extends ElasticsearchTestBase {
     @Test
     public void tryCreate5ItemsThenDelete2AndPerformGetAll() throws Exception {
 
-        Structure structure = new Structure();
-        structure.setId("Search5-" + System.currentTimeMillis());
-        structure.setDescription("Defines an Item1");
-
-
-        Optional<Trait> ipOptional = traitService.getTraitByName("Ip");
-        Optional<Trait> macOptional = traitService.getTraitByName("Mac");
-
-        structure.getTraits().put("ip", ipOptional.get());
-        structure.getTraits().put("mac", macOptional.get());
-        // should also get createdTime, updateTime, and deleted by default
-
-        structureService.save(structure);
-        structureService.publish(structure.getId());
+        Structure structure = structureTestHelper.getSimpleItemStructure();
 
         int index = 0;
         String delete1Id = "";
@@ -413,22 +336,7 @@ public class SearchTests extends ElasticsearchTestBase {
     @Test
     public void tryCreate5ItemsThenDelete2AndPerformSearchExact() throws Exception {
 
-        Structure structure = new Structure();
-        structure.setId("Search6-" + System.currentTimeMillis());
-        structure.setDescription("Defines an Item1");
-
-
-        Optional<Trait> vpnIpOptional = traitService.getTraitByName("VpnIp");
-        Optional<Trait> ipOptional = traitService.getTraitByName("Ip");
-        Optional<Trait> macOptional = traitService.getTraitByName("Mac");
-
-        structure.getTraits().put("vpnIp", vpnIpOptional.get());
-        structure.getTraits().put("ip", ipOptional.get());
-        structure.getTraits().put("mac", macOptional.get());
-        // should also get createdTime, updateTime, and deleted by default
-
-        structureService.save(structure);
-        structureService.publish(structure.getId());
+        Structure structure = structureTestHelper.getSimpleItemStructure();
 
         int index = 0;
         String delete1Id = "";
@@ -497,22 +405,7 @@ public class SearchTests extends ElasticsearchTestBase {
     @Test
     public void tryCreate5ItemsThenDelete2AndPerformSearchText() throws Exception {
 
-        Structure structure = new Structure();
-        structure.setId("Search7-" + System.currentTimeMillis());
-        structure.setDescription("Defines an Item1");
-
-        Optional<Trait> ipOptional = traitService.getTraitByName("Ip");
-        Optional<Trait> macOptional = traitService.getTraitByName("Mac");
-        Trait descriptionOptional = traitService.getTraitByName("TextString").get();
-        descriptionOptional.setRequired(false);
-
-        structure.getTraits().put("ip", ipOptional.get());
-        structure.getTraits().put("mac", macOptional.get());
-        structure.getTraits().put("description", descriptionOptional);
-        // should also get createdTime, updateTime, and deleted by default
-
-        structureService.save(structure);
-        structureService.publish(structure.getId());
+        Structure structure = structureTestHelper.getSimpleItemStructure();
 
         int index = 0;
         String delete1Id = "";
@@ -603,24 +496,7 @@ public class SearchTests extends ElasticsearchTestBase {
     @Test
     public void tryCreate5ItemsThenDelete2AndPerformSearchLucene() throws Exception {
 
-        Structure structure = new Structure();
-        structure.setId("Search8-" + System.currentTimeMillis());
-        structure.setDescription("Defines an Item1");
-
-        Optional<Trait> vpnIpOptional = traitService.getTraitByName("VpnIp");
-        Optional<Trait> ipOptional = traitService.getTraitByName("Ip");
-        Optional<Trait> macOptional = traitService.getTraitByName("Mac");
-        Trait descriptionOptional = traitService.getTraitByName("TextString").get();
-        descriptionOptional.setRequired(false);
-
-        structure.getTraits().put("vpnIp", vpnIpOptional.get());
-        structure.getTraits().put("ip", ipOptional.get());
-        structure.getTraits().put("mac", macOptional.get());
-        structure.getTraits().put("description", descriptionOptional);
-        // should also get createdTime, updateTime, and deleted by default
-
-        structureService.save(structure);
-        structureService.publish(structure.getId());
+        Structure structure = structureTestHelper.getSimpleItemStructure();
 
         int index = 0;
         String delete1Id = "";

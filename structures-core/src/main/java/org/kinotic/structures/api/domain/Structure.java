@@ -22,13 +22,14 @@ import org.springframework.data.annotation.Version;
 import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
+import org.springframework.data.elasticsearch.annotations.Setting;
 
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.LinkedList;
 
-@Document(indexName = "structure", replicas = 2)
+@Document(indexName = "structure")
+@Setting(shards = 5, replicas = 2)
 public class Structure implements Serializable {
 
     @Id
@@ -37,11 +38,15 @@ public class Structure implements Serializable {
     @Field(type = FieldType.Text)
     private String description = null;
     @Field(type = FieldType.Long)
-    private long created = 0;
+    private long created = 0;// do not ever set, system managed
     @Field(type = FieldType.Boolean)
     private boolean published = false;
     @Field(type = FieldType.Long)
     private long publishedTimestamp = 0;
+    @Field(type = FieldType.Keyword)
+    private String name = null;
+    @Field(type = FieldType.Keyword)
+    private String namespace = null;
 
     @Field(type = FieldType.Flattened)
     private LinkedHashMap<String, Trait> traits = new LinkedHashMap<>();
@@ -51,7 +56,7 @@ public class Structure implements Serializable {
 
     @Version
     @Field(type = FieldType.Long)
-    private Long updated;
+    private Long updated;// do not ever set, system managed
 
     public String getId() {
         return id;
@@ -93,6 +98,22 @@ public class Structure implements Serializable {
         this.publishedTimestamp = publishedTimestamp;
     }
 
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getNamespace() {
+        return namespace;
+    }
+
+    public void setNamespace(String namespace) {
+        this.namespace = namespace;
+    }
+
     public LinkedHashMap<String, Trait> getTraits() {
         return traits;
     }
@@ -115,6 +136,10 @@ public class Structure implements Serializable {
 
     public void setUpdated(Long updated) {
         this.updated = updated;
+    }
+
+    public String getIndexName(){
+        return (namespace.trim()+name.trim()).toLowerCase();
     }
 
 }

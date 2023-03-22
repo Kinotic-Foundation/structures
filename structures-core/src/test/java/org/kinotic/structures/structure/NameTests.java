@@ -41,7 +41,8 @@ public class NameTests extends ElasticsearchTestBase {
     public void tryCreateStructureWithIdStartsWith_(){
         Assertions.assertThrows(IllegalStateException.class, () -> {
             Structure structure = new Structure();
-            structure.setId("_TEST");
+            structure.setName("_TEST");
+            structure.setNamespace("_org-kinotic");
             structure.setDescription("Test Structure Id that starts with underscore (_)");
             structureService.save(structure);
         });
@@ -51,7 +52,8 @@ public class NameTests extends ElasticsearchTestBase {
     public void tryCreateStructureWithIdStartsWithADash(){
         Assertions.assertThrows(IllegalStateException.class, () -> {
             Structure structure = new Structure();
-            structure.setId("-TEST");
+            structure.setName("-TEST");
+            structure.setNamespace("-org-kinotic");
             structure.setDescription("Test Structure Id that starts with a dash (-)");
             structureService.save(structure);
         });
@@ -61,7 +63,8 @@ public class NameTests extends ElasticsearchTestBase {
     public void tryCreateStructureWithIdStartsWithAPlus(){
         Assertions.assertThrows(IllegalStateException.class, () -> {
             Structure structure = new Structure();
-            structure.setId("+TEST");
+            structure.setName("+TEST");
+            structure.setNamespace("+org-kinotic");
             structure.setDescription("Test Structure Id that starts with a plus (+)");
             structureService.save(structure);
         });
@@ -71,7 +74,8 @@ public class NameTests extends ElasticsearchTestBase {
     public void tryCreateStructureWithIdStartsWithPeriod(){
         Assertions.assertThrows(IllegalStateException.class, () -> {
             Structure structure = new Structure();
-            structure.setId(".TEST");
+            structure.setName(".TEST");
+            structure.setNamespace(".org.kinotic");
             structure.setDescription("Test Structure Id that contains a period (.)");
             structureService.save(structure);
         });
@@ -81,7 +85,8 @@ public class NameTests extends ElasticsearchTestBase {
     public void tryCreateStructureWithIdStartsWithDotDot(){
         Assertions.assertThrows(IllegalStateException.class, () -> {
             Structure structure = new Structure();
-            structure.setId("..TEST");
+            structure.setName("..TEST");
+            structure.setNamespace("..org.kinotic");
             structure.setDescription("Test Structure Id that contains a dotdot (..)");
             structureService.save(structure);
         });
@@ -91,7 +96,8 @@ public class NameTests extends ElasticsearchTestBase {
     public void tryCreateStructureWithIdContainsBackslash() {
         Assertions.assertThrows(IllegalStateException.class, () -> {
             Structure structure = new Structure();
-            structure.setId("TEST\\ING");
+            structure.setName("TEST\\ING");
+            structure.setNamespace("org.kinotic");
             structure.setDescription("Test Structure Id that contains a backslash (\\)");
             structureService.save(structure);
         });
@@ -101,7 +107,8 @@ public class NameTests extends ElasticsearchTestBase {
     public void tryCreateStructureWithIdContainsForwardSlash() {
         Assertions.assertThrows(IllegalStateException.class, () -> {
             Structure structure = new Structure();
-            structure.setId("TES/T");
+            structure.setName("TES/T");
+            structure.setNamespace("org.kinotic");
             structure.setDescription("Test Structure Id that contains a forward slash (/)");
             structureService.save(structure);
         });
@@ -111,7 +118,8 @@ public class NameTests extends ElasticsearchTestBase {
     public void tryCreateStructureWithIdContainsAsterisk() {
         Assertions.assertThrows(IllegalStateException.class, () -> {
             Structure structure = new Structure();
-            structure.setId("TE*ST");
+            structure.setName("TE*ST");
+            structure.setNamespace("org.kinotic");
             structure.setDescription("Test Structure Id that contains an asterisk (*)");
             structureService.save(structure);
         });
@@ -121,7 +129,8 @@ public class NameTests extends ElasticsearchTestBase {
     public void tryCreateStructureWithIdContainsQuestionMark(){
         Assertions.assertThrows(IllegalStateException.class, () -> {
             Structure structure = new Structure();
-            structure.setId("TEST?");
+            structure.setName("TEST?");
+            structure.setNamespace("org.kinotic");
             structure.setDescription("Test Structure Id that contains a question mark (?)");
             structureService.save(structure);
         });
@@ -131,7 +140,8 @@ public class NameTests extends ElasticsearchTestBase {
     public void tryCreateStructureWithIdContainsQuotationMarks(){
         Assertions.assertThrows(IllegalStateException.class, () -> {
             Structure structure = new Structure();
-            structure.setId("T\"EST");
+            structure.setName("T\"EST");
+            structure.setNamespace("org.kinotic");
             structure.setDescription("Test Structure Id that contains quotation marks (\")");
             structureService.save(structure);
         });
@@ -141,7 +151,8 @@ public class NameTests extends ElasticsearchTestBase {
     public void tryCreateStructureWithIdContainsLessThan() {
         Assertions.assertThrows(IllegalStateException.class, () -> {
             Structure structure = new Structure();
-            structure.setId("TE<ST");
+            structure.setName("TE<ST");
+            structure.setNamespace("org.kinotic");
             structure.setDescription("Test Structure Id that contains a less than symbol (<)");
             structureService.save(structure);
         });
@@ -151,7 +162,8 @@ public class NameTests extends ElasticsearchTestBase {
     public void tryCreateStructureWithIdContainsGreaterThan() {
         Assertions.assertThrows(IllegalStateException.class, () -> {
             Structure structure = new Structure();
-            structure.setId("TE>ST");
+            structure.setName("TE>ST");
+            structure.setNamespace("org.kinotic");
             structure.setDescription("Test Structure Id that contains a greater than symbol (>)");
             structureService.save(structure);
         });
@@ -161,7 +173,8 @@ public class NameTests extends ElasticsearchTestBase {
     public void tryCreateStructureWithIdContainsPipe(){
         Assertions.assertThrows(IllegalStateException.class, () -> {
             Structure structure = new Structure();
-            structure.setId("TE|ST");
+            structure.setName("TE|ST");
+            structure.setNamespace("org.kinotic");
             structure.setDescription("Test Structure Id that contains a pipe operator (|)");
             structureService.save(structure);
         });
@@ -171,7 +184,8 @@ public class NameTests extends ElasticsearchTestBase {
     public void tryCreateStructureWithIdContainsSpace() {
         Assertions.assertThrows(IllegalStateException.class, () -> {
             Structure structure = new Structure();
-            structure.setId("TE ST");
+            structure.setName("TE ST");
+            structure.setNamespace("org.kinotic");
             structure.setDescription("Test Structure Id that contains a space ( )");
             structureService.save(structure);
         });
@@ -181,7 +195,8 @@ public class NameTests extends ElasticsearchTestBase {
     public void tryCreateStructureWithIdContainsComma() {
         Assertions.assertThrows(IllegalStateException.class, () -> {
             Structure structure = new Structure();
-            structure.setId("TES,T");
+            structure.setName("TES,T");
+            structure.setNamespace("org.kinotic");
             structure.setDescription("Test Structure Id that contains a comma (,)");
             structureService.save(structure);
         });
@@ -191,8 +206,20 @@ public class NameTests extends ElasticsearchTestBase {
     public void tryCreateStructureWithIdContainsHash() {
         Assertions.assertThrows(IllegalStateException.class, () -> {
             Structure structure = new Structure();
-            structure.setId("TEST#");
+            structure.setName("TEST#");
+            structure.setNamespace("org.kinotic");
             structure.setDescription("Test Structure Id that contains a hash (#)");
+            structureService.save(structure);
+        });
+    }
+
+    @Test
+    public void tryCreateStructureWithIdContainsDoubleDot() {
+        Assertions.assertThrows(IllegalStateException.class, () -> {
+            Structure structure = new Structure();
+            structure.setName(".TEST");
+            structure.setNamespace("org.kinotic.");
+            structure.setDescription("Test Structure Id that contains a double dot (..)");
             structureService.save(structure);
         });
     }
@@ -201,7 +228,8 @@ public class NameTests extends ElasticsearchTestBase {
     public void tryCreateStructureWithIdContainsColon() {
         Assertions.assertThrows(IllegalStateException.class, () -> {
             Structure structure = new Structure();
-            structure.setId("TES:T");
+            structure.setName("TES:T");
+            structure.setNamespace("org.kinotic");
             structure.setDescription("Test Structure Id that contains a colon (:)");
             structureService.save(structure);
         });
@@ -211,7 +239,8 @@ public class NameTests extends ElasticsearchTestBase {
     public void tryCreateStructureWithIdContainsSemiColon() {
         Assertions.assertThrows(IllegalStateException.class, () -> {
             Structure structure = new Structure();
-            structure.setId("TES;T");
+            structure.setName("TES;T");
+            structure.setNamespace("org.kinotic");
             structure.setDescription("Test Structure Id that contains a semi colon (;)");
             structureService.save(structure);
         });
@@ -221,12 +250,13 @@ public class NameTests extends ElasticsearchTestBase {
     public void tryCreateStructureWithIdLongerThan255(){
         Assertions.assertThrows(IllegalStateException.class, () -> {
             String tooLong = "";
-            for (int i = 0; i < 257; i++) {
+            for (int i = 0; i < 246; i++) { // leaving some room for the namespace to go over
                 tooLong += "a";
             }
             Structure structure = new Structure();
-            structure.setId(tooLong);
-            structure.setDescription("Test Structure Id that is longer than 255 chars");
+            structure.setName(tooLong);
+            structure.setNamespace("org.kinotic");
+            structure.setDescription("Test Structure Namespace+Id that is longer than 255 chars");
             structureService.save(structure);
         });
     }

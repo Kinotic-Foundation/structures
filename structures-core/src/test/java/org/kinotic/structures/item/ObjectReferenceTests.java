@@ -29,6 +29,8 @@ public class ObjectReferenceTests extends ElasticsearchTestBase {
 //    private TraitService traitService;
 //    @Autowired
 //    private StructureService structureService;
+//    @Autowired
+//    private StructureTestHelper structureTestHelper;
 //
 //    @Test
 //    public void createItemThatAlsoHasObjectReference_GetAllShouldNotLazyLoad_ThenDeleteAll() throws Exception {
@@ -344,67 +346,5 @@ public class ObjectReferenceTests extends ElasticsearchTestBase {
 //        });
 //    }
 //
-//    public Structure getComputerStructure() throws Exception {
-//        Structure structure = new Structure();
-//        structure.setId("Computer-" + String.valueOf(System.currentTimeMillis()));
-//        structure.setDescription("Defines an Computer");
-//
-//        Optional<Trait> vpnIpOptional = traitService.getTraitByName("VpnIp");
-//        Optional<Trait> ipOptional = traitService.getTraitByName("Ip");
-//        Optional<Trait> macOptional = traitService.getTraitByName("Mac");
-//
-//        structure.getTraits().put("vpnIp", vpnIpOptional.get());
-//        structure.getTraits().put("ip", ipOptional.get());
-//        structure.getTraits().put("mac", macOptional.get());
-//
-//        structureService.save(structure);
-//        structureService.publish(structure.getId());
-//        return structure;
-//    }
-//
-//    public Structure getDeviceStructure() throws Exception {
-//        Structure structure = new Structure();
-//        structure.setId("EmbeddedDevice-" + String.valueOf(System.currentTimeMillis()));
-//        structure.setDescription("Defines an EmbeddedDevice");
-//
-//        Optional<Trait> vpnIpOptional = traitService.getTraitByName("VpnIp");
-//        Optional<Trait> ipOptional = traitService.getTraitByName("Ip");
-//        Optional<Trait> macOptional = traitService.getTraitByName("Mac");
-//        Optional<Trait> textOptional = traitService.getTraitByName("KeywordString");
-//
-//        structure.getTraits().put("vpnIp", vpnIpOptional.get());
-//        structure.getTraits().put("ip", ipOptional.get());
-//        structure.getTraits().put("mac", macOptional.get());
-//        structure.getTraits().put("generation", textOptional.get());
-//        structure.getTraits().put("type", textOptional.get());
-//
-//        structureService.save(structure);
-//        structureService.publish(structure.getId());
-//        return structure;
-//    }
-//
-//    public Structure getOfficeStructure(Structure deviceStructure, Structure computerStructure) throws Exception {
-//        Structure structure = new Structure();
-//        structure.setId("Office-" + String.valueOf(System.currentTimeMillis()));
-//        structure.setDescription("Defines a Office");
-//
-//        Optional<Trait> textOptional = traitService.getTraitByName("KeywordString");
-//        Optional<Trait> objComputerRefOptional = traitService.getTraitByName("Reference "+computerStructure.getId().trim());
-//        Optional<Trait> objDeviceRefOptional = traitService.getTraitByName("Reference "+deviceStructure.getId().trim());
-//
-//        // What if we just used some auto generated ObjectReferences when creating structure
-//        // we create the object reference for the object and we can just use the Name or Description
-//        // fields to populate or use a pattern in the name so that we can get at the particular structure
-//        // that we configured.
-//
-//        structure.getTraits().put("partNumber", textOptional.get());
-//        structure.getTraits().put("computer", objComputerRefOptional.get());
-//        structure.getTraits().put("device1", objDeviceRefOptional.get());
-//        structure.getTraits().put("device2", objDeviceRefOptional.get());
-//
-//        structureService.save(structure);
-//        structureService.publish(structure.getId());
-//        return structure;
-//    }
 
 }

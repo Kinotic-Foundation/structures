@@ -20,31 +20,17 @@ package org.kinotic.structures.testenv;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.kinotic.structures.ElasticsearchTestBase;
-import org.kinotic.structures.api.domain.AlreadyExistsException;
-import org.kinotic.structures.api.domain.Structure;
-import org.kinotic.structures.api.domain.Trait;
-import org.kinotic.structures.api.services.ItemService;
-import org.kinotic.structures.api.services.StructureService;
-import org.kinotic.structures.api.services.TraitService;
+import org.kinotic.structures.util.StructureTestHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
-
-import java.io.IOException;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.Optional;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest
 public class GenerateData extends ElasticsearchTestBase {
 
     @Autowired
-    private ItemService itemService;
-    @Autowired
-    private TraitService traitService;
-    @Autowired
-    private StructureService structureService;
+    private StructureTestHelper structureTestHelper;
     
     @Test
     public void createData() {
@@ -84,60 +70,4 @@ public class GenerateData extends ElasticsearchTestBase {
 
     }
 
-    public Structure getComputerStructure() throws AlreadyExistsException, IOException {
-        Structure structure = new Structure();
-        structure.setId("Computer-" + System.currentTimeMillis());
-        structure.setDescription("Defines an Computer");
-
-        Optional<Trait> vpnIpOptional = traitService.getTraitByName("VpnIp");
-        Optional<Trait> ipOptional = traitService.getTraitByName("Ip");
-        Optional<Trait> macOptional = traitService.getTraitByName("Mac");
-
-        structure.getTraits().put("vpnIp", vpnIpOptional.get());
-        structure.getTraits().put("ip", ipOptional.get());
-        structure.getTraits().put("mac", macOptional.get());
-
-        structureService.save(structure);
-        structureService.publish(structure.getId());
-        return structure;
-    }
-
-    public Structure getDeviceStructure() throws AlreadyExistsException, IOException {
-        Structure structure = new Structure();
-        structure.setId("Device-" + System.currentTimeMillis());
-        structure.setDescription("Defines an Device");
-
-        Optional<Trait> vpnIpOptional = traitService.getTraitByName("VpnIp");
-        Optional<Trait> ipOptional = traitService.getTraitByName("Ip");
-        Optional<Trait> macOptional = traitService.getTraitByName("Mac");
-        Optional<Trait> textOptional = traitService.getTraitByName("KeywordString");
-
-        structure.getTraits().put("vpnIp", vpnIpOptional.get());
-        structure.getTraits().put("ip", ipOptional.get());
-        structure.getTraits().put("mac", macOptional.get());
-        structure.getTraits().put("generation", textOptional.get());
-        structure.getTraits().put("type", textOptional.get());
-
-        structureService.save(structure);
-        structureService.publish(structure.getId());
-        return structure;
-    }
-
-    public Structure getOfficeStructure() throws AlreadyExistsException, IOException {
-        Structure structure = new Structure();
-        structure.setId("Office-" + System.currentTimeMillis());
-        structure.setDescription("Defines a Office");
-
-        Optional<Trait> textOptional = traitService.getTraitByName("KeywordString");
-        Optional<Trait> objRefOptional = traitService.getTraitByName("ObjectReference");
-
-        structure.getTraits().put("partNumber", textOptional.get());
-        structure.getTraits().put("computer", objRefOptional.get());
-        structure.getTraits().put("device1", objRefOptional.get());
-        structure.getTraits().put("device2", objRefOptional.get());
-
-        structureService.save(structure);
-        structureService.publish(structure.getId());
-        return structure;
-    }
 }

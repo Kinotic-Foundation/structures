@@ -21,12 +21,14 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
+import org.springframework.data.elasticsearch.annotations.Setting;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.UUID;
 
-@Document(indexName = "referencelog", replicas = 2)
+@Document(indexName = "referencelog")
+@Setting(shards = 5, replicas = 2)
 public class ReferenceLog implements Serializable {
 
     @Id

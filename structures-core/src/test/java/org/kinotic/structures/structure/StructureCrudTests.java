@@ -17,9 +17,7 @@
 
 package org.kinotic.structures.structure;
 
-import org.elasticsearch.search.SearchHits;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.kinotic.structures.ElasticsearchTestBase;
@@ -29,14 +27,17 @@ import org.kinotic.structures.api.services.StructureService;
 import org.kinotic.structures.api.services.TraitService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Optional;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest
-public class CrudTests extends ElasticsearchTestBase {
+public class StructureCrudTests extends ElasticsearchTestBase {
 
     @Autowired
     private TraitService traitService;
@@ -50,7 +51,8 @@ public class CrudTests extends ElasticsearchTestBase {
 	public void createAndDeleteStructure() {
 		Assertions.assertThrows(NoSuchElementException.class, () -> {
 			Structure structure = new Structure();
-			structure.setId("Computer1-" + System.currentTimeMillis());
+			structure.setName("Computer1-" + System.currentTimeMillis());
+			structure.setNamespace("some_other_org_");
 			structure.setDescription("Defines the Computer Device properties");
 
 
@@ -74,10 +76,10 @@ public class CrudTests extends ElasticsearchTestBase {
 			} catch (Exception e) {
 				throw e;
 			} finally {
-				structureService.delete(structure.getId());
+				structureService.delete(saved.getId());
 			}
 
-			Optional<Structure> optional = structureService.getStructureById(structure.getId());
+			Optional<Structure> optional = structureService.getStructureById(saved.getId());
 			optional.get();// should throw if null
 		});
 	}
@@ -86,7 +88,8 @@ public class CrudTests extends ElasticsearchTestBase {
 	public void tryCreateDuplicateStructure(){
 		Assertions.assertThrows(AlreadyExistsException.class, () -> {
 			Structure structure = new Structure();
-			structure.setId("Computer2-" + System.currentTimeMillis());
+			structure.setName("Computer2-" + System.currentTimeMillis());
+			structure.setNamespace("some_other_org_");
 			structure.setDescription("Defines the Computer Device properties");
 
 
@@ -99,13 +102,64 @@ public class CrudTests extends ElasticsearchTestBase {
 			structure.getTraits().put("mac", macOptional.get());
 			// should also get createdTime, updateTime, and deleted by default
 
-			structureService.save(structure);
+			structure = structureService.save(structure);
+			String structureId = structure.getId(); // save for later deletion
 			try {
+				structure.setId("");
 				structure.setCreated(0);
 				structure.setUpdated(0L);
 				structureService.save(structure);
 			} catch (AlreadyExistsException aee) {
 				throw aee;
+			} finally {
+				structureService.delete(structureId);
+			}
+		});
+	}
+
+
+	@Test
+	public void tryCreateUpdateStructure_WithoutGettingFreshFromDb(){
+		Assertions.assertThrows(OptimisticLockingFailureException.class, () -> {
+			Structure structure = new Structure();
+			structure.setName("Computer42-" + System.currentTimeMillis());
+			structure.setNamespace("some_other_org_");
+			structure.setDescription("Defines the Computer Device properties");
+
+
+			Optional<Trait> vpnIpOptional = traitService.getTraitByName("VpnIp");
+			Optional<Trait> ipOptional = traitService.getTraitByName("Ip");
+			Optional<Trait> macOptional = traitService.getTraitByName("Mac");
+
+			structure.getTraits().put("vpnIp", vpnIpOptional.get());
+			structure.getTraits().put("ip", ipOptional.get());
+			structure.getTraits().put("mac", macOptional.get());
+			// should also get createdTime, updateTime, and deleted by default
+
+			structure = structureService.save(structure);
+
+			Structure clone = new Structure();// break pass by reference chain
+			clone.setId(structure.getId());
+			clone.setDescription(structure.getDescription());
+			clone.setCreated(structure.getCreated());
+			clone.setPublished(structure.isPublished());
+			clone.setPublishedTimestamp(structure.getPublishedTimestamp());
+			clone.setName(structure.getName());
+			clone.setNamespace(structure.getNamespace());
+			clone.setTraits(structure.getTraits());
+			clone.setMetadata(structure.getMetadata());
+			clone.setUpdated(structure.getUpdated());
+
+			structure.setDescription("Some New Description");
+			structure = structureService.save(structure);// make sure our updated field has new value
+
+			Assertions.assertTrue(structure.getUpdated() > clone.getUpdated(), "Updated Structure did not get new updated time value");
+
+			try {
+				clone.setDescription("Should Fail because this object is out of sync with db");
+				structureService.save(clone);
+			} catch (OptimisticLockingFailureException olfe) {
+				throw olfe;
 			} finally {
 				structureService.delete(structure.getId());
 			}
@@ -115,7 +169,8 @@ public class CrudTests extends ElasticsearchTestBase {
 	@Test
 	public void addToTraitMapNotPublishedAndValidate() throws AlreadyExistsException, IOException, PermenentTraitException {
 		Structure structure = new Structure();
-		structure.setId("Computer3-" + System.currentTimeMillis());
+		structure.setName("Computer3-" + System.currentTimeMillis());
+		structure.setNamespace("some_other_org_");
 		structure.setDescription("Defines the Computer Device properties");
 
 
@@ -127,7 +182,7 @@ public class CrudTests extends ElasticsearchTestBase {
 		structure.getTraits().put("ip", ipOptional.get());
 		// should also get createdTime, updateTime, and deleted by default
 
-		structureService.save(structure);
+		structure = structureService.save(structure);
 
 		try {
 
@@ -172,7 +227,8 @@ public class CrudTests extends ElasticsearchTestBase {
 	@Test
 	public void addToTraitMapAlreadyPublishedAndValidate() throws AlreadyExistsException, IOException, PermenentTraitException {
 		Structure structure = new Structure();
-		structure.setId("Computer4-" + System.currentTimeMillis());
+		structure.setName("Computer4-" + System.currentTimeMillis());
+		structure.setNamespace("some_other_org_");
 		structure.setDescription("Defines the Computer Device properties");
 
 
@@ -184,7 +240,7 @@ public class CrudTests extends ElasticsearchTestBase {
 		structure.getTraits().put("ip", ipOptional.get());
 		// should also get createdTime, updateTime, and deleted by default
 
-		structureService.save(structure);
+		structure = structureService.save(structure);
 
 		try {
 
@@ -231,7 +287,8 @@ public class CrudTests extends ElasticsearchTestBase {
 	@Test
 	public void publishAndDeleteAStructure() throws AlreadyExistsException, IOException, PermenentTraitException {
 		Structure structure = new Structure();
-		structure.setId("Computer9-" + System.currentTimeMillis());
+		structure.setName("Computer9-" + System.currentTimeMillis());
+		structure.setNamespace("some_other_org_");
 		structure.setDescription("Defines the Computer Device properties");
 
 
@@ -244,7 +301,7 @@ public class CrudTests extends ElasticsearchTestBase {
 		structure.getTraits().put("mac", macOptional.get());
 		// should also get createdTime, updateTime, and deleted by default
 
-		structureService.save(structure);
+		structure = structureService.save(structure);
 
 		structureService.publish(structure.getId());
 
@@ -255,7 +312,8 @@ public class CrudTests extends ElasticsearchTestBase {
 	public void publishAndDeleteAStructureWithAnItem() {
 		Assertions.assertThrows(IllegalStateException.class, () -> {
 			Structure structure = new Structure();
-			structure.setId("Computer10-" + System.currentTimeMillis());
+			structure.setName("Computer10-" + System.currentTimeMillis());
+			structure.setNamespace("some_other_org_");
 			structure.setDescription("Defines the Computer Device properties");
 
 
@@ -268,7 +326,7 @@ public class CrudTests extends ElasticsearchTestBase {
 			structure.getTraits().put("mac", macOptional.get());
 			// should also get createdTime, updateTime, and deleted by default
 
-			structureService.save(structure);
+			structure = structureService.save(structure);
 			structureService.publish(structure.getId());
 
 			// now we can create an item with the above fields

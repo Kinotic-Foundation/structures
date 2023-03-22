@@ -27,8 +27,11 @@
                           'items-per-page-options':options.rowsPerPageItems
                         }" >
 
-                    <template v-slot:item.id="{ item }">
-                        {{ item.structure.id }}
+                    <template v-slot:item.name="{ item }">
+                        {{ item.structure.name }}
+                    </template>
+                    <template v-slot:item.namespace="{ item }">
+                        {{ item.structure.namespace }}
                     </template>
                     <template v-slot:item.description="{ item }">
                         {{ item.structure.description }}
@@ -178,11 +181,23 @@
                                         </v-alert>
                                         <v-list-item>
                                             <v-list-item-content>
-                                                <v-text-field v-model="editedItem.structure.id"
-                                                              label="Structure Name"
+                                                <v-text-field v-model="editedItem.structure.name"
+                                                              label="Name"
                                                               autofocus
                                                               :error-messages="nameErrorMessage"
-                                                              :readonly="editedItem.structure.published"></v-text-field>
+                                                              :readonly="editedItem.structure.published"
+                                                              @keydown.space.prevent >
+                                                </v-text-field>
+                                            </v-list-item-content>
+                                        </v-list-item>
+                                        <v-list-item>
+                                            <v-list-item-content>
+                                                <v-text-field v-model="editedItem.structure.namespace"
+                                                              label="Namespace"
+                                                              :error-messages="namespaceErrorMessage"
+                                                              :readonly="editedItem.structure.published"
+                                                              @keydown.space.prevent >
+                                                </v-text-field>
                                             </v-list-item-content>
                                         </v-list-item>
                                         <v-list-item>
@@ -212,7 +227,7 @@
                                         <v-subheader>Configured Traits - Sortable</v-subheader>
                                         <v-list-item>
                                             <v-list-item-content>
-                                                <v-simple-table :key="editedItem.structure.id" >
+                                                <v-simple-table>
                                                     <template v-slot:default>
                                                         <thead>
                                                         <tr>
@@ -287,8 +302,10 @@
                                         </v-subheader>
                                         <v-list-item>
                                             <v-list-item-content>
-                                                <v-text-field v-model="newTraitName"
+                                                <v-text-field ref="traitCreation"
+                                                              v-model="newTraitName"
                                                               label="Trait Field Name"
+                                                              autofocus
                                                               :error-messages="traitFieldNameErrorMessage"
                                                               @keydown.space.prevent>
                                                 </v-text-field>
@@ -390,14 +407,17 @@ export default class Traits extends Vue {
     public newTrait: Trait = new Trait("","","","","",0,0,true,true,true,true)
     public dummyTrait: Trait = new Trait("","","","","",0,0,true,true,true,true)
     public defaultTraits: TraitHolder[] = []
-    public editedItem: StructureHolder = new StructureHolder(new Structure("","",0,false,0, false,0,new Map<string, Trait>(),new Map<string, string>(),0),this.defaultTraits)
+    public editedItem: StructureHolder = new StructureHolder(new Structure("","", "",0,false,0, "", false,0,new Map<string, Trait>(),new Map<string, string>(),0),this.defaultTraits)
     public structureChanged: boolean = false
     public publishingId: string = ""
     public requireIdForEditedItem: boolean = false
 
     public nameErrorMessage: string = ""
+    public namespaceErrorMessage: string = ""
     public traitFieldNameErrorMessage: string = ""
     public serverErrors: string = ""
+    public illegalStructureNameChars: RegExp = new RegExp(/[.][.]|[\\][\\]|[/]|[*]|[?]|[\\]|<|>|[|]|[ ]|[,]|[#]|[:]|[;]|[+]|[=]|[(]|[)]|[{]|[}]/)
+
 
     public options: any = {
         mustSort: true,
@@ -413,6 +433,7 @@ export default class Traits extends Vue {
     public headers: any = [
         { text: '', value: 'data-table-expand', sortable: false },
         { text: 'Id',align: 'left',value: 'id'},
+        { text: 'Namespace',align: 'left',value: 'namespace'},
         { text: 'Description', value: 'description', sortable: false },
         { text: 'Created', value: 'created' },
         { text: 'Last Updated', value: 'updated' },
@@ -523,10 +544,11 @@ export default class Traits extends Vue {
         })
     }
 
-    public getAllTraits(){
+    public async getAllTraits(){
         // FIXME: this could be turned into a smart select with autocomplete
         // or we need to get all pages
-        this.traitManager.getAll(100, 0, "name", true).then((returnedItems: any) => {
+        try {
+            let returnedItems: any = await this.traitManager.getAll(100, 0, "name", true)
             this.traits.length = 0
             this.defaultTraits.length = 0
 
@@ -543,17 +565,17 @@ export default class Traits extends Vue {
                     return true
                 }
             })
-            this.editedItem = new StructureHolder(new Structure("","",0,false,0, false,0,new Map<string, Trait>(),new Map<string, string>(),0),this.defaultTraits)
-        })
-        .catch((error: any) => {
+            this.editedItem = new StructureHolder(new Structure("", "", "",0,false,0, "", false,0,new Map<string, Trait>(),new Map<string, string>(),0),this.defaultTraits)
+        }catch (error: any){
             console.log(error.stack)
             this.serverErrors = error.message
-        })
+        }
     }
 
-    public getAll() {
-        this.loading = true
-        this.structureManager.getAll(this.options.itemsPerPage, this.options.page-1, this.options.sortBy[0], this.options.sortDesc[0]).then((returnedItems: any) => {
+    public async getAll() {
+        try {
+            this.loading = true
+            let returnedItems: any = await this.structureManager.getAll(this.options.itemsPerPage, this.options.page-1, this.options.sortBy[0], this.options.sortDesc[0])
             this.loading = false
             this.options.totalItems = returnedItems.totalElements
             this.items.length = 0 // reset the list
@@ -564,9 +586,7 @@ export default class Traits extends Vue {
                     this.finishedInitialLoad = true
                 }, 500)
             }
-
-        })
-        .catch((error: any) => {
+        }catch (error: any){
             this.loading = false
             console.log(error.stack)
             this.serverErrors = error.message
@@ -576,7 +596,7 @@ export default class Traits extends Vue {
                     this.finishedInitialLoad = true
                 }, 500)
             }
-        })
+        }
     }
 
     public async addNewTrait(name: string, trait: Trait){
@@ -621,6 +641,8 @@ export default class Traits extends Vue {
         this.newTrait = new Trait("","","","","",0,0,true,true,true,true)
         this.dummyTrait = new Trait("","","","","",0,0,true,true,true,true)
         this.traitFieldNameErrorMessage = ""
+        let ref: any = this.$refs["traitCreation"] as any
+        ref.$refs.input.focus()
     }
 
     public async publish(item: StructureHolder){
@@ -628,8 +650,8 @@ export default class Traits extends Vue {
             try {
                 this.publishingId = item.structure.id
                 await this.structureManager.publish(item.structure.id)
-                this.getAllTraits()
-                this.getAll()// get updated list
+                await this.getAllTraits()
+                await this.getAll()// get updated list
                 this.publishingId = ""
             }catch (error: any){
                 this.publishingId = ""
@@ -671,8 +693,8 @@ export default class Traits extends Vue {
                 this.options.totalItems--
                 if((this.options.totalItems/this.options.itemsPerPage) < this.options.page && this.options.page > 1){
                     this.options.page--
-                    this.getAllTraits()
-                    this.getAll()
+                    await this.getAllTraits()
+                    await this.getAll()
                 }
             }catch(error: any){
                 console.log(error.stack)
@@ -702,25 +724,32 @@ export default class Traits extends Vue {
         }
     }
 
-    public async save() {
-        this.nameErrorMessage = ""
-        let illegalStructureNameChars: RegExp = new RegExp(/[.]|[.][.]|[\\][\\]|[/]|[*]|[?]|[\\]|<|>|[|]|[ ]|[,]|[#]|[:]|[;]|[+]|[=]|[(]|[)]|[{]|[}]/)
-
-        if(this.editedItem.structure.id.length === 0) {
-            this.nameErrorMessage = "This field is required"
-        }else if(this.editedItem.structure.id.length >= 255){
-            this.nameErrorMessage = "Id must be less than 255 characters"
-        }else if(this.editedItem.structure.id.charAt(0) === '_') {
-            this.nameErrorMessage = "Id must not start with _"
-        }else if(this.editedItem.structure.id.charAt(0) === '-'){
-            this.nameErrorMessage = "Id must not start with -"
-        }else if(this.editedItem.structure.id.charAt(0) === '+') {
-            this.nameErrorMessage = "Id must not start with +"
-        }else if(illegalStructureNameChars.test(this.editedItem.structure.id)){
-            this.nameErrorMessage = 'Id must not contain these characters . .. \\ / * ? \ < > | , # : ; + = ( ) { } or spaces'
+    private checkNameAndNamespace(value: string, reference: string): string {
+        let ret: string = ""
+        if(value.length === 0) {
+            ret = "This field is required"
+        }else if(value.length >= 255){
+            ret = `${reference} must be less than 255 characters`
+        }else if(value.charAt(0) === '_') {
+            ret = `${reference} must not start with _`
+        }else if(value.charAt(0) === '-'){
+            ret = `${reference} must not start with -`
+        }else if(value.charAt(0) === '+') {
+            ret = `${reference} must not start with +`
+        }else if(value.charAt(0) === '.') {
+            ret = `${reference} must not start with .`
+        }else if(this.illegalStructureNameChars.test(value)){
+            ret = `${reference} must not contain these characters .. \\ / * ? \ < > | , # : ; + = ( ) { } or spaces`
         }
+        return ret
+    }
 
-        if(this.nameErrorMessage.length === 0){
+    public async save() {
+        this.nameErrorMessage = this.checkNameAndNamespace(this.editedItem.structure.name, "Name")
+        this.namespaceErrorMessage = this.checkNameAndNamespace(this.editedItem.structure.namespace, "Namespace")
+        this.serverErrors = this.checkNameAndNamespace(this.editedItem.structure.namespace+this.editedItem.structure.name, "Index Name, namespace+name,")
+
+        if(this.nameErrorMessage.length === 0 && this.namespaceErrorMessage.length === 0 && this.serverErrors.length === 0){
             // NOTE: save once published only saves the description
             let list: TraitHolder[] = []
             let order: number = 0

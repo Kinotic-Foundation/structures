@@ -17,7 +17,6 @@
 
 package org.kinotic.structures.structure;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.kinotic.structures.ElasticsearchTestBase;
@@ -32,8 +31,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.io.IOException;
-import java.util.Collections;
-import java.util.LinkedList;
 import java.util.Map;
 import java.util.Optional;
 
@@ -50,7 +47,8 @@ public class TraitReorderTests extends ElasticsearchTestBase {
     @Test
     public void addToTraitAndMoveBeforeFirst() throws AlreadyExistsException, IOException, PermenentTraitException {
         Structure structure = new Structure();
-        structure.setId("Computer5-" + System.currentTimeMillis());
+        structure.setName("Computer5-" + System.currentTimeMillis());
+        structure.setNamespace("org-kinotic-");
         structure.setDescription("Defines the Computer Device properties");
 
 
@@ -147,7 +145,8 @@ public class TraitReorderTests extends ElasticsearchTestBase {
     @Test
     public void addToTraitAndMoveAfterLast() throws AlreadyExistsException, IOException, PermenentTraitException {
         Structure structure = new Structure();
-        structure.setId("Computer6-" + System.currentTimeMillis());
+        structure.setName("Computer6-" + System.currentTimeMillis());
+        structure.setNamespace("org-kinotic-");
         structure.setDescription("Defines the Computer Device properties");
 
 

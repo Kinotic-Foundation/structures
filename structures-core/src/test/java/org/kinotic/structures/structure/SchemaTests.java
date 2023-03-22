@@ -17,7 +17,6 @@
 
 package org.kinotic.structures.structure;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.kinotic.structures.ElasticsearchTestBase;
@@ -32,8 +31,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.io.IOException;
-import java.util.Collections;
-import java.util.LinkedList;
 import java.util.Optional;
 
 @ExtendWith(SpringExtension.class)
@@ -49,7 +46,8 @@ public class SchemaTests extends ElasticsearchTestBase {
     @Test
     public void validateJsonSchemaGeneration() throws AlreadyExistsException, IOException, PermenentTraitException {
         Structure structure = new Structure();
-        structure.setId("Computer11-" + System.currentTimeMillis());
+        structure.setName("Computer11-" + System.currentTimeMillis());
+        structure.setNamespace("some_other_org_");
         structure.setDescription("Defines the Computer Device properties");
 
 
@@ -67,7 +65,7 @@ public class SchemaTests extends ElasticsearchTestBase {
         String jsonSchema = structureService.getJsonSchema(saved);
         System.out.println(jsonSchema);
 
-        structureService.delete(structure.getId());
+        structureService.delete(saved.getId());
 
         if (saved.getTraits().size() != 9) {
             throw new IllegalStateException("We should have 9 traits, 6 given by default. We have " + saved.getTraits().size());
@@ -78,7 +76,8 @@ public class SchemaTests extends ElasticsearchTestBase {
     @Test
     public void validateElasticSearchMappingGeneration() throws AlreadyExistsException, IOException, PermenentTraitException {
         Structure structure = new Structure();
-        structure.setId("Computer12-" + System.currentTimeMillis());
+        structure.setName("Computer12-" + System.currentTimeMillis());
+        structure.setNamespace("some_other_org_");
         structure.setDescription("Defines the Computer Device properties");
 
 
@@ -96,7 +95,7 @@ public class SchemaTests extends ElasticsearchTestBase {
         String esSchema = structureService.getElasticSearchBaseMapping(saved);
         System.out.println(esSchema);
 
-        structureService.delete(structure.getId());
+        structureService.delete(saved.getId());
 
         if (saved.getTraits().size() != 9) {
             throw new IllegalStateException("We should have 9 traits, 6 given by default. We have " + saved.getTraits().size());

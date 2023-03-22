@@ -17,26 +17,26 @@
 
 package org.kinotic.structures.item;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.kinotic.structures.ElasticsearchTestBase;
-import org.kinotic.structures.api.domain.*;
+import org.kinotic.structures.api.domain.AlreadyExistsException;
+import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.api.domain.Trait;
+import org.kinotic.structures.api.domain.TypeCheckMap;
 import org.kinotic.structures.api.services.ItemService;
 import org.kinotic.structures.api.services.StructureService;
 import org.kinotic.structures.api.services.TraitService;
+import org.kinotic.structures.util.StructureTestHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
-import java.io.IOException;
-import java.util.Collections;
-import java.util.LinkedList;
 import java.util.Optional;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest
-public class CrudTests extends ElasticsearchTestBase {
+public class ItemCrudTests extends ElasticsearchTestBase {
 
     @Autowired
     private ItemService itemService;
@@ -44,28 +44,19 @@ public class CrudTests extends ElasticsearchTestBase {
     private TraitService traitService;
     @Autowired
     private StructureService structureService;
+    @Autowired
+    private StructureTestHelper structureTestHelper;
 
     @Test
     public void createAndDeleteItem() throws Exception {
 
-        Structure structure = new Structure();
-        structure.setId("Item1-" + String.valueOf(System.currentTimeMillis()));
-        structure.setDescription("Defines an Item1");
-
-        Optional<Trait> ipOptional = traitService.getTraitByName("Ip");
-        Optional<Trait> macOptional = traitService.getTraitByName("Mac");
-
-        structure.getTraits().put("ip", ipOptional.get());
-        structure.getTraits().put("mac", macOptional.get());
-        // should also get createdTime, updateTime, and deleted by default
+        Structure structure = structureTestHelper.getSimpleItemStructure();
 
         // now we can create an item with the above fields
         TypeCheckMap obj = new TypeCheckMap();
         obj.put("ip", "192.0.2.11");
         obj.put("mac", "000000000001");
 
-        structureService.save(structure);
-        structureService.publish(structure.getId());
         TypeCheckMap saved = itemService.upsertItem(structure.getId(), obj);
 
         Thread.sleep(1000);// give time for ES to flush the new item
@@ -82,25 +73,13 @@ public class CrudTests extends ElasticsearchTestBase {
     @Test
     public void createAndupsertItem() throws Exception {
 
-        Structure structure = new Structure();
-        structure.setId("Item3-" + String.valueOf(System.currentTimeMillis()));
-        structure.setDescription("Defines an Item1");
-
-
-        Optional<Trait> ipOptional = traitService.getTraitByName("Ip");
-        Optional<Trait> macOptional = traitService.getTraitByName("Mac");
-
-        structure.getTraits().put("ip", ipOptional.get());
-        structure.getTraits().put("mac", macOptional.get());
-        // should also get createdTime, updateTime, and deleted by default
+        Structure structure = structureTestHelper.getSimpleItemStructure();
 
         // now we can create an item with the above fields
         TypeCheckMap obj = new TypeCheckMap();
         obj.put("ip", "192.0.2.11");
         obj.put("mac", "000000000001");
 
-        structureService.save(structure);
-        structureService.publish(structure.getId());
         TypeCheckMap saved = itemService.upsertItem(structure.getId(), obj);
 
         try {
@@ -139,7 +118,8 @@ public class CrudTests extends ElasticsearchTestBase {
     public void validatePrimaryKeyWithTwoFields() throws Exception {
 
         Structure structure = new Structure();
-        structure.setId("Item3-" + System.currentTimeMillis());
+        structure.setName("Item3-" + System.currentTimeMillis());
+        structure.setNamespace("my.funky-Namespace_");
         structure.setDescription("Defines an Person");
 
         Optional<Trait> stateOptional = traitService.getTraitByName("KeywordString");
@@ -165,7 +145,7 @@ public class CrudTests extends ElasticsearchTestBase {
         obj.put("lastName", "Polo");
         obj.put("id", "nevada-las_vegas-111_las_vegas_blvd");
 
-        structureService.save(structure);
+        structure = structureService.save(structure);
         structureService.publish(structure.getId());
         TypeCheckMap saved = itemService.upsertItem(structure.getId(), obj);
 
@@ -212,26 +192,15 @@ public class CrudTests extends ElasticsearchTestBase {
 
     @Test
     public void upsertItemThenAddFieldAndupsertItem() throws Exception {
-        Structure structure = new Structure();
-        structure.setId("Item4-" + String.valueOf(System.currentTimeMillis()));
-        structure.setDescription("Defines an Item1");
 
-
-        Optional<Trait> vpnIpOptional = traitService.getTraitByName("VpnIp");
-        Optional<Trait> ipOptional = traitService.getTraitByName("Ip");
-        Optional<Trait> macOptional = traitService.getTraitByName("Mac");
-
-        structure.getTraits().put("vpnIp", vpnIpOptional.get());
-        structure.getTraits().put("ip", ipOptional.get());
-        // should also get createdTime, updateTime, and deleted by default
+        Structure structure = structureTestHelper.getSimpleItemStructure();
 
         // now we can create an item with the above fields
         TypeCheckMap obj = new TypeCheckMap();
         obj.put("ip", "192.0.2.101");
         obj.put("vpnIp", "10.0.2.101");
+        obj.put("mac", "000000000001");
 
-        structureService.save(structure);
-        structureService.publish(structure.getId());
         TypeCheckMap saved = itemService.upsertItem(structure.getId(), obj);
 
         try {
@@ -243,16 +212,16 @@ public class CrudTests extends ElasticsearchTestBase {
                 throw new IllegalStateException("ip provided to Item apon saving and getting are not what was expected.");
             }
 
+            Optional<Trait> wifiMacOptional = traitService.getTraitByName("Mac");
+            structureService.addTraitToStructure(structure.getId(), "wifiMac", wifiMacOptional.get());
 
-            structureService.addTraitToStructure(structure.getId(), "mac", macOptional.get());
-
-            saved.put("mac", "aaaaddddrrrr");
+            saved.put("wifiMac", "aaaaddddrrrr");
 
             itemService.upsertItem(structure.getId(), saved);
 
             saved = itemService.getItemById(structure.getId(), saved.getString("id")).get();
 
-            if (!saved.getString("mac").equals("aaaaddddrrrr")) {
+            if (!saved.getString("wifiMac").equals("aaaaddddrrrr")) {
                 throw new IllegalStateException("Data provided to Item apon saving and getting");
             }
 
@@ -270,25 +239,14 @@ public class CrudTests extends ElasticsearchTestBase {
 
     @Test
     public void upsertItemThenPerformPartialUpdate() throws Exception {
-        Structure structure = new Structure();
-        structure.setId("Item5-" + String.valueOf(System.currentTimeMillis()));
-        structure.setDescription("Defines an Item1");
 
-        Trait ipOptional = traitService.getTraitByName("Ip").get();
-        ipOptional.setRequired(false);
-        Optional<Trait> macOptional = traitService.getTraitByName("Mac");
-
-        structure.getTraits().put("ip", ipOptional);
-        structure.getTraits().put("mac", macOptional.get());
-        // should also get createdTime, updateTime, and deleted by default
+        Structure structure = structureTestHelper.getSimpleItemStructure();
 
         // now we can create an item with the above fields
         TypeCheckMap obj = new TypeCheckMap();
         obj.put("ip", "192.0.2.101");
         obj.put("mac", "111111111111");
 
-        structureService.save(structure);
-        structureService.publish(structure.getId());
         TypeCheckMap saved = itemService.upsertItem(structure.getId(), obj);
 
         try {
@@ -304,6 +262,7 @@ public class CrudTests extends ElasticsearchTestBase {
             TypeCheckMap partial = new TypeCheckMap();
             partial.put("id", saved.getString("id"));// required to update
             partial.put("mac", "aaaaddddrrrr");
+            partial.put("ip", "192.0.2.101");
 
             itemService.upsertItem(structure.getId(), partial);
 

@@ -3,7 +3,6 @@ package org.kinotic.structures;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;
-import org.kinotic.continuum.api.annotations.EnableContinuum;
 import org.kinotic.structures.api.domain.AlreadyExistsException;
 import org.kinotic.structures.api.domain.PermenentTraitException;
 import org.kinotic.structures.api.domain.Trait;
@@ -31,7 +30,6 @@ public abstract class ElasticsearchTestBase {
             temp.setDescribeTrait("VpnIp address that the devices should be provided on the VLAN.");
             temp.setSchema("{ \"type\": \"string\", \"format\": \"ipv4\" }");
             temp.setEsSchema("{ \"type\": \"ip\" }");
-            temp.setRequired(true);
             traitService.save(temp);
         }
     }
