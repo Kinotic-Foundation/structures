@@ -2,7 +2,6 @@ package org.kinotic.structuresserver.controllers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.elasticsearch.search.SearchHits;
-import org.kinotic.structures.api.domain.NotFoundException;
 import org.kinotic.structures.api.domain.TypeCheckMap;
 import org.kinotic.structures.api.services.ItemService;
 import org.springframework.http.MediaType;
@@ -10,7 +9,6 @@ import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,6 +18,7 @@ import java.util.Optional;
  * Created by Navíd Mitchell 🤪 on 3/18/23.
  */
 @RestController
+// Currently this is the only path that is secured
 @RequestMapping("/api")
 public class StructureItemController {
 
@@ -38,6 +37,22 @@ public class StructureItemController {
         return Mono.defer(() -> {
             try {
                 SearchHits searchHits = itemService.getAll(structureId, size, page);
+                String json = objectMapper.writeValueAsString(searchHits);
+                return Mono.just(json);
+            } catch (Exception e) {
+                return Mono.error(e);
+            }
+        }).subscribeOn(Schedulers.boundedElastic());
+    }
+
+    @PostMapping(value = "/{structureId}/search", produces = MediaType.APPLICATION_JSON_VALUE)
+    public Mono<String> listItems(@PathVariable String structureId,
+                                  @RequestBody String search,
+                                  @RequestParam(required = false, defaultValue = "0") int page,
+                                  @RequestParam(required = false, defaultValue = "25") int size) {
+        return Mono.defer(() -> {
+            try {
+                SearchHits searchHits = itemService.search(structureId, search, size, page);
                 String json = objectMapper.writeValueAsString(searchHits);
                 return Mono.just(json);
             } catch (Exception e) {

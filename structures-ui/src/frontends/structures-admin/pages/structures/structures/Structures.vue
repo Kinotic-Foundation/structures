@@ -329,7 +329,7 @@
                                     </v-list>
                                     <v-card-actions>
                                         <v-spacer></v-spacer>
-                                        <v-btn color="blue darken-1" text @click="closeTraitDialog">Cancel</v-btn>
+                                        <v-btn color="blue darken-1" text @click="closeTraitDialog">Done</v-btn>
                                         <v-btn color="blue darken-1" text @click="addNewTrait(newTraitName, newTrait)" :disabled="newTraitName.length === 0 || newTrait.created === 0">Add Trait</v-btn>
                                     </v-card-actions>
                                 </v-card>

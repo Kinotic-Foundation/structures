@@ -8,6 +8,8 @@ import io.swagger.v3.oas.models.parameters.Parameter;
 import io.swagger.v3.oas.models.parameters.RequestBody;
 import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.responses.ApiResponses;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
+import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.kinotic.continuum.api.jsonSchema.JsonSchema;
 import org.kinotic.continuum.api.jsonSchema.*;
 import org.kinotic.continuum.api.jsonSchema.datestyles.MillsDateStyle;
@@ -56,8 +58,16 @@ public class DefaultOpenApiService implements OpenApiService {
 //        servers.add(new Server().url("http://127.0.0.1:8090"));
 //        openAPI.setServers(servers);
 
-        Structures structures = structureManager.getAllPublished(100, 0, "id", false);
         Components components = new Components();
+
+        // security scheme
+        SecurityScheme securityScheme = new SecurityScheme();
+        securityScheme.setType(SecurityScheme.Type.HTTP);
+        securityScheme.setScheme("basic");
+        components.addSecuritySchemes("BasicAuth", securityScheme);
+        openAPI.setSecurity(List.of(new SecurityRequirement().addList("BasicAuth")));
+
+        Structures structures = structureManager.getAllPublished(100, 0, "id", false);
         Paths paths = new Paths();
         for(StructureHolder structureHolder : structures.getContent()){
             Structure structure = structureHolder.getStructure();
@@ -152,6 +162,32 @@ public class DefaultOpenApiService implements OpenApiService {
 
         paths.put("/api/"+structure.getId()+"/{id}", byIdPathItem);
 
+        // Create a path item for all the operations with "/api/"+structure.getId()+"/search"
+        PathItem searchPathItem = new PathItem();
+        Operation searchOperation = createOperation("Search "+structure.getId(),
+                                                    "search"+structure.getId(),
+                                                    structure.getId(),
+                                                    2);
+
+        searchOperation.addParametersItem(new Parameter().name("page")
+                                                         .in("query")
+                                                         .description("The page number to get")
+                                                         .required(false)
+                                                         .schema(new IntegerSchema()._default(0)));
+
+        searchOperation.addParametersItem(new Parameter().name("size")
+                                                         .in("query")
+                                                         .description("The number of items per page")
+                                                         .required(false)
+                                                         .schema(new IntegerSchema()._default(25)));
+
+        RequestBody searchRequestBody = new RequestBody()
+                .content(new Content().addMediaType("text/plain",
+                                                    new MediaType().schema(new StringSchema())));
+        searchOperation.requestBody(searchRequestBody);
+
+        searchPathItem.post(searchOperation);
+        paths.put("/api/"+structure.getId()+"/search", searchPathItem);
     }
 
     private static Operation createOperation(String operationSummary,
@@ -160,6 +196,7 @@ public class DefaultOpenApiService implements OpenApiService {
                                              int responseType) {
 
         Operation operation = new Operation().summary(operationSummary)
+                                             .security(List.of(new SecurityRequirement().addList("BasicAuth")))
                                              .tags(List.of(structureId))
                                              .operationId(operationId);
 
