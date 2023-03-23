@@ -6,4 +6,3 @@ continuum:
   discovery: zookeeper
   debug: true
   eventBusClusterPort: 57100
-

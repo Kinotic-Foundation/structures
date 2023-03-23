@@ -2,16 +2,15 @@ spring:
   main:
     allow-circular-references: true
 
+structures:
+  elasticUseSsl: ${ELASTIC_USE_SSL}
+  elasticUris: "${ELASTIC_URIS}"
+  elasticConnectionTimeout: ${ELASTIC_CONNECTION_TIMEOUT}
+  elasticSocketTimeout: ${ELASTIC_SOCKET_TIMEOUT}
+  elasticUsername: "${ELASTIC_USERNAME}"
+  elasticPassword: "${ELASTIC_PASSWORD}"
+
 logging:
   level:
     org:
-      kinotic: DEBUG
-
-elastic:
-  hosts: localhost:9200
-  useSSL: false
-  user:
-  password:
-
-structures:
-  prefix:
+      kinotic: INFO

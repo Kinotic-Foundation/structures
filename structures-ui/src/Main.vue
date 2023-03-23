@@ -18,7 +18,7 @@
     public eventBus!: IEventBus
 
     public async mounted() {
-        // await this.eventBus.connect('ws://localhost:58503/v1', 'guest', 'guest')
+
     }
 
     public beforeDestroy() {

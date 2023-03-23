@@ -18,8 +18,7 @@
 package org.kinotic.structures.internal.config;
 
 import org.elasticsearch.client.RestHighLevelClient;
-import org.springframework.beans.factory.InitializingBean;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -30,29 +29,16 @@ import org.springframework.data.elasticsearch.config.AbstractElasticsearchConfig
 import org.springframework.data.elasticsearch.repository.config.EnableElasticsearchRepositories;
 
 @Configuration
+@EnableConfigurationProperties
 @EnableElasticsearchRepositories(basePackages = "org.kinotic.structures.internal.repositories")
 @ComponentScan(basePackages = "org.kinotic.structures")
 @Profile("!test")
-public class StructuresConfiguration extends AbstractElasticsearchConfiguration implements InitializingBean {
-    static {
-        System.setProperty("es.set.netty.runtime.available.processors", "false");
-    }
+public class StructuresConfiguration extends AbstractElasticsearchConfiguration {
 
-    @Value("${elastic.hosts}")
-    private String hosts;
+    private StructuresProperties structuresProperties;
 
-    @Value("${elastic.useSSL}")
-    private boolean useSSL;
-
-    @Value("${elastic.user}")
-    private String user;
-
-    @Value("${elastic.password}")
-    private String password;
-
-    @Override
-    public void afterPropertiesSet() throws Exception {
-        // LOOK: use of InitBean and Static block is outlined here -> https://github.com/elastic/elasticsearch/issues/25741
+    public StructuresConfiguration(StructuresProperties structuresProperties){
+        this.structuresProperties = structuresProperties;
     }
 
     @Bean
@@ -60,18 +46,18 @@ public class StructuresConfiguration extends AbstractElasticsearchConfiguration 
     public RestHighLevelClient elasticsearchClient() {
         ClientConfiguration.MaybeSecureClientConfigurationBuilder builder
                 = ClientConfiguration.builder()
-                                     .connectedTo(hosts.split(","));
+                                     .connectedTo(structuresProperties.getElasticUris().split(","));
 
-        if(useSSL){
+        if(structuresProperties.isElasticUseSsl()){
             builder.usingSsl();
         }
 
-        if(user != null && !user.isEmpty()){
-            builder.withBasicAuth(user, password);
+        if(structuresProperties.getElasticUsername() != null && !structuresProperties.getElasticUsername().isBlank()){
+            builder.withBasicAuth(structuresProperties.getElasticUsername(), structuresProperties.getElasticPassword());
         }
 
-        builder.withConnectTimeout(60000)
-                .withSocketTimeout(60000);
+        builder.withConnectTimeout(structuresProperties.getElasticConnectionTimeout())
+                .withSocketTimeout(structuresProperties.getElasticSocketTimeout());
 
         return RestClients.create(builder.build()).rest();
     }

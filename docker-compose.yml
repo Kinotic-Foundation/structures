@@ -24,5 +24,11 @@ services:
       - "127.0.0.1:8989:8989"
     environment:
       SPRING_PROFILES_DEFAULT: docker
+      ELASTIC_USE_SSL: false
+      ELASTIC_URIS: "elasticsearch:9200"
+      ELASTIC_CONNECTION_TIMEOUT: 60s
+      ELASTIC_SOCKET_TIMEOUT: 60s
+      ELASTIC_USERNAME: ""
+      ELASTIC_PASSWORD: ""
     stdin_open: true # docker run -i
     tty: true        # docker run -t

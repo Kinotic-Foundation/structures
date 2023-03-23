@@ -17,9 +17,6 @@ import org.springframework.data.elasticsearch.repository.config.EnableElasticsea
 @ComponentScan(basePackages = "org.kinotic.structures")
 @Profile("test")
 public class TestElasticsearchConfiguration {
-    static {
-        System.setProperty("es.set.netty.runtime.available.processors", "false");
-    }
     public static final ElasticsearchTestContainer ELASTICSEARCH_CONTAINER;
     static {
         ELASTICSEARCH_CONTAINER = ElasticsearchTestContainer.create();

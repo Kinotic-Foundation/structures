@@ -9,5 +9,3 @@ logging:
     org:
       kinotic: DEBUG
 
-structures:
-  prefix:

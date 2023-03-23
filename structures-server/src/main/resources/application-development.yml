@@ -15,9 +15,10 @@ logging:
     io:
       vertx: TRACE
 
-elastic:
-  hosts: localhost:9200
-  useSSL: false
-  user:
-  password:
-
+structures:
+  elasticUseSsl: false
+  elasticUris: "localhost:9200"
+  elasticConnectionTimeout: 60s
+  elasticSocketTimeout: 60s
+  elasticUsername: ""
+  elasticPassword: ""
