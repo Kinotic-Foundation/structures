@@ -72,8 +72,8 @@ public class StructureItemController {
         }).subscribeOn(Schedulers.boundedElastic());
     }
 
-    @PostMapping("/bulk/{structureId}")
-    public void bulkUpsertItem(@PathVariable String structureId, @RequestBody List<Map<String, Object>> itemList) throws Exception {
+    @PostMapping("/{structureId}/bulk-upsert")
+    public Mono<Void> bulkUpsertItem(@PathVariable String structureId, @RequestBody List<Map<String, Object>> itemList) throws Exception {
         try {
             itemService.requestBulkUpdatesForStructure(structureId);
             itemList.forEach(item -> {
@@ -88,6 +88,7 @@ public class StructureItemController {
         } finally {
             itemService.flushAndCloseBulkUpdate(structureId);
         }
+        return Mono.empty().then();
     }
 
     @GetMapping("/{structureId}/{id}")

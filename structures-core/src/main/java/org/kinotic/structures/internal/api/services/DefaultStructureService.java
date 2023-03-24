@@ -396,7 +396,7 @@ public class DefaultStructureService implements StructureService {
 
     @Override
     public Optional<Structure> getStructureById(String id) throws IOException {
-        GetResponse response = highLevelClient.get(new GetRequest("structure").id(id), RequestOptions.DEFAULT);
+        GetResponse response = highLevelClient.get(new GetRequest("structure").id(id.toLowerCase()), RequestOptions.DEFAULT);
         Structure ret = null;
         if (response.isExists()) {
             ret = EsHighLevelClientUtil.getTypeFromBytesReference(response.getSourceAsBytesRef(), Structure.class);
@@ -448,7 +448,7 @@ public class DefaultStructureService implements StructureService {
 
     @Override
     public void delete(String structureId) throws IOException, PermenentTraitException {
-        Optional<Structure> optional = getStructureById(structureId);
+        Optional<Structure> optional = getStructureById(structureId.toLowerCase());
         //noinspection OptionalGetWithoutIsPresent
         Structure structure = optional.get();// will throw null pointer/element not available
 
@@ -490,7 +490,7 @@ public class DefaultStructureService implements StructureService {
 
     @Override
     public void publish(String structureId) throws IOException {
-        Optional<Structure> optional = getStructureById(structureId);
+        Optional<Structure> optional = getStructureById(structureId.toLowerCase());
         //noinspection OptionalGetWithoutIsPresent
         Structure structure = optional.get();// will throw null pointer/element not available
 
@@ -556,7 +556,7 @@ public class DefaultStructureService implements StructureService {
 
     @Override
     public void addTraitToStructure(String structureId, String fieldName, Trait newTrait) throws IOException {
-        Optional<Structure> optional = getStructureById(structureId);
+        Optional<Structure> optional = getStructureById(structureId.toLowerCase());
         //noinspection OptionalGetWithoutIsPresent
         Structure structure = optional.get();// will throw null pointer/element not available
 
@@ -583,7 +583,7 @@ public class DefaultStructureService implements StructureService {
 
     @Override
     public void insertTraitBeforeAnotherForStructure(String structureId, String movingTraitName, String insertBeforeTraitName) throws IOException {
-        Optional<Structure> optional = getStructureById(structureId);
+        Optional<Structure> optional = getStructureById(structureId.toLowerCase());
         //noinspection OptionalGetWithoutIsPresent
         Structure structure = optional.get();// will throw null pointer/element not available
 
@@ -623,7 +623,7 @@ public class DefaultStructureService implements StructureService {
 
     @Override
     public void insertTraitAfterAnotherForStructure(String structureId, String movingTraitName, String insertAfterTraitName) throws IOException {
-        Optional<Structure> optional = getStructureById(structureId);
+        Optional<Structure> optional = getStructureById(structureId.toLowerCase());
         //noinspection OptionalGetWithoutIsPresent
         Structure structure = optional.get();// will throw null pointer/element not available
 
@@ -663,7 +663,7 @@ public class DefaultStructureService implements StructureService {
     }
 
     private long count(String structureId) throws IOException {
-        Optional<Structure> optional = this.getStructureById(structureId);
+        Optional<Structure> optional = this.getStructureById(structureId.toLowerCase());
         //noinspection OptionalGetWithoutIsPresent
         Structure structure = optional.get();// will throw null pointer/element not available
 

@@ -126,10 +126,10 @@ public class DefaultOpenApiService implements OpenApiService {
 
         structurePathItem.post(createOperation);
 
-        paths.put("/api/"+structure.getName(), structurePathItem);
+        paths.put("/api/"+structure.getIndexName(), structurePathItem);
 
 
-        // Create a path item for all the operations with "/api/"+structure.getName()+"/{id}"
+        // Create a path item for all the operations with "/api/"+structure.getIndexName()+"/{id}"
         PathItem byIdPathItem = new PathItem();
 
         // Operation for get by id
@@ -160,7 +160,7 @@ public class DefaultOpenApiService implements OpenApiService {
 
         byIdPathItem.delete(deleteOperation);
 
-        paths.put("/api/"+structure.getName()+"/{id}", byIdPathItem);
+        paths.put("/api/"+structure.getIndexName()+"/{id}", byIdPathItem);
 
         // Create a path item for all the operations with "/api/"+structure.getName()+"/search"
         PathItem searchPathItem = new PathItem();
@@ -187,7 +187,25 @@ public class DefaultOpenApiService implements OpenApiService {
         searchOperation.requestBody(searchRequestBody);
 
         searchPathItem.post(searchOperation);
-        paths.put("/api/"+structure.getName()+"/search", searchPathItem);
+        paths.put("/api/"+structure.getIndexName()+"/search", searchPathItem);
+
+
+        // Create a path item for all the operations with "/api/"+structure.getName()+"/bulk-upsert"
+        PathItem bulkUpsertPathItem = new PathItem();
+        Operation bulkUpsertOperation = createOperation("Bulk Upsert "+structure.getName(),
+                "bulkUpsert"+structure.getName(),
+                structure.getName(),
+                0);
+
+        ArraySchema bulkUpsertSchema = new ArraySchema();
+        bulkUpsertSchema.items(refSchema);
+        RequestBody bulkUpsertRequestBody = new RequestBody()
+                .content(new Content().addMediaType("application/json",
+                        new MediaType().schema(bulkUpsertSchema)));
+        bulkUpsertOperation.requestBody(bulkUpsertRequestBody);
+
+        bulkUpsertPathItem.post(bulkUpsertOperation);
+        paths.put("/api/"+structure.getIndexName()+"/bulk-upsert", bulkUpsertPathItem);
     }
 
     private static Operation createOperation(String operationSummary,
