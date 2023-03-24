@@ -1,21 +1,31 @@
 <!doctype html>
 <html lang="en">
-  <head>
+<head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>Elements in HTML</title>
 
     <script src="https://unpkg.com/@stoplight/elements/web-components.min.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/@stoplight/elements/styles.min.css">
-  </head>
-  <body>
+</head>
+<body>
 
-    <elements-api
-      apiDescriptionUrl="api-docs/openapi.json"
-      router="hash"
-      hideTryIt="true"
-      tryItCredentialPolicy="same-origin"
-      ></elements-api>
+<elements-api
+        id="elementsApi"
+        router="hash"
+        hideTryIt="true"
+        tryItCredentialPolicy="same-origin"
+></elements-api>
 
-  </body>
+<script>
+    function getQueryParam(name) {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get(name);
+    }
+
+    const namespace = getQueryParam('namespace') || 'default';
+    const elementsApi = document.getElementById('elementsApi');
+    elementsApi.setAttribute('apiDescriptionUrl', `api-docs/${namespace}/openapi.json`);
+</script>
+</body>
 </html>

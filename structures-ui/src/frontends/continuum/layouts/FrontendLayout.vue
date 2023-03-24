@@ -42,10 +42,10 @@
                          :frontends="frontendState.frontends"
                          @frontend-selected="onFrontendSelected"/>
 
-      <v-btn href="/openapi-ui.html" target="_blank" flat >
-          <span class="mr-2">OpenAPI</span>
-          <v-icon>{{icons.window}}</v-icon>
-      </v-btn>
+<!--      <v-btn href="/openapi-ui.html" target="_blank" flat >-->
+<!--          <span class="mr-2">OpenAPI</span>-->
+<!--          <v-icon>{{icons.window}}</v-icon>-->
+<!--      </v-btn>-->
 
       <v-btn icon @click="toggleDarkMode">
         <v-icon>{{icons.toggleTheme}}</v-icon>

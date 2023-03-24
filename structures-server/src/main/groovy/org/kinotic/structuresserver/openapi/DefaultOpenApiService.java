@@ -45,13 +45,13 @@ public class DefaultOpenApiService implements OpenApiService {
     }
 
     @Override
-    public OpenAPI getOpenApiSpec() {
+    public OpenAPI getOpenApiSpec(String namespace) {
         OpenAPI openAPI = new OpenAPI();
 
         Info info = new Info()
-                .title("Structures API")
+                .title(namespace + " Structures API")
                 .version("1.0")
-                .description("Provides access to Structures Items");
+                .description("Provides access to Structures Items for the " + namespace + " namespace");
         openAPI.setInfo(info);
 
 //        List<Server> servers = new ArrayList<>();
@@ -67,7 +67,7 @@ public class DefaultOpenApiService implements OpenApiService {
         components.addSecuritySchemes("BasicAuth", securityScheme);
         openAPI.setSecurity(List.of(new SecurityRequirement().addList("BasicAuth")));
 
-        Structures structures = structureManager.getAllPublished(100, 0, "id", false);
+        Structures structures = structureManager.getAllPublished(100, 0, "name", false);
         Paths paths = new Paths();
         for(StructureHolder structureHolder : structures.getContent()){
             Structure structure = structureHolder.getStructure();
@@ -76,10 +76,10 @@ public class DefaultOpenApiService implements OpenApiService {
 
             //Now Add Schemas for the structure, one with all fields and one with only the input fields
             Schema<?> schema = getSchemaForStructureItem(structure, false);
-            components.addSchemas(structure.getId(), schema);
+            components.addSchemas(structure.getName(), schema);
 
             Schema<?> schemaInput = getSchemaForStructureItem(structure, true);
-            components.addSchemas(structure.getId()+"Input", schemaInput);
+            components.addSchemas(structure.getName()+"Input", schemaInput);
         }
         openAPI.setPaths(paths);
         openAPI.components(components);
@@ -89,12 +89,12 @@ public class DefaultOpenApiService implements OpenApiService {
 
     public void addPathItemsForStructure(Paths paths, Structure structure){
 
-        // Create a path item for all the operations with "/api/"+structure.getId()
+        // Create a path item for all the operations with "/api/"+structure.getName()
         PathItem structurePathItem = new PathItem();
 
-        Operation getAllOperation = createOperation("Get all "+structure.getId(),
-                                                    "getAll"+structure.getId(),
-                                                    structure.getId(),
+        Operation getAllOperation = createOperation("Get all "+structure.getName(),
+                                                    "getAll"+structure.getName(),
+                                                    structure.getName(),
                                                     2);
 
         getAllOperation.addParametersItem(new Parameter().name("page")
@@ -112,61 +112,61 @@ public class DefaultOpenApiService implements OpenApiService {
         structurePathItem.get(getAllOperation);
 
         // Request body for upsert operations
-        Schema<?> refSchema = new Schema<>().$ref(structure.getId()+"Input");
+        Schema<?> refSchema = new Schema<>().$ref(structure.getName()+"Input");
         RequestBody structureRequestBody = new RequestBody()
                 .content(new Content().addMediaType("application/json",
                                                     new MediaType().schema(refSchema)));
 
         // Operation for create
-        Operation createOperation = createOperation("Upsert "+structure.getId(),
-                                                    "upsert"+structure.getId(),
-                                                    structure.getId(),
+        Operation createOperation = createOperation("Upsert "+structure.getName(),
+                                                    "upsert"+structure.getName(),
+                                                    structure.getName(),
                                                     1);
         createOperation.requestBody(structureRequestBody);
 
         structurePathItem.post(createOperation);
 
-        paths.put("/api/"+structure.getId(), structurePathItem);
+        paths.put("/api/"+structure.getName(), structurePathItem);
 
 
-        // Create a path item for all the operations with "/api/"+structure.getId()+"/{id}"
+        // Create a path item for all the operations with "/api/"+structure.getName()+"/{id}"
         PathItem byIdPathItem = new PathItem();
 
         // Operation for get by id
-        Operation getByIdOperation = createOperation("Get "+structure.getId()+" by Id",
-                                                     "get"+structure.getId()+"ById",
-                                                     structure.getId(),
+        Operation getByIdOperation = createOperation("Get "+structure.getName()+" by Id",
+                                                     "get"+structure.getName()+"ById",
+                                                     structure.getName(),
                                                      1);
 
         getByIdOperation.addParametersItem(new Parameter().name("id")
                                                           .in("path")
-                                                          .description("The id of the "+structure.getId()+" to get")
+                                                          .description("The id of the "+structure.getName()+" to get")
                                                           .required(true)
                                                           .schema(new StringSchema()));
 
         byIdPathItem.get(getByIdOperation);
 
         // Operation for delete
-        Operation deleteOperation = createOperation("Delete "+structure.getId(),
-                                                    "delete"+structure.getId(),
-                                                    structure.getId(),
+        Operation deleteOperation = createOperation("Delete "+structure.getName(),
+                                                    "delete"+structure.getName(),
+                                                    structure.getName(),
                                                     0);
 
         deleteOperation.addParametersItem(new Parameter().name("id")
                                                          .in("path")
-                                                         .description("The id of the "+structure.getId()+" to delete")
+                                                         .description("The id of the "+structure.getName()+" to delete")
                                                          .required(true)
                                                          .schema(new StringSchema()));
 
         byIdPathItem.delete(deleteOperation);
 
-        paths.put("/api/"+structure.getId()+"/{id}", byIdPathItem);
+        paths.put("/api/"+structure.getName()+"/{id}", byIdPathItem);
 
-        // Create a path item for all the operations with "/api/"+structure.getId()+"/search"
+        // Create a path item for all the operations with "/api/"+structure.getName()+"/search"
         PathItem searchPathItem = new PathItem();
-        Operation searchOperation = createOperation("Search "+structure.getId(),
-                                                    "search"+structure.getId(),
-                                                    structure.getId(),
+        Operation searchOperation = createOperation("Search "+structure.getName(),
+                                                    "search"+structure.getName(),
+                                                    structure.getName(),
                                                     2);
 
         searchOperation.addParametersItem(new Parameter().name("page")
@@ -187,17 +187,17 @@ public class DefaultOpenApiService implements OpenApiService {
         searchOperation.requestBody(searchRequestBody);
 
         searchPathItem.post(searchOperation);
-        paths.put("/api/"+structure.getId()+"/search", searchPathItem);
+        paths.put("/api/"+structure.getName()+"/search", searchPathItem);
     }
 
     private static Operation createOperation(String operationSummary,
                                              String operationId,
-                                             String structureId,
+                                             String structureName,
                                              int responseType) {
 
         Operation operation = new Operation().summary(operationSummary)
                                              .security(List.of(new SecurityRequirement().addList("BasicAuth")))
-                                             .tags(List.of(structureId))
+                                             .tags(List.of(structureName))
                                              .operationId(operationId);
 
         // Add the default responses and the response for the structure item being returned
@@ -208,12 +208,12 @@ public class DefaultOpenApiService implements OpenApiService {
         Content content = new Content();
         MediaType mediaType = new MediaType();
         if(responseType == 1){
-            mediaType.setSchema(new Schema<>().$ref(structureId));
+            mediaType.setSchema(new Schema<>().$ref(structureName));
             content.addMediaType("application/json", mediaType);
             response.setContent(content);
         }else if(responseType == 2){
             ObjectSchema searchHitsSchema = new ObjectSchema();
-            searchHitsSchema.addProperty("content", new ArraySchema().items(new Schema<>().$ref(structureId)));
+            searchHitsSchema.addProperty("content", new ArraySchema().items(new Schema<>().$ref(structureName)));
             searchHitsSchema.addProperty("totalElements", new IntegerSchema());
             mediaType.setSchema(searchHitsSchema);
             content.addMediaType("application/json", mediaType);
