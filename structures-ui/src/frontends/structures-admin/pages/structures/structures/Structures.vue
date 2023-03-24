@@ -34,7 +34,7 @@
                         {{ item.structure.name }}
                     </template>
                     <template v-slot:item.namespace="{ item }">
-                        {{ item.structure.namespace }}
+                        <a :href="'/openapi-ui.html?namespace='+item.structure.namespace" target="_blank" >{{ item.structure.namespace }}</a>
                     </template>
                     <template v-slot:item.description="{ item }">
                         {{ item.structure.description }}

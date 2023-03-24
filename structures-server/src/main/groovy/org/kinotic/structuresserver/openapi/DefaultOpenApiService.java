@@ -67,7 +67,7 @@ public class DefaultOpenApiService implements OpenApiService {
         components.addSecuritySchemes("BasicAuth", securityScheme);
         openAPI.setSecurity(List.of(new SecurityRequirement().addList("BasicAuth")));
 
-        Structures structures = structureManager.getAllPublished(100, 0, "name", false);
+        Structures structures = structureManager.getAllPublishedForNamespace(namespace, 100, 0, "name", false);
         Paths paths = new Paths();
         for(StructureHolder structureHolder : structures.getContent()){
             Structure structure = structureHolder.getStructure();

@@ -3,11 +3,9 @@ package org.kinotic.structuresserver.structures
 import org.kinotic.continuum.api.annotations.Publish
 import org.kinotic.continuum.api.annotations.Version
 import org.kinotic.structures.api.domain.AlreadyExistsException
-import org.kinotic.structures.api.domain.Structure
 import org.kinotic.structures.api.domain.Trait
 import org.kinotic.structuresserver.domain.StructureHolder
 import org.kinotic.structuresserver.serializer.Structures
-
 
 @Publish
 @Version("1.0.0")
@@ -24,6 +22,8 @@ interface IStructureManager {
     Structures getAllPublishedAndIdLike(String IdLike, int numberPerPage, int page, String columnToSortBy, boolean descending)
 
     Structures getAllPublished(int numberPerPage, int page, String columnToSortBy, boolean descending)
+
+    Structures getAllPublishedForNamespace(String namespace, int numberPerPage, int page, String columnToSortBy, boolean descending)
 
     void delete(String structureId)
 

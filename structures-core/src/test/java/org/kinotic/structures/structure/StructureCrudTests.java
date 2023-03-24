@@ -17,6 +17,7 @@
 
 package org.kinotic.structures.structure;
 
+import org.elasticsearch.search.SearchHits;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,6 +26,7 @@ import org.kinotic.structures.api.domain.*;
 import org.kinotic.structures.api.services.ItemService;
 import org.kinotic.structures.api.services.StructureService;
 import org.kinotic.structures.api.services.TraitService;
+import org.kinotic.structures.util.StructureTestHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.OptimisticLockingFailureException;
@@ -45,6 +47,8 @@ public class StructureCrudTests extends ElasticsearchTestBase {
     private StructureService structureService;
     @Autowired
     private ItemService itemService;
+	@Autowired
+	private StructureTestHelper structureTestHelper;
 
 
 	@Test
@@ -356,5 +360,36 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 			}
 		});
 
+	}
+
+	@Test
+	public void publishManyNamespacesAndQueryForOneNamespace() throws IOException, AlreadyExistsException, PermenentTraitException {
+		Structure office1 = structureTestHelper.getOfficeStructure("org.kinotic.");
+		Structure computer = structureTestHelper.getComputerStructure("org.kinotic.");
+		Structure office2 = structureTestHelper.getOfficeStructure("some_name_space_");
+		Structure computer1 = structureTestHelper.getComputerStructure("some_name_space_");
+		Structure computer2 = structureTestHelper.getComputerStructure("some_name_space_");
+		Structure computer3 = structureTestHelper.getComputerStructure("some_name_space_");
+
+		try {
+
+			SearchHits query1 = structureService.getAllPublishedAndNamespaceEquals("some_name_space_", 100, 0, "name", true);
+
+			Assertions.assertEquals(4, query1.getTotalHits().value, "Structure Namespace query did not return expected results");
+
+			SearchHits query2 = structureService.getAllPublishedAndNamespaceEquals("org.kinotic.", 100, 0, "name", true);
+
+			Assertions.assertEquals(2, query2.getTotalHits().value, "Second Structure Namespace query did not return expected results");
+
+		} catch (IOException ioe) {
+			throw ioe;
+		} finally {
+			structureService.delete(office1.getId());
+			structureService.delete(computer.getId());
+			structureService.delete(office2.getId());
+			structureService.delete(computer1.getId());
+			structureService.delete(computer2.getId());
+			structureService.delete(computer3.getId());
+		}
 	}
 }

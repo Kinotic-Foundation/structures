@@ -5,6 +5,7 @@ continuum:
 
 continuum-gateway:
   disableIam: true
+  dataDir: /tmp/work
 
 logging:
   level:

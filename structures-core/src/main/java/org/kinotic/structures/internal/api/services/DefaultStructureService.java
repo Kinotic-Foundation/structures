@@ -425,6 +425,21 @@ public class DefaultStructureService implements StructureService {
     }
 
     @Override
+    public SearchHits getAllNamespaceEquals(String namespace, int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException {
+        SearchSourceBuilder builder = EsHighLevelClientUtil.buildGeneric(numberPerPage, page, columnToSortBy, descending);
+        builder.postFilter(QueryBuilders.termQuery("namespace", namespace));
+        return getStructures(builder);
+    }
+
+    @Override
+    public SearchHits getAllPublishedAndNamespaceEquals(String namespace, int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException {
+        SearchSourceBuilder builder = EsHighLevelClientUtil.buildGeneric(numberPerPage, page, columnToSortBy, descending);
+        builder.query(QueryBuilders.termQuery("published", true));
+        builder.postFilter(QueryBuilders.termQuery("namespace", namespace));
+        return getStructures(builder);
+    }
+
+    @Override
     public SearchHits getAllPublished(int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException {
         SearchSourceBuilder builder = EsHighLevelClientUtil.buildGeneric(numberPerPage,page,columnToSortBy,descending);
         builder.query(QueryBuilders.termQuery("published", true));

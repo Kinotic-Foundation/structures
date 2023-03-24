@@ -73,6 +73,11 @@ class StructureManager implements IStructureManager {
     }
 
     @Override
+    Structures getAllPublishedForNamespace(String namespace, int numberPerPage, int page, String columnToSortBy, boolean descending) {
+        gatherStructures(structureService.getAllPublishedAndNamespaceEquals(namespace, numberPerPage, page, columnToSortBy, descending))
+    }
+
+    @Override
     void delete(String structureId) {
         structureService.delete(structureId)
     }

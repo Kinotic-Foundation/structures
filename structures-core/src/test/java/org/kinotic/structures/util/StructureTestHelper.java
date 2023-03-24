@@ -45,25 +45,6 @@ public class StructureTestHelper {
         return fresh;
     }
 
-    public Structure getComputerStructure() throws AlreadyExistsException, IOException {
-        Structure structure = new Structure();
-        structure.setName("Computer-" + System.currentTimeMillis());
-        structure.setNamespace("org.kinotic.");
-        structure.setDescription("Defines an Computer");
-
-        Optional<Trait> vpnIpOptional = traitService.getTraitByName("VpnIp");
-        Optional<Trait> ipOptional = traitService.getTraitByName("Ip");
-        Optional<Trait> macOptional = traitService.getTraitByName("Mac");
-
-        structure.getTraits().put("vpnIp", vpnIpOptional.get());
-        structure.getTraits().put("ip", ipOptional.get());
-        structure.getTraits().put("mac", macOptional.get());
-
-        Structure fresh = structureService.save(structure);
-        structureService.publish(fresh.getId());
-        return structure;
-    }
-
     public Structure getDeviceStructure() throws AlreadyExistsException, IOException {
         Structure structure = new Structure();
         structure.setName("Device-" + System.currentTimeMillis());
@@ -86,19 +67,38 @@ public class StructureTestHelper {
         return fresh;
     }
 
-    public Structure getOfficeStructure() throws AlreadyExistsException, IOException {
+    public Structure getComputerStructure(String namespace) throws AlreadyExistsException, IOException {
+        Structure structure = new Structure();
+        structure.setName("Computer-" + System.currentTimeMillis());
+        structure.setNamespace(namespace);
+        structure.setDescription("Defines an Computer");
+
+        Optional<Trait> vpnIpOptional = traitService.getTraitByName("VpnIp");
+        Optional<Trait> ipOptional = traitService.getTraitByName("Ip");
+        Optional<Trait> macOptional = traitService.getTraitByName("Mac");
+
+        structure.getTraits().put("vpnIp", vpnIpOptional.get());
+        structure.getTraits().put("ip", ipOptional.get());
+        structure.getTraits().put("mac", macOptional.get());
+
+        Structure fresh = structureService.save(structure);
+        structureService.publish(fresh.getId());
+        return structure;
+    }
+
+    public Structure getOfficeStructure(String namespace) throws AlreadyExistsException, IOException {
         Structure structure = new Structure();
         structure.setName("Office-" + System.currentTimeMillis());
-        structure.setNamespace("org.kinotic.");
+        structure.setNamespace(namespace);
         structure.setDescription("Defines a Office");
 
-        Optional<Trait> textOptional = traitService.getTraitByName("KeywordString");
-        Optional<Trait> objRefOptional = traitService.getTraitByName("ObjectReference");
+        Optional<Trait> textOptional = traitService.getTraitByName("TextString");
+        Optional<Trait> keywordOptional = traitService.getTraitByName("KeywordString");
 
         structure.getTraits().put("partNumber", textOptional.get());
-        structure.getTraits().put("computer", objRefOptional.get());
-        structure.getTraits().put("device1", objRefOptional.get());
-        structure.getTraits().put("device2", objRefOptional.get());
+        structure.getTraits().put("computer", keywordOptional.get());
+        structure.getTraits().put("device1", keywordOptional.get());
+        structure.getTraits().put("device2", keywordOptional.get());
 
         Structure fresh = structureService.save(structure);
         structureService.publish(fresh.getId());

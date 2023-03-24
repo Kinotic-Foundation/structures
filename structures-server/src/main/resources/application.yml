@@ -1,5 +1,11 @@
 # General properties shared by all profiles
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
 logging:
   level:
     com:

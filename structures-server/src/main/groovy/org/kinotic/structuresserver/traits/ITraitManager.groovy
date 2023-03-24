@@ -1,6 +1,5 @@
 package org.kinotic.structuresserver.traits
 
-
 import org.elasticsearch.search.SearchHits
 import org.kinotic.continuum.api.annotations.Publish
 import org.kinotic.continuum.api.annotations.Version
@@ -20,7 +19,7 @@ interface ITraitManager {
 
     SearchHits getAll(int numberPerPage, int page, String columnToSortBy, boolean descending)
 
-    SearchHits getAllNameLike(String nameLike, int numberPerPage, int page, String columnToSortBy, boolean descending);
+    SearchHits getAllNameLike(String nameLike, int numberPerPage, int page, String columnToSortBy, boolean descending)
 
     void delete(String traitId) throws PermenentTraitException
 

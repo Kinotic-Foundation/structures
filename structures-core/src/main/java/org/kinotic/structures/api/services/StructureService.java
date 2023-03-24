@@ -40,6 +40,10 @@ public interface StructureService {
 
     SearchHits getAllPublishedAndIdLike(String idLike, int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException;
 
+    SearchHits getAllNamespaceEquals(String namespace, int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException;
+
+    SearchHits getAllPublishedAndNamespaceEquals(String namespace, int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException;
+
     SearchHits getAllPublished(int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException;
 
     void delete(String structureId) throws IOException, PermenentTraitException;
