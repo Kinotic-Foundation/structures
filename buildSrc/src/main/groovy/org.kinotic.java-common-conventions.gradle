@@ -19,6 +19,11 @@ dependencyManagement {
     }
     dependencies {
         dependency 'com.h2database:h2:1.4.197' // We override the version provided by Spring to be compatible with Ignite which is used by Continuum
+        dependency "org.springframework.security:spring-security-core:${springSecurityVersion}"
+        dependency "org.springframework.security:spring-security-web:${springSecurityVersion}"
+        dependency "org.springframework.security:spring-security-crypto:${springSecurityVersion}"
+        dependency "org.springframework.security:spring-security-config:${springSecurityVersion}"
+        dependency "org.springframework.security:spring-security-test:${springSecurityVersion}"
     }
 }
 

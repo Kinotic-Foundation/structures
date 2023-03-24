@@ -41,7 +41,7 @@ public class StructuresConfiguration extends AbstractElasticsearchConfiguration 
         this.structuresProperties = structuresProperties;
     }
 
-    @Bean
+    @Bean(destroyMethod = "close")
     @Override
     public RestHighLevelClient elasticsearchClient() {
         ClientConfiguration.MaybeSecureClientConfigurationBuilder builder
