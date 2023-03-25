@@ -89,7 +89,7 @@ public class DefaultOpenApiService implements OpenApiService {
 
     public void addPathItemsForStructure(Paths paths, Structure structure){
 
-        // Create a path item for all the operations with "/api/"+structure.getName()
+        // Create a path item for all the operations with "/api/"+structure.getId()
         PathItem structurePathItem = new PathItem();
 
         Operation getAllOperation = createOperation("Get all "+structure.getName(),
@@ -126,10 +126,10 @@ public class DefaultOpenApiService implements OpenApiService {
 
         structurePathItem.post(createOperation);
 
-        paths.put("/api/"+structure.getIndexName(), structurePathItem);
+        paths.put("/api/"+structure.getId(), structurePathItem);
 
 
-        // Create a path item for all the operations with "/api/"+structure.getIndexName()+"/{id}"
+        // Create a path item for all the operations with "/api/"+structure.getId()+"/{id}"
         PathItem byIdPathItem = new PathItem();
 
         // Operation for get by id
@@ -160,9 +160,9 @@ public class DefaultOpenApiService implements OpenApiService {
 
         byIdPathItem.delete(deleteOperation);
 
-        paths.put("/api/"+structure.getIndexName()+"/{id}", byIdPathItem);
+        paths.put("/api/"+structure.getId()+"/{id}", byIdPathItem);
 
-        // Create a path item for all the operations with "/api/"+structure.getName()+"/search"
+        // Create a path item for all the operations with "/api/"+structure.getId()+"/search"
         PathItem searchPathItem = new PathItem();
         Operation searchOperation = createOperation("Search "+structure.getName(),
                                                     "search"+structure.getName(),
@@ -187,10 +187,10 @@ public class DefaultOpenApiService implements OpenApiService {
         searchOperation.requestBody(searchRequestBody);
 
         searchPathItem.post(searchOperation);
-        paths.put("/api/"+structure.getIndexName()+"/search", searchPathItem);
+        paths.put("/api/"+structure.getId()+"/search", searchPathItem);
 
 
-        // Create a path item for all the operations with "/api/"+structure.getName()+"/bulk-upsert"
+        // Create a path item for all the operations with "/api/"+structure.getId()+"/bulk-upsert"
         PathItem bulkUpsertPathItem = new PathItem();
         Operation bulkUpsertOperation = createOperation("Bulk Upsert "+structure.getName(),
                 "bulkUpsert"+structure.getName(),
@@ -205,7 +205,7 @@ public class DefaultOpenApiService implements OpenApiService {
         bulkUpsertOperation.requestBody(bulkUpsertRequestBody);
 
         bulkUpsertPathItem.post(bulkUpsertOperation);
-        paths.put("/api/"+structure.getIndexName()+"/bulk-upsert", bulkUpsertPathItem);
+        paths.put("/api/"+structure.getId()+"/bulk-upsert", bulkUpsertPathItem);
     }
 
     private static Operation createOperation(String operationSummary,

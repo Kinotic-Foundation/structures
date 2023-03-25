@@ -11,10 +11,10 @@ logging:
   level:
     org:
       springframework:
-        web: DEBUG
+        web: INFO
       kinotic: TRACE
     io:
-      vertx: TRACE
+      vertx: INFO
 
 structures:
   elasticUseSsl: ${ELASTIC_USE_SSL}

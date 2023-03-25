@@ -9,10 +9,11 @@ continuum-gateway:
 logging:
   level:
     org:
-      springframework: TRACE
+      springframework:
+        web: DEBUG
       kinotic: TRACE
     io:
-      vertx: TRACE
+      vertx: DEBUG
 
 structures:
   elasticUseSsl: false
