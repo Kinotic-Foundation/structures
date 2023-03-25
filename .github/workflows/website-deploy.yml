@@ -34,4 +34,3 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: website/.vitepress/dist
           publish_branch: gh-pages
-          base_branch: main
