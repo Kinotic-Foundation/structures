@@ -15,7 +15,7 @@ export default defineConfig({
     },
 
     socialLinks: [
-      { icon: 'github', link: ' https://github.com/Kinotic-Foundation/continuum-framework' }
+      { icon: 'github', link: ' https://github.com/Kinotic-Foundation/structures' }
     ],
     footer: {
       message: 'Released under the Apache License.',
