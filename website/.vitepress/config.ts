@@ -47,7 +47,7 @@ function sidebarGuide() {
     {
       text: 'Details',
       items: [
-        { text: 'Creating a new Structure', link: '/guide/new-structure' },
+        { text: 'Create a new Structure', link: '/guide/new-structure' },
       ]
     }
   ]
