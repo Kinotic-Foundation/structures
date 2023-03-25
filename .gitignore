@@ -55,16 +55,12 @@ out/
 
 *.zip
 
-/continuum-core-vertx/ignite/
-
-/continuum-gateway/ignite/
-
-/continuum-orbiter/ignite/
-
-/continuum-iam/ignite/
-
 structures-server/src/main/resources/webroot/
 
 structures-server/src/main/resources/public/
 
 .idea/jpa-buddy.xml
+
+website/node_modules
+
+website/.vitepress/cache

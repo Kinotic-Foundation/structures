@@ -1,5 +1,5 @@
 # Structures
-Structures is an open-source framework for data storage and retrieval, supporting schema evolution, data composition, and providing a user-friendly GUI and OpenAPI interface for data management.
+Structures is an open-source framework for data storage and retrieval, supporting schema evolution, data management, and providing a user-friendly GUI and OpenAPI interface for data management.
 
 
 ### Projects
