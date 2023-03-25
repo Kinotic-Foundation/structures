@@ -64,3 +64,5 @@ structures-server/src/main/resources/public/
 website/node_modules
 
 website/.vitepress/cache
+
+website/.vitepress/dist/
