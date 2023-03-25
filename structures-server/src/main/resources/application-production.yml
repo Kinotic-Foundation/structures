@@ -1,8 +1,20 @@
-# General properties shared by all profiles
-continuum-gateway:
-  dataDir:                  /media/continuum/data/gateway
-
+# YAML Reference http://www.yaml.org/refcard.html
 continuum:
-  discovery: zookeeper
+  discovery: sharedfs
   debug: true
-  eventBusClusterPort: 57100
+
+continuum-gateway:
+  disableIam: true
+  dataDir: /tmp/work
+
+logging:
+  level:
+    org:
+      springframework:
+        web: INFO
+      kinotic: TRACE
+    io:
+      vertx: INFO
+
+
+

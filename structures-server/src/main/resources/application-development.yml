@@ -16,9 +16,4 @@ logging:
       vertx: DEBUG
 
 structures:
-  elasticUseSsl: false
-  elasticUris: "localhost:9200"
-  elasticConnectionTimeout: 60s
-  elasticSocketTimeout: 60s
-  elasticUsername: ""
-  elasticPassword: ""
+  elastic-use-ssl: false

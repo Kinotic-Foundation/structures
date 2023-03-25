@@ -14,10 +14,6 @@ logging:
 server:
   port: 8989
 
-structures:
-  elasticUseSsl: ${ELASTIC_USE_SSL}
-  elasticUris: "${ELASTIC_URIS}"
-  elasticConnectionTimeout: ${ELASTIC_CONNECTION_TIMEOUT}
-  elasticSocketTimeout: ${ELASTIC_SOCKET_TIMEOUT}
-  elasticUsername: "${ELASTIC_USERNAME}"
-  elasticPassword: "${ELASTIC_PASSWORD}"
+spring:
+  elasticsearch:
+    uris: ${STRUCTURES_ELASTIC_URIS:127.0.0.1:9200} # needed for actuator health health checks

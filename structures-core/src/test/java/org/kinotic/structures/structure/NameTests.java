@@ -23,6 +23,7 @@ import org.kinotic.structures.api.services.StructureService;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.kinotic.structures.internal.config.StructuresProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -33,52 +34,64 @@ public class NameTests extends ElasticsearchTestBase {
 
     @Autowired
     private StructureService structureService;
+    @Autowired
+    private StructuresProperties structuresProperties;
 
     /**
      * Structure Id Tests to ensure we do not allow unsupported ElasticSearch index Ids.
      */
+    // TODO: figure out how to change the index-prefix on a per file basis so we can
+    //  write tests against this config.
     @Test
     public void tryCreateStructureWithIdStartsWith_(){
-        Assertions.assertThrows(IllegalStateException.class, () -> {
-            Structure structure = new Structure();
-            structure.setName("_TEST");
-            structure.setNamespace("_org-kinotic");
-            structure.setDescription("Test Structure Id that starts with underscore (_)");
-            structureService.save(structure);
-        });
+        if(structuresProperties.getIndexPrefix().isBlank()){
+            Assertions.assertThrows(IllegalStateException.class, () -> {
+                Structure structure = new Structure();
+                structure.setName("_TEST");
+                structure.setNamespace("_org-kinotic");
+                structure.setDescription("Test Structure Id that starts with underscore (_)");
+                structureService.save(structure);
+            });
+        }
     }
 
     @Test
     public void tryCreateStructureWithIdStartsWithADash(){
-        Assertions.assertThrows(IllegalStateException.class, () -> {
-            Structure structure = new Structure();
-            structure.setName("-TEST");
-            structure.setNamespace("-org-kinotic");
-            structure.setDescription("Test Structure Id that starts with a dash (-)");
-            structureService.save(structure);
-        });
+        if(structuresProperties.getIndexPrefix().isBlank()) {
+            Assertions.assertThrows(IllegalStateException.class, () -> {
+                Structure structure = new Structure();
+                structure.setName("-TEST");
+                structure.setNamespace("-org-kinotic");
+                structure.setDescription("Test Structure Id that starts with a dash (-)");
+                structureService.save(structure);
+            });
+        }
     }
 
     @Test
     public void tryCreateStructureWithIdStartsWithAPlus(){
-        Assertions.assertThrows(IllegalStateException.class, () -> {
-            Structure structure = new Structure();
-            structure.setName("+TEST");
-            structure.setNamespace("+org-kinotic");
-            structure.setDescription("Test Structure Id that starts with a plus (+)");
-            structureService.save(structure);
-        });
+        if(structuresProperties.getIndexPrefix().isBlank()) {
+            Assertions.assertThrows(IllegalStateException.class, () -> {
+                Structure structure = new Structure();
+                structure.setName("+TEST");
+                structure.setNamespace("+org-kinotic");
+                structure.setDescription("Test Structure Id that starts with a plus (+)");
+                structureService.save(structure);
+            });
+        }
     }
 
     @Test
     public void tryCreateStructureWithIdStartsWithPeriod(){
-        Assertions.assertThrows(IllegalStateException.class, () -> {
-            Structure structure = new Structure();
-            structure.setName(".TEST");
-            structure.setNamespace(".org.kinotic");
-            structure.setDescription("Test Structure Id that contains a period (.)");
-            structureService.save(structure);
-        });
+        if(structuresProperties.getIndexPrefix().isBlank()) {
+            Assertions.assertThrows(IllegalStateException.class, () -> {
+                Structure structure = new Structure();
+                structure.setName(".TEST");
+                structure.setNamespace(".org.kinotic");
+                structure.setDescription("Test Structure Id that contains a period (.)");
+                structureService.save(structure);
+            });
+        }
     }
 
     @Test

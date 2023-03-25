@@ -214,7 +214,7 @@ public class DefaultItemService implements ItemService {
             return obj;
         });
 
-        UpdateRequest request = new UpdateRequest(bulkUpdate.getStructure().getIndexName(), item.getString("id"));
+        UpdateRequest request = new UpdateRequest(bulkUpdate.getStructure().getId(), item.getString("id"));
         request.docAsUpsert(true);
         request.doc(item, XContentType.JSON);
 
@@ -258,7 +258,7 @@ public class DefaultItemService implements ItemService {
         SearchSourceBuilder builder = new SearchSourceBuilder();
         builder.query(boolQueryBuilder);
         builder.size(0);
-        SearchRequest request = new SearchRequest(structure.getIndexName());
+        SearchRequest request = new SearchRequest(structure.getId());
         request.source(builder);
         SearchResponse response = highLevelClient.search(request, RequestOptions.DEFAULT);
 
@@ -267,7 +267,7 @@ public class DefaultItemService implements ItemService {
 
     @Override
     public Optional<TypeCheckMap> getById(Structure structure, String id) throws Exception {
-        GetResponse response = highLevelClient.get(new GetRequest(structure.getIndexName()).id(id), RequestOptions.DEFAULT);
+        GetResponse response = highLevelClient.get(new GetRequest(structure.getId()).id(id), RequestOptions.DEFAULT);
         TypeCheckMap ret = null;
         if (response.isExists()) {
             ret = new TypeCheckMap(response.getSourceAsMap());
@@ -333,7 +333,7 @@ public class DefaultItemService implements ItemService {
         BoolQueryBuilder boolQueryBuilder = new BoolQueryBuilder();
         boolQueryBuilder.filter(QueryBuilders.termQuery("deleted", false));
 
-        SearchRequest request = new SearchRequest(structure.getIndexName());
+        SearchRequest request = new SearchRequest(structure.getId());
         request.source(new SearchSourceBuilder()
                             .query(boolQueryBuilder)
                             .from(from*numberPerPage)
@@ -361,7 +361,7 @@ public class DefaultItemService implements ItemService {
         BoolQueryBuilder boolQueryBuilder = new BoolQueryBuilder();
         boolQueryBuilder.filter(QueryBuilders.termsQuery(fieldName, searchTerms)).filter(QueryBuilders.termQuery("deleted", false));
 
-        SearchRequest request = new SearchRequest(structure.getIndexName());
+        SearchRequest request = new SearchRequest(structure.getId());
         request.source(new SearchSourceBuilder()
                 .query(boolQueryBuilder)
                 .from(from*numberPerPage)
@@ -388,7 +388,7 @@ public class DefaultItemService implements ItemService {
         BoolQueryBuilder boolQueryBuilder = new BoolQueryBuilder();
         boolQueryBuilder.filter(QueryBuilders.termQuery("deleted", false)).filter(QueryBuilders.multiMatchQuery(search, fieldNames));
 
-        SearchRequest request = new SearchRequest(structure.getIndexName());
+        SearchRequest request = new SearchRequest(structure.getId());
         request.source(new SearchSourceBuilder()
                 .query(boolQueryBuilder)
                 .from(from*numberPerPage)
@@ -427,7 +427,7 @@ public class DefaultItemService implements ItemService {
             builder.sort(sortField, sortOrder);
         }
 
-        SearchRequest request = new SearchRequest(structure.getIndexName());
+        SearchRequest request = new SearchRequest(structure.getId());
         request.source(builder);
 
         SearchResponse response = highLevelClient.search(request, RequestOptions.DEFAULT);
@@ -441,7 +441,7 @@ public class DefaultItemService implements ItemService {
         //noinspection OptionalGetWithoutIsPresent
         Structure structure = optional.get();// will throw null pointer/element not available
 
-        SearchRequest request = new SearchRequest(structure.getIndexName());
+        SearchRequest request = new SearchRequest(structure.getId());
         request.source(new SearchSourceBuilder()
                 .aggregation(AggregationBuilders.terms(field).field(field).size(500))
                 .query(new QueryStringQueryBuilder(search))
@@ -489,7 +489,7 @@ public class DefaultItemService implements ItemService {
     }
 
     private void processUpdateRequest(Structure structure, TypeCheckMap ret, boolean asUpsert) throws IOException {
-        UpdateRequest request = new UpdateRequest(structure.getIndexName(), ret.getString("id"));
+        UpdateRequest request = new UpdateRequest(structure.getId(), ret.getString("id"));
         request.docAsUpsert(asUpsert);
         request.doc(ret, XContentType.JSON);
         // forces a cluster refresh of the index.. for high volume data this wouldn't work - lets see how it works in our case.

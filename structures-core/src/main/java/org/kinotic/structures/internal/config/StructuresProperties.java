@@ -1,9 +1,11 @@
 package org.kinotic.structures.internal.config;
 
 
+import org.kinotic.structures.internal.api.services.util.StructureHelper;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.PostConstruct;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import java.time.Duration;
@@ -12,23 +14,41 @@ import java.time.Duration;
 @ConfigurationProperties(prefix = "structures")
 public class StructuresProperties {
 
-    private boolean elasticUseSsl;
     @NotNull
-    private Duration elasticConnectionTimeout;
+    private String indexPrefix = "struct_";
     @NotNull
-    private Duration elasticSocketTimeout;
+    private Boolean elasticUseSsl = true;
+    @NotNull
+    private Duration elasticConnectionTimeout = Duration.ofMinutes(1);
+    @NotNull
+    private Duration elasticSocketTimeout = Duration.ofMinutes(1);
     @NotBlank
-    private String elasticUris;
+    private String elasticUris = "localhost:9200";
     @NotBlank
-    private String elasticUsername;
+    private String elasticUsername = "";
     @NotBlank
-    private String elasticPassword;
+    private String elasticPassword = "";
 
-    public boolean isElasticUseSsl() {
+    @PostConstruct
+    public void validate(){
+        // this will validate we do not contain invalid characters
+        // FIXME: should we limit the number of chars as well?
+        StructureHelper.indexNameValidation(indexPrefix);
+    }
+
+    public String getIndexPrefix() {
+        return indexPrefix;
+    }
+
+    public void setIndexPrefix(String indexPrefix) {
+        this.indexPrefix = indexPrefix;
+    }
+
+    public Boolean isElasticUseSsl() {
         return elasticUseSsl;
     }
 
-    public void setElasticUseSsl(boolean elasticUseSsl) {
+    public void setElasticUseSsl(Boolean elasticUseSsl) {
         this.elasticUseSsl = elasticUseSsl;
     }
 

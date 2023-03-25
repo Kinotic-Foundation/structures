@@ -9,3 +9,6 @@ logging:
     org:
       kinotic: DEBUG
 
+
+structures:
+  index-prefix: ""

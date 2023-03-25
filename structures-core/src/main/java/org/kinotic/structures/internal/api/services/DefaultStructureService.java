@@ -41,6 +41,8 @@ import org.kinotic.structures.api.domain.Trait;
 import org.kinotic.structures.api.services.StructureService;
 import org.kinotic.structures.api.services.TraitService;
 import org.kinotic.structures.internal.api.services.util.EsHighLevelClientUtil;
+import org.kinotic.structures.internal.api.services.util.StructureHelper;
+import org.kinotic.structures.internal.config.StructuresProperties;
 import org.kinotic.structures.internal.repositories.StructureElasticRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,6 +64,7 @@ public class DefaultStructureService implements StructureService {
     private TraitService traitService;
 
     private StructureElasticRepository structureElasticRepository;
+    private StructuresProperties structuresProperties;
 
     private Trait id;
     private Trait deleted;
@@ -70,10 +73,14 @@ public class DefaultStructureService implements StructureService {
     private Trait updatedTime;
     private Trait structureId;
 
-    public DefaultStructureService(RestHighLevelClient highLevelClient, TraitService traitService, StructureElasticRepository structureElasticRepository){
+    public DefaultStructureService(RestHighLevelClient highLevelClient,
+                                   TraitService traitService,
+                                   StructureElasticRepository structureElasticRepository,
+                                   StructuresProperties structuresProperties){
         this.highLevelClient = highLevelClient;
         this.traitService = traitService;
         this.structureElasticRepository = structureElasticRepository;
+        this.structuresProperties = structuresProperties;
     }
 
     @PostConstruct
@@ -300,8 +307,13 @@ public class DefaultStructureService implements StructureService {
             throw new IllegalArgumentException("Structures must provide proper Structure Namespace.");
         }
 
+        String logicalIndexName = (this.structuresProperties.getIndexPrefix().trim()+structure.getNamespace().trim()+structure.getName().trim()).toLowerCase();
+
+        // will throw an exception if invalid
+        StructureHelper.indexNameValidation(logicalIndexName);
+
         // check to ensure we either have this unique index or not
-        Optional<Structure> alreadyCreated = structureElasticRepository.findById(structure.getIndexName());
+        Optional<Structure> alreadyCreated = structureElasticRepository.findById(logicalIndexName);
 
         // ensure we are not trying to do something odd here, if you are updating we must have the same
         // version(updated field) from the request as we have in the database.
@@ -309,7 +321,7 @@ public class DefaultStructureService implements StructureService {
             if(structure.getCreated() == 0 && structure.getUpdated() == 0 && (structure.getId() == null || structure.getId().isBlank())){
                 // new structure request, but we already have a structure by the same id
                 // structures must have globally unique ID's.
-                throw new AlreadyExistsException("Structure Namespace+Name must be unique, '"+structure.getIndexName()+"' already exists.");
+                throw new AlreadyExistsException("Structure Namespace+Name must be unique, '"+structure.getId()+"' already exists.");
             }else{
                 throw new OptimisticLockingFailureException("Attempting to update a Structure, but out of sync with database; please re-fetch from database and try again");
             }
@@ -320,37 +332,6 @@ public class DefaultStructureService implements StructureService {
         }else{
             // version type field - updating structure
             structure.setUpdated(System.currentTimeMillis());
-        }
-
-        //    255 characters in length
-        //    must be lowercase
-        //    must not start with '_', '-', or '+'
-        //    must not be '.' or '..' -
-        //
-        //    must not contain the following characters
-        //    '\\', '/', '*', '?', '"', '<', '>', '|', ' ', ',', '#', ':', ';'
-        String logicalIndexName = structure.getIndexName();
-        if(logicalIndexName.startsWith("_")
-                || logicalIndexName.startsWith("-")
-                || logicalIndexName.startsWith("+")
-                || logicalIndexName.startsWith(".")
-                || logicalIndexName.startsWith("..")
-                || logicalIndexName.contains("\\")
-                || logicalIndexName.contains("/")
-                || logicalIndexName.contains("*")
-                || logicalIndexName.contains("?")
-                || logicalIndexName.contains("\"")
-                || logicalIndexName.contains("<")
-                || logicalIndexName.contains(">")
-                || logicalIndexName.contains("|")
-                || logicalIndexName.contains(" ")
-                || logicalIndexName.contains(",")
-                || logicalIndexName.contains("#")
-                || logicalIndexName.contains(":")
-                || logicalIndexName.contains(";")
-                || logicalIndexName.contains("..")
-                || logicalIndexName.getBytes().length > 255){
-            throw new IllegalStateException("namespace and id combined are not in correct format, \ncannot start with _ - +\ncannot contain . .. \\ / * ? \" < > | , # : ; \ncannot contain a space or be longer than 255 bytes");
         }
 
         for(Map.Entry<String, Trait> traitEntry : structure.getTraits().entrySet()){
@@ -387,7 +368,7 @@ public class DefaultStructureService implements StructureService {
             ret = structureElasticRepository.save(alreadyCreated.get());
         }else{
             // can update everything until published
-            structure.setId(structure.getIndexName());
+            structure.setId(logicalIndexName);
             ret = structureElasticRepository.save(structure);
         }
 
@@ -455,13 +436,13 @@ public class DefaultStructureService implements StructureService {
         if(structure.isPublished()){
             // if its published we should check to see if we can remove the
             // ElasticSearch index, but only if there are not any items created
-            if(highLevelClient.indices().exists(new GetIndexRequest(structure.getIndexName()), RequestOptions.DEFAULT)){
+            if(highLevelClient.indices().exists(new GetIndexRequest(structure.getId()), RequestOptions.DEFAULT)){
                 long countOfItemsForStructure = this.count(structure.getId());
 
                 if(countOfItemsForStructure > 0){
                     throw new IllegalStateException("you cannot delete a Structure until all Items associated are also deleted.");
                 }
-                DeleteIndexRequest request = new DeleteIndexRequest(structure.getIndexName());
+                DeleteIndexRequest request = new DeleteIndexRequest(structure.getId());
                 AcknowledgedResponse response = highLevelClient.indices().delete(request, RequestOptions.DEFAULT);
                 if(!response.isAcknowledged()){
                     response = highLevelClient.indices().delete(request, RequestOptions.DEFAULT);
@@ -515,7 +496,7 @@ public class DefaultStructureService implements StructureService {
             settings.put("index.store.type", "fs");
 
             // Item ES Index
-            CreateIndexRequest indexRequest = new CreateIndexRequest(structure.getIndexName());
+            CreateIndexRequest indexRequest = new CreateIndexRequest(structure.getId());
             String mapping = getElasticSearchBaseMapping(structure);
             indexRequest.mapping(mapping, XContentType.JSON);
             indexRequest.settings(settings);
@@ -575,7 +556,7 @@ public class DefaultStructureService implements StructureService {
 
         if(structure.isPublished()){
             String mapping = "{ \"properties\": { \""+fieldName+"\": "+newTrait.getEsSchema()+" } }";
-            PutMappingRequest putMappingRequest = new PutMappingRequest(structure.getIndexName());
+            PutMappingRequest putMappingRequest = new PutMappingRequest(structure.getId());
             putMappingRequest.source(mapping, XContentType.JSON);
             highLevelClient.indices().putMapping(putMappingRequest, RequestOptions.DEFAULT);
         }
@@ -673,7 +654,7 @@ public class DefaultStructureService implements StructureService {
         SearchSourceBuilder builder = new SearchSourceBuilder();
         builder.query(boolQueryBuilder);
         builder.size(0);
-        SearchRequest request = new SearchRequest(structure.getIndexName());
+        SearchRequest request = new SearchRequest(structure.getId());
         request.source(builder);
         SearchResponse response = highLevelClient.search(request, RequestOptions.DEFAULT);
 

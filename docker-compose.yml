@@ -23,12 +23,13 @@ services:
       - "127.0.0.1:58504:58504"
       - "127.0.0.1:8989:8989"
     environment:
-      SPRING_PROFILES_DEFAULT: docker
-      ELASTIC_USE_SSL: false
-      ELASTIC_URIS: "elasticsearch:9200"
-      ELASTIC_CONNECTION_TIMEOUT: 60s
-      ELASTIC_SOCKET_TIMEOUT: 60s
-      ELASTIC_USERNAME: ""
-      ELASTIC_PASSWORD: ""
+      SPRING_PROFILES_ACTIVE: production
+      STRUCTURES_INDEX_PREFIX: struct_
+      STRUCTURES_ELASTIC_USE_SSL: false
+      STRUCTURES_ELASTIC_URIS: elasticsearch:9200
+      STRUCTURES_ELASTIC_CONNECTION_TIMEOUT: 60s
+      STRUCTURES_ELASTIC_SOCKET_TIMEOUT: 60s
+      STRUCTURES_ELASTIC_USERNAME:
+      STRUCTURES_ELASTIC_PASSWORD:
     stdin_open: true # docker run -i
     tty: true        # docker run -t

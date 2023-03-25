@@ -138,8 +138,4 @@ public class Structure implements Serializable {
         this.updated = updated;
     }
 
-    public String getIndexName(){
-        return (namespace.trim()+name.trim()).toLowerCase();
-    }
-
 }

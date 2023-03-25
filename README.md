@@ -25,3 +25,17 @@ Structures is an open-source framework for data storage and retrieval, supportin
    1. `docker-compose up -d` (You should see the application listed under containers in docker desktop)
 6. You can now view the application by going [here](http://localhost:8989/) in a browser. (This may not be available for at least a minute while the backend services finish starting.)
    1. [http://localhost:8989/](http://localhost:8989/)
+
+### Environment Variables 
+These variables are available for custom configuration, presented are the defaults.
+
+```text
+STRUCTURES_INDEX_PREFIX=struct_
+STRUCTURES_ELASTIC_USE_SSL=true
+STRUCTURES_ELASTIC_URIS=127.0.0.1:9200
+STRUCTURES_ELASTIC_CONNECTION_TIMEOUT=1M
+STRUCTURES_ELASTIC_SOCKET_TIMEOUT=1M
+STRUCTURES_ELASTIC_USERNAME=
+STRUCTURES_ELASTIC_PASSWORD=
+```
+
