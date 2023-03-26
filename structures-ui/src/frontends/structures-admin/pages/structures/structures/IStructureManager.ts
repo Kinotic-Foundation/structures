@@ -11,6 +11,8 @@ export interface IStructureManager {
     getStructureById(id: string): Promise<StructureHolder>
     getAllPublishedAndIdLike(idLike: string, numberPerPage: number, page: number, columnToSortBy: string, descending: boolean): Promise<StructureHolder[]>
     getAllPublished(numberPerPage: number, page: number, columnToSortBy: string, descending: boolean): Promise<StructureHolder[]>
+    getAllPublishedForNamespace(namespace: string, numberPerPage: number, page: number, columnToSortBy: string, descending: boolean): Promise<StructureHolder[]>
+    getAllNamespaceEquals(namespace: string, numberPerPage: number, page: number, columnToSortBy: string, descending: boolean): Promise<StructureHolder[]>
     delete(structureId: string): Promise<void>
     publish(structureId: string): Promise<void>
     addTraitToStructure(structureId: string, fieldName: string, newTrait: Trait): Promise<void>
@@ -49,10 +51,17 @@ class StructureManager implements IStructureManager {
         return this.serviceProxy.invoke('getAllPublishedAndIdLike', [idLike, numberPerPage, page, columnToSortBy, descending])
     }
 
+    public getAllPublishedForNamespace(namespace: string, numberPerPage: number, page: number, columnToSortBy: string, descending: boolean): Promise<StructureHolder[]> {
+        return this.serviceProxy.invoke('getAllPublishedForNamespace', [namespace, numberPerPage, page, columnToSortBy, descending])
+    }
+
+    public getAllNamespaceEquals(namespace: string, numberPerPage: number, page: number, columnToSortBy: string, descending: boolean): Promise<StructureHolder[]> {
+        return this.serviceProxy.invoke('getAllNamespaceEquals', [namespace, numberPerPage, page, columnToSortBy, descending])
+    }
+
     public getAllPublished(numberPerPage: number, page: number, columnToSortBy: string, descending: boolean): Promise<StructureHolder[]> {
         return this.serviceProxy.invoke('getAllPublished', [numberPerPage, page, columnToSortBy, descending])
     }
-
     public delete(structureId: string): Promise<void> {
         return this.serviceProxy.invoke('delete', [structureId])
     }

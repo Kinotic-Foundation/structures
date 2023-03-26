@@ -1,7 +1,6 @@
 package org.kinotic.structuresserver.controllers;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.kinotic.structuresserver.openapi.OpenApiService;
 import org.springframework.http.MediaType;
@@ -10,6 +9,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
+
+import java.io.IOException;
 
 /**
  * Created by Navíd Mitchell 🤪 on 3/18/23.
@@ -33,10 +34,10 @@ public class OpenApiDocsController {
                            mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
                            String json = mapper.writeValueAsString(openApiService.getOpenApiSpec(namespace));
                            return Mono.just(json);
-                       } catch (JsonProcessingException e) {
+                       } catch (IOException e) {
                            return Mono.error(e);
                        }
-                   })
+                })
                    .subscribeOn(Schedulers.boundedElastic());
     }
 

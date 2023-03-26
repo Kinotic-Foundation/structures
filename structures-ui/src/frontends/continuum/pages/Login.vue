@@ -130,7 +130,7 @@
                 this.loading = true
                 try{
 
-                    let uri: string = 'ws://localhost:58503/v1'
+                    let uri: string = 'ws://127.0.0.1:58503/v1'
                     let hasQuery: number = window.location.hash.indexOf('?')
                     if(hasQuery !== -1){
                         let query: string = window.location.hash.substr(hasQuery+1)

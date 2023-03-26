@@ -68,13 +68,18 @@ class StructureManager implements IStructureManager {
     }
 
     @Override
-    Structures getAllPublished(int numberPerPage, int page, String columnToSortBy, boolean descending) {
-        gatherStructures(structureService.getAllPublished(numberPerPage, page, columnToSortBy, descending))
+    Structures getAllNamespaceEquals(String namespace, int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException {
+        gatherStructures(structureService.getAllNamespaceEquals(namespace, numberPerPage, page, columnToSortBy, descending))
     }
 
     @Override
     Structures getAllPublishedForNamespace(String namespace, int numberPerPage, int page, String columnToSortBy, boolean descending) {
         gatherStructures(structureService.getAllPublishedAndNamespaceEquals(namespace, numberPerPage, page, columnToSortBy, descending))
+    }
+
+    @Override
+    Structures getAllPublished(int numberPerPage, int page, String columnToSortBy, boolean descending) {
+        gatherStructures(structureService.getAllPublished(numberPerPage, page, columnToSortBy, descending))
     }
 
     @Override

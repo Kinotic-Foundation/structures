@@ -20,6 +20,14 @@ const adminRoutes: RouteConfig[] = [
                 }
             },
             {
+                path: '/structures-admin-namespaces', component: () => import('@/frontends/structures-admin/pages/structures/namespaces/Namespaces.vue'),
+                meta: {
+                    authenticationRequired: true,
+                    icon: 'fa-project-diagram',
+                    title: 'Namespaces'
+                }
+            },
+            {
                 path: '/structures-admin-traits', component: () => import('@/frontends/structures-admin/pages/structures/traits/Traits.vue'),
                 meta: {
                     authenticationRequired: true,

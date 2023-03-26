@@ -55,19 +55,24 @@
                         </v-icon>
                     </template>
                     <template v-slot:item.action="{ item }" >
-                        <v-icon small
-                                class="mr-2"
-                                @click="editItem(item)"
-                                v-show="item.systemManaged"
-                                title="Edit" >
-                          {{icons.edit}}
-                        </v-icon>
-                        <v-icon small
-                                @click="deleteItem(item)"
-                                v-show="item.systemManaged"
-                                title="Delete" >
-                          {{icons.delete}}
-                        </v-icon>
+                        <v-btn icon >
+                            <v-icon medium
+                                    class="mr-2"
+                                    @click="editItem(item)"
+                                    v-show="item.systemManaged"
+                                    title="Edit" >
+                              {{icons.edit}}
+                            </v-icon>
+                        </v-btn>
+                        <v-btn icon >
+                            <v-icon medium
+                                    class="mr-2"
+                                    @click="deleteItem(item)"
+                                    v-show="item.systemManaged"
+                                    title="Delete" >
+                              {{icons.delete}}
+                            </v-icon>
+                        </v-btn>
                     </template>
 
                     <template v-slot:no-data>

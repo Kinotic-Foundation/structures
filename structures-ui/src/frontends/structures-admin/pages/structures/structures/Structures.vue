@@ -195,12 +195,19 @@
                                         </v-list-item>
                                         <v-list-item>
                                             <v-list-item-content>
-                                                <v-text-field v-model="editedItem.structure.namespace"
-                                                              label="Namespace"
-                                                              :error-messages="namespaceErrorMessage"
-                                                              :readonly="editedItem.structure.published"
-                                                              @keydown.space.prevent >
-                                                </v-text-field>
+                                                <v-select
+                                                    label="Namespace"
+                                                    v-model="selectedNamespace"
+                                                    :items="namespaces"
+                                                    :disabled="editedItem.structure.published"
+                                                    :hint="`${selectedNamespace.name}: ${selectedNamespace.description}`"
+                                                    :error-messages="namespaceErrorMessage"
+                                                    item-text="name"
+                                                    return-object
+                                                    persistent-hint
+                                                    hide-selected
+                                                    single-line >
+                                                </v-select>
                                             </v-list-item-content>
                                         </v-list-item>
                                         <v-list-item>
@@ -372,6 +379,8 @@ import { Trait } from '@/frontends/structures-admin/pages/structures/traits/Trai
 import draggable from 'vuedraggable'
 import {StructureHolder} from "@/frontends/structures-admin/pages/structures/structures/StructureHolder";
 import {TraitHolder} from "@/frontends/structures-admin/pages/structures/structures/TraitHolder";
+import {INamespaceManager} from "@/frontends/structures-admin/pages/structures/namespaces/INamespaceManager";
+import {Namespace} from "@/frontends/structures-admin/pages/structures/namespaces/Namespace";
 import { inject } from 'inversify-props'
 import {
   mdiPlus,
@@ -384,6 +393,7 @@ import {
   mdiArrowCollapseLeft,
   mdiArrowCollapseRight
 } from '@mdi/js'
+import {IndexNameHelper} from "@/frontends/structures-admin/pages/structures/util/IndexNameHelper";
 
 @Component({
     components: { draggable },
@@ -395,11 +405,14 @@ export default class Traits extends Vue {
     private traitManager!: ITraitManager
     @inject()
     private structureManager!: IStructureManager
+    @inject()
+    private namespaceManager!: INamespaceManager
 
     private computedHeight: number = (window.innerHeight - 225)
 
     public items: StructureHolder[] = []
     public traits: Trait[] = []
+    public namespaces: Namespace[] = []
     public loading: boolean = true
     public finishedInitialLoad: boolean = false
     public dialog: boolean = false
@@ -407,6 +420,7 @@ export default class Traits extends Vue {
     public editedIndex: number = -1
     public newTraitName: string = ""
     public pathToIcon: string = ""
+    public selectedNamespace: Namespace = new Namespace("", "", 0)
     public newTrait: Trait = new Trait("","","","","",0,0,true,true,true,true)
     public dummyTrait: Trait = new Trait("","","","","",0,0,true,true,true,true)
     public defaultTraits: TraitHolder[] = []
@@ -419,7 +433,6 @@ export default class Traits extends Vue {
     public namespaceErrorMessage: string = ""
     public traitFieldNameErrorMessage: string = ""
     public serverErrors: string = ""
-    public illegalStructureNameChars: RegExp = new RegExp(/[.][.]|[\\][\\]|[/]|[*]|[?]|[\\]|<|>|[|]|[ ]|[,]|[#]|[:]|[;]|[+]|[=]|[(]|[)]|[{]|[}]/)
 
 
     public options: any = {
@@ -464,6 +477,7 @@ export default class Traits extends Vue {
 
     // Lifecycle hook
     public mounted() {
+        this.getAllNamespaces()
         this.getAllTraits()
         this.getAll()
     }
@@ -546,6 +560,17 @@ export default class Traits extends Vue {
         this.editedItem.traits = this.editedItem.traits.filter((trait: TraitHolder) => {
             return trait.fieldName !== fieldName
         })
+    }
+
+    public async getAllNamespaces(){
+        try {
+            let returnedData: any = await this.namespaceManager.getAll(100, 0, "name", true)
+            this.namespaces.length = 0
+            this.namespaces = returnedData.content
+        }catch (error: any){
+            console.log(error.stack)
+            this.serverErrors = error.message
+        }
     }
 
     public async getAllTraits(){
@@ -679,6 +704,12 @@ export default class Traits extends Vue {
                     break
                 }
             }
+            for(let namespace of this.namespaces){
+                if(this.editedItem.structure.namespace === namespace.name){
+                    this.selectedNamespace = namespace
+                    break
+                }
+            }
             let meta: any = this.editedItem.structure.metadata
             this.pathToIcon = meta.pathToIcon // this is okay.. being javascript an all. :)
             this.dialog = true
@@ -709,49 +740,29 @@ export default class Traits extends Vue {
 
     public async onMoveCallback(evt: any) {
         // this is only needed if we are already published - since we save everything before publish.
-        if(evt.oldIndex !== -1 && evt.newIndex !== -1 && this.editedItem.structure.published){
+        if (evt.oldIndex !== -1 && evt.newIndex !== -1 && this.editedItem.structure.published) {
             let movingItem: TraitHolder = this.editedItem.traits[evt.newIndex]
 
             try {
-                if((this.editedItem.traits.length-1) === evt.newIndex){
+                if ((this.editedItem.traits.length - 1) === evt.newIndex) {
                     // if we are moving to the end we use insertAfter
-                    let movingAfterItem: TraitHolder = this.editedItem.traits[this.editedItem.traits.length-2]
+                    let movingAfterItem: TraitHolder = this.editedItem.traits[this.editedItem.traits.length - 2]
                     await this.structureManager.insertTraitAfterAnotherForStructure(this.editedItem.structure.id, movingItem.fieldName, movingAfterItem.fieldName)
-                }else{
-                    let movingBeforeItem: TraitHolder = this.editedItem.traits[evt.newIndex+1]
+                } else {
+                    let movingBeforeItem: TraitHolder = this.editedItem.traits[evt.newIndex + 1]
                     await this.structureManager.insertTraitBeforeAnotherForStructure(this.editedItem.structure.id, movingItem.fieldName, movingBeforeItem.fieldName)
                 }
-            }catch (error: any){
+            } catch (error: any) {
                 console.log(error.stack)
                 this.serverErrors = error.message
             }
         }
     }
 
-    private checkNameAndNamespace(value: string, reference: string): string {
-        let ret: string = ""
-        if(value.length === 0) {
-            ret = "This field is required"
-        }else if(value.length >= 255){
-            ret = `${reference} must be less than 255 characters`
-        }else if(value.charAt(0) === '_') {
-            ret = `${reference} must not start with _`
-        }else if(value.charAt(0) === '-'){
-            ret = `${reference} must not start with -`
-        }else if(value.charAt(0) === '+') {
-            ret = `${reference} must not start with +`
-        }else if(value.charAt(0) === '.') {
-            ret = `${reference} must not start with .`
-        }else if(this.illegalStructureNameChars.test(value)){
-            ret = `${reference} must not contain these characters .. \\ / * ? \ < > | , # : ; + = ( ) { } or spaces`
-        }
-        return ret
-    }
-
     public async save() {
-        this.nameErrorMessage = this.checkNameAndNamespace(this.editedItem.structure.name, "Name")
-        this.namespaceErrorMessage = this.checkNameAndNamespace(this.editedItem.structure.namespace, "Namespace")
-        this.serverErrors = this.checkNameAndNamespace(this.editedItem.structure.namespace+this.editedItem.structure.name, "Index Name, namespace+name,")
+        this.nameErrorMessage = IndexNameHelper.checkNameAndNamespace(this.editedItem.structure.name, "Name")
+        this.namespaceErrorMessage = IndexNameHelper.checkNameAndNamespace(this.selectedNamespace?.name, "Namespace")
+        this.serverErrors = IndexNameHelper.checkNameAndNamespace(this.editedItem.structure.namespace+this.editedItem.structure.name, "Index Name, namespace+name,")
 
         if(this.nameErrorMessage.length === 0 && this.namespaceErrorMessage.length === 0 && this.serverErrors.length === 0){
             // NOTE: save once published only saves the description
@@ -762,8 +773,11 @@ export default class Traits extends Vue {
                 list.push(entry)
                 order++
             }
-
             this.editedItem.traits = list
+
+            if(!this.editedItem.structure.published && this.editedItem.structure.namespace !== this.selectedNamespace.name){
+                this.editedItem.structure.namespace = this.selectedNamespace.name
+            }
 
             this.editedItem.structure.metadata = Object.assign(this.editedItem.structure.metadata, {pathToIcon: this.pathToIcon})
 
@@ -795,9 +809,11 @@ export default class Traits extends Vue {
         setTimeout(() => {
             this.getAllTraits()
             this.editedIndex = -1
+            this.selectedNamespace = new Namespace("", "", 0)
             this.pathToIcon = ""
             this.serverErrors = ""
             this.nameErrorMessage = ""
+            this.namespaceErrorMessage = ""
         }, 300)
     }
 

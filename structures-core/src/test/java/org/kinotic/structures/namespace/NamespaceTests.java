@@ -24,7 +24,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.kinotic.structures.ElasticsearchTestBase;
 import org.kinotic.structures.api.domain.AlreadyExistsException;
 import org.kinotic.structures.api.domain.Namespace;
+import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.NamespaceService;
+import org.kinotic.structures.api.services.StructureService;
+import org.kinotic.structures.util.StructureTestHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -37,7 +40,11 @@ import java.util.Optional;
 public class NamespaceTests extends ElasticsearchTestBase {
 
 	@Autowired
-	NamespaceService namespaceService;
+	private NamespaceService namespaceService;
+	@Autowired
+	private StructureService structureService;
+	@Autowired
+	private StructureTestHelper structureTestHelper;
 
 	@Test
 	public void createAndDeleteNamespace() throws Exception {
@@ -144,5 +151,30 @@ public class NamespaceTests extends ElasticsearchTestBase {
 		}else{
 			namespaceService.delete(test.getName());
 		}
+	}
+
+
+	@Test
+	public void createNamespaceAndStructureAndAttemptDeleteOfNamespace() {
+		Assertions.assertThrows(IllegalStateException.class, () -> {
+			Namespace test = new Namespace();
+			test.setName("error-testing");
+			test.setDescription("kinotic stuff");
+			Structure structure = null;
+
+			try {
+				test = namespaceService.save(test);
+				structure = structureTestHelper.getComputerStructure(test.getName());
+				namespaceService.delete(test.getName());
+			}catch (Exception e){
+				throw e;
+			}finally {
+				if(structure != null){
+					structureService.delete(structure.getId());
+				}
+				Thread.sleep(1000);
+				namespaceService.delete(test.getName());
+			}
+		});
 	}
 }

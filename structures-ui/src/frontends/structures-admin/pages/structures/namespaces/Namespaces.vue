@@ -10,12 +10,11 @@
                         :server-items-length="options.totalItems"
                         :options.sync="options"
                         :loading="loading"
-                        :single-expand="true"
-                        show-expand
                         dense
                         item-key="id"
                         loading-text="Loading... Please wait"
                         class="elevation-1"
+                        @click:row="rowClicked"
                         @page-count="pageCount = $event"
                         :fixed-header=true
                         :footer-props="{
@@ -27,47 +26,32 @@
                           'items-per-page-options':options.rowsPerPageItems
                         }" >
 
-                    <template v-slot:item.created="{ item }">
-                        {{ formatDate(item.created) }}
+                    <template v-slot:item.name="{ item }">
+                        {{ item.name }}
+                    </template>
+                    <template v-slot:item.description="{ item }">
+                        {{ item.description }}
                     </template>
                     <template v-slot:item.updated="{ item }">
                         {{ formatDate(item.updated) }}
                     </template>
-                    <template v-slot:item.required="{ item }">
-                        <v-icon small
-                                class="mr-2"
-                                title="Required">
-                            {{ item.required ? "fas fa-check" : "" }}
-                        </v-icon>
-                    </template>
-                    <template v-slot:item.systemManaged="{ item }">
-                        <v-icon small
-                                class="mr-2"
-                                title="System Managed">
-                            {{ item.systemManaged ? "fas fa-check" : "" }}
-                        </v-icon>
-                    </template>
-                    <template v-slot:item.operational="{ item }">
-                        <v-icon small
-                                class="mr-2"
-                                title="Operational">
-                            {{ item.operational ? "fas fa-check" : "" }}
-                        </v-icon>
-                    </template>
                     <template v-slot:item.action="{ item }" >
-                        <v-icon small
-                                class="mr-2"
-                                @click="editItem(item)"
-                                v-show="item.systemManaged"
-                                title="Edit" >
-                          {{icons.edit}}
-                        </v-icon>
-                        <v-icon small
-                                @click="deleteItem(item)"
-                                v-show="item.systemManaged"
-                                title="Delete" >
-                          {{icons.delete}}
-                        </v-icon>
+                        <v-btn icon >
+                            <v-icon medium
+                                    class="mr-2"
+                                    @click="editItem(item)"
+                                    title="Edit" >
+                              {{icons.edit}}
+                            </v-icon>
+                        </v-btn>
+                        <v-btn icon >
+                            <v-icon medium
+                                    class="mr-2"
+                                    @click="deleteItem(item)"
+                                    title="Delete" >
+                              {{icons.delete}}
+                            </v-icon>
+                        </v-btn>
                     </template>
 
                     <template v-slot:no-data>
@@ -76,23 +60,15 @@
                         </div>
                     </template>
 
-                    <template v-slot:expanded-item="{ item }" >
-                        <td :colspan="headers.length" class="pa-1">
-                            <v-list >
-                                <v-list-item>
-                                    JS Schema : {{item.schema}}
-                                </v-list-item>
-                                <v-list-item>
-                                    ES Schema : {{item.esSchema}}
-                                </v-list-item>
-                            </v-list>
-                        </td>
-                    </template>
+<!--                    <template v-slot:expanded-item="{ item }" >-->
+<!--                        <td :colspan="headers.length" class="pa-1">-->
 
+<!--                        </td>-->
+<!--                    </template>-->
 
                     <template v-slot:top>
                         <v-toolbar flat>
-                            <v-toolbar-title>Trait Templates</v-toolbar-title>
+                            <v-toolbar-title>Namespaces</v-toolbar-title>
                             <v-divider
                                     class="mx-4"
                                     inset
@@ -108,7 +84,7 @@
                             <v-spacer></v-spacer>
                             <v-dialog v-model="dialog" fullscreen hide-overlay persistent transition="dialog-bottom-transition" >
                                 <template v-slot:activator="{ on }">
-                                    <v-btn color="primary" dark class="mb-2" v-on="on">New Trait</v-btn>
+                                    <v-btn color="primary" dark class="mb-2" v-on="on">New Namespace</v-btn>
                                 </template>
                                 <v-card>
 
@@ -139,36 +115,16 @@
                                         </v-alert>
                                         <v-list-item>
                                             <v-list-item-content>
-                                                <v-text-field v-model="editedItem.name" label="Trait Name" autofocus></v-text-field>
+                                                <v-text-field v-model="editedItem.name"
+                                                              label="Name"
+                                                              :error-messages="namespaceErrorMessage"
+                                                              @keydown.space.prevent >
+                                                </v-text-field>
                                             </v-list-item-content>
                                         </v-list-item>
                                         <v-list-item>
                                             <v-list-item-content>
-                                                <v-text-field v-model="editedItem.schema" label="JS Schema"></v-text-field>
-                                            </v-list-item-content>
-                                        </v-list-item>
-                                        <v-list-item>
-                                            <v-list-item-content>
-                                                <v-text-field v-model="editedItem.esSchema" label="ES Schema"></v-text-field>
-                                            </v-list-item-content>
-                                        </v-list-item>
-                                        <v-list-item>
-                                            <v-list-item-content>
-                                                <v-text-field v-model="editedItem.describeTrait" label="Describe Trait"></v-text-field>
-                                            </v-list-item-content>
-                                        </v-list-item>
-                                        <v-list-item>
-                                            <v-list-item-content>
-                                                <v-switch v-model="editedItem.required"
-                                                          class="ma-2"
-                                                          label="Required"
-                                                          messages="Makes field required">
-                                                </v-switch>
-                                                <v-switch v-model="editedItem.operational"
-                                                          class="ma-2"
-                                                          label="Operational"
-                                                          messages="Field provides functional operations to be performed, will never be shown in a GUI; i.e. VPN IP address.">
-                                                </v-switch>
+                                                <v-text-field v-model="editedItem.description" label="Description"></v-text-field>
                                             </v-list-item-content>
                                         </v-list-item>
                                     </v-list>
@@ -184,7 +140,7 @@
 
 <script lang="ts">
 import { Component, Vue, Watch } from 'vue-property-decorator'
-import { ITraitManager } from "@/frontends/structures-admin/services"
+import {IStructureManager, ITraitManager} from "@/frontends/structures-admin/services"
 import { Trait } from '@/frontends/structures-admin/pages/structures/traits/Trait'
 import { inject } from 'inversify-props'
 import {
@@ -197,27 +153,36 @@ import {
   mdiArrowCollapseLeft,
   mdiArrowCollapseRight
 } from '@mdi/js'
+import {INamespaceManager} from "@/frontends/structures-admin/pages/structures/namespaces/INamespaceManager";
+import { Namespace } from './Namespace'
+import {StructureHolder} from "@/frontends/structures-admin/pages/structures/structures/StructureHolder";
+import {IndexNameHelper} from "@/frontends/structures-admin/pages/structures/util/IndexNameHelper";
 
 @Component({
     components: { },
     props: { }
 })
-export default class Traits extends Vue {
+export default class Namespaces extends Vue {
 
     @inject()
-    private traitManager!: ITraitManager
+    private namespaceManager!: INamespaceManager
+    @inject()
+    private structureManager!: IStructureManager
 
     private computedHeight: number = (window.innerHeight - 225)
 
-    public items: Trait[] = []
+    public items: Namespace[] = []
+    // TODO: maybe we add a row expander that shows associated structures
+    // public structuresForNamespace: Map<number,StructureHolder[]> = new Map<number,StructureHolder[]>()
     public loading: boolean = true
     public finishedInitialLoad: boolean = false
     public dialog: boolean = false
     public editedIndex: number = -1
-    public defaultItem: Trait = new Trait("","","","","",0,0,true,true,true,true)
-    public editedItem: Trait = Object.assign({}, this.defaultItem)
+    public defaultItem: Namespace = new Namespace("", "", 0)
+    public editedItem: Namespace = Object.assign({}, this.defaultItem)
 
     public serverErrors: string = ""
+    public namespaceErrorMessage: string = ""
 
     public options: any = {
         mustSort: true,
@@ -232,14 +197,8 @@ export default class Traits extends Vue {
     // NOTE: Cannot Sort on Fields that are set up for Full Text Search.
     public headers: any = [
         {text: 'Name',align: 'left',value: 'name'},
-        { text: 'Description', value: 'describeTrait', sortable: false },
-        // { text: 'JS Schema', value: 'schema', sortable: false },
-        // { text: 'ES Schema', value: 'esSchema', sortable: false },
-        // { text: 'Created', value: 'created' },
-        // { text: 'Last Updated', value: 'updated' },
-        { text: 'Required',align: 'center', value: 'required' },// should the GUI require a field to be filled out when looking at the item
-        { text: 'System Managed',align: 'center', value: 'systemManaged' },// system managed traits
-        { text: 'Operational',align: 'center', value: 'operational' },
+        { text: 'Description', value: 'description', sortable: false },
+        { text: 'Last Updated', value: 'updated' },
         { text: 'Actions', value: 'action', sortable: false }
       ]
 
@@ -288,9 +247,24 @@ export default class Traits extends Vue {
         return date + " " + time
     }
 
-    public getAll() {
-        this.loading = true
-        this.traitManager.getAll(this.options.itemsPerPage, this.options.page-1, this.options.sortBy[0], this.options.sortDesc[0]).then((returnedItems: any) => {
+    public async rowClicked(event: any){
+        // {
+        //     index: number
+        //     item: InternalDataTableItem
+        //     columns: InternalDataTableHeader[]
+        //     isExpanded: (item: DataTableItem) => boolean
+        //     toggleExpand: (item: DataTableItem) => void
+        //     isSelected: (items: DataTableItem[]) => boolean
+        //     toggleSelect: (item: DataTableItem) => void
+        // }
+
+        // let response: StructureHolder[] = await this.structureManager.getAllNamespaceEquals(this.items[event.index].name, 100, 0, "name", true)
+    }
+
+    public async getAll() {
+        try {
+            this.loading = true
+            let returnedItems: any = await this.namespaceManager.getAll(this.options.itemsPerPage, this.options.page-1, this.options.sortBy[0], this.options.sortDesc[0])
             this.loading = false
             this.options.totalItems = returnedItems.totalElements
             this.items = returnedItems.content
@@ -300,9 +274,7 @@ export default class Traits extends Vue {
                     this.finishedInitialLoad = true
                 }, 500)
             }
-
-        })
-        .catch((error: any) => {
+        }catch(error: any){
             console.log(error.stack)
             this.serverErrors = error.message
 
@@ -311,55 +283,62 @@ export default class Traits extends Vue {
                     this.finishedInitialLoad = true
                 }, 500)
             }
-
-        })
+        }
     }
 
     get formTitle () {
-        return this.editedIndex === -1 ? 'New Trait' : 'Edit Trait'
+        return this.editedIndex === -1 ? 'New Namespace' : 'Edit Namespace'
     }
 
-    public editItem(item: Trait) {
+    public async editItem(item: Namespace) {
         this.editedIndex = this.items.indexOf(item)
-        this.traitManager.getTraitById(item.id).then((fresh) => {
-          this.editedItem = Object.assign({}, fresh)
-          this.dialog = true
-        })
+        try {
+            let fresh: Namespace = await this.namespaceManager.getNamespace(item.name)
+            this.editedItem = Object.assign({}, fresh)
+            this.dialog = true
+        }catch(error: any){
+            console.log(error.stack)
+            this.serverErrors = error.message
+        }
     }
 
-    public deleteItem(item: Trait) {
+    public async deleteItem(item: Namespace) {
         const index = this.items.indexOf(item)
-        if(confirm('Are you sure you want to Delete this Trait?')) {
-            this.traitManager.delete(item.id).then((data) => {
+        if(confirm('Are you sure you want to Delete this Namespace?')) {
+            try {
+                await this.namespaceManager.delete(item.name)
                 this.items.splice(index, 1)
                 this.options.totalItems--
                 if((this.options.totalItems/this.options.itemsPerPage) < this.options.page && this.options.page > 1){
                     this.options.page--
-                    this.getAll()
+                    await this.getAll()
                 }
-            }).catch((error: any) => {
+            }catch(error: any){
                 console.log(error.stack)
                 this.serverErrors = error.message
-            })
+            }
         }
     }
 
-    public save() {
-        // FIXME: add some JSON validation around the schema and esSchema
-        this.traitManager.save(this.editedItem).then((item) => {
-            if (this.editedIndex > -1) {
-                Object.assign(this.items[this.editedIndex], item)
-            } else {
-                this.options.totalItems++
-                this.items.push(item)
-            }
-            this.close()
-        })
-        .catch((error: any) => {
-            console.log(error.stack)
-            this.serverErrors = error.message
-        })
+    public async save() {
+        this.namespaceErrorMessage = IndexNameHelper.checkNameAndNamespace(this.editedItem.name, "Namespace")
 
+        if(this.namespaceErrorMessage.length === 0){
+            try{
+                // FIXME: add some JSON validation around the schema and esSchema
+                let item: Namespace = await this.namespaceManager.save(this.editedItem)
+                if (this.editedIndex > -1) {
+                    Object.assign(this.items[this.editedIndex], item)
+                } else {
+                    this.options.totalItems++
+                    this.items.push(item)
+                }
+                this.close()
+            }catch (error: any){
+                console.log(error.stack)
+                this.serverErrors = error.message
+            }
+        }
     }
 
     public close () {

@@ -24,6 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
@@ -45,7 +46,7 @@ public class DefaultOpenApiService implements OpenApiService {
     }
 
     @Override
-    public OpenAPI getOpenApiSpec(String namespace) {
+    public OpenAPI getOpenApiSpec(String namespace) throws IOException {
         OpenAPI openAPI = new OpenAPI();
 
         Info info = new Info()
