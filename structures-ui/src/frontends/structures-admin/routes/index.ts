@@ -12,19 +12,19 @@ const adminRoutes: RouteConfig[] = [
         },
         children: [
             {
+                path: '/structures-admin-namespaces', component: () => import('@/frontends/structures-admin/pages/structures/namespaces/Namespaces.vue'),
+                meta: {
+                    authenticationRequired: true,
+                    icon: 'fa-sitemap',
+                    title: 'Namespaces'
+                }
+            },
+            {
                 path: '/structures-admin', component: () => import('@/frontends/structures-admin/pages/structures/structures/Structures.vue'),
                 meta: {
                     authenticationRequired: true,
                     icon: 'fa-toolbox',
                     title: 'Structures'
-                }
-            },
-            {
-                path: '/structures-admin-namespaces', component: () => import('@/frontends/structures-admin/pages/structures/namespaces/Namespaces.vue'),
-                meta: {
-                    authenticationRequired: true,
-                    icon: 'fa-project-diagram',
-                    title: 'Namespaces'
                 }
             },
             {
