@@ -200,7 +200,7 @@
                                                     v-model="selectedNamespace"
                                                     :items="namespaces"
                                                     :disabled="editedItem.structure.published"
-                                                    :hint="`${selectedNamespace.name}: ${selectedNamespace.description}`"
+                                                    :hint="selectedNamespace.name + (selectedNamespace.description ? ': ' + selectedNamespace.description : '')"
                                                     :error-messages="namespaceErrorMessage"
                                                     item-text="name"
                                                     return-object

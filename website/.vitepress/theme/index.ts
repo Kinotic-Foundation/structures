@@ -10,6 +10,7 @@ export default {
       // https://vitepress.vuejs.org/guide/extending-default-theme#layout-slots
     })
   },
+  // @ts-ignore
   enhanceApp({ app, router, siteData }) {
     // ...
   }
