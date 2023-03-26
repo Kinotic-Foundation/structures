@@ -26,7 +26,13 @@ export class UserState implements IUserState{
                 .then(value => {
                     this.authenticated = true
                     resolve()
-                }).catch(reason => reject(reason))
+                }).catch(reason => {
+                    if(reason){
+                        reject(new Error(reason));
+                    }else{
+                        reject(new Error("Credentials invalid"));
+                    }
+            })
         })
     }
 
