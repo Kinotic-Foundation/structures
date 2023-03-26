@@ -2,7 +2,6 @@ import {IServiceProxy, IServiceRegistry} from '@kinotic-foundation/continuum-js'
 import { Trait } from '@/frontends/structures-admin/pages/structures/traits/Trait'
 import { StructureHolder } from '@/frontends/structures-admin/pages/structures/structures/StructureHolder'
 import { inject, injectable, container } from 'inversify-props'
-import {Structure} from "@/frontends/structures-admin/pages/structures/structures/Structure";
 
 export interface IStructureManager {
     save(structureHolder: StructureHolder): Promise<StructureHolder>
