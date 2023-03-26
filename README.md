@@ -7,7 +7,7 @@ Structures is an open-source framework for data storage and retrieval, supportin
 ### Projects
 * structures-core
   * Provides the core library for use in all other projects.
-* structures-serverr
+* structures-server
   * Provides Access to the core library via a REST API and a GUI.
 * structures-ui
   * Provides a GUI for interacting with Structures.
