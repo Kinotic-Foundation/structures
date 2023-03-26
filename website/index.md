@@ -20,6 +20,6 @@ features:
   - title: Data Management
     details: Structures provides developers with a comprehensive set of tools for managing data, including the ability to create, read, update, and delete data. This feature allows developers to easily manage complex data sets, and provides a flexible interface for data manipulation.
   - title: User-Friendly GUI and OpenAPI Interface
-    details: Structures provides a user-friendly graphical user interface (GUI) for data management, as well as an OpenAPI interface for accessing data stored in the framework. This feature enables developers to easily interact with the data stored in Structures, and allows them to integrate Structures into their existing applications and workflows.
+    details: Structures provides a user-friendly graphical user interface (GUI) for data management built with [Continuum](https://github.com/Kinotic-Foundation/continuum-framework), as well as an OpenAPI interface for accessing data stored in the framework. This feature enables developers to easily interact with the data stored in Structures, and allows them to integrate Structures into their existing applications and workflows.
 ---
 
