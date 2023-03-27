@@ -47,6 +47,8 @@ public class Structure implements Serializable {
     private String name = null;
     @Field(type = FieldType.Keyword)
     private String namespace = null;
+    @Field(type = FieldType.Keyword)
+    private String itemIndex = null;
 
     @Field(type = FieldType.Flattened)
     private LinkedHashMap<String, Trait> traits = new LinkedHashMap<>();
@@ -112,6 +114,14 @@ public class Structure implements Serializable {
 
     public void setNamespace(String namespace) {
         this.namespace = namespace;
+    }
+
+    public String getItemIndex() {
+        return itemIndex;
+    }
+
+    public void setItemIndex(String itemIndex) {
+        this.itemIndex = itemIndex;
     }
 
     public LinkedHashMap<String, Trait> getTraits() {

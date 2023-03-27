@@ -307,7 +307,7 @@ public class DefaultStructureService implements StructureService {
             throw new IllegalArgumentException("Structures must provide proper Structure Namespace.");
         }
 
-        String logicalIndexName = (this.structuresProperties.getIndexPrefix().trim()+structure.getNamespace().trim()+structure.getName().trim()).toLowerCase();
+        String logicalIndexName = (structure.getNamespace().trim()+structure.getName().trim()).toLowerCase();
 
         // will throw an exception if invalid
         StructureHelper.indexNameValidation(logicalIndexName);
@@ -329,6 +329,8 @@ public class DefaultStructureService implements StructureService {
             // new structure
             structure.setCreated(System.currentTimeMillis());
             structure.setUpdated(structure.getCreated());
+            // Store name of the elastic search index for items
+            structure.setItemIndex(this.structuresProperties.getIndexPrefix().trim().toLowerCase()+logicalIndexName);
         }else{
             // version type field - updating structure
             structure.setUpdated(System.currentTimeMillis());
@@ -496,7 +498,7 @@ public class DefaultStructureService implements StructureService {
             settings.put("index.store.type", "fs");
 
             // Item ES Index
-            CreateIndexRequest indexRequest = new CreateIndexRequest(structure.getId());
+            CreateIndexRequest indexRequest = new CreateIndexRequest(structure.getItemIndex());
             String mapping = getElasticSearchBaseMapping(structure);
             indexRequest.mapping(mapping, XContentType.JSON);
             indexRequest.settings(settings);

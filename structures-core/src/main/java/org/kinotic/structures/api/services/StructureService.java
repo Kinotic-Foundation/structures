@@ -56,7 +56,6 @@ public interface StructureService {
 
     void insertTraitAfterAnotherForStructure(String structureId, String movingTraitName, String insertAfterTraitName) throws IOException;
 
-
     default String getJsonSchema(Structure structure) {
         StringBuilder ret = new StringBuilder();
         StringBuilder properties = new StringBuilder();

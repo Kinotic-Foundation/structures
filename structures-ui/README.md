@@ -1,5 +1,5 @@
-# continuum-propel
-Continuum Frontend Application
+# structures-ui
+Structures Frontend Application
 
 ## Table of Contents
 - [Caveats](#caveats)

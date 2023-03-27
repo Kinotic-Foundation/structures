@@ -68,14 +68,14 @@ public class DefaultItemService implements ItemService {
 
     private static final Logger log = LoggerFactory.getLogger(DefaultItemService.class);
 
-    private RestHighLevelClient highLevelClient;
-    private StructureService structureService;
-    private List<TraitLifecycle> traitLifecycles;
+    private final RestHighLevelClient highLevelClient;
+    private final StructureService structureService;
+    private final List<TraitLifecycle> traitLifecycles;
 
-    private HashMap<String, TraitLifecycle> traitLifecycleMap = new HashMap<>();
+    private final HashMap<String, TraitLifecycle> traitLifecycleMap = new HashMap<>();
 
-    private ConcurrentHashMap<String, BulkUpdate> bulkRequests = new ConcurrentHashMap<>();
-    private ConcurrentHashMap<String, AtomicLong> activeBulkRequests = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, BulkUpdate> bulkRequests = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, AtomicLong> activeBulkRequests = new ConcurrentHashMap<>();
 
     public DefaultItemService(RestHighLevelClient highLevelClient, StructureService structureService, List<TraitLifecycle> traitLifecycles) {
         this.highLevelClient = highLevelClient;
@@ -111,13 +111,13 @@ public class DefaultItemService implements ItemService {
         //noinspection OptionalGetWithoutIsPresent
         final Structure structure = optional.get();// will throw null pointer/element not available
         if (!structure.isPublished()) {
-            throw new IllegalStateException("\'" + structure.getId() + "\' Structure is not published and cannot have had Items modified for it");
+            throw new IllegalStateException("'" + structure.getId() + "' Structure is not published and cannot have had Items modified for it");
         }
 
         // ensure required fields are present, system managed fields are automatically processed by hooks; so don't require them
         for (Map.Entry<String, Trait> traitEntry : structure.getTraits().entrySet()) {
             if (!traitEntry.getValue().isSystemManaged() && traitEntry.getValue().isRequired() && !item.has(traitEntry.getKey())) {
-                throw new IllegalStateException("\'" + structure.getId() + "\' Structure create/modify has been called without all required fields");
+                throw new IllegalStateException("'" + structure.getId() + "' Structure create/modify has been called without all required fields");
             }
         }
 
@@ -135,6 +135,7 @@ public class DefaultItemService implements ItemService {
         // get value fresh from db
         //noinspection OptionalGetWithoutIsPresent
         TypeCheckMap ret = getItemById(structureId, toUpsert.getString("id")).get();
+
         return (TypeCheckMap) processLifecycle(ret, structure, (hook, obj, fieldName) -> {
             if(hook instanceof HasOnAfterModify){
                 obj = ((HasOnAfterModify)hook).afterModify((TypeCheckMap) obj, structure, fieldName);
@@ -203,7 +204,7 @@ public class DefaultItemService implements ItemService {
         BulkUpdate bulkUpdate = this.bulkRequests.get(structureId);
         for (Map.Entry<String, Trait> traitEntry : bulkUpdate.getStructure().getTraits().entrySet()) {
             if (!traitEntry.getValue().isSystemManaged() && traitEntry.getValue().isRequired() && !item.has(traitEntry.getKey())) {
-                throw new IllegalStateException("\'" + structureId + "\' Structure create/modify has been called without all required fields");
+                throw new IllegalStateException("'" + structureId + "' Structure create/modify has been called without all required fields");
             }
         }
 
@@ -214,7 +215,7 @@ public class DefaultItemService implements ItemService {
             return obj;
         });
 
-        UpdateRequest request = new UpdateRequest(bulkUpdate.getStructure().getId(), item.getString("id"));
+        UpdateRequest request = new UpdateRequest(bulkUpdate.getStructure().getItemIndex(), item.getString("id"));
         request.docAsUpsert(true);
         request.doc(item, XContentType.JSON);
 
@@ -258,7 +259,7 @@ public class DefaultItemService implements ItemService {
         SearchSourceBuilder builder = new SearchSourceBuilder();
         builder.query(boolQueryBuilder);
         builder.size(0);
-        SearchRequest request = new SearchRequest(structure.getId());
+        SearchRequest request = new SearchRequest(structure.getItemIndex());
         request.source(builder);
         SearchResponse response = highLevelClient.search(request, RequestOptions.DEFAULT);
 
@@ -267,7 +268,7 @@ public class DefaultItemService implements ItemService {
 
     @Override
     public Optional<TypeCheckMap> getById(Structure structure, String id) throws Exception {
-        GetResponse response = highLevelClient.get(new GetRequest(structure.getId()).id(id), RequestOptions.DEFAULT);
+        GetResponse response = highLevelClient.get(new GetRequest(structure.getItemIndex()).id(id), RequestOptions.DEFAULT);
         TypeCheckMap ret = null;
         if (response.isExists()) {
             ret = new TypeCheckMap(response.getSourceAsMap());
@@ -316,7 +317,7 @@ public class DefaultItemService implements ItemService {
                 .query(new IdsQueryBuilder().addIds(ids))
                 .postFilter(QueryBuilders.termQuery("deleted", false));
 
-        SearchRequest request = new SearchRequest(structureId.toLowerCase());
+        SearchRequest request = new SearchRequest(structure.getItemIndex());
         request.source(builder);
 
         SearchResponse response = highLevelClient.search(request, RequestOptions.DEFAULT);
@@ -333,7 +334,7 @@ public class DefaultItemService implements ItemService {
         BoolQueryBuilder boolQueryBuilder = new BoolQueryBuilder();
         boolQueryBuilder.filter(QueryBuilders.termQuery("deleted", false));
 
-        SearchRequest request = new SearchRequest(structure.getId());
+        SearchRequest request = new SearchRequest(structure.getItemIndex());
         request.source(new SearchSourceBuilder()
                             .query(boolQueryBuilder)
                             .from(from*numberPerPage)
@@ -349,7 +350,7 @@ public class DefaultItemService implements ItemService {
      *
      * Provides a terms search functionality, a keyword type search over provided fields.
      * <p>
-     * https://www.elastic.co/guide/en/elasticsearch/reference/6.2/query-dsl-terms-query.html
+     * <a href="https://www.elastic.co/guide/en/elasticsearch/reference/6.2/query-dsl-terms-query.html">Terms Query</a>
      *
      */
     @Override
@@ -361,7 +362,7 @@ public class DefaultItemService implements ItemService {
         BoolQueryBuilder boolQueryBuilder = new BoolQueryBuilder();
         boolQueryBuilder.filter(QueryBuilders.termsQuery(fieldName, searchTerms)).filter(QueryBuilders.termQuery("deleted", false));
 
-        SearchRequest request = new SearchRequest(structure.getId());
+        SearchRequest request = new SearchRequest(structure.getItemIndex());
         request.source(new SearchSourceBuilder()
                 .query(boolQueryBuilder)
                 .from(from*numberPerPage)
@@ -376,7 +377,7 @@ public class DefaultItemService implements ItemService {
      *
      * Provides a multisearch functionality, a full text search type.
      * <p>
-     * https://www.elastic.co/guide/en/elasticsearch/reference/6.2/query-dsl-multi-match-query.html
+     * <a href="https://www.elastic.co/guide/en/elasticsearch/reference/6.2/query-dsl-multi-match-query.html">Multi Match Query</a>
      *
      */
     @Override
@@ -388,7 +389,7 @@ public class DefaultItemService implements ItemService {
         BoolQueryBuilder boolQueryBuilder = new BoolQueryBuilder();
         boolQueryBuilder.filter(QueryBuilders.termQuery("deleted", false)).filter(QueryBuilders.multiMatchQuery(search, fieldNames));
 
-        SearchRequest request = new SearchRequest(structure.getId());
+        SearchRequest request = new SearchRequest(structure.getItemIndex());
         request.source(new SearchSourceBuilder()
                 .query(boolQueryBuilder)
                 .from(from*numberPerPage)
@@ -403,7 +404,7 @@ public class DefaultItemService implements ItemService {
      *
      * Provides an option for expert level searching, using standard lucene query structure.
      * <p>
-     * https://www.elastic.co/guide/en/elasticsearch/reference/6.2/query-dsl-query-string-query.html
+     * <a href="https://www.elastic.co/guide/en/elasticsearch/reference/6.2/query-dsl-query-string-query.html">String Query</a>
      *
      */
     @Override
@@ -427,7 +428,7 @@ public class DefaultItemService implements ItemService {
             builder.sort(sortField, sortOrder);
         }
 
-        SearchRequest request = new SearchRequest(structure.getId());
+        SearchRequest request = new SearchRequest(structure.getItemIndex());
         request.source(builder);
 
         SearchResponse response = highLevelClient.search(request, RequestOptions.DEFAULT);
@@ -441,7 +442,7 @@ public class DefaultItemService implements ItemService {
         //noinspection OptionalGetWithoutIsPresent
         Structure structure = optional.get();// will throw null pointer/element not available
 
-        SearchRequest request = new SearchRequest(structure.getId());
+        SearchRequest request = new SearchRequest(structure.getItemIndex());
         request.source(new SearchSourceBuilder()
                 .aggregation(AggregationBuilders.terms(field).field(field).size(500))
                 .query(new QueryStringQueryBuilder(search))
@@ -489,7 +490,7 @@ public class DefaultItemService implements ItemService {
     }
 
     private void processUpdateRequest(Structure structure, TypeCheckMap ret, boolean asUpsert) throws IOException {
-        UpdateRequest request = new UpdateRequest(structure.getId(), ret.getString("id"));
+        UpdateRequest request = new UpdateRequest(structure.getItemIndex(), ret.getString("id"));
         request.docAsUpsert(asUpsert);
         request.doc(ret, XContentType.JSON);
         // forces a cluster refresh of the index.. for high volume data this wouldn't work - lets see how it works in our case.

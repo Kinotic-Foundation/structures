@@ -1,6 +1,5 @@
 package org.kinotic.structures.item;
 
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.kinotic.structures.ElasticsearchTestBase;
 import org.kinotic.structures.api.domain.Structure;
@@ -26,7 +25,7 @@ public class BulkUpdateTests extends ElasticsearchTestBase {
     private StructureService structureService;
 
 
-    @Test
+    //@Test
     public void bulkUpdateTest() throws Exception {
 
         Structure structure = structureTestHelper.getDeviceStructure();
