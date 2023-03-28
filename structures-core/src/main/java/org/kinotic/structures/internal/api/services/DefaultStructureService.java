@@ -431,20 +431,20 @@ public class DefaultStructureService implements StructureService {
 
     @Override
     public void delete(String structureId) throws IOException, PermenentTraitException {
-        Optional<Structure> optional = getStructureById(structureId.toLowerCase());
+        Optional<Structure> optional = getStructureById(structureId);
         //noinspection OptionalGetWithoutIsPresent
         Structure structure = optional.get();// will throw null pointer/element not available
 
         if(structure.isPublished()){
             // if its published we should check to see if we can remove the
             // ElasticSearch index, but only if there are not any items created
-            if(highLevelClient.indices().exists(new GetIndexRequest(structure.getId()), RequestOptions.DEFAULT)){
-                long countOfItemsForStructure = this.count(structure.getId());
+            if(highLevelClient.indices().exists(new GetIndexRequest(structure.getItemIndex()), RequestOptions.DEFAULT)){
+                long countOfItemsForStructure = this.count(structure.getItemIndex());
 
                 if(countOfItemsForStructure > 0){
                     throw new IllegalStateException("you cannot delete a Structure until all Items associated are also deleted.");
                 }
-                DeleteIndexRequest request = new DeleteIndexRequest(structure.getId());
+                DeleteIndexRequest request = new DeleteIndexRequest(structure.getItemIndex());
                 AcknowledgedResponse response = highLevelClient.indices().delete(request, RequestOptions.DEFAULT);
                 if(!response.isAcknowledged()){
                     response = highLevelClient.indices().delete(request, RequestOptions.DEFAULT);
@@ -558,7 +558,7 @@ public class DefaultStructureService implements StructureService {
 
         if(structure.isPublished()){
             String mapping = "{ \"properties\": { \""+fieldName+"\": "+newTrait.getEsSchema()+" } }";
-            PutMappingRequest putMappingRequest = new PutMappingRequest(structure.getId());
+            PutMappingRequest putMappingRequest = new PutMappingRequest(structure.getItemIndex());
             putMappingRequest.source(mapping, XContentType.JSON);
             highLevelClient.indices().putMapping(putMappingRequest, RequestOptions.DEFAULT);
         }
@@ -645,18 +645,14 @@ public class DefaultStructureService implements StructureService {
 
     }
 
-    private long count(String structureId) throws IOException {
-        Optional<Structure> optional = this.getStructureById(structureId.toLowerCase());
-        //noinspection OptionalGetWithoutIsPresent
-        Structure structure = optional.get();// will throw null pointer/element not available
-
+    private long count(String indexName) throws IOException {
         BoolQueryBuilder boolQueryBuilder = new BoolQueryBuilder();
         boolQueryBuilder.filter(QueryBuilders.termQuery("deleted", false));
 
         SearchSourceBuilder builder = new SearchSourceBuilder();
         builder.query(boolQueryBuilder);
         builder.size(0);
-        SearchRequest request = new SearchRequest(structure.getId());
+        SearchRequest request = new SearchRequest(indexName);
         request.source(builder);
         SearchResponse response = highLevelClient.search(request, RequestOptions.DEFAULT);
 

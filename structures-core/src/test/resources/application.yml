@@ -10,5 +10,5 @@ logging:
       kinotic: DEBUG
 
 
-structures:
-  index-prefix: ""
+#structures:
+#  index-prefix: ""
