@@ -131,18 +131,18 @@
                 try{
 
                     let uri: string = 'ws://127.0.0.1:58503/v1'
-                    let hasQuery: number = window.location.hash.indexOf('?')
-                    if(hasQuery !== -1){
-                        let query: string = window.location.hash.substr(hasQuery+1)
-                        let pairs: string[] = query.split('&')
-                        if(pairs.length > 0){
-                            for(let pair of pairs){
-                                if(pair.startsWith('host=')){
-                                    let host: string = pair.split('=')[1]
-                                    uri = 'ws://'+host+':58503/v1'
-                                }
-                            }
+                    if(window.location.hostname !== "127.0.0.1"
+                        && window.location.hostname !== "localhost"){
+                        let prefix: string = 'ws'
+                        if(window.location.protocol.startsWith('https')){
+                            prefix = 'wss'
                         }
+                        let port: string = ''
+                        if(window.location.port !== ''){
+                            // non standard prod deployment, use our specific port
+                            port = ':58503'
+                        }
+                        uri = `${prefix}://${window.location.hostname}${port}/v1`
                     }
 
                     await this.userState.authenticate(uri, this.login, this.password)
