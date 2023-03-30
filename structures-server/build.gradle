@@ -9,6 +9,10 @@ ext {
 dependencies {
 	implementation project(':structures-core')
 
+	implementation 'org.springframework.boot:spring-boot-starter-webflux'
+	implementation 'org.springframework.boot:spring-boot-starter-security'
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
 	// Additional Continuum Dependencies
 	implementation "org.kinotic:continuum-gateway:${continuumVersion}"
 
