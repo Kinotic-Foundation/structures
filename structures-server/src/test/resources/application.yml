@@ -18,10 +18,3 @@ spring:
     livereload:
       port: 35730
 
-elastic:
-  hosts: localhost:9200
-  useSSL: false
-  user:
-  password:
-
-

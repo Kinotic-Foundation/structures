@@ -8,12 +8,16 @@ ext {
 
 dependencies {
 	implementation project(':structures-core')
+
+	// Additional Continuum Dependencies
+	implementation "org.kinotic:continuum-gateway:${continuumVersion}"
+
 }
 
 test {
 	useJUnitPlatform()
 }
-//
-//tasks.findByName('build').dependsOn ":structures-ui:build"
-//
-//tasks.findByName('bootBuildImage').dependsOn ":structures-ui:build"
+
+tasks.findByName('build').dependsOn ":structures-ui:build"
+
+tasks.findByName('bootBuildImage').dependsOn ":structures-ui:build"

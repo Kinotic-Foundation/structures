@@ -386,12 +386,33 @@ public class DefaultStructureService implements StructureService {
 
     @Override
     public StructureHolder save(StructureHolder structureHolder) throws AlreadyExistsException {
-        return null;
+        LinkedHashMap<String, Trait> traits = new LinkedHashMap<>();
+        structureHolder.getTraits().sort(new Comparator<TraitHolder>() {
+            @Override
+            public int compare(TraitHolder o1, TraitHolder o2) {
+                return o1.getOrder() - o2.getOrder();
+            }
+        });
+
+        for(TraitHolder holder : structureHolder.getTraits()){
+            traits.put(holder.getFieldName(), holder.getFieldTrait());
+        }
+
+        structureHolder.getStructure().setTraits(traits);
+
+        return new StructureHolder(this.save(structureHolder.getStructure()), structureHolder.getTraits());
     }
 
     @Override
     public StructureHolder getStructureHolderById(String id) throws IOException {
-        return null;
+        Structure structure = this.getById(id).get();
+        LinkedList<TraitHolder> traits = new LinkedList<>();
+        int index = 0;
+        for(Map.Entry<String, Trait> traitEntry : structure.getTraits().entrySet()){
+            traits.add(new TraitHolder(index, traitEntry.getKey(), traitEntry.getValue()));
+            index++;
+        }
+        return new StructureHolder(structure, traits);
     }
 
     @Override
