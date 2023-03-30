@@ -51,7 +51,7 @@ import java.io.IOException;
 import java.util.*;
 
 @Component
-public class DefaultStructureService implements StructureService {
+public class DefaultStructureService implements StructureService, StructureServiceInternal { // TODO: after continuum fix remove StructureService
 
     private static final Logger log = LoggerFactory.getLogger(DefaultStructureService.class);
     private final ObjectMapper mapper = new ObjectMapper();
@@ -387,12 +387,7 @@ public class DefaultStructureService implements StructureService {
     @Override
     public StructureHolder save(StructureHolder structureHolder) throws AlreadyExistsException {
         LinkedHashMap<String, Trait> traits = new LinkedHashMap<>();
-        structureHolder.getTraits().sort(new Comparator<TraitHolder>() {
-            @Override
-            public int compare(TraitHolder o1, TraitHolder o2) {
-                return o1.getOrder() - o2.getOrder();
-            }
-        });
+        structureHolder.getTraits().sort((o1, o2) -> o1.getOrder() - o2.getOrder());
 
         for(TraitHolder holder : structureHolder.getTraits()){
             traits.put(holder.getFieldName(), holder.getFieldTrait());
@@ -404,7 +399,7 @@ public class DefaultStructureService implements StructureService {
     }
 
     @Override
-    public StructureHolder getStructureHolderById(String id) throws IOException {
+    public StructureHolder getStructureById(String id) throws IOException {
         Structure structure = this.getById(id).get();
         LinkedList<TraitHolder> traits = new LinkedList<>();
         int index = 0;
@@ -443,7 +438,7 @@ public class DefaultStructureService implements StructureService {
     }
 
     @Override
-    public Structures getAllPublishedAndNamespaceEquals(String namespace, int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException {
+    public Structures getAllPublishedForNamespace(String namespace, int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException {
         SearchSourceBuilder builder = EsHighLevelClientUtil.buildGeneric(numberPerPage, page, columnToSortBy, descending);
         builder.query(QueryBuilders.termQuery("published", true));
         builder.postFilter(QueryBuilders.termQuery("namespace", namespace));

@@ -26,7 +26,7 @@ import org.kinotic.structures.api.domain.TypeCheckMap;
 import org.kinotic.structures.api.domain.traitlifecycle.HasOnAfterGet;
 import org.kinotic.structures.api.domain.traitlifecycle.HasOnAfterModify;
 import org.kinotic.structures.api.domain.traitlifecycle.HasOnBeforeModify;
-import org.kinotic.structures.api.services.ItemService;
+import org.kinotic.structures.internal.api.services.ItemServiceInternal;
 import org.kinotic.structures.internal.repositories.ReferenceLogElasticRepository;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
@@ -45,10 +45,10 @@ import java.util.Optional;
 @Component
 public class ObjectReference implements HasOnBeforeModify, HasOnAfterModify, HasOnAfterGet {
 
-    private final ItemService itemService;
+    private final ItemServiceInternal itemService;
     private final ReferenceLogElasticRepository referenceLogElasticRepository;
 
-    public ObjectReference(@Lazy ItemService itemService, ReferenceLogElasticRepository referenceLogElasticRepository){
+    public ObjectReference(@Lazy ItemServiceInternal itemService, ReferenceLogElasticRepository referenceLogElasticRepository){
         this.itemService = itemService;
         this.referenceLogElasticRepository = referenceLogElasticRepository;
     }

@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.openapi;
+package org.kinotic.structures.internal.api.services;
 
 import io.swagger.v3.oas.models.OpenAPI;
 

@@ -22,9 +22,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.kinotic.structures.ElasticsearchTestBase;
 import org.kinotic.structures.api.domain.*;
-import org.kinotic.structures.api.services.ItemService;
-import org.kinotic.structures.api.services.StructureService;
 import org.kinotic.structures.api.services.TraitService;
+import org.kinotic.structures.internal.api.services.ItemServiceInternal;
+import org.kinotic.structures.internal.api.services.StructureServiceInternal;
 import org.kinotic.structures.util.StructureTestHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -43,9 +43,9 @@ public class StructureCrudTests extends ElasticsearchTestBase {
     @Autowired
     private TraitService traitService;
     @Autowired
-    private StructureService structureService;
+    private StructureServiceInternal structureService;
     @Autowired
-    private ItemService itemService;
+    private ItemServiceInternal itemService;
 	@Autowired
 	private StructureTestHelper structureTestHelper;
 
@@ -372,11 +372,11 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 
 		try {
 
-			Structures query1 = structureService.getAllPublishedAndNamespaceEquals("some_name_space_", 100, 0, "name", true);
+			Structures query1 = structureService.getAllPublishedForNamespace("some_name_space_", 100, 0, "name", true);
 
 			Assertions.assertEquals(4, query1.getTotalElements(), "Structure Namespace query did not return expected results");
 
-			Structures query2 = structureService.getAllPublishedAndNamespaceEquals("org.kinotic.", 100, 0, "name", true);
+			Structures query2 = structureService.getAllPublishedForNamespace("org.kinotic.", 100, 0, "name", true);
 
 			Assertions.assertEquals(2, query2.getTotalElements(), "Second Structure Namespace query did not return expected results");
 

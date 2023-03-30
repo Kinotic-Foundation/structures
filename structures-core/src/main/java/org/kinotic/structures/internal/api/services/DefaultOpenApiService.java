@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.openapi;
+package org.kinotic.structures.internal.api.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.models.*;
@@ -19,8 +19,6 @@ import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.domain.StructureHolder;
 import org.kinotic.structures.api.domain.Structures;
 import org.kinotic.structures.api.domain.Trait;
-import org.kinotic.structures.api.services.StructureService;
-import org.kinotic.structures.internal.api.services.StructureServiceInternal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;

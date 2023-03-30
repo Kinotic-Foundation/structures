@@ -4,8 +4,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.kinotic.structures.ElasticsearchTestBase;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.domain.TypeCheckMap;
-import org.kinotic.structures.api.services.ItemService;
-import org.kinotic.structures.api.services.StructureService;
+import org.kinotic.structures.internal.api.services.ItemServiceInternal;
+import org.kinotic.structures.internal.api.services.StructureServiceInternal;
 import org.kinotic.structures.util.StructureTestHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -18,11 +18,11 @@ import org.springframework.util.Assert;
 public class BulkUpdateTests extends ElasticsearchTestBase {
 
     @Autowired
-    private ItemService itemService;
+    private ItemServiceInternal itemService;
     @Autowired
     private StructureTestHelper structureTestHelper;
     @Autowired
-    private StructureService structureService;
+    private StructureServiceInternal structureService;
 
 
     //@Test

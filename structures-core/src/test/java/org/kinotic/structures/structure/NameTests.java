@@ -17,12 +17,12 @@
 
 package org.kinotic.structures.structure;
 
-import org.kinotic.structures.ElasticsearchTestBase;
-import org.kinotic.structures.api.domain.Structure;
-import org.kinotic.structures.api.services.StructureService;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.kinotic.structures.ElasticsearchTestBase;
+import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.internal.api.services.StructureServiceInternal;
 import org.kinotic.structures.internal.config.StructuresProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -33,7 +33,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 public class NameTests extends ElasticsearchTestBase {
 
     @Autowired
-    private StructureService structureService;
+    private StructureServiceInternal structureService;
     @Autowired
     private StructuresProperties structuresProperties;
 

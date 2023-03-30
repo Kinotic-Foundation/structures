@@ -24,8 +24,8 @@ import org.kinotic.structures.api.domain.AlreadyExistsException;
 import org.kinotic.structures.api.domain.PermenentTraitException;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.domain.Trait;
-import org.kinotic.structures.api.services.StructureService;
 import org.kinotic.structures.api.services.TraitService;
+import org.kinotic.structures.internal.api.services.StructureServiceInternal;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -41,7 +41,7 @@ public class TraitReorderTests extends ElasticsearchTestBase {
     @Autowired
     private TraitService traitService;
     @Autowired
-    private StructureService structureService;
+    private StructureServiceInternal structureService;
 
 
     @Test

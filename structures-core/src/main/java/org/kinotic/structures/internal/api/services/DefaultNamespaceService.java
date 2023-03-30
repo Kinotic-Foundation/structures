@@ -22,7 +22,6 @@ import org.kinotic.structures.api.domain.AlreadyExistsException;
 import org.kinotic.structures.api.domain.Namespace;
 import org.kinotic.structures.api.domain.Structures;
 import org.kinotic.structures.api.services.NamespaceService;
-import org.kinotic.structures.api.services.StructureService;
 import org.kinotic.structures.internal.api.services.util.EsHighLevelClientUtil;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Component;
@@ -38,9 +37,9 @@ public class DefaultNamespaceService implements NamespaceService {
 
     private final ObjectMapper mapper = new ObjectMapper();
     private RestHighLevelClient highLevelClient;
-    private StructureService structureService;
+    private StructureServiceInternal structureService;
 
-    public DefaultNamespaceService(RestHighLevelClient highLevelClient, StructureService structureService){
+    public DefaultNamespaceService(RestHighLevelClient highLevelClient, StructureServiceInternal structureService){
         this.highLevelClient = highLevelClient;
         this.structureService = structureService;
     }
