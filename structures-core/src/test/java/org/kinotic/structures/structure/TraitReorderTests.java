@@ -68,7 +68,7 @@ public class TraitReorderTests extends ElasticsearchTestBase {
 
             structureService.addTraitToStructure(structure.getId(), "mac", macOptional.get());
 
-            Optional<Structure> optional = structureService.getStructureById(structure.getId());
+            Optional<Structure> optional = structureService.getById(structure.getId());
             Structure saved = optional.get();
             int index = 0;
             String insertFirstId = "";
@@ -108,7 +108,7 @@ public class TraitReorderTests extends ElasticsearchTestBase {
 
             structureService.insertTraitBeforeAnotherForStructure(structure.getId(), movingTraitId, insertFirstId);
 
-            saved = structureService.getStructureById(structure.getId()).get();
+            saved = structureService.getById(structure.getId()).get();
             index = 0;
             for (Map.Entry<String, Trait> traitEntry : saved.getTraits().entrySet()) {
                 if (index == 0 && !traitEntry.getKey().equals("mac")) {
@@ -166,7 +166,7 @@ public class TraitReorderTests extends ElasticsearchTestBase {
 
             structureService.addTraitToStructure(structure.getId(), "mac", macOptional.get());
 
-            Optional<Structure> optional = structureService.getStructureById(structure.getId());
+            Optional<Structure> optional = structureService.getById(structure.getId());
             Structure saved = optional.get();
             int index = 0;
             String insertLastId = "";
@@ -206,7 +206,7 @@ public class TraitReorderTests extends ElasticsearchTestBase {
 
             structureService.insertTraitAfterAnotherForStructure(structure.getId(), movingTraitId, insertLastId);
 
-            saved = structureService.getStructureById(structure.getId()).get();
+            saved = structureService.getById(structure.getId()).get();
             index = 0;
             for (Map.Entry<String, Trait> traitEntry : saved.getTraits().entrySet()) {
                 if (index == 0 && !traitEntry.getKey().equals("ip")) {

@@ -4,11 +4,22 @@ spring:
   main:
     allow-circular-references: true
 
+# YAML Reference http://www.yaml.org/refcard.html
+continuum:
+  discovery: sharedfs
+  debug: true
+
+continuum-gateway:
+  disableIam: true
+
 logging:
   level:
     org:
-      kinotic: DEBUG
+      springframework:
+        web: DEBUG
+      kinotic: TRACE
+    io:
+      vertx: DEBUG
 
-
-#structures:
-#  index-prefix: ""
+structures:
+  elastic-use-ssl: false

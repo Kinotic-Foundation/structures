@@ -1,8 +1,8 @@
-package org.kinotic.structuresserver.controllers;
+package org.kinotic.structures.internal.controllers;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.kinotic.structuresserver.openapi.OpenApiService;
+import org.kinotic.structures.internal.openapi.OpenApiService;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -28,17 +28,17 @@ public class OpenApiDocsController {
     @GetMapping(value = "/api-docs/{namespace}/openapi.json", produces = MediaType.APPLICATION_JSON_VALUE)
     public Mono<String> getOpenApiDocs(@PathVariable String namespace) {
         return Mono.defer(() -> {
-                       try {
-                           //This wacky stuff is needed since we do not want nulls in our output
-                           ObjectMapper mapper = new ObjectMapper();
-                           mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-                           String json = mapper.writeValueAsString(openApiService.getOpenApiSpec(namespace));
-                           return Mono.just(json);
-                       } catch (IOException e) {
-                           return Mono.error(e);
-                       }
-                })
-                   .subscribeOn(Schedulers.boundedElastic());
+               try {
+                   //This wacky stuff is needed since we do not want nulls in our output
+                   ObjectMapper mapper = new ObjectMapper();
+                   mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+                   String json = mapper.writeValueAsString(openApiService.getOpenApiSpec(namespace));
+                   return Mono.just(json);
+               } catch (IOException e) {
+                   return Mono.error(e);
+               }
+        })
+        .subscribeOn(Schedulers.boundedElastic());
     }
 
 }

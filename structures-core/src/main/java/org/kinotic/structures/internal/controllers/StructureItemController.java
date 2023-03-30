@@ -1,4 +1,4 @@
-package org.kinotic.structuresserver.controllers;
+package org.kinotic.structures.internal.controllers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.elasticsearch.search.SearchHits;

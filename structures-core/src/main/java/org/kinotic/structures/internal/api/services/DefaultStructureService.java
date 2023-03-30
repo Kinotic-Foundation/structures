@@ -31,13 +31,10 @@ import org.elasticsearch.client.indices.GetIndexRequest;
 import org.elasticsearch.client.indices.PutMappingRequest;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.search.SearchHits;
+import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.xcontent.XContentType;
-import org.kinotic.structures.api.domain.AlreadyExistsException;
-import org.kinotic.structures.api.domain.PermenentTraitException;
-import org.kinotic.structures.api.domain.Structure;
-import org.kinotic.structures.api.domain.Trait;
+import org.kinotic.structures.api.domain.*;
 import org.kinotic.structures.api.services.StructureService;
 import org.kinotic.structures.api.services.TraitService;
 import org.kinotic.structures.internal.api.services.util.EsHighLevelClientUtil;
@@ -378,7 +375,7 @@ public class DefaultStructureService implements StructureService {
     }
 
     @Override
-    public Optional<Structure> getStructureById(String id) throws IOException {
+    public Optional<Structure> getById(String id) throws IOException {
         GetResponse response = highLevelClient.get(new GetRequest("structure").id(id.toLowerCase()), RequestOptions.DEFAULT);
         Structure ret = null;
         if (response.isExists()) {
@@ -388,19 +385,29 @@ public class DefaultStructureService implements StructureService {
     }
 
     @Override
-    public SearchHits getAll(int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException {
+    public StructureHolder save(StructureHolder structureHolder) throws AlreadyExistsException {
+        return null;
+    }
+
+    @Override
+    public StructureHolder getStructureHolderById(String id) throws IOException {
+        return null;
+    }
+
+    @Override
+    public Structures getAll(int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException {
         return getStructures(EsHighLevelClientUtil.buildGeneric(numberPerPage,page,columnToSortBy,descending));
     }
 
     @Override
-    public SearchHits getAllIdLike(String idLike, int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException {
+    public Structures getAllIdLike(String idLike, int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException {
         SearchSourceBuilder builder = EsHighLevelClientUtil.buildGeneric(numberPerPage,page,columnToSortBy,descending);
         builder.postFilter(QueryBuilders.wildcardQuery("id", idLike));
         return getStructures(builder);
     }
 
     @Override
-    public SearchHits getAllPublishedAndIdLike(String idLike, int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException {
+    public Structures getAllPublishedAndIdLike(String idLike, int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException {
         SearchSourceBuilder builder = EsHighLevelClientUtil.buildGeneric(numberPerPage,page,columnToSortBy,descending);
         builder.query(QueryBuilders.termQuery("published", true));
         builder.postFilter(QueryBuilders.wildcardQuery("id", idLike));
@@ -408,14 +415,14 @@ public class DefaultStructureService implements StructureService {
     }
 
     @Override
-    public SearchHits getAllNamespaceEquals(String namespace, int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException {
+    public Structures getAllNamespaceEquals(String namespace, int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException {
         SearchSourceBuilder builder = EsHighLevelClientUtil.buildGeneric(numberPerPage, page, columnToSortBy, descending);
         builder.postFilter(QueryBuilders.termQuery("namespace", namespace));
         return getStructures(builder);
     }
 
     @Override
-    public SearchHits getAllPublishedAndNamespaceEquals(String namespace, int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException {
+    public Structures getAllPublishedAndNamespaceEquals(String namespace, int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException {
         SearchSourceBuilder builder = EsHighLevelClientUtil.buildGeneric(numberPerPage, page, columnToSortBy, descending);
         builder.query(QueryBuilders.termQuery("published", true));
         builder.postFilter(QueryBuilders.termQuery("namespace", namespace));
@@ -423,7 +430,7 @@ public class DefaultStructureService implements StructureService {
     }
 
     @Override
-    public SearchHits getAllPublished(int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException {
+    public Structures getAllPublished(int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException {
         SearchSourceBuilder builder = EsHighLevelClientUtil.buildGeneric(numberPerPage,page,columnToSortBy,descending);
         builder.query(QueryBuilders.termQuery("published", true));
         return getStructures(builder);
@@ -431,7 +438,7 @@ public class DefaultStructureService implements StructureService {
 
     @Override
     public void delete(String structureId) throws IOException, PermenentTraitException {
-        Optional<Structure> optional = getStructureById(structureId);
+        Optional<Structure> optional = getById(structureId);
         //noinspection OptionalGetWithoutIsPresent
         Structure structure = optional.get();// will throw null pointer/element not available
 
@@ -473,7 +480,7 @@ public class DefaultStructureService implements StructureService {
 
     @Override
     public void publish(String structureId) throws IOException {
-        Optional<Structure> optional = getStructureById(structureId.toLowerCase());
+        Optional<Structure> optional = getById(structureId.toLowerCase());
         //noinspection OptionalGetWithoutIsPresent
         Structure structure = optional.get();// will throw null pointer/element not available
 
@@ -539,7 +546,7 @@ public class DefaultStructureService implements StructureService {
 
     @Override
     public void addTraitToStructure(String structureId, String fieldName, Trait newTrait) throws IOException {
-        Optional<Structure> optional = getStructureById(structureId.toLowerCase());
+        Optional<Structure> optional = getById(structureId.toLowerCase());
         //noinspection OptionalGetWithoutIsPresent
         Structure structure = optional.get();// will throw null pointer/element not available
 
@@ -566,7 +573,7 @@ public class DefaultStructureService implements StructureService {
 
     @Override
     public void insertTraitBeforeAnotherForStructure(String structureId, String movingTraitName, String insertBeforeTraitName) throws IOException {
-        Optional<Structure> optional = getStructureById(structureId.toLowerCase());
+        Optional<Structure> optional = getById(structureId.toLowerCase());
         //noinspection OptionalGetWithoutIsPresent
         Structure structure = optional.get();// will throw null pointer/element not available
 
@@ -606,7 +613,7 @@ public class DefaultStructureService implements StructureService {
 
     @Override
     public void insertTraitAfterAnotherForStructure(String structureId, String movingTraitName, String insertAfterTraitName) throws IOException {
-        Optional<Structure> optional = getStructureById(structureId.toLowerCase());
+        Optional<Structure> optional = getById(structureId.toLowerCase());
         //noinspection OptionalGetWithoutIsPresent
         Structure structure = optional.get();// will throw null pointer/element not available
 
@@ -682,8 +689,19 @@ public class DefaultStructureService implements StructureService {
         }
     }
 
-    private SearchHits getStructures(SearchSourceBuilder builder) throws IOException {
+    private Structures getStructures(SearchSourceBuilder builder) throws IOException {
         SearchResponse response = highLevelClient.search(new SearchRequest("structure").source(builder), RequestOptions.DEFAULT);
-        return response.getHits();
+        LinkedList<StructureHolder> holderList = new LinkedList<>();
+        for(SearchHit hit : response.getHits()){
+            Structure structure = EsHighLevelClientUtil.getTypeFromBytesReference(hit.getSourceRef(), Structure.class);
+            LinkedList<TraitHolder> traits = new LinkedList<>();
+            int index = 0;
+            for(Map.Entry<String, Trait> traitEntry : structure.getTraits().entrySet()){
+                traits.add(new TraitHolder(index, traitEntry.getKey(), traitEntry.getValue()));
+                index++;
+            }
+            holderList.add(new StructureHolder(structure, traits));
+        }
+        return new Structures(holderList, response.getHits().getTotalHits().value);
     }
 }

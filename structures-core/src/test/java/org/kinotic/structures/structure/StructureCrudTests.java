@@ -17,7 +17,6 @@
 
 package org.kinotic.structures.structure;
 
-import org.elasticsearch.search.SearchHits;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -83,7 +82,7 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 				structureService.delete(saved.getId());
 			}
 
-			Optional<Structure> optional = structureService.getStructureById(saved.getId());
+			Optional<Structure> optional = structureService.getById(saved.getId());
 			optional.get();// should throw if null
 		});
 	}
@@ -192,7 +191,7 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 
 			structureService.addTraitToStructure(structure.getId(), "mac", macOptional.get());
 
-			Optional<Structure> optional = structureService.getStructureById(structure.getId());
+			Optional<Structure> optional = structureService.getById(structure.getId());
 			Structure saved = optional.get();
 			int index = 0;
 			for (Map.Entry<String, Trait> traitEntry : saved.getTraits().entrySet()) {
@@ -252,7 +251,7 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 
 			structureService.addTraitToStructure(structure.getId(), "mac", macOptional.get());
 
-			Optional<Structure> optional = structureService.getStructureById(structure.getId());
+			Optional<Structure> optional = structureService.getById(structure.getId());
 			Structure saved = optional.get();
 			int index = 0;
 			for (Map.Entry<String, Trait> traitEntry : saved.getTraits().entrySet()) {
@@ -373,13 +372,13 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 
 		try {
 
-			SearchHits query1 = structureService.getAllPublishedAndNamespaceEquals("some_name_space_", 100, 0, "name", true);
+			Structures query1 = structureService.getAllPublishedAndNamespaceEquals("some_name_space_", 100, 0, "name", true);
 
-			Assertions.assertEquals(4, query1.getTotalHits().value, "Structure Namespace query did not return expected results");
+			Assertions.assertEquals(4, query1.getTotalElements(), "Structure Namespace query did not return expected results");
 
-			SearchHits query2 = structureService.getAllPublishedAndNamespaceEquals("org.kinotic.", 100, 0, "name", true);
+			Structures query2 = structureService.getAllPublishedAndNamespaceEquals("org.kinotic.", 100, 0, "name", true);
 
-			Assertions.assertEquals(2, query2.getTotalHits().value, "Second Structure Namespace query did not return expected results");
+			Assertions.assertEquals(2, query2.getTotalElements(), "Second Structure Namespace query did not return expected results");
 
 		} catch (IOException ioe) {
 			throw ioe;

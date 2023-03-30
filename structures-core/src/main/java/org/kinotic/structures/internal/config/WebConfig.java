@@ -1,4 +1,4 @@
-package org.kinotic.structuresserver.config;
+package org.kinotic.structures.internal.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

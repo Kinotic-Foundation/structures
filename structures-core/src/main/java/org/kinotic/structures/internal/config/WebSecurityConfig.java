@@ -1,4 +1,4 @@
-package org.kinotic.structuresserver.config;
+package org.kinotic.structures.internal.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -8,6 +8,7 @@ import org.springframework.security.core.userdetails.MapReactiveUserDetailsServi
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.server.SecurityWebFilterChain;
+
 import static org.springframework.security.config.Customizer.withDefaults;
 
 /**

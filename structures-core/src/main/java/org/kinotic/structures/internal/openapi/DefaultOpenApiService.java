@@ -1,4 +1,4 @@
-package org.kinotic.structuresserver.openapi;
+package org.kinotic.structures.internal.openapi;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.models.*;
@@ -16,10 +16,10 @@ import org.kinotic.continuum.api.jsonSchema.datestyles.MillsDateStyle;
 import org.kinotic.continuum.api.jsonSchema.datestyles.StringDateStyle;
 import org.kinotic.continuum.api.jsonSchema.datestyles.UnixDateStyle;
 import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.api.domain.StructureHolder;
+import org.kinotic.structures.api.domain.Structures;
 import org.kinotic.structures.api.domain.Trait;
-import org.kinotic.structuresserver.domain.StructureHolder;
-import org.kinotic.structuresserver.serializer.Structures;
-import org.kinotic.structuresserver.structures.IStructureManager;
+import org.kinotic.structures.api.services.StructureService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -38,11 +38,11 @@ public class DefaultOpenApiService implements OpenApiService {
     private static final Logger log = LoggerFactory.getLogger(DefaultOpenApiService.class);
 
     private final ObjectMapper objectMapper;
-    private final IStructureManager structureManager;
+    private final StructureService structureService;
 
-    public DefaultOpenApiService(ObjectMapper objectMapper, IStructureManager structureManager) {
+    public DefaultOpenApiService(ObjectMapper objectMapper, StructureService structureService) {
         this.objectMapper = objectMapper;
-        this.structureManager = structureManager;
+        this.structureService = structureService;
     }
 
     @Override
@@ -68,7 +68,7 @@ public class DefaultOpenApiService implements OpenApiService {
         components.addSecuritySchemes("BasicAuth", securityScheme);
         openAPI.setSecurity(List.of(new SecurityRequirement().addList("BasicAuth")));
 
-        Structures structures = structureManager.getAllPublishedForNamespace(namespace, 100, 0, "name", false);
+        Structures structures = structureService.getAllPublishedAndNamespaceEquals(namespace, 100, 0, "name", false);
         Paths paths = new Paths();
         for(StructureHolder structureHolder : structures.getContent()){
             Structure structure = structureHolder.getStructure();

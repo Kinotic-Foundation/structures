@@ -107,7 +107,7 @@ public class DefaultItemService implements ItemService {
 
     @Override
     public TypeCheckMap upsertItem(String structureId, TypeCheckMap item) throws Exception {
-        Optional<Structure> optional = structureService.getStructureById(structureId);
+        Optional<Structure> optional = structureService.getById(structureId);
         //noinspection OptionalGetWithoutIsPresent
         final Structure structure = optional.get();// will throw null pointer/element not available
         if (!structure.isPublished()) {
@@ -147,7 +147,7 @@ public class DefaultItemService implements ItemService {
     @Override
     public void requestBulkUpdatesForStructure(String structureId) throws IOException, NotFoundException {
         if(!this.bulkRequests.containsKey(structureId)){
-            Optional<Structure> structureOptional = this.structureService.getStructureById(structureId);
+            Optional<Structure> structureOptional = this.structureService.getById(structureId);
             if(structureOptional.isEmpty()){
                 throw new NotFoundException("Not able to find requested Structure");
             }
@@ -249,7 +249,7 @@ public class DefaultItemService implements ItemService {
 
     @Override
     public long count(String structureId) throws IOException {
-        Optional<Structure> optional = structureService.getStructureById(structureId);
+        Optional<Structure> optional = structureService.getById(structureId);
         //noinspection OptionalGetWithoutIsPresent
         Structure structure = optional.get();// will throw null pointer/element not available
 
@@ -292,7 +292,7 @@ public class DefaultItemService implements ItemService {
      */
     @Override
     public Optional<TypeCheckMap> getItemById(String structureId, String id) throws Exception {
-        Optional<Structure> optional = structureService.getStructureById(structureId);
+        Optional<Structure> optional = structureService.getById(structureId);
         //noinspection OptionalGetWithoutIsPresent
         Structure structure = optional.get();// will throw null pointer/element not available
 
@@ -309,7 +309,7 @@ public class DefaultItemService implements ItemService {
      */
     @Override
     public SearchHits searchForItemsById(String structureId, String... ids) throws IOException {
-        Optional<Structure> optional = structureService.getStructureById(structureId);
+        Optional<Structure> optional = structureService.getById(structureId);
         //noinspection OptionalGetWithoutIsPresent
         Structure structure = optional.get();// will throw null pointer/element not available
 
@@ -327,7 +327,7 @@ public class DefaultItemService implements ItemService {
 
     @Override
     public SearchHits getAll(String structureId, int numberPerPage, int from) throws IOException {
-        Optional<Structure> optional = structureService.getStructureById(structureId);
+        Optional<Structure> optional = structureService.getById(structureId);
         //noinspection OptionalGetWithoutIsPresent
         Structure structure = optional.get();// will throw null pointer/element not available
 
@@ -355,7 +355,7 @@ public class DefaultItemService implements ItemService {
      */
     @Override
     public SearchHits searchTerms(String structureId, int numberPerPage, int from, String fieldName, Object... searchTerms) throws IOException {
-        Optional<Structure> optional = structureService.getStructureById(structureId);
+        Optional<Structure> optional = structureService.getById(structureId);
         //noinspection OptionalGetWithoutIsPresent
         Structure structure = optional.get();// will throw null pointer/element not available
 
@@ -382,7 +382,7 @@ public class DefaultItemService implements ItemService {
      */
     @Override
     public SearchHits searchFullText(String structureId, int numberPerPage, int from, String search, String... fieldNames) throws IOException {
-        Optional<Structure> optional = structureService.getStructureById(structureId);
+        Optional<Structure> optional = structureService.getById(structureId);
         //noinspection OptionalGetWithoutIsPresent
         Structure structure = optional.get();// will throw null pointer/element not available
 
@@ -414,7 +414,7 @@ public class DefaultItemService implements ItemService {
 
     @Override
     public SearchHits search(String structureId, String search, int numberPerPage, int from, String sortField, SortOrder sortOrder) throws IOException {
-        Optional<Structure> optional = structureService.getStructureById(structureId);
+        Optional<Structure> optional = structureService.getById(structureId);
         //noinspection OptionalGetWithoutIsPresent
         Structure structure = optional.get();// will throw null pointer/element not available
 
@@ -438,7 +438,7 @@ public class DefaultItemService implements ItemService {
 
     @Override
     public List<String> searchDistinct(String structureId, String search, String field, int limit) throws IOException {
-        Optional<Structure> optional = structureService.getStructureById(structureId);
+        Optional<Structure> optional = structureService.getById(structureId);
         //noinspection OptionalGetWithoutIsPresent
         Structure structure = optional.get();// will throw null pointer/element not available
 
@@ -461,7 +461,7 @@ public class DefaultItemService implements ItemService {
 
     @Override
     public void delete(String structureId, String itemId) throws Exception {
-        Optional<Structure> optional = structureService.getStructureById(structureId);
+        Optional<Structure> optional = structureService.getById(structureId);
         //noinspection OptionalGetWithoutIsPresent
         Structure structure = optional.get();
 

@@ -20,6 +20,7 @@ import org.elasticsearch.xcontent.XContentFactory;
 import org.elasticsearch.xcontent.XContentType;
 import org.kinotic.structures.api.domain.AlreadyExistsException;
 import org.kinotic.structures.api.domain.Namespace;
+import org.kinotic.structures.api.domain.Structures;
 import org.kinotic.structures.api.services.NamespaceService;
 import org.kinotic.structures.api.services.StructureService;
 import org.kinotic.structures.internal.api.services.util.EsHighLevelClientUtil;
@@ -120,9 +121,9 @@ public class DefaultNamespaceService implements NamespaceService {
         if(namespaceOptional.isPresent()){
             Namespace toBeDeleted = namespaceOptional.get();
 
-            SearchHits response = structureService.getAllNamespaceEquals(toBeDeleted.getName(), 100, 0, "name", true);
+            Structures response = structureService.getAllNamespaceEquals(toBeDeleted.getName(), 100, 0, "name", true);
 
-            if(response.getTotalHits().value > 0){
+            if(response.getTotalElements() > 0){
                 throw new IllegalStateException("Attempting to delete a Namespace that is still attached to a Structure, you must delete all references before deleting this Namespace");
             }
 

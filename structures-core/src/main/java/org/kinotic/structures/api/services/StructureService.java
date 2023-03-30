@@ -17,11 +17,7 @@
 
 package org.kinotic.structures.api.services;
 
-import org.kinotic.structures.api.domain.AlreadyExistsException;
-import org.kinotic.structures.api.domain.PermenentTraitException;
-import org.kinotic.structures.api.domain.Structure;
-import org.kinotic.structures.api.domain.Trait;
-import org.elasticsearch.search.SearchHits;
+import org.kinotic.structures.api.domain.*;
 
 import java.io.IOException;
 import java.util.Map;
@@ -31,20 +27,21 @@ public interface StructureService {
 
 
     Structure save(Structure structure) throws AlreadyExistsException;
+    Optional<Structure> getById(String id) throws IOException;
+    StructureHolder save(StructureHolder structureHolder) throws AlreadyExistsException;
+    StructureHolder getStructureHolderById(String id) throws IOException;
 
-    Optional<Structure> getStructureById(String id) throws IOException;
+    Structures getAll(int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException;
 
-    SearchHits getAll(int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException;
+    Structures getAllIdLike(String idLike, int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException;
 
-    SearchHits getAllIdLike(String idLike, int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException;
+    Structures getAllPublishedAndIdLike(String idLike, int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException;
 
-    SearchHits getAllPublishedAndIdLike(String idLike, int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException;
+    Structures getAllNamespaceEquals(String namespace, int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException;
 
-    SearchHits getAllNamespaceEquals(String namespace, int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException;
+    Structures getAllPublishedAndNamespaceEquals(String namespace, int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException;
 
-    SearchHits getAllPublishedAndNamespaceEquals(String namespace, int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException;
-
-    SearchHits getAllPublished(int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException;
+    Structures getAllPublished(int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException;
 
     void delete(String structureId) throws IOException, PermenentTraitException;
 
