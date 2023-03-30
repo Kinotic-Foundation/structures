@@ -668,6 +668,18 @@ public class DefaultStructureService implements StructureService, StructureServi
 
     }
 
+    @Override
+    public String getJsonSchema(String structureId) throws IOException{
+        Structure structure = getById(structureId).get();
+        return getJsonSchema(structure);
+    }
+
+    @Override
+    public String getElasticSearchBaseMapping(String structureId) throws IOException{
+        Structure structure = getById(structureId).get();
+        return getElasticSearchBaseMapping(structure);
+    }
+
     private long count(String indexName) throws IOException {
         BoolQueryBuilder boolQueryBuilder = new BoolQueryBuilder();
         boolQueryBuilder.filter(QueryBuilders.termQuery("deleted", false));

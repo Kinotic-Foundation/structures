@@ -8,8 +8,6 @@ export interface IItemManager {
 
     getItemById(structureId: string, id: string): Promise<any>
 
-    searchForItemsByIdForStructureId(structureId: string, ids: string[]): Promise<any>
-
     searchForItemsById(structureId: string, ids: string[]): Promise<any>
 
     getAll(structureId: string, numberPerPage: number, from: number): Promise<any>
@@ -20,7 +18,7 @@ export interface IItemManager {
 
     search(structureId: string, search: string, numberPerPage: number, from: number): Promise<any>
 
-    searchWithSort(structureId: string, search: string, numberPerPage: number, from: number, sortField: string, sortOrder: string): Promise<any>
+    searchWithSort(structureId: string, search: string, numberPerPage: number, from: number, sortField: string, descending: boolean): Promise<any>
 
     delete(structureId: string, itemId: string): Promise<void>
 
@@ -52,10 +50,6 @@ class ItemManager implements IItemManager {
         return this.serviceProxy.invoke('getItemById', [structureId, id])
     }
 
-    public searchForItemsByIdForStructureId(structureId: string, ids: string[]): Promise<any> {
-        return this.serviceProxy.invoke('searchForItemsByIdForStructureId', [structureId, ids])
-    }
-
     public searchForItemsById(structureId: string, ids: string[]): Promise<any> {
         return this.serviceProxy.invoke('searchForItemsById', [structureId, ids])
     }
@@ -76,8 +70,8 @@ class ItemManager implements IItemManager {
         return this.serviceProxy.invoke('search', [structureId, search, numberPerPage, from])
     }
 
-    public searchWithSort(structureId: string, search: string, numberPerPage: number, from: number, sortField: string, sortOrder: string): Promise<any> {
-        return this.serviceProxy.invoke('searchWithSort', [structureId, search, numberPerPage, from, sortField, sortOrder])
+    public searchWithSort(structureId: string, search: string, numberPerPage: number, from: number, sortField: string, descending: boolean): Promise<any> {
+        return this.serviceProxy.invoke('searchWithSort', [structureId, search, numberPerPage, from, sortField, descending])
     }
 
     public delete(structureId: string, itemId: string): Promise<void> {

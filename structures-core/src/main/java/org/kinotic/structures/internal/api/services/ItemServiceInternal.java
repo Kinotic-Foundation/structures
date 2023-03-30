@@ -10,17 +10,14 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Created by Navíd Mitchell 🤪 on 3/30/23.
  */
 public interface ItemServiceInternal extends ItemService {
 
-    void requestBulkUpdatesForStructure(String structureId) throws IOException, NotFoundException;
-
-    void pushItemForBulkUpdate(String structureId, TypeCheckMap item) throws Exception;
-
-    void flushAndCloseBulkUpdate(String structureId) throws Exception;
+    Optional<TypeCheckMap> getById(Structure structure, String id) throws Exception;
 
     SearchHits search(String structureId, String search, int numberPerPage, int from, String sortField, SortOrder sortOrder) throws IOException;
 
