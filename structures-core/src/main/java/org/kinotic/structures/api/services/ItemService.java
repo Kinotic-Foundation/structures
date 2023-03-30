@@ -17,12 +17,11 @@
 
 package org.kinotic.structures.api.services;
 
-import org.kinotic.continuum.api.annotations.Publish;
-import org.kinotic.continuum.api.annotations.Version;
-import org.kinotic.structures.api.domain.*;
-import org.kinotic.structures.api.domain.traitlifecycle.TraitLifecycle;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.sort.SortOrder;
+import org.kinotic.continuum.api.annotations.Publish;
+import org.kinotic.structures.api.domain.*;
+import org.kinotic.structures.api.domain.traitlifecycle.TraitLifecycle;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -31,7 +30,6 @@ import java.util.Map;
 import java.util.Optional;
 
 @Publish
-@Version("1.0.0")
 public interface ItemService {
     TypeCheckMap upsertItem(String structureId, TypeCheckMap item) throws Exception;
 

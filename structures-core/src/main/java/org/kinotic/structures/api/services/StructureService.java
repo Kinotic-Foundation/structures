@@ -17,12 +17,14 @@
 
 package org.kinotic.structures.api.services;
 
+import org.kinotic.continuum.api.annotations.Publish;
 import org.kinotic.structures.api.domain.*;
 
 import java.io.IOException;
 import java.util.Map;
 import java.util.Optional;
 
+@Publish
 public interface StructureService {
 
 

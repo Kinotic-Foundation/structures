@@ -37,7 +37,7 @@ class ItemManager implements IItemManager {
     private serviceProxy: IServiceProxy
 
     constructor(@inject() serviceRegistry: IServiceRegistry) {
-        this.serviceProxy = serviceRegistry.serviceProxy('org.kinotic.structuresserver.items.IItemManager')
+        this.serviceProxy = serviceRegistry.serviceProxy('org.kinotic.structures.api.services.ItemService')
     }
 
     public upsertItem(structureId: string, item: any): Promise<any> {

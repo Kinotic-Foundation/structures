@@ -17,18 +17,16 @@
 
 package org.kinotic.structures.api.services;
 
+import org.elasticsearch.search.SearchHits;
 import org.kinotic.continuum.api.annotations.Publish;
-import org.kinotic.continuum.api.annotations.Version;
 import org.kinotic.structures.api.domain.AlreadyExistsException;
 import org.kinotic.structures.api.domain.PermenentTraitException;
 import org.kinotic.structures.api.domain.Trait;
-import org.elasticsearch.search.SearchHits;
 
 import java.io.IOException;
 import java.util.Optional;
 
 @Publish
-@Version("1.0.0")
 public interface TraitService {
 
     Trait save(Trait saveTrait) throws AlreadyExistsException, PermenentTraitException, IOException;
