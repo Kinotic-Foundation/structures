@@ -20,6 +20,7 @@ import org.kinotic.structures.api.domain.StructureHolder;
 import org.kinotic.structures.api.domain.Structures;
 import org.kinotic.structures.api.domain.Trait;
 import org.kinotic.structures.api.services.StructureService;
+import org.kinotic.structures.internal.api.services.StructureServiceInternal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -38,9 +39,9 @@ public class DefaultOpenApiService implements OpenApiService {
     private static final Logger log = LoggerFactory.getLogger(DefaultOpenApiService.class);
 
     private final ObjectMapper objectMapper;
-    private final StructureService structureService;
+    private final StructureServiceInternal structureService;
 
-    public DefaultOpenApiService(ObjectMapper objectMapper, StructureService structureService) {
+    public DefaultOpenApiService(ObjectMapper objectMapper, StructureServiceInternal structureService) {
         this.objectMapper = objectMapper;
         this.structureService = structureService;
     }
@@ -68,7 +69,7 @@ public class DefaultOpenApiService implements OpenApiService {
         components.addSecuritySchemes("BasicAuth", securityScheme);
         openAPI.setSecurity(List.of(new SecurityRequirement().addList("BasicAuth")));
 
-        Structures structures = structureService.getAllPublishedAndNamespaceEquals(namespace, 100, 0, "name", false);
+        Structures structures = structureService.getAllPublishedForNamespace(namespace, 100, 0, "name", false);
         Paths paths = new Paths();
         for(StructureHolder structureHolder : structures.getContent()){
             Structure structure = structureHolder.getStructure();
