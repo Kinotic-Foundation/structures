@@ -66,7 +66,6 @@ public class DefaultStructureService implements StructureService, StructureServi
     private Trait id;
     private Trait deleted;
     private Trait deletedTime;
-    private Trait createdTime;
     private Trait updatedTime;
     private Trait structureId;
 
@@ -128,19 +127,6 @@ public class DefaultStructureService implements StructureService, StructureServi
             }else{
                 this.deletedTime = deletedTimeOptional.get();
             }
-            Optional<Trait> createdTimeOptional = traitService.getTraitByName("CreatedTime");
-            if(createdTimeOptional.isEmpty()){
-                Trait temp = new Trait();
-                temp.setName("CreatedTime");
-                temp.setDescribeTrait("Long field that says when the item was created.");
-                temp.setSchema("{ \"type\": \"date\", \"format\": { \"style\": \"unix\" } }");
-                temp.setEsSchema("{ \"type\": \"date\", \"format\": \"epoch_millis\" }");
-                temp.setRequired(true);
-                temp.setSystemManaged(true);
-                this.createdTime = traitService.save(temp);
-            }else{
-                this.createdTime = createdTimeOptional.get();
-            }
             Optional<Trait> updatedTimeOptional = traitService.getTraitByName("UpdatedTime");
             if(updatedTimeOptional.isEmpty()){
                 Trait temp = new Trait();
@@ -188,6 +174,16 @@ public class DefaultStructureService implements StructureService, StructureServi
              * Below are generic fields that provide some quick access. They can be modified within the Structure frontend.
              */
 
+            Optional<Trait> createdTimeOptional = traitService.getTraitByName("CreatedTime");
+            if(createdTimeOptional.isEmpty()){
+                Trait temp = new Trait();
+                temp.setName("CreatedTime");
+                temp.setDescribeTrait("Long field that says when the item was created.");
+                temp.setSchema("{ \"type\": \"date\", \"format\": { \"style\": \"unix\" } }");
+                temp.setEsSchema("{ \"type\": \"date\", \"format\": \"epoch_millis\" }");
+                temp.setRequired(true);
+                traitService.save(temp);
+            }
             Optional<Trait> ipOptional = traitService.getTraitByName("Ip");
             if(ipOptional.isEmpty()){
                 Trait temp = new Trait();
