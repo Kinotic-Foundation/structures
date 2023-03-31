@@ -4,3 +4,6 @@ logging:
   level:
     com:
       kinotic: INFO
+
+server:
+  port: 8989

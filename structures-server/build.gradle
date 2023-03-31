@@ -15,7 +15,6 @@ dependencies {
 
 	// Additional Continuum Dependencies
 	implementation "org.kinotic:continuum-gateway:${continuumVersion}"
-
 }
 
 test {

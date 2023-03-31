@@ -9,12 +9,8 @@ logging:
     org:
       kinotic: INFO
 
-
 management:
   endpoints:
     web:
       exposure:
         include: health,info
-
-server:
-  port: 8989

@@ -56,6 +56,7 @@ public class DefaultNamespaceService implements NamespaceService {
         }
         Optional<Namespace> alreadyCreated = getNamespace(namespace.getName());
 
+        IndexRequest request = new IndexRequest("namespace");
         if(alreadyCreated.isPresent() && !Objects.equals(alreadyCreated.get().getUpdated(), namespace.getUpdated())){
             if(namespace.getUpdated() == 0){
                 throw new AlreadyExistsException("Namespace name must be unique, '"+namespace.getName()+"' already exists.");
@@ -63,15 +64,15 @@ public class DefaultNamespaceService implements NamespaceService {
                 throw new OptimisticLockingFailureException("Attempting to update a Namespace, but out of sync with database; please re-fetch from database and try again");
             }
         }else if(alreadyCreated.isEmpty()){
+            request.create(true);
             namespace.setUpdated(System.currentTimeMillis());
         }else{
             // version type field - updating
+            request.create(false);
             namespace.setUpdated(System.currentTimeMillis());
         }
 
-        IndexRequest request = new IndexRequest("namespace");
         request.id(namespace.getName());
-        request.create(true);
         request.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
 
         XContentBuilder builder = XContentFactory.jsonBuilder();

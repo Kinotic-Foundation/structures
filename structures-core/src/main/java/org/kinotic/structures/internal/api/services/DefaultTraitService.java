@@ -68,6 +68,9 @@ public class DefaultTraitService implements TraitService {
 
     @Override
     public Trait save(Trait saveTrait) throws AlreadyExistsException, PermenentTraitException, IOException {
+
+        IndexRequest request = new IndexRequest("trait");
+
         if(saveTrait.getCreated() == 0){ // new trait, name must be unique
             Optional<Trait> alreadyCreated = getTraitByName(saveTrait.getName());
             if(alreadyCreated.isPresent()){
@@ -76,15 +79,13 @@ public class DefaultTraitService implements TraitService {
             saveTrait.setId(UUID.randomUUID().toString());
             saveTrait.setCreated(System.currentTimeMillis());
             saveTrait.setUpdated(saveTrait.getCreated());
+            request.create(true);
         }else{
             saveTrait.setUpdated(System.currentTimeMillis());
+            request.create(false);
         }
 
-
-        IndexRequest request = new IndexRequest("trait");
         request.id(saveTrait.getId());
-        request.create(true);
-
         // forces a cluster refresh of the index.. for high volume data this wouldn't work - lets see how it works in our case.
         request.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
 

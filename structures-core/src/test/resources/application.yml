@@ -9,9 +9,6 @@ continuum:
   discovery: sharedfs
   debug: true
 
-continuum-gateway:
-  disableIam: true
-
 logging:
   level:
     org:

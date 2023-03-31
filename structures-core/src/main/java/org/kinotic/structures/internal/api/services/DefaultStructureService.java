@@ -348,9 +348,6 @@ public class DefaultStructureService implements StructureService, StructureServi
         if(!structure.getTraits().containsKey("deletedTime")){
             structure.getTraits().put("deletedTime", this.deletedTime);
         }
-        if(!structure.getTraits().containsKey("createdTime")){
-            structure.getTraits().put("createdTime", this.createdTime);
-        }
         if(!structure.getTraits().containsKey("updatedTime")){
             structure.getTraits().put("updatedTime", this.updatedTime);
         }

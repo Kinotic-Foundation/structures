@@ -51,7 +51,8 @@ out/
 *.DS_Store
 
 /ignite/
-/gateway-data/
+*/ignite/
+/gateway-data/**
 
 *.zip
 
@@ -66,3 +67,4 @@ website/node_modules
 website/.vitepress/cache
 
 website/.vitepress/dist/
+
