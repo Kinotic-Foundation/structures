@@ -19,6 +19,8 @@ import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.domain.StructureHolder;
 import org.kinotic.structures.api.domain.Structures;
 import org.kinotic.structures.api.domain.Trait;
+import org.kinotic.structures.internal.config.OpenApiSecurityType;
+import org.kinotic.structures.internal.config.StructuresProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -38,10 +40,14 @@ public class DefaultOpenApiService implements OpenApiService {
 
     private final ObjectMapper objectMapper;
     private final StructureServiceInternal structureService;
+    private final StructuresProperties structuresProperties;
 
-    public DefaultOpenApiService(ObjectMapper objectMapper, StructureServiceInternal structureService) {
+    public DefaultOpenApiService(ObjectMapper objectMapper,
+                                 StructureServiceInternal structureService,
+                                 StructuresProperties structuresProperties) {
         this.objectMapper = objectMapper;
         this.structureService = structureService;
+        this.structuresProperties = structuresProperties;
     }
 
     @Override
@@ -61,11 +67,19 @@ public class DefaultOpenApiService implements OpenApiService {
         Components components = new Components();
 
         // security scheme
-        SecurityScheme securityScheme = new SecurityScheme();
-        securityScheme.setType(SecurityScheme.Type.HTTP);
-        securityScheme.setScheme("basic");
-        components.addSecuritySchemes("BasicAuth", securityScheme);
-        openAPI.setSecurity(List.of(new SecurityRequirement().addList("BasicAuth")));
+        if(structuresProperties.getOpenApiSecurityType() == OpenApiSecurityType.BASIC){
+            SecurityScheme securityScheme = new SecurityScheme();
+            securityScheme.setType(SecurityScheme.Type.HTTP);
+            securityScheme.setScheme("basic");
+            components.addSecuritySchemes("BasicAuth", securityScheme);
+            openAPI.setSecurity(List.of(new SecurityRequirement().addList("BasicAuth")));
+        } else if (structuresProperties.getOpenApiSecurityType() == OpenApiSecurityType.BEARER){
+            SecurityScheme securityScheme = new SecurityScheme();
+            securityScheme.setType(SecurityScheme.Type.HTTP);
+            securityScheme.setScheme("bearer");
+            components.addSecuritySchemes("BearerAuth", securityScheme);
+            openAPI.setSecurity(List.of(new SecurityRequirement().addList("BearerAuth")));
+        }
 
         Structures structures = structureService.getAllPublishedForNamespace(namespace, 100, 0, "name", false);
         Paths paths = new Paths();
@@ -208,15 +222,20 @@ public class DefaultOpenApiService implements OpenApiService {
         paths.put("/api/"+structure.getId()+"/bulk-upsert", bulkUpsertPathItem);
     }
 
-    private static Operation createOperation(String operationSummary,
+    private Operation createOperation(String operationSummary,
                                              String operationId,
                                              String structureName,
                                              int responseType) {
 
         Operation operation = new Operation().summary(operationSummary)
-                                             .security(List.of(new SecurityRequirement().addList("BasicAuth")))
                                              .tags(List.of(structureName))
                                              .operationId(operationId);
+
+        if(structuresProperties.getOpenApiSecurityType() == OpenApiSecurityType.BASIC){
+            operation.security(List.of(new SecurityRequirement().addList("BasicAuth")));
+        }else if(structuresProperties.getOpenApiSecurityType() == OpenApiSecurityType.BEARER){
+            operation.security(List.of(new SecurityRequirement().addList("BearerAuth")));
+        }
 
         // Add the default responses and the response for the structure item being returned
         ApiResponses defaultResponses = getDefaultResponses();
@@ -295,7 +314,11 @@ public class DefaultOpenApiService implements OpenApiService {
      */
     public Schema<?> getSchemaForTrait(Trait trait) throws Exception{
         JsonSchema schema = objectMapper.readValue(trait.getSchema(), JsonSchema.class);
-        return getSchemaForContinuumJsonSchema(schema);
+        Schema<?> ret = getSchemaForContinuumJsonSchema(schema);
+        if(trait.getDescribeTrait() != null){
+            ret.setDescription(trait.getDescribeTrait());
+        }
+        return ret;
     }
 
     private Schema<?> getSchemaForContinuumJsonSchema(JsonSchema schema){

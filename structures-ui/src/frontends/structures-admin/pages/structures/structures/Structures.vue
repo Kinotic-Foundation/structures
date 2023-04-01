@@ -322,13 +322,6 @@
                                             </v-list-item-content>
                                         </v-list-item>
                                         <v-list-item>
-                                            <v-list-item-content>
-                                                <v-text-field v-model="newTrait.describeTrait"
-                                                              label="Describe Trait Field" >
-                                                </v-text-field>
-                                            </v-list-item-content>
-                                        </v-list-item>
-                                        <v-list-item>
                                             <v-list-item-content >
 
                                                 <v-select
@@ -345,6 +338,13 @@
                                                 </v-select>
 
                                             </v-list-item-content>
+                                        </v-list-item>
+                                        <v-list-item v-if="newTrait.created !== 0">
+                                          <v-list-item-content>
+                                            <v-text-field v-model="newTrait.describeTrait"
+                                                          label="Describe Trait Field" >
+                                            </v-text-field>
+                                          </v-list-item-content>
                                         </v-list-item>
                                         <v-list-item v-if="newTrait.created !== 0">
                                             <v-list-item-content>
@@ -674,7 +674,6 @@ export default class Traits extends Vue {
 
     private resetEditedItem(){
         this.newTraitName = ""
-        this.newTraitDescribe = ""
         this.newTrait = new Trait("","","","","",0,0,true,true,true,true)
         this.dummyTrait = new Trait("","","","","",0,0,true,true,true,true)
         this.traitFieldNameErrorMessage = ""
