@@ -18,6 +18,7 @@
 package org.kinotic.structures.internal.api.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.elasticsearch.search.SearchHit;
 import org.kinotic.structures.api.domain.AlreadyExistsException;
 import org.kinotic.structures.api.domain.PermenentTraitException;
 import org.kinotic.structures.api.domain.Trait;
@@ -52,8 +53,6 @@ import java.util.*;
 
 @Component
 public class DefaultTraitService implements TraitService {
-
-    private final ObjectMapper mapper = new ObjectMapper();
 
     private RestHighLevelClient highLevelClient;
 
@@ -142,6 +141,24 @@ public class DefaultTraitService implements TraitService {
         }
 
         return Optional.ofNullable(ret);
+    }
+
+    @Override
+    public List<Trait> getAllSystemManaged() throws IOException {
+        BoolQueryBuilder boolBuilder = new BoolQueryBuilder();
+        boolBuilder.filter(QueryBuilders.termQuery("systemManaged", true));
+
+        SearchSourceBuilder builder = new SearchSourceBuilder();
+        builder.query(boolBuilder);
+        SearchRequest request = new SearchRequest("trait");
+        request.source(builder);
+        SearchResponse response = highLevelClient.search(request, RequestOptions.DEFAULT);
+
+        ArrayList<Trait> ret = new ArrayList<>();
+        for(SearchHit hit : response.getHits()){
+            ret.add(EsHighLevelClientUtil.getTypeFromBytesReference(hit.getSourceRef(), Trait.class));
+        }
+        return ret;
     }
 
     @Override

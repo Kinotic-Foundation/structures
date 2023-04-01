@@ -24,6 +24,7 @@ import org.kinotic.structures.api.domain.PermenentTraitException;
 import org.kinotic.structures.api.domain.Trait;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Optional;
 
 @Publish
@@ -34,6 +35,8 @@ public interface TraitService {
     Optional<Trait> getTraitById(String id) throws IOException;
 
     Optional<Trait> getTraitByName(String name) throws IOException;
+
+    List<Trait> getAllSystemManaged() throws IOException;
 
     SearchHits getAll(int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException;
 

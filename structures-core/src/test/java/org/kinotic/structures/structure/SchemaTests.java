@@ -67,8 +67,8 @@ public class SchemaTests extends ElasticsearchTestBase {
 
         structureService.delete(saved.getId());
 
-        if (saved.getTraits().size() != 9) {
-            throw new IllegalStateException("We should have 9 traits, 6 given by default. We have " + saved.getTraits().size());
+        if (saved.getTraits().size() != 8) {
+            throw new IllegalStateException("We should have 8 traits, 5 given by default. We have " + saved.getTraits().size());
         }
 
     }
@@ -97,8 +97,8 @@ public class SchemaTests extends ElasticsearchTestBase {
 
         structureService.delete(saved.getId());
 
-        if (saved.getTraits().size() != 9) {
-            throw new IllegalStateException("We should have 9 traits, 6 given by default. We have " + saved.getTraits().size());
+        if (saved.getTraits().size() != 8) {
+            throw new IllegalStateException("We should have 8 traits, 5 given by default. We have " + saved.getTraits().size());
         }
 
 

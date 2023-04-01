@@ -25,7 +25,7 @@ import java.io.IOException;
 @Publish
 public interface StructureService {
 
-    StructureHolder save(StructureHolder structureHolder) throws AlreadyExistsException;
+    StructureHolder save(StructureHolder structureHolder) throws AlreadyExistsException, IOException;
 
     Structures getAll(int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException;
 

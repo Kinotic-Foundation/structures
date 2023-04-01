@@ -71,8 +71,8 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 			final Structure saved = structureService.save(structure);
 
 			try {
-				if (saved.getTraits().size() != 9) {
-					throw new IllegalStateException("We should have 9 traits, 6 given by default. We have " + saved.getTraits()
+				if (saved.getTraits().size() != 8) {
+					throw new IllegalStateException("We should have 8 traits, 5 given by default. We have " + saved.getTraits()
 																												   .size());
 				}
 
@@ -205,14 +205,12 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 					throw new IllegalStateException("Order of Trait Map not what it should be, index 3 should be \'deleted\' but got \'" + traitEntry.getKey());
 				} else if (index == 4 && !traitEntry.getKey().equals("deletedTime")) {
 					throw new IllegalStateException("Order of Trait Map not what it should be, index 4 should be \'deletedTime\' but got \'" + traitEntry.getKey());
-				} else if (index == 5 && !traitEntry.getKey().equals("createdTime")) {
-					throw new IllegalStateException("Order of Trait Map not what it should be, index 5 should be \'createdTime\' but got \'" + traitEntry.getKey());
-				} else if (index == 6 && !traitEntry.getKey().equals("updatedTime")) {
-					throw new IllegalStateException("Order of Trait Map not what it should be, index 6 should be \'updatedTime\' but got \'" + traitEntry.getKey());
-				} else if (index == 7 && !traitEntry.getKey().equals("structureId")) {
-					throw new IllegalStateException("Order of Trait Map not what it should be, index 7 should be \'structureId\' but got \'" + traitEntry.getKey());
-				} else if (index == 8 && !traitEntry.getKey().equals("mac")) {
-					throw new IllegalStateException("Order of Trait Map not what it should be, index 8 should be \'mac\' but got \'" + traitEntry.getKey());
+				} else if (index == 5 && !traitEntry.getKey().equals("updatedTime")) {
+					throw new IllegalStateException("Order of Trait Map not what it should be, index 5 should be \'updatedTime\' but got \'" + traitEntry.getKey());
+				} else if (index == 6 && !traitEntry.getKey().equals("structureId")) {
+					throw new IllegalStateException("Order of Trait Map not what it should be, index 6 should be \'structureId\' but got \'" + traitEntry.getKey());
+				} else if (index == 7 && !traitEntry.getKey().equals("mac")) {
+					throw new IllegalStateException("Order of Trait Map not what it should be, index 7 should be \'mac\' but got \'" + traitEntry.getKey());
 				}
 
 				index++;
@@ -265,14 +263,12 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 					throw new IllegalStateException("Order of Trait Map not what it should be, index 3 should be \'deleted\' but got \'" + traitEntry.getKey());
 				} else if (index == 4 && !traitEntry.getKey().equals("deletedTime")) {
 					throw new IllegalStateException("Order of Trait Map not what it should be, index 4 should be \'deletedTime\' but got \'" + traitEntry.getKey());
-				} else if (index == 5 && !traitEntry.getKey().equals("createdTime")) {
-					throw new IllegalStateException("Order of Trait Map not what it should be, index 5 should be \'createdTime\' but got \'" + traitEntry.getKey());
-				} else if (index == 6 && !traitEntry.getKey().equals("updatedTime")) {
-					throw new IllegalStateException("Order of Trait Map not what it should be, index 6 should be \'updatedTime\' but got \'" + traitEntry.getKey());
-				} else if (index == 7 && !traitEntry.getKey().equals("structureId")) {
-					throw new IllegalStateException("Order of Trait Map not what it should be, index 7 should be \'structureId\' but got \'" + traitEntry.getKey());
-				} else if (index == 8 && !traitEntry.getKey().equals("mac")) {
-					throw new IllegalStateException("Order of Trait Map not what it should be, index 8 should be \'mac\' but got \'" + traitEntry.getKey());
+				} else if (index == 5 && !traitEntry.getKey().equals("updatedTime")) {
+					throw new IllegalStateException("Order of Trait Map not what it should be, index 5 should be \'updatedTime\' but got \'" + traitEntry.getKey());
+				} else if (index == 6 && !traitEntry.getKey().equals("structureId")) {
+					throw new IllegalStateException("Order of Trait Map not what it should be, index 6 should be \'structureId\' but got \'" + traitEntry.getKey());
+				} else if (index == 7 && !traitEntry.getKey().equals("mac")) {
+					throw new IllegalStateException("Order of Trait Map not what it should be, index 7 should be \'mac\' but got \'" + traitEntry.getKey());
 				}
 
 				index++;

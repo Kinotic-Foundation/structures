@@ -14,7 +14,7 @@ import java.util.Optional;
  */
 public interface StructureServiceInternal extends StructureService {
 
-    Structure save(Structure structure) throws AlreadyExistsException;
+    Structure save(Structure structure) throws AlreadyExistsException, IOException;
 
     Optional<Structure> getById(String id) throws IOException;
 

@@ -17,7 +17,7 @@
 
 package org.kinotic.structures.internal.api.services;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import net.logstash.logback.encoder.org.apache.commons.lang.WordUtils;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.get.GetRequest;
 import org.elasticsearch.action.get.GetResponse;
@@ -54,7 +54,6 @@ import java.util.*;
 public class DefaultStructureService implements StructureService, StructureServiceInternal { // TODO: after continuum fix remove StructureService
 
     private static final Logger log = LoggerFactory.getLogger(DefaultStructureService.class);
-    private final ObjectMapper mapper = new ObjectMapper();
 
     private RestHighLevelClient highLevelClient;
 
@@ -68,7 +67,6 @@ public class DefaultStructureService implements StructureService, StructureServi
     private Trait deletedTime;
     private Trait updatedTime;
     private Trait structureId;
-
     public DefaultStructureService(RestHighLevelClient highLevelClient,
                                    TraitService traitService,
                                    StructureElasticRepository structureElasticRepository,
@@ -291,7 +289,7 @@ public class DefaultStructureService implements StructureService, StructureServi
 
 
     @Override
-    public Structure save(Structure structure) throws AlreadyExistsException {
+    public Structure save(Structure structure) throws AlreadyExistsException, IOException {
 
         if(structure.getName() == null || structure.getName().isBlank()){
             throw new IllegalArgumentException("Structures must provide proper Structure Name.");
@@ -333,8 +331,9 @@ public class DefaultStructureService implements StructureService, StructureServi
             checkFieldNameFormat(traitEntry.getKey());
         }
 
-        // defaults
+        // defaults - we add our defaults in a ordered way (our tests depend on that when testing reordering)
 
+        // id is not a "system managed" trait anymore
         if(!structure.getTraits().containsKey("id")){
             structure.getTraits().put("id", this.id);
         }
@@ -349,6 +348,21 @@ public class DefaultStructureService implements StructureService, StructureServi
         }
         if(!structure.getTraits().containsKey("structureId")){
             structure.getTraits().put("structureId", this.structureId);
+        }
+
+        // now allow any user defined default traits to be added
+        ArrayList<Trait> defaultTraits = new ArrayList<>(this.traitService.getAllSystemManaged());
+        for(Trait trait : defaultTraits){
+            boolean hasTrait = false;
+            for(Map.Entry<String, Trait> entry : structure.getTraits().entrySet()){
+                if(entry.getKey().equalsIgnoreCase(trait.getName())){
+                    hasTrait = true;
+                    break;
+                }
+            }
+            if(!hasTrait){
+                structure.getTraits().put(WordUtils.uncapitalize(trait.getName().trim()), trait);
+            }
         }
 
         Structure ret;
@@ -378,7 +392,7 @@ public class DefaultStructureService implements StructureService, StructureServi
     }
 
     @Override
-    public StructureHolder save(StructureHolder structureHolder) throws AlreadyExistsException {
+    public StructureHolder save(StructureHolder structureHolder) throws AlreadyExistsException, IOException {
         LinkedHashMap<String, Trait> traits = new LinkedHashMap<>();
         structureHolder.getTraits().sort((o1, o2) -> o1.getOrder() - o2.getOrder());
 
