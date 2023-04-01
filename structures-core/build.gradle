@@ -8,21 +8,34 @@ ext {
 
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+	implementation 'org.springframework.boot:spring-boot-starter-webflux'
+
+	// Used for conditionally wiring beans
+	implementation 'org.springframework.boot:spring-boot-autoconfigure'
 
 	//Misc
 	implementation "net.logstash.logback:logstash-logback-encoder:4.11"
-
-	implementation 'org.springframework:spring-web'
-	implementation 'org.springframework.boot:spring-boot-starter-actuator'
-	implementation 'org.springframework.boot:spring-boot-starter-validation'
 
 	// reactive https://github.com/reactive-streams/reactive-streams-jvm
 	// these should be the only reactive interfaces exposed by the Core API!
 	implementation 'org.reactivestreams:reactive-streams'
 	implementation 'io.projectreactor:reactor-core'
 
+	// Additional Continuum Dependencies
+	implementation "org.kinotic:continuum-core:${continuumVersion}"
+	implementation "org.kinotic:continuum-core-vertx:${continuumVersion}"
+
+	implementation 'io.swagger.core.v3:swagger-models:2.2.8'
+	implementation 'io.swagger.core.v3:swagger-core:2.2.8'
+
 	annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.testcontainers:testcontainers:1.17.6'
 	testImplementation 'org.testcontainers:elasticsearch:1.17.6'
+	testImplementation 'junit:junit:4.13.1'
+}
+
+test {
+	useJUnitPlatform()
 }

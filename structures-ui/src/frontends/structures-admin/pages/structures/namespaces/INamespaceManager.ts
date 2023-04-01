@@ -18,7 +18,7 @@ class NamespaceManager implements INamespaceManager {
     private serviceProxy: IServiceProxy
 
     constructor(@inject() serviceRegistry: IServiceRegistry) {
-        this.serviceProxy = serviceRegistry.serviceProxy('org.kinotic.structuresserver.namespace.INamespaceManager')
+        this.serviceProxy = serviceRegistry.serviceProxy('org.kinotic.structures.api.services.NamespaceService')
     }
 
     public save(saveNamespace: Namespace): Promise<Namespace> {

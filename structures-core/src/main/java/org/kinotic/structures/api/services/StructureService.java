@@ -17,34 +17,29 @@
 
 package org.kinotic.structures.api.services;
 
-import org.kinotic.structures.api.domain.AlreadyExistsException;
-import org.kinotic.structures.api.domain.PermenentTraitException;
-import org.kinotic.structures.api.domain.Structure;
-import org.kinotic.structures.api.domain.Trait;
-import org.elasticsearch.search.SearchHits;
+import org.kinotic.continuum.api.annotations.Publish;
+import org.kinotic.structures.api.domain.*;
 
 import java.io.IOException;
-import java.util.Map;
-import java.util.Optional;
 
+@Publish
 public interface StructureService {
 
+    StructureHolder save(StructureHolder structureHolder) throws AlreadyExistsException, IOException;
 
-    Structure save(Structure structure) throws AlreadyExistsException;
+    Structures getAll(int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException;
 
-    Optional<Structure> getStructureById(String id) throws IOException;
+    Structures getAllIdLike(String idLike, int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException;
 
-    SearchHits getAll(int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException;
+    StructureHolder getStructureById(String id) throws IOException;
 
-    SearchHits getAllIdLike(String idLike, int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException;
+    Structures getAllPublishedAndIdLike(String idLike, int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException;
 
-    SearchHits getAllPublishedAndIdLike(String idLike, int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException;
+    Structures getAllPublished(int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException;
 
-    SearchHits getAllNamespaceEquals(String namespace, int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException;
+    Structures getAllPublishedForNamespace(String namespace, int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException;
 
-    SearchHits getAllPublishedAndNamespaceEquals(String namespace, int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException;
-
-    SearchHits getAllPublished(int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException;
+    Structures getAllNamespaceEquals(String namespace, int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException;
 
     void delete(String structureId) throws IOException, PermenentTraitException;
 
@@ -56,77 +51,8 @@ public interface StructureService {
 
     void insertTraitAfterAnotherForStructure(String structureId, String movingTraitName, String insertAfterTraitName) throws IOException;
 
-    default String getJsonSchema(Structure structure) {
-        StringBuilder ret = new StringBuilder();
-        StringBuilder properties = new StringBuilder();
-        StringBuilder requires = new StringBuilder();
-        StringBuilder systemManaged = new StringBuilder();
-        for(Map.Entry<String, Trait> traitEntry : structure.getTraits().entrySet()){
-            if(!traitEntry.getValue().isOperational()){// operational traits never get added to schema
-                if(properties.length() > 0){
-                    properties.append(",");
-                }
-                properties.append("\"").append(traitEntry.getKey()).append("\":").append(traitEntry.getValue().getSchema());
-                if(traitEntry.getValue().isRequired()){
-                    if(requires.length() == 0){
-                        requires.append("[");
-                    }else{
-                        requires.append(",");
-                    }
-                    requires.append("\"").append(traitEntry.getKey()).append("\"");
-                }
-                if(traitEntry.getValue().isSystemManaged()){
-                    if(systemManaged.length() == 0){
-                        systemManaged.append("[");
-                    }else{
-                        systemManaged.append(",");
-                    }
-                    systemManaged.append("\"").append(traitEntry.getKey()).append("\"");
-                }
-            }
-        }
-        properties.append("}");// end properties
+    String getJsonSchema(String structureId) throws IOException;
 
-        ret.append("{\"$schema\": \"http://json-schema.org/draft-07/schema#\",\"type\": \"object\",\"structure\": \""+structure.getId()+"\",\"properties\": {");
-        ret.append(properties);
-        if(requires.length() > 0){
-            requires.append("]");
-            ret.append(",\"required\":");
-            ret.append(requires);
-        }else{
-            ret.append(",\"required\":[]");
-        }
-        if(systemManaged.length() > 0){
-            systemManaged.append("]");
-            ret.append(",\"systemManaged\":");
-            ret.append(systemManaged);
-        }else{
-            ret.append(",\"systemManaged\":[]");
-        }
-        ret.append("}");// end schema
-
-        return ret.toString();
-    }
-
-    default String getElasticSearchBaseMapping(Structure structure) {
-        StringBuilder ret = new StringBuilder();
-        StringBuilder properties = new StringBuilder();
-        for (Map.Entry<String, Trait> traitEntry : structure.getTraits().entrySet()) {
-            if (!traitEntry.getValue().isOperational()) {// operational traits never get added to schema
-                if (properties.length() == 0) {
-                    properties.append("\"properties\": {");
-                } else {
-                    properties.append(",");
-                }
-                properties.append("\"").append(traitEntry.getKey()).append("\":").append(traitEntry.getValue().getEsSchema());
-            }
-        }
-        properties.append("}");// end properties
-
-        ret.append("{ \"dynamic\": \"strict\", ");// start object
-        ret.append(properties);
-        ret.append("}");// end object
-        return ret.toString();
-    }
+    String getElasticSearchBaseMapping(String structureId) throws IOException;
 
 }

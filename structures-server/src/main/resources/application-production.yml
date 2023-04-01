@@ -7,6 +7,9 @@ continuum-gateway:
   disableIam: true
   dataDir: /tmp/work
 
+structures:
+  openApiSecurityType: BASIC
+
 logging:
   level:
     org:

@@ -24,9 +24,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.kinotic.structures.ElasticsearchTestBase;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.domain.TypeCheckMap;
-import org.kinotic.structures.api.services.ItemService;
-import org.kinotic.structures.api.services.StructureService;
 import org.kinotic.structures.api.services.TraitService;
+import org.kinotic.structures.internal.api.services.ItemServiceInternal;
+import org.kinotic.structures.internal.api.services.StructureServiceInternal;
 import org.kinotic.structures.util.StructureTestHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -37,11 +37,11 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 public class SearchTests extends ElasticsearchTestBase {
 
     @Autowired
-    private ItemService itemService;
+    private ItemServiceInternal itemService;
     @Autowired
     private TraitService traitService;
     @Autowired
-    private StructureService structureService;
+    private StructureServiceInternal structureService;
     @Autowired
     private StructureTestHelper structureTestHelper;
 
@@ -78,7 +78,7 @@ public class SearchTests extends ElasticsearchTestBase {
             }
 
         }
-        
+
         structureService.delete(structure.getId());
 
         if (hits.getTotalHits().value != 5) {

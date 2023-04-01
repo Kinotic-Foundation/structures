@@ -1,9 +1,9 @@
-package org.kinotic.structuresserver.controllers;
+package org.kinotic.structures.internal.controllers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.elasticsearch.search.SearchHits;
 import org.kinotic.structures.api.domain.TypeCheckMap;
-import org.kinotic.structures.api.services.ItemService;
+import org.kinotic.structures.internal.api.services.ItemServiceInternal;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
@@ -22,10 +22,10 @@ import java.util.Optional;
 @RequestMapping("/api")
 public class StructureItemController {
 
-    private final ItemService itemService;
+    private final ItemServiceInternal itemService;
     private final ObjectMapper objectMapper;
 
-    public StructureItemController(ItemService itemService, ObjectMapper objectMapper) {
+    public StructureItemController(ItemServiceInternal itemService, ObjectMapper objectMapper) {
         this.itemService = itemService;
         this.objectMapper = objectMapper;
     }

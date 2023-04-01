@@ -22,7 +22,7 @@ class TraitManager implements ITraitManager {
     private serviceProxy: IServiceProxy
 
     constructor(@inject() serviceRegistry: IServiceRegistry) {
-        this.serviceProxy = serviceRegistry.serviceProxy('org.kinotic.structuresserver.traits.ITraitManager')
+        this.serviceProxy = serviceRegistry.serviceProxy('org.kinotic.structures.api.services.TraitService')
     }
 
     public save(saveTrait: Trait): Promise<Trait> {

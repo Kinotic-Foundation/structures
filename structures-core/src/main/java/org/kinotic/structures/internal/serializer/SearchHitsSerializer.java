@@ -1,4 +1,4 @@
-package org.kinotic.structuresserver.serializer;
+package org.kinotic.structures.internal.serializer;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;

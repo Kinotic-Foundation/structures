@@ -29,6 +29,8 @@ public class StructuresProperties {
     @NotBlank
     private String elasticPassword = "";
 
+    private OpenApiSecurityType openApiSecurityType = OpenApiSecurityType.NONE;
+
     @PostConstruct
     public void validate(){
         // this will validate we do not contain invalid characters
@@ -90,5 +92,13 @@ public class StructuresProperties {
 
     public void setElasticPassword(String elasticPassword) {
         this.elasticPassword = elasticPassword;
+    }
+
+    public OpenApiSecurityType getOpenApiSecurityType() {
+        return openApiSecurityType;
+    }
+
+    public void setOpenApiSecurityType(OpenApiSecurityType openApiSecurityType) {
+        this.openApiSecurityType = openApiSecurityType;
     }
 }

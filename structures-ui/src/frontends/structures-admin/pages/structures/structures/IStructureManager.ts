@@ -27,7 +27,7 @@ class StructureManager implements IStructureManager {
     private serviceProxy: IServiceProxy
 
     constructor(@inject() serviceRegistry: IServiceRegistry) {
-        this.serviceProxy = serviceRegistry.serviceProxy('org.kinotic.structuresserver.structures.IStructureManager')
+        this.serviceProxy = serviceRegistry.serviceProxy('org.kinotic.structures.api.services.StructureService')
     }
 
     public save(structureHolder: StructureHolder): Promise<StructureHolder> {

@@ -20,8 +20,8 @@ import org.elasticsearch.xcontent.XContentFactory;
 import org.elasticsearch.xcontent.XContentType;
 import org.kinotic.structures.api.domain.AlreadyExistsException;
 import org.kinotic.structures.api.domain.Namespace;
+import org.kinotic.structures.api.domain.Structures;
 import org.kinotic.structures.api.services.NamespaceService;
-import org.kinotic.structures.api.services.StructureService;
 import org.kinotic.structures.internal.api.services.util.EsHighLevelClientUtil;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Component;
@@ -37,9 +37,9 @@ public class DefaultNamespaceService implements NamespaceService {
 
     private final ObjectMapper mapper = new ObjectMapper();
     private RestHighLevelClient highLevelClient;
-    private StructureService structureService;
+    private StructureServiceInternal structureService;
 
-    public DefaultNamespaceService(RestHighLevelClient highLevelClient, StructureService structureService){
+    public DefaultNamespaceService(RestHighLevelClient highLevelClient, StructureServiceInternal structureService){
         this.highLevelClient = highLevelClient;
         this.structureService = structureService;
     }
@@ -56,6 +56,7 @@ public class DefaultNamespaceService implements NamespaceService {
         }
         Optional<Namespace> alreadyCreated = getNamespace(namespace.getName());
 
+        IndexRequest request = new IndexRequest("namespace");
         if(alreadyCreated.isPresent() && !Objects.equals(alreadyCreated.get().getUpdated(), namespace.getUpdated())){
             if(namespace.getUpdated() == 0){
                 throw new AlreadyExistsException("Namespace name must be unique, '"+namespace.getName()+"' already exists.");
@@ -63,15 +64,15 @@ public class DefaultNamespaceService implements NamespaceService {
                 throw new OptimisticLockingFailureException("Attempting to update a Namespace, but out of sync with database; please re-fetch from database and try again");
             }
         }else if(alreadyCreated.isEmpty()){
+            request.create(true);
             namespace.setUpdated(System.currentTimeMillis());
         }else{
             // version type field - updating
+            request.create(false);
             namespace.setUpdated(System.currentTimeMillis());
         }
 
-        IndexRequest request = new IndexRequest("namespace");
         request.id(namespace.getName());
-        request.create(true);
         request.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
 
         XContentBuilder builder = XContentFactory.jsonBuilder();
@@ -120,9 +121,9 @@ public class DefaultNamespaceService implements NamespaceService {
         if(namespaceOptional.isPresent()){
             Namespace toBeDeleted = namespaceOptional.get();
 
-            SearchHits response = structureService.getAllNamespaceEquals(toBeDeleted.getName(), 100, 0, "name", true);
+            Structures response = structureService.getAllNamespaceEquals(toBeDeleted.getName(), 100, 0, "name", true);
 
-            if(response.getTotalHits().value > 0){
+            if(response.getTotalElements() > 0){
                 throw new IllegalStateException("Attempting to delete a Namespace that is still attached to a Structure, you must delete all references before deleting this Namespace");
             }
 
