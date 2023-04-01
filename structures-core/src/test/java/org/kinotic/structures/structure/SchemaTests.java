@@ -24,8 +24,8 @@ import org.kinotic.structures.api.domain.AlreadyExistsException;
 import org.kinotic.structures.api.domain.PermenentTraitException;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.domain.Trait;
-import org.kinotic.structures.api.services.StructureService;
 import org.kinotic.structures.api.services.TraitService;
+import org.kinotic.structures.internal.api.services.StructureServiceInternal;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -40,7 +40,7 @@ public class SchemaTests extends ElasticsearchTestBase {
     @Autowired
     private TraitService traitService;
     @Autowired
-    private StructureService structureService;
+    private StructureServiceInternal structureService;
 
 
     @Test
@@ -67,8 +67,8 @@ public class SchemaTests extends ElasticsearchTestBase {
 
         structureService.delete(saved.getId());
 
-        if (saved.getTraits().size() != 9) {
-            throw new IllegalStateException("We should have 9 traits, 6 given by default. We have " + saved.getTraits().size());
+        if (saved.getTraits().size() != 8) {
+            throw new IllegalStateException("We should have 8 traits, 5 given by default. We have " + saved.getTraits().size());
         }
 
     }
@@ -97,8 +97,8 @@ public class SchemaTests extends ElasticsearchTestBase {
 
         structureService.delete(saved.getId());
 
-        if (saved.getTraits().size() != 9) {
-            throw new IllegalStateException("We should have 9 traits, 6 given by default. We have " + saved.getTraits().size());
+        if (saved.getTraits().size() != 8) {
+            throw new IllegalStateException("We should have 8 traits, 5 given by default. We have " + saved.getTraits().size());
         }
 
 

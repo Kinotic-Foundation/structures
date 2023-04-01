@@ -18,6 +18,7 @@
 package org.kinotic.structures.internal.api.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.elasticsearch.search.SearchHit;
 import org.kinotic.structures.api.domain.AlreadyExistsException;
 import org.kinotic.structures.api.domain.PermenentTraitException;
 import org.kinotic.structures.api.domain.Trait;
@@ -53,8 +54,6 @@ import java.util.*;
 @Component
 public class DefaultTraitService implements TraitService {
 
-    private final ObjectMapper mapper = new ObjectMapper();
-
     private RestHighLevelClient highLevelClient;
 
     public DefaultTraitService(RestHighLevelClient highLevelClient){
@@ -68,6 +67,9 @@ public class DefaultTraitService implements TraitService {
 
     @Override
     public Trait save(Trait saveTrait) throws AlreadyExistsException, PermenentTraitException, IOException {
+
+        IndexRequest request = new IndexRequest("trait");
+
         if(saveTrait.getCreated() == 0){ // new trait, name must be unique
             Optional<Trait> alreadyCreated = getTraitByName(saveTrait.getName());
             if(alreadyCreated.isPresent()){
@@ -76,15 +78,13 @@ public class DefaultTraitService implements TraitService {
             saveTrait.setId(UUID.randomUUID().toString());
             saveTrait.setCreated(System.currentTimeMillis());
             saveTrait.setUpdated(saveTrait.getCreated());
+            request.create(true);
         }else{
             saveTrait.setUpdated(System.currentTimeMillis());
+            request.create(false);
         }
 
-
-        IndexRequest request = new IndexRequest("trait");
         request.id(saveTrait.getId());
-        request.create(true);
-
         // forces a cluster refresh of the index.. for high volume data this wouldn't work - lets see how it works in our case.
         request.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
 
@@ -141,6 +141,24 @@ public class DefaultTraitService implements TraitService {
         }
 
         return Optional.ofNullable(ret);
+    }
+
+    @Override
+    public List<Trait> getAllSystemManaged() throws IOException {
+        BoolQueryBuilder boolBuilder = new BoolQueryBuilder();
+        boolBuilder.filter(QueryBuilders.termQuery("systemManaged", true));
+
+        SearchSourceBuilder builder = new SearchSourceBuilder();
+        builder.query(boolBuilder);
+        SearchRequest request = new SearchRequest("trait");
+        request.source(builder);
+        SearchResponse response = highLevelClient.search(request, RequestOptions.DEFAULT);
+
+        ArrayList<Trait> ret = new ArrayList<>();
+        for(SearchHit hit : response.getHits()){
+            ret.add(EsHighLevelClientUtil.getTypeFromBytesReference(hit.getSourceRef(), Trait.class));
+        }
+        return ret;
     }
 
     @Override

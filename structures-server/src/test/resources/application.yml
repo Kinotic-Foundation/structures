@@ -1,4 +1,7 @@
-# YAML Reference http://www.yaml.org/refcard.html
+spring:
+  main:
+    allow-circular-references: true
+
 continuum:
   discovery: sharedfs
   debug: true
@@ -8,20 +11,15 @@ continuum-gateway:
 
 logging:
   level:
-    com:
+    org:
+      springframework:
+        web: DEBUG
       kinotic: TRACE
     io:
-      vertx: TRACE
+      vertx: DEBUG
 
-spring:
-  devtools:
-    livereload:
-      port: 35730
+structures:
+  elastic-use-ssl: false
 
-elastic:
-  hosts: localhost:9200
-  useSSL: false
-  user:
-  password:
-
-
+server:
+  port: 8989

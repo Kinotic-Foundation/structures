@@ -17,14 +17,17 @@
 
 package org.kinotic.structures.api.services;
 
+import org.elasticsearch.search.SearchHits;
+import org.kinotic.continuum.api.annotations.Publish;
 import org.kinotic.structures.api.domain.AlreadyExistsException;
 import org.kinotic.structures.api.domain.PermenentTraitException;
 import org.kinotic.structures.api.domain.Trait;
-import org.elasticsearch.search.SearchHits;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Optional;
 
+@Publish
 public interface TraitService {
 
     Trait save(Trait saveTrait) throws AlreadyExistsException, PermenentTraitException, IOException;
@@ -32,6 +35,8 @@ public interface TraitService {
     Optional<Trait> getTraitById(String id) throws IOException;
 
     Optional<Trait> getTraitByName(String name) throws IOException;
+
+    List<Trait> getAllSystemManaged() throws IOException;
 
     SearchHits getAll(int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException;
 

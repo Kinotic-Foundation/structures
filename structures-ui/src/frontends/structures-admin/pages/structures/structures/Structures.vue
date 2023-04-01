@@ -340,6 +340,13 @@
                                             </v-list-item-content>
                                         </v-list-item>
                                         <v-list-item v-if="newTrait.created !== 0">
+                                          <v-list-item-content>
+                                            <v-text-field v-model="newTrait.describeTrait"
+                                                          label="Describe Trait Field" >
+                                            </v-text-field>
+                                          </v-list-item-content>
+                                        </v-list-item>
+                                        <v-list-item v-if="newTrait.created !== 0">
                                             <v-list-item-content>
                                                 <v-switch v-model="newTrait.required"
                                                           class="ma-2"
@@ -520,7 +527,6 @@ export default class Traits extends Vue {
       let ret: boolean = false
       if(item.fieldName === 'id'
           || item.fieldName === 'deleted'
-          || item.fieldName === 'createdTime'
           || item.fieldName === 'deletedTime'
           || item.fieldName === 'updatedTime'
           || item.fieldName === 'structureId'){
@@ -535,6 +541,7 @@ export default class Traits extends Vue {
 
     public cloneTrait(item: any){
         this.newTrait = Object.assign({}, item)
+        this.newTrait.describeTrait = ""
     }
 
     public formatDate(timeInMills: number){
@@ -582,7 +589,7 @@ export default class Traits extends Vue {
             this.defaultTraits.length = 0
 
             this.traits = returnedItems.content
-            let defaultTraitRegex: RegExp = new RegExp(/^Id|Deleted|DeletedTime|CreatedTime|UpdatedTime|StructureId$/)
+            let defaultTraitRegex: RegExp = new RegExp(/^Id|Deleted|DeletedTime|UpdatedTime|StructureId$/)
             let index: number = 0
             this.traits = this.traits.filter((trait: Trait) => {
                 if(defaultTraitRegex.test(trait.name)){

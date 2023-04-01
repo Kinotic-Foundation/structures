@@ -17,7 +17,7 @@
 
 package org.kinotic.structures.internal.api.services;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import net.logstash.logback.encoder.org.apache.commons.lang.WordUtils;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.get.GetRequest;
 import org.elasticsearch.action.get.GetResponse;
@@ -31,13 +31,10 @@ import org.elasticsearch.client.indices.GetIndexRequest;
 import org.elasticsearch.client.indices.PutMappingRequest;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.search.SearchHits;
+import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.xcontent.XContentType;
-import org.kinotic.structures.api.domain.AlreadyExistsException;
-import org.kinotic.structures.api.domain.PermenentTraitException;
-import org.kinotic.structures.api.domain.Structure;
-import org.kinotic.structures.api.domain.Trait;
+import org.kinotic.structures.api.domain.*;
 import org.kinotic.structures.api.services.StructureService;
 import org.kinotic.structures.api.services.TraitService;
 import org.kinotic.structures.internal.api.services.util.EsHighLevelClientUtil;
@@ -54,10 +51,9 @@ import java.io.IOException;
 import java.util.*;
 
 @Component
-public class DefaultStructureService implements StructureService {
+public class DefaultStructureService implements StructureService, StructureServiceInternal { // TODO: after continuum fix remove StructureService
 
     private static final Logger log = LoggerFactory.getLogger(DefaultStructureService.class);
-    private final ObjectMapper mapper = new ObjectMapper();
 
     private RestHighLevelClient highLevelClient;
 
@@ -69,10 +65,8 @@ public class DefaultStructureService implements StructureService {
     private Trait id;
     private Trait deleted;
     private Trait deletedTime;
-    private Trait createdTime;
     private Trait updatedTime;
     private Trait structureId;
-
     public DefaultStructureService(RestHighLevelClient highLevelClient,
                                    TraitService traitService,
                                    StructureElasticRepository structureElasticRepository,
@@ -122,7 +116,7 @@ public class DefaultStructureService implements StructureService {
             if(deletedTimeOptional.isEmpty()){
                 Trait temp = new Trait();
                 temp.setName("DeletedTime");
-                temp.setDescribeTrait("Long field that gives the time an item was deleted.");
+                temp.setDescribeTrait("A long field that indicates the timestamp of when the item was deleted.");
                 temp.setSchema("{ \"type\": \"date\", \"format\": { \"style\": \"unix\" } }");
                 temp.setEsSchema("{ \"type\": \"date\", \"format\": \"epoch_millis\" }");
                 temp.setRequired(true);
@@ -131,24 +125,11 @@ public class DefaultStructureService implements StructureService {
             }else{
                 this.deletedTime = deletedTimeOptional.get();
             }
-            Optional<Trait> createdTimeOptional = traitService.getTraitByName("CreatedTime");
-            if(createdTimeOptional.isEmpty()){
-                Trait temp = new Trait();
-                temp.setName("CreatedTime");
-                temp.setDescribeTrait("Long field that says when the item was created.");
-                temp.setSchema("{ \"type\": \"date\", \"format\": { \"style\": \"unix\" } }");
-                temp.setEsSchema("{ \"type\": \"date\", \"format\": \"epoch_millis\" }");
-                temp.setRequired(true);
-                temp.setSystemManaged(true);
-                this.createdTime = traitService.save(temp);
-            }else{
-                this.createdTime = createdTimeOptional.get();
-            }
             Optional<Trait> updatedTimeOptional = traitService.getTraitByName("UpdatedTime");
             if(updatedTimeOptional.isEmpty()){
                 Trait temp = new Trait();
                 temp.setName("UpdatedTime");
-                temp.setDescribeTrait("Long field that says when the item was last updated, version type field.");
+                temp.setDescribeTrait("A long field that indicates the timestamp of when the item was last updated.");
                 temp.setSchema("{ \"type\": \"date\", \"format\": { \"style\": \"unix\" } }");
                 temp.setEsSchema("{ \"type\": \"date\", \"format\": \"epoch_millis\" }");
                 temp.setRequired(true);
@@ -191,6 +172,16 @@ public class DefaultStructureService implements StructureService {
              * Below are generic fields that provide some quick access. They can be modified within the Structure frontend.
              */
 
+            Optional<Trait> createdTimeOptional = traitService.getTraitByName("CreatedTime");
+            if(createdTimeOptional.isEmpty()){
+                Trait temp = new Trait();
+                temp.setName("CreatedTime");
+                temp.setDescribeTrait("A long field that indicates the timestamp of when the item was created.");
+                temp.setSchema("{ \"type\": \"date\", \"format\": { \"style\": \"unix\" } }");
+                temp.setEsSchema("{ \"type\": \"date\", \"format\": \"epoch_millis\" }");
+                temp.setRequired(true);
+                traitService.save(temp);
+            }
             Optional<Trait> ipOptional = traitService.getTraitByName("Ip");
             if(ipOptional.isEmpty()){
                 Trait temp = new Trait();
@@ -298,7 +289,7 @@ public class DefaultStructureService implements StructureService {
 
 
     @Override
-    public Structure save(Structure structure) throws AlreadyExistsException {
+    public Structure save(Structure structure) throws AlreadyExistsException, IOException {
 
         if(structure.getName() == null || structure.getName().isBlank()){
             throw new IllegalArgumentException("Structures must provide proper Structure Name.");
@@ -340,8 +331,9 @@ public class DefaultStructureService implements StructureService {
             checkFieldNameFormat(traitEntry.getKey());
         }
 
-        // defaults
+        // defaults - we add our defaults in a ordered way (our tests depend on that when testing reordering)
 
+        // id is not a "system managed" trait anymore
         if(!structure.getTraits().containsKey("id")){
             structure.getTraits().put("id", this.id);
         }
@@ -351,14 +343,26 @@ public class DefaultStructureService implements StructureService {
         if(!structure.getTraits().containsKey("deletedTime")){
             structure.getTraits().put("deletedTime", this.deletedTime);
         }
-        if(!structure.getTraits().containsKey("createdTime")){
-            structure.getTraits().put("createdTime", this.createdTime);
-        }
         if(!structure.getTraits().containsKey("updatedTime")){
             structure.getTraits().put("updatedTime", this.updatedTime);
         }
         if(!structure.getTraits().containsKey("structureId")){
             structure.getTraits().put("structureId", this.structureId);
+        }
+
+        // now allow any user defined default traits to be added
+        ArrayList<Trait> defaultTraits = new ArrayList<>(this.traitService.getAllSystemManaged());
+        for(Trait trait : defaultTraits){
+            boolean hasTrait = false;
+            for(Map.Entry<String, Trait> entry : structure.getTraits().entrySet()){
+                if(entry.getKey().equalsIgnoreCase(trait.getName())){
+                    hasTrait = true;
+                    break;
+                }
+            }
+            if(!hasTrait){
+                structure.getTraits().put(WordUtils.uncapitalize(trait.getName().trim()), trait);
+            }
         }
 
         Structure ret;
@@ -378,7 +382,7 @@ public class DefaultStructureService implements StructureService {
     }
 
     @Override
-    public Optional<Structure> getStructureById(String id) throws IOException {
+    public Optional<Structure> getById(String id) throws IOException {
         GetResponse response = highLevelClient.get(new GetRequest("structure").id(id.toLowerCase()), RequestOptions.DEFAULT);
         Structure ret = null;
         if (response.isExists()) {
@@ -388,19 +392,45 @@ public class DefaultStructureService implements StructureService {
     }
 
     @Override
-    public SearchHits getAll(int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException {
+    public StructureHolder save(StructureHolder structureHolder) throws AlreadyExistsException, IOException {
+        LinkedHashMap<String, Trait> traits = new LinkedHashMap<>();
+        structureHolder.getTraits().sort((o1, o2) -> o1.getOrder() - o2.getOrder());
+
+        for(TraitHolder holder : structureHolder.getTraits()){
+            traits.put(holder.getFieldName(), holder.getFieldTrait());
+        }
+
+        structureHolder.getStructure().setTraits(traits);
+
+        return new StructureHolder(this.save(structureHolder.getStructure()), structureHolder.getTraits());
+    }
+
+    @Override
+    public StructureHolder getStructureById(String id) throws IOException {
+        Structure structure = this.getById(id).get();
+        LinkedList<TraitHolder> traits = new LinkedList<>();
+        int index = 0;
+        for(Map.Entry<String, Trait> traitEntry : structure.getTraits().entrySet()){
+            traits.add(new TraitHolder(index, traitEntry.getKey(), traitEntry.getValue()));
+            index++;
+        }
+        return new StructureHolder(structure, traits);
+    }
+
+    @Override
+    public Structures getAll(int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException {
         return getStructures(EsHighLevelClientUtil.buildGeneric(numberPerPage,page,columnToSortBy,descending));
     }
 
     @Override
-    public SearchHits getAllIdLike(String idLike, int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException {
+    public Structures getAllIdLike(String idLike, int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException {
         SearchSourceBuilder builder = EsHighLevelClientUtil.buildGeneric(numberPerPage,page,columnToSortBy,descending);
         builder.postFilter(QueryBuilders.wildcardQuery("id", idLike));
         return getStructures(builder);
     }
 
     @Override
-    public SearchHits getAllPublishedAndIdLike(String idLike, int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException {
+    public Structures getAllPublishedAndIdLike(String idLike, int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException {
         SearchSourceBuilder builder = EsHighLevelClientUtil.buildGeneric(numberPerPage,page,columnToSortBy,descending);
         builder.query(QueryBuilders.termQuery("published", true));
         builder.postFilter(QueryBuilders.wildcardQuery("id", idLike));
@@ -408,14 +438,14 @@ public class DefaultStructureService implements StructureService {
     }
 
     @Override
-    public SearchHits getAllNamespaceEquals(String namespace, int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException {
+    public Structures getAllNamespaceEquals(String namespace, int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException {
         SearchSourceBuilder builder = EsHighLevelClientUtil.buildGeneric(numberPerPage, page, columnToSortBy, descending);
         builder.postFilter(QueryBuilders.termQuery("namespace", namespace));
         return getStructures(builder);
     }
 
     @Override
-    public SearchHits getAllPublishedAndNamespaceEquals(String namespace, int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException {
+    public Structures getAllPublishedForNamespace(String namespace, int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException {
         SearchSourceBuilder builder = EsHighLevelClientUtil.buildGeneric(numberPerPage, page, columnToSortBy, descending);
         builder.query(QueryBuilders.termQuery("published", true));
         builder.postFilter(QueryBuilders.termQuery("namespace", namespace));
@@ -423,7 +453,7 @@ public class DefaultStructureService implements StructureService {
     }
 
     @Override
-    public SearchHits getAllPublished(int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException {
+    public Structures getAllPublished(int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException {
         SearchSourceBuilder builder = EsHighLevelClientUtil.buildGeneric(numberPerPage,page,columnToSortBy,descending);
         builder.query(QueryBuilders.termQuery("published", true));
         return getStructures(builder);
@@ -431,7 +461,7 @@ public class DefaultStructureService implements StructureService {
 
     @Override
     public void delete(String structureId) throws IOException, PermenentTraitException {
-        Optional<Structure> optional = getStructureById(structureId);
+        Optional<Structure> optional = getById(structureId);
         //noinspection OptionalGetWithoutIsPresent
         Structure structure = optional.get();// will throw null pointer/element not available
 
@@ -473,7 +503,7 @@ public class DefaultStructureService implements StructureService {
 
     @Override
     public void publish(String structureId) throws IOException {
-        Optional<Structure> optional = getStructureById(structureId.toLowerCase());
+        Optional<Structure> optional = getById(structureId.toLowerCase());
         //noinspection OptionalGetWithoutIsPresent
         Structure structure = optional.get();// will throw null pointer/element not available
 
@@ -539,7 +569,7 @@ public class DefaultStructureService implements StructureService {
 
     @Override
     public void addTraitToStructure(String structureId, String fieldName, Trait newTrait) throws IOException {
-        Optional<Structure> optional = getStructureById(structureId.toLowerCase());
+        Optional<Structure> optional = getById(structureId.toLowerCase());
         //noinspection OptionalGetWithoutIsPresent
         Structure structure = optional.get();// will throw null pointer/element not available
 
@@ -566,7 +596,7 @@ public class DefaultStructureService implements StructureService {
 
     @Override
     public void insertTraitBeforeAnotherForStructure(String structureId, String movingTraitName, String insertBeforeTraitName) throws IOException {
-        Optional<Structure> optional = getStructureById(structureId.toLowerCase());
+        Optional<Structure> optional = getById(structureId.toLowerCase());
         //noinspection OptionalGetWithoutIsPresent
         Structure structure = optional.get();// will throw null pointer/element not available
 
@@ -606,7 +636,7 @@ public class DefaultStructureService implements StructureService {
 
     @Override
     public void insertTraitAfterAnotherForStructure(String structureId, String movingTraitName, String insertAfterTraitName) throws IOException {
-        Optional<Structure> optional = getStructureById(structureId.toLowerCase());
+        Optional<Structure> optional = getById(structureId.toLowerCase());
         //noinspection OptionalGetWithoutIsPresent
         Structure structure = optional.get();// will throw null pointer/element not available
 
@@ -643,6 +673,18 @@ public class DefaultStructureService implements StructureService {
 
         structureElasticRepository.save(structure);
 
+    }
+
+    @Override
+    public String getJsonSchema(String structureId) throws IOException{
+        Structure structure = getById(structureId).get();
+        return getJsonSchema(structure);
+    }
+
+    @Override
+    public String getElasticSearchBaseMapping(String structureId) throws IOException{
+        Structure structure = getById(structureId).get();
+        return getElasticSearchBaseMapping(structure);
     }
 
     private long count(String indexName) throws IOException {
@@ -682,8 +724,19 @@ public class DefaultStructureService implements StructureService {
         }
     }
 
-    private SearchHits getStructures(SearchSourceBuilder builder) throws IOException {
+    private Structures getStructures(SearchSourceBuilder builder) throws IOException {
         SearchResponse response = highLevelClient.search(new SearchRequest("structure").source(builder), RequestOptions.DEFAULT);
-        return response.getHits();
+        LinkedList<StructureHolder> holderList = new LinkedList<>();
+        for(SearchHit hit : response.getHits()){
+            Structure structure = EsHighLevelClientUtil.getTypeFromBytesReference(hit.getSourceRef(), Structure.class);
+            LinkedList<TraitHolder> traits = new LinkedList<>();
+            int index = 0;
+            for(Map.Entry<String, Trait> traitEntry : structure.getTraits().entrySet()){
+                traits.add(new TraitHolder(index, traitEntry.getKey(), traitEntry.getValue()));
+                index++;
+            }
+            holderList.add(new StructureHolder(structure, traits));
+        }
+        return new Structures(holderList, response.getHits().getTotalHits().value);
     }
 }

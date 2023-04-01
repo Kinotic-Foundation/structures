@@ -59,7 +59,7 @@
                             <v-icon medium
                                     class="mr-2"
                                     @click="editItem(item)"
-                                    v-show="item.systemManaged"
+                                    v-show="!item.systemManaged"
                                     title="Edit" >
                               {{icons.edit}}
                             </v-icon>
@@ -68,7 +68,7 @@
                             <v-icon medium
                                     class="mr-2"
                                     @click="deleteItem(item)"
-                                    v-show="item.systemManaged"
+                                    v-show="!item.systemManaged"
                                     title="Delete" >
                               {{icons.delete}}
                             </v-icon>

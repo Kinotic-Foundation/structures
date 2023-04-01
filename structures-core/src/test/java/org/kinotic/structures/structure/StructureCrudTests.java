@@ -17,15 +17,14 @@
 
 package org.kinotic.structures.structure;
 
-import org.elasticsearch.search.SearchHits;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.kinotic.structures.ElasticsearchTestBase;
 import org.kinotic.structures.api.domain.*;
-import org.kinotic.structures.api.services.ItemService;
-import org.kinotic.structures.api.services.StructureService;
 import org.kinotic.structures.api.services.TraitService;
+import org.kinotic.structures.internal.api.services.ItemServiceInternal;
+import org.kinotic.structures.internal.api.services.StructureServiceInternal;
 import org.kinotic.structures.util.StructureTestHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -44,9 +43,9 @@ public class StructureCrudTests extends ElasticsearchTestBase {
     @Autowired
     private TraitService traitService;
     @Autowired
-    private StructureService structureService;
+    private StructureServiceInternal structureService;
     @Autowired
-    private ItemService itemService;
+    private ItemServiceInternal itemService;
 	@Autowired
 	private StructureTestHelper structureTestHelper;
 
@@ -72,8 +71,8 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 			final Structure saved = structureService.save(structure);
 
 			try {
-				if (saved.getTraits().size() != 9) {
-					throw new IllegalStateException("We should have 9 traits, 6 given by default. We have " + saved.getTraits()
+				if (saved.getTraits().size() != 8) {
+					throw new IllegalStateException("We should have 8 traits, 5 given by default. We have " + saved.getTraits()
 																												   .size());
 				}
 
@@ -83,7 +82,7 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 				structureService.delete(saved.getId());
 			}
 
-			Optional<Structure> optional = structureService.getStructureById(saved.getId());
+			Optional<Structure> optional = structureService.getById(saved.getId());
 			optional.get();// should throw if null
 		});
 	}
@@ -192,7 +191,7 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 
 			structureService.addTraitToStructure(structure.getId(), "mac", macOptional.get());
 
-			Optional<Structure> optional = structureService.getStructureById(structure.getId());
+			Optional<Structure> optional = structureService.getById(structure.getId());
 			Structure saved = optional.get();
 			int index = 0;
 			for (Map.Entry<String, Trait> traitEntry : saved.getTraits().entrySet()) {
@@ -206,14 +205,12 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 					throw new IllegalStateException("Order of Trait Map not what it should be, index 3 should be \'deleted\' but got \'" + traitEntry.getKey());
 				} else if (index == 4 && !traitEntry.getKey().equals("deletedTime")) {
 					throw new IllegalStateException("Order of Trait Map not what it should be, index 4 should be \'deletedTime\' but got \'" + traitEntry.getKey());
-				} else if (index == 5 && !traitEntry.getKey().equals("createdTime")) {
-					throw new IllegalStateException("Order of Trait Map not what it should be, index 5 should be \'createdTime\' but got \'" + traitEntry.getKey());
-				} else if (index == 6 && !traitEntry.getKey().equals("updatedTime")) {
-					throw new IllegalStateException("Order of Trait Map not what it should be, index 6 should be \'updatedTime\' but got \'" + traitEntry.getKey());
-				} else if (index == 7 && !traitEntry.getKey().equals("structureId")) {
-					throw new IllegalStateException("Order of Trait Map not what it should be, index 7 should be \'structureId\' but got \'" + traitEntry.getKey());
-				} else if (index == 8 && !traitEntry.getKey().equals("mac")) {
-					throw new IllegalStateException("Order of Trait Map not what it should be, index 8 should be \'mac\' but got \'" + traitEntry.getKey());
+				} else if (index == 5 && !traitEntry.getKey().equals("updatedTime")) {
+					throw new IllegalStateException("Order of Trait Map not what it should be, index 5 should be \'updatedTime\' but got \'" + traitEntry.getKey());
+				} else if (index == 6 && !traitEntry.getKey().equals("structureId")) {
+					throw new IllegalStateException("Order of Trait Map not what it should be, index 6 should be \'structureId\' but got \'" + traitEntry.getKey());
+				} else if (index == 7 && !traitEntry.getKey().equals("mac")) {
+					throw new IllegalStateException("Order of Trait Map not what it should be, index 7 should be \'mac\' but got \'" + traitEntry.getKey());
 				}
 
 				index++;
@@ -252,7 +249,7 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 
 			structureService.addTraitToStructure(structure.getId(), "mac", macOptional.get());
 
-			Optional<Structure> optional = structureService.getStructureById(structure.getId());
+			Optional<Structure> optional = structureService.getById(structure.getId());
 			Structure saved = optional.get();
 			int index = 0;
 			for (Map.Entry<String, Trait> traitEntry : saved.getTraits().entrySet()) {
@@ -266,14 +263,12 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 					throw new IllegalStateException("Order of Trait Map not what it should be, index 3 should be \'deleted\' but got \'" + traitEntry.getKey());
 				} else if (index == 4 && !traitEntry.getKey().equals("deletedTime")) {
 					throw new IllegalStateException("Order of Trait Map not what it should be, index 4 should be \'deletedTime\' but got \'" + traitEntry.getKey());
-				} else if (index == 5 && !traitEntry.getKey().equals("createdTime")) {
-					throw new IllegalStateException("Order of Trait Map not what it should be, index 5 should be \'createdTime\' but got \'" + traitEntry.getKey());
-				} else if (index == 6 && !traitEntry.getKey().equals("updatedTime")) {
-					throw new IllegalStateException("Order of Trait Map not what it should be, index 6 should be \'updatedTime\' but got \'" + traitEntry.getKey());
-				} else if (index == 7 && !traitEntry.getKey().equals("structureId")) {
-					throw new IllegalStateException("Order of Trait Map not what it should be, index 7 should be \'structureId\' but got \'" + traitEntry.getKey());
-				} else if (index == 8 && !traitEntry.getKey().equals("mac")) {
-					throw new IllegalStateException("Order of Trait Map not what it should be, index 8 should be \'mac\' but got \'" + traitEntry.getKey());
+				} else if (index == 5 && !traitEntry.getKey().equals("updatedTime")) {
+					throw new IllegalStateException("Order of Trait Map not what it should be, index 5 should be \'updatedTime\' but got \'" + traitEntry.getKey());
+				} else if (index == 6 && !traitEntry.getKey().equals("structureId")) {
+					throw new IllegalStateException("Order of Trait Map not what it should be, index 6 should be \'structureId\' but got \'" + traitEntry.getKey());
+				} else if (index == 7 && !traitEntry.getKey().equals("mac")) {
+					throw new IllegalStateException("Order of Trait Map not what it should be, index 7 should be \'mac\' but got \'" + traitEntry.getKey());
 				}
 
 				index++;
@@ -373,13 +368,13 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 
 		try {
 
-			SearchHits query1 = structureService.getAllPublishedAndNamespaceEquals("some_name_space_", 100, 0, "name", true);
+			Structures query1 = structureService.getAllPublishedForNamespace("some_name_space_", 100, 0, "name", true);
 
-			Assertions.assertEquals(4, query1.getTotalHits().value, "Structure Namespace query did not return expected results");
+			Assertions.assertEquals(4, query1.getTotalElements(), "Structure Namespace query did not return expected results");
 
-			SearchHits query2 = structureService.getAllPublishedAndNamespaceEquals("org.kinotic.", 100, 0, "name", true);
+			Structures query2 = structureService.getAllPublishedForNamespace("org.kinotic.", 100, 0, "name", true);
 
-			Assertions.assertEquals(2, query2.getTotalHits().value, "Second Structure Namespace query did not return expected results");
+			Assertions.assertEquals(2, query2.getTotalElements(), "Second Structure Namespace query did not return expected results");
 
 		} catch (IOException ioe) {
 			throw ioe;

@@ -118,6 +118,7 @@
                                                 <v-text-field v-model="editedItem.name"
                                                               label="Name"
                                                               :error-messages="namespaceErrorMessage"
+                                                              :disabled="editedItem.updated !== 0"
                                                               @keydown.space.prevent >
                                                 </v-text-field>
                                             </v-list-item-content>
