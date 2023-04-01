@@ -150,7 +150,7 @@
                     await this.continuumUI.navigate('/')
 
                 } catch (error: any) {
-                    this.displayAlert(error.message)
+                    this.displayAlert((error.message ? error.message : error))
                 }
                 this.loading = false
             }

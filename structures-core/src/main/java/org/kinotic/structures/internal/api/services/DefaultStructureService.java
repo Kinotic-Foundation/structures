@@ -116,7 +116,7 @@ public class DefaultStructureService implements StructureService, StructureServi
             if(deletedTimeOptional.isEmpty()){
                 Trait temp = new Trait();
                 temp.setName("DeletedTime");
-                temp.setDescribeTrait("Long field that gives the time an item was deleted.");
+                temp.setDescribeTrait("A long field that indicates the timestamp of when the item was deleted.");
                 temp.setSchema("{ \"type\": \"date\", \"format\": { \"style\": \"unix\" } }");
                 temp.setEsSchema("{ \"type\": \"date\", \"format\": \"epoch_millis\" }");
                 temp.setRequired(true);
@@ -129,7 +129,7 @@ public class DefaultStructureService implements StructureService, StructureServi
             if(updatedTimeOptional.isEmpty()){
                 Trait temp = new Trait();
                 temp.setName("UpdatedTime");
-                temp.setDescribeTrait("Long field that says when the item was last updated, version type field.");
+                temp.setDescribeTrait("A long field that indicates the timestamp of when the item was last updated.");
                 temp.setSchema("{ \"type\": \"date\", \"format\": { \"style\": \"unix\" } }");
                 temp.setEsSchema("{ \"type\": \"date\", \"format\": \"epoch_millis\" }");
                 temp.setRequired(true);
@@ -176,7 +176,7 @@ public class DefaultStructureService implements StructureService, StructureServi
             if(createdTimeOptional.isEmpty()){
                 Trait temp = new Trait();
                 temp.setName("CreatedTime");
-                temp.setDescribeTrait("Long field that says when the item was created.");
+                temp.setDescribeTrait("A long field that indicates the timestamp of when the item was created.");
                 temp.setSchema("{ \"type\": \"date\", \"format\": { \"style\": \"unix\" } }");
                 temp.setEsSchema("{ \"type\": \"date\", \"format\": \"epoch_millis\" }");
                 temp.setRequired(true);
