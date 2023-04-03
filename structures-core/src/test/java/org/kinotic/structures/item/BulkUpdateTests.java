@@ -1,5 +1,12 @@
 package org.kinotic.structures.item;
 
+import org.elasticsearch.client.RequestOptions;
+import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.index.query.MatchAllQueryBuilder;
+import org.elasticsearch.index.reindex.BulkByScrollResponse;
+import org.elasticsearch.index.reindex.DeleteByQueryRequest;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.kinotic.structures.ElasticsearchTestBase;
 import org.kinotic.structures.api.domain.Structure;
@@ -23,9 +30,10 @@ public class BulkUpdateTests extends ElasticsearchTestBase {
     private StructureTestHelper structureTestHelper;
     @Autowired
     private StructureServiceInternal structureService;
+    @Autowired
+    private RestHighLevelClient highLevelClient;
 
-
-    //@Test
+    @Test
     public void bulkUpdateTest() throws Exception {
 
         Structure structure = structureTestHelper.getDeviceStructure();
@@ -41,26 +49,27 @@ public class BulkUpdateTests extends ElasticsearchTestBase {
             itemService.pushItemForBulkUpdate(structure.getId(), obj);
         }
 
-        Thread.sleep(3000);// give time for ES to flush the new item
+        Thread.sleep(10000);// give time for ES to flush the new item
 
         long firstCount = itemService.count(structure.getId());
         Assert.isTrue(firstCount == 5000, "Bulk upload didn't complete properly before flush");
 
         itemService.flushAndCloseBulkUpdate(structure.getId());
 
-        Thread.sleep(1000);
+        Thread.sleep(5000);
 
         long secondCount = itemService.count(structure.getId());
         Assert.isTrue(secondCount == 6000, "Bulk upload didn't complete properly after flush");
 
-        Thread.sleep(1000);
-
         // run through deletion
-        for(int i = 0; i < 6000; i++){
-            itemService.delete(structure.getId(), String.valueOf(i));
-        }
+        DeleteByQueryRequest deleteByQueryRequest = new DeleteByQueryRequest(structure.getItemIndex());
+        deleteByQueryRequest.setBatchSize(3000);
+        deleteByQueryRequest.setQuery(new MatchAllQueryBuilder());
+        BulkByScrollResponse response = highLevelClient.deleteByQuery(deleteByQueryRequest, RequestOptions.DEFAULT);
 
-        Thread.sleep(1000);
+        Assertions.assertEquals(response.getStatus().getDeleted(), 6000);
+
+        Thread.sleep(10000);
 
         structureService.delete(structure.getId());
 

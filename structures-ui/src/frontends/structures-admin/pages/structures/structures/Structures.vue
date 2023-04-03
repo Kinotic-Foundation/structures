@@ -347,13 +347,6 @@
                                             </v-list-item-content>
                                         </v-list-item>
                                         <v-list-item v-if="newTrait.created !== 0">
-                                          <v-list-item-content>
-                                            <v-text-field v-model="newTrait.describeTrait"
-                                                          label="Describe Trait Field" >
-                                            </v-text-field>
-                                          </v-list-item-content>
-                                        </v-list-item>
-                                        <v-list-item v-if="newTrait.created !== 0">
                                             <v-list-item-content>
                                                 <v-switch v-model="newTrait.required"
                                                           class="ma-2"

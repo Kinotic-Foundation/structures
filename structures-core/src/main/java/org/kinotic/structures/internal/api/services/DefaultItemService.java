@@ -156,38 +156,38 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
             BiConsumer<BulkRequest, ActionListener<BulkResponse>> bulkConsumer =
                     (request, bulkListener) -> highLevelClient.bulkAsync(request, RequestOptions.DEFAULT, bulkListener);
             BulkProcessor bulkProcessor = BulkProcessor.builder(bulkConsumer, new BulkProcessor.Listener() {
-                                                           private final AtomicLong count = new AtomicLong(0);
+                        private final AtomicLong count = new AtomicLong(0);
 
-                                                           @Override
-                                                           public void beforeBulk(long executionId,
-                                                                                  BulkRequest request) {
-                                                           }
+                        @Override
+                        public void beforeBulk(long executionId,
+                                               BulkRequest request) {
+                        }
 
-                                                           @Override
-                                                           public void afterBulk(long executionId,
-                                                                                 BulkRequest request,
-                                                                                 BulkResponse response) {
-                                                               if (response.hasFailures()) {
-                                                                   for (BulkItemResponse itemResponse : response.getItems()) {
-                                                                       log.error("DefaultItemService: Encountered an error while ingesting data.  for Structure: '" + structureId + "'    Index: " + itemResponse.getIndex() + " \n\r    " + itemResponse.getFailureMessage(),
-                                                                                 itemResponse.getFailure());
-                                                                   }
-                                                               }
+                        @Override
+                        public void afterBulk(long executionId,
+                                              BulkRequest request,
+                                              BulkResponse response) {
+                            if (response.hasFailures()) {
+                                for (BulkItemResponse itemResponse : response.getItems()) {
+                                    log.error("DefaultItemService: Encountered an error while ingesting data.  for Structure: '" + structureId + "'    Index: " + itemResponse.getIndex() + " \n\r    " + itemResponse.getFailureMessage(),
+                                            itemResponse.getFailure());
+                                }
+                            }
 
-                                                               long currentCount = count.addAndGet(request.numberOfActions());
-                                                               log.debug("DefaultItemService: bulk processing for Structure '" + structureId + "' finished indexing : " + currentCount);
-                                                           }
+                            long currentCount = count.addAndGet(request.numberOfActions());
+                            log.debug("DefaultItemService: bulk processing for Structure '" + structureId + "' finished indexing : " + currentCount);
+                        }
 
-                                                           @Override
-                                                           public void afterBulk(long executionId,
-                                                                                 BulkRequest request,
-                                                                                 Throwable failure) {
-                                                               log.error("DefaultItemService: Bulk Ingestion encountered an error. ", failure);
-                                                           }
-                                                       })
-                                                       .setFlushInterval(TimeValue.timeValueSeconds(60))
-                                                       .setBulkActions(2500)
-                                                       .build();
+                        @Override
+                        public void afterBulk(long executionId,
+                                              BulkRequest request,
+                                              Throwable failure) {
+                            log.error("DefaultItemService: Bulk Ingestion encountered an error. ", failure);
+                        }
+                    })
+                   .setFlushInterval(TimeValue.timeValueSeconds(60))
+                   .setBulkActions(2500)
+                   .build();
 
             this.bulkRequests.put(structureId, new BulkUpdate(bulkProcessor, structureOptional.get()));
             this.activeBulkRequests.put(structureId, new AtomicLong(1));
