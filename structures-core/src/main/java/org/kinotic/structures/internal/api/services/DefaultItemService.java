@@ -253,7 +253,6 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
         GetResponse response = highLevelClient.get(new GetRequest(structure.getItemIndex()).id(id),
                                                    RequestOptions.DEFAULT);
 
-
         // FiXME: this operation is more expensive than needed, figure out a way to restrict during get - id look ups
         //  do not allow for filtering - right now you can restrict access by implementing your own HasOnAfterGet lifecycle
         //  trait.

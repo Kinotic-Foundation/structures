@@ -90,7 +90,11 @@ public class TraitLifecycles {
         for (Map.Entry<String, Trait> traitEntry : structure.getTraits().entrySet()) {
             if (getAfterGetLifecycleMap().containsKey(traitEntry.getValue().getName())) {
                 HasOnAfterGet toExecute = getAfterGetLifecycleMap().get(traitEntry.getValue().getName());
-                obj = process.apply(toExecute, obj, traitEntry.getKey(), context);
+                if(obj != null){
+                    obj = process.apply(toExecute, obj, traitEntry.getKey(), context);
+                }else if(traitEntry.getValue().isOperational()){
+                    obj = process.apply(toExecute, null, traitEntry.getKey(), context);
+                }
             }
         }
         return obj;

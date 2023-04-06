@@ -77,7 +77,7 @@ class TestContext extends TestBase {
         try {
             Thread.sleep(1000)
 
-            Optional<TypeCheckMap> freshOpt = itemService.getItemById(structureHolder.getStructure().getId(), "nevada-las_vegas-111_las_vegas_blvd", customBlue)
+            Optional<TypeCheckMap> freshOpt = itemService.getItemById(structureHolder.getStructure().getId(), "nevada-las_vegas-111_las_vegas_blvd", customRed)
 
             if(freshOpt.isEmpty()){
                 throw new IllegalStateException("Composite Primary Key was not saved as expected")
@@ -92,7 +92,47 @@ class TestContext extends TestBase {
         } catch (AlreadyExistsException e) {
             throw e
         } finally {
-            itemService.delete(structureHolder.getStructure().getId(), saved.getString("id"), null)
+            itemService.delete(structureHolder.getStructure().getId(), saved.getString("id"), customRed)
+
+            Thread.sleep(1000)
+
+            structureService.delete(structureHolder.getStructure().getId())
+        }
+    }
+
+    @Test
+    void attemptToAddStructureWithItem_AttemptGettingWithNewContext(){
+
+        StructureHolder structureHolder = getPerson()
+
+        HashMap<String, Object> customRed = new HashMap<String, Object>()
+        customRed.put("custom", "red")
+
+        HashMap<String, Object> customBlue = new HashMap<String, Object>()
+        customBlue.put("custom", "blue")
+
+        // now we can create an item with the above fields
+        TypeCheckMap obj = new TypeCheckMap()
+        obj.put("state", "Nevada")
+        obj.put("city", "Las Vegas")
+        obj.put("address", "111 Las Vegas Blvd")
+        obj.put("firstName", "Marco")
+        obj.put("lastName", "Polo")
+        obj.put("id", "nevada-las_vegas-111_las_vegas_blvd")
+
+        TypeCheckMap saved = itemService.upsertItem(structureHolder.getStructure().getId(), obj, customRed)
+
+        try {
+            Thread.sleep(1000)
+
+            Optional<TypeCheckMap> freshOpt = itemService.getItemById(structureHolder.getStructure().getId(), "nevada-las_vegas-111_las_vegas_blvd", customBlue)
+
+            Assertions.assertTrue(freshOpt.isEmpty())
+
+        } catch (AlreadyExistsException e) {
+            throw e
+        } finally {
+            itemService.delete(structureHolder.getStructure().getId(), saved.getString("id"), customRed)
 
             Thread.sleep(1000)
 
