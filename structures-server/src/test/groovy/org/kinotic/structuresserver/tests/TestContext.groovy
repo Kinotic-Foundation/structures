@@ -5,6 +5,7 @@ import org.elasticsearch.client.RestHighLevelClient
 import org.elasticsearch.index.query.MatchAllQueryBuilder
 import org.elasticsearch.index.reindex.BulkByScrollResponse
 import org.elasticsearch.index.reindex.DeleteByQueryRequest
+import org.elasticsearch.search.SearchHits
 import org.junit.Assert
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
@@ -56,6 +57,12 @@ class TestContext extends TestBase {
 
         StructureHolder structureHolder = getPerson()
 
+        HashMap<String, Object> customRed = new HashMap<String, Object>()
+        customRed.put("custom", "red")
+
+        HashMap<String, Object> customBlue = new HashMap<String, Object>()
+        customBlue.put("custom", "blue")
+
         // now we can create an item with the above fields
         TypeCheckMap obj = new TypeCheckMap()
         obj.put("state", "Nevada")
@@ -65,12 +72,12 @@ class TestContext extends TestBase {
         obj.put("lastName", "Polo")
         obj.put("id", "nevada-las_vegas-111_las_vegas_blvd")
 
-        TypeCheckMap saved = itemService.upsertItem(structureHolder.getStructure().getId(), obj)
+        TypeCheckMap saved = itemService.upsertItem(structureHolder.getStructure().getId(), obj, customRed)
 
         try {
             Thread.sleep(1000)
 
-            Optional<TypeCheckMap> freshOpt = itemService.getItemById(structureHolder.getStructure().getId(), "nevada-las_vegas-111_las_vegas_blvd")
+            Optional<TypeCheckMap> freshOpt = itemService.getItemById(structureHolder.getStructure().getId(), "nevada-las_vegas-111_las_vegas_blvd", customBlue)
 
             if(freshOpt.isEmpty()){
                 throw new IllegalStateException("Composite Primary Key was not saved as expected")
@@ -78,14 +85,14 @@ class TestContext extends TestBase {
 
             TypeCheckMap fresh = freshOpt.get()
 
-            if (!fresh.getString("custom").equals("custom")) {
+            if (!fresh.getString("custom").equals("red")) {
                 throw new IllegalStateException("Custom Default Trait was not used properly")
             }
 
         } catch (AlreadyExistsException e) {
             throw e
         } finally {
-            itemService.delete(structureHolder.getStructure().getId(), saved.getString("id"))
+            itemService.delete(structureHolder.getStructure().getId(), saved.getString("id"), null)
 
             Thread.sleep(1000)
 
@@ -94,13 +101,20 @@ class TestContext extends TestBase {
     }
 
     @Test
-    void bulkUpsertTest(){
+    void bulkUpsertTest_ValidateCustomTraitSearch(){
 
         StructureHolder structureHolder = getPerson()
 
+        // we have a default trait that is called custom and uses the context to set the value
+        // we will filter the values automatically
+        HashMap<String, Object> hometown = new HashMap<String, Object>()
+        hometown.put("custom", "New Mexico")
+
+        HashMap<String, Object> visiting = new HashMap<String, Object>()
+        visiting.put("custom", "New York")
+
         try {
             itemService.requestBulkUpdatesForStructure(structureHolder.getStructure().getId())
-            ArrayList<TypeCheckMap> bulkItemList = new ArrayList<>()
             for(int i = 0; i < 6000; i++){
                 TypeCheckMap obj = new TypeCheckMap()
                 obj.put("state", "State-${i%10}".toString())
@@ -108,22 +122,23 @@ class TestContext extends TestBase {
                 obj.put("address", "111 Main Blvd")
                 obj.put("firstName", "Marco-${i}".toString())
                 obj.put("lastName", "Polo-${i}".toString())
-                bulkItemList.add(obj)
-            }
-            bulkItemList.forEach(item -> {
                 try {
-                    itemService.pushItemForBulkUpdate(structureHolder.getStructure().getId(), new TypeCheckMap(item))
+                    itemService.pushItemForBulkUpdate(structureHolder.getStructure().getId(), obj, i%2 == 0 ? hometown : visiting)
                 } catch (Exception e) {
                     // FIXME: how to handle this, we will not know where we had issues.. we could capture all the ones that errored out
                     //  and pass them back - or we fail fast and just respond with the id or some other identifiable info for debugging
                     throw new RuntimeException(e)
                 }
-            })
+            }
         } finally {
             itemService.flushAndCloseBulkUpdate(structureHolder.getStructure().getId())
         }
 
         Thread.sleep(10000)
+
+        SearchHits hits = itemService.getAll(structureHolder.getStructure().getId(), 100, 0, hometown)
+        Assertions.assertEquals(100, hits.getHits().length)
+        Assertions.assertEquals(3000, hits.getTotalHits().value)
 
         try {
             // run through deletion

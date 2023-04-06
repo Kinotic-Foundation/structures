@@ -22,6 +22,6 @@ import org.kinotic.structures.api.domain.TypeCheckMap;
 
 import java.util.Map;
 
-public interface HasOnBeforeDelete extends TraitLifecycle {
+public interface HasOnBeforeDelete {
     TypeCheckMap beforeDelete(TypeCheckMap obj, Structure structure, String fieldName, Map<String, Object> context) throws Exception;
 }
