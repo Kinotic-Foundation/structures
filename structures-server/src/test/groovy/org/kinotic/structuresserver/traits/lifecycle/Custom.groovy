@@ -30,7 +30,7 @@ class Custom implements HasOnBeforeModify, HasOnBeforeSearch, HasOnAfterGet {
     TypeCheckMap afterGet(TypeCheckMap obj, Structure structure, String fieldName, Map<String, Object> context) throws Exception {
         String customValue = context.get("custom") as String
         if(obj.getString("custom") != customValue){
-            obj = null // caller shouldn't have access to this record - we can throw error or just return null
+            obj = null // caller shouldn't have access to this record - we can just return null as that is a normal workflow
         }
         return obj
     }
