@@ -17,15 +17,20 @@
 
 package org.kinotic.structures.internal.trait.lifecycle;
 
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.domain.TypeCheckMap;
 import org.kinotic.structures.api.domain.traitlifecycle.HasOnBeforeDelete;
 import org.kinotic.structures.api.domain.traitlifecycle.HasOnBeforeModify;
+import org.kinotic.structures.api.domain.traitlifecycle.HasOnBeforeSearch;
 import org.kinotic.structures.internal.repositories.ReferenceLogElasticRepository;
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
+
 @Component
-public class Deleted implements HasOnBeforeDelete, HasOnBeforeModify {
+public class Deleted implements HasOnBeforeDelete, HasOnBeforeModify, HasOnBeforeSearch {
 
     private final ReferenceLogElasticRepository referenceLogElasticRepository;
 
@@ -34,7 +39,7 @@ public class Deleted implements HasOnBeforeDelete, HasOnBeforeModify {
     }
 
     @Override
-    public TypeCheckMap beforeModify(TypeCheckMap obj, Structure structure, String fieldName) throws Exception {
+    public TypeCheckMap beforeModify(TypeCheckMap obj, Structure structure, String fieldName, Map<String, Object> context) throws Exception {
         if(!obj.has("deleted")){
             obj.amend("deleted", false);
         }
@@ -42,7 +47,7 @@ public class Deleted implements HasOnBeforeDelete, HasOnBeforeModify {
     }
 
     @Override
-    public TypeCheckMap beforeDelete(TypeCheckMap obj, final Structure structure, String fieldName) throws Exception {
+    public TypeCheckMap beforeDelete(TypeCheckMap obj, final Structure structure, String fieldName, Map<String, Object> context) throws Exception {
 //        Iterable<ReferenceLog> references = referenceLogElasticRepository.findByReferencesContains(structure.getId().toLowerCase() + "_" + obj.getString("id"));
 //        StringBuilder referenceHolderIds = new StringBuilder();
 //        for (ReferenceLog log : references) {
@@ -66,4 +71,8 @@ public class Deleted implements HasOnBeforeDelete, HasOnBeforeModify {
         return obj;
     }
 
+    @Override
+    public BoolQueryBuilder beforeSearch(BoolQueryBuilder builder, Structure structure, String fieldName, Map<String, Object> context) throws Exception {
+        return builder.filter(QueryBuilders.termQuery("deleted", false));
+    }
 }

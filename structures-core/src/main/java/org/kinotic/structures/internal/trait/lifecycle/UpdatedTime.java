@@ -24,6 +24,8 @@ import org.kinotic.structures.internal.api.services.ItemServiceInternal;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
+
 @Component
 public class UpdatedTime implements HasOnBeforeModify {
 
@@ -35,7 +37,7 @@ public class UpdatedTime implements HasOnBeforeModify {
 
 
     @Override
-    public TypeCheckMap beforeModify(TypeCheckMap obj, Structure structure, String fieldName) throws Exception {
+    public TypeCheckMap beforeModify(TypeCheckMap obj, Structure structure, String fieldName, Map<String, Object> context) throws Exception {
         //we should be able to turn on internal versioning, and we don't have to do this logic at all.
         // if we support partial updates,
         //    might not have an updateTime, if we are performing partial updates.

@@ -20,6 +20,8 @@ package org.kinotic.structures.api.domain.traitlifecycle;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.domain.TypeCheckMap;
 
+import java.util.Map;
+
 public interface HasOnAfterGet extends TraitLifecycle {
-    TypeCheckMap afterGet(TypeCheckMap obj, Structure structure, String fieldName) throws Exception;
+    TypeCheckMap afterGet(TypeCheckMap obj, Structure structure, String fieldName, Map<String, Object> context) throws Exception;
 }

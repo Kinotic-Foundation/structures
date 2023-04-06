@@ -22,11 +22,13 @@ import org.kinotic.structures.api.domain.TypeCheckMap;
 import org.kinotic.structures.api.domain.traitlifecycle.HasOnBeforeDelete;
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
+
 @Component
 public class DeletedTime implements HasOnBeforeDelete {
 
     @Override
-    public TypeCheckMap beforeDelete(TypeCheckMap obj, Structure structure, String fieldName) throws Exception {
+    public TypeCheckMap beforeDelete(TypeCheckMap obj, Structure structure, String fieldName, Map<String, Object> context) throws Exception {
         obj.amend("deletedTime", System.currentTimeMillis());
         return obj;
     }

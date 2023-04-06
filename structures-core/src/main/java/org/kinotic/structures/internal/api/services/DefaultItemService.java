@@ -31,10 +31,7 @@ import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.core.TimeValue;
-import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.IdsQueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.index.query.QueryStringQueryBuilder;
+import org.elasticsearch.index.query.*;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
@@ -107,7 +104,7 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
     }
 
     @Override
-    public TypeCheckMap upsertItem(String structureId, TypeCheckMap item) throws Exception {
+    public TypeCheckMap upsertItem(String structureId, TypeCheckMap item, Map<String, Object> context) throws Exception {
         Optional<Structure> optional = structureService.getById(structureId);
         //noinspection OptionalGetWithoutIsPresent
         final Structure structure = optional.get();// will throw null pointer/element not available
@@ -124,9 +121,9 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
         }
 
         // perform before create/update hooks - id is created if it does not already exist
-        TypeCheckMap toUpsert = (TypeCheckMap) processLifecycle(item, structure, (hook, obj, fieldName) -> {
+        TypeCheckMap toUpsert = (TypeCheckMap) processLifecycle(item, structure, context, (hook, obj, fieldName, contextMap) -> {
             if (hook instanceof HasOnBeforeModify) {
-                obj = ((HasOnBeforeModify) hook).beforeModify((TypeCheckMap) obj, structure, fieldName);
+                obj = ((HasOnBeforeModify) hook).beforeModify((TypeCheckMap) obj, structure, fieldName, contextMap);
             }
             return obj;
         });
@@ -136,11 +133,11 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
 
         // get value fresh from db
         //noinspection OptionalGetWithoutIsPresent
-        TypeCheckMap ret = getItemById(structureId, toUpsert.getString("id")).get();
+        TypeCheckMap ret = getItemById(structureId, toUpsert.getString("id"), context).get();
 
-        return (TypeCheckMap) processLifecycle(ret, structure, (hook, obj, fieldName) -> {
+        return (TypeCheckMap) processLifecycle(ret, structure, context, (hook, obj, fieldName, contextMap) -> {
             if (hook instanceof HasOnAfterModify) {
-                obj = ((HasOnAfterModify) hook).afterModify((TypeCheckMap) obj, structure, fieldName);
+                obj = ((HasOnAfterModify) hook).afterModify((TypeCheckMap) obj, structure, fieldName, contextMap);
             }
             return obj;
         });
@@ -199,7 +196,7 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
     }
 
     @Override
-    public void pushItemForBulkUpdate(String structureId, TypeCheckMap item) throws Exception {
+    public void pushItemForBulkUpdate(String structureId, TypeCheckMap item, Map<String, Object> context) throws Exception {
         Assert.isTrue(structureId != null && !structureId.isBlank(), "Must provide valid structureId.");
         Assert.isTrue(this.bulkRequests.containsKey(structureId),
                       "Your structure not set up for bulk processing, please request new bulk updates for structure");
@@ -213,9 +210,9 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
             }
         }
 
-        TypeCheckMap ret = (TypeCheckMap) processLifecycle(item, bulkUpdate.getStructure(), (hook, obj, fieldName) -> {
+        TypeCheckMap ret = (TypeCheckMap) processLifecycle(item, bulkUpdate.getStructure(), context, (hook, obj, fieldName, contextMap) -> {
             if (hook instanceof HasOnBeforeModify) {
-                obj = ((HasOnBeforeModify) hook).beforeModify((TypeCheckMap) obj, bulkUpdate.getStructure(), fieldName);
+                obj = ((HasOnBeforeModify) hook).beforeModify((TypeCheckMap) obj, bulkUpdate.getStructure(), fieldName, contextMap);
             }
             return obj;
         });
@@ -226,9 +223,9 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
 
         this.bulkRequests.get(structureId).getBulkProcessor().add(request);
 
-        ret = (TypeCheckMap) processLifecycle(ret, bulkUpdate.getStructure(), (hook, obj, fieldName) -> {
+        ret = (TypeCheckMap) processLifecycle(ret, bulkUpdate.getStructure(), context, (hook, obj, fieldName, contextMap) -> {
             if (hook instanceof HasOnAfterModify) {
-                obj = ((HasOnAfterModify) hook).afterModify((TypeCheckMap) obj, bulkUpdate.getStructure(), fieldName);
+                obj = ((HasOnAfterModify) hook).afterModify((TypeCheckMap) obj, bulkUpdate.getStructure(), fieldName, contextMap);
             }
             return obj;
         });
@@ -254,17 +251,23 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
     }
 
     @Override
-    public long count(String structureId) throws IOException {
+    public long count(String structureId, Map<String, Object> context) throws Exception {
         Optional<Structure> optional = structureService.getById(structureId);
         //noinspection OptionalGetWithoutIsPresent
         Structure structure = optional.get();// will throw null pointer/element not available
 
-        BoolQueryBuilder boolQueryBuilder = new BoolQueryBuilder();
-        boolQueryBuilder.filter(QueryBuilders.termQuery("deleted", false));
+        BoolQueryBuilder queryBuilder = (BoolQueryBuilder) processLifecycle(new BoolQueryBuilder(), structure, context, (hook, boolQueryBuilder, fieldName, contextMap) -> {
+            if (hook instanceof HasOnBeforeSearch) {
+                boolQueryBuilder = ((HasOnBeforeSearch) hook).beforeSearch((BoolQueryBuilder) boolQueryBuilder, structure, fieldName, contextMap);
+            }
+            return boolQueryBuilder;
+        });
 
         SearchSourceBuilder builder = new SearchSourceBuilder();
-        builder.query(boolQueryBuilder);
         builder.size(0);
+        if(queryBuilder.hasClauses()){
+            builder.query(queryBuilder);
+        }
         SearchRequest request = new SearchRequest(structure.getItemIndex());
         request.source(builder);
         SearchResponse response = highLevelClient.search(request, RequestOptions.DEFAULT);
@@ -273,15 +276,21 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
     }
 
     @Override
-    public Optional<TypeCheckMap> getById(Structure structure, String id) throws Exception {
+    public Optional<TypeCheckMap> getById(Structure structure, String id, Map<String, Object> context) throws Exception {
         GetResponse response = highLevelClient.get(new GetRequest(structure.getItemIndex()).id(id),
                                                    RequestOptions.DEFAULT);
+
+
+        // FiXME: this operation is more expensive than needed, figure out a way to restrict during get - id look ups
+        //  do not allow for filtering - right now you can restrict access by implementing your own HasOnAfterGet lifecycle
+        //  trait.
+
         TypeCheckMap ret = null;
         if (response.isExists()) {
             ret = new TypeCheckMap(response.getSourceAsMap());
-            ret = (TypeCheckMap) processLifecycle(ret, structure, (hook, obj, fieldName) -> {
+            ret = (TypeCheckMap) processLifecycle(ret, structure, context, (hook, obj, fieldName, contextMap) -> {
                 if (hook instanceof HasOnAfterGet) {
-                    obj = ((HasOnAfterGet) hook).afterGet((TypeCheckMap) obj, structure, fieldName);
+                    obj = ((HasOnAfterGet) hook).afterGet((TypeCheckMap) obj, structure, fieldName, contextMap);
                 }
                 return obj;
             });
@@ -296,12 +305,12 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
      * $Structure lookup, just the item lookup.
      */
     @Override
-    public Optional<TypeCheckMap> getItemById(String structureId, String id) throws Exception {
+    public Optional<TypeCheckMap> getItemById(String structureId, String id, Map<String, Object> context) throws Exception {
         Optional<Structure> optional = structureService.getById(structureId);
         //noinspection OptionalGetWithoutIsPresent
         Structure structure = optional.get();// will throw null pointer/element not available
 
-        return getById(structure, id);
+        return getById(structure, id, context);
     }
 
     /**
@@ -311,14 +320,24 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
      * structure to it.. please see ObjectReference trait lifecycle for more information on structure.
      */
     @Override
-    public SearchHits searchForItemsById(String structureId, String... ids) throws IOException {
+    public SearchHits searchForItemsById(String structureId, Map<String, Object> context, String... ids) throws Exception {
         Optional<Structure> optional = structureService.getById(structureId);
         //noinspection OptionalGetWithoutIsPresent
         Structure structure = optional.get();// will throw null pointer/element not available
 
+        BoolQueryBuilder queryBuilder = (BoolQueryBuilder) processLifecycle(new BoolQueryBuilder(), structure, context, (hook, boolQueryBuilder, fieldName, contextMap) -> {
+            if (hook instanceof HasOnBeforeSearch) {
+                boolQueryBuilder = ((HasOnBeforeSearch) hook).beforeSearch((BoolQueryBuilder) boolQueryBuilder, structure, fieldName, contextMap);
+            }
+            return boolQueryBuilder;
+        });
+
         SearchSourceBuilder builder = new SearchSourceBuilder()
-                .query(new IdsQueryBuilder().addIds(ids))
-                .postFilter(QueryBuilders.termQuery("deleted", false));
+                .query(new IdsQueryBuilder().addIds(ids));
+
+        if(queryBuilder.hasClauses()){
+            builder.postFilter(queryBuilder);
+        }
 
         SearchRequest request = new SearchRequest(structure.getItemIndex());
         request.source(builder);
@@ -329,19 +348,27 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
     }
 
     @Override
-    public SearchHits getAll(String structureId, int numberPerPage, int from) throws IOException {
+    public SearchHits getAll(String structureId, int numberPerPage, int from, Map<String, Object> context) throws Exception {
         Optional<Structure> optional = structureService.getById(structureId);
         //noinspection OptionalGetWithoutIsPresent
         Structure structure = optional.get();// will throw null pointer/element not available
 
-        BoolQueryBuilder boolQueryBuilder = new BoolQueryBuilder();
-        boolQueryBuilder.filter(QueryBuilders.termQuery("deleted", false));
+        BoolQueryBuilder queryBuilder = (BoolQueryBuilder) processLifecycle(new BoolQueryBuilder(), structure, context, (hook, boolQueryBuilder, fieldName, contextMap) -> {
+            if (hook instanceof HasOnBeforeSearch) {
+                boolQueryBuilder = ((HasOnBeforeSearch) hook).beforeSearch((BoolQueryBuilder) boolQueryBuilder, structure, fieldName, contextMap);
+            }
+            return boolQueryBuilder;
+        });
+
+        SearchSourceBuilder builder = new SearchSourceBuilder()
+                                            .from(from * numberPerPage)
+                                            .size(numberPerPage);
+        if(queryBuilder.hasClauses()){
+            builder.query(queryBuilder);
+        }
 
         SearchRequest request = new SearchRequest(structure.getItemIndex());
-        request.source(new SearchSourceBuilder()
-                               .query(boolQueryBuilder)
-                               .from(from * numberPerPage)
-                               .size(numberPerPage));
+        request.source(builder);
 
         SearchResponse response = highLevelClient.search(request, RequestOptions.DEFAULT);
 
@@ -359,19 +386,25 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
                                   int numberPerPage,
                                   int from,
                                   String fieldName,
-                                  Object... searchTerms) throws IOException {
+                                  Map<String, Object> context,
+                                  Object... searchTerms) throws Exception {
 
         Optional<Structure> optional = structureService.getById(structureId);
         //noinspection OptionalGetWithoutIsPresent
         Structure structure = optional.get();// will throw null pointer/element not available
 
-        BoolQueryBuilder boolQueryBuilder = new BoolQueryBuilder();
-        boolQueryBuilder.filter(QueryBuilders.termsQuery(fieldName, searchTerms))
-                        .filter(QueryBuilders.termQuery("deleted", false));
+        BoolQueryBuilder queryBuilder = (BoolQueryBuilder) processLifecycle(new BoolQueryBuilder(), structure, context, (hook, boolQueryBuilder, field, contextMap) -> {
+            if (hook instanceof HasOnBeforeSearch) {
+                boolQueryBuilder = ((HasOnBeforeSearch) hook).beforeSearch((BoolQueryBuilder) boolQueryBuilder, structure, field, contextMap);
+            }
+            return boolQueryBuilder;
+        });
+
+        queryBuilder.filter(QueryBuilders.termsQuery(fieldName, searchTerms));
 
         SearchRequest request = new SearchRequest(structure.getItemIndex());
         request.source(new SearchSourceBuilder()
-                               .query(boolQueryBuilder)
+                               .query(queryBuilder)
                                .from(from * numberPerPage)
                                .size(numberPerPage));
 
@@ -390,18 +423,24 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
                                      int numberPerPage,
                                      int from,
                                      String search,
-                                     String... fieldNames) throws IOException {
+                                     Map<String, Object> context,
+                                     String... fieldNames) throws Exception {
         Optional<Structure> optional = structureService.getById(structureId);
         //noinspection OptionalGetWithoutIsPresent
         Structure structure = optional.get();// will throw null pointer/element not available
 
-        BoolQueryBuilder boolQueryBuilder = new BoolQueryBuilder();
-        boolQueryBuilder.filter(QueryBuilders.termQuery("deleted", false))
-                        .filter(QueryBuilders.multiMatchQuery(search, fieldNames));
+        BoolQueryBuilder queryBuilder = (BoolQueryBuilder) processLifecycle(new BoolQueryBuilder(), structure, context, (hook, boolQueryBuilder, field, contextMap) -> {
+            if (hook instanceof HasOnBeforeSearch) {
+                boolQueryBuilder = ((HasOnBeforeSearch) hook).beforeSearch((BoolQueryBuilder) boolQueryBuilder, structure, field, contextMap);
+            }
+            return boolQueryBuilder;
+        });
+
+        queryBuilder.filter(QueryBuilders.multiMatchQuery(search, fieldNames));
 
         SearchRequest request = new SearchRequest(structure.getItemIndex());
         request.source(new SearchSourceBuilder()
-                               .query(boolQueryBuilder)
+                               .query(queryBuilder)
                                .from(from * numberPerPage)
                                .size(numberPerPage));
 
@@ -416,8 +455,8 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
      * <a href="https://www.elastic.co/guide/en/elasticsearch/reference/6.2/query-dsl-query-string-query.html">String Query</a>
      */
     @Override
-    public SearchHits search(String structureId, String search, int numberPerPage, int from) throws IOException {
-        return search(structureId, search, numberPerPage, from, null, null);
+    public SearchHits search(String structureId, String search, int numberPerPage, int from, Map<String, Object> context) throws Exception {
+        return search(structureId, search, numberPerPage, from, null, null, context);
     }
 
     @Override
@@ -426,17 +465,28 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
                              int numberPerPage,
                              int from,
                              String sortField,
-                             SortOrder sortOrder) throws IOException {
+                             SortOrder sortOrder,
+                             Map<String, Object> context) throws Exception {
 
         Optional<Structure> optional = structureService.getById(structureId);
         //noinspection OptionalGetWithoutIsPresent
         Structure structure = optional.get();// will throw null pointer/element not available
 
+        BoolQueryBuilder queryBuilder = (BoolQueryBuilder) processLifecycle(new BoolQueryBuilder(), structure, context, (hook, boolQueryBuilder, field, contextMap) -> {
+            if (hook instanceof HasOnBeforeSearch) {
+                boolQueryBuilder = ((HasOnBeforeSearch) hook).beforeSearch((BoolQueryBuilder) boolQueryBuilder, structure, field, contextMap);
+            }
+            return boolQueryBuilder;
+        });
+
         SearchSourceBuilder builder = new SearchSourceBuilder()
                 .query(new QueryStringQueryBuilder(search))
-                .postFilter(QueryBuilders.termQuery("deleted", false))
                 .from(from * numberPerPage)
                 .size(numberPerPage);
+
+        if(queryBuilder.hasClauses()){
+            builder.postFilter(QueryBuilders.termQuery("deleted", false));
+        }
 
         if (sortField != null) {
             builder.sort(sortField, sortOrder);
@@ -456,27 +506,41 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
                                      int numberPerPage,
                                      int from,
                                      String sortField,
-                                     boolean descending) throws IOException {
+                                     boolean descending,
+                                     Map<String, Object> context) throws Exception {
         return this.search(structureId,
                            search,
                            numberPerPage,
                            from,
                            sortField,
-                           descending ? SortOrder.DESC : SortOrder.ASC);
+                           descending ? SortOrder.DESC : SortOrder.ASC,
+                           context);
     }
 
     @Override
-    public List<String> searchDistinct(String structureId, String search, String field, int limit) throws IOException {
+    public List<String> searchDistinct(String structureId, String search, String field, int limit, Map<String, Object> context) throws Exception {
         Optional<Structure> optional = structureService.getById(structureId);
         //noinspection OptionalGetWithoutIsPresent
         Structure structure = optional.get();// will throw null pointer/element not available
 
+        BoolQueryBuilder queryBuilder = (BoolQueryBuilder) processLifecycle(new BoolQueryBuilder(), structure, context, (hook, boolQueryBuilder, fieldName, contextMap) -> {
+            if (hook instanceof HasOnBeforeSearch) {
+                boolQueryBuilder = ((HasOnBeforeSearch) hook).beforeSearch((BoolQueryBuilder) boolQueryBuilder, structure, fieldName, contextMap);
+            }
+            return boolQueryBuilder;
+        });
+
+        SearchSourceBuilder sourceBuilder = new SearchSourceBuilder()
+                                                    .aggregation(AggregationBuilders.terms(field).field(field).size(500))
+                                                    .query(new QueryStringQueryBuilder(search))
+                                                    .size(limit);
+
+        if(queryBuilder.hasClauses()){
+            sourceBuilder.postFilter(queryBuilder);
+        }
+
         SearchRequest request = new SearchRequest(structure.getItemIndex());
-        request.source(new SearchSourceBuilder()
-                               .aggregation(AggregationBuilders.terms(field).field(field).size(500))
-                               .query(new QueryStringQueryBuilder(search))
-                               .postFilter(QueryBuilders.termQuery("deleted", false))
-                               .size(limit));
+        request.source(sourceBuilder);
 
         SearchResponse response = highLevelClient.search(request, RequestOptions.DEFAULT);
 
@@ -489,16 +553,16 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
     }
 
     @Override
-    public void delete(String structureId, String itemId) throws Exception {
+    public void delete(String structureId, String itemId, Map<String, Object> context) throws Exception {
         Optional<Structure> optional = structureService.getById(structureId);
         //noinspection OptionalGetWithoutIsPresent
         Structure structure = optional.get();
 
-        TypeCheckMap item = new TypeCheckMap();
-        item.amend("id", itemId);
-        TypeCheckMap ret = (TypeCheckMap) processLifecycle(item, structure, (hook, obj, fieldName) -> {
+        // if document level security is in use, the getById will validate access
+        TypeCheckMap item = getById(structure, itemId, context).get();
+        TypeCheckMap ret = (TypeCheckMap) processLifecycle(item, structure, context, (hook, obj, fieldName, contextMap) -> {
             if (hook instanceof HasOnBeforeDelete) {
-                obj = ((HasOnBeforeDelete) hook).beforeDelete((TypeCheckMap) obj, structure, fieldName);
+                obj = ((HasOnBeforeDelete) hook).beforeDelete((TypeCheckMap) obj, structure, fieldName, contextMap);
             }
             return obj;
         });
@@ -506,9 +570,9 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
         processUpdateRequest(structure, ret, false);
 
         //TODO: find out how this will operate concurrently
-        processLifecycle(ret, structure, (hook, obj, fieldName) -> {
+        processLifecycle(ret, structure, context, (hook, obj, fieldName, contextMap) -> {
             if (hook instanceof HasOnAfterDelete) {
-                obj = ((HasOnAfterDelete) hook).afterDelete((TypeCheckMap) obj, structure, fieldName);
+                obj = ((HasOnAfterDelete) hook).afterDelete((TypeCheckMap) obj, structure, fieldName, contextMap);
             }
             return obj;
         });

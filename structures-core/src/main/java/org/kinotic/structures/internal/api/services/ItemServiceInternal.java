@@ -2,11 +2,13 @@ package org.kinotic.structures.internal.api.services;
 
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.sort.SortOrder;
-import org.kinotic.structures.api.domain.*;
+import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.api.domain.Trait;
+import org.kinotic.structures.api.domain.TraitFunction;
+import org.kinotic.structures.api.domain.TypeCheckMap;
 import org.kinotic.structures.api.domain.traitlifecycle.TraitLifecycle;
 import org.kinotic.structures.api.services.ItemService;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,11 +19,11 @@ import java.util.Optional;
  */
 public interface ItemServiceInternal extends ItemService {
 
-    Optional<TypeCheckMap> getById(Structure structure, String id) throws Exception;
+    Optional<TypeCheckMap> getById(Structure structure, String id, Map<String, Object> context) throws Exception;
 
-    SearchHits search(String structureId, String search, int numberPerPage, int from, String sortField, SortOrder sortOrder) throws IOException;
+    SearchHits search(String structureId, String search, int numberPerPage, int from, String sortField, SortOrder sortOrder, Map<String, Object> context) throws Exception;
 
-    List<String> searchDistinct(String structureId, String search, String field, int limit) throws IOException;
+    List<String> searchDistinct(String structureId, String search, String field, int limit, Map<String, Object> context) throws Exception;
 
     HashMap<String, TraitLifecycle> getTraitLifecycleMap();
 
@@ -31,11 +33,11 @@ public interface ItemServiceInternal extends ItemService {
      * catch the cause and rethrow to make it more evident what the issue is.
      *
      */
-    default Object processLifecycle(Object obj, Structure structure, TriFunction<TraitLifecycle, Object, String, Object> process) throws Exception {
+    default Object processLifecycle(Object obj, Structure structure, Map<String, Object> context, TraitFunction<TraitLifecycle, Object, String, Object> process) throws Exception {
         for (Map.Entry<String, Trait> traitEntry : structure.getTraits().entrySet()) {
             if (getTraitLifecycleMap().containsKey(traitEntry.getValue().getName())) {
                 TraitLifecycle toExecute = getTraitLifecycleMap().get(traitEntry.getValue().getName());
-                obj = process.apply(toExecute, obj, traitEntry.getKey());
+                obj = process.apply(toExecute, obj, traitEntry.getKey(), context);
             }//else if(traitEntry.getValue().getName().contains("Reference ")){
 //                TraitLifecycle toExecute = getTraitLifecycleMap().get("ObjectReference");
 //                obj = process.apply(toExecute, obj, traitEntry.getKey());

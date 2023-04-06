@@ -66,7 +66,7 @@ public class GenerateData extends ElasticsearchTestBase {
 //		office.put("device1",savedDevice1)
 //		office.put("device2",savedDevice2)
 //
-//		TypeCheckMap savedOffice = itemService.createItem(officeStructure.id, office)
+//		TypeCheckMap savedOffice = itemService.createItem(officeStructure.id, office, null)
 
     }
 

@@ -22,10 +22,12 @@ import org.kinotic.structures.api.domain.TypeCheckMap;
 import org.kinotic.structures.api.domain.traitlifecycle.HasOnBeforeModify;
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
+
 @Component
 public class CreatedTime implements HasOnBeforeModify {
     @Override
-    public TypeCheckMap beforeModify(TypeCheckMap obj, Structure structure, String fieldName) throws Exception {
+    public TypeCheckMap beforeModify(TypeCheckMap obj, Structure structure, String fieldName, Map<String, Object> context) throws Exception {
         if(!obj.has("createdTime")){
             obj.amend("createdTime", System.currentTimeMillis());
         }

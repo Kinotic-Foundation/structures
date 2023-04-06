@@ -23,34 +23,35 @@ import org.kinotic.structures.api.domain.NotFoundException;
 import org.kinotic.structures.api.domain.TypeCheckMap;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.Optional;
 
 @Publish
 public interface ItemService {
 
-    TypeCheckMap upsertItem(String structureId, TypeCheckMap item) throws Exception;
+    TypeCheckMap upsertItem(String structureId, TypeCheckMap item, Map<String, Object> context) throws Exception;
 
-    long count(String structureId) throws IOException;
+    long count(String structureId, Map<String, Object> context) throws Exception;
 
-    Optional<TypeCheckMap> getItemById(String structureId, String id) throws Exception;
+    Optional<TypeCheckMap> getItemById(String structureId, String id, Map<String, Object> context) throws Exception;
 
-    SearchHits searchForItemsById(String structureId, String... ids) throws IOException;
+    SearchHits searchForItemsById(String structureId, Map<String, Object> context, String... ids) throws Exception;
 
-    SearchHits getAll(String structureId, int numberPerPage, int from) throws IOException;
+    SearchHits getAll(String structureId, int numberPerPage, int from, Map<String, Object> context) throws Exception;
 
-    SearchHits searchTerms(String structureId, int numberPerPage, int from, String fieldName, Object... searchTerms) throws IOException;
+    SearchHits searchTerms(String structureId, int numberPerPage, int from, String fieldName, Map<String, Object> context, Object... searchTerms) throws Exception;
 
-    SearchHits searchFullText(String structureId, int numberPerPage, int from, String search, String... fieldNames) throws IOException;
+    SearchHits searchFullText(String structureId, int numberPerPage, int from, String search, Map<String, Object> context, String... fieldNames) throws Exception;
 
-    SearchHits search(String structureId, String search, int numberPerPage, int from) throws IOException;
+    SearchHits search(String structureId, String search, int numberPerPage, int from, Map<String, Object> context) throws Exception;
 
-    SearchHits searchWithSort(String structureId, String search, int numberPerPage, int from, String sortField, boolean descending) throws IOException;
+    SearchHits searchWithSort(String structureId, String search, int numberPerPage, int from, String sortField, boolean descending, Map<String, Object> context) throws Exception;
 
-    void delete(String structureId, String itemId) throws Exception;
+    void delete(String structureId, String itemId, Map<String, Object> context) throws Exception;
 
     void requestBulkUpdatesForStructure(String structureId) throws IOException, NotFoundException;
 
-    void pushItemForBulkUpdate(String structureId, TypeCheckMap item) throws Exception;
+    void pushItemForBulkUpdate(String structureId, TypeCheckMap item, Map<String, Object> context) throws Exception;
 
     void flushAndCloseBulkUpdate(String structureId) throws Exception;
 

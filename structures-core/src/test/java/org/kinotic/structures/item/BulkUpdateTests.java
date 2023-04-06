@@ -46,19 +46,19 @@ public class BulkUpdateTests extends ElasticsearchTestBase {
             obj.put("mac", "000000000001");
             obj.put("label", "Device-"+i);
             obj.put("description", "This is a description for device "+i);
-            itemService.pushItemForBulkUpdate(structure.getId(), obj);
+            itemService.pushItemForBulkUpdate(structure.getId(), obj, null);
         }
 
         Thread.sleep(10000);// give time for ES to flush the new item
 
-        long firstCount = itemService.count(structure.getId());
+        long firstCount = itemService.count(structure.getId(), null);
         Assert.isTrue(firstCount == 5000, "Bulk upload didn't complete properly before flush");
 
         itemService.flushAndCloseBulkUpdate(structure.getId());
 
         Thread.sleep(5000);
 
-        long secondCount = itemService.count(structure.getId());
+        long secondCount = itemService.count(structure.getId(), null);
         Assert.isTrue(secondCount == 6000, "Bulk upload didn't complete properly after flush");
 
         // run through deletion

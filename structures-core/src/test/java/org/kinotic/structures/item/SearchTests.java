@@ -60,7 +60,7 @@ public class SearchTests extends ElasticsearchTestBase {
             obj.put("ip", "192.0." + index + ".11");
             obj.put("mac", "00000000000" + index);
 
-            TypeCheckMap saved = itemService.upsertItem(structure.getId(), obj);
+            TypeCheckMap saved = itemService.upsertItem(structure.getId(), obj, null);
 
             Thread.sleep(1000);// give time for ES to flush the new item
 
@@ -68,11 +68,11 @@ public class SearchTests extends ElasticsearchTestBase {
         }
 
 
-        final SearchHits hits = itemService.getAll(structure.getId(), 100, 0);
+        final SearchHits hits = itemService.getAll(structure.getId(), 100, 0, null);
 
         for (SearchHit item : hits.getHits()) {
             if (item != null) {
-                itemService.delete(structure.getId(), item.getId());
+                itemService.delete(structure.getId(), item.getId(), null);
 
                 Thread.sleep(1000);
             }
@@ -101,7 +101,7 @@ public class SearchTests extends ElasticsearchTestBase {
             obj.put("ip", "192.0." + index + ".11");
             obj.put("mac", "00000000000" + index);
 
-            TypeCheckMap saved = itemService.upsertItem(structure.getId(), obj);
+            TypeCheckMap saved = itemService.upsertItem(structure.getId(), obj, null);
 
             Thread.sleep(1000);// give time for ES to flush the new item
 
@@ -109,15 +109,15 @@ public class SearchTests extends ElasticsearchTestBase {
         }
 
 
-        final SearchHits zeroDotEleven = itemService.searchTerms(structure.getId(), 100, 0, "ip", "192.0.0.11");
+        final SearchHits zeroDotEleven = itemService.searchTerms(structure.getId(), 100, 0, "ip", null, "192.0.0.11");
 
-        final SearchHits twoMacs = itemService.searchTerms(structure.getId(), 100, 0, "mac", "000000000000", "000000000001");
+        final SearchHits twoMacs = itemService.searchTerms(structure.getId(), 100, 0, "mac", null, "000000000000", "000000000001");
 
-        final SearchHits all = itemService.getAll(structure.getId(), 100, 0);
+        final SearchHits all = itemService.getAll(structure.getId(), 100, 0, null);
 
         for (SearchHit item : all.getHits()) {
             if (item != null) {
-                itemService.delete(structure.getId(), item.getId());
+                itemService.delete(structure.getId(), item.getId(), null);
 
                 Thread.sleep(1000);
             }
@@ -169,7 +169,7 @@ public class SearchTests extends ElasticsearchTestBase {
             }
 
 
-            TypeCheckMap saved = itemService.upsertItem(structure.getId(), obj);
+            TypeCheckMap saved = itemService.upsertItem(structure.getId(), obj, null);
 
             Thread.sleep(1000);// give time for ES to flush the new item
 
@@ -177,17 +177,17 @@ public class SearchTests extends ElasticsearchTestBase {
         }
 
 
-        final SearchHits oneItemUsingText = itemService.searchFullText(structure.getId(), 100, 0, "zero", "description");
+        final SearchHits oneItemUsingText = itemService.searchFullText(structure.getId(), 100, 0, "zero", null, "description");
 
-        final SearchHits twoItemsUsingOr = itemService.searchFullText(structure.getId(), 100, 0, "zero|fifty", "description");
+        final SearchHits twoItemsUsingOr = itemService.searchFullText(structure.getId(), 100, 0, "zero|fifty", null, "description");
 
-        final SearchHits twoItemsUsingSameText = itemService.searchFullText(structure.getId(), 100, 0, "twenty", "description");
+        final SearchHits twoItemsUsingSameText = itemService.searchFullText(structure.getId(), 100, 0, "twenty", null, "description");
 
-        final SearchHits all = itemService.getAll(structure.getId(), 100, 0);
+        final SearchHits all = itemService.getAll(structure.getId(), 100, 0, null);
 
         for (SearchHit item : all.getHits()) {
             if (item != null) {
-                itemService.delete(structure.getId(), item.getId());
+                itemService.delete(structure.getId(), item.getId(), null);
 
                 Thread.sleep(1000);
             }
@@ -244,7 +244,7 @@ public class SearchTests extends ElasticsearchTestBase {
             }
 
 
-            TypeCheckMap saved = itemService.upsertItem(structure.getId(), obj);
+            TypeCheckMap saved = itemService.upsertItem(structure.getId(), obj, null);
 
             Thread.sleep(1000);// give time for ES to flush the new item
 
@@ -252,13 +252,13 @@ public class SearchTests extends ElasticsearchTestBase {
         }
 
 
-        SearchHits oneRetured = itemService.search(structure.getId(), "(ip:192.0.0.11 OR ip:192.0.1.11) AND (mac:000000000003 OR mac:000000000000)", 100, 0);
+        SearchHits oneRetured = itemService.search(structure.getId(), "(ip:192.0.0.11 OR ip:192.0.1.11) AND (mac:000000000003 OR mac:000000000000)", 100, 0, null);
 
-        final SearchHits all = itemService.getAll(structure.getId(), 100, 0);
+        final SearchHits all = itemService.getAll(structure.getId(), 100, 0, null);
 
         for (SearchHit item : all.getHits()) {
             if (item != null) {
-                itemService.delete(structure.getId(), item.getId());
+                itemService.delete(structure.getId(), item.getId(), null);
 
                 Thread.sleep(1000);
             }
@@ -294,7 +294,7 @@ public class SearchTests extends ElasticsearchTestBase {
             obj.put("ip", "192.0." + index + ".11");
             obj.put("mac", "00000000000" + index);
 
-            TypeCheckMap saved = itemService.upsertItem(structure.getId(), obj);
+            TypeCheckMap saved = itemService.upsertItem(structure.getId(), obj, null);
 
             if (index == 1) {
                 delete1Id = saved.getString("id");
@@ -309,15 +309,15 @@ public class SearchTests extends ElasticsearchTestBase {
         }
 
 
-        itemService.delete(structure.getId(), delete1Id);
-        itemService.delete(structure.getId(), delete2Id);
+        itemService.delete(structure.getId(), delete1Id, null);
+        itemService.delete(structure.getId(), delete2Id, null);
         Thread.sleep(1000);
 
-        final SearchHits hits = itemService.getAll(structure.getId(), 100, 0);
+        final SearchHits hits = itemService.getAll(structure.getId(), 100, 0, null);
 
         for (SearchHit item : hits.getHits()) {
             if (item != null) {
-                itemService.delete(structure.getId(), item.getId());
+                itemService.delete(structure.getId(), item.getId(), null);
 
                 Thread.sleep(1000);
             }
@@ -349,7 +349,7 @@ public class SearchTests extends ElasticsearchTestBase {
             obj.put("ip", "192.0." + index + ".11");
             obj.put("mac", "00000000000" + index);
 
-            TypeCheckMap saved = itemService.upsertItem(structure.getId(), obj);
+            TypeCheckMap saved = itemService.upsertItem(structure.getId(), obj, null);
 
             if (index == 1) {
                 delete1Id = saved.getString("id");
@@ -364,19 +364,19 @@ public class SearchTests extends ElasticsearchTestBase {
         }
 
 
-        itemService.delete(structure.getId(), delete1Id);
-        itemService.delete(structure.getId(), delete2Id);
+        itemService.delete(structure.getId(), delete1Id, null);
+        itemService.delete(structure.getId(), delete2Id, null);
         Thread.sleep(1000);
 
-        final SearchHits oneDotEleven = itemService.searchTerms(structure.getId(), 100, 0, "ip", "192.0.1.11");
+        final SearchHits oneDotEleven = itemService.searchTerms(structure.getId(), 100, 0, "ip", null, "192.0.1.11");
 
-        final SearchHits oneMacs = itemService.searchTerms(structure.getId(), 100, 0, "mac", "000000000003", "000000000004");
+        final SearchHits oneMacs = itemService.searchTerms(structure.getId(), 100, 0, "mac", null, "000000000003", "000000000004");
 
-        final SearchHits all = itemService.getAll(structure.getId(), 100, 0);
+        final SearchHits all = itemService.getAll(structure.getId(), 100, 0, null);
 
         for (SearchHit item : all.getHits()) {
             if (item != null) {
-                itemService.delete(structure.getId(), item.getId());
+                itemService.delete(structure.getId(), item.getId(), null);
 
                 Thread.sleep(1000);
             }
@@ -433,7 +433,7 @@ public class SearchTests extends ElasticsearchTestBase {
             }
 
 
-            TypeCheckMap saved = itemService.upsertItem(structure.getId(), obj);
+            TypeCheckMap saved = itemService.upsertItem(structure.getId(), obj, null);
 
             if (index == 1) {
                 delete1Id = saved.getString("id");
@@ -448,21 +448,21 @@ public class SearchTests extends ElasticsearchTestBase {
         }
 
 
-        itemService.delete(structure.getId(), delete1Id);
-        itemService.delete(structure.getId(), delete2Id);
+        itemService.delete(structure.getId(), delete1Id, null);
+        itemService.delete(structure.getId(), delete2Id, null);
         Thread.sleep(2000);
 
-        final SearchHits zeroItemUsingText = itemService.searchFullText(structure.getId(), 100, 0, "thirteen", "description");
+        final SearchHits zeroItemUsingText = itemService.searchFullText(structure.getId(), 100, 0, "thirteen", null, "description");
 
-        final SearchHits oneItemsUsingSameText = itemService.searchFullText(structure.getId(), 100, 0, "twenty", "description");
+        final SearchHits oneItemsUsingSameText = itemService.searchFullText(structure.getId(), 100, 0, "twenty", null, "description");
 
-        final SearchHits oneItemsUsingOr = itemService.searchFullText(structure.getId(), 100, 0, "thirty|thirteen", "description");
+        final SearchHits oneItemsUsingOr = itemService.searchFullText(structure.getId(), 100, 0, "thirty|thirteen", null, "description");
 
-        final SearchHits all = itemService.getAll(structure.getId(), 100, 0);
+        final SearchHits all = itemService.getAll(structure.getId(), 100, 0, null);
 
         for (SearchHit item : all.getHits()) {
             if (item != null) {
-                itemService.delete(structure.getId(), item.getId());
+                itemService.delete(structure.getId(), item.getId(), null);
 
                 Thread.sleep(1000);
             }
@@ -521,7 +521,7 @@ public class SearchTests extends ElasticsearchTestBase {
             }
 
 
-            TypeCheckMap saved = itemService.upsertItem(structure.getId(), obj);
+            TypeCheckMap saved = itemService.upsertItem(structure.getId(), obj, null);
 
             if (index == 1) {
                 delete1Id = saved.getString("id");
@@ -536,17 +536,17 @@ public class SearchTests extends ElasticsearchTestBase {
         }
 
 
-        itemService.delete(structure.getId(), delete1Id);
-        itemService.delete(structure.getId(), delete2Id);
+        itemService.delete(structure.getId(), delete1Id, null);
+        itemService.delete(structure.getId(), delete2Id, null);
         Thread.sleep(1000);
 
-        final SearchHits zeroRetured = itemService.search(structure.getId(), "(ip:192.0.1.11 OR ip:192.0.3.11) AND (mac:000000000001 OR mac:000000000003)", 100, 0);
+        final SearchHits zeroRetured = itemService.search(structure.getId(), "(ip:192.0.1.11 OR ip:192.0.3.11) AND (mac:000000000001 OR mac:000000000003)", 100, 0, null);
 
-        final SearchHits all = itemService.getAll(structure.getId(), 100, 0);
+        final SearchHits all = itemService.getAll(structure.getId(), 100, 0, null);
 
         for (SearchHit item : all.getHits()) {
             if (item != null) {
-                itemService.delete(structure.getId(), item.getId());
+                itemService.delete(structure.getId(), item.getId(), null);
 
                 Thread.sleep(1000);
             }
