@@ -54,6 +54,13 @@
                             {{ item.operational ? "fas fa-check" : "" }}
                         </v-icon>
                     </template>
+                    <template v-slot:item.collection="{ item }">
+                        <v-icon small
+                                class="mr-2"
+                                title="Collection">
+                            {{ item.collection ? "fas fa-check" : "" }}
+                        </v-icon>
+                    </template>
                     <template v-slot:item.action="{ item }" >
                         <v-btn icon >
                             <v-icon medium
@@ -172,7 +179,12 @@
                                                 <v-switch v-model="editedItem.operational"
                                                           class="ma-2"
                                                           label="Operational"
-                                                          messages="Field provides functional operations to be performed, will never be shown in a GUI; i.e. VPN IP address.">
+                                                          messages="Field provides functional operations to be performed, will never be shown in a GUI; i.e. External IP address.">
+                                                </v-switch>
+                                                <v-switch v-model="editedItem.collection"
+                                                          class="ma-2"
+                                                          label="Collection"
+                                                          messages="Field provides a collection (array) of values.">
                                                 </v-switch>
                                             </v-list-item-content>
                                         </v-list-item>
@@ -219,7 +231,7 @@ export default class Traits extends Vue {
     public finishedInitialLoad: boolean = false
     public dialog: boolean = false
     public editedIndex: number = -1
-    public defaultItem: Trait = new Trait("","","","","",0,0,true,true,true,true)
+    public defaultItem: Trait = new Trait("","","","","",0,0,true,false,false,false, false)
     public editedItem: Trait = Object.assign({}, this.defaultItem)
 
     public serverErrors: string = ""
@@ -245,6 +257,7 @@ export default class Traits extends Vue {
         { text: 'Required',align: 'center', value: 'required' },// should the GUI require a field to be filled out when looking at the item
         { text: 'System Managed',align: 'center', value: 'systemManaged' },// system managed traits
         { text: 'Operational',align: 'center', value: 'operational' },
+        { text: 'Collection',align: 'center', value: 'collection' },
         { text: 'Actions', value: 'action', sortable: false }
       ]
 

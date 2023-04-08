@@ -191,7 +191,7 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
         for (Map.Entry<String, Trait> traitEntry : bulkUpdate.getStructure().getTraits().entrySet()) {
             if (!traitEntry.getValue().isSystemManaged() && traitEntry.getValue()
                                                                       .isRequired() && !item.has(traitEntry.getKey())) {
-                throw new IllegalStateException("'" + structureId + "' Structure create/modify has been called without all required fields");
+                throw new IllegalStateException("'" + structureId + "' Structure create/modify has been called without all required fields '"+traitEntry.getKey()+"'");
             }
         }
 

@@ -32,6 +32,7 @@ public class Trait implements Serializable {
     private Long updated;
     private boolean operational = false; // field that says we do not really add to the schema but provide some type of process
     private boolean systemManaged = false; // field that means our default traits for all structures
+    private boolean collection =  false; // is field an array or collection
 
     public String getId() {
         return id;
@@ -111,5 +112,13 @@ public class Trait implements Serializable {
 
     public void setSystemManaged(boolean systemManaged) {
         this.systemManaged = systemManaged;
+    }
+
+    public boolean isCollection() {
+        return collection;
+    }
+
+    public void setCollection(boolean collection) {
+        this.collection = collection;
     }
 }

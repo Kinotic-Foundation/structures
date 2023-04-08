@@ -65,6 +65,7 @@
                                     <thead>
                                     <tr>
                                         <th class="text-center">Required</th>
+                                        <th class="text-center">Collection</th>
                                         <th class="text-left">Field Name</th>
                                         <th class="text-left">Trait Name</th>
                                         <th class="text-left">Trait Description</th>
@@ -77,6 +78,13 @@
                                                         class="ma-2"
                                                         title="Required">
                                                     {{ entry.fieldTrait.required ? "fas fa-check" : "" }}
+                                                </v-icon>
+                                            </td>
+                                            <td class="text-center">
+                                                <v-icon small
+                                                        class="ma-2"
+                                                        title="Is Collection">
+                                                    {{ entry.fieldTrait.collection ? "fas fa-check" : "" }}
                                                 </v-icon>
                                             </td>
                                             <td>{{ entry.fieldName }}</td>
@@ -257,6 +265,7 @@
                                                             </th>
                                                             <th class="text-left">Field Name</th>
                                                             <th class="text-left">Trait</th>
+                                                            <th class="text-left">Collection</th>
                                                             <th class="text-left">Required</th>
                                                             <th class="text-left" v-show="!editedItem.structure.published">Actions</th>
                                                             <th></th>
@@ -272,6 +281,13 @@
                                                                 <td></td>
                                                                 <td>{{ entry.fieldName }}</td>
                                                                 <td>{{ entry.fieldTrait.name }}</td>
+                                                                <td>
+                                                                    <v-icon small
+                                                                            class="mr-2"
+                                                                            title="Collection">
+                                                                        {{ entry.fieldTrait.collection ? "fas fa-check" : "" }}
+                                                                    </v-icon>
+                                                                </td>
                                                                 <td>
                                                                     <v-icon small
                                                                             class="mr-2"
@@ -353,10 +369,15 @@
                                                           label="Required"
                                                           messages="Makes field required on all input forms.">
                                                 </v-switch>
+                                                <v-switch v-model="newTrait.collection"
+                                                          class="ma-2"
+                                                          label="Collection"
+                                                          messages="Field provides a collection (array) of values.">
+                                                </v-switch>
                                                 <v-switch v-model="newTrait.operational"
                                                           class="ma-2"
                                                           label="Operational"
-                                                          messages="Field provides functional operations to be performed, will never be shown in a GUI; i.e. VPN IP address.">
+                                                          messages="Field provides functional operations to be performed, will never be shown in a GUI; i.e. External IP address.">
                                                 </v-switch>
                                             </v-list-item-content>
                                         </v-list-item>
@@ -429,8 +450,8 @@ export default class Traits extends Vue {
     public newTraitDescription: string = ""
     public pathToIcon: string = ""
     public selectedNamespace: Namespace = new Namespace("", "", 0)
-    public newTrait: Trait = new Trait("","","","","",0,0,true,true,true,true)
-    public dummyTrait: Trait = new Trait("","","","","",0,0,true,true,true,true)
+    public newTrait: Trait = new Trait("","","","","",0,0,true,false,false,false, false)
+    public dummyTrait: Trait = new Trait("","","","","",0,0,true,false,false,false, false)
     public defaultTraits: TraitHolder[] = []
     public editedItem: StructureHolder = new StructureHolder(new Structure("","", "",0,false,0, "", false,0,new Map<string, Trait>(),new Map<string, string>(),0),this.defaultTraits)
     public structureChanged: boolean = false
@@ -672,8 +693,8 @@ export default class Traits extends Vue {
     private resetEditedItem(){
         this.newTraitName = ""
         this.newTraitDescription = ""
-        this.newTrait = new Trait("","","","","",0,0,true,true,true,true)
-        this.dummyTrait = new Trait("","","","","",0,0,true,true,true,true)
+        this.newTrait = new Trait("","","","","",0,0,true,false,false,false, false)
+        this.dummyTrait = new Trait("","","","","",0,0,true,false,false,false, false)
         this.traitFieldNameErrorMessage = ""
         let ref: any = this.$refs["traitCreation"] as any
         ref?.$refs.input.focus()

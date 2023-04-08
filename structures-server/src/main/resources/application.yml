@@ -7,3 +7,9 @@ logging:
 
 server:
   port: 8989
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

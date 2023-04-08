@@ -315,6 +315,9 @@ public class DefaultOpenApiService implements OpenApiService {
     public Schema<?> getSchemaForTrait(Trait trait) throws Exception{
         JsonSchema schema = objectMapper.readValue(trait.getSchema(), JsonSchema.class);
         Schema<?> ret = getSchemaForContinuumJsonSchema(schema);
+        if(trait.isCollection()){
+            ret = new ArraySchema().items(ret);
+        }
         if(trait.getDescribeTrait() != null){
             ret.setDescription(trait.getDescribeTrait());
         }
@@ -363,15 +366,7 @@ public class DefaultOpenApiService implements OpenApiService {
         }else if(schema instanceof BooleanJsonSchema){
             ret = new BooleanSchema();
         }
-        // TODO: figure how we want to handle arrays
-        // And for the structure as well
-//        else if (schema instanceof ArrayJsonSchema) {
-//            ArrayJsonSchema arrayJsonSchema = (ArrayJsonSchema) schema;
-//            ArraySchema arraySchema = new ArraySchema();
-//            arraySchema.setItems(getSchemaForTrait(arrayJsonSchema.getItems()));
-//            ret = arraySchema;
-//
-//        }
+
         return ret;
     }
 
