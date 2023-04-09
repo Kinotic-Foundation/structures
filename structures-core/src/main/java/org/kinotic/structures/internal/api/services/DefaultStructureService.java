@@ -407,7 +407,7 @@ public class DefaultStructureService implements StructureService, StructureServi
 
     @Override
     public StructureHolder getStructureById(String id) throws IOException {
-        Structure structure = this.getById(id).get();
+        Structure structure = this.getById(id).orElseThrow();
         LinkedList<TraitHolder> traits = new LinkedList<>();
         int index = 0;
         for(Map.Entry<String, Trait> traitEntry : structure.getTraits().entrySet()){
@@ -462,8 +462,7 @@ public class DefaultStructureService implements StructureService, StructureServi
     @Override
     public void delete(String structureId) throws IOException, PermenentTraitException {
         Optional<Structure> optional = getById(structureId);
-        //noinspection OptionalGetWithoutIsPresent
-        Structure structure = optional.get();// will throw null pointer/element not available
+        Structure structure = optional.orElseThrow();// will throw null pointer/element not available
 
         if(structure.isPublished()){
             // if its published we should check to see if we can remove the
@@ -504,8 +503,7 @@ public class DefaultStructureService implements StructureService, StructureServi
     @Override
     public void publish(String structureId) throws IOException {
         Optional<Structure> optional = getById(structureId.toLowerCase());
-        //noinspection OptionalGetWithoutIsPresent
-        Structure structure = optional.get();// will throw null pointer/element not available
+        Structure structure = optional.orElseThrow();// will throw null pointer/element not available
 
         if(!structure.isPublished()){
             // this is when we create the index
@@ -570,8 +568,7 @@ public class DefaultStructureService implements StructureService, StructureServi
     @Override
     public void addTraitToStructure(String structureId, String fieldName, Trait newTrait) throws IOException {
         Optional<Structure> optional = getById(structureId.toLowerCase());
-        //noinspection OptionalGetWithoutIsPresent
-        Structure structure = optional.get();// will throw null pointer/element not available
+        Structure structure = optional.orElseThrow();// will throw null pointer/element not available
 
         checkFieldNameFormat(fieldName);
 
@@ -597,8 +594,7 @@ public class DefaultStructureService implements StructureService, StructureServi
     @Override
     public void insertTraitBeforeAnotherForStructure(String structureId, String movingTraitName, String insertBeforeTraitName) throws IOException {
         Optional<Structure> optional = getById(structureId.toLowerCase());
-        //noinspection OptionalGetWithoutIsPresent
-        Structure structure = optional.get();// will throw null pointer/element not available
+        Structure structure = optional.orElseThrow();// will throw null pointer/element not available
 
         Trait movingTrait = null;
         String movingTraitFieldName = null;
@@ -637,8 +633,7 @@ public class DefaultStructureService implements StructureService, StructureServi
     @Override
     public void insertTraitAfterAnotherForStructure(String structureId, String movingTraitName, String insertAfterTraitName) throws IOException {
         Optional<Structure> optional = getById(structureId.toLowerCase());
-        //noinspection OptionalGetWithoutIsPresent
-        Structure structure = optional.get();// will throw null pointer/element not available
+        Structure structure = optional.orElseThrow();// will throw null pointer/element not available
 
         Trait movingTrait = null;
         String movingTraitFieldName = null;
@@ -677,13 +672,13 @@ public class DefaultStructureService implements StructureService, StructureServi
 
     @Override
     public String getJsonSchema(String structureId) throws IOException{
-        Structure structure = getById(structureId).get();
+        Structure structure = getById(structureId).orElseThrow();
         return getJsonSchema(structure);
     }
 
     @Override
     public String getElasticSearchBaseMapping(String structureId) throws IOException{
-        Structure structure = getById(structureId).get();
+        Structure structure = getById(structureId).orElseThrow();
         return getElasticSearchBaseMapping(structure);
     }
 
