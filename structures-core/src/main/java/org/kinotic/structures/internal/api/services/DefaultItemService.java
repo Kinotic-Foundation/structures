@@ -99,8 +99,7 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
     @Override
     public TypeCheckMap upsertItem(String structureId, TypeCheckMap item, Map<String, Object> context) throws Exception {
         Optional<Structure> optional = structureService.getById(structureId);
-        //noinspection OptionalGetWithoutIsPresent
-        final Structure structure = optional.get();// will throw null pointer/element not available
+        final Structure structure = optional.orElseThrow();// will throw null pointer/element not available
         if (!structure.isPublished()) {
             throw new IllegalStateException("'" + structure.getId() + "' Structure is not published and cannot have had Items modified for it");
         }
@@ -230,8 +229,7 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
     @Override
     public long count(String structureId, Map<String, Object> context) throws Exception {
         Optional<Structure> optional = structureService.getById(structureId);
-        //noinspection OptionalGetWithoutIsPresent
-        Structure structure = optional.get();// will throw null pointer/element not available
+        Structure structure = optional.orElseThrow();// will throw null pointer/element not available
 
         BoolQueryBuilder queryBuilder = (BoolQueryBuilder) traitLifecycles.processBeforeSearchLifecycle(new BoolQueryBuilder(), structure, context,
                 (hook, boolQueryBuilder, fieldName, contextMap) -> hook.beforeSearch((BoolQueryBuilder) boolQueryBuilder, structure, fieldName, contextMap));
@@ -273,8 +271,7 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
     @Override
     public Optional<TypeCheckMap> getItemById(String structureId, String id, Map<String, Object> context) throws Exception {
         Optional<Structure> optional = structureService.getById(structureId);
-        //noinspection OptionalGetWithoutIsPresent
-        Structure structure = optional.get();// will throw null pointer/element not available
+        Structure structure = optional.orElseThrow();// will throw null pointer/element not available
 
         return getById(structure, id, context);
     }
@@ -288,8 +285,7 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
     @Override
     public SearchHits searchForItemsById(String structureId, Map<String, Object> context, String... ids) throws Exception {
         Optional<Structure> optional = structureService.getById(structureId);
-        //noinspection OptionalGetWithoutIsPresent
-        Structure structure = optional.get();// will throw null pointer/element not available
+        Structure structure = optional.orElseThrow();// will throw null pointer/element not available
 
         BoolQueryBuilder queryBuilder = (BoolQueryBuilder) traitLifecycles.processBeforeSearchLifecycle(new BoolQueryBuilder(), structure, context,
                 (hook, boolQueryBuilder, fieldName, contextMap) -> hook.beforeSearch((BoolQueryBuilder) boolQueryBuilder, structure, fieldName, contextMap));
@@ -312,8 +308,7 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
     @Override
     public SearchHits getAll(String structureId, int numberPerPage, int from, Map<String, Object> context) throws Exception {
         Optional<Structure> optional = structureService.getById(structureId);
-        //noinspection OptionalGetWithoutIsPresent
-        Structure structure = optional.get();// will throw null pointer/element not available
+        Structure structure = optional.orElseThrow();// will throw null pointer/element not available
 
         BoolQueryBuilder queryBuilder = (BoolQueryBuilder) traitLifecycles.processBeforeSearchLifecycle(new BoolQueryBuilder(), structure, context,
                 (hook, boolQueryBuilder, fieldName, contextMap) -> hook.beforeSearch((BoolQueryBuilder) boolQueryBuilder, structure, fieldName, contextMap));
@@ -348,8 +343,7 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
                                   Object... searchTerms) throws Exception {
 
         Optional<Structure> optional = structureService.getById(structureId);
-        //noinspection OptionalGetWithoutIsPresent
-        Structure structure = optional.get();// will throw null pointer/element not available
+        Structure structure = optional.orElseThrow();// will throw null pointer/element not available
 
         BoolQueryBuilder queryBuilder = (BoolQueryBuilder) traitLifecycles.processBeforeSearchLifecycle(new BoolQueryBuilder(), structure, context,
                 (hook, boolQueryBuilder, field, contextMap) -> hook.beforeSearch((BoolQueryBuilder) boolQueryBuilder, structure, field, contextMap));
@@ -380,8 +374,7 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
                                      Map<String, Object> context,
                                      String... fieldNames) throws Exception {
         Optional<Structure> optional = structureService.getById(structureId);
-        //noinspection OptionalGetWithoutIsPresent
-        Structure structure = optional.get();// will throw null pointer/element not available
+        Structure structure = optional.orElseThrow();// will throw null pointer/element not available
 
         BoolQueryBuilder queryBuilder = (BoolQueryBuilder) traitLifecycles.processBeforeSearchLifecycle(new BoolQueryBuilder(), structure, context,
                 (hook, boolQueryBuilder, field, contextMap) -> hook.beforeSearch((BoolQueryBuilder) boolQueryBuilder, structure, field, contextMap));
@@ -419,8 +412,7 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
                              Map<String, Object> context) throws Exception {
 
         Optional<Structure> optional = structureService.getById(structureId);
-        //noinspection OptionalGetWithoutIsPresent
-        Structure structure = optional.get();// will throw null pointer/element not available
+        Structure structure = optional.orElseThrow();// will throw null pointer/element not available
 
         BoolQueryBuilder queryBuilder = (BoolQueryBuilder) traitLifecycles.processBeforeSearchLifecycle(new BoolQueryBuilder(), structure, context,
                 (hook, boolQueryBuilder, field, contextMap) -> hook.beforeSearch((BoolQueryBuilder) boolQueryBuilder, structure, field, contextMap));
@@ -466,8 +458,7 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
     @Override
     public List<String> searchDistinct(String structureId, String search, String field, int limit, Map<String, Object> context) throws Exception {
         Optional<Structure> optional = structureService.getById(structureId);
-        //noinspection OptionalGetWithoutIsPresent
-        Structure structure = optional.get();// will throw null pointer/element not available
+        Structure structure = optional.orElseThrow();// will throw null pointer/element not available
 
         BoolQueryBuilder queryBuilder = (BoolQueryBuilder) traitLifecycles.processBeforeSearchLifecycle(new BoolQueryBuilder(), structure, context,
                 (hook, boolQueryBuilder, fieldName, contextMap) -> hook.beforeSearch((BoolQueryBuilder) boolQueryBuilder, structure, fieldName, contextMap));
@@ -497,11 +488,10 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
     @Override
     public void delete(String structureId, String itemId, Map<String, Object> context) throws Exception {
         Optional<Structure> optional = structureService.getById(structureId);
-        //noinspection OptionalGetWithoutIsPresent
-        Structure structure = optional.get();
+        Structure structure = optional.orElseThrow();
 
         // if document level security is in use, the getById will validate access
-        TypeCheckMap item = getById(structure, itemId, context).get();
+        TypeCheckMap item = getById(structure, itemId, context).orElseThrow();
         TypeCheckMap ret = (TypeCheckMap) traitLifecycles.processBeforeDeleteLifecycle(item, structure, context,
                 (hook, obj, fieldName, contextMap) -> hook.beforeDelete((TypeCheckMap) obj, structure, fieldName, contextMap));
 
