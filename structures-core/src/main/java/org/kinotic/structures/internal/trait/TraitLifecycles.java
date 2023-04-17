@@ -1,8 +1,9 @@
 package org.kinotic.structures.internal.trait;
 
+import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.domain.Trait;
-import org.kinotic.structures.api.domain.TraitFunction;
+import org.kinotic.structures.api.domain.TypeCheckMap;
 import org.kinotic.structures.api.domain.traitlifecycle.*;
 import org.springframework.stereotype.Component;
 
@@ -77,63 +78,63 @@ public class TraitLifecycles {
      *
      */
 
-    public Object processAfterDeleteLifecycle(Object obj, Structure structure, Map<String, Object> context, TraitFunction<HasOnAfterDelete, Object, String, Object> process) throws Exception {
+    public TypeCheckMap processAfterDeleteLifecycle(TypeCheckMap obj, Structure structure, Map<String, Object> context) throws Exception {
         for (Map.Entry<String, Trait> traitEntry : structure.getTraits().entrySet()) {
             if (getAfterDeleteLifecycleMap().containsKey(traitEntry.getValue().getName())) {
                 HasOnAfterDelete toExecute = getAfterDeleteLifecycleMap().get(traitEntry.getValue().getName());
-                obj = process.apply(toExecute, obj, traitEntry.getKey(), context);
+                obj = toExecute.afterDelete(obj, structure, traitEntry.getKey(), context);
             }
         }
         return obj;
     }
-    public Object processAfterGetLifecycle(Object obj, Structure structure, Map<String, Object> context, TraitFunction<HasOnAfterGet, Object, String, Object> process) throws Exception {
+    public TypeCheckMap processAfterGetLifecycle(TypeCheckMap obj, Structure structure, Map<String, Object> context) throws Exception {
         for (Map.Entry<String, Trait> traitEntry : structure.getTraits().entrySet()) {
             if (getAfterGetLifecycleMap().containsKey(traitEntry.getValue().getName())) {
                 HasOnAfterGet toExecute = getAfterGetLifecycleMap().get(traitEntry.getValue().getName());
                 if(obj != null){
-                    obj = process.apply(toExecute, obj, traitEntry.getKey(), context);
+                    obj = toExecute.afterGet(obj, structure, traitEntry.getKey(), context);
                 }else if(traitEntry.getValue().isOperational()){
-                    obj = process.apply(toExecute, null, traitEntry.getKey(), context);
+                    obj = toExecute.afterGet(null, structure, traitEntry.getKey(), context);
                 }
             }
         }
         return obj;
     }
-    public Object processAfterModifyLifecycle(Object obj, Structure structure, Map<String, Object> context, TraitFunction<HasOnAfterModify, Object, String, Object> process) throws Exception {
+    public TypeCheckMap processAfterModifyLifecycle(TypeCheckMap obj, Structure structure, Map<String, Object> context) throws Exception {
         for (Map.Entry<String, Trait> traitEntry : structure.getTraits().entrySet()) {
             if (getAfterModifyLifecycleMap().containsKey(traitEntry.getValue().getName())) {
                 HasOnAfterModify toExecute = getAfterModifyLifecycleMap().get(traitEntry.getValue().getName());
-                obj = process.apply(toExecute, obj, traitEntry.getKey(), context);
+                obj = toExecute.afterModify(obj ,structure, traitEntry.getKey(), context);
             }
         }
         return obj;
     }
-    public Object processBeforeDeleteLifecycle(Object obj, Structure structure, Map<String, Object> context, TraitFunction<HasOnBeforeDelete, Object, String, Object> process) throws Exception {
+    public TypeCheckMap processBeforeDeleteLifecycle(TypeCheckMap obj, Structure structure, Map<String, Object> context) throws Exception {
         for (Map.Entry<String, Trait> traitEntry : structure.getTraits().entrySet()) {
             if (getBeforeDeleteLifecycleMap().containsKey(traitEntry.getValue().getName())) {
                 HasOnBeforeDelete toExecute = getBeforeDeleteLifecycleMap().get(traitEntry.getValue().getName());
-                obj = process.apply(toExecute, obj, traitEntry.getKey(), context);
+                obj = toExecute.beforeDelete(obj, structure, traitEntry.getKey(), context);
             }
         }
         return obj;
     }
-    public Object processBeforeModifyLifecycle(Object obj, Structure structure, Map<String, Object> context, TraitFunction<HasOnBeforeModify, Object, String, Object> process) throws Exception {
+    public TypeCheckMap processBeforeModifyLifecycle(TypeCheckMap obj, Structure structure, Map<String, Object> context) throws Exception {
         for (Map.Entry<String, Trait> traitEntry : structure.getTraits().entrySet()) {
             if (getBeforeModifyLifecycleMap().containsKey(traitEntry.getValue().getName())) {
                 HasOnBeforeModify toExecute = getBeforeModifyLifecycleMap().get(traitEntry.getValue().getName());
-                obj = process.apply(toExecute, obj, traitEntry.getKey(), context);
+                obj = toExecute.beforeModify(obj, structure, traitEntry.getKey(), context);
             }
         }
         return obj;
     }
-    public Object processBeforeSearchLifecycle(Object obj, Structure structure, Map<String, Object> context, TraitFunction<HasOnBeforeSearch, Object, String, Object> process) throws Exception {
+    public BoolQueryBuilder processBeforeSearchLifecycle(BoolQueryBuilder boolQueryBuilder, Structure structure, Map<String, Object> context) throws Exception {
         for (Map.Entry<String, Trait> traitEntry : structure.getTraits().entrySet()) {
             if (getBeforeSearchLifecycleMap().containsKey(traitEntry.getValue().getName())) {
                 HasOnBeforeSearch toExecute = getBeforeSearchLifecycleMap().get(traitEntry.getValue().getName());
-                obj = process.apply(toExecute, obj, traitEntry.getKey(), context);
+                boolQueryBuilder = toExecute.beforeSearch(boolQueryBuilder, structure, traitEntry.getKey(), context);
             }
         }
-        return obj;
+        return boolQueryBuilder;
     }
 
     public HashMap<String, HasOnAfterDelete> getAfterDeleteLifecycleMap() {

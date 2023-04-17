@@ -13,3 +13,12 @@ management:
     web:
       exposure:
         include: health,info
+
+spring:
+  graphql:
+    schema:
+      printer:
+        enabled: true
+      file-extensions: [".graphql"]
+    graphiql:
+      enabled: true

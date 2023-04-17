@@ -16,23 +16,22 @@ import java.util.*;
  * Created by Navíd Mitchell 🤪 on 3/18/23.
  */
 @RestController
-// Currently this is the only path that is secured
 @RequestMapping("/api")
-public class StructureItemController {
+public class StructureItemRestController {
 
     private final ItemServiceInternal itemService;
     private final ObjectMapper objectMapper;
 
-    public StructureItemController(ItemServiceInternal itemService, ObjectMapper objectMapper) {
+    public StructureItemRestController(ItemServiceInternal itemService, ObjectMapper objectMapper) {
         this.itemService = itemService;
         this.objectMapper = objectMapper;
     }
 
     @GetMapping(value = "/{structureId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public Mono<String> listItems(@PathVariable String structureId,
-                                  @RequestParam(required = false, defaultValue = "0") int page,
-                                  @RequestParam(required = false, defaultValue = "25") int size,
-                                    Principal principal) {
+    public Mono<String> listAll(@PathVariable String structureId,
+                               @RequestParam(required = false, defaultValue = "0") int page,
+                               @RequestParam(required = false, defaultValue = "25") int size,
+                               Principal principal) {
         return Mono.defer(() -> {
             try {
                 HashMap<String, Object> context = new HashMap<>();
@@ -47,11 +46,11 @@ public class StructureItemController {
     }
 
     @PostMapping(value = "/{structureId}/search", produces = MediaType.APPLICATION_JSON_VALUE)
-    public Mono<String> listItems(@PathVariable String structureId,
-                                  @RequestBody String search,
-                                  @RequestParam(required = false, defaultValue = "0") int page,
-                                  @RequestParam(required = false, defaultValue = "25") int size,
-                                  Principal principal) {
+    public Mono<String> search(@PathVariable String structureId,
+                               @RequestBody String search,
+                               @RequestParam(required = false, defaultValue = "0") int page,
+                               @RequestParam(required = false, defaultValue = "25") int size,
+                               Principal principal) {
         return Mono.defer(() -> {
             try {
                 HashMap<String, Object> context = new HashMap<>();

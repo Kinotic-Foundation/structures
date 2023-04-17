@@ -119,7 +119,7 @@ public class DefaultStructureService implements StructureService, StructureServi
                 temp.setDescribeTrait("A long field that indicates the timestamp of when the item was deleted.");
                 temp.setSchema("{ \"type\": \"date\", \"format\": { \"style\": \"unix\" } }");
                 temp.setEsSchema("{ \"type\": \"date\", \"format\": \"epoch_millis\" }");
-                temp.setRequired(true);
+                temp.setRequired(false);
                 temp.setSystemManaged(true);
                 this.deletedTime = traitService.save(temp);
             }else{
