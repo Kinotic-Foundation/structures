@@ -113,8 +113,7 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
         }
 
         // perform before create/update hooks - id is created if it does not already exist
-        TypeCheckMap toUpsert = (TypeCheckMap) traitLifecycles.processBeforeModifyLifecycle(item, structure, context,
-                (hook, obj, fieldName, contextMap) -> hook.beforeModify((TypeCheckMap) obj, structure, fieldName, contextMap));
+        TypeCheckMap toUpsert = traitLifecycles.processBeforeModifyLifecycle(item, structure, context);
 
         // process upsert
         processUpdateRequest(structure, toUpsert, true);
@@ -123,8 +122,7 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
         //noinspection OptionalGetWithoutIsPresent
         TypeCheckMap ret = getItemById(structureId, toUpsert.getString("id"), context).get();
 
-        return (TypeCheckMap) traitLifecycles.processAfterModifyLifecycle(ret, structure, context,
-                (hook, obj, fieldName, contextMap) -> hook.afterModify((TypeCheckMap) obj, structure, fieldName, contextMap));
+        return (TypeCheckMap) traitLifecycles.processAfterModifyLifecycle(ret, structure, context);
     }
 
     @Override
@@ -194,8 +192,7 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
             }
         }
 
-        TypeCheckMap ret = (TypeCheckMap) traitLifecycles.processBeforeModifyLifecycle(item, bulkUpdate.getStructure(), context,
-                (hook, obj, fieldName, contextMap) -> hook.beforeModify((TypeCheckMap) obj, bulkUpdate.getStructure(), fieldName, contextMap));
+        TypeCheckMap ret = traitLifecycles.processBeforeModifyLifecycle(item, bulkUpdate.getStructure(), context);
 
         UpdateRequest request = new UpdateRequest(bulkUpdate.getStructure().getItemIndex(), item.getString("id"));
         request.docAsUpsert(true);
@@ -203,8 +200,7 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
 
         this.bulkRequests.get(structureId).getBulkProcessor().add(request);
 
-        ret = (TypeCheckMap) traitLifecycles.processAfterModifyLifecycle(ret, bulkUpdate.getStructure(), context,
-                (hook, obj, fieldName, contextMap) -> hook.afterModify((TypeCheckMap) obj, bulkUpdate.getStructure(), fieldName, contextMap));
+        traitLifecycles.processAfterModifyLifecycle(ret, bulkUpdate.getStructure(), context);
 
     }
 
@@ -231,8 +227,7 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
         Optional<Structure> optional = structureService.getById(structureId);
         Structure structure = optional.orElseThrow();// will throw null pointer/element not available
 
-        BoolQueryBuilder queryBuilder = (BoolQueryBuilder) traitLifecycles.processBeforeSearchLifecycle(new BoolQueryBuilder(), structure, context,
-                (hook, boolQueryBuilder, fieldName, contextMap) -> hook.beforeSearch((BoolQueryBuilder) boolQueryBuilder, structure, fieldName, contextMap));
+        BoolQueryBuilder queryBuilder = traitLifecycles.processBeforeSearchLifecycle(new BoolQueryBuilder(), structure, context);
 
         SearchSourceBuilder builder = new SearchSourceBuilder();
         builder.size(0);
@@ -256,8 +251,7 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
         TypeCheckMap ret = null;
         if (response.isExists()) {
             ret = new TypeCheckMap(response.getSourceAsMap());
-            ret = (TypeCheckMap) traitLifecycles.processAfterGetLifecycle(ret, structure, context,
-                    (hook, obj, fieldName, contextMap) -> hook.afterGet((TypeCheckMap) obj, structure, fieldName, contextMap));
+            ret = traitLifecycles.processAfterGetLifecycle(ret, structure, context);
         }
 
         return Optional.ofNullable(ret);
@@ -287,8 +281,7 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
         Optional<Structure> optional = structureService.getById(structureId);
         Structure structure = optional.orElseThrow();// will throw null pointer/element not available
 
-        BoolQueryBuilder queryBuilder = (BoolQueryBuilder) traitLifecycles.processBeforeSearchLifecycle(new BoolQueryBuilder(), structure, context,
-                (hook, boolQueryBuilder, fieldName, contextMap) -> hook.beforeSearch((BoolQueryBuilder) boolQueryBuilder, structure, fieldName, contextMap));
+        BoolQueryBuilder queryBuilder = traitLifecycles.processBeforeSearchLifecycle(new BoolQueryBuilder(), structure, context);
 
         SearchSourceBuilder builder = new SearchSourceBuilder()
                 .query(new IdsQueryBuilder().addIds(ids));
@@ -310,8 +303,7 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
         Optional<Structure> optional = structureService.getById(structureId);
         Structure structure = optional.orElseThrow();// will throw null pointer/element not available
 
-        BoolQueryBuilder queryBuilder = (BoolQueryBuilder) traitLifecycles.processBeforeSearchLifecycle(new BoolQueryBuilder(), structure, context,
-                (hook, boolQueryBuilder, fieldName, contextMap) -> hook.beforeSearch((BoolQueryBuilder) boolQueryBuilder, structure, fieldName, contextMap));
+        BoolQueryBuilder queryBuilder = traitLifecycles.processBeforeSearchLifecycle(new BoolQueryBuilder(), structure, context);
 
         SearchSourceBuilder builder = new SearchSourceBuilder()
                                             .from(from * numberPerPage)
@@ -345,8 +337,7 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
         Optional<Structure> optional = structureService.getById(structureId);
         Structure structure = optional.orElseThrow();// will throw null pointer/element not available
 
-        BoolQueryBuilder queryBuilder = (BoolQueryBuilder) traitLifecycles.processBeforeSearchLifecycle(new BoolQueryBuilder(), structure, context,
-                (hook, boolQueryBuilder, field, contextMap) -> hook.beforeSearch((BoolQueryBuilder) boolQueryBuilder, structure, field, contextMap));
+        BoolQueryBuilder queryBuilder = traitLifecycles.processBeforeSearchLifecycle(new BoolQueryBuilder(), structure, context);
 
         queryBuilder.filter(QueryBuilders.termsQuery(fieldName, searchTerms));
 
@@ -376,8 +367,7 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
         Optional<Structure> optional = structureService.getById(structureId);
         Structure structure = optional.orElseThrow();// will throw null pointer/element not available
 
-        BoolQueryBuilder queryBuilder = (BoolQueryBuilder) traitLifecycles.processBeforeSearchLifecycle(new BoolQueryBuilder(), structure, context,
-                (hook, boolQueryBuilder, field, contextMap) -> hook.beforeSearch((BoolQueryBuilder) boolQueryBuilder, structure, field, contextMap));
+        BoolQueryBuilder queryBuilder = traitLifecycles.processBeforeSearchLifecycle(new BoolQueryBuilder(), structure, context);
 
         queryBuilder.filter(QueryBuilders.multiMatchQuery(search, fieldNames));
 
@@ -414,8 +404,7 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
         Optional<Structure> optional = structureService.getById(structureId);
         Structure structure = optional.orElseThrow();// will throw null pointer/element not available
 
-        BoolQueryBuilder queryBuilder = (BoolQueryBuilder) traitLifecycles.processBeforeSearchLifecycle(new BoolQueryBuilder(), structure, context,
-                (hook, boolQueryBuilder, field, contextMap) -> hook.beforeSearch((BoolQueryBuilder) boolQueryBuilder, structure, field, contextMap));
+        BoolQueryBuilder queryBuilder = traitLifecycles.processBeforeSearchLifecycle(new BoolQueryBuilder(), structure, context);
 
         SearchSourceBuilder builder = new SearchSourceBuilder()
                 .query(new QueryStringQueryBuilder(search))
@@ -460,8 +449,7 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
         Optional<Structure> optional = structureService.getById(structureId);
         Structure structure = optional.orElseThrow();// will throw null pointer/element not available
 
-        BoolQueryBuilder queryBuilder = (BoolQueryBuilder) traitLifecycles.processBeforeSearchLifecycle(new BoolQueryBuilder(), structure, context,
-                (hook, boolQueryBuilder, fieldName, contextMap) -> hook.beforeSearch((BoolQueryBuilder) boolQueryBuilder, structure, fieldName, contextMap));
+        BoolQueryBuilder queryBuilder = traitLifecycles.processBeforeSearchLifecycle(new BoolQueryBuilder(), structure, context);
 
         SearchSourceBuilder sourceBuilder = new SearchSourceBuilder()
                                                     .aggregation(AggregationBuilders.terms(field).field(field).size(500))
@@ -492,14 +480,12 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
 
         // if document level security is in use, the getById will validate access
         TypeCheckMap item = getById(structure, itemId, context).orElseThrow();
-        TypeCheckMap ret = (TypeCheckMap) traitLifecycles.processBeforeDeleteLifecycle(item, structure, context,
-                (hook, obj, fieldName, contextMap) -> hook.beforeDelete((TypeCheckMap) obj, structure, fieldName, contextMap));
+        TypeCheckMap ret = traitLifecycles.processBeforeDeleteLifecycle(item, structure, context);
 
         processUpdateRequest(structure, ret, false);
 
         //TODO: find out how this will operate concurrently
-        traitLifecycles.processAfterDeleteLifecycle(ret, structure, context,
-                (hook, obj, fieldName, contextMap) -> hook.afterDelete((TypeCheckMap) obj, structure, fieldName, contextMap));
+        traitLifecycles.processAfterDeleteLifecycle(ret, structure, context);
     }
 
     private void processUpdateRequest(Structure structure, TypeCheckMap ret, boolean asUpsert) throws IOException {
