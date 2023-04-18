@@ -1,8 +1,6 @@
 package org.kinotic.structures.internal.config;
 
 import org.kinotic.structures.internal.graphql.StructuresGraphQlHttpHandler;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.graphql.server.WebGraphQlHandler;
@@ -23,8 +21,6 @@ import static org.springframework.web.reactive.function.server.RequestPredicates
  */
 @Configuration
 public class GraphQlConfig {
-
-    private static final Logger log = LoggerFactory.getLogger(GraphQlConfig.class);
 
     private static final RequestPredicate SUPPORTS_MEDIATYPES = accept(MediaType.APPLICATION_GRAPHQL,
                                                                        MediaType.APPLICATION_JSON)

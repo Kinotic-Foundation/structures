@@ -16,6 +16,7 @@ import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.domain.StructureHolder;
 import org.kinotic.structures.api.domain.Structures;
 import org.kinotic.structures.api.domain.Trait;
+import org.kinotic.structures.internal.graphql.CachingPreparsedDocumentProvider;
 import org.kinotic.structures.internal.graphql.GetAllItemsDataFetcher;
 import org.kinotic.structures.internal.graphql.GetItemDataFetcher;
 import org.kinotic.structures.internal.graphql.SearchItemDataFetcher;
@@ -83,7 +84,8 @@ public class DefaultExecutionGraphQlServiceProvider implements ExecutionGraphQlS
         public @Nullable ExecutionGraphQlService load(String namespace) throws Exception {
             GraphQLSchema schema = createGraphQlSchema(namespace);
 
-            GraphQL.Builder builder = GraphQL.newGraphQL(schema);
+            GraphQL.Builder builder = GraphQL.newGraphQL(schema)
+                                             .preparsedDocumentProvider(new CachingPreparsedDocumentProvider());
 
             DefaultExecutionGraphQlService service = new DefaultExecutionGraphQlService(new FixedGraphQlSource(builder.build(), schema));
             service.addDataLoaderRegistrar(new DefaultBatchLoaderRegistry());
