@@ -1,13 +1,6 @@
 import { RouteConfig } from 'vue-router'
 
-const continuumRoutes: RouteConfig[] = [
-    {
-        path: '/login',
-        meta:{
-            authenticationRequired: false
-        },
-        component: () => import(/* webpackChunkName: "main" */'@/frontends/continuum/pages/Login.vue')
-    },
+let continuumRoutes: RouteConfig[] = [
     {
         path: '/404',
         meta:{
@@ -16,5 +9,23 @@ const continuumRoutes: RouteConfig[] = [
         component: () => import(/* webpackChunkName: "main" */'@/frontends/continuum/pages/FourOFour.vue')
     }
 ]
+
+if(process.env.VUE_APP_KEYCLOAK_SUPPORT === "true") {
+    continuumRoutes.unshift({
+        path: '/login',
+        meta:{
+            authenticationRequired: false
+        },
+        component: () => import(/* webpackChunkName: "main" */'@/frontends/continuum/pages/LoginKeycloak.vue')
+    })
+}else{
+    continuumRoutes.unshift({
+        path: '/login',
+        meta:{
+            authenticationRequired: false
+        },
+        component: () => import(/* webpackChunkName: "main" */'@/frontends/continuum/pages/Login.vue')
+    })
+}
 
 export default continuumRoutes

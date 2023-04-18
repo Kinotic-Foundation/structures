@@ -68,3 +68,5 @@ website/.vitepress/cache
 
 website/.vitepress/dist/
 
+structures-ui/.env.development
+structures-ui/.env.production
