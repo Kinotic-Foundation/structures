@@ -153,15 +153,23 @@ public class DefaultExecutionGraphQlServiceProvider implements ExecutionGraphQlS
 
             for (Map.Entry<String, Trait> traitEntry : structure.getTraits().entrySet()) {
                 try {
+                    Trait trait = traitEntry.getValue();
 
-                    GraphQLOutputType graphQlType = getGraphQlOutputTypeForTrait(traitEntry.getValue());
+                    GraphQLScalarType scalarType = getGraphQlScalarTypeForTrait(trait);
+
+                    GraphQLOutputType outputType = scalarType;
+
+                    if(trait.isRequired() && !trait.getName().equals("DeletedTime")){
+                        outputType = GraphQLNonNull.nonNull(outputType);
+                    }
+
                     if(traitEntry.getValue().isCollection()){
-                        graphQlType = GraphQLList.list(graphQlType);
+                        outputType = GraphQLList.list(outputType);
                     }
 
                     builder.field(newFieldDefinition()
                                           .name(traitEntry.getKey())
-                                          .type(graphQlType));
+                                          .type(outputType));
 
                 } catch (Exception e) {
                     throw new RuntimeException("Failed to get schema for trait " + traitEntry.getKey(), e);
@@ -171,8 +179,8 @@ public class DefaultExecutionGraphQlServiceProvider implements ExecutionGraphQlS
             return builder.build();
         }
 
-        private GraphQLOutputType getGraphQlOutputTypeForTrait(Trait trait) throws Exception {
-            GraphQLOutputType ret;
+        private GraphQLScalarType getGraphQlScalarTypeForTrait(Trait trait) throws Exception {
+            GraphQLScalarType ret;
             if(trait.getSchema() != null){
                 if(trait.getName().equals("Id")){
                     ret = GraphQLID;
@@ -203,11 +211,6 @@ public class DefaultExecutionGraphQlServiceProvider implements ExecutionGraphQlS
                 }
             }else{
                 throw new RuntimeException("Trait schema is null");
-            }
-
-            //FIXME: remove once deleted time is corrected in the DB
-            if(trait.isRequired() && !trait.getName().equals("DeletedTime")){
-                ret = GraphQLNonNull.nonNull(ret);
             }
 
             return ret;
