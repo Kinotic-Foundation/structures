@@ -335,7 +335,7 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 			TypeCheckMap saved = null;
 
 			try {
-				saved = itemService.upsertItem(structure.getId(), obj);
+				saved = itemService.upsertItem(structure.getId(), obj, null);
 
 				Thread.sleep(1000);// give time for ES to flush the new item
 
@@ -347,7 +347,7 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 			} finally {
 				// now delete the item so we can delete the structure.
 				if (saved != null) {
-					itemService.delete(structure.getId(), saved.getString("id"));
+					itemService.delete(structure.getId(), saved.getString("id"), null);
 				}
 
 				Thread.sleep(1000);// give time for ES to flush the new item

@@ -130,22 +130,7 @@
                 this.loading = true
                 try{
 
-                    let uri: string = 'ws://127.0.0.1:58503/v1'
-                    if(window.location.hostname !== "127.0.0.1"
-                        && window.location.hostname !== "localhost"){
-                        let prefix: string = 'ws'
-                        if(window.location.protocol.startsWith('https')){
-                            prefix = 'wss'
-                        }
-                        let port: string = ''
-                        if(window.location.port !== ''){
-                            // non standard prod deployment, use our specific port
-                            port = ':58503'
-                        }
-                        uri = `${prefix}://${window.location.hostname}${port}/v1`
-                    }
-
-                    await this.userState.authenticate(uri, this.login, this.password)
+                    await this.userState.authenticate(this.userState.getUri(), this.login, this.password)
 
                     await this.continuumUI.navigate('/')
 

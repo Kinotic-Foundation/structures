@@ -64,24 +64,32 @@
                                 <template v-slot:default>
                                     <thead>
                                     <tr>
-                                        <th></th>
+                                        <th class="text-center">Required</th>
+                                        <th class="text-center">Collection</th>
                                         <th class="text-left">Field Name</th>
                                         <th class="text-left">Trait Name</th>
-                                        <th class="text-left">Required</th>
+                                        <th class="text-left">Trait Description</th>
                                     </tr>
                                     </thead>
                                     <tbody>
                                         <tr v-for="entry in item.traits" :key="entry.order" >
-                                            <td></td>
-                                            <td>{{ entry.fieldName }}</td>
-                                            <td>{{ entry.fieldTrait.name }}</td>
-                                            <td>
+                                            <td class="text-center">
                                                 <v-icon small
-                                                        class="mr-2"
+                                                        class="ma-2"
                                                         title="Required">
                                                     {{ entry.fieldTrait.required ? "fas fa-check" : "" }}
                                                 </v-icon>
                                             </td>
+                                            <td class="text-center">
+                                                <v-icon small
+                                                        class="ma-2"
+                                                        title="Is Collection">
+                                                    {{ entry.fieldTrait.collection ? "fas fa-check" : "" }}
+                                                </v-icon>
+                                            </td>
+                                            <td>{{ entry.fieldName }}</td>
+                                            <td>{{ entry.fieldTrait.name }}</td>
+                                            <td>{{ entry.fieldTrait.describeTrait }}</td>
                                         </tr>
                                     </tbody>
                                 </template>
@@ -257,6 +265,7 @@
                                                             </th>
                                                             <th class="text-left">Field Name</th>
                                                             <th class="text-left">Trait</th>
+                                                            <th class="text-left">Collection</th>
                                                             <th class="text-left">Required</th>
                                                             <th class="text-left" v-show="!editedItem.structure.published">Actions</th>
                                                             <th></th>
@@ -272,6 +281,13 @@
                                                                 <td></td>
                                                                 <td>{{ entry.fieldName }}</td>
                                                                 <td>{{ entry.fieldTrait.name }}</td>
+                                                                <td>
+                                                                    <v-icon small
+                                                                            class="mr-2"
+                                                                            title="Collection">
+                                                                        {{ entry.fieldTrait.collection ? "fas fa-check" : "" }}
+                                                                    </v-icon>
+                                                                </td>
                                                                 <td>
                                                                     <v-icon small
                                                                             class="mr-2"
@@ -322,6 +338,13 @@
                                             </v-list-item-content>
                                         </v-list-item>
                                         <v-list-item>
+                                            <v-list-item-content>
+                                                <v-text-field v-model="newTraitDescription"
+                                                              label="Describe Trait Field" >
+                                                </v-text-field>
+                                            </v-list-item-content>
+                                        </v-list-item>
+                                        <v-list-item>
                                             <v-list-item-content >
 
                                                 <v-select
@@ -340,23 +363,21 @@
                                             </v-list-item-content>
                                         </v-list-item>
                                         <v-list-item v-if="newTrait.created !== 0">
-                                          <v-list-item-content>
-                                            <v-text-field v-model="newTrait.describeTrait"
-                                                          label="Describe Trait Field" >
-                                            </v-text-field>
-                                          </v-list-item-content>
-                                        </v-list-item>
-                                        <v-list-item v-if="newTrait.created !== 0">
                                             <v-list-item-content>
                                                 <v-switch v-model="newTrait.required"
                                                           class="ma-2"
                                                           label="Required"
                                                           messages="Makes field required on all input forms.">
                                                 </v-switch>
+                                                <v-switch v-model="newTrait.collection"
+                                                          class="ma-2"
+                                                          label="Collection"
+                                                          messages="Field provides a collection (array) of values.">
+                                                </v-switch>
                                                 <v-switch v-model="newTrait.operational"
                                                           class="ma-2"
                                                           label="Operational"
-                                                          messages="Field provides functional operations to be performed, will never be shown in a GUI; i.e. VPN IP address.">
+                                                          messages="Field provides functional operations to be performed, will never be shown in a GUI; i.e. External IP address.">
                                                 </v-switch>
                                             </v-list-item-content>
                                         </v-list-item>
@@ -364,7 +385,7 @@
                                     <v-card-actions>
                                         <v-spacer></v-spacer>
                                         <v-btn color="blue darken-1" text @click="closeTraitDialog">Done</v-btn>
-                                        <v-btn color="blue darken-1" text @click="addNewTrait(newTraitName, newTrait)" :disabled="newTraitName.length === 0 || newTrait.created === 0">Add Trait</v-btn>
+                                        <v-btn color="blue darken-1" text @click="addNewTrait(newTraitName, newTraitDescription, newTrait)" :disabled="newTraitName.length === 0 || newTrait.created === 0">Add Trait</v-btn>
                                     </v-card-actions>
                                 </v-card>
                             </v-dialog>
@@ -426,10 +447,11 @@ export default class Traits extends Vue {
     public traitDialog: boolean = false
     public editedIndex: number = -1
     public newTraitName: string = ""
+    public newTraitDescription: string = ""
     public pathToIcon: string = ""
     public selectedNamespace: Namespace = new Namespace("", "", 0)
-    public newTrait: Trait = new Trait("","","","","",0,0,true,true,true,true)
-    public dummyTrait: Trait = new Trait("","","","","",0,0,true,true,true,true)
+    public newTrait: Trait = new Trait("","","","","",0,0,true,false,false,false, false)
+    public dummyTrait: Trait = new Trait("","","","","",0,0,true,false,false,false, false)
     public defaultTraits: TraitHolder[] = []
     public editedItem: StructureHolder = new StructureHolder(new Structure("","", "",0,false,0, "", false,0,new Map<string, Trait>(),new Map<string, string>(),0),this.defaultTraits)
     public structureChanged: boolean = false
@@ -523,13 +545,9 @@ export default class Traits extends Vue {
         }
     }
 
-    public defaultTrait(item: any){
+    public defaultTrait(item: Trait){
       let ret: boolean = false
-      if(item.fieldName === 'id'
-          || item.fieldName === 'deleted'
-          || item.fieldName === 'deletedTime'
-          || item.fieldName === 'updatedTime'
-          || item.fieldName === 'structureId'){
+      if(item.systemManaged){
         ret = true
       }
       return ret
@@ -555,7 +573,6 @@ export default class Traits extends Vue {
 
     public openAddTraitDialog(){
         this.traitDialog = true
-        this.resetEditedItem()
     }
 
     public closeTraitDialog(){
@@ -635,7 +652,7 @@ export default class Traits extends Vue {
         }
     }
 
-    public async addNewTrait(name: string, trait: Trait){
+    public async addNewTrait(name: string, newTraitDescription: string, trait: Trait){
         this.traitFieldNameErrorMessage = ""
         let proceed: boolean = true
         if(this.editedItem.structure.published){
@@ -653,6 +670,7 @@ export default class Traits extends Vue {
             if(alreadyHasTraitName !== -1){
                 this.traitFieldNameErrorMessage = "Structure already has a field with provided name, please change Trait Field Name to be unique."
             }else{
+                trait.describeTrait = newTraitDescription
                 if(this.editedItem.structure.published){
                     try{
                         await this.structureManager.addTraitToStructure(this.editedItem.structure.id, name, trait)
@@ -674,11 +692,12 @@ export default class Traits extends Vue {
 
     private resetEditedItem(){
         this.newTraitName = ""
-        this.newTrait = new Trait("","","","","",0,0,true,true,true,true)
-        this.dummyTrait = new Trait("","","","","",0,0,true,true,true,true)
+        this.newTraitDescription = ""
+        this.newTrait = new Trait("","","","","",0,0,true,false,false,false, false)
+        this.dummyTrait = new Trait("","","","","",0,0,true,false,false,false, false)
         this.traitFieldNameErrorMessage = ""
         let ref: any = this.$refs["traitCreation"] as any
-        ref.$refs.input.focus()
+        ref?.$refs.input.focus()
     }
 
     public async publish(item: StructureHolder){

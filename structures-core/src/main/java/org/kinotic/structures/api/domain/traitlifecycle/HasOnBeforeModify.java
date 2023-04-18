@@ -20,6 +20,8 @@ package org.kinotic.structures.api.domain.traitlifecycle;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.domain.TypeCheckMap;
 
-public interface HasOnBeforeModify extends TraitLifecycle {
-    TypeCheckMap beforeModify(TypeCheckMap obj, Structure structure, String fieldName) throws Exception;
+import java.util.Map;
+
+public interface HasOnBeforeModify {
+    TypeCheckMap beforeModify(TypeCheckMap obj, Structure structure, String fieldName, Map<String, Object> context) throws Exception;
 }

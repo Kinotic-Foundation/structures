@@ -31,7 +31,7 @@ public class WebSecurityConfig {
     public SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {
         http.csrf().disable()
             .authorizeExchange(exchanges -> exchanges
-                .pathMatchers("/api/**").authenticated()
+                //.pathMatchers("/api/**").authenticated()
                 .pathMatchers("/**").permitAll()
             )
             .httpBasic(Customizer.withDefaults());

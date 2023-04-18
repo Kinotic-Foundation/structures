@@ -17,13 +17,6 @@
 
 package org.kinotic.structures.internal.api.services;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.elasticsearch.search.SearchHit;
-import org.kinotic.structures.api.domain.AlreadyExistsException;
-import org.kinotic.structures.api.domain.PermenentTraitException;
-import org.kinotic.structures.api.domain.Trait;
-import org.kinotic.structures.api.services.TraitService;
-import org.kinotic.structures.internal.api.services.util.EsHighLevelClientUtil;
 import org.elasticsearch.action.delete.DeleteRequest;
 import org.elasticsearch.action.get.GetRequest;
 import org.elasticsearch.action.get.GetResponse;
@@ -33,15 +26,20 @@ import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.support.WriteRequest;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
-import org.elasticsearch.client.indices.CreateIndexRequest;
-import org.elasticsearch.client.indices.GetIndexRequest;
+import org.elasticsearch.client.indices.*;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.search.SearchHits;
+import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.xcontent.XContentBuilder;
 import org.elasticsearch.xcontent.XContentFactory;
 import org.elasticsearch.xcontent.XContentType;
-import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.search.SearchHits;
-import org.elasticsearch.search.builder.SearchSourceBuilder;
+import org.kinotic.structures.api.domain.AlreadyExistsException;
+import org.kinotic.structures.api.domain.PermenentTraitException;
+import org.kinotic.structures.api.domain.Trait;
+import org.kinotic.structures.api.services.TraitService;
+import org.kinotic.structures.internal.api.services.util.EsHighLevelClientUtil;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
@@ -53,6 +51,9 @@ import java.util.*;
 
 @Component
 public class DefaultTraitService implements TraitService {
+
+    private static final String INDEX_NAME = "trait";
+    private static final String MAPPING_JSON = "{ \"dynamic\": \"strict\", \"properties\":{\"created\":{\"type\":\"date\",\"format\":\"epoch_millis\"},\"describeTrait\":{\"type\":\"text\"},\"esSchema\":{\"type\":\"text\"},\"id\":{\"type\":\"text\",\"fields\":{\"keyword\":{\"type\":\"keyword\",\"ignore_above\":256}}},\"includeInLabel\":{\"type\":\"boolean\"},\"includeInQRCode\":{\"type\":\"boolean\"},\"name\":{\"type\":\"keyword\"},\"operational\":{\"type\":\"boolean\"},\"required\":{\"type\":\"boolean\"},\"schema\":{\"type\":\"text\"},\"systemManaged\":{\"type\":\"boolean\"},\"collection\":{\"type\":\"boolean\"},\"updated\":{\"type\":\"date\",\"format\":\"epoch_millis\"}}}}";
 
     private RestHighLevelClient highLevelClient;
 
@@ -68,7 +69,7 @@ public class DefaultTraitService implements TraitService {
     @Override
     public Trait save(Trait saveTrait) throws AlreadyExistsException, PermenentTraitException, IOException {
 
-        IndexRequest request = new IndexRequest("trait");
+        IndexRequest request = new IndexRequest(INDEX_NAME);
 
         if(saveTrait.getCreated() == 0){ // new trait, name must be unique
             Optional<Trait> alreadyCreated = getTraitByName(saveTrait.getName());
@@ -100,6 +101,7 @@ public class DefaultTraitService implements TraitService {
         builder.field("updated", saveTrait.getUpdated());
         builder.field("systemManaged", saveTrait.isSystemManaged());
         builder.field("operational", saveTrait.isOperational());
+        builder.field("collection", saveTrait.isCollection());
         builder.endObject();
 
         request.source(builder);
@@ -112,7 +114,7 @@ public class DefaultTraitService implements TraitService {
     @Override
     public Optional<Trait> getTraitById(String id) throws IOException {
 
-        GetResponse response = highLevelClient.get(new GetRequest("trait").id(id), RequestOptions.DEFAULT);
+        GetResponse response = highLevelClient.get(new GetRequest(INDEX_NAME).id(id), RequestOptions.DEFAULT);
         Trait ret = null;
         if (response.isExists()) {
             ret = EsHighLevelClientUtil.getTypeFromBytesReference(response.getSourceAsBytesRef(), Trait.class);
@@ -127,7 +129,7 @@ public class DefaultTraitService implements TraitService {
         BoolQueryBuilder boolQueryBuilder = new BoolQueryBuilder();
         boolQueryBuilder.filter(QueryBuilders.termQuery("name", name));
 
-        SearchRequest request = new SearchRequest("trait");
+        SearchRequest request = new SearchRequest(INDEX_NAME);
         request.source(new SearchSourceBuilder()
                 .query(boolQueryBuilder)
                 .from(0)
@@ -150,7 +152,7 @@ public class DefaultTraitService implements TraitService {
 
         SearchSourceBuilder builder = new SearchSourceBuilder();
         builder.query(boolBuilder);
-        SearchRequest request = new SearchRequest("trait");
+        SearchRequest request = new SearchRequest(INDEX_NAME);
         request.source(builder);
         SearchResponse response = highLevelClient.search(request, RequestOptions.DEFAULT);
 
@@ -185,7 +187,7 @@ public class DefaultTraitService implements TraitService {
                 throw new PermenentTraitException("Trait that was requested to be deleted is a System Managed Trait - cannot delete.");
             }
 
-            DeleteRequest request = new DeleteRequest("trait");
+            DeleteRequest request = new DeleteRequest(INDEX_NAME);
             request.id(traitId);
             request.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
 
@@ -200,25 +202,35 @@ public class DefaultTraitService implements TraitService {
     @Override
     public void createTraitIndex() {
         try {
-            if(!highLevelClient.indices().exists(new GetIndexRequest("trait"), RequestOptions.DEFAULT)){
+            if(!highLevelClient.indices().exists(new GetIndexRequest(INDEX_NAME), RequestOptions.DEFAULT)){
                 HashMap<String, Object> settings = new HashMap<>();
                 settings.put("index.number_of_shards", 5);
                 settings.put("index.number_of_replicas", 2);
                 settings.put("index.refresh_interval", "1s");
                 settings.put("index.store.type", "fs");
 
-                CreateIndexRequest indexRequest = new CreateIndexRequest("trait");
-                indexRequest.mapping("{ \"dynamic\": \"strict\", \"properties\":{\"created\":{\"type\":\"date\",\"format\":\"epoch_millis\"},\"describeTrait\":{\"type\":\"text\"},\"esSchema\":{\"type\":\"text\"},\"id\":{\"type\":\"text\",\"fields\":{\"keyword\":{\"type\":\"keyword\",\"ignore_above\":256}}},\"includeInLabel\":{\"type\":\"boolean\"},\"includeInQRCode\":{\"type\":\"boolean\"},\"name\":{\"type\":\"keyword\"},\"operational\":{\"type\":\"boolean\"},\"required\":{\"type\":\"boolean\"},\"schema\":{\"type\":\"text\"},\"systemManaged\":{\"type\":\"boolean\"},\"updated\":{\"type\":\"date\",\"format\":\"epoch_millis\"}}}}", XContentType.JSON);
+                CreateIndexRequest indexRequest = new CreateIndexRequest(INDEX_NAME);
+                indexRequest.mapping(MAPPING_JSON, XContentType.JSON);
                 indexRequest.settings(settings);
                 highLevelClient.indices().create(indexRequest, RequestOptions.DEFAULT);
+            }else{
+                GetMappingsRequest request = new GetMappingsRequest();
+                request.indices(INDEX_NAME);
+                GetMappingsResponse getMappingResponse = highLevelClient.indices().getMapping(request, RequestOptions.DEFAULT);
+                if(!getMappingResponse.mappings().containsKey("collection")){
+                    String mapping = "{ \"properties\": { \"collection\": {\"type\":\"boolean\"} } }";
+                    PutMappingRequest putMappingRequest = new PutMappingRequest(INDEX_NAME);
+                    putMappingRequest.source(mapping, XContentType.JSON);
+                    highLevelClient.indices().putMapping(putMappingRequest, RequestOptions.DEFAULT);
+                }
             }
         } catch (Exception e) {
-            throw new IllegalStateException("We were not able to check for 'trait' existence or create 'trait' index.", e);
+            throw new IllegalStateException("We were not able to check for '"+INDEX_NAME+"' existence or create '"+INDEX_NAME+"' index.", e);
         }
     }
 
     private SearchHits getTraits(SearchSourceBuilder builder) throws IOException {
-        SearchResponse response = highLevelClient.search(new SearchRequest("trait").source(builder), RequestOptions.DEFAULT);
+        SearchResponse response = highLevelClient.search(new SearchRequest(INDEX_NAME).source(builder), RequestOptions.DEFAULT);
         return response.getHits();
     }
 }

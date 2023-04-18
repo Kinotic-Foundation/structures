@@ -17,6 +17,8 @@
 
 package org.kinotic.structures.item;
 
+import org.elasticsearch.search.SearchHits;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.kinotic.structures.ElasticsearchTestBase;
@@ -57,11 +59,101 @@ public class ItemCrudTests extends ElasticsearchTestBase {
         obj.put("ip", "192.0.2.11");
         obj.put("mac", "000000000001");
 
-        TypeCheckMap saved = itemService.upsertItem(structure.getId(), obj);
+        TypeCheckMap saved = itemService.upsertItem(structure.getId(), obj, null);
 
         Thread.sleep(1000);// give time for ES to flush the new item
 
-        itemService.delete(structure.getId(), saved.getString("id"));
+        itemService.delete(structure.getId(), saved.getString("id"), null);
+
+        Thread.sleep(1000);
+
+        structureService.delete(structure.getId());
+
+    }
+
+    @Test
+    public void createAndDeleteItem_checkingCountBeforeDelete() throws Exception {
+
+        Structure structure = structureTestHelper.getSimpleItemStructure();
+
+        // now we can create an item with the above fields
+        TypeCheckMap obj = new TypeCheckMap();
+        obj.put("ip", "192.0.2.11");
+        obj.put("mac", "000000000001");
+
+        TypeCheckMap saved = itemService.upsertItem(structure.getId(), obj, null);
+
+        Thread.sleep(1000);// give time for ES to flush the new item
+
+        long count = itemService.count(structure.getId(), null);
+        Assertions.assertEquals(1, count);
+
+        SearchHits hits = itemService.getAll(structure.getId(), 100, 0, null);
+        Assertions.assertEquals(1, hits.getHits().length);
+        Assertions.assertEquals(1, hits.getTotalHits().value);
+
+        Thread.sleep(1000);
+
+        itemService.delete(structure.getId(), saved.getString("id"), null);
+
+        Thread.sleep(1000);
+
+        structureService.delete(structure.getId());
+
+    }
+
+    @Test
+    public void createAndDeleteItem_canWeGetById() throws Exception {
+
+        Structure structure = structureTestHelper.getSimpleItemStructure();
+
+        // now we can create an item with the above fields
+        TypeCheckMap obj = new TypeCheckMap();
+        obj.put("ip", "192.0.2.11");
+        obj.put("mac", "000000000001");
+
+        TypeCheckMap saved = itemService.upsertItem(structure.getId(), obj, null);
+
+        Thread.sleep(1000);
+
+        itemService.delete(structure.getId(), saved.getString("id"), null);
+
+        Thread.sleep(1000);
+
+        Optional<TypeCheckMap> deleted = itemService.getById(structure, saved.getString("id"), null);
+
+        // we should still be able to get this item if it was deleted, they still exist just filtered out by default
+        // TODO: we might want to make the deletion route configurable - fully delete item or mark it as deleted and filter
+        Assertions.assertTrue(deleted.isPresent());
+
+        structureService.delete(structure.getId());
+
+    }
+
+    @Test
+    public void createAndDeleteItem_checkingCountAfterDelete() throws Exception {
+
+        Structure structure = structureTestHelper.getSimpleItemStructure();
+
+        // now we can create an item with the above fields
+        TypeCheckMap obj = new TypeCheckMap();
+        obj.put("ip", "192.0.2.11");
+        obj.put("mac", "000000000001");
+
+        TypeCheckMap saved = itemService.upsertItem(structure.getId(), obj, null);
+
+        Thread.sleep(1000);
+
+        itemService.delete(structure.getId(), saved.getString("id"), null);
+
+        Thread.sleep(1000);
+
+        long count = itemService.count(structure.getId(), null);
+        Assertions.assertEquals(0, count);
+
+        SearchHits hits = itemService.getAll(structure.getId(), 100, 0, null);
+        Assertions.assertEquals(0, hits.getHits().length);
+        Assertions.assertEquals(0, hits.getTotalHits().value);
 
         Thread.sleep(1000);
 
@@ -80,12 +172,12 @@ public class ItemCrudTests extends ElasticsearchTestBase {
         obj.put("ip", "192.0.2.11");
         obj.put("mac", "000000000001");
 
-        TypeCheckMap saved = itemService.upsertItem(structure.getId(), obj);
+        TypeCheckMap saved = itemService.upsertItem(structure.getId(), obj, null);
 
         try {
             Thread.sleep(1000);// give time for ES to flush the new item
 
-            saved = itemService.getItemById(structure.getId(), saved.getString("id")).get();
+            saved = itemService.getItemById(structure.getId(), saved.getString("id"), null).get();
 
             if (!saved.getString("mac").equals("000000000001")) {
                 throw new IllegalStateException("Data provided to Item apon saving and getting");
@@ -94,9 +186,9 @@ public class ItemCrudTests extends ElasticsearchTestBase {
 
             saved.put("mac", "aaaaddddrrrr");
 
-            itemService.upsertItem(structure.getId(), saved);
+            itemService.upsertItem(structure.getId(), saved, null);
 
-            saved = itemService.getItemById(structure.getId(), saved.getString("id")).get();
+            saved = itemService.getItemById(structure.getId(), saved.getString("id"), null).get();
 
             if (!saved.getString("mac").equals("aaaaddddrrrr")) {
                 throw new IllegalStateException("Data provided to Item apon saving and getting");
@@ -106,7 +198,7 @@ public class ItemCrudTests extends ElasticsearchTestBase {
         } catch (AlreadyExistsException e) {
             throw e;
         } finally {
-            itemService.delete(structure.getId(), saved.getString("id"));
+            itemService.delete(structure.getId(), saved.getString("id"), null);
 
             Thread.sleep(1000);
 
@@ -147,12 +239,12 @@ public class ItemCrudTests extends ElasticsearchTestBase {
 
         structure = structureService.save(structure);
         structureService.publish(structure.getId());
-        TypeCheckMap saved = itemService.upsertItem(structure.getId(), obj);
+        TypeCheckMap saved = itemService.upsertItem(structure.getId(), obj, null);
 
         try {
             Thread.sleep(1000);// give time for ES to flush the new item
 
-            Optional<TypeCheckMap> freshOpt = itemService.getItemById(structure.getId(), "nevada-las_vegas-111_las_vegas_blvd");
+            Optional<TypeCheckMap> freshOpt = itemService.getItemById(structure.getId(), "nevada-las_vegas-111_las_vegas_blvd", null);
 
             if(freshOpt.isEmpty()){
                 throw new IllegalStateException("Composite Primary Key was not saved as expected");
@@ -167,13 +259,13 @@ public class ItemCrudTests extends ElasticsearchTestBase {
             fresh.put("firstName", "The");
             fresh.put("lastName", "Dude");
 
-            TypeCheckMap updated = itemService.upsertItem(structure.getId(), fresh);
+            TypeCheckMap updated = itemService.upsertItem(structure.getId(), fresh, null);
 
             if (!updated.getString("firstName").equals("The") || !updated.getString("lastName").equals("Dude")) {
                 throw new IllegalStateException("Data provided to upsert was not saved properly");
             }
 
-            TypeCheckMap secondGet = itemService.getItemById(structure.getId(), "nevada-las_vegas-111_las_vegas_blvd").get();
+            TypeCheckMap secondGet = itemService.getItemById(structure.getId(), "nevada-las_vegas-111_las_vegas_blvd", null).get();
 
             if (!secondGet.getString("firstName").equals("The") || !secondGet.getString("lastName").equals("Dude")) {
                 throw new IllegalStateException("Data provided to upsert was not saved properly");
@@ -182,7 +274,7 @@ public class ItemCrudTests extends ElasticsearchTestBase {
         } catch (AlreadyExistsException e) {
             throw e;
         } finally {
-            itemService.delete(structure.getId(), saved.getString("id"));
+            itemService.delete(structure.getId(), saved.getString("id"), null);
 
             Thread.sleep(1000);
 
@@ -201,12 +293,12 @@ public class ItemCrudTests extends ElasticsearchTestBase {
         obj.put("vpnIp", "10.0.2.101");
         obj.put("mac", "000000000001");
 
-        TypeCheckMap saved = itemService.upsertItem(structure.getId(), obj);
+        TypeCheckMap saved = itemService.upsertItem(structure.getId(), obj, null);
 
         try {
             Thread.sleep(1000);// give time for ES to flush the new item
 
-            saved = itemService.getItemById(structure.getId(), saved.getString("id")).get();
+            saved = itemService.getItemById(structure.getId(), saved.getString("id"), null).get();
 
             if (!saved.getString("ip").equals("192.0.2.101")) {
                 throw new IllegalStateException("ip provided to Item apon saving and getting are not what was expected.");
@@ -217,9 +309,9 @@ public class ItemCrudTests extends ElasticsearchTestBase {
 
             saved.put("wifiMac", "aaaaddddrrrr");
 
-            itemService.upsertItem(structure.getId(), saved);
+            itemService.upsertItem(structure.getId(), saved, null);
 
-            saved = itemService.getItemById(structure.getId(), saved.getString("id")).get();
+            saved = itemService.getItemById(structure.getId(), saved.getString("id"), null).get();
 
             if (!saved.getString("wifiMac").equals("aaaaddddrrrr")) {
                 throw new IllegalStateException("Data provided to Item apon saving and getting");
@@ -229,7 +321,7 @@ public class ItemCrudTests extends ElasticsearchTestBase {
         } catch (Exception e) {
             throw e;
         } finally {
-            itemService.delete(structure.getId(), saved.getString("id"));
+            itemService.delete(structure.getId(), saved.getString("id"), null);
             Thread.sleep(1000);
             structureService.delete(structure.getId());
         }
@@ -247,12 +339,12 @@ public class ItemCrudTests extends ElasticsearchTestBase {
         obj.put("ip", "192.0.2.101");
         obj.put("mac", "111111111111");
 
-        TypeCheckMap saved = itemService.upsertItem(structure.getId(), obj);
+        TypeCheckMap saved = itemService.upsertItem(structure.getId(), obj, null);
 
         try {
             Thread.sleep(1000);// give time for ES to flush the new item
 
-            saved = itemService.getItemById(structure.getId(), saved.getString("id")).get();
+            saved = itemService.getItemById(structure.getId(), saved.getString("id"), null).get();
 
             if (!saved.getString("mac").equals("111111111111")) {
                 throw new IllegalStateException("mac provided to Item apon saving and getting are not what was expected.");
@@ -264,9 +356,9 @@ public class ItemCrudTests extends ElasticsearchTestBase {
             partial.put("mac", "aaaaddddrrrr");
             partial.put("ip", "192.0.2.101");
 
-            itemService.upsertItem(structure.getId(), partial);
+            itemService.upsertItem(structure.getId(), partial, null);
 
-            TypeCheckMap updated = itemService.getItemById(structure.getId(), saved.getString("id")).get();
+            TypeCheckMap updated = itemService.getItemById(structure.getId(), saved.getString("id"), null).get();
 
             if (!updated.getString("mac").equals("aaaaddddrrrr")) {
                 throw new IllegalStateException("mac provided to Item apon saving and getting are not what we expected from the updated.");
@@ -275,7 +367,7 @@ public class ItemCrudTests extends ElasticsearchTestBase {
         } catch (Exception e) {
             throw e;
         } finally {
-            itemService.delete(structure.getId(), saved.getString("id"));
+            itemService.delete(structure.getId(), saved.getString("id"), null);
             Thread.sleep(1000);
             structureService.delete(structure.getId());
         }

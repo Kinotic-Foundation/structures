@@ -22,14 +22,14 @@ import org.kinotic.structures.api.domain.TypeCheckMap;
 import org.kinotic.structures.api.domain.traitlifecycle.HasOnBeforeModify;
 import org.springframework.stereotype.Component;
 
-import java.util.Objects;
+import java.util.Map;
 import java.util.UUID;
 
 @Component
 public class Id implements HasOnBeforeModify {
 
     @Override
-    public TypeCheckMap beforeModify(TypeCheckMap obj, Structure structure, String fieldName) throws Exception {
+    public TypeCheckMap beforeModify(TypeCheckMap obj, Structure structure, String fieldName, Map<String, Object> context) throws Exception {
         if (!obj.has("id")) {
             obj.amend("id", UUID.randomUUID().toString());
         }

@@ -31,6 +31,7 @@ import org.kinotic.structures.internal.repositories.ReferenceLogElasticRepositor
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -54,24 +55,24 @@ public class ObjectReference implements HasOnBeforeModify, HasOnAfterModify, Has
     }
 
     @Override
-    public TypeCheckMap beforeModify(TypeCheckMap obj, Structure structure, String fieldName) throws Exception {
+    public TypeCheckMap beforeModify(TypeCheckMap obj, Structure structure, String fieldName, Map<String, Object> context) throws Exception {
         return manageSave(obj, structure, fieldName);
     }
 
     @Override
-    public TypeCheckMap afterModify(TypeCheckMap obj, Structure structure, String fieldName) throws Exception {
+    public TypeCheckMap afterModify(TypeCheckMap obj, Structure structure, String fieldName, Map<String, Object> context) throws Exception {
         return manageReferenceLog(obj, structure, fieldName);
     }
 
     @Override
-    public TypeCheckMap afterGet(TypeCheckMap obj, Structure structure, String fieldName) throws Exception {
+    public TypeCheckMap afterGet(TypeCheckMap obj, Structure structure, String fieldName, Map<String, Object> context) throws Exception {
         Trait fieldTrait = structure.getTraits().get(fieldName);
         if (fieldTrait.getName().contains("Reference ")) {
             // we need to fill up the field with the current version of the referenced object
             TypeCheckMap field = obj.getTypeCheckMap(fieldName);
 
             if (field.has("structureId") && field.has("id")) {
-                SearchHits hits = itemService.searchForItemsById(field.getString("structureId"), field.getString("id"));
+                SearchHits hits = itemService.searchForItemsById(field.getString("structureId"), context, field.getString("id"));
                 for (SearchHit hit : hits) {
                     if (hit.getId().equals(field.getString("id"))) {
                         obj.amend(fieldName, new TypeCheckMap(hit.getSourceAsMap()));

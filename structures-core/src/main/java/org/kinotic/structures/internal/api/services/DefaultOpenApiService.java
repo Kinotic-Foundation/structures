@@ -207,15 +207,15 @@ public class DefaultOpenApiService implements OpenApiService {
         // Create a path item for all the operations with "/api/"+structure.getId()+"/bulk-upsert"
         PathItem bulkUpsertPathItem = new PathItem();
         Operation bulkUpsertOperation = createOperation("Bulk Upsert "+structure.getName(),
-                "bulkUpsert"+structure.getName(),
-                structure.getName(),
-                0);
+                                                        "bulkUpsert"+structure.getName(),
+                                                        structure.getName(),
+                                                        0);
 
         ArraySchema bulkUpsertSchema = new ArraySchema();
         bulkUpsertSchema.items(refSchema);
         RequestBody bulkUpsertRequestBody = new RequestBody()
                 .content(new Content().addMediaType("application/json",
-                        new MediaType().schema(bulkUpsertSchema)));
+                                                    new MediaType().schema(bulkUpsertSchema)));
         bulkUpsertOperation.requestBody(bulkUpsertRequestBody);
 
         bulkUpsertPathItem.post(bulkUpsertOperation);
@@ -223,9 +223,9 @@ public class DefaultOpenApiService implements OpenApiService {
     }
 
     private Operation createOperation(String operationSummary,
-                                             String operationId,
-                                             String structureName,
-                                             int responseType) {
+                                      String operationId,
+                                      String structureName,
+                                      int responseType) {
 
         Operation operation = new Operation().summary(operationSummary)
                                              .tags(List.of(structureName))
@@ -315,6 +315,9 @@ public class DefaultOpenApiService implements OpenApiService {
     public Schema<?> getSchemaForTrait(Trait trait) throws Exception{
         JsonSchema schema = objectMapper.readValue(trait.getSchema(), JsonSchema.class);
         Schema<?> ret = getSchemaForContinuumJsonSchema(schema);
+        if(trait.isCollection()){
+            ret = new ArraySchema().items(ret);
+        }
         if(trait.getDescribeTrait() != null){
             ret.setDescription(trait.getDescribeTrait());
         }
@@ -322,7 +325,7 @@ public class DefaultOpenApiService implements OpenApiService {
     }
 
     private Schema<?> getSchemaForContinuumJsonSchema(JsonSchema schema){
-        Schema<?> ret = null;
+        Schema<?> ret;
         if(schema instanceof DateJsonSchema){
             DateJsonSchema dateJsonSchema = (DateJsonSchema) schema;
             if(dateJsonSchema.getFormat() instanceof UnixDateStyle) {
@@ -330,9 +333,10 @@ public class DefaultOpenApiService implements OpenApiService {
             }else if(dateJsonSchema.getFormat() instanceof MillsDateStyle) {
                 ret = new IntegerSchema().format("int64");
             }else if(dateJsonSchema.getFormat() instanceof StringDateStyle) {
-                // FIXME: I think the intent here is unclear. The OpenApi spec expects a reg ex. Im not certain this is clear in the continuum json spec
                 StringDateStyle stringDateStyle = (StringDateStyle) dateJsonSchema.getFormat();
                 ret = new StringSchema().pattern(stringDateStyle.getPattern());
+            }else{
+                throw new RuntimeException("Unknown date format " + dateJsonSchema.getFormat().getClass().getName());
             }
         }else if(schema instanceof StringJsonSchema) {
             StringJsonSchema stringJsonSchema = (StringJsonSchema) schema;
@@ -362,16 +366,10 @@ public class DefaultOpenApiService implements OpenApiService {
             }
         }else if(schema instanceof BooleanJsonSchema){
             ret = new BooleanSchema();
+        }else{
+            throw new RuntimeException("Unknown schema type " + schema.getClass().getName());
         }
-        // TODO: figure how we want to handle arrays
-        // And for the structure as well
-//        else if (schema instanceof ArrayJsonSchema) {
-//            ArrayJsonSchema arrayJsonSchema = (ArrayJsonSchema) schema;
-//            ArraySchema arraySchema = new ArraySchema();
-//            arraySchema.setItems(getSchemaForTrait(arrayJsonSchema.getItems()));
-//            ret = arraySchema;
-//
-//        }
+
         return ret;
     }
 

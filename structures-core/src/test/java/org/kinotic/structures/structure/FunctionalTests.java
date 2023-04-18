@@ -72,7 +72,7 @@ public class FunctionalTests extends ElasticsearchTestBase {
                 obj.put("vpnIp", "172.16.0.11");
                 obj.put("ip", "192.0.2.11");
                 obj.put("mac", "aaaaaaaaaaa1");
-                itemService.upsertItem(structure.getId(), obj);
+                itemService.upsertItem(structure.getId(), obj, null);
 
             } catch (ElasticsearchStatusException e) {
                 throw e;
@@ -106,7 +106,7 @@ public class FunctionalTests extends ElasticsearchTestBase {
         TypeCheckMap obj = new TypeCheckMap();
         obj.amend("ip", "192.0.2.11");
         obj.amend("vpnIp","10.99.99.9");
-        TypeCheckMap savedJsonItem = itemService.upsertItem(structure.getId(), obj);
+        TypeCheckMap savedJsonItem = itemService.upsertItem(structure.getId(), obj, null);
         TypeCheckMap item = null;
 
         try {
@@ -114,9 +114,9 @@ public class FunctionalTests extends ElasticsearchTestBase {
 
             savedJsonItem.put("mac", "aaaaaaaaaaa1");
 
-            itemService.upsertItem(structure.getId(), savedJsonItem);
+            itemService.upsertItem(structure.getId(), savedJsonItem, null);
 
-            item = itemService.getItemById(structure.getId(), savedJsonItem.getString("id")).get();
+            item = itemService.getItemById(structure.getId(), savedJsonItem.getString("id"), null).get();
 
             if (!item.has("mac")) {
                 throw new IllegalStateException("After save of an Item, new Trait field added, mac, does not exist after pulling from ES.");
@@ -131,9 +131,9 @@ public class FunctionalTests extends ElasticsearchTestBase {
             throw e;
         } finally {
             if (item != null) {
-                itemService.delete(structure.getId(), item.getString("id"));
+                itemService.delete(structure.getId(), item.getString("id"), null);
             } else {
-                itemService.delete(structure.getId(), savedJsonItem.getString("id"));
+                itemService.delete(structure.getId(), savedJsonItem.getString("id"), null);
             }
 
             Thread.sleep(1000);
@@ -166,7 +166,7 @@ public class FunctionalTests extends ElasticsearchTestBase {
         TypeCheckMap firstItem = new TypeCheckMap();
         firstItem.amend("ip","192.0.2.11");
         firstItem.amend("vpnIp","10.99.99.9");
-        TypeCheckMap savedJsonItem = itemService.upsertItem(structure.getId(), firstItem);
+        TypeCheckMap savedJsonItem = itemService.upsertItem(structure.getId(), firstItem, null);
         TypeCheckMap item = null;
 
         try{
@@ -177,9 +177,9 @@ public class FunctionalTests extends ElasticsearchTestBase {
             secondItem.amend("vpnIp","10.99.99.10");
             secondItem.amend("mac", "aaaaaaaaaaa2");
 
-            item = itemService.upsertItem(structure.getId(), secondItem);
+            item = itemService.upsertItem(structure.getId(), secondItem, null);
 
-            TypeCheckMap freshFromDb = itemService.getItemById(structure.getId(), item.getString("id")).get();
+            TypeCheckMap freshFromDb = itemService.getItemById(structure.getId(), item.getString("id"), null).get();
 
             if(!freshFromDb.has("mac")){
                 throw new IllegalStateException("After save of an Item, new Trait field added, mac, does not exist after pulling from ES.");
@@ -192,10 +192,10 @@ public class FunctionalTests extends ElasticsearchTestBase {
             throw e;
         }finally{
             if(item != null){
-                itemService.delete(structure.getId(), item.getString("id"));
+                itemService.delete(structure.getId(), item.getString("id"), null);
             }
             if(savedJsonItem != null){
-                itemService.delete(structure.getId(), savedJsonItem.getString("id"));
+                itemService.delete(structure.getId(), savedJsonItem.getString("id"), null);
             }
             Thread.sleep(1000);
             structureService.delete(structure.getId());

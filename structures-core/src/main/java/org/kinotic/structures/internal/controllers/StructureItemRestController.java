@@ -9,34 +9,34 @@ import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.security.Principal;
+import java.util.*;
 
 /**
  * Created by Navíd Mitchell 🤪 on 3/18/23.
  */
 @RestController
-// Currently this is the only path that is secured
 @RequestMapping("/api")
-public class StructureItemController {
+public class StructureItemRestController {
 
     private final ItemServiceInternal itemService;
     private final ObjectMapper objectMapper;
 
-    public StructureItemController(ItemServiceInternal itemService, ObjectMapper objectMapper) {
+    public StructureItemRestController(ItemServiceInternal itemService, ObjectMapper objectMapper) {
         this.itemService = itemService;
         this.objectMapper = objectMapper;
     }
 
     @GetMapping(value = "/{structureId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public Mono<String> listItems(@PathVariable String structureId,
-                                  @RequestParam(required = false, defaultValue = "0") int page,
-                                  @RequestParam(required = false, defaultValue = "25") int size) {
+    public Mono<String> listAll(@PathVariable String structureId,
+                               @RequestParam(required = false, defaultValue = "0") int page,
+                               @RequestParam(required = false, defaultValue = "25") int size,
+                               Principal principal) {
         return Mono.defer(() -> {
             try {
-                SearchHits searchHits = itemService.getAll(structureId, size, page);
+                HashMap<String, Object> context = new HashMap<>();
+                context.put("principal", principal);
+                SearchHits searchHits = itemService.getAll(structureId, size, page, context);
                 String json = objectMapper.writeValueAsString(searchHits);
                 return Mono.just(json);
             } catch (Exception e) {
@@ -46,13 +46,16 @@ public class StructureItemController {
     }
 
     @PostMapping(value = "/{structureId}/search", produces = MediaType.APPLICATION_JSON_VALUE)
-    public Mono<String> listItems(@PathVariable String structureId,
-                                  @RequestBody String search,
-                                  @RequestParam(required = false, defaultValue = "0") int page,
-                                  @RequestParam(required = false, defaultValue = "25") int size) {
+    public Mono<String> search(@PathVariable String structureId,
+                               @RequestBody String search,
+                               @RequestParam(required = false, defaultValue = "0") int page,
+                               @RequestParam(required = false, defaultValue = "25") int size,
+                               Principal principal) {
         return Mono.defer(() -> {
             try {
-                SearchHits searchHits = itemService.search(structureId, search, size, page);
+                HashMap<String, Object> context = new HashMap<>();
+                context.put("principal", principal);
+                SearchHits searchHits = itemService.search(structureId, search, size, page, context);
                 String json = objectMapper.writeValueAsString(searchHits);
                 return Mono.just(json);
             } catch (Exception e) {
@@ -62,10 +65,12 @@ public class StructureItemController {
     }
 
     @PostMapping("/{structureId}")
-    public Mono<LinkedHashMap<String, Object>> upsertItem(@PathVariable String structureId, @RequestBody Map<String, Object> item) {
+    public Mono<LinkedHashMap<String, Object>> upsertItem(@PathVariable String structureId, @RequestBody Map<String, Object> item, Principal principal) {
         return Mono.defer(() -> {
             try {
-                return Mono.just((LinkedHashMap<String, Object>)itemService.upsertItem(structureId, new TypeCheckMap(item)));
+                HashMap<String, Object> context = new HashMap<>();
+                context.put("principal", principal);
+                return Mono.just((LinkedHashMap<String, Object>)itemService.upsertItem(structureId, new TypeCheckMap(item), context));
             } catch (Exception e) {
                 return Mono.error(e);
             }
@@ -73,12 +78,14 @@ public class StructureItemController {
     }
 
     @PostMapping("/{structureId}/bulk-upsert")
-    public Mono<Void> bulkUpsertItem(@PathVariable String structureId, @RequestBody List<Map<String, Object>> itemList) throws Exception {
+    public Mono<Void> bulkUpsertItem(@PathVariable String structureId, @RequestBody List<Map<String, Object>> itemList, Principal principal) throws Exception {
         try {
             itemService.requestBulkUpdatesForStructure(structureId);
             itemList.forEach(item -> {
                 try {
-                    itemService.pushItemForBulkUpdate(structureId, new TypeCheckMap(item));
+                    HashMap<String, Object> context = new HashMap<>();
+                    context.put("principal", principal);
+                    itemService.pushItemForBulkUpdate(structureId, new TypeCheckMap(item), context);
                 } catch (Exception e) {
                     // FIXME: how to handle this, we will not know where we had issues.. we could capture all the ones that errored out
                     //  and pass them back - or we fail fast and just respond with the id or some other identifiable info for debugging
@@ -92,10 +99,12 @@ public class StructureItemController {
     }
 
     @GetMapping("/{structureId}/{id}")
-    public Mono<LinkedHashMap<String, Object>> getItemById(@PathVariable String structureId, @PathVariable String id) {
+    public Mono<LinkedHashMap<String, Object>> getItemById(@PathVariable String structureId, @PathVariable String id, Principal principal) {
         return Mono.defer(() -> {
             try {
-                Optional<TypeCheckMap> item = itemService.getItemById(structureId, id);
+                HashMap<String, Object> context = new HashMap<>();
+                context.put("principal", principal);
+                Optional<TypeCheckMap> item = itemService.getItemById(structureId, id, context);
                 return item.map(typeCheckMap -> Mono.just((LinkedHashMap<String, Object>) typeCheckMap))
                            .orElseGet(Mono::empty);
             } catch (Exception e) {
@@ -105,10 +114,12 @@ public class StructureItemController {
     }
 
     @DeleteMapping("/{structureId}/{id}")
-    public Mono<Void> deleteItem(@PathVariable String structureId, @PathVariable String id) {
+    public Mono<Void> deleteItem(@PathVariable String structureId, @PathVariable String id, Principal principal) {
         return Mono.defer(() -> {
             try {
-                itemService.delete(structureId, id);
+                HashMap<String, Object> context = new HashMap<>();
+                context.put("principal", principal);
+                itemService.delete(structureId, id, context);
                 return Mono.empty().then();
             } catch (Exception e) {
                 return Mono.error(e);

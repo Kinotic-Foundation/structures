@@ -7,8 +7,8 @@
     "email": "develop@kinotic.org"
   },
   "scripts": {
-    "serve": "vue-cli-service serve",
-    "build": "vue-cli-service build",
+    "serve": "vue-cli-service serve --mode development",
+    "build": "vue-cli-service build --mode production",
     "lint": "vue-cli-service lint"
   },
   "main": "main.ts",
@@ -47,7 +47,8 @@
     "vue-split-layout": "^0.0.13",
     "vue-virtual-scroll-list": "^2.3.1",
     "vuedraggable": "^2.23.2",
-    "vuetify": "^2.6.1"
+    "vuetify": "^2.6.1",
+    "keycloak-js": "21.0.2"
   },
   "devDependencies": {
     "@fortawesome/fontawesome-free": "^5.15.4",

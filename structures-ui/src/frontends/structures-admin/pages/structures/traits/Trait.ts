@@ -15,6 +15,7 @@ export class Trait {
     public includeInQRCode: boolean
     public systemManaged: boolean // is a system managed default - cannot modify
     public operational: boolean // field that says we do not really add to the schema but provide some type of process
+    public collection: boolean
 
     constructor(id: string,
                 name: string,
@@ -26,7 +27,8 @@ export class Trait {
                 required: boolean,
                 includeInLabel: boolean,
                 includeInQRCode: boolean,
-                operational: boolean) {
+                operational: boolean,
+                collection: boolean) {
         this.id = id
         this.name = name
         this.describeTrait = describeTrait
@@ -39,6 +41,7 @@ export class Trait {
         this.includeInQRCode = includeInQRCode
         this.systemManaged = false
         this.operational = operational
+        this.collection = collection
     }
 
 }
