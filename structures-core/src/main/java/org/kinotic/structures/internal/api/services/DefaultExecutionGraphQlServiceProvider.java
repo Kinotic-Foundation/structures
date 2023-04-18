@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import graphql.GraphQL;
 import graphql.scalars.ExtendedScalars;
 import graphql.schema.*;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -16,10 +15,7 @@ import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.domain.StructureHolder;
 import org.kinotic.structures.api.domain.Structures;
 import org.kinotic.structures.api.domain.Trait;
-import org.kinotic.structures.internal.graphql.CachingPreparsedDocumentProvider;
-import org.kinotic.structures.internal.graphql.GetAllItemsDataFetcher;
-import org.kinotic.structures.internal.graphql.GetItemDataFetcher;
-import org.kinotic.structures.internal.graphql.SearchItemDataFetcher;
+import org.kinotic.structures.internal.graphql.*;
 import org.springframework.graphql.ExecutionGraphQlService;
 import org.springframework.graphql.execution.DefaultBatchLoaderRegistry;
 import org.springframework.graphql.execution.DefaultExecutionGraphQlService;
@@ -34,7 +30,10 @@ import java.util.concurrent.TimeUnit;
 import static graphql.Scalars.*;
 import static graphql.schema.GraphQLArgument.newArgument;
 import static graphql.schema.GraphQLFieldDefinition.newFieldDefinition;
+import static graphql.schema.GraphQLInputObjectField.newInputObjectField;
+import static graphql.schema.GraphQLInputObjectType.newInputObject;
 import static graphql.schema.GraphQLObjectType.newObject;
+
 
 /**
  * Created by Navíd Mitchell 🤪 on 4/16/23.
@@ -84,10 +83,12 @@ public class DefaultExecutionGraphQlServiceProvider implements ExecutionGraphQlS
         public @Nullable ExecutionGraphQlService load(String namespace) throws Exception {
             GraphQLSchema schema = createGraphQlSchema(namespace);
 
-            GraphQL.Builder builder = GraphQL.newGraphQL(schema)
-                                             .preparsedDocumentProvider(new CachingPreparsedDocumentProvider());
+            GraphQlSource graphQlSource = GraphQlSource.builder(schema)
+                                                       .configureGraphQl(builder -> builder.preparsedDocumentProvider(new CachingPreparsedDocumentProvider()))
+                                                       .build();
 
-            DefaultExecutionGraphQlService service = new DefaultExecutionGraphQlService(new FixedGraphQlSource(builder.build(), schema));
+
+            DefaultExecutionGraphQlService service = new DefaultExecutionGraphQlService(graphQlSource);
             service.addDataLoaderRegistrar(new DefaultBatchLoaderRegistry());
             return service;
         }
@@ -98,40 +99,58 @@ public class DefaultExecutionGraphQlServiceProvider implements ExecutionGraphQlS
 
             for(StructureHolder structureHolder : structures.getContent()) {
                 Structure structure = structureHolder.getStructure();
-                GraphQLObjectType graphQlOutputStructureItem = getGraphQlOutputStructureItem(structure);
-                structureTypeMap.put(structure.getId(), new StructureGraphTypeHolder(graphQlOutputStructureItem));
+                structureTypeMap.put(structure.getId(), getGraphQlObjectsForStructure(structure));
             }
 
             GraphQLObjectType.Builder queryBuilder = newObject().name("Query");
 
+            GraphQLObjectType.Builder mutationBuilder = newObject().name("Mutation");
+
             for(Map.Entry<String, StructureGraphTypeHolder> entry : structureTypeMap.entrySet()){
 
+                GraphQLObjectType outputType = entry.getValue().getGraphOutputType();
+                GraphQLInputObjectType inputType = entry.getValue().getGraphInputType();
+
                 queryBuilder.field(newFieldDefinition()
-                                           .name(entry.getValue().getGraphOutputType().getName())
-                                           .type(entry.getValue().getGraphOutputType())
+                                           .name(outputType.getName())
+                                           .type(outputType)
                                            .argument(newArgument().name("id").type(GraphQLNonNull.nonNull(GraphQLID)))
                                            .dataFetcher(new GetItemDataFetcher(entry.getKey(), itemService)));
 
-                GraphQLTypeReference graphQLTypeReference = new GraphQLTypeReference(entry.getValue().getGraphOutputType().getName());
+                GraphQLTypeReference graphQLTypeReference = new GraphQLTypeReference(outputType.getName());
                 GraphQLNamedOutputType listResponse = wrapForItemListResponse(graphQLTypeReference);
 
                 queryBuilder.field(newFieldDefinition()
-                                           .name(entry.getValue().getGraphOutputType().getName() + "s")
+                                           .name(outputType.getName() + "s")
                                            .type(listResponse)
                                            .argument(newArgument().name("offset").type(GraphQLNonNull.nonNull(GraphQLInt)))
                                            .argument(newArgument().name("limit").type(GraphQLNonNull.nonNull(GraphQLInt)))
                                            .dataFetcher(new GetAllItemsDataFetcher(entry.getKey(), itemService)));
 
                 queryBuilder.field(newFieldDefinition()
-                                           .name("search" + entry.getValue().getGraphOutputType().getName())
+                                           .name("search" + outputType.getName())
                                            .type(listResponse)
                                            .argument(newArgument().name("search").type(GraphQLNonNull.nonNull(GraphQLString)))
                                            .argument(newArgument().name("offset").type(GraphQLNonNull.nonNull(GraphQLInt)))
                                            .argument(newArgument().name("limit").type(GraphQLNonNull.nonNull(GraphQLInt)))
                                            .dataFetcher(new SearchItemDataFetcher(entry.getKey(), itemService)));
+
+                mutationBuilder.field(newFieldDefinition()
+                                              .name("upsert" + inputType.getName())
+                                              .type(outputType)
+                                              .argument(newArgument().name("input").type(GraphQLNonNull.nonNull(inputType)))
+                                              .dataFetcher(new UpsertDataFetcher(entry.getKey(), itemService)));
+
+                mutationBuilder.field(newFieldDefinition()
+                                              .name("delete" + inputType.getName())
+                                              .type(GraphQLBoolean)
+                                              .argument(newArgument().name("id").type(GraphQLNonNull.nonNull(GraphQLString)))
+                                              .dataFetcher(new UpsertDataFetcher(entry.getKey(), itemService)));
+
             }
             return GraphQLSchema.newSchema()
                                 .query(queryBuilder.build())
+                                .mutation(mutationBuilder.build())
                                 .build();
         }
 
@@ -148,8 +167,9 @@ public class DefaultExecutionGraphQlServiceProvider implements ExecutionGraphQlS
         }
 
 
-        private GraphQLObjectType getGraphQlOutputStructureItem(Structure structure){
-            GraphQLObjectType.Builder builder = newObject().name(structure.getName());
+        private StructureGraphTypeHolder getGraphQlObjectsForStructure(Structure structure){
+            GraphQLObjectType.Builder outputBuilder = newObject().name(structure.getName());
+            GraphQLInputObjectType.Builder inputBuilder = newInputObject().name(structure.getName()+"Input");
 
             for (Map.Entry<String, Trait> traitEntry : structure.getTraits().entrySet()) {
                 try {
@@ -158,25 +178,34 @@ public class DefaultExecutionGraphQlServiceProvider implements ExecutionGraphQlS
                     GraphQLScalarType scalarType = getGraphQlScalarTypeForTrait(trait);
 
                     GraphQLOutputType outputType = scalarType;
+                    GraphQLInputType inputType = scalarType;
 
                     if(trait.isRequired() && !trait.getName().equals("DeletedTime")){
                         outputType = GraphQLNonNull.nonNull(outputType);
+                        inputType = GraphQLNonNull.nonNull(inputType);
                     }
 
                     if(traitEntry.getValue().isCollection()){
                         outputType = GraphQLList.list(outputType);
+                        inputType = GraphQLList.list(inputType);
                     }
 
-                    builder.field(newFieldDefinition()
-                                          .name(traitEntry.getKey())
-                                          .type(outputType));
+                    outputBuilder.field(newFieldDefinition()
+                                                .name(traitEntry.getKey())
+                                                .type(outputType));
+
+                    if(!trait.isSystemManaged()){
+                        inputBuilder.field(newInputObjectField()
+                                                   .name(traitEntry.getKey())
+                                                   .type(inputType));
+                    }
 
                 } catch (Exception e) {
                     throw new RuntimeException("Failed to get schema for trait " + traitEntry.getKey(), e);
                 }
             }
 
-            return builder.build();
+            return new StructureGraphTypeHolder(outputBuilder.build(), inputBuilder.build());
         }
 
         private GraphQLScalarType getGraphQlScalarTypeForTrait(Trait trait) throws Exception {
@@ -219,36 +248,20 @@ public class DefaultExecutionGraphQlServiceProvider implements ExecutionGraphQlS
 
     private static class StructureGraphTypeHolder {
         private final GraphQLObjectType graphOutputType;
+        private final GraphQLInputObjectType graphInputType;
 
-        public StructureGraphTypeHolder(GraphQLObjectType graphOutputType) {
+        public StructureGraphTypeHolder(GraphQLObjectType graphOutputType, GraphQLInputObjectType graphInputType) {
             this.graphOutputType = graphOutputType;
+            this.graphInputType = graphInputType;
         }
 
         public GraphQLObjectType getGraphOutputType() {
             return graphOutputType;
         }
+
+        public GraphQLInputObjectType getGraphInputType() {
+            return graphInputType;
+        }
     }
 
-    private static class FixedGraphQlSource implements GraphQlSource {
-
-        private final GraphQL graphQl;
-
-        private final GraphQLSchema schema;
-
-        FixedGraphQlSource(GraphQL graphQl, GraphQLSchema schema) {
-            this.graphQl = graphQl;
-            this.schema = schema;
-        }
-
-        @Override
-        public GraphQL graphQl() {
-            return this.graphQl;
-        }
-
-        @Override
-        public GraphQLSchema schema() {
-            return this.schema;
-        }
-
-    }
 }

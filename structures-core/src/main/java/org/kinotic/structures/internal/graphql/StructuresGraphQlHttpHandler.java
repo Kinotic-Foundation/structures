@@ -58,16 +58,16 @@ public class StructuresGraphQlHttpHandler {
 
                                 graphQlRequest.getExtensions().put("__structuresNamespace", serverRequest.pathVariable("namespace"));
 
-                                if (log.isDebugEnabled()) {
-                                    log.debug("Executing: " + graphQlRequest);
+                                if (log.isTraceEnabled()) {
+                                    log.trace("Executing: " + graphQlRequest);
                                 }
 
                                 return this.graphQlHandler.handleRequest(graphQlRequest);
 
                             })
                             .flatMap(response -> {
-                                if (log.isDebugEnabled()) {
-                                    log.debug("Execution complete");
+                                if (log.isTraceEnabled()) {
+                                    log.trace("Execution complete");
                                 }
                                 ServerResponse.BodyBuilder builder = ServerResponse.ok();
                                 builder.headers(headers -> headers.putAll(response.getResponseHeaders()));

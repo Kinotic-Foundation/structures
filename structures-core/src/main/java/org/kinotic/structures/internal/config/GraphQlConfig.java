@@ -1,8 +1,10 @@
 package org.kinotic.structures.internal.config;
 
 import org.kinotic.structures.internal.graphql.StructuresGraphQlHttpHandler;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.graphql.execution.ReactiveSecurityDataFetcherExceptionResolver;
 import org.springframework.graphql.server.WebGraphQlHandler;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -37,6 +39,12 @@ public class GraphQlConfig {
         builder = builder.GET("/graphql/{namespace}", this::onlyAllowPost);
         builder = builder.POST("/graphql/{namespace}", SUPPORTS_MEDIATYPES, handler::handleRequest);
         return builder.build();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public ReactiveSecurityDataFetcherExceptionResolver reactiveSecurityDataFetcherExceptionResolver() {
+        return new ReactiveSecurityDataFetcherExceptionResolver();
     }
 
     private Mono<ServerResponse> onlyAllowPost(ServerRequest request) {
