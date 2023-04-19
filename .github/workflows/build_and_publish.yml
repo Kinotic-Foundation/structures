@@ -19,12 +19,14 @@ jobs:
           distribution: 'zulu'
           java-version: 11
           cache: 'gradle'
+          gpg-private-key: ${{ secrets.GPG_KEY }}
+          gpg-passphrase: GPG_KEY_PASS
 
       - name: Build with Gradle
         run: ./gradlew build -x test
 
       - name: Publish to Maven Central
-        run: ./gradlew publish
+        run: ./gradlew publish -Psigning.gnupg.keyName="${{ secrets.GPG_KEY_ID }}" -Psigning.gnupg.passphrase="${{ secrets.GPG_KEY_PASS }}"
         env:
           MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
           MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
