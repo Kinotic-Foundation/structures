@@ -44,6 +44,7 @@ public interface StructureService {
     void delete(String structureId) throws IOException, PermenentTraitException;
 
     void publish(String structureId) throws IOException;
+    StructureHolder unPublish(String structureId) throws IOException;
 
     void addTraitToStructure(String structureId, String fieldName, Trait newTrait) throws IOException;
 

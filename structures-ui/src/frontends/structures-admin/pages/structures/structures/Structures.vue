@@ -135,6 +135,18 @@
                                 {{icons.database}}
                             </v-icon>
                         </v-btn>
+                        <v-btn icon
+                               v-show="item.structure.published"
+                               :disabled="publishingId.length > 0"
+                               :loading="publishingId === item.structure.id"
+                               :key="item.structure.id" >
+                            <v-icon medium
+                                    class="mr-2 red--text"
+                                    @click="unPublish(item)"
+                                    title="Un-Publish">
+                                {{ icons.unpublish }}
+                            </v-icon>
+                        </v-btn>
                     </template>
 
                     <template v-slot:no-data >
@@ -419,7 +431,8 @@ import {
   mdiMinusCircle,
   mdiPlusCircle,
   mdiArrowCollapseLeft,
-  mdiArrowCollapseRight
+  mdiArrowCollapseRight,
+  mdiUmbraco
 } from '@mdi/js'
 import {IndexNameHelper} from "@/frontends/structures-admin/pages/structures/util/IndexNameHelper";
 
@@ -497,7 +510,8 @@ export default class Traits extends Vue {
       minus: mdiMinusCircle,
       plus: mdiPlusCircle,
       arrowLeft: mdiArrowCollapseLeft,
-      arrowRight: mdiArrowCollapseRight
+      arrowRight: mdiArrowCollapseRight,
+      unpublish: mdiUmbraco
     }
 
     constructor() {
@@ -705,6 +719,22 @@ export default class Traits extends Vue {
             try {
                 this.publishingId = item.structure.id
                 await this.structureManager.publish(item.structure.id)
+                await this.getAllTraits()
+                await this.getAll()// get updated list
+                this.publishingId = ""
+            }catch (error: any){
+                this.publishingId = ""
+                console.log(error.stack)
+                this.serverErrors = error.message
+            }
+        }
+    }
+
+    public async unPublish(item: StructureHolder){
+        if(confirm('Are you sure you want to Remove Published Status for this Structure? \nAll data saved under this Structure will be permanently deleted, proceed with caution.')) {
+            try {
+                this.publishingId = item.structure.id
+                await this.structureManager.unPublish(item.structure.id)
                 await this.getAllTraits()
                 await this.getAll()// get updated list
                 this.publishingId = ""

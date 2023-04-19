@@ -566,6 +566,31 @@ public class DefaultStructureService implements StructureService, StructureServi
     }
 
     @Override
+    public StructureHolder unPublish(String structureId) throws IOException {
+        Optional<Structure> optional = getById(structureId.toLowerCase());
+        Structure structure = optional.orElseThrow();// will throw null pointer/element not available
+
+        if(structure.isPublished()){
+            if(highLevelClient.indices().exists(new GetIndexRequest(structure.getItemIndex()), RequestOptions.DEFAULT)){
+                DeleteIndexRequest request = new DeleteIndexRequest(structure.getItemIndex());
+                AcknowledgedResponse response = highLevelClient.indices().delete(request, RequestOptions.DEFAULT);
+                if(!response.isAcknowledged()){
+                    response = highLevelClient.indices().delete(request, RequestOptions.DEFAULT);
+                    if(!response.isAcknowledged()){
+                        throw new IllegalStateException("We were not able to delete requested index, please review and try again.");
+                    }
+                }
+            }
+            structure.setPublished(false);
+            structure.setPublishedTimestamp(0);
+            structure.setUpdated(System.currentTimeMillis());
+            structureElasticRepository.save(structure);
+        }
+
+        return getStructureById(structure.getId());
+    }
+
+    @Override
     public void addTraitToStructure(String structureId, String fieldName, Trait newTrait) throws IOException {
         Optional<Structure> optional = getById(structureId.toLowerCase());
         Structure structure = optional.orElseThrow();// will throw null pointer/element not available
