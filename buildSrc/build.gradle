@@ -29,5 +29,5 @@ dependencies {
     implementation "io.spring.gradle:dependency-management-plugin:${springDependencyManagementVersion}"
 
     // lombok
-    implementation("io.freefair.gradle:lombok-plugin:${lombokPluginVersion}")
+    implementation "io.freefair.gradle:lombok-plugin:${lombokPluginVersion}"
 }
