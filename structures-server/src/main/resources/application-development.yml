@@ -17,5 +17,5 @@ logging:
 
 structures:
   elastic-use-ssl: false
-  elastic-username: elastic
-  elastic-password: pass79
+#  elastic-username: elastic
+#  elastic-password: pass79

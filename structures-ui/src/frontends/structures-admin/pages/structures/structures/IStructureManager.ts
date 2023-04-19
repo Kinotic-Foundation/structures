@@ -14,6 +14,7 @@ export interface IStructureManager {
     getAllNamespaceEquals(namespace: string, numberPerPage: number, page: number, columnToSortBy: string, descending: boolean): Promise<StructureHolder[]>
     delete(structureId: string): Promise<void>
     publish(structureId: string): Promise<void>
+    unPublish(structureId: string): Promise<StructureHolder>
     addTraitToStructure(structureId: string, fieldName: string, newTrait: Trait): Promise<void>
     insertTraitBeforeAnotherForStructure(structureId: string, movingTraitName: string, insertBeforeTraitName: string): Promise<void>
     insertTraitAfterAnotherForStructure(structureId: string, movingTraitName: string, insertAfterTraitName: string): Promise<void>
@@ -67,6 +68,10 @@ class StructureManager implements IStructureManager {
 
     public publish(structureId: string): Promise<void> {
         return this.serviceProxy.invoke('publish', [structureId])
+    }
+
+    public unPublish(structureId: string): Promise<StructureHolder> {
+        return this.serviceProxy.invoke('unPublish', [structureId])
     }
 
     public addTraitToStructure(structureId: string, fieldName: string, newTrait: Trait): Promise<void> {

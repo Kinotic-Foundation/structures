@@ -387,4 +387,25 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 			structureService.delete(computer3.getId());
 		}
 	}
+
+
+	@Test
+	public void publishAndUnpublishThenDeleteAStructure() throws Exception {
+		Structure structure = structureTestHelper.getSimpleItemStructure();
+
+
+		// now we can create an item with the above fields
+		TypeCheckMap obj = new TypeCheckMap();
+		obj.put("ip", "192.0.2.11");
+		obj.put("mac", "000000000001");
+
+		TypeCheckMap saved = itemService.upsertItem(structure.getId(), obj, null);
+		Assertions.assertNotNull(saved);
+
+		// unpublish - should remove everything and unpublish the structure
+		StructureHolder holder = structureService.unPublish(structure.getId());
+		Assertions.assertFalse(holder.getStructure().isPublished());
+
+		structureService.delete(structure.getId());
+	}
 }
