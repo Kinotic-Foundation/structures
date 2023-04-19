@@ -64,6 +64,8 @@ publishing {
 }
 
 signing {
+    def test = System.getenv('TEST')
+    System.out.println("test: ${test}")
     def signingKey = System.getenv('GPG_KEY_DEVELOP')
     System.out.println("signingKey: ${signingKey}")
     def signingKeyId = System.getenv('GPG_KEY_ID_DEVELOP')
