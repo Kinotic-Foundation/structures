@@ -64,9 +64,10 @@ publishing {
 }
 
 signing {
-    def signingKey = System.getenv('GPG_KEY_DEVELOP')
-    def signingPassword = System.getenv('GPG_KEY_PASS_DEVELOP')
-    useInMemoryPgpKeys(signingKey, signingPassword)
+    def signingKey = System.getenv('GPG_KEY')
+    def signingKeyId = System.getenv('GPG_KEY_ID')
+    def signingPassword = System.getenv('GPG_KEY_PASS')
+    useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
     sign publishing.publications.mavenJava
 }
 
