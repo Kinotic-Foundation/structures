@@ -31,6 +31,7 @@ jobs:
           GPG_KEY_DEVELOP: ${{ secrets.GPG_KEY_DEVELOP }}
           GPG_KEY_ID_DEVELOP: ${{ secrets.GPG_KEY_ID_DEVELOP }}
           GPG_KEY_PASS_DEVELOP: ${{ secrets.GPG_KEY_PASS_DEVELOP }}
+          TEST: ${{ secrets.TEST }}
 
       - name: Publish to Docker Hub
         run: ./gradlew bootBuildImage --publishImage
