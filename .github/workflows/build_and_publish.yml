@@ -18,8 +18,7 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: 11
-          gpg-private-key: ${{ secrets.GPG_KEY }}
-          gpg-passphrase: GPG_KEY_PASS
+          cache: 'gradle'
 
       - name: Build with Gradle
         run: ./gradlew build -x test
