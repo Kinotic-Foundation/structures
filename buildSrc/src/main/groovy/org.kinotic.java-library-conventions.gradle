@@ -65,9 +65,6 @@ publishing {
 
 signing {
     useGpgCmd()
-    options([
-            '--pinentry-mode': 'loopback'
-    ])
     sign publishing.publications.mavenJava
 }
 
