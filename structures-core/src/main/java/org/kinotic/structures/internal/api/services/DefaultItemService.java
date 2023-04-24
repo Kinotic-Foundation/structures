@@ -119,8 +119,7 @@ public class DefaultItemService implements ItemService, ItemServiceInternal { //
         processUpdateRequest(structure, toUpsert, true);
 
         // get value fresh from db
-        //noinspection OptionalGetWithoutIsPresent
-        TypeCheckMap ret = getItemById(structureId, toUpsert.getString("id"), context).get();
+        TypeCheckMap ret = getItemById(structureId, toUpsert.getString("id"), context).orElseThrow();
 
         return (TypeCheckMap) traitLifecycles.processAfterModifyLifecycle(ret, structure, context);
     }
