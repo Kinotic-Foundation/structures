@@ -12,6 +12,7 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation 'org.springframework.boot:spring-boot-starter-webflux'
 	implementation 'org.springframework.boot:spring-boot-starter-graphql'
+	implementation 'org.springframework.boot:spring-boot-starter-json'
 
 	implementation "com.apollographql.federation:federation-graphql-java-support:${federationJvmVersion}"
 	implementation "com.graphql-java:graphql-java-extended-scalars:${graphQlJavaVersion}"
@@ -30,11 +31,16 @@ dependencies {
 	// Additional Continuum Dependencies
 	implementation "org.kinotic:continuum-core:${continuumVersion}"
 	implementation "org.kinotic:continuum-core-vertx:${continuumVersion}"
+	implementation "org.kinotic:continuum-idl:${continuumVersion}"
 
 	implementation "io.swagger.core.v3:swagger-models:${swaggerCoreVersion}"
 	implementation "io.swagger.core.v3:swagger-core:${swaggerCoreVersion}"
 
 	implementation "com.github.ben-manes.caffeine:caffeine:${caffeineVersion}"
+
+	implementation 'com.fasterxml.jackson.core:jackson-annotations'
+	implementation 'com.fasterxml.jackson.core:jackson-core'
+	implementation 'com.fasterxml.jackson.core:jackson-databind'
 
 	annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'

@@ -15,11 +15,6 @@ export interface IStructureManager {
     delete(structureId: string): Promise<void>
     publish(structureId: string): Promise<void>
     unPublish(structureId: string): Promise<StructureHolder>
-    addTraitToStructure(structureId: string, fieldName: string, newTrait: Trait): Promise<void>
-    insertTraitBeforeAnotherForStructure(structureId: string, movingTraitName: string, insertBeforeTraitName: string): Promise<void>
-    insertTraitAfterAnotherForStructure(structureId: string, movingTraitName: string, insertAfterTraitName: string): Promise<void>
-    getJsonSchema(structureId: string): Promise<string>
-    getElasticSearchBaseMapping(structureId: string): Promise<string>
 }
 
 @injectable()
@@ -74,25 +69,6 @@ class StructureManager implements IStructureManager {
         return this.serviceProxy.invoke('unPublish', [structureId])
     }
 
-    public addTraitToStructure(structureId: string, fieldName: string, newTrait: Trait): Promise<void> {
-        return this.serviceProxy.invoke('addTraitToStructure', [structureId, fieldName, newTrait])
-    }
-
-    public insertTraitBeforeAnotherForStructure(structureId: string, movingTraitName: string, insertBeforeTraitName: string): Promise<void> {
-        return this.serviceProxy.invoke('insertTraitBeforeAnotherForStructure', [structureId, movingTraitName, insertBeforeTraitName])
-    }
-
-    public insertTraitAfterAnotherForStructure(structureId: string, movingTraitName: string, insertAfterTraitName: string): Promise<void> {
-        return this.serviceProxy.invoke('insertTraitAfterAnotherForStructure', [structureId, movingTraitName, insertAfterTraitName])
-    }
-
-    public getJsonSchema(structureId: string): Promise<string> {
-        return this.serviceProxy.invoke('getJsonSchema', [structureId])
-    }
-
-    public getElasticSearchBaseMapping(structureId: string): Promise<string> {
-        return this.serviceProxy.invoke('getElasticSearchBaseMapping', [structureId])
-    }
 }
 
 container.addSingleton<IStructureManager>(StructureManager)
