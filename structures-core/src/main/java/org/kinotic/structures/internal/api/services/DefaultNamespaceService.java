@@ -9,9 +9,6 @@ import org.springframework.stereotype.Component;
 import javax.annotation.PostConstruct;
 import java.util.concurrent.CompletableFuture;
 
-/**
- * Created by Navíd Mitchell 🤪 on 4/25/23.
- */
 @Component
 public class DefaultNamespaceService extends AbstractCrudService<Namespace> implements NamespaceService {
 
