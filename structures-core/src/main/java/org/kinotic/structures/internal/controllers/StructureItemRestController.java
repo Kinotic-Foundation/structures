@@ -64,6 +64,27 @@ public class StructureItemRestController {
         }).subscribeOn(Schedulers.boundedElastic());
     }
 
+    @PostMapping(value = "/{structureId}/searchWithSort", produces = MediaType.APPLICATION_JSON_VALUE)
+    public Mono<String> searchWithSort(@PathVariable String structureId,
+                               @RequestBody String search,
+                               @RequestParam String sortField,
+                               @RequestParam(required = false, defaultValue = "false") boolean isDescending,
+                               @RequestParam(required = false, defaultValue = "0") int page,
+                               @RequestParam(required = false, defaultValue = "25") int size,
+                               Principal principal) {
+        return Mono.defer(() -> {
+            try {
+                HashMap<String, Object> context = new HashMap<>();
+                context.put("principal", principal);
+                SearchHits searchHits = itemService.searchWithSort(structureId, search, size, page, sortField, isDescending, context);
+                String json = objectMapper.writeValueAsString(searchHits);
+                return Mono.just(json);
+            } catch (Exception e) {
+                return Mono.error(e);
+            }
+        }).subscribeOn(Schedulers.boundedElastic());
+    }
+
     @PostMapping("/{structureId}")
     public Mono<LinkedHashMap<String, Object>> upsertItem(@PathVariable String structureId, @RequestBody Map<String, Object> item, Principal principal) {
         return Mono.defer(() -> {
