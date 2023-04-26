@@ -40,7 +40,6 @@ import org.kinotic.structures.api.domain.PermenentTraitException;
 import org.kinotic.structures.api.domain.Trait;
 import org.kinotic.structures.api.services.TraitService;
 import org.kinotic.structures.internal.api.services.util.EsHighLevelClientUtil;
-import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
@@ -49,7 +48,7 @@ import java.util.*;
 //need to just increment the version instead of using the long this way.
 //so we should get the value and check against it.
 
-@Component
+//@Component
 public class DefaultTraitService implements TraitService {
 
     private static final String INDEX_NAME = "trait";

@@ -17,7 +17,7 @@
 
 package org.kinotic.structures.api.annotations;
 
-import org.kinotic.structures.internal.config.StructuresConfiguration;
+import org.kinotic.structures.internal.config.ElasticsearchConfiguration;
 import org.springframework.context.annotation.Import;
 
 import java.lang.annotation.*;
@@ -31,6 +31,6 @@ import java.lang.annotation.*;
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@Import(StructuresConfiguration.class)
+@Import(ElasticsearchConfiguration.class)
 public @interface EnableStructures {
 }

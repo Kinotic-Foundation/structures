@@ -19,6 +19,7 @@ package org.kinotic.structures;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.data.elasticsearch.ReactiveElasticsearchRestClientAutoConfiguration;
 import org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration;
 import org.springframework.boot.autoconfigure.graphql.GraphQlAutoConfiguration;
 import org.springframework.boot.autoconfigure.graphql.reactive.GraphQlWebFluxAutoConfiguration;
@@ -28,7 +29,8 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 @SpringBootApplication(exclude = {HazelcastAutoConfiguration.class,
                                   JpaRepositoriesAutoConfiguration.class,
                                   GraphQlAutoConfiguration.class,
-                                  GraphQlWebFluxAutoConfiguration.class})
+                                  GraphQlWebFluxAutoConfiguration.class,
+                                  ReactiveElasticsearchRestClientAutoConfiguration.class})
 @EnableConfigurationProperties
 public class StructuresTestApplication {
     public static void main(String[] args) {

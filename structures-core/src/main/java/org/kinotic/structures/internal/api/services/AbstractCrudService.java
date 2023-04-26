@@ -16,7 +16,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.elasticsearch.core.ReactiveElasticsearchOperations;
+import org.springframework.data.elasticsearch.core.ReactiveIndexOperations;
+import reactor.core.publisher.Mono;
 
+import javax.annotation.PostConstruct;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -32,13 +36,25 @@ public abstract class AbstractCrudService<T extends Identifiable<String>> implem
     private final String indexName;
     private final Class<T> type;
     protected final ElasticsearchAsyncClient esAsyncClient;
+    protected final ReactiveElasticsearchOperations esOperations;
 
     public AbstractCrudService(String indexName,
                                Class<T> type,
-                               ElasticsearchAsyncClient esAsyncClient) {
+                               ElasticsearchAsyncClient esAsyncClient,
+                               ReactiveElasticsearchOperations esOperations) {
         this.indexName = indexName;
         this.type = type;
         this.esAsyncClient = esAsyncClient;
+        this.esOperations = esOperations;
+    }
+
+    @PostConstruct
+    public void init(){
+        // create mapping for class, we don't check if it has a Document annotation for now since all of these calls require an index to exist
+        ReactiveIndexOperations indexOperations = esOperations.indexOps(type);
+        indexOperations.exists() //
+                       .flatMap(exists -> exists ? Mono.empty() : indexOperations.createWithMapping())
+                       .block();
     }
 
     /**

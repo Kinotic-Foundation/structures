@@ -24,10 +24,7 @@ import lombok.experimental.Accessors;
 import org.kinotic.continuum.api.Identifiable;
 import org.kinotic.continuum.idl.api.ObjectTypeDefinition;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.elasticsearch.annotations.Document;
-import org.springframework.data.elasticsearch.annotations.Field;
-import org.springframework.data.elasticsearch.annotations.FieldType;
-import org.springframework.data.elasticsearch.annotations.Setting;
+import org.springframework.data.elasticsearch.annotations.*;
 
 @Getter
 @Setter
@@ -50,21 +47,25 @@ public class Structure implements Identifiable<String> {
     @Field(type = FieldType.Text)
     private String description = null;
 
+    //@Field(type=FieldType.Date, format = DateFormat.epoch_millis)
     @Field(type = FieldType.Long)
     private long created = 0;// do not ever set, system managed
 
+    //@Field(type=FieldType.Date, format = DateFormat.epoch_millis)
     @Field(type = FieldType.Long)
     private long updated = 0;// do not ever set, system managed
 
     @Field(type = FieldType.Boolean)
     private boolean published = false;
 
+    //@Field(type=FieldType.Date, format = DateFormat.epoch_millis)
     @Field(type = FieldType.Long)
     private long publishedTimestamp = 0;
 
     @Field(type = FieldType.Keyword)
     private String itemIndex = null;
 
+    @Field(type = FieldType.Flattened)
     private ObjectTypeDefinition itemDefinition = null;
 
 }

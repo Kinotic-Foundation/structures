@@ -11,6 +11,7 @@ import org.kinotic.structures.internal.config.StructuresProperties;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.elasticsearch.core.ReactiveElasticsearchOperations;
 import org.springframework.stereotype.Component;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -23,8 +24,9 @@ public class DefaultStructureService extends AbstractCrudService<Structure> impl
     private final StructuresProperties structuresProperties;
 
     public DefaultStructureService(ElasticsearchAsyncClient esAsyncClient,
+                                   ReactiveElasticsearchOperations esOperations,
                                    StructuresProperties structuresProperties) {
-        super("structures", Structure.class, esAsyncClient);
+        super("structure", Structure.class, esAsyncClient, esOperations);
         this.structuresProperties = structuresProperties;
     }
 
@@ -33,7 +35,7 @@ public class DefaultStructureService extends AbstractCrudService<Structure> impl
         return count(builder -> builder
                 .query(q -> q
                     .bool(b -> b
-                            .filter(TermQuery.of(tq -> tq.field("namespace").value(namespace))._toQuery()
+                        .filter(TermQuery.of(tq -> tq.field("namespace").value(namespace))._toQuery()
                     )
                 )));
     }

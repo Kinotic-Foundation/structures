@@ -15,8 +15,8 @@ import java.util.*;
 /**
  * Created by Navíd Mitchell 🤪 on 3/18/23.
  */
-@RestController
-@RequestMapping("/api")
+//@RestController
+//@RequestMapping("/api")
 public class StructureItemRestController {
 
     private final ItemServiceInternal itemService;

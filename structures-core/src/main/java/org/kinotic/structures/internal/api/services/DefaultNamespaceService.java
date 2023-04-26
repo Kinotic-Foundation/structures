@@ -4,9 +4,9 @@ import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import org.kinotic.structures.api.domain.Namespace;
 import org.kinotic.structures.api.services.NamespaceService;
 import org.kinotic.structures.api.services.StructureService;
+import org.springframework.data.elasticsearch.core.ReactiveElasticsearchOperations;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.PostConstruct;
 import java.util.concurrent.CompletableFuture;
 
 @Component
@@ -15,18 +15,10 @@ public class DefaultNamespaceService extends AbstractCrudService<Namespace> impl
     private final StructureService structureService;
 
     public DefaultNamespaceService(ElasticsearchAsyncClient esAsyncClient,
+                                   ReactiveElasticsearchOperations esOperations,
                                    StructureService structureService) {
-        super("namespace", Namespace.class, esAsyncClient);
+        super("namespace", Namespace.class, esAsyncClient, esOperations);
         this.structureService = structureService;
-    }
-
-    @PostConstruct
-    public void init(){
-        createIndex("namespace", false, builder -> builder
-            .mappings(m -> {
-                // FIXME: add mapping
-                return m;
-            }));
     }
 
     @Override

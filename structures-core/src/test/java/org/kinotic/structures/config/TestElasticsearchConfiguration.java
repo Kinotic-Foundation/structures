@@ -1,43 +1,55 @@
 package org.kinotic.structures.config;
 
-import org.elasticsearch.client.RestHighLevelClient;
-import org.springframework.boot.test.util.TestPropertyValues;
-import org.springframework.context.ApplicationContextInitializer;
-import org.springframework.context.ConfigurableApplicationContext;
+import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
+import co.elastic.clients.json.jackson.JacksonJsonpMapper;
+import co.elastic.clients.transport.ElasticsearchTransport;
+import co.elastic.clients.transport.rest_client.RestClientTransport;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.http.HttpHost;
+import org.elasticsearch.client.RestClient;
+import org.elasticsearch.client.RestClientBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.data.elasticsearch.client.ClientConfiguration;
-import org.springframework.data.elasticsearch.client.RestClients;
-import org.springframework.data.elasticsearch.repository.config.EnableElasticsearchRepositories;
+import org.springframework.data.elasticsearch.client.elc.ReactiveElasticsearchConfiguration;
 
 @Configuration
-@EnableElasticsearchRepositories(basePackages = "org.kinotic.structures.internal.repositories")
 @ComponentScan(basePackages = "org.kinotic.structures")
 @Profile("test")
-public class TestElasticsearchConfiguration {
-    public static final ElasticsearchTestContainer ELASTICSEARCH_CONTAINER;
-    static {
-        ELASTICSEARCH_CONTAINER = ElasticsearchTestContainer.create();
-        ELASTICSEARCH_CONTAINER.start();
-    }
-    @Bean
-    public RestHighLevelClient elasticsearchClient() {
+public class TestElasticsearchConfiguration extends ReactiveElasticsearchConfiguration {
+
+    @Override
+    public ClientConfiguration clientConfiguration() {
+
         ClientConfiguration.MaybeSecureClientConfigurationBuilder builder
-                = ClientConfiguration.builder()
-                .connectedTo(ELASTICSEARCH_CONTAINER.getHttpHostAddress());
+                = ClientConfiguration.builder().connectedTo(ElasticsearchProvider.ELASTICSEARCH_CONTAINER.getHttpHostAddress());
 
         builder.withConnectTimeout(60000)
-                .withSocketTimeout(60000);
+               .withSocketTimeout(60000);
 
-        return RestClients.create(builder.build()).rest();
+        return builder.build();
     }
-    public static class Initializer implements ApplicationContextInitializer<ConfigurableApplicationContext> {
-        @Override
-        public void initialize(ConfigurableApplicationContext configurableApplicationContext) {
-            TestPropertyValues.of("spring.data.elasticsearch.cluster-nodes=" + ELASTICSEARCH_CONTAINER.getHttpHostAddress())
-                    .applyTo(configurableApplicationContext.getEnvironment());
-        }
+
+    @Bean
+    public ElasticsearchAsyncClient elasticsearchAsyncClient(ObjectMapper objectMapper){
+
+        String[] parts = ElasticsearchProvider.ELASTICSEARCH_CONTAINER.getHttpHostAddress().split(":");
+
+        RestClientBuilder builder = RestClient.builder(new HttpHost(parts[0], Integer.parseInt(parts[1])));
+
+        RestClient restClient = builder.build();
+
+        // Create the transport with a Jackson mapper
+        ElasticsearchTransport transport = new RestClientTransport(restClient, new JacksonJsonpMapper(objectMapper));
+
+        return new ElasticsearchAsyncClient(transport);
     }
+
+    @Override
+    protected boolean writeTypeHints() {
+        return false;
+    }
+
 }

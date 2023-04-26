@@ -38,6 +38,8 @@ dependencyManagement {
         dependency "org.springframework.security:spring-security-crypto:${springSecurityVersion}"
         dependency "org.springframework.security:spring-security-config:${springSecurityVersion}"
         dependency "org.springframework.security:spring-security-test:${springSecurityVersion}"
+        // must be overridden for the elastic client
+        dependency 'jakarta.json:jakarta.json-api:2.0.1'
     }
 }
 

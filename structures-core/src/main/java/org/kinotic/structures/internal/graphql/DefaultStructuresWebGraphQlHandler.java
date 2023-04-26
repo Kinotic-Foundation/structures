@@ -5,14 +5,13 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.graphql.execution.ThreadLocalAccessor;
 import org.springframework.graphql.server.*;
 import org.springframework.lang.Nullable;
-import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 import reactor.core.publisher.Mono;
 
 /**
  * Created by Navíd Mitchell 🤪 on 4/16/23.
  */
-@Component
+//@Component
 public class DefaultStructuresWebGraphQlHandler implements WebGraphQlHandler {
 
     private final ExecutionGraphQlServiceProvider executionGraphQlServiceProvider;

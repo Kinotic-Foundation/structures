@@ -6,7 +6,6 @@ import org.kinotic.structures.internal.api.services.OpenApiService;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
@@ -15,7 +14,7 @@ import java.io.IOException;
 /**
  * Created by Navíd Mitchell 🤪 on 3/18/23.
  */
-@RestController
+//@RestController
 public class OpenApiDocsController {
 
     private final OpenApiService openApiService;
