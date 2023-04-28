@@ -17,61 +17,78 @@
 
 package org.kinotic.structures.structure;
 
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.kinotic.continuum.idl.api.ArrayC3Type;
+import org.kinotic.continuum.idl.api.ObjectC3Type;
+import org.kinotic.continuum.idl.api.StringC3Type;
 import org.kinotic.structures.ElasticsearchTestBase;
+import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.api.services.StructureService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
+
+import java.util.concurrent.CompletableFuture;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest
 public class StructureCrudTests extends ElasticsearchTestBase {
 
-//    @Autowired
+	//    @Autowired
 //    private TraitService traitService;
-//    @Autowired
-//    private StructureServiceInternal structureService;
+	@Autowired
+	private StructureService structureService;
 //    @Autowired
 //    private ItemServiceInternal itemService;
 //	@Autowired
 //	private StructureTestHelper structureTestHelper;
 //
 //
-//	@Test
-//	public void createAndDeleteStructure() {
-//		Assertions.assertThrows(NoSuchElementException.class, () -> {
-//			Structure structure = new Structure();
-//			structure.setName("Computer1-" + System.currentTimeMillis());
-//			structure.setNamespace("some_other_org_");
-//			structure.setDescription("Defines the Computer Device properties");
-//
-//
-//			Optional<Trait> vpnIpOptional = traitService.getTraitByName("VpnIp");
-//			Optional<Trait> ipOptional = traitService.getTraitByName("Ip");
-//			Optional<Trait> macOptional = traitService.getTraitByName("Mac");
-//
-//			structure.getTraits().put("vpnIp", vpnIpOptional.get());
-//			structure.getTraits().put("ip", ipOptional.get());
-//			structure.getTraits().put("mac", macOptional.get());
-//			// should also get createdTime, updateTime, and deleted by default
-//
-//			final Structure saved = structureService.save(structure);
-//
-//			try {
-//				if (saved.getTraits().size() != 8) {
-//					throw new IllegalStateException("We should have 8 traits, 5 given by default. We have " + saved.getTraits()
-//																												   .size());
-//				}
-//
-//			} catch (Exception e) {
-//				throw e;
-//			} finally {
-//				structureService.delete(saved.getId());
-//			}
-//
-//			Optional<Structure> optional = structureService.getById(saved.getId());
-//			optional.get();// should throw if null
-//		});
-//	}
+
+	private ObjectC3Type buildTestItemDefinition(){
+		return new ObjectC3Type()
+				.addProperty("name", new StringC3Type())
+				.addProperty("description", new StringC3Type())
+				.addProperty("addresses", new ArrayC3Type(
+						new ObjectC3Type()
+								.addProperty("street", new StringC3Type())
+								.addProperty("city", new StringC3Type())
+								.addProperty("state", new StringC3Type())
+								.addProperty("zip", new StringC3Type())
+				));
+	}
+
+
+	@Test
+	public void createAndDeleteStructure() {
+
+		Structure structure = new Structure();
+		structure.setName("Person")
+				 .setNamespace("kinotic_")
+				 .setDescription("Defines a Person")
+				 .setItemDefinition(buildTestItemDefinition());
+
+		CompletableFuture<Structure> future = structureService.save(structure);
+
+		StepVerifier.create(Mono.fromFuture(future))
+					.expectNextMatches(savedStructure -> {
+						Assertions.assertNotNull(savedStructure.getId());
+						Assertions.assertTrue(savedStructure.getCreated() > 0);
+						Assertions.assertTrue(savedStructure.getUpdated() > 0);
+						Assertions.assertEquals(structure.getName(), savedStructure.getName());
+						Assertions.assertEquals(structure.getDescription(), savedStructure.getDescription());
+						Assertions.assertEquals(structure.getItemDefinition(), savedStructure.getItemDefinition());
+						return true;
+					})
+					.expectComplete()
+					.verify();
+
+
+	}
 //
 //	@Test
 //	public void tryCreateDuplicateStructure(){

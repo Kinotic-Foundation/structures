@@ -1,32 +1,37 @@
 package org.kinotic.structures.internal.api.services;
 
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
+import co.elastic.clients.elasticsearch._types.mapping.Property;
 import co.elastic.clients.elasticsearch._types.query_dsl.TermQuery;
-import co.elastic.clients.elasticsearch.indices.CreateIndexRequest;
+import org.kinotic.continuum.idl.converter.IdlConverter;
+import org.kinotic.continuum.idl.converter.IdlConverterFactory;
 import org.kinotic.structures.api.domain.AlreadyExistsException;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.StructureService;
 import org.kinotic.structures.internal.api.services.util.StructureHelper;
 import org.kinotic.structures.internal.config.StructuresProperties;
-import org.springframework.dao.OptimisticLockingFailureException;
+import org.kinotic.structures.internal.idl.converters.elastic.C3ToEsConverterStrategy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.elasticsearch.core.ReactiveElasticsearchOperations;
 import org.springframework.stereotype.Component;
-import java.util.Objects;
+
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
 
 
 @Component
 public class DefaultStructureService extends AbstractCrudService<Structure> implements StructureService {
 
     private final StructuresProperties structuresProperties;
+    private final IdlConverterFactory idlConverterFactory;
+    private final C3ToEsConverterStrategy c3ToEsConverterStrategy = new C3ToEsConverterStrategy();
 
     public DefaultStructureService(ElasticsearchAsyncClient esAsyncClient,
                                    ReactiveElasticsearchOperations esOperations,
+                                   IdlConverterFactory idlConverterFactory,
                                    StructuresProperties structuresProperties) {
         super("structure", Structure.class, esAsyncClient, esOperations);
+        this.idlConverterFactory = idlConverterFactory;
         this.structuresProperties = structuresProperties;
     }
 
@@ -70,15 +75,11 @@ public class DefaultStructureService extends AbstractCrudService<Structure> impl
                     if(structure.getId() == null){
                         ret = CompletableFuture.failedFuture(new AlreadyExistsException("Structure Namespace+Name must be unique, '"+logicalIndexName+"' already exists."));
                     }else{
-                        if(Objects.equals(existingStructure.getUpdated(), structure.getUpdated())){
-                            // updating an existing structure, reconcile the differences
-                            structure.setUpdated(System.currentTimeMillis());
+                        // updating an existing structure, reconcile the differences
+                        structure.setUpdated(System.currentTimeMillis());
 
-                            // FIXME: reconcile structure differences (should be async)
-                            ret = super.save(structure);
-                        }else{
-                            ret = CompletableFuture.failedFuture(new OptimisticLockingFailureException("Attempting to update a Structure, but out of sync with database; please re-fetch from database and try again"));
-                        }
+                        // FIXME: reconcile structure differences (should be async)
+                        ret = super.save(structure);
                     }
                 }else{
                     // new structure
@@ -140,23 +141,28 @@ public class DefaultStructureService extends AbstractCrudService<Structure> impl
                         ret = CompletableFuture.failedFuture(new IllegalArgumentException("Structure is already published"));
                     } else {
 
-                        ret = createIndex(structure.getItemIndex(), true, new Consumer<CreateIndexRequest.Builder>() {
-                                        @Override
-                                        public void accept(CreateIndexRequest.Builder builder) {
-                                            // FIXME: add mappings for schema
-                                        }
-                                    })
-                                .thenCompose(createIndexResponse -> {
+                        ret = createIndex(structure.getItemIndex(), true, indexBuilder -> {
 
-                                    // update tracking fields
-                                    structure.setPublished(true);
-                                    structure.setPublishedTimestamp(System.currentTimeMillis());
-                                    structure.setUpdated(structure.getPublishedTimestamp());
+                            IdlConverter<Property> converter = idlConverterFactory.createConverter(c3ToEsConverterStrategy);
+                            Property esProperty = converter.convert(structure.getItemDefinition());
 
-                                    // FIXME: add optimizations for decorators needed by structure (should be async)
+                            if(esProperty.isObject()){
+                                indexBuilder.mappings(m -> m.properties(esProperty.object().properties()));
+                            }else{
+                                throw new IllegalStateException("ItemDefinition must be an object");
+                            }
 
-                                    return super.save(structure).thenApply(structure1 -> null);
-                                });
+                        })
+                        .thenCompose(createIndexResponse -> {
+                            // update tracking fields
+                            structure.setPublished(true);
+                            structure.setPublishedTimestamp(System.currentTimeMillis());
+                            structure.setUpdated(structure.getPublishedTimestamp());
+
+                            // FIXME: add optimizations for decorators needed by structure (should be async)
+
+                            return super.save(structure).thenApply(structure1 -> null);
+                        });
                     }
                 }else{
                     ret = CompletableFuture.failedFuture(new IllegalArgumentException("No Structure found with id: "+structureId));
@@ -191,29 +197,6 @@ public class DefaultStructureService extends AbstractCrudService<Structure> impl
                 }
                 return ret;
             });
-    }
-
-    static void checkFieldNameFormat(String fieldName){
-        if(fieldName.contains("-")
-                || fieldName.contains("+")
-                || fieldName.contains(".")
-                || fieldName.contains("..")
-                || fieldName.contains("\\")
-                || fieldName.contains("/")
-                || fieldName.contains("*")
-                || fieldName.contains("?")
-                || fieldName.contains("\"")
-                || fieldName.contains("<")
-                || fieldName.contains(">")
-                || fieldName.contains("|")
-                || fieldName.contains(" ")
-                || fieldName.contains(",")
-                || fieldName.contains("#")
-                || fieldName.contains(":")
-                || fieldName.contains(";")
-                || fieldName.getBytes().length > 255){
-            throw new IllegalStateException("Field Name is not in correct format, \ncannot contain - + . .. \\ / * ? \" < > | , # : ; \ncannot contain a space or be longer than 255 bytes");
-        }
     }
 
 }

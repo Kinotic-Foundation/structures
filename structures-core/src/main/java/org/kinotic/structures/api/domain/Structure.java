@@ -22,7 +22,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.kinotic.continuum.api.Identifiable;
-import org.kinotic.continuum.idl.api.ObjectTypeDefinition;
+import org.kinotic.continuum.idl.api.ObjectC3Type;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.*;
 
@@ -66,6 +66,6 @@ public class Structure implements Identifiable<String> {
     private String itemIndex = null;
 
     @Field(type = FieldType.Flattened)
-    private ObjectTypeDefinition itemDefinition = null;
+    private ObjectC3Type itemDefinition = null;
 
 }
