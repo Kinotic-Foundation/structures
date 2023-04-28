@@ -18,7 +18,8 @@ public class C3ToEsConverterStrategy implements IdlConverterStrategy<Property> {
             new PrimitiveC3TypeToEsPrimitiveProperty(),
             new StringC3TypeToEsStringLikeProperty(),
             new DateC3TypeToEsDateProperty(),
-            new ObjectC3TypeToEsObjectProperty()
+            new ObjectC3TypeToEsObjectProperty(),
+            new ArrayC3TypeToEsProperty()
     );
 
     @Override

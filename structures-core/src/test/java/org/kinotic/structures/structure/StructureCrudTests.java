@@ -38,8 +38,6 @@ import java.util.concurrent.CompletableFuture;
 @SpringBootTest
 public class StructureCrudTests extends ElasticsearchTestBase {
 
-	//    @Autowired
-//    private TraitService traitService;
 	@Autowired
 	private StructureService structureService;
 //    @Autowired
@@ -64,7 +62,7 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 
 
 	@Test
-	public void createAndDeleteStructure() {
+	public void createPublishAndDeleteStructure() throws Exception {
 
 		Structure structure = new Structure();
 		structure.setName("Person")
@@ -87,7 +85,23 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 					.expectComplete()
 					.verify();
 
+		CompletableFuture<Void> pubFuture = structureService.publish(future.get().getId());
 
+		StepVerifier.create(Mono.fromFuture(pubFuture))
+					.expectComplete()
+					.verify();
+
+		CompletableFuture<Void> unPubFuture = structureService.unPublish(future.get().getId());
+
+		StepVerifier.create(Mono.fromFuture(unPubFuture))
+					.expectComplete()
+					.verify();
+
+		CompletableFuture<Void> delFuture = structureService.deleteById(future.get().getId());
+
+		StepVerifier.create(Mono.fromFuture(delFuture))
+					.expectComplete()
+					.verify();
 	}
 //
 //	@Test
