@@ -47,7 +47,7 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 //
 //
 
-	private ObjectC3Type buildTestItemDefinition(){
+	private ObjectC3Type buildTestItemDefinition(boolean addInvalidField){
 		return new ObjectC3Type()
 				.addProperty("name", new StringC3Type())
 				.addProperty("description", new StringC3Type())
@@ -56,7 +56,7 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 								.addProperty("street", new StringC3Type())
 								.addProperty("city", new StringC3Type())
 								.addProperty("state", new StringC3Type())
-								.addProperty("zip", new StringC3Type())
+								.addProperty("zip"+(addInvalidField ? "." : ""), new StringC3Type())
 				));
 	}
 
@@ -68,7 +68,7 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 		structure.setName("Person")
 				 .setNamespace("kinotic_")
 				 .setDescription("Defines a Person")
-				 .setItemDefinition(buildTestItemDefinition());
+				 .setItemDefinition(buildTestItemDefinition(false));
 
 		CompletableFuture<Structure> future = structureService.save(structure);
 
@@ -103,6 +103,22 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 					.expectComplete()
 					.verify();
 	}
+
+	@Test
+	public void createStructureInvalidField() throws Exception{
+		Structure structure = new Structure();
+		structure.setName("Person")
+				 .setNamespace("kinotic_")
+				 .setDescription("Defines a Person")
+				 .setItemDefinition(buildTestItemDefinition(true));
+
+		CompletableFuture<Structure> future = structureService.save(structure);
+
+		StepVerifier.create(Mono.fromFuture(future))
+					.expectError(IllegalArgumentException.class)
+					.verify();
+	}
+
 //
 //	@Test
 //	public void tryCreateDuplicateStructure(){

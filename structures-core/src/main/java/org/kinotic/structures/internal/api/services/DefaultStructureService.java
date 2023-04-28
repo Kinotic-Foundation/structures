@@ -1,8 +1,10 @@
 package org.kinotic.structures.internal.api.services;
 
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
+import co.elastic.clients.elasticsearch._types.mapping.ObjectProperty;
 import co.elastic.clients.elasticsearch._types.mapping.Property;
 import co.elastic.clients.elasticsearch._types.query_dsl.TermQuery;
+import org.kinotic.continuum.idl.api.ObjectC3Type;
 import org.kinotic.continuum.idl.converter.IdlConverter;
 import org.kinotic.continuum.idl.converter.IdlConverterFactory;
 import org.kinotic.structures.api.domain.AlreadyExistsException;
@@ -47,11 +49,15 @@ public class DefaultStructureService extends AbstractCrudService<Structure> impl
 
     @Override
     public CompletableFuture<Structure> save(Structure structure) {
+
         if(structure.getName() == null || structure.getName().isBlank()){
-            return CompletableFuture.failedFuture(new IllegalArgumentException("Structures must provide proper Structure Name."));
+            return CompletableFuture.failedFuture(new IllegalArgumentException("Structures must provide a proper Structure Name."));
         }
         if(structure.getNamespace() == null || structure.getNamespace().isBlank()){
-            return CompletableFuture.failedFuture(new IllegalArgumentException("Structures must provide proper Structure Namespace."));
+            return CompletableFuture.failedFuture(new IllegalArgumentException("Structures must provide a proper Structure Namespace."));
+        }
+        if(structure.getItemDefinition() == null){
+            return CompletableFuture.failedFuture(new IllegalArgumentException("Structures must provide a proper Structure ItemDefinition."));
         }
 
         String logicalIndexName = (structure.getNamespace().trim()+structure.getName().trim()).toLowerCase();
@@ -89,7 +95,8 @@ public class DefaultStructureService extends AbstractCrudService<Structure> impl
                     // Store name of the elastic search index for items
                     structure.setItemIndex(this.structuresProperties.getIndexPrefix().trim().toLowerCase()+logicalIndexName);
 
-                    // FIXME: Preprocess itemDefinition to ensure it is valid (should be async)
+                    // Try and create ES mapping to make sure IDL is valid
+                    createEsObject(structure.getItemDefinition());
 
                     ret = super.save(structure);
                 }
@@ -143,14 +150,7 @@ public class DefaultStructureService extends AbstractCrudService<Structure> impl
 
                         ret = createIndex(structure.getItemIndex(), true, indexBuilder -> {
 
-                            IdlConverter<Property> converter = idlConverterFactory.createConverter(c3ToEsConverterStrategy);
-                            Property esProperty = converter.convert(structure.getItemDefinition());
-
-                            if(esProperty.isObject()){
-                                indexBuilder.mappings(m -> m.properties(esProperty.object().properties()));
-                            }else{
-                                throw new IllegalStateException("ItemDefinition must be an object");
-                            }
+                           indexBuilder.mappings(m -> m.properties(createEsObject(structure.getItemDefinition()).properties()));
 
                         })
                         .thenCompose(createIndexResponse -> {
@@ -197,6 +197,19 @@ public class DefaultStructureService extends AbstractCrudService<Structure> impl
                 }
                 return ret;
             });
+    }
+
+    private ObjectProperty createEsObject(ObjectC3Type objectC3Type){
+        ObjectProperty ret;
+        IdlConverter<Property> converter = idlConverterFactory.createConverter(c3ToEsConverterStrategy);
+        Property esProperty = converter.convert(objectC3Type);
+
+        if(esProperty.isObject()){
+            ret = esProperty.object();
+        }else{
+            throw new IllegalStateException("ItemDefinition must be an object");
+        }
+        return ret;
     }
 
 }
