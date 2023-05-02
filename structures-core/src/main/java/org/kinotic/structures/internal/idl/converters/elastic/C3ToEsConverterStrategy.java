@@ -14,7 +14,7 @@ import java.util.List;
  */
 public class C3ToEsConverterStrategy implements IdlConverterStrategy<Property> {
 
-    private final static List<SpecificC3TypeConverter<Property>> specificTypeConverters = List.of(
+    private final static List<SpecificC3TypeConverter<Property, ?>> specificTypeConverters = List.of(
             new PrimitiveC3TypeToEsPrimitiveProperty(),
             new StringC3TypeToEsStringLikeProperty(),
             new DateC3TypeToEsDateProperty(),
@@ -23,12 +23,12 @@ public class C3ToEsConverterStrategy implements IdlConverterStrategy<Property> {
     );
 
     @Override
-    public List<SpecificC3TypeConverter<Property>> specificTypeConverters() {
+    public List<SpecificC3TypeConverter<Property, ?>> specificTypeConverters() {
         return specificTypeConverters;
     }
 
     @Override
-    public List<GenericC3TypeConverter<Property>> genericTypeConverters() {
+    public List<GenericC3TypeConverter<Property, ?>> genericTypeConverters() {
         return Collections.emptyList();
     }
 

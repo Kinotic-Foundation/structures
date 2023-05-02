@@ -7,7 +7,6 @@ import co.elastic.clients.elasticsearch._types.query_dsl.TermQuery;
 import org.kinotic.continuum.idl.api.ObjectC3Type;
 import org.kinotic.continuum.idl.converter.IdlConverter;
 import org.kinotic.continuum.idl.converter.IdlConverterFactory;
-import org.kinotic.structures.api.domain.AlreadyExistsException;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.StructureService;
 import org.kinotic.structures.internal.api.services.util.StructureHelper;
@@ -79,7 +78,7 @@ public class DefaultStructureService extends AbstractCrudService<Structure> impl
 
                     // trying to save a new structure with an existing name
                     if(structure.getId() == null){
-                        ret = CompletableFuture.failedFuture(new AlreadyExistsException("Structure Namespace+Name must be unique, '"+logicalIndexName+"' already exists."));
+                        ret = CompletableFuture.failedFuture(new IllegalArgumentException("Structure Namespace+Name must be unique, '"+logicalIndexName+"' already exists."));
                     }else{
                         // updating an existing structure, reconcile the differences
                         structure.setUpdated(System.currentTimeMillis());

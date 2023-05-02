@@ -25,6 +25,8 @@ dependencies {
 	implementation 'com.fasterxml.jackson.core:jackson-core'
 	implementation 'com.fasterxml.jackson.core:jackson-databind'
 
+	implementation "com.jayway.jsonpath:json-path:${jsonPathVersion}"
+
 	implementation "com.github.ben-manes.caffeine:caffeine:${caffeineVersion}"
 
 	implementation "com.apollographql.federation:federation-graphql-java-support:${federationJvmVersion}"

@@ -11,7 +11,7 @@ import co.elastic.clients.elasticsearch.core.search.HitsMetadata;
 import co.elastic.clients.elasticsearch.indices.CreateIndexRequest;
 import co.elastic.clients.elasticsearch.indices.StorageType;
 import org.kinotic.continuum.api.Identifiable;
-import org.kinotic.continuum.core.api.crud.CrudService;
+import org.kinotic.continuum.core.api.crud.IdentifiableCrudService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -22,7 +22,6 @@ import reactor.core.publisher.Mono;
 
 import javax.annotation.PostConstruct;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -31,7 +30,7 @@ import java.util.function.Consumer;
 /**
  * Created by Navíd Mitchell 🤪 on 4/24/23.
  */
-public abstract class AbstractCrudService<T extends Identifiable<String>> implements CrudService<T, String>{
+public abstract class AbstractCrudService<T extends Identifiable<String>> implements IdentifiableCrudService<T, String> {
 
     private final String indexName;
     private final Class<T> type;
@@ -184,11 +183,6 @@ public abstract class AbstractCrudService<T extends Identifiable<String>> implem
     @Override
     public CompletableFuture<Page<T>> findAll(Pageable pageable) {
         return findAll(pageable, null);
-    }
-
-    @Override
-    public CompletableFuture<Page<T>> findByIdNotIn(Collection<String> collection, Pageable pageable) {
-        return null;
     }
 
     @Override

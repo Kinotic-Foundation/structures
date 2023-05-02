@@ -14,27 +14,22 @@ import java.util.Set;
 /**
  * Created by Navíd Mitchell 🤪 on 4/27/23.
  */
-public class ObjectC3TypeToEsObjectProperty implements SpecificC3TypeConverter<Property>, Cacheable {
+public class ObjectC3TypeToEsObjectProperty implements SpecificC3TypeConverter<Property, ObjectC3Type>, Cacheable {
 
     private static final Set<Class<? extends C3Type>> supports = Set.of(ObjectC3Type.class);
 
     @Override
-    public Property convert(C3Type c3Type, C3ConversionContext<Property> conversionContext) {
-        if(c3Type instanceof ObjectC3Type){
-            ObjectC3Type objectC3Type = (ObjectC3Type) c3Type;
-            ObjectProperty.Builder builder = new ObjectProperty.Builder();
+    public Property convert(ObjectC3Type objectC3Type, C3ConversionContext<Property> conversionContext) {
+        ObjectProperty.Builder builder = new ObjectProperty.Builder();
 
-            for(Map.Entry<String, C3Type> entry : objectC3Type.getProperties().entrySet()){
+        for(Map.Entry<String, C3Type> entry : objectC3Type.getProperties().entrySet()){
 
-                checkFieldNameFormat(entry.getKey());
+            checkFieldNameFormat(entry.getKey());
 
-                builder.properties(entry.getKey(), conversionContext.convert(entry.getValue()));
-            }
-
-            return builder.build()._toProperty();
-        }else{
-            throw new IllegalStateException("Unexpected C3Type: "+c3Type.getClass().getName()+" expected: "+ObjectC3Type.class.getName());
+            builder.properties(entry.getKey(), conversionContext.convert(entry.getValue()));
         }
+
+        return builder.build()._toProperty();
     }
 
     @Override

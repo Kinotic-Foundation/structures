@@ -13,12 +13,12 @@ import java.util.Set;
  * Creates an ES property that is either a Text or Keyword type, depending on the decorators on the {@lnik C3Type}
  * Created by Navíd Mitchell 🤪 on 4/28/23.
  */
-public class StringC3TypeToEsStringLikeProperty implements SpecificC3TypeConverter<Property>{
+public class StringC3TypeToEsStringLikeProperty implements SpecificC3TypeConverter<Property, StringC3Type>{
 
     private static final Set<Class<? extends C3Type>> supports = Set.of(StringC3Type.class);
 
     @Override
-    public Property convert(C3Type c3Type, C3ConversionContext<Property> conversionContext) {
+    public Property convert(StringC3Type c3Type, C3ConversionContext<Property> conversionContext) {
         // FIXME: look at decorators to determine if this should be a keyword or text
         return KeywordProperty.of(f -> f)._toProperty();
     }

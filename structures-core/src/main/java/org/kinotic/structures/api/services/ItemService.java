@@ -19,7 +19,6 @@ package org.kinotic.structures.api.services;
 
 import org.elasticsearch.search.SearchHits;
 import org.kinotic.continuum.api.annotations.Publish;
-import org.kinotic.structures.api.domain.NotFoundException;
 import org.kinotic.structures.api.domain.TypeCheckMap;
 
 import java.io.IOException;
@@ -49,7 +48,7 @@ public interface ItemService {
 
     void delete(String structureId, String itemId, Map<String, Object> context) throws Exception;
 
-    void requestBulkUpdatesForStructure(String structureId) throws IOException, NotFoundException;
+    void requestBulkUpdatesForStructure(String structureId) throws IOException;
 
     void pushItemForBulkUpdate(String structureId, TypeCheckMap item, Map<String, Object> context) throws Exception;
 

@@ -11,7 +11,7 @@ import java.util.Set;
 /**
  * Created by Navíd Mitchell 🤪 on 4/28/23.
  */
-public class PrimitiveC3TypeToEsPrimitiveProperty implements SpecificC3TypeConverter<Property> {
+public class PrimitiveC3TypeToEsPrimitiveProperty implements SpecificC3TypeConverter<Property, C3Type> {
 
     private final MultipleSpecificC3TypeConverter<Property> converter = new MultipleSpecificC3TypeConverter<>();
 

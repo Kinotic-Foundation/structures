@@ -15,26 +15,21 @@ import java.util.Set;
 /**
  * Created by Navíd Mitchell 🤪 on 4/28/23.
  */
-public class DateC3TypeToEsDateProperty implements SpecificC3TypeConverter<Property> {
+public class DateC3TypeToEsDateProperty implements SpecificC3TypeConverter<Property, DateC3Type> {
 
     private static final Set<Class<? extends C3Type>> supports = Set.of(DateC3Type.class);
 
     @Override
-    public Property convert(C3Type c3Type, C3ConversionContext<Property> conversionContext) {
-        if(c3Type instanceof DateC3Type){
-            DateC3Type dateC3Type = (DateC3Type) c3Type;
-            DateProperty.Builder builder = new DateProperty.Builder();
-            if(dateC3Type.getFormat() instanceof MillsDateStyle){
-                builder.format("epoch_millis");
-            }else if(dateC3Type.getFormat() instanceof UnixDateStyle){
-                builder.format("epoch_second");
-            } else if (dateC3Type.getFormat() instanceof StringDateStyle) {
-                builder.format("date_optional_time");
-            }
-            return builder.build()._toProperty();
-        }else{
-            throw new IllegalStateException("Unexpected C3Type: "+c3Type.getClass().getName()+" expected: "+DateC3Type.class.getName());
+    public Property convert(DateC3Type dateC3Type, C3ConversionContext<Property> conversionContext) {
+        DateProperty.Builder builder = new DateProperty.Builder();
+        if(dateC3Type.getFormat() instanceof MillsDateStyle){
+            builder.format("epoch_millis");
+        }else if(dateC3Type.getFormat() instanceof UnixDateStyle){
+            builder.format("epoch_second");
+        } else if (dateC3Type.getFormat() instanceof StringDateStyle) {
+            builder.format("date_optional_time");
         }
+        return builder.build()._toProperty();
     }
 
     @Override
