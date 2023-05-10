@@ -5,6 +5,6 @@ package org.kinotic.structures.internal.api.services;
  */
 public interface DecoratorInstanceService {
 
-    
+
 
 }

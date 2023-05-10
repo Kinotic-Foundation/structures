@@ -8,6 +8,7 @@ import reactor.core.publisher.Mono;
 import java.util.concurrent.CompletableFuture;
 
 /**
+ * Provides access to entities for a given structure.
  * Created by Navíd Mitchell 🤪 on 5/10/23.
  */
 public interface EntitiesService {
