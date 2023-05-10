@@ -20,12 +20,12 @@ public class DefaultEntitiesService implements EntitiesService {
 
     private final AsyncLoadingCache<String, EntityService> entityServiceCache;
 
-    public DefaultEntitiesService(StructureService structureService) {
+    public DefaultEntitiesService(StructureService structureService,
+                                  EntityServiceFactory entityServiceFactory){
         this.entityServiceCache = Caffeine.newBuilder()
                                           .buildAsync((key, executor) ->
                                               structureService.findById(key)
-                                                              .thenApplyAsync(DefaultEntityService::new,
-                                                                              executor));
+                                                              .thenComposeAsync(entityServiceFactory::createEntityService, executor));
     }
 
     @Override

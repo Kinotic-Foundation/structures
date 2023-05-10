@@ -7,14 +7,13 @@ import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.async.ByteArrayFeeder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.kinotic.continuum.idl.api.schema.decorators.C3Decorator;
-import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.decorators.lifecycle.UpsertFieldPreProcessor;
+import org.kinotic.structures.api.domain.Structure;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -27,13 +26,16 @@ public class BasicUpsertEntityPreProcessor implements UpsertEntityPreProcessor {
     private final Structure structure;
     // Map of json path to decorator logic
     private final Map<String, DecoratorLogic<C3Decorator, Object, Object,
-                                             UpsertFieldPreProcessor<C3Decorator, Object, Object>>> fieldPreProcessors = new HashMap<>();
+                                             UpsertFieldPreProcessor<C3Decorator, Object, Object>>> fieldPreProcessors;
 
 
     public BasicUpsertEntityPreProcessor(ObjectMapper objectMapper,
-                                         Structure structure) {
+                                         Structure structure,
+                                         Map<String, DecoratorLogic<C3Decorator, Object, Object,
+                                                 UpsertFieldPreProcessor<C3Decorator, Object, Object>>> fieldPreProcessors) {
         this.objectMapper = objectMapper;
         this.structure = structure;
+        this.fieldPreProcessors = fieldPreProcessors;
     }
 
     @Override

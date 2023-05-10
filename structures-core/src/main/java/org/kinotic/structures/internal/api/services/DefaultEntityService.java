@@ -1,7 +1,7 @@
 package org.kinotic.structures.internal.api.services;
 
 import co.elastic.clients.util.BinaryData;
-import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.internal.api.decorators.UpsertEntityPreProcessor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -12,10 +12,10 @@ import java.util.concurrent.CompletableFuture;
  */
 public class DefaultEntityService implements EntityService {
 
-    private final Structure structure;
+    private final UpsertEntityPreProcessor upsertEntityPreProcessor;
 
-    public DefaultEntityService(Structure structure) {
-        this.structure = structure;
+    public DefaultEntityService(UpsertEntityPreProcessor upsertEntityPreProcessor) {
+        this.upsertEntityPreProcessor = upsertEntityPreProcessor;
     }
 
     @Override
