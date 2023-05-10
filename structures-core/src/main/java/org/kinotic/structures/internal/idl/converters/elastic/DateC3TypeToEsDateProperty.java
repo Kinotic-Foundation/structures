@@ -2,25 +2,25 @@ package org.kinotic.structures.internal.idl.converters.elastic;
 
 import co.elastic.clients.elasticsearch._types.mapping.DateProperty;
 import co.elastic.clients.elasticsearch._types.mapping.Property;
-import org.kinotic.continuum.idl.api.C3Type;
-import org.kinotic.continuum.idl.api.DateC3Type;
-import org.kinotic.continuum.idl.api.datestyles.MillsDateStyle;
-import org.kinotic.continuum.idl.api.datestyles.StringDateStyle;
-import org.kinotic.continuum.idl.api.datestyles.UnixDateStyle;
-import org.kinotic.continuum.idl.converter.C3ConversionContext;
-import org.kinotic.continuum.idl.converter.SpecificC3TypeConverter;
+import org.kinotic.continuum.idl.api.schema.C3Type;
+import org.kinotic.continuum.idl.api.schema.DateC3Type;
+import org.kinotic.continuum.idl.api.schema.datestyles.MillsDateStyle;
+import org.kinotic.continuum.idl.api.schema.datestyles.StringDateStyle;
+import org.kinotic.continuum.idl.api.schema.datestyles.UnixDateStyle;
+import org.kinotic.continuum.idl.api.converter.C3ConversionContext;
+import org.kinotic.continuum.idl.api.converter.SpecificC3TypeConverter;
 
 import java.util.Set;
 
 /**
  * Created by Navíd Mitchell 🤪 on 4/28/23.
  */
-public class DateC3TypeToEsDateProperty implements SpecificC3TypeConverter<Property, DateC3Type> {
+public class DateC3TypeToEsDateProperty implements SpecificC3TypeConverter<Property, DateC3Type, EsConversionInfo> {
 
     private static final Set<Class<? extends C3Type>> supports = Set.of(DateC3Type.class);
 
     @Override
-    public Property convert(DateC3Type dateC3Type, C3ConversionContext<Property> conversionContext) {
+    public Property convert(DateC3Type dateC3Type, C3ConversionContext<Property, EsConversionInfo> conversionContext) {
         DateProperty.Builder builder = new DateProperty.Builder();
         if(dateC3Type.getFormat() instanceof MillsDateStyle){
             builder.format("epoch_millis");

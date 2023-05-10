@@ -4,6 +4,8 @@ import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import org.kinotic.structures.api.domain.Namespace;
 import org.kinotic.structures.api.services.NamespaceService;
 import org.kinotic.structures.api.services.StructureService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.elasticsearch.core.ReactiveElasticsearchOperations;
 import org.springframework.stereotype.Component;
 
@@ -34,5 +36,10 @@ public class DefaultNamespaceService extends AbstractCrudService<Namespace> impl
                 throw new IllegalStateException("Cannot delete namespace with structures in it.");
             }
         }).thenCompose(v -> super.deleteById(id));
+    }
+
+    @Override
+    public CompletableFuture<Page<Namespace>> search(String searchText, Pageable pageable) {
+        return null;
     }
 }

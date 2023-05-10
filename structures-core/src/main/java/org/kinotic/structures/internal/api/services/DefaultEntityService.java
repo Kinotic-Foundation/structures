@@ -1,8 +1,7 @@
 package org.kinotic.structures.internal.api.services;
 
-import org.kinotic.structures.api.services.EntityService;
-import org.springframework.core.codec.ByteArrayDecoder;
-import org.springframework.core.io.buffer.DataBuffer;
+import co.elastic.clients.util.BinaryData;
+import org.kinotic.structures.api.domain.Structure;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -13,14 +12,19 @@ import java.util.concurrent.CompletableFuture;
  */
 public class DefaultEntityService implements EntityService {
 
+    private final Structure structure;
+
+    public DefaultEntityService(Structure structure) {
+        this.structure = structure;
+    }
+
     @Override
-    public CompletableFuture<DataBuffer> save(DataBuffer entity) {
+    public CompletableFuture<BinaryData> save(BinaryData entity) {
         return null;
     }
 
     @Override
-    public CompletableFuture<DataBuffer> findById(String s) {
-        ByteArrayDecoder
+    public CompletableFuture<BinaryData> findById(String s) {
         return null;
     }
 
@@ -35,12 +39,12 @@ public class DefaultEntityService implements EntityService {
     }
 
     @Override
-    public CompletableFuture<Page<DataBuffer>> findAll(Pageable pageable) {
+    public CompletableFuture<Page<BinaryData>> findAll(Pageable pageable) {
         return null;
     }
 
     @Override
-    public CompletableFuture<Page<DataBuffer>> search(String searchText, Pageable pageable) {
+    public CompletableFuture<Page<BinaryData>> search(String searchText, Pageable pageable) {
         return null;
     }
 

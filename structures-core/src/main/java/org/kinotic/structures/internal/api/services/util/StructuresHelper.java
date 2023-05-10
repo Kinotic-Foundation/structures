@@ -1,6 +1,6 @@
 package org.kinotic.structures.internal.api.services.util;
 
-public class StructureHelper {
+public class StructuresHelper {
 
     /**
      * Function will validate the index name, ensures we can use it for creating an
@@ -37,7 +37,31 @@ public class StructureHelper {
                 || indexName.contains(";")
                 || indexName.contains("..")
                 || indexName.getBytes().length > 255){
-            throw new IllegalArgumentException("namespace and id combined are not in correct format, \ncannot start with _ - +\ncannot contain . .. \\ / * ? \" < > | , # : ; \ncannot contain a space or be longer than 255 bytes");
+            throw new IllegalArgumentException("Elastic index name is not in correct format, \ncannot start with _ - +\ncannot contain . .. \\ / * ? \" < > | , # : ; space, or be longer than 255 bytes");
         }
     }
+
+    public static void fieldNameValidation(String fieldName){
+        if(fieldName.contains("-")
+                || fieldName.contains("+")
+                || fieldName.contains(".")
+                || fieldName.contains("..")
+                || fieldName.contains("\\")
+                || fieldName.contains("/")
+                || fieldName.contains("*")
+                || fieldName.contains("?")
+                || fieldName.contains("\"")
+                || fieldName.contains("<")
+                || fieldName.contains(">")
+                || fieldName.contains("|")
+                || fieldName.contains(" ")
+                || fieldName.contains(",")
+                || fieldName.contains("#")
+                || fieldName.contains(":")
+                || fieldName.contains(";")
+                || fieldName.getBytes().length > 255){
+            throw new IllegalArgumentException("Field Name is not in correct format, \ncannot contain - + . .. \\ / * ? \" < > | , # : ; space, or be longer than 255 bytes");
+        }
+    }
+
 }

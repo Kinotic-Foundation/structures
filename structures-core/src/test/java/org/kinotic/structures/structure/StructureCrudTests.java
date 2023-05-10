@@ -20,9 +20,10 @@ package org.kinotic.structures.structure;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.kinotic.continuum.idl.api.ArrayC3Type;
-import org.kinotic.continuum.idl.api.ObjectC3Type;
-import org.kinotic.continuum.idl.api.StringC3Type;
+import org.kinotic.continuum.idl.api.schema.ArrayC3Type;
+import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
+import org.kinotic.continuum.idl.api.schema.StringC3Type;
+import org.kinotic.continuum.idl.api.schema.decorators.NotNullC3Decorator;
 import org.kinotic.structures.ElasticsearchTestBase;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.StructureService;
@@ -49,11 +50,15 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 
 	private ObjectC3Type buildTestItemDefinition(boolean addInvalidField){
 		return new ObjectC3Type()
-				.addProperty("name", new StringC3Type())
+				.setName("Person")
+				.setNamespace("kinotic")
+				.addProperty("name", new StringC3Type().addDecorator(new NotNullC3Decorator()))
 				.addProperty("description", new StringC3Type())
 				.addProperty("addresses", new ArrayC3Type(
 						new ObjectC3Type()
-								.addProperty("street", new StringC3Type())
+								.setName("Address")
+								.setNamespace("kinotic")
+								.addProperty("street", new StringC3Type().addDecorator(new NotNullC3Decorator()))
 								.addProperty("city", new StringC3Type())
 								.addProperty("state", new StringC3Type())
 								.addProperty("zip"+(addInvalidField ? "." : ""), new StringC3Type())
@@ -66,9 +71,9 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 
 		Structure structure = new Structure();
 		structure.setName("Person")
-				 .setNamespace("kinotic_")
+				 .setNamespace("kinotic")
 				 .setDescription("Defines a Person")
-				 .setItemDefinition(buildTestItemDefinition(false));
+				 .setEntityDefinition(buildTestItemDefinition(false));
 
 		CompletableFuture<Structure> future = structureService.save(structure);
 
@@ -79,7 +84,7 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 						Assertions.assertTrue(savedStructure.getUpdated() > 0);
 						Assertions.assertEquals(structure.getName(), savedStructure.getName());
 						Assertions.assertEquals(structure.getDescription(), savedStructure.getDescription());
-						Assertions.assertEquals(structure.getItemDefinition(), savedStructure.getItemDefinition());
+						Assertions.assertEquals(structure.getEntityDefinition(), savedStructure.getEntityDefinition());
 						return true;
 					})
 					.expectComplete()
@@ -110,7 +115,7 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 		structure.setName("Person")
 				 .setNamespace("kinotic_")
 				 .setDescription("Defines a Person")
-				 .setItemDefinition(buildTestItemDefinition(true));
+				 .setEntityDefinition(buildTestItemDefinition(true));
 
 		CompletableFuture<Structure> future = structureService.save(structure);
 

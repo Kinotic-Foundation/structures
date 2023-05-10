@@ -6,7 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.kinotic.structures.internal.api.services.util.StructureHelper;
+import org.kinotic.structures.internal.api.services.util.StructuresHelper;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
@@ -44,7 +44,7 @@ public class StructuresProperties {
     public void validate(){
         // this will validate we do not contain invalid characters
         // FIXME: should we limit the number of chars as well?
-        StructureHelper.indexNameValidation(indexPrefix);
+        StructuresHelper.indexNameValidation(indexPrefix);
     }
 
     public boolean hasElasticUsernameAndPassword(){

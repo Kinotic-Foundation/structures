@@ -21,7 +21,7 @@ import static org.springframework.web.reactive.function.server.RequestPredicates
  * Created by Navíd Mitchell 🤪 on 4/17/23.
  */
 //@Configuration
-public class GraphQlConfig {
+public class StructuresGraphQlConfig {
 
     private static final RequestPredicate SUPPORTS_MEDIATYPES = accept(MediaType.APPLICATION_GRAPHQL,
                                                                        MediaType.APPLICATION_JSON)

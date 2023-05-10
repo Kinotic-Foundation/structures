@@ -1,8 +1,8 @@
 package org.kinotic.structures.internal.idl.converters.graphql;
 
-import org.kinotic.continuum.idl.converter.GenericC3TypeConverter;
-import org.kinotic.continuum.idl.converter.IdlConverterStrategy;
-import org.kinotic.continuum.idl.converter.SpecificC3TypeConverter;
+import org.kinotic.continuum.idl.api.converter.GenericC3TypeConverter;
+import org.kinotic.continuum.idl.api.converter.IdlConverterStrategy;
+import org.kinotic.continuum.idl.api.converter.SpecificC3TypeConverter;
 
 import java.util.List;
 

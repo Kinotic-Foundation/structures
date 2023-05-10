@@ -1,19 +1,19 @@
 package org.kinotic.structures.internal.idl.converters.elastic;
 
 import co.elastic.clients.elasticsearch._types.mapping.*;
-import org.kinotic.continuum.idl.api.*;
-import org.kinotic.continuum.idl.converter.C3ConversionContext;
-import org.kinotic.continuum.idl.converter.SpecificC3TypeConverter;
-import org.kinotic.continuum.idl.internal.converter.MultipleSpecificC3TypeConverter;
+import org.kinotic.continuum.idl.api.schema.*;
+import org.kinotic.continuum.idl.api.converter.C3ConversionContext;
+import org.kinotic.continuum.idl.api.converter.SpecificC3TypeConverter;
+import org.kinotic.continuum.idl.internal.api.converter.MultipleSpecificC3TypeConverter;
 
 import java.util.Set;
 
 /**
  * Created by Navíd Mitchell 🤪 on 4/28/23.
  */
-public class PrimitiveC3TypeToEsPrimitiveProperty implements SpecificC3TypeConverter<Property, C3Type> {
+public class PrimitiveC3TypeToEsPrimitiveProperty implements SpecificC3TypeConverter<Property, C3Type, EsConversionInfo> {
 
-    private final MultipleSpecificC3TypeConverter<Property> converter = new MultipleSpecificC3TypeConverter<>();
+    private final MultipleSpecificC3TypeConverter<Property, EsConversionInfo> converter = new MultipleSpecificC3TypeConverter<>();
 
     public PrimitiveC3TypeToEsPrimitiveProperty() {
         converter.addConverter(BooleanC3Type.class, (c3Type, context) -> BooleanProperty.of(f -> f)._toProperty())
@@ -27,7 +27,7 @@ public class PrimitiveC3TypeToEsPrimitiveProperty implements SpecificC3TypeConve
     }
 
     @Override
-    public Property convert(C3Type c3Type, C3ConversionContext<Property> conversionContext) {
+    public Property convert(C3Type c3Type, C3ConversionContext<Property, EsConversionInfo> conversionContext) {
         return converter.convert(c3Type, conversionContext);
     }
 

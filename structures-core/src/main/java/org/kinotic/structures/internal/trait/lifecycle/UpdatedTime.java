@@ -20,21 +20,12 @@ package org.kinotic.structures.internal.trait.lifecycle;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.domain.TypeCheckMap;
 import org.kinotic.structures.api.domain.traitlifecycle.HasOnBeforeModify;
-import org.kinotic.structures.internal.api.services.ItemServiceInternal;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
 
 @Component
 public class UpdatedTime implements HasOnBeforeModify {
-
-    private final ItemServiceInternal itemService;
-
-    public UpdatedTime(@Lazy ItemServiceInternal itemService){
-        this.itemService = itemService;
-    }
-
 
     @Override
     public TypeCheckMap beforeModify(TypeCheckMap obj, Structure structure, String fieldName, Map<String, Object> context) throws Exception {
