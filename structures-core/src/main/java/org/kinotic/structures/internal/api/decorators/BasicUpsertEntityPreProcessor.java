@@ -10,6 +10,8 @@ import org.kinotic.continuum.idl.api.schema.decorators.C3Decorator;
 import org.kinotic.structures.api.decorators.IdDecorator;
 import org.kinotic.structures.api.decorators.lifecycle.UpsertFieldPreProcessor;
 import org.kinotic.structures.api.domain.Structure;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -22,6 +24,8 @@ import java.util.concurrent.CompletableFuture;
  * Created by Navíd Mitchell 🤪 on 5/5/23.
  */
 public class BasicUpsertEntityPreProcessor implements UpsertEntityPreProcessor {
+
+    private static final Logger log = LoggerFactory.getLogger(BasicUpsertEntityPreProcessor.class);
 
     private final ObjectMapper objectMapper;
     private final Structure structure;
@@ -103,7 +107,10 @@ public class BasicUpsertEntityPreProcessor implements UpsertEntityPreProcessor {
             if(id == null){
                 return CompletableFuture.failedFuture(new IllegalArgumentException("No id field found in entity"));
             }else{
-                return CompletableFuture.completedFuture(new RawEntity(id, outputStream.toByteArray()));
+                // FIXME: remove
+                byte[] entityBytes = outputStream.toByteArray();
+                log.debug("Json\n"+ new String(entityBytes));
+                return CompletableFuture.completedFuture(new RawEntity(id, entityBytes));
             }
 
         } catch (IOException e) {

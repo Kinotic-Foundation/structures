@@ -8,6 +8,7 @@ import org.kinotic.structures.internal.api.services.EntityService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.io.StringReader;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -38,7 +39,7 @@ public class DefaultEntityService implements EntityService {
                     return esAsyncClient.index(i -> i
                             .index(structure.getItemIndex())
                             .id(rawEntity.getId())
-                            .document(rawEntity.getData()))
+                            .withJson(new StringReader(new String(rawEntity.getData()))))
                             .thenApply(indexResponse -> binaryData);
                 });
     }
