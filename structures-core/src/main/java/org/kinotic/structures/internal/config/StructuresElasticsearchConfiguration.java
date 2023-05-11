@@ -29,11 +29,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @EnableConfigurationProperties
 @ComponentScan(basePackages = "org.kinotic.structures")
 @Profile("!test")
-public class StrructuresElasticsearchConfiguration extends ReactiveElasticsearchConfiguration {
+public class StructuresElasticsearchConfiguration extends ReactiveElasticsearchConfiguration {
 
     private final StructuresProperties structuresProperties;
 
-    public StrructuresElasticsearchConfiguration(StructuresProperties structuresProperties) {
+    public StructuresElasticsearchConfiguration(StructuresProperties structuresProperties) {
         this.structuresProperties = structuresProperties;
     }
 

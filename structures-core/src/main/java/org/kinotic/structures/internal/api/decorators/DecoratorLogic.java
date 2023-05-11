@@ -6,7 +6,7 @@ import org.kinotic.structures.api.decorators.lifecycle.DecoratorProcessor;
 /**
  * Created by Navíd Mitchell 🤪 on 5/10/23.
  */
-public class DecoratorLogic<D extends C3Decorator, T, R, P extends DecoratorProcessor<D, T, R>> {
+public class DecoratorLogic<D extends C3Decorator, R, T, P extends DecoratorProcessor<D, R, T>> {
 
     private final D decorator;
 

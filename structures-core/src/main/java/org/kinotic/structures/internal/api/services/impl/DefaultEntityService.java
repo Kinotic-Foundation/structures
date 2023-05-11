@@ -1,7 +1,8 @@
-package org.kinotic.structures.internal.api.services;
+package org.kinotic.structures.internal.api.services.impl;
 
 import co.elastic.clients.util.BinaryData;
 import org.kinotic.structures.internal.api.decorators.UpsertEntityPreProcessor;
+import org.kinotic.structures.internal.api.services.EntityService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 

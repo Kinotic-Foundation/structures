@@ -2,7 +2,7 @@ package org.kinotic.structures.internal.graphql;
 
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
-import org.kinotic.structures.internal.api.services.ItemServiceInternal;
+import org.kinotic.structures.api.services.EntitiesService;
 
 /**
  * Created by Navíd Mitchell 🤪 on 4/18/23.
@@ -10,17 +10,17 @@ import org.kinotic.structures.internal.api.services.ItemServiceInternal;
 public class DeleteDataFetcher implements DataFetcher<Boolean> {
 
     private final String structureId;
-    private final ItemServiceInternal itemService;
+    private final EntitiesService entitiesService;
 
-    public DeleteDataFetcher(String structureId, ItemServiceInternal itemService) {
+    public DeleteDataFetcher(String structureId, EntitiesService entitiesService) {
         this.structureId = structureId;
-        this.itemService = itemService;
+        this.entitiesService = entitiesService;
     }
 
     @Override
     public Boolean get(DataFetchingEnvironment environment) throws Exception {
         String id = environment.getArgument("id");
-        itemService.delete(structureId, id, null);
+        entitiesService.deleteById(structureId, id);
         return true;
     }
 }

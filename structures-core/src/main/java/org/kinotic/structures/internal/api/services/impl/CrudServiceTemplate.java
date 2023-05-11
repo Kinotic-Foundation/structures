@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.api.services;
+package org.kinotic.structures.internal.api.services.impl;
 
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import co.elastic.clients.elasticsearch._types.SortOrder;

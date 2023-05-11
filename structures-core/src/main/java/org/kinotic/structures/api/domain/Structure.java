@@ -23,8 +23,11 @@ import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.kinotic.continuum.api.Identifiable;
 import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
+import org.kinotic.structures.internal.idl.converters.elastic.DecoratedProperty;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.*;
+
+import java.util.List;
 
 @Getter
 @Setter
@@ -67,5 +70,8 @@ public class Structure implements Identifiable<String> {
 
     @Field(type = FieldType.Flattened)
     private ObjectC3Type entityDefinition = null;
+
+    @Field(type = FieldType.Flattened)
+    private List<DecoratedProperty> decoratedProperties = null;
 
 }

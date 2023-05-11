@@ -9,19 +9,17 @@ import java.util.LinkedList;
 import java.util.List;
 
 /**
- * Created by Navíd Mitchell 🤪 on 5/5/23.
+ * Created by Navíd Mitchell 🤪 on 5/9/23.
  */
 @Getter
 @Setter
 @Accessors(chain = true)
 @NoArgsConstructor
-public class DecoratorInfo {
-
-    private boolean containsDecoratorForObject = false;
+public class EsConversionState {
 
     List<DecoratedProperty> decoratedProperties = new LinkedList<>();
 
-    public DecoratorInfo addDecoratedProperty(DecoratedProperty decoratedProperty){
+    public EsConversionState addDecoratedProperty(DecoratedProperty decoratedProperty){
         decoratedProperties.add(decoratedProperty);
         return this;
     }

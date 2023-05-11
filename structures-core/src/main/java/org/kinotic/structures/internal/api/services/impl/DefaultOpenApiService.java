@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.api.services;
+package org.kinotic.structures.internal.api.services.impl;
 
 /**
  * Created by Navíd Mitchell 🤪 on 3/17/23.

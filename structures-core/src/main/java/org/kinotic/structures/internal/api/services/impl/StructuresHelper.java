@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.api.services.util;
+package org.kinotic.structures.internal.api.services.impl;
 
 public class StructuresHelper {
 

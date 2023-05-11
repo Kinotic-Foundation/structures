@@ -1,10 +1,12 @@
-package org.kinotic.structures.internal.api.services;
+package org.kinotic.structures.internal.api.services.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.kinotic.continuum.idl.api.schema.decorators.C3Decorator;
 import org.kinotic.structures.api.decorators.lifecycle.UpsertFieldPreProcessor;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.internal.api.decorators.DecoratorLogic;
+import org.kinotic.structures.internal.api.services.EntityService;
+import org.kinotic.structures.internal.api.services.EntityServiceFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -15,7 +17,7 @@ import java.util.concurrent.CompletableFuture;
  * Created by Navíd Mitchell 🤪 on 5/10/23.
  */
 @Component
-public class DefaultEntityServiceFactory implements EntityServiceFactory{
+public class DefaultEntityServiceFactory implements EntityServiceFactory {
 
     private final ObjectMapper objectMapper;
 
@@ -31,6 +33,7 @@ public class DefaultEntityServiceFactory implements EntityServiceFactory{
 
 
 
-        return CompletableFuture.completedFuture(new DefaultEntityService(objectMapper, structure));
+//        return CompletableFuture.completedFuture(new DefaultEntityService(objectMapper, structure));
+        return null;
     }
 }

@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.api.services;
+package org.kinotic.structures.internal.api.services.impl;
 
 import co.elastic.clients.util.BinaryData;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
@@ -6,6 +6,8 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import org.kinotic.continuum.core.api.crud.CrudService;
 import org.kinotic.structures.api.services.EntitiesService;
 import org.kinotic.structures.api.services.StructureService;
+import org.kinotic.structures.internal.api.services.EntityService;
+import org.kinotic.structures.internal.api.services.EntityServiceFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;

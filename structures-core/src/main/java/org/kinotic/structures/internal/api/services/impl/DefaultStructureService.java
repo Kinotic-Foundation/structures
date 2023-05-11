@@ -1,20 +1,12 @@
-package org.kinotic.structures.internal.api.services;
+package org.kinotic.structures.internal.api.services.impl;
 
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
-import co.elastic.clients.elasticsearch._types.mapping.ObjectProperty;
-import co.elastic.clients.elasticsearch._types.mapping.Property;
 import co.elastic.clients.elasticsearch._types.query_dsl.TermQuery;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import org.kinotic.continuum.idl.api.converter.IdlConverter;
-import org.kinotic.continuum.idl.api.converter.IdlConverterFactory;
-import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.StructureService;
-import org.kinotic.structures.internal.api.services.util.StructuresHelper;
+import org.kinotic.structures.internal.api.services.C3ToEsConversionService;
+import org.kinotic.structures.internal.api.services.EsConversionResult;
 import org.kinotic.structures.internal.config.StructuresProperties;
-import org.kinotic.structures.internal.idl.converters.elastic.EsConversionInfo;
-import org.kinotic.structures.internal.idl.converters.elastic.EsConverterStrategy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.elasticsearch.core.ReactiveElasticsearchOperations;
@@ -27,16 +19,16 @@ import java.util.concurrent.CompletableFuture;
 public class DefaultStructureService extends AbstractCrudService<Structure> implements StructureService {
 
     private final StructuresProperties structuresProperties;
-    private final IdlConverterFactory idlConverterFactory;
-    private final EsConverterStrategy esConverterStrategy = new EsConverterStrategy();
+    private final C3ToEsConversionService c3ToEsConversionService;
+
 
     public DefaultStructureService(ElasticsearchAsyncClient esAsyncClient,
                                    ReactiveElasticsearchOperations esOperations,
-                                   IdlConverterFactory idlConverterFactory,
-                                   StructuresProperties structuresProperties) {
+                                   StructuresProperties structuresProperties,
+                                   C3ToEsConversionService c3ToEsConversionService) {
         super("structure", Structure.class, esAsyncClient, esOperations);
-        this.idlConverterFactory = idlConverterFactory;
         this.structuresProperties = structuresProperties;
+        this.c3ToEsConversionService = c3ToEsConversionService;
     }
 
     @Override
@@ -98,7 +90,7 @@ public class DefaultStructureService extends AbstractCrudService<Structure> impl
                         structure.setItemIndex(this.structuresProperties.getIndexPrefix().trim().toLowerCase()+logicalIndexName);
 
                         // Try and create ES mapping to make sure IDL is valid
-                        createEsObject(structure.getEntityDefinition());
+                        c3ToEsConversionService.convert(structure.getEntityDefinition());
 
                         ret = super.save(structure);
                     }
@@ -148,11 +140,11 @@ public class DefaultStructureService extends AbstractCrudService<Structure> impl
                             ret = CompletableFuture.failedFuture(new IllegalArgumentException("Structure is already published"));
                         } else {
 
-                            ObjectConversionInfo info = createEsObject(structure.getEntityDefinition());
+                            EsConversionResult result = c3ToEsConversionService.convert(structure.getEntityDefinition());
 
                             ret = crudServiceTemplate.createIndex(structure.getItemIndex(), true, indexBuilder -> {
 
-                                indexBuilder.mappings(m -> m.properties(info.objectProperty.properties()));
+                                indexBuilder.mappings(m -> m.properties(result.getObjectProperty().properties()));
 
                             })
                             .thenCompose(createIndexResponse -> {
@@ -160,8 +152,7 @@ public class DefaultStructureService extends AbstractCrudService<Structure> impl
                                 structure.setPublished(true);
                                 structure.setPublishedTimestamp(System.currentTimeMillis());
                                 structure.setUpdated(structure.getPublishedTimestamp());
-
-                                // FIXME: add optimizations for decorators needed by structure (should be async)
+                                structure.setDecoratedProperties(result.getDecoratedProperties());
 
                                 return super.save(structure).thenApply(structure1 -> null);
                             });
@@ -204,26 +195,6 @@ public class DefaultStructureService extends AbstractCrudService<Structure> impl
     @Override
     public CompletableFuture<Page<Structure>> search(String searchText, Pageable pageable) {
         return null;
-    }
-
-    private ObjectConversionInfo createEsObject(ObjectC3Type objectC3Type){
-        ObjectProperty objectProperty;
-        IdlConverter<Property, EsConversionInfo> converter = idlConverterFactory.createConverter(esConverterStrategy);
-        Property esProperty = converter.convert(objectC3Type);
-
-        if(esProperty.isObject()){
-            objectProperty = esProperty.object();
-        }else{
-            throw new IllegalStateException("EntityDefinition must be an object");
-        }
-        return new ObjectConversionInfo(objectProperty, converter.getConversionContext().state());
-    }
-
-    @RequiredArgsConstructor
-    @Getter
-    private static class ObjectConversionInfo {
-        private final ObjectProperty objectProperty;
-        private final EsConversionInfo esConversionInfo;
     }
 
 }

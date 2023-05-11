@@ -50,14 +50,19 @@ public class BasicUpsertEntityPreProcessor implements UpsertEntityPreProcessor {
             feeder.endOfInput();
 
             while (jsonParser.nextToken() != null) {
+
                 JsonToken token = jsonParser.getCurrentToken();
+
                 if (token == JsonToken.FIELD_NAME) {
+
                     String fieldName = jsonParser.getCurrentName();
 
                     String currentJsonPath = !jsonPathStack.isEmpty() ? jsonPathStack.peekFirst() + "." + fieldName : fieldName;
                     jsonPathStack.addFirst(currentJsonPath);
+
                     DecoratorLogic<C3Decorator, Object, Object,
                             UpsertFieldPreProcessor<C3Decorator, Object, Object>> preProcessorLogic = fieldPreProcessors.get(currentJsonPath);
+
                     if(preProcessorLogic != null){
 
                         C3Decorator decorator = preProcessorLogic.getDecorator();
