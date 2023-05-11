@@ -5,6 +5,7 @@ import org.kinotic.structures.api.decorators.lifecycle.UpsertFieldPreProcessor;
 import org.kinotic.structures.api.decorators.runtime.C3DecoratorInstance;
 
 /**
+ * {@link DecoratorInstanceService} provides access to {@link C3DecoratorInstance} instances in various forms
  * Created by Navíd Mitchell 🤪 on 5/10/23.
  */
 public interface DecoratorInstanceService {
@@ -13,6 +14,7 @@ public interface DecoratorInstanceService {
      * Finds the {@link C3DecoratorInstance} for the given {@link C3Decorator} class
      * @param decoratorClass to find the instance for
      * @return the instance or null if not found
+     *
      * @param <T> the type of {@link C3Decorator}
      */
     <T extends C3Decorator> C3DecoratorInstance<T> findDecoratorInstance(Class<T> decoratorClass);
@@ -21,6 +23,7 @@ public interface DecoratorInstanceService {
      * Finds the {@link UpsertFieldPreProcessor} for the given {@link C3Decorator} class
      * @param decoratorClass to find the instance for
      * @return the instance or null if not found
+     *
      * @param <D> the type of {@link C3Decorator}
      * @param <R> the type of the field after processing
      * @param <T> the type of the field being processed

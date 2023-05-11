@@ -21,6 +21,7 @@ public class DefaultDecoratorInstanceService implements DecoratorInstanceService
 
     public DefaultDecoratorInstanceService(List<C3DecoratorInstance<?>> decoratorInstances){
         this.decoratorInstances = new HashMap<>(decoratorInstances.size());
+
         for(C3DecoratorInstance<?> instance : decoratorInstances){
             this.decoratorInstances.put(instance.implementsDecorator(), instance);
 

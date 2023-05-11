@@ -1,6 +1,7 @@
 package org.kinotic.structures.config;
 
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
+import co.elastic.clients.json.JsonpMapper;
 import co.elastic.clients.json.jackson.JacksonJsonpMapper;
 import co.elastic.clients.transport.ElasticsearchTransport;
 import co.elastic.clients.transport.rest_client.RestClientTransport;
@@ -33,7 +34,12 @@ public class TestElasticsearchConfiguration extends ReactiveElasticsearchConfigu
     }
 
     @Bean
-    public ElasticsearchAsyncClient elasticsearchAsyncClient(ObjectMapper objectMapper){
+    public JsonpMapper jsonpMapper(ObjectMapper objectMapper){
+        return new JacksonJsonpMapper(objectMapper);
+    }
+
+    @Bean
+    public ElasticsearchAsyncClient elasticsearchAsyncClient(JsonpMapper jsonpMapper){
 
         String[] parts = ElasticsearchProvider.ELASTICSEARCH_CONTAINER.getHttpHostAddress().split(":");
 
@@ -42,7 +48,7 @@ public class TestElasticsearchConfiguration extends ReactiveElasticsearchConfigu
         RestClient restClient = builder.build();
 
         // Create the transport with a Jackson mapper
-        ElasticsearchTransport transport = new RestClientTransport(restClient, new JacksonJsonpMapper(objectMapper));
+        ElasticsearchTransport transport = new RestClientTransport(restClient, jsonpMapper);
 
         return new ElasticsearchAsyncClient(transport);
     }

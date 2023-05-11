@@ -14,9 +14,18 @@ import java.util.List;
 @Configuration
 public class StructuresJacksonConfiguration {
 
-    @PostConstruct
-    public void configureObjectMapper(ObjectMapper objectMapper, List<C3DecoratorInstance<?>> decoratorInstances) {
+    private final ObjectMapper objectMapper;
 
+    private final List<C3DecoratorInstance<?>> decoratorInstances;
+
+    public StructuresJacksonConfiguration(ObjectMapper objectMapper,
+                                          List<C3DecoratorInstance<?>> decoratorInstances) {
+        this.objectMapper = objectMapper;
+        this.decoratorInstances = decoratorInstances;
+    }
+
+    @PostConstruct
+    public void configureObjectMapper() {
         // Register all C3Decorator's with Jackson
         NamedType[] namedTypes = new NamedType[decoratorInstances.size()];
         for (int i = 0; i < decoratorInstances.size(); i++) {

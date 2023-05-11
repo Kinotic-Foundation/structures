@@ -13,4 +13,11 @@ import org.kinotic.continuum.idl.api.schema.decorators.C3Decorator;
  */
 public interface UpsertFieldPreProcessor<D extends C3Decorator, R, T> extends DecoratorProcessor<D, R, T>{
 
+    /**
+     * The type of the field that this processor will process.
+     * This is needed for the JSON processing logic.
+     * @return the class of the field that this processor will process
+     */
+    Class<T> getFieldType();
+
 }

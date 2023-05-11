@@ -26,6 +26,11 @@ public class IdDecoratorInstance implements UpsertFieldPreProcessor<IdDecorator,
     }
 
     @Override
+    public Class<String> getFieldType() {
+        return String.class;
+    }
+
+    @Override
     public String process(Structure structure, String fieldName, IdDecorator decorator, String fieldValue) {
         return fieldValue != null && !fieldValue.isBlank() ? fieldValue : UUID.randomUUID().toString();
     }

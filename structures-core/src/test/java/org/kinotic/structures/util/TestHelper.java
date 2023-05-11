@@ -1,40 +1,60 @@
 package org.kinotic.structures.util;
 
+import org.kinotic.continuum.idl.api.directory.SchemaFactory;
+import org.kinotic.continuum.idl.api.schema.C3Type;
+import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
+import org.kinotic.structures.api.decorators.IdDecorator;
+import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.api.services.StructureService;
+import org.kinotic.structures.support.Address;
+import org.kinotic.structures.support.Person;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-@Component
-public class StructureTestHelper {
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
-//    @Autowired
-//    private TraitService traitService;
-//    @Autowired
-//    private StructureServiceInternal structureService;
-//
-//    public Structure getSimpleItemStructure() throws AlreadyExistsException, IOException {
-//
-//        Structure structure = new Structure();
-//        structure.setName("Item1-" + System.currentTimeMillis());
-//        structure.setNamespace("org_kinotic_");
-//        structure.setDescription("Defines an Item1");
-//
-//        Optional<Trait> vpnIpOptional = traitService.getTraitByName("VpnIp");// already not required
-//        Optional<Trait> ipOptional = traitService.getTraitByName("Ip");
-//        Optional<Trait> macOptional = traitService.getTraitByName("Mac");
-//        Trait description = traitService.getTraitByName("TextString").get();
-//        description.setRequired(false);// ensure not required
-//        Trait id = traitService.getTraitByName("Id").get();
-//        id.setRequired(false);
-//
-//        structure.getTraits().put("id", id);
-//        structure.getTraits().put("vpnIp", vpnIpOptional.get());
-//        structure.getTraits().put("ip", ipOptional.get());
-//        structure.getTraits().put("mac", macOptional.get());
-//        structure.getTraits().put("description", description);
-//
-//        Structure fresh = structureService.save(structure);
-//        structureService.publish(fresh.getId());
-//        return fresh;
-//    }
+@Component
+public class TestHelper {
+
+    @Autowired
+    private SchemaFactory schemaFactory;
+
+    @Autowired
+    private StructureService structureService;
+
+    public Person createTestPerson() {
+        return new Person()
+                .setId(UUID.randomUUID().toString())
+                .setFirstName("Jesse")
+                .setLastName("Pinkman")
+                .setAddresses(List.of(new Address()
+                                              .setStreet("1001 Central Ave NE")
+                                              .setCity("Albuquerque")
+                                              .setState("NM")
+                                              .setZip("87106")));
+    }
+
+    public CompletableFuture<Structure> getPersonStructure() {
+        Structure structure = new Structure();
+        structure.setName("Person-" + System.currentTimeMillis());
+        structure.setDescription("Defines a Person");
+
+        C3Type c3Type = schemaFactory.createForClass(Person.class);
+        if(c3Type instanceof ObjectC3Type){
+            ObjectC3Type personType = (ObjectC3Type) c3Type;
+            personType.getProperties().get("id").addDecorator(new IdDecorator());
+            structure.setEntityDefinition(personType);
+            structure.setNamespace(personType.getNamespace());
+
+            return structureService.save(structure)
+                                   .thenCompose(saved -> structureService.publish(saved.getId())
+                                                                         .thenApply(published -> saved));
+        }else{
+            return CompletableFuture.failedFuture(new RuntimeException("Failed to create structure for Person"));
+        }
+    }
 //
 //    public Structure getDeviceStructure() throws AlreadyExistsException, IOException {
 //        Structure structure = new Structure();

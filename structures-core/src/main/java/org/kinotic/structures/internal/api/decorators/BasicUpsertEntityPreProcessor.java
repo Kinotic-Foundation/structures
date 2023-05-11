@@ -7,6 +7,7 @@ import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.async.ByteArrayFeeder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.kinotic.continuum.idl.api.schema.decorators.C3Decorator;
+import org.kinotic.structures.api.decorators.IdDecorator;
 import org.kinotic.structures.api.decorators.lifecycle.UpsertFieldPreProcessor;
 import org.kinotic.structures.api.domain.Structure;
 
@@ -39,8 +40,9 @@ public class BasicUpsertEntityPreProcessor implements UpsertEntityPreProcessor {
     }
 
     @Override
-    public CompletableFuture<byte[]> process(byte[] bytes) {
+    public CompletableFuture<RawEntity> process(byte[] bytes) {
         Deque<String> jsonPathStack = new ArrayDeque<>();
+        String id = null;
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
         try(JsonParser jsonParser = objectMapper.createNonBlockingByteArrayParser();
@@ -65,13 +67,21 @@ public class BasicUpsertEntityPreProcessor implements UpsertEntityPreProcessor {
 
                     if(preProcessorLogic != null){
 
+                        jsonParser.nextToken(); // move to value token
+
                         C3Decorator decorator = preProcessorLogic.getDecorator();
                         UpsertFieldPreProcessor<C3Decorator, Object, Object> preProcessor = preProcessorLogic.getProcessor();
-                        Object value = preProcessor.process(structure, fieldName, decorator, jsonParser.currentValue());
+                        Object input = objectMapper.readValue(jsonParser, preProcessor.getFieldType());
+                        Object value = preProcessor.process(structure, fieldName, decorator, input);
 
                         if(value != null) {
                             jsonGenerator.writeFieldName(fieldName);
                             jsonGenerator.writeObject(value);
+
+                            // We hard code the id logic here, in the future we may create a more general approach if the need arises
+                            if(decorator instanceof IdDecorator){
+                                id = (String) value;
+                            }
                         }else{
                             // skip the field
                             jsonParser.nextToken(); // move to value token
@@ -89,7 +99,13 @@ public class BasicUpsertEntityPreProcessor implements UpsertEntityPreProcessor {
             }
 
             jsonGenerator.flush();
-            return CompletableFuture.completedFuture(outputStream.toByteArray());
+
+            if(id == null){
+                return CompletableFuture.failedFuture(new IllegalArgumentException("No id field found in entity"));
+            }else{
+                return CompletableFuture.completedFuture(new RawEntity(id, outputStream.toByteArray()));
+            }
+
         } catch (IOException e) {
             return CompletableFuture.failedFuture(e);
         }

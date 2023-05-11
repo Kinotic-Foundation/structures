@@ -17,45 +17,59 @@
 
 package org.kinotic.structures.item;
 
+import co.elastic.clients.json.JsonpMapper;
+import co.elastic.clients.util.BinaryData;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.kinotic.structures.ElasticsearchTestBase;
+import org.kinotic.structures.api.services.EntitiesService;
+import org.kinotic.structures.support.Person;
+import org.kinotic.structures.util.TestHelper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
+
+import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest
 public class ItemCrudTests extends ElasticsearchTestBase {
 
-//    @Autowired
-//    private ItemServiceInternal itemService;
-//    @Autowired
-//    private TraitService traitService;
-//    @Autowired
-//    private StructureServiceInternal structureService;
-//    @Autowired
-//    private StructureTestHelper structureTestHelper;
-//
-//    @Test
-//    public void createAndDeleteItem() throws Exception {
-//
-//        Structure structure = structureTestHelper.getSimpleItemStructure();
-//
-//        // now we can create an item with the above fields
-//        TypeCheckMap obj = new TypeCheckMap();
-//        obj.put("ip", "192.0.2.11");
-//        obj.put("mac", "000000000001");
-//
-//        TypeCheckMap saved = itemService.upsertItem(structure.getId(), obj, null);
-//
-//        Thread.sleep(1000);// give time for ES to flush the new item
-//
-//        itemService.delete(structure.getId(), saved.getString("id"), null);
-//
-//        Thread.sleep(1000);
-//
-//        structureService.delete(structure.getId());
-//
-//    }
+    @Autowired
+    private EntitiesService entitiesService;
+    @Autowired
+    private TestHelper testHelper;
+    @Autowired
+    private JsonpMapper jsonpMapper;
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @Test
+    public void createAndDeleteItem() {
+
+        CompletableFuture<Void> future = testHelper.getPersonStructure()
+                                                   .thenCompose(structure -> {
+            Person person = testHelper.createTestPerson();
+            BinaryData personData = BinaryData.of(person, jsonpMapper);
+            return entitiesService.save(structure.getId(), personData)
+                    .thenCompose(saved -> {
+                        try {
+                            Person savedPerson = objectMapper.readValue(saved.asByteBuffer().array(),
+                                                                        Person.class);
+                            return entitiesService.deleteById(structure.getId(), savedPerson.getId());
+                        } catch (IOException e) {
+                            return CompletableFuture.failedFuture(e);
+                        }
+                    });
+        });
+
+        StepVerifier.create(Mono.fromFuture(future))
+                    .verifyComplete();
+    }
 //
 //    @Test
 //    public void createAndDeleteItem_checkingCountBeforeDelete() throws Exception {

@@ -44,17 +44,17 @@ public class DefaultStructureService extends AbstractCrudService<Structure> impl
     @Override
     public CompletableFuture<Structure> save(Structure structure) {
 
-        if(structure.getName() == null || structure.getName().isBlank()){
-            return CompletableFuture.failedFuture(new IllegalArgumentException("Structures must provide a proper Structure Name."));
+        if(structure.getName() == null || structure.getName().isBlank() || structure.getName().contains(".")){
+            return CompletableFuture.failedFuture(new IllegalArgumentException("Structure Name Invalid"));
         }
         if(structure.getNamespace() == null || structure.getNamespace().isBlank()){
-            return CompletableFuture.failedFuture(new IllegalArgumentException("Structures must provide a proper Structure Namespace."));
+            return CompletableFuture.failedFuture(new IllegalArgumentException("Structure Namespace Invalid"));
         }
         if(structure.getEntityDefinition() == null){
-            return CompletableFuture.failedFuture(new IllegalArgumentException("Structures must provide a proper Structure ItemDefinition."));
+            return CompletableFuture.failedFuture(new IllegalArgumentException("Structure entityDefinition must not be null"));
         }
 
-        String logicalIndexName = (structure.getNamespace().trim()+structure.getName().trim()).toLowerCase();
+        String logicalIndexName = (structure.getNamespace().trim() + "." + structure.getName().trim()).toLowerCase();
 
         // will throw an exception if invalid
         try {

@@ -11,6 +11,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,6 +22,7 @@ import java.util.function.Consumer;
 /**
  * Created by Navíd Mitchell 🤪 on 5/10/23.
  */
+@Component
 public class CrudServiceTemplate {
 
     private final ElasticsearchAsyncClient esAsyncClient;

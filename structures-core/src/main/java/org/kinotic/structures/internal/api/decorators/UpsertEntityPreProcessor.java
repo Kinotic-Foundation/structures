@@ -9,6 +9,6 @@ import java.util.concurrent.CompletableFuture;
  */
 public interface UpsertEntityPreProcessor {
 
-    CompletableFuture<byte[]> process(byte[] bytes);
+    CompletableFuture<RawEntity> process(byte[] bytes);
 
 }
