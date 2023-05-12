@@ -1,7 +1,7 @@
 package org.kinotic.structures.internal.api.decorators;
 
 import org.kinotic.continuum.idl.api.schema.decorators.C3Decorator;
-import org.kinotic.structures.api.decorators.lifecycle.DecoratorProcessor;
+import org.kinotic.structures.api.decorators.runtime.DecoratorProcessor;
 
 /**
  * {@link DecoratorLogic} holds a {@link C3Decorator} and its {@link DecoratorProcessor}

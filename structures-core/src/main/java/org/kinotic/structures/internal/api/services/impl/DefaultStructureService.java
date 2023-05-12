@@ -93,6 +93,9 @@ public class DefaultStructureService extends AbstractCrudService<Structure> impl
                         // Try and create ES mapping to make sure IDL is valid
                         c3ToEsConversionService.convert(structure.getEntityDefinition());
 
+                        // FIXME: make sure that every C3Type has only a single decorator with the same implementation type
+                        // For example two decorators instances that both implement UpsertFieldPreProcessor or MappingPreProcessor
+
                         ret = super.save(structure);
                     }
                     return ret;

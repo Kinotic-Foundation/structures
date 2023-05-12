@@ -49,10 +49,9 @@ public class DefaultEntityService implements EntityService {
 
     @Override
     public CompletableFuture<ByteBuffer> findById(String id) {
+        // FIXME: deserialization does not work with complex objects
         return crudServiceTemplate.findById(structure.getItemIndex(), BinaryData.class, id, null)
-                                  .thenApply(binaryData -> {
-                                      return binaryData.asByteBuffer();
-                                  });
+                                  .thenApply(BinaryData::asByteBuffer);
     }
 
     @Override

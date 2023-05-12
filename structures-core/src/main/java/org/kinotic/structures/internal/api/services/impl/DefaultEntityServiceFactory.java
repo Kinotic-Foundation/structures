@@ -3,17 +3,17 @@ package org.kinotic.structures.internal.api.services.impl;
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.kinotic.continuum.idl.api.schema.decorators.C3Decorator;
-import org.kinotic.structures.api.decorators.lifecycle.UpsertFieldPreProcessor;
+import org.kinotic.structures.api.decorators.runtime.UpsertFieldPreProcessor;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.internal.api.decorators.BasicUpsertEntityPreProcessor;
 import org.kinotic.structures.internal.api.decorators.DecoratorLogic;
-import org.kinotic.structures.internal.api.services.DecoratorInstanceService;
 import org.kinotic.structures.internal.api.services.EntityService;
 import org.kinotic.structures.internal.api.services.EntityServiceFactory;
 import org.kinotic.structures.internal.idl.converters.elastic.DecoratedProperty;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -25,18 +25,29 @@ import java.util.concurrent.CompletableFuture;
 public class DefaultEntityServiceFactory implements EntityServiceFactory {
 
     private final ObjectMapper objectMapper;
-    private final DecoratorInstanceService decoratorInstanceService;
     private final ElasticsearchAsyncClient esAsyncClient;
     private final CrudServiceTemplate crudServiceTemplate;
+    private final Map<Class<? extends C3Decorator>, UpsertFieldPreProcessor<C3Decorator, Object, Object>> upsertFieldPreProcessors;
 
     public DefaultEntityServiceFactory(ObjectMapper objectMapper,
-                                       DecoratorInstanceService decoratorInstanceService,
                                        ElasticsearchAsyncClient esAsyncClient,
-                                       CrudServiceTemplate crudServiceTemplate) {
+                                       CrudServiceTemplate crudServiceTemplate,
+                                       List<UpsertFieldPreProcessor<?, ?, ?>> upsertFieldPreProcessors) {
         this.objectMapper = objectMapper;
-        this.decoratorInstanceService = decoratorInstanceService;
         this.esAsyncClient = esAsyncClient;
         this.crudServiceTemplate = crudServiceTemplate;
+
+        this.upsertFieldPreProcessors = new HashMap<>(upsertFieldPreProcessors.size());
+
+        for(UpsertFieldPreProcessor<?, ?, ?> processor : upsertFieldPreProcessors){
+
+            if(this.upsertFieldPreProcessors.containsKey(processor.implementsDecorator())){
+                throw new IllegalStateException("Found multiple UpsertFieldPreProcessor for decorator: " + processor.implementsDecorator().getName());
+            }
+            //noinspection unchecked
+            this.upsertFieldPreProcessors.put(processor.implementsDecorator(),
+                                              (UpsertFieldPreProcessor<C3Decorator, Object, Object>) processor);
+        }
     }
 
     @Override
@@ -47,11 +58,12 @@ public class DefaultEntityServiceFactory implements EntityServiceFactory {
                 UpsertFieldPreProcessor<C3Decorator, Object, Object>>> fieldPreProcessors = new HashMap<>();
 
         for(DecoratedProperty decoratedProperty : structure.getDecoratedProperties()){
+
             for(C3Decorator decorator : decoratedProperty.getDecorators()){
-                //noinspection unchecked
-                UpsertFieldPreProcessor<C3Decorator, Object, Object> processor
-                        = decoratorInstanceService.findUpsertFieldPreProcessor((Class<C3Decorator>) decorator.getClass());
+
+                UpsertFieldPreProcessor<C3Decorator, Object, Object> processor = upsertFieldPreProcessors.get(decorator.getClass());
                 if(processor != null){
+                    // FIXME: without validation the last implementation will win, should we allow multiple per field?
                     fieldPreProcessors.put(decoratedProperty.getJsonPath(), new DecoratorLogic<>(decorator, processor));
                 }
             }

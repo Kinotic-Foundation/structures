@@ -1,4 +1,4 @@
-package org.kinotic.structures.api.decorators.lifecycle;
+package org.kinotic.structures.api.decorators.runtime;
 
 import org.kinotic.continuum.idl.api.schema.decorators.C3Decorator;
 

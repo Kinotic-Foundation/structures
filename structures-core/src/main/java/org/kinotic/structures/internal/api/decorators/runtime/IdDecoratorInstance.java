@@ -1,7 +1,7 @@
 package org.kinotic.structures.internal.api.decorators.runtime;
 
 import org.kinotic.structures.api.decorators.IdDecorator;
-import org.kinotic.structures.api.decorators.lifecycle.UpsertFieldPreProcessor;
+import org.kinotic.structures.api.decorators.runtime.UpsertFieldPreProcessor;
 import org.kinotic.structures.api.domain.Structure;
 import org.springframework.stereotype.Component;
 

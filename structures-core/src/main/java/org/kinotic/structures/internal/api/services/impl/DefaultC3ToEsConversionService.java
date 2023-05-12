@@ -18,10 +18,12 @@ import org.springframework.stereotype.Component;
 public class DefaultC3ToEsConversionService implements C3ToEsConversionService {
 
     private final IdlConverterFactory idlConverterFactory;
-    private final EsConverterStrategy esConverterStrategy = new EsConverterStrategy();
+    private final EsConverterStrategy esConverterStrategy;
 
-    public DefaultC3ToEsConversionService(IdlConverterFactory idlConverterFactory) {
+    public DefaultC3ToEsConversionService(IdlConverterFactory idlConverterFactory,
+                                          EsConverterStrategy esConverterStrategy) {
         this.idlConverterFactory = idlConverterFactory;
+        this.esConverterStrategy = esConverterStrategy;
     }
 
     public EsConversionResult convert(ObjectC3Type objectC3Type) {

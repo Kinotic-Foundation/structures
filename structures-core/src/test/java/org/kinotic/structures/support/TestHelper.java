@@ -78,6 +78,7 @@ public class TestHelper {
                     return entitiesService.save(structure.getId(), buffer)
                                           .thenCompose(saved -> {
                                               try {
+                                                  System.out.println(new String(saved.array()));
                                                   Person savedPerson = objectMapper.readValue(saved.array(),
                                                                                               Person.class);
                                                   return CompletableFuture.completedFuture(new StructureAndPersonHolder(structure,

@@ -8,7 +8,7 @@ import com.fasterxml.jackson.core.async.ByteArrayFeeder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.kinotic.continuum.idl.api.schema.decorators.C3Decorator;
 import org.kinotic.structures.api.decorators.IdDecorator;
-import org.kinotic.structures.api.decorators.lifecycle.UpsertFieldPreProcessor;
+import org.kinotic.structures.api.decorators.runtime.UpsertFieldPreProcessor;
 import org.kinotic.structures.api.domain.Structure;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
