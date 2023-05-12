@@ -1,7 +1,7 @@
 package org.kinotic.structures.internal.api.services.impl;
 
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
-import co.elastic.clients.elasticsearch.core.get.GetResult;
+import co.elastic.clients.elasticsearch._types.Refresh;
 import org.kinotic.continuum.api.Identifiable;
 import org.kinotic.continuum.core.api.crud.IdentifiableCrudService;
 import org.springframework.data.domain.Page;
@@ -51,14 +51,14 @@ public abstract class AbstractCrudService<T extends Identifiable<String>> implem
         return esAsyncClient.index(i -> i
                 .index(indexName)
                 .id(entity.getId())
-                .document(entity))
+                .document(entity)
+                .refresh(Refresh.True))
                 .thenCompose(indexResponse -> findById(indexResponse.id()));
     }
 
     @Override
     public CompletableFuture<T> findById(String id) {
-        return esAsyncClient.get(builder -> builder.index(indexName).id(id), type)
-                            .thenApply(GetResult::source);
+        return crudServiceTemplate.findById(indexName, type, id, null);
     }
 
     @Override

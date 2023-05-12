@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Map;
@@ -44,7 +45,17 @@ public class BasicUpsertEntityPreProcessor implements UpsertEntityPreProcessor {
     }
 
     @Override
-    public CompletableFuture<RawEntity> process(byte[] bytes) {
+    public CompletableFuture<RawEntity> process(ByteBuffer data) {
+
+        // for now, we use a temporary array I will look for a more optimal way when we move to streaming input.
+        byte[] bytes;
+        if(data.hasArray()) {
+            bytes = data.array();
+        }else {
+            bytes = new byte[data.remaining()];
+            data.get(bytes);
+        }
+
         Deque<String> jsonPathStack = new ArrayDeque<>();
         String id = null;
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
@@ -105,12 +116,9 @@ public class BasicUpsertEntityPreProcessor implements UpsertEntityPreProcessor {
             jsonGenerator.flush();
 
             if(id == null){
-                return CompletableFuture.failedFuture(new IllegalArgumentException("No id field found in entity"));
+                return CompletableFuture.failedFuture(new IllegalArgumentException("No id field found in entity data"));
             }else{
-                // FIXME: remove
-                byte[] entityBytes = outputStream.toByteArray();
-                log.debug("Json\n"+ new String(entityBytes));
-                return CompletableFuture.completedFuture(new RawEntity(id, entityBytes));
+                return CompletableFuture.completedFuture(new RawEntity(id, outputStream.toByteArray()));
             }
 
         } catch (IOException e) {

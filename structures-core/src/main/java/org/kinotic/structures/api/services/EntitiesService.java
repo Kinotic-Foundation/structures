@@ -1,10 +1,10 @@
 package org.kinotic.structures.api.services;
 
-import co.elastic.clients.util.BinaryData;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import reactor.core.publisher.Mono;
 
+import java.nio.ByteBuffer;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -22,7 +22,7 @@ public interface EntitiesService {
      * @return {@link Mono} emitting the saved entity
      * @throws IllegalArgumentException in case the given {@literal entity} is {@literal null}
      */
-    CompletableFuture<BinaryData> save(String structureId, BinaryData entity);
+    CompletableFuture<ByteBuffer> save(String structureId, ByteBuffer entity);
 
     /**
      * Retrieves an entity by its id.
@@ -32,7 +32,7 @@ public interface EntitiesService {
      * @return {@link Mono} emitting the entity with the given id or {@link Mono#empty()} if none found
      * @throws IllegalArgumentException in case the given {@literal id} is {@literal null}
      */
-    CompletableFuture<BinaryData> findById(String structureId, String id);
+    CompletableFuture<ByteBuffer> findById(String structureId, String id);
 
     /**
      * Returns the number of entities available.
@@ -58,7 +58,7 @@ public interface EntitiesService {
      * @param pageable the page settings to be used
      * @return a page of entities
      */
-    CompletableFuture<Page<BinaryData>> findAll(String structureId, Pageable pageable);
+    CompletableFuture<Page<ByteBuffer>> findAll(String structureId, Pageable pageable);
 
     /**
      * Returns a {@link Page} of entities matching the search text and paging restriction provided in the {@code Pageable} object.
@@ -68,6 +68,6 @@ public interface EntitiesService {
      * @param pageable the page settings to be used
      * @return a page of entities
      */
-    CompletableFuture<Page<BinaryData>> search(String structureId, String searchText, Pageable pageable);
+    CompletableFuture<Page<ByteBuffer>> search(String structureId, String searchText, Pageable pageable);
 
 }

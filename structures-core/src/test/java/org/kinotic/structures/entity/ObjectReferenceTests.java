@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.kinotic.structures.item;
+package org.kinotic.structures.entity;
 
 import org.kinotic.structures.ElasticsearchTestBase;
 

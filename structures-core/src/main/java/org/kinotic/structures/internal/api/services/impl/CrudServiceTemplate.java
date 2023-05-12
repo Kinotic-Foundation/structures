@@ -3,6 +3,7 @@ package org.kinotic.structures.internal.api.services.impl;
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch.core.*;
+import co.elastic.clients.elasticsearch.core.get.GetResult;
 import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.elasticsearch.core.search.HitsMetadata;
 import co.elastic.clients.elasticsearch.indices.CreateIndexRequest;
@@ -66,10 +67,10 @@ public class CrudServiceTemplate {
                                                         .create(builder -> {
                                                             builder.index(indexName);
                                                             builder.settings(s -> s
-                                                                   .numberOfShards("5")
-                                                                   .numberOfReplicas("2")
-                                                                   .refreshInterval(t -> t.time("1s"))
-                                                                   .store(st -> st.type(StorageType.Fs))
+                                                                    .numberOfShards("5")
+                                                                    .numberOfReplicas("2")
+                                                                    .refreshInterval(t -> t.time("1s"))
+                                                                    .store(st -> st.type(StorageType.Fs))
                                                             );
 
                                                             if(builderConsumer != null){
@@ -134,6 +135,29 @@ public class CrudServiceTemplate {
     }
 
     /**
+     * Finds a document by id. Also allows for customization of the {@link GetRequest}.
+     * @param indexName name of the index to search
+     * @param type of the document to return
+     * @param id of the document to return
+     * @param builderConsumer to customize the {@link GetRequest}, or null if no customization is needed
+     * @return a {@link CompletableFuture} that will complete with the document
+     * @param <T> type of the document to return
+     */
+    public <T> CompletableFuture<T> findById(String indexName,
+                                             Class<T> type,
+                                             String id,
+                                             Consumer<GetRequest.Builder> builderConsumer) {
+        return esAsyncClient.get(builder -> {
+                                builder.index(indexName).id(id);
+                                if(builderConsumer != null){
+                                    builderConsumer.accept(builder);
+                                }
+                                return builder;
+                            }, type)
+                            .thenApply(GetResult::source);
+    }
+
+    /**
      * Deletes a document by id. Also allows for customization of the {@link DeleteRequest}.
      * @param indexName name of the index to delete from
      * @param id of the document to delete
@@ -144,12 +168,12 @@ public class CrudServiceTemplate {
                                                         String id,
                                                         Consumer<DeleteRequest.Builder> builderConsumer){
         return esAsyncClient.delete(builder -> {
-                                builder.index(indexName).id(id);
-                                if(builderConsumer != null){
-                                    builderConsumer.accept(builder);
-                                }
-                                return builder;
-                            });
+            builder.index(indexName).id(id);
+            if(builderConsumer != null){
+                builderConsumer.accept(builder);
+            }
+            return builder;
+        });
     }
 
 }

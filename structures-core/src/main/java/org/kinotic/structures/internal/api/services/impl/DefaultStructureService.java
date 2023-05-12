@@ -26,6 +26,7 @@ public class DefaultStructureService extends AbstractCrudService<Structure> impl
                                    ReactiveElasticsearchOperations esOperations,
                                    StructuresProperties structuresProperties,
                                    C3ToEsConversionService c3ToEsConversionService) {
+        // FIXME: should we use the prefix in the structure index name?
         super("structure", Structure.class, esAsyncClient, esOperations);
         this.structuresProperties = structuresProperties;
         this.c3ToEsConversionService = c3ToEsConversionService;

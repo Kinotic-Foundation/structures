@@ -15,17 +15,22 @@
  * limitations under the License.
  */
 
-package org.kinotic.structures.item;
+package org.kinotic.structures.entity;
 
-import co.elastic.clients.json.JsonpMapper;
+import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
+import co.elastic.clients.elasticsearch._types.Refresh;
+import co.elastic.clients.elasticsearch.core.GetResponse;
 import co.elastic.clients.util.BinaryData;
+import co.elastic.clients.util.ContentType;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.kinotic.structures.ElasticsearchTestBase;
 import org.kinotic.structures.api.services.EntitiesService;
 import org.kinotic.structures.support.Person;
-import org.kinotic.structures.util.TestHelper;
+import org.kinotic.structures.support.StructureAndPersonHolder;
+import org.kinotic.structures.support.TestHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -33,43 +38,105 @@ import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import java.io.IOException;
-import java.util.concurrent.CompletableFuture;
+import java.nio.charset.StandardCharsets;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest
-public class ItemCrudTests extends ElasticsearchTestBase {
+public class EntityCrudTests extends ElasticsearchTestBase {
 
     @Autowired
     private EntitiesService entitiesService;
     @Autowired
     private TestHelper testHelper;
     @Autowired
-    private JsonpMapper jsonpMapper;
-    @Autowired
     private ObjectMapper objectMapper;
+    @Autowired
+    private ElasticsearchAsyncClient esAsyncClient;
+
+    private StructureAndPersonHolder createAndVerify(){
+        StructureAndPersonHolder ret = new StructureAndPersonHolder();
+
+        StepVerifier.create(testHelper.createDataForSingleEntityTest())
+                    .expectNextMatches(structureAndPersonHolder -> {
+                        boolean matches = structureAndPersonHolder.getStructure() != null &&
+                                structureAndPersonHolder.getPerson() != null &&
+                                structureAndPersonHolder.getStructure().getId() != null &&
+                                structureAndPersonHolder.getPerson().getId() != null;
+                        if(matches){
+                            ret.setStructure(structureAndPersonHolder.getStructure());
+                            ret.setPerson(structureAndPersonHolder.getPerson());
+                        }
+                        return matches;
+                    })
+                    .verifyComplete();
+        return ret;
+    }
 
     @Test
-    public void createAndDeleteItem() {
+    public void testCreateAndDeleteItem() {
+        StructureAndPersonHolder holder = createAndVerify();
 
-        CompletableFuture<Void> future = testHelper.getPersonStructure()
-                                                   .thenCompose(structure -> {
-            Person person = testHelper.createTestPerson();
-            BinaryData personData = BinaryData.of(person, jsonpMapper);
-            return entitiesService.save(structure.getId(), personData)
-                    .thenCompose(saved -> {
-                        try {
-                            Person savedPerson = objectMapper.readValue(saved.asByteBuffer().array(),
-                                                                        Person.class);
-                            return entitiesService.deleteById(structure.getId(), savedPerson.getId());
-                        } catch (IOException e) {
-                            return CompletableFuture.failedFuture(e);
-                        }
-                    });
-        });
+        Assertions.assertNotNull(holder);
 
-        StepVerifier.create(Mono.fromFuture(future))
+        StepVerifier.create(Mono.fromFuture(entitiesService.deleteById(holder.getStructure().getId(),
+                                                                       holder.getPerson().getId())))
                     .verifyComplete();
     }
+
+    @Test
+    public void testFindById(){
+        StructureAndPersonHolder holder = createAndVerify();
+
+        Assertions.assertNotNull(holder);
+
+        StepVerifier.create(Mono.fromFuture(entitiesService.findById(holder.getStructure().getId(), holder.getPerson().getId())))
+                .expectNextMatches(found -> {
+                    boolean ret;
+                    try {
+                        Person savedPerson = objectMapper.readValue(found.array(),
+                                                                    Person.class);
+                        Assertions.assertNotNull(savedPerson);
+
+                        ret = savedPerson.equals(holder.getPerson());
+
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                    return ret;
+                })
+                .verifyComplete();
+
+    }
+
+    @Test
+    public void testBinaryDataIngestion() throws Exception {
+        String index = "binary-ingestion-test";
+        String id = "foo-bar";
+
+        BinaryData data = BinaryData.of("{\"id\":\"27082ce1-d9ab-404e-a810-f2894640edf4\",\"firstName\":\"Jesse\",\"lastName\":\"Pinkman\",\"addresses\":[{\"street\":\"1001 Central Ave NE\",\"city\":\"Albuquerque\",\"state\":\"NM\",\"zip\":\"87106\"}]}".getBytes(), ContentType.APPLICATION_JSON);
+
+        esAsyncClient.index(i -> i
+                .index(index)
+                .id(id)
+                .document(data)
+                .refresh(Refresh.True)
+        ).get();
+
+        GetResponse<BinaryData> getResponse = esAsyncClient.get(g -> g
+                                                                 .index(index)
+                                                                 .id(id)
+                , BinaryData.class
+        ).get();
+
+        Assertions.assertEquals(id, getResponse.id());
+        Assertions.assertEquals(
+                "{\"id\":\"27082ce1-d9ab-404e-a810-f2894640edf4\",\"firstName\":\"Jesse\",\"lastName\":\"Pinkman\",\"addresses\":[{\"street\":\"1001 Central Ave NE\",\"city\":\"Albuquerque\",\"state\":\"NM\",\"zip\":\"87106\"}]}",
+                new String(getResponse.source().asByteBuffer().array(), StandardCharsets.UTF_8)
+        );
+    }
+
+
+
 //
 //    @Test
 //    public void createAndDeleteItem_checkingCountBeforeDelete() throws Exception {

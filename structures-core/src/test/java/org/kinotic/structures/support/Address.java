@@ -1,5 +1,6 @@
 package org.kinotic.structures.support;
 
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -12,6 +13,7 @@ import lombok.experimental.Accessors;
 @Setter
 @Accessors(chain = true)
 @NoArgsConstructor
+@EqualsAndHashCode
 public class Address {
 
     private String street;

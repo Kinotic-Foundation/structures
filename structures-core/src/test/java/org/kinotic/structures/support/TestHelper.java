@@ -1,18 +1,21 @@
-package org.kinotic.structures.util;
+package org.kinotic.structures.support;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.kinotic.continuum.idl.api.directory.SchemaFactory;
 import org.kinotic.continuum.idl.api.schema.C3Type;
 import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
 import org.kinotic.structures.api.decorators.IdDecorator;
 import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.api.services.EntitiesService;
 import org.kinotic.structures.api.services.StructureService;
-import org.kinotic.structures.support.Address;
-import org.kinotic.structures.support.Person;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import reactor.core.publisher.Mono;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 @Component
@@ -22,11 +25,16 @@ public class TestHelper {
     private SchemaFactory schemaFactory;
 
     @Autowired
+    private ObjectMapper objectMapper;
+
+    @Autowired
     private StructureService structureService;
+
+    @Autowired
+    private EntitiesService entitiesService;
 
     public Person createTestPerson() {
         return new Person()
-                .setId(UUID.randomUUID().toString())
                 .setFirstName("Jesse")
                 .setLastName("Pinkman")
                 .setAddresses(List.of(new Address()
@@ -36,7 +44,7 @@ public class TestHelper {
                                               .setZip("87106")));
     }
 
-    public CompletableFuture<Structure> getPersonStructure() {
+    public CompletableFuture<Structure> createPersonStructure() {
         Structure structure = new Structure();
         structure.setName("Person-" + System.currentTimeMillis());
         structure.setDescription("Defines a Person");
@@ -55,6 +63,32 @@ public class TestHelper {
             return CompletableFuture.failedFuture(new RuntimeException("Failed to create structure for Person"));
         }
     }
+
+    public Mono<StructureAndPersonHolder> createDataForSingleEntityTest(){
+        return Mono.fromFuture(() -> createPersonStructure()
+                .thenCompose(structure -> {
+                    Person person = createTestPerson();
+                    byte[] jsonData;
+                    try {
+                        jsonData = objectMapper.writeValueAsBytes(person);
+                    } catch (JsonProcessingException e) {
+                        return CompletableFuture.failedFuture(e);
+                    }
+                    ByteBuffer buffer = ByteBuffer.wrap(jsonData);
+                    return entitiesService.save(structure.getId(), buffer)
+                                          .thenCompose(saved -> {
+                                              try {
+                                                  Person savedPerson = objectMapper.readValue(saved.array(),
+                                                                                              Person.class);
+                                                  return CompletableFuture.completedFuture(new StructureAndPersonHolder(structure,
+                                                                                                                        savedPerson));
+                                              } catch (IOException e) {
+                                                  return CompletableFuture.failedFuture(e);
+                                              }
+                                          });
+                }));
+    }
+
 //
 //    public Structure getDeviceStructure() throws AlreadyExistsException, IOException {
 //        Structure structure = new Structure();

@@ -20,6 +20,10 @@ dependencyManagement {
     }
     dependencies {
         dependency 'com.h2database:h2:1.4.197' // We override the version provided by Spring to be compatible with Ignite which is used by Continuum
+        dependency "co.elastic.clients:elasticsearch-java:${elasticClientVersion}"
+        dependency "org.elasticsearch:elasticsearch:${elasticClientVersion}"
+        dependency "org.elasticsearch.client:elasticsearch-rest-client:${elasticClientVersion}"
+        dependency "org.elasticsearch.client:elasticsearch-rest-high-level-client:${elasticClientVersion}"
         dependency "org.apache.lucene:lucene-analyzers-common:${luceneVersion}"
         dependency "org.apache.lucene:lucene-backwards-codecs:${luceneVersion}"
         dependency "org.apache.lucene:lucene-core:${luceneVersion}"

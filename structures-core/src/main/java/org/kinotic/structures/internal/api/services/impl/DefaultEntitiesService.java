@@ -1,6 +1,5 @@
 package org.kinotic.structures.internal.api.services.impl;
 
-import co.elastic.clients.util.BinaryData;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.kinotic.continuum.core.api.crud.CrudService;
@@ -12,6 +11,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
+import java.nio.ByteBuffer;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -31,13 +31,13 @@ public class DefaultEntitiesService implements EntitiesService {
     }
 
     @Override
-    public CompletableFuture<BinaryData> save(String structureId, BinaryData entity) {
+    public CompletableFuture<ByteBuffer> save(String structureId, ByteBuffer entity) {
         return entityServiceCache.get(structureId)
                                  .thenCompose(entityService -> entityService.save(entity));
     }
 
     @Override
-    public CompletableFuture<BinaryData> findById(String structureId, String id) {
+    public CompletableFuture<ByteBuffer> findById(String structureId, String id) {
         return entityServiceCache.get(structureId)
                                  .thenCompose(entityService -> entityService.findById(id));
     }
@@ -55,13 +55,13 @@ public class DefaultEntitiesService implements EntitiesService {
     }
 
     @Override
-    public CompletableFuture<Page<BinaryData>> findAll(String structureId, Pageable pageable) {
+    public CompletableFuture<Page<ByteBuffer>> findAll(String structureId, Pageable pageable) {
         return entityServiceCache.get(structureId)
                                  .thenCompose(entityService -> entityService.findAll(pageable));
     }
 
     @Override
-    public CompletableFuture<Page<BinaryData>> search(String structureId, String searchText, Pageable pageable) {
+    public CompletableFuture<Page<ByteBuffer>> search(String structureId, String searchText, Pageable pageable) {
         return entityServiceCache.get(structureId)
                                  .thenCompose(entityService -> entityService.search(searchText, pageable));
     }

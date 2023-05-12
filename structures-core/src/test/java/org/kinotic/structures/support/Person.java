@@ -1,5 +1,6 @@
 package org.kinotic.structures.support;
 
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -14,6 +15,7 @@ import java.util.List;
 @Setter
 @Accessors(chain = true)
 @NoArgsConstructor
+@EqualsAndHashCode
 public class Person {
 
     private String id;

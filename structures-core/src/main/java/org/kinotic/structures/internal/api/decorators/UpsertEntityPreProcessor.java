@@ -1,5 +1,6 @@
 package org.kinotic.structures.internal.api.decorators;
 
+import java.nio.ByteBuffer;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -9,6 +10,6 @@ import java.util.concurrent.CompletableFuture;
  */
 public interface UpsertEntityPreProcessor {
 
-    CompletableFuture<RawEntity> process(byte[] bytes);
+    CompletableFuture<RawEntity> process(ByteBuffer data);
 
 }

@@ -1,4 +1,4 @@
-package org.kinotic.structures.item;
+package org.kinotic.structures.entity;
 
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.kinotic.structures.ElasticsearchTestBase;
