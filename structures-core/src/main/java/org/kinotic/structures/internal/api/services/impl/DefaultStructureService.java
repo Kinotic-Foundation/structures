@@ -4,14 +4,15 @@ import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import co.elastic.clients.elasticsearch._types.query_dsl.TermQuery;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.StructureService;
-import org.kinotic.structures.internal.api.services.C3ToEsConversionService;
-import org.kinotic.structures.internal.api.services.EsConversionResult;
+import org.kinotic.structures.internal.api.services.StructureConversionService;
+import org.kinotic.structures.internal.api.services.ElasticConversionResult;
 import org.kinotic.structures.internal.config.StructuresProperties;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.elasticsearch.core.ReactiveElasticsearchOperations;
 import org.springframework.stereotype.Component;
 
+import java.util.Date;
 import java.util.concurrent.CompletableFuture;
 
 
@@ -19,17 +20,17 @@ import java.util.concurrent.CompletableFuture;
 public class DefaultStructureService extends AbstractCrudService<Structure> implements StructureService {
 
     private final StructuresProperties structuresProperties;
-    private final C3ToEsConversionService c3ToEsConversionService;
+    private final StructureConversionService structureConversionService;
 
 
     public DefaultStructureService(ElasticsearchAsyncClient esAsyncClient,
                                    ReactiveElasticsearchOperations esOperations,
                                    StructuresProperties structuresProperties,
-                                   C3ToEsConversionService c3ToEsConversionService) {
+                                   StructureConversionService structureConversionService) {
         // FIXME: should we use the prefix in the structure index name?
         super("structure", Structure.class, esAsyncClient, esOperations);
         this.structuresProperties = structuresProperties;
-        this.c3ToEsConversionService = c3ToEsConversionService;
+        this.structureConversionService = structureConversionService;
     }
 
     @Override
@@ -77,7 +78,7 @@ public class DefaultStructureService extends AbstractCrudService<Structure> impl
                             ret = CompletableFuture.failedFuture(new IllegalArgumentException("Structure Namespace+Name must be unique, '"+logicalIndexName+"' already exists."));
                         }else{
                             // updating an existing structure, reconcile the differences
-                            structure.setUpdated(System.currentTimeMillis());
+                            structure.setUpdated(new Date());
 
                             // FIXME: reconcile structure differences (should be async)
                             ret = super.save(structure);
@@ -85,13 +86,13 @@ public class DefaultStructureService extends AbstractCrudService<Structure> impl
                     }else{
                         // new structure
                         structure.setId(logicalIndexName);
-                        structure.setCreated(System.currentTimeMillis());
+                        structure.setCreated(new Date());
                         structure.setUpdated(structure.getCreated());
                         // Store name of the elastic search index for items
                         structure.setItemIndex(this.structuresProperties.getIndexPrefix().trim().toLowerCase()+logicalIndexName);
 
                         // Try and create ES mapping to make sure IDL is valid
-                        c3ToEsConversionService.convert(structure.getEntityDefinition());
+                        structureConversionService.convertToElasticMapping(structure);
 
                         // FIXME: make sure that every C3Type has only a single decorator with the same implementation type
                         // For example two decorators instances that both implement UpsertFieldPreProcessor or MappingPreProcessor
@@ -144,7 +145,7 @@ public class DefaultStructureService extends AbstractCrudService<Structure> impl
                             ret = CompletableFuture.failedFuture(new IllegalArgumentException("Structure is already published"));
                         } else {
 
-                            EsConversionResult result = c3ToEsConversionService.convert(structure.getEntityDefinition());
+                            ElasticConversionResult result = structureConversionService.convertToElasticMapping(structure);
 
                             ret = crudServiceTemplate.createIndex(structure.getItemIndex(), true, indexBuilder -> {
 
@@ -154,7 +155,7 @@ public class DefaultStructureService extends AbstractCrudService<Structure> impl
                             .thenCompose(createIndexResponse -> {
                                 // update tracking fields
                                 structure.setPublished(true);
-                                structure.setPublishedTimestamp(System.currentTimeMillis());
+                                structure.setPublishedTimestamp(new Date());
                                 structure.setUpdated(structure.getPublishedTimestamp());
                                 structure.setDecoratedProperties(result.getDecoratedProperties());
 
@@ -182,8 +183,8 @@ public class DefaultStructureService extends AbstractCrudService<Structure> impl
                             ret = esAsyncClient.indices().delete(builder -> builder.index(structure.getItemIndex()))
                                                .thenCompose(deleteIndexResponse -> {
                                                    structure.setPublished(false);
-                                                   structure.setPublishedTimestamp(0);
-                                                   structure.setUpdated(System.currentTimeMillis());
+                                                   structure.setPublishedTimestamp(null);
+                                                   structure.setUpdated(new Date());
                                                    return super.save(structure).thenApply(structure1 -> null);
                                                });
                         }else {

@@ -15,12 +15,12 @@ import java.util.Set;
 /**
  * Created by Navíd Mitchell 🤪 on 4/28/23.
  */
-public class DateC3TypeToEsDateProperty implements SpecificC3TypeConverter<Property, DateC3Type, EsConversionState> {
+public class DateC3TypeToEsDateProperty implements SpecificC3TypeConverter<Property, DateC3Type, ElasticConversionState> {
 
     private static final Set<Class<? extends C3Type>> supports = Set.of(DateC3Type.class);
 
     @Override
-    public Property convert(DateC3Type dateC3Type, C3ConversionContext<Property, EsConversionState> conversionContext) {
+    public Property convert(DateC3Type dateC3Type, C3ConversionContext<Property, ElasticConversionState> conversionContext) {
         DateProperty.Builder builder = new DateProperty.Builder();
         if(dateC3Type.getFormat() instanceof MillsDateStyle){
             builder.format("epoch_millis");

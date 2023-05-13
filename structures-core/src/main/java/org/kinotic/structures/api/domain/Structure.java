@@ -23,10 +23,11 @@ import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.kinotic.continuum.api.Identifiable;
 import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
-import org.kinotic.structures.internal.idl.converters.elastic.DecoratedProperty;
+import org.kinotic.structures.internal.api.services.DecoratedProperty;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.*;
 
+import java.util.Date;
 import java.util.List;
 
 @Getter
@@ -39,7 +40,7 @@ public class Structure implements Identifiable<String> {
 
     @Id
     @Field(type = FieldType.Keyword)
-    private String id = null;
+    private String id = null; // do not ever set, system managed
 
     @Field(type = FieldType.Keyword)
     private String name = null;
@@ -50,28 +51,25 @@ public class Structure implements Identifiable<String> {
     @Field(type = FieldType.Text)
     private String description = null;
 
-    //@Field(type=FieldType.Date, format = DateFormat.epoch_millis)
-    @Field(type = FieldType.Long)
-    private long created = 0;// do not ever set, system managed
-
-    //@Field(type=FieldType.Date, format = DateFormat.epoch_millis)
-    @Field(type = FieldType.Long)
-    private long updated = 0;// do not ever set, system managed
-
-    @Field(type = FieldType.Boolean)
-    private boolean published = false;
-
-    //@Field(type=FieldType.Date, format = DateFormat.epoch_millis)
-    @Field(type = FieldType.Long)
-    private long publishedTimestamp = 0;
-
-    @Field(type = FieldType.Keyword)
-    private String itemIndex = null;
-
     @Field(type = FieldType.Flattened)
     private ObjectC3Type entityDefinition = null;
 
+    @Field(type=FieldType.Date)
+    private Date created = null; // do not ever set, system managed
+
+    @Field(type=FieldType.Date)
+    private Date updated = null; // do not ever set, system managed
+
+    @Field(type = FieldType.Boolean)
+    private boolean published = false; // do not ever set, system managed
+
+    @Field(type=FieldType.Date)
+    private Date publishedTimestamp = null; // do not ever set, system managed
+
+    @Field(type = FieldType.Keyword)
+    private String itemIndex = null; // do not ever set, system managed
+
     @Field(type = FieldType.Flattened)
-    private List<DecoratedProperty> decoratedProperties = null;
+    private List<DecoratedProperty> decoratedProperties = null; // do not ever set, system managed
 
 }

@@ -50,7 +50,7 @@ public class NamespaceTests extends ElasticsearchTestBase {
 		CompletableFuture<Namespace> future = namespaceService.save(test);
 
 		StepVerifier.create(Mono.fromFuture(future))
-					.expectNextMatches(namespace -> namespace.getId().equals("Test") && namespace.getUpdated() > 0)
+					.expectNextMatches(namespace -> namespace.getId().equals("Test") && namespace.getUpdated() != null)
 					.expectComplete()
 					.verify();
 

@@ -7,6 +7,7 @@ import org.kinotic.continuum.idl.api.converter.Cacheable;
 import org.kinotic.continuum.idl.api.converter.SpecificC3TypeConverter;
 import org.kinotic.continuum.idl.api.schema.C3Type;
 import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
+import org.kinotic.structures.internal.api.services.DecoratedProperty;
 import org.kinotic.structures.internal.api.services.impl.StructuresHelper;
 
 import java.util.ArrayDeque;
@@ -18,22 +19,25 @@ import java.util.Set;
  * Converts a {@link ObjectC3Type} to a {@link Property}
  * Created by Navíd Mitchell 🤪 on 4/27/23.
  */
-public class ObjectC3TypeToEsObjectProperty implements SpecificC3TypeConverter<Property, ObjectC3Type, EsConversionState>, Cacheable {
+public class ObjectC3TypeToEsObjectProperty implements SpecificC3TypeConverter<Property, ObjectC3Type, ElasticConversionState>, Cacheable {
 
     private static final Set<Class<? extends C3Type>> supports = Set.of(ObjectC3Type.class);
 
     private final Deque<String> propertyStack = new ArrayDeque<>();
 
     @Override
-    public Property convert(ObjectC3Type objectC3Type, C3ConversionContext<Property, EsConversionState> conversionContext) {
+    public Property convert(ObjectC3Type objectC3Type, C3ConversionContext<Property, ElasticConversionState> conversionContext) {
         ObjectProperty.Builder builder = new ObjectProperty.Builder();
 
         for(Map.Entry<String, C3Type> entry : objectC3Type.getProperties().entrySet()){
 
-            StructuresHelper.fieldNameValidation(entry.getKey());
+            String fieldName = entry.getKey();
+            conversionContext.state().setCurrentFieldName(fieldName);
+
+            StructuresHelper.fieldNameValidation(fieldName);
 
             // Store decorators for use later with their corresponding json path and type
-            String currentJsonPath = !propertyStack.isEmpty() ? propertyStack.peekFirst() + "." +entry.getKey() : entry.getKey();
+            String currentJsonPath = !propertyStack.isEmpty() ? propertyStack.peekFirst() + "." + fieldName : fieldName;
             propertyStack.addFirst(currentJsonPath);
 
             if(entry.getValue().hasDecorators()){

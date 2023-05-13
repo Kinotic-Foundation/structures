@@ -11,9 +11,9 @@ import java.util.Set;
 /**
  * Created by Navíd Mitchell 🤪 on 4/28/23.
  */
-public class PrimitiveC3TypeToEsPrimitiveProperty implements SpecificC3TypeConverter<Property, C3Type, EsConversionState> {
+public class PrimitiveC3TypeToEsPrimitiveProperty implements SpecificC3TypeConverter<Property, C3Type, ElasticConversionState> {
 
-    private final MultipleSpecificC3TypeConverter<Property, EsConversionState> converter = new MultipleSpecificC3TypeConverter<>();
+    private final MultipleSpecificC3TypeConverter<Property, ElasticConversionState> converter = new MultipleSpecificC3TypeConverter<>();
 
     public PrimitiveC3TypeToEsPrimitiveProperty() {
         converter.addConverter(BooleanC3Type.class, (c3Type, context) -> BooleanProperty.of(f -> f)._toProperty())
@@ -27,7 +27,7 @@ public class PrimitiveC3TypeToEsPrimitiveProperty implements SpecificC3TypeConve
     }
 
     @Override
-    public Property convert(C3Type c3Type, C3ConversionContext<Property, EsConversionState> conversionContext) {
+    public Property convert(C3Type c3Type, C3ConversionContext<Property, ElasticConversionState> conversionContext) {
         return converter.convert(c3Type, conversionContext);
     }
 

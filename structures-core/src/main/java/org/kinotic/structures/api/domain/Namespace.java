@@ -8,6 +8,8 @@ import org.kinotic.continuum.api.Identifiable;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.*;
 
+import java.util.Date;
+
 @Getter
 @Setter
 @Accessors(chain = true)
@@ -23,8 +25,7 @@ public class Namespace implements Identifiable<String> {
     @Field(type = FieldType.Text)
     private String description = null;
 
-   // @Field(type=FieldType.Date, format = DateFormat.epoch_millis)
-    @Field(type = FieldType.Long)
-    private long updated = 0;
+    @Field(type=FieldType.Date)
+    private Date updated = null;
 
 }

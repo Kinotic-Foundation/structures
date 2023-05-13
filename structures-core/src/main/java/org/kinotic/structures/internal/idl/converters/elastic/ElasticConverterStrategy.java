@@ -6,7 +6,6 @@ import org.kinotic.continuum.idl.internal.api.converter.AbstractIdlConverterStra
 import org.kinotic.structures.api.decorators.runtime.MappingPreProcessor;
 import org.springframework.stereotype.Component;
 
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -14,9 +13,9 @@ import java.util.List;
  * Created by Navíd Mitchell 🤪 on 4/28/23.
  */
 @Component
-public class EsConverterStrategy extends AbstractIdlConverterStrategy<Property, EsConversionState> {
+public class ElasticConverterStrategy extends AbstractIdlConverterStrategy<Property, ElasticConversionState> {
 
-    private final static List<SpecificC3TypeConverter<Property, ?, EsConversionState>> specificTypeConverters = List.of(
+    private final static List<SpecificC3TypeConverter<Property, ?, ElasticConversionState>> specificTypeConverters = List.of(
             new PrimitiveC3TypeToEsPrimitiveProperty(),
             new StringC3TypeToEsStringLikeProperty(),
             new DateC3TypeToEsDateProperty(),
@@ -24,17 +23,23 @@ public class EsConverterStrategy extends AbstractIdlConverterStrategy<Property, 
             new ArrayC3TypeToEsProperty()
     );
 
-    public EsConverterStrategy(List<MappingPreProcessor<?>> mappingPreProcessors) {
-        super(specificTypeConverters, Collections.emptyList());
+    public ElasticConverterStrategy(List<MappingPreProcessor<?>> mappingPreProcessors) {
+        super(specificTypeConverters, List.of(new MappingPreProcessorConverter(mappingPreProcessors)));
     }
 
     @Override
-    public EsConversionState initialState() {
-        return new EsConversionState();
+    public ElasticConversionState initialState() {
+        return new ElasticConversionState();
     }
 
     @Override
     public boolean shouldCache() {
+        return true;
+    }
+
+    @Override
+    protected boolean shouldCheckGenericConvertersFirst() {
+        // We do this so mapping converters will take precedence over specific converters
         return true;
     }
 }

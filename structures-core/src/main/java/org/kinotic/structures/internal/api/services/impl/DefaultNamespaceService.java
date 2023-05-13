@@ -9,6 +9,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.elasticsearch.core.ReactiveElasticsearchOperations;
 import org.springframework.stereotype.Component;
 
+import java.util.Date;
 import java.util.concurrent.CompletableFuture;
 
 @Component
@@ -25,7 +26,7 @@ public class DefaultNamespaceService extends AbstractCrudService<Namespace> impl
 
     @Override
     public CompletableFuture<Namespace> save(Namespace entity) {
-        entity.setUpdated(System.currentTimeMillis());
+        entity.setUpdated(new Date());
         return super.save(entity);
     }
 

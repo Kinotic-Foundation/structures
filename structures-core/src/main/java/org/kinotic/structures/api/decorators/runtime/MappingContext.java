@@ -4,8 +4,8 @@ import co.elastic.clients.elasticsearch._types.mapping.Property;
 import org.kinotic.continuum.idl.api.schema.C3Type;
 
 /**
- * The {@link MappingContext} is provided to the {@link MappingPreProcessor} to allow it to have access to the
- * {@link C3Type} that is currently being mapped and to allow it to convert a {@link C3Type} that does not need to convert
+ * The {@link MappingContext} is provided to the {@link MappingPreProcessor} to provide the {@link C3Type} that is currently being converted.
+ * Additionally, it provides a method to convert a {@link C3Type} that the {@link MappingPreProcessor} cannot convert by itself.
  * Created by Navíd Mitchell 🤪 on 5/12/23.
  */
 public interface MappingContext {

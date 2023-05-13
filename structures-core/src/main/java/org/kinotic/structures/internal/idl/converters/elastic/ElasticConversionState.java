@@ -4,6 +4,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.internal.api.services.DecoratedProperty;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -15,11 +17,15 @@ import java.util.List;
 @Setter
 @Accessors(chain = true)
 @NoArgsConstructor
-public class EsConversionState {
+public class ElasticConversionState {
 
-    List<DecoratedProperty> decoratedProperties = new LinkedList<>();
+    private List<DecoratedProperty> decoratedProperties = new LinkedList<>();
 
-    public EsConversionState addDecoratedProperty(DecoratedProperty decoratedProperty){
+    private Structure structureBeingConverted;
+
+    private String currentFieldName;
+
+    public ElasticConversionState addDecoratedProperty(DecoratedProperty decoratedProperty){
         decoratedProperties.add(decoratedProperty);
         return this;
     }

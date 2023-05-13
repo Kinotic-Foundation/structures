@@ -80,8 +80,8 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 		StepVerifier.create(Mono.fromFuture(future))
 					.expectNextMatches(savedStructure -> {
 						Assertions.assertNotNull(savedStructure.getId());
-						Assertions.assertTrue(savedStructure.getCreated() > 0);
-						Assertions.assertTrue(savedStructure.getUpdated() > 0);
+						Assertions.assertNotNull(savedStructure.getCreated());
+						Assertions.assertNotNull(savedStructure.getUpdated());
 						Assertions.assertEquals(structure.getName(), savedStructure.getName());
 						Assertions.assertEquals(structure.getDescription(), savedStructure.getDescription());
 						Assertions.assertEquals(structure.getEntityDefinition(), savedStructure.getEntityDefinition());
