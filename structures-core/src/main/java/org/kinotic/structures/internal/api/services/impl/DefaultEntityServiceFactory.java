@@ -9,7 +9,7 @@ import org.kinotic.structures.internal.api.decorators.BasicUpsertEntityPreProces
 import org.kinotic.structures.internal.api.decorators.DecoratorLogic;
 import org.kinotic.structures.internal.api.services.EntityService;
 import org.kinotic.structures.internal.api.services.EntityServiceFactory;
-import org.kinotic.structures.internal.api.services.DecoratedProperty;
+import org.kinotic.structures.internal.idl.converters.common.DecoratedProperty;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;

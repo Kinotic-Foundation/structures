@@ -4,10 +4,12 @@ import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import org.kinotic.structures.api.services.EntitiesService;
 
+import java.util.concurrent.CompletableFuture;
+
 /**
  * Created by Navíd Mitchell 🤪 on 4/18/23.
  */
-public class DeleteDataFetcher implements DataFetcher<Boolean> {
+public class DeleteDataFetcher implements DataFetcher<CompletableFuture<String>> {
 
     private final String structureId;
     private final EntitiesService entitiesService;
@@ -18,9 +20,9 @@ public class DeleteDataFetcher implements DataFetcher<Boolean> {
     }
 
     @Override
-    public Boolean get(DataFetchingEnvironment environment) throws Exception {
+    public CompletableFuture<String> get(DataFetchingEnvironment environment) throws Exception {
         String id = environment.getArgument("id");
-        entitiesService.deleteById(structureId, id);
-        return true;
+        return entitiesService.deleteById(structureId, id)
+                .thenCompose(aVoid -> CompletableFuture.completedFuture(id));
     }
 }

@@ -3,6 +3,7 @@ package org.kinotic.structures.internal.config;
 import org.kinotic.structures.internal.graphql.StructuresGraphQlHttpHandler;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.graphql.execution.ReactiveSecurityDataFetcherExceptionResolver;
 import org.springframework.graphql.server.WebGraphQlHandler;
 import org.springframework.http.HttpHeaders;
@@ -20,7 +21,7 @@ import static org.springframework.web.reactive.function.server.RequestPredicates
 /**
  * Created by Navíd Mitchell 🤪 on 4/17/23.
  */
-//@Configuration
+@Configuration
 public class StructuresGraphQlConfig {
 
     private static final RequestPredicate SUPPORTS_MEDIATYPES = accept(MediaType.APPLICATION_GRAPHQL,

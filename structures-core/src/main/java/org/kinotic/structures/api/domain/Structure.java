@@ -23,7 +23,7 @@ import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.kinotic.continuum.api.Identifiable;
 import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
-import org.kinotic.structures.internal.api.services.DecoratedProperty;
+import org.kinotic.structures.internal.idl.converters.common.DecoratedProperty;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.*;
 

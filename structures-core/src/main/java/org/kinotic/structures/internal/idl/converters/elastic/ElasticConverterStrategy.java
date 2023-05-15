@@ -3,7 +3,8 @@ package org.kinotic.structures.internal.idl.converters.elastic;
 import co.elastic.clients.elasticsearch._types.mapping.Property;
 import org.kinotic.continuum.idl.api.converter.SpecificC3TypeConverter;
 import org.kinotic.continuum.idl.internal.api.converter.AbstractIdlConverterStrategy;
-import org.kinotic.structures.api.decorators.runtime.MappingPreProcessor;
+import org.kinotic.structures.api.decorators.runtime.ElasticMappingPreProcessor;
+import org.kinotic.structures.internal.api.decorators.runtime.MappingPreProcessorConverter;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -16,15 +17,16 @@ import java.util.List;
 public class ElasticConverterStrategy extends AbstractIdlConverterStrategy<Property, ElasticConversionState> {
 
     private final static List<SpecificC3TypeConverter<Property, ?, ElasticConversionState>> specificTypeConverters = List.of(
-            new PrimitiveC3TypeToEsPrimitiveProperty(),
-            new StringC3TypeToEsStringLikeProperty(),
-            new DateC3TypeToEsDateProperty(),
-            new ObjectC3TypeToEsObjectProperty(),
-            new ArrayC3TypeToEsProperty()
+            new PrimitiveC3TypeToElastic(),
+            new ArrayC3TypeToElastic(),
+            new DateC3TypeToElastic(),
+            new ObjectC3TypeToElastic()
     );
 
-    public ElasticConverterStrategy(List<MappingPreProcessor<?>> mappingPreProcessors) {
-        super(specificTypeConverters, List.of(new MappingPreProcessorConverter(mappingPreProcessors)));
+    public ElasticConverterStrategy(List<ElasticMappingPreProcessor<?>> elasticMappingPreProcessors) {
+        // FIXME: get the generics correct here. Seems I shouldn't have to suppress the warnings.
+        //noinspection unchecked,rawtypes
+        super(specificTypeConverters, List.of(new MappingPreProcessorConverter(elasticMappingPreProcessors)));
     }
 
     @Override

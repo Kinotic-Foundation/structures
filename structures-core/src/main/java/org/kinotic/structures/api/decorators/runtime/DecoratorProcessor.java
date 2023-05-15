@@ -15,6 +15,6 @@ import org.kinotic.structures.api.domain.Structure;
  */
 public interface DecoratorProcessor<D extends C3Decorator, R, T> extends C3DecoratorInstance<D> {
 
-    R process(Structure structure, String fieldName, D decorator, T Value);
+    R process(Structure structure, String fieldName, D decorator, T value);
 
 }

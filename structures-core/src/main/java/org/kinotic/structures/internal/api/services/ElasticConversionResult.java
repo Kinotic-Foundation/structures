@@ -3,6 +3,7 @@ package org.kinotic.structures.internal.api.services;
 import co.elastic.clients.elasticsearch._types.mapping.ObjectProperty;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import org.kinotic.structures.internal.idl.converters.common.DecoratedProperty;
 
 import java.util.List;
 

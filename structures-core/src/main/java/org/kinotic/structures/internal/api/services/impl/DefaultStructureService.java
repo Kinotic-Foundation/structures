@@ -1,6 +1,7 @@
 package org.kinotic.structures.internal.api.services.impl;
 
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
+import co.elastic.clients.elasticsearch._types.mapping.DynamicMapping;
 import co.elastic.clients.elasticsearch._types.query_dsl.TermQuery;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.StructureService;
@@ -149,7 +150,8 @@ public class DefaultStructureService extends AbstractCrudService<Structure> impl
 
                             ret = crudServiceTemplate.createIndex(structure.getItemIndex(), true, indexBuilder -> {
 
-                                indexBuilder.mappings(m -> m.properties(result.getObjectProperty().properties()));
+                                indexBuilder.mappings(m -> m.dynamic(DynamicMapping.Strict)
+                                                            .properties(result.getObjectProperty().properties()));
 
                             })
                             .thenCompose(createIndexResponse -> {

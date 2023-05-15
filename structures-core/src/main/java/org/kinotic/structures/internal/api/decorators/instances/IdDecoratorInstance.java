@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.api.decorators.runtime;
+package org.kinotic.structures.internal.api.decorators.instances;
 
 import org.kinotic.structures.api.decorators.IdDecorator;
 import org.kinotic.structures.api.decorators.runtime.UpsertFieldPreProcessor;

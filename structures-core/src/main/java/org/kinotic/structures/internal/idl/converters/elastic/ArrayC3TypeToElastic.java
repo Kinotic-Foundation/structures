@@ -11,7 +11,7 @@ import java.util.Set;
 /**
  * Created by Navíd Mitchell 🤪 on 4/28/23.
  */
-public class ArrayC3TypeToEsProperty implements SpecificC3TypeConverter<Property, ArrayC3Type, ElasticConversionState> {
+public class ArrayC3TypeToElastic implements SpecificC3TypeConverter<Property, ArrayC3Type, ElasticConversionState> {
 
     private static final Set<Class<? extends C3Type>> supports = Set.of(ArrayC3Type.class);
 

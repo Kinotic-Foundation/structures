@@ -3,9 +3,11 @@ package org.kinotic.structures.support;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.kinotic.continuum.idl.api.directory.SchemaFactory;
+import org.kinotic.continuum.idl.api.schema.ArrayC3Type;
 import org.kinotic.continuum.idl.api.schema.C3Type;
 import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
 import org.kinotic.structures.api.decorators.IdDecorator;
+import org.kinotic.structures.api.decorators.TextDecorator;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.EntitiesService;
 import org.kinotic.structures.api.services.StructureService;
@@ -52,7 +54,14 @@ public class TestHelper {
         C3Type c3Type = schemaFactory.createForClass(Person.class);
         if(c3Type instanceof ObjectC3Type){
             ObjectC3Type personType = (ObjectC3Type) c3Type;
+
+            // Add decorators
             personType.getProperties().get("id").addDecorator(new IdDecorator());
+            ((ObjectC3Type)((ArrayC3Type)personType.getProperties().get("addresses"))
+                    .getContains())
+                    .getProperties()
+                    .get("street").addDecorator(new TextDecorator());
+
             structure.setEntityDefinition(personType);
             structure.setNamespace(personType.getNamespace());
 

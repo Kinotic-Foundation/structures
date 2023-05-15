@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.idl.converters.graphql;
+package org.kinotic.structures.api.decorators.runtime;
 
 import graphql.schema.GraphQLInputType;
 import graphql.schema.GraphQLOutputType;
@@ -15,10 +15,16 @@ import lombok.experimental.Accessors;
 @Setter
 @Accessors(chain = true)
 @RequiredArgsConstructor
-public class C3TypeToGraphTypeHolder<I extends GraphQLInputType, O extends GraphQLOutputType> {
+public class GraphQLTypeHolder {
 
-    private final I inputType;
+    /**
+     * The GraphQL input type for the C3 type
+     */
+    private final GraphQLInputType inputType;
 
-    private final O outputType;
+    /**
+     * The GraphQL output type for the C3 type
+     */
+    private final GraphQLOutputType outputType;
 
 }

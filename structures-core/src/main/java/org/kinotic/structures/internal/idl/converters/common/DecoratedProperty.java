@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.api.services;
+package org.kinotic.structures.internal.idl.converters.common;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
