@@ -199,6 +199,47 @@ public class DefaultOpenApiService implements OpenApiService {
         paths.put("/api/"+structure.getId()+"/search", searchPathItem);
 
 
+        // Create a path item for all the operations with "/api/"+structure.getId()+"/searchWithSort"
+        PathItem searchWithSortPathItem = new PathItem();
+        Operation searchWithSortOperation = createOperation("Search with Sort "+structure.getName(),
+                "searchWithSort"+structure.getName(),
+                structure.getName(),
+                2);
+
+        searchWithSortOperation.addParametersItem(new Parameter().name("sortField")
+                .in("query")
+                .description("The field to apply sorting to")
+                .required(true)
+                .schema(new StringSchema()));
+
+        searchWithSortOperation.addParametersItem(new Parameter().name("isDescending")
+                .in("query")
+                .description("Should we sort descending")
+                .required(false)
+                .schema(new BooleanSchema()._default(false)));
+
+        searchWithSortOperation.addParametersItem(new Parameter().name("page")
+                .in("query")
+                .description("The page number to get")
+                .required(false)
+                .schema(new IntegerSchema()._default(0)));
+
+        searchWithSortOperation.addParametersItem(new Parameter().name("size")
+                .in("query")
+                .description("The number of items per page")
+                .required(false)
+                .schema(new IntegerSchema()._default(25)));
+
+        RequestBody searchWithSortRequestBody = new RequestBody()
+                .content(new Content().addMediaType("text/plain",
+                        new MediaType().schema(new StringSchema())));
+        searchWithSortOperation.requestBody(searchWithSortRequestBody);
+
+        searchWithSortPathItem.post(searchWithSortOperation);
+        paths.put("/api/"+structure.getId()+"/searchWithSort", searchWithSortPathItem);
+
+
+
         // Create a path item for all the operations with "/api/"+structure.getId()+"/bulk-upsert"
         PathItem bulkUpsertPathItem = new PathItem();
         Operation bulkUpsertOperation = createOperation("Bulk Upsert "+structure.getName(),
