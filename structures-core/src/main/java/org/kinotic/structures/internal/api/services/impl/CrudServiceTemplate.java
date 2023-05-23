@@ -1,6 +1,7 @@
 package org.kinotic.structures.internal.api.services.impl;
 
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
+import co.elastic.clients.elasticsearch._types.ErrorResponse;
 import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch.core.*;
 import co.elastic.clients.elasticsearch.core.get.GetResult;
@@ -8,6 +9,13 @@ import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.elasticsearch.core.search.HitsMetadata;
 import co.elastic.clients.elasticsearch.indices.CreateIndexRequest;
 import co.elastic.clients.elasticsearch.indices.StorageType;
+import co.elastic.clients.json.JsonpDeserializer;
+import co.elastic.clients.json.JsonpMapperBase;
+import co.elastic.clients.transport.JsonEndpoint;
+import co.elastic.clients.transport.endpoints.EndpointWithResponseMapperAttr;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.kinotic.structures.api.domain.RawJson;
+import org.kinotic.structures.internal.serializer.RawJsonDeserializerDelegator;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -27,9 +35,12 @@ import java.util.function.Consumer;
 public class CrudServiceTemplate {
 
     private final ElasticsearchAsyncClient esAsyncClient;
+    private final ObjectMapper objectMapper;
 
-    public CrudServiceTemplate(ElasticsearchAsyncClient esAsyncClient) {
+
+    public CrudServiceTemplate(ElasticsearchAsyncClient esAsyncClient, ObjectMapper objectMapper) {
         this.esAsyncClient = esAsyncClient;
+        this.objectMapper = objectMapper;
     }
 
     /**
@@ -93,69 +104,121 @@ public class CrudServiceTemplate {
     /**
      * Provides base functionality to get a {@link Page} of documents from elasticsearch. With the ability to customize the {@link SearchRequest}.
      * NOTE: not all customizations are supported, only the ones that make sense for a {@link Page} of documents.
-     *       For example aggregations are not supported.
-     *       This is meant to be used internally by implementors.
+     * For example aggregations are not supported.
+     * This is meant to be used internally by implementors.
      *
-     * @param indexName name of the index to search
-     * @param type of the documents to return
-     * @param pageable to use for the search
+     * @param indexName       name of the index to search
+     * @param pageable        to use for the search
+     * @param type            of the documents to return
      * @param builderConsumer to customize the {@link SearchRequest}, or null if no customization is needed
      * @return a {@link CompletableFuture} that will complete with a {@link Page} of documents
      */
     public <T> CompletableFuture<Page<T>> findAll(String indexName,
-                                                  Class<T> type,
                                                   Pageable pageable,
+                                                  Class<T> type,
                                                   Consumer<SearchRequest.Builder> builderConsumer){
-        return esAsyncClient.search(builder -> {
-                                builder.index(indexName)
-                                       .trackTotalHits(t -> t.enabled(true))
-                                       .from(pageable.getPageNumber() * pageable.getPageSize())
-                                       .size(pageable.getPageSize());
 
-                                for(Sort.Order order : pageable.getSort()){
-                                    builder.sort(s -> s.field(f -> f.field(order.getProperty()).order(order.isAscending() ? SortOrder.Asc : SortOrder.Desc)));
-                                }
-
-                                if(builderConsumer != null){
-                                    builderConsumer.accept(builder);
-                                }
-
-                                return builder;
-                            }, type)
-                            .thenApply(response -> {
-                                HitsMetadata<T> hitsMetadata = response.hits();
-                                List<T> content = new ArrayList<>(hitsMetadata.hits().size());
-                                for(Hit<T> hit : hitsMetadata.hits()) {
-                                    content.add(hit.source());
-                                }
-                                return new PageImpl<>(content, pageable,
-                                                      Objects.requireNonNull(hitsMetadata.total(),
-                                                                             "System Error total hits not available").value());
-                            });
+        return findAll(indexName, pageable, getDeserializer(type), builderConsumer)
+                .thenApply(response -> {
+                    HitsMetadata<T> hitsMetadata = response.hits();
+                    List<T> content = new ArrayList<>(hitsMetadata.hits().size());
+                    for(Hit<T> hit : hitsMetadata.hits()) {
+                        content.add(hit.source());
+                    }
+                    return new PageImpl<>(content, pageable,
+                                          Objects.requireNonNull(hitsMetadata.total(),
+                                                                 "System Error total hits not available").value());
+                });
     }
+
+    /**
+     * Provides base functionality to get a {@link Page} of documents from elasticsearch. With the ability to customize the {@link SearchRequest}.
+     * @param indexName name of the index to search
+     * @param pageable to use for the search
+     * @param deserializer to use to deserialize the documents
+     * @param builderConsumer to customize the {@link SearchRequest}, or null if no customization is needed
+     * @return a {@link CompletableFuture} that will complete with a {@link SearchResponse} of documents
+     * @param <T> type of the documents to return
+     */
+    public <T> CompletableFuture<SearchResponse<T>> findAll(String indexName,
+                                                            Pageable pageable,
+                                                            JsonpDeserializer<T> deserializer,
+                                                            Consumer<SearchRequest.Builder> builderConsumer) {
+        @SuppressWarnings("unchecked")
+        JsonEndpoint<SearchRequest, SearchResponse<T>, ErrorResponse> endpoint = (JsonEndpoint<SearchRequest, SearchResponse<T>, ErrorResponse>) SearchRequest._ENDPOINT;
+        endpoint = new EndpointWithResponseMapperAttr<>(endpoint,
+                                                        "co.elastic.clients:Deserializer:_global.search.TDocument", deserializer);
+
+        SearchRequest.Builder builder = new SearchRequest.Builder();
+
+        builder.index(indexName)
+               .trackTotalHits(t -> t.enabled(true))
+               .from(pageable.getPageNumber() * pageable.getPageSize())
+               .size(pageable.getPageSize());
+
+        for(Sort.Order order : pageable.getSort()){
+            builder.sort(s -> s.field(f -> f.field(order.getProperty()).order(order.isAscending() ? SortOrder.Asc : SortOrder.Desc)));
+        }
+
+        if(builderConsumer != null){
+            builderConsumer.accept(builder);
+        }
+
+        //noinspection resource
+        return esAsyncClient._transport().performRequestAsync(builder.build(), endpoint, esAsyncClient._transportOptions());
+    }
+
+
+    /**
+     * Finds a document by id. Also allows for customization of the {@link GetRequest}.
+     *
+     * @param <T>             type of the document to return
+     * @param indexName       name of the index to search
+     * @param id              of the document to return
+     * @param type            of the document to return
+     * @param builderConsumer to customize the {@link GetRequest}, or null if no customization is needed
+     * @return a {@link CompletableFuture} that will complete with the document
+     */
+    public <T> CompletableFuture<T> findById(String indexName,
+                                             String id,
+                                             Class<T> type,
+                                             Consumer<GetRequest.Builder> builderConsumer) {
+        return this.findById(indexName, id, getDeserializer(type), builderConsumer)
+                   .thenApply(GetResult::source);
+    }
+
 
     /**
      * Finds a document by id. Also allows for customization of the {@link GetRequest}.
      * @param indexName name of the index to search
-     * @param type of the document to return
      * @param id of the document to return
+     * @param deserializer to use to deserialize the document
      * @param builderConsumer to customize the {@link GetRequest}, or null if no customization is needed
      * @return a {@link CompletableFuture} that will complete with the document
      * @param <T> type of the document to return
      */
-    public <T> CompletableFuture<T> findById(String indexName,
-                                             Class<T> type,
-                                             String id,
-                                             Consumer<GetRequest.Builder> builderConsumer) {
-        return esAsyncClient.get(builder -> {
-                                builder.index(indexName).id(id);
-                                if(builderConsumer != null){
-                                    builderConsumer.accept(builder);
-                                }
-                                return builder;
-                            }, type)
-                            .thenApply(GetResult::source);
+    public <T> CompletableFuture<GetResponse<T>> findById(String indexName,
+                                                          String id,
+                                                          JsonpDeserializer<T> deserializer,
+                                                          Consumer<GetRequest.Builder> builderConsumer){
+        //noinspection unchecked
+        JsonEndpoint<GetRequest, GetResponse<T>, ErrorResponse> endpoint =
+                (JsonEndpoint<GetRequest, GetResponse<T>, ErrorResponse>) GetRequest._ENDPOINT;
+
+        endpoint = new EndpointWithResponseMapperAttr<>(endpoint, "co.elastic.clients:Deserializer:_global.get.TDocument", deserializer);
+
+        GetRequest.Builder builder = new GetRequest.Builder();
+
+        builder.index(indexName).id(id);
+        if(builderConsumer != null){
+            builderConsumer.accept(builder);
+        }
+
+        //noinspection resource
+        return esAsyncClient._transport().performRequestAsync(builder.build(), endpoint, esAsyncClient._transportOptions());
     }
+
+
 
     /**
      * Deletes a document by id. Also allows for customization of the {@link DeleteRequest}.
@@ -174,6 +237,21 @@ public class CrudServiceTemplate {
             }
             return builder;
         });
+    }
+
+    private <T> JsonpDeserializer<T> getDeserializer(Class<T> type) {
+        if(RawJson.class.isAssignableFrom(type)){
+            //noinspection unchecked
+            return (JsonpDeserializer<T>) new RawJsonDeserializerDelegator(objectMapper);
+        }
+
+        // Try the built-in deserializers first to avoid repeated lookups in the Jsonp mapper for client-defined classes
+        JsonpDeserializer<T> result = JsonpMapperBase.findDeserializer(type);
+        if (result != null) {
+            return result;
+        }
+
+        return JsonpDeserializer.of(type);
     }
 
 }

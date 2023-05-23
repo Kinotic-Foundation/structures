@@ -27,12 +27,13 @@ public abstract class AbstractCrudService<T extends Identifiable<String>> implem
     public AbstractCrudService(String indexName,
                                Class<T> type,
                                ElasticsearchAsyncClient esAsyncClient,
-                               ReactiveElasticsearchOperations esOperations) {
+                               ReactiveElasticsearchOperations esOperations,
+                               CrudServiceTemplate crudServiceTemplate) {
         this.indexName = indexName;
         this.type = type;
         this.esAsyncClient = esAsyncClient;
         this.esOperations = esOperations;
-        this.crudServiceTemplate = new CrudServiceTemplate(esAsyncClient);
+        this.crudServiceTemplate = crudServiceTemplate;
     }
 
     @PostConstruct
@@ -58,7 +59,7 @@ public abstract class AbstractCrudService<T extends Identifiable<String>> implem
 
     @Override
     public CompletableFuture<T> findById(String id) {
-        return crudServiceTemplate.findById(indexName, type, id, null);
+        return crudServiceTemplate.findById(indexName, id, type, null);
     }
 
     @Override
@@ -74,7 +75,7 @@ public abstract class AbstractCrudService<T extends Identifiable<String>> implem
 
     @Override
     public CompletableFuture<Page<T>> findAll(Pageable pageable) {
-        return crudServiceTemplate.findAll(indexName, type, pageable, null);
+        return crudServiceTemplate.findAll(indexName, pageable, type, null);
     }
 
 }

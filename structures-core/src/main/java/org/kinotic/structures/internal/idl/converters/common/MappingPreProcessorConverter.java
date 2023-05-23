@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.api.decorators.runtime;
+package org.kinotic.structures.internal.idl.converters.common;
 
 import org.apache.commons.lang3.Validate;
 import org.apache.commons.lang3.tuple.Pair;
@@ -9,7 +9,6 @@ import org.kinotic.continuum.idl.api.schema.decorators.C3Decorator;
 import org.kinotic.structures.api.decorators.runtime.DecoratorProcessor;
 import org.kinotic.structures.api.decorators.runtime.MappingContext;
 import org.kinotic.structures.api.domain.Structure;
-import org.kinotic.structures.internal.idl.converters.common.BaseConversionState;
 
 import java.util.HashMap;
 import java.util.List;

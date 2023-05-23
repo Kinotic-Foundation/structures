@@ -15,7 +15,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Map;
@@ -45,16 +44,7 @@ public class BasicUpsertEntityPreProcessor implements UpsertEntityPreProcessor {
     }
 
     @Override
-    public CompletableFuture<RawEntity> process(ByteBuffer data) {
-
-        // for now, we use a temporary array I will look for a more optimal way when we move to streaming input.
-        byte[] bytes;
-        if(data.hasArray()) {
-            bytes = data.array();
-        }else {
-            bytes = new byte[data.remaining()];
-            data.get(bytes);
-        }
+    public CompletableFuture<RawEntity> process(byte[] bytes) {
 
         Deque<String> jsonPathStack = new ArrayDeque<>();
         String id = null;

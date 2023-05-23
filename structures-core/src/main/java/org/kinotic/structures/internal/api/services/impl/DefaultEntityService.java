@@ -4,13 +4,13 @@ import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import co.elastic.clients.elasticsearch._types.Refresh;
 import co.elastic.clients.util.BinaryData;
 import co.elastic.clients.util.ContentType;
+import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.internal.api.decorators.UpsertEntityPreProcessor;
 import org.kinotic.structures.internal.api.services.EntityService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
-import java.nio.ByteBuffer;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -34,8 +34,8 @@ public class DefaultEntityService implements EntityService {
     }
 
     @Override
-    public CompletableFuture<ByteBuffer> save(ByteBuffer entity) {
-        return upsertEntityPreProcessor.process(entity)
+    public CompletableFuture<RawJson> save(RawJson entity) {
+        return upsertEntityPreProcessor.process(entity.data())
                 .thenCompose(rawEntity -> {
                     BinaryData binaryData = BinaryData.of(rawEntity.getData(), ContentType.APPLICATION_JSON);
                     return esAsyncClient.index(i -> i
@@ -43,15 +43,13 @@ public class DefaultEntityService implements EntityService {
                             .id(rawEntity.getId())
                             .document(binaryData)
                             .refresh(Refresh.True))
-                            .thenApply(indexResponse -> binaryData.asByteBuffer());
+                            .thenApply(indexResponse -> new RawJson(rawEntity.getData()));
                 });
     }
 
     @Override
-    public CompletableFuture<ByteBuffer> findById(String id) {
-        // FIXME: deserialization does not work with complex objects
-        return crudServiceTemplate.findById(structure.getItemIndex(), BinaryData.class, id, null)
-                                  .thenApply(BinaryData::asByteBuffer);
+    public CompletableFuture<RawJson> findById(String id) {
+        return crudServiceTemplate.findById(structure.getItemIndex(), id, RawJson.class, null);
     }
 
     @Override
@@ -66,13 +64,12 @@ public class DefaultEntityService implements EntityService {
     }
 
     @Override
-    public CompletableFuture<Page<ByteBuffer>> findAll(Pageable pageable) {
-        return crudServiceTemplate.findAll(structure.getItemIndex(), BinaryData.class, pageable, null)
-                                  .thenApply(page -> page.map(BinaryData::asByteBuffer));
+    public CompletableFuture<Page<RawJson>> findAll(Pageable pageable) {
+        return crudServiceTemplate.findAll(structure.getItemIndex(), pageable, RawJson.class, null);
     }
 
     @Override
-    public CompletableFuture<Page<ByteBuffer>> search(String searchText, Pageable pageable) {
+    public CompletableFuture<Page<RawJson>> search(String searchText, Pageable pageable) {
         return null;
     }
 

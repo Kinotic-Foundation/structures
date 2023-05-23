@@ -19,8 +19,9 @@ public class DefaultNamespaceService extends AbstractCrudService<Namespace> impl
 
     public DefaultNamespaceService(ElasticsearchAsyncClient esAsyncClient,
                                    ReactiveElasticsearchOperations esOperations,
-                                   StructureService structureService) {
-        super("namespace", Namespace.class, esAsyncClient, esOperations);
+                                   StructureService structureService,
+                                   CrudServiceTemplate crudServiceTemplate) {
+        super("namespace", Namespace.class, esAsyncClient, esOperations, crudServiceTemplate);
         this.structureService = structureService;
     }
 

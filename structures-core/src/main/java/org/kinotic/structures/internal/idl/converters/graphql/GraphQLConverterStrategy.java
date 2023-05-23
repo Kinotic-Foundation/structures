@@ -4,7 +4,7 @@ import org.kinotic.continuum.idl.api.converter.SpecificC3TypeConverter;
 import org.kinotic.continuum.idl.internal.api.converter.AbstractIdlConverterStrategy;
 import org.kinotic.structures.api.decorators.runtime.GraphQLMappingPreProcessor;
 import org.kinotic.structures.api.decorators.runtime.GraphQLTypeHolder;
-import org.kinotic.structures.internal.api.decorators.runtime.MappingPreProcessorConverter;
+import org.kinotic.structures.internal.idl.converters.common.MappingPreProcessorConverter;
 import org.springframework.stereotype.Component;
 
 import java.util.List;

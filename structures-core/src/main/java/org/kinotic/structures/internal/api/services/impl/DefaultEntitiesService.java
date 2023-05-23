@@ -3,6 +3,7 @@ package org.kinotic.structures.internal.api.services.impl;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.kinotic.continuum.core.api.crud.CrudService;
+import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.services.EntitiesService;
 import org.kinotic.structures.api.services.StructureService;
 import org.kinotic.structures.internal.api.services.EntityService;
@@ -11,7 +12,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
-import java.nio.ByteBuffer;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -31,13 +31,13 @@ public class DefaultEntitiesService implements EntitiesService {
     }
 
     @Override
-    public CompletableFuture<ByteBuffer> save(String structureId, ByteBuffer entity) {
+    public CompletableFuture<RawJson> save(String structureId, RawJson entity) {
         return entityServiceCache.get(structureId)
                                  .thenCompose(entityService -> entityService.save(entity));
     }
 
     @Override
-    public CompletableFuture<ByteBuffer> findById(String structureId, String id) {
+    public CompletableFuture<RawJson> findById(String structureId, String id) {
         return entityServiceCache.get(structureId)
                                  .thenCompose(entityService -> entityService.findById(id));
     }
@@ -55,13 +55,13 @@ public class DefaultEntitiesService implements EntitiesService {
     }
 
     @Override
-    public CompletableFuture<Page<ByteBuffer>> findAll(String structureId, Pageable pageable) {
+    public CompletableFuture<Page<RawJson>> findAll(String structureId, Pageable pageable) {
         return entityServiceCache.get(structureId)
                                  .thenCompose(entityService -> entityService.findAll(pageable));
     }
 
     @Override
-    public CompletableFuture<Page<ByteBuffer>> search(String structureId, String searchText, Pageable pageable) {
+    public CompletableFuture<Page<RawJson>> search(String structureId, String searchText, Pageable pageable) {
         return entityServiceCache.get(structureId)
                                  .thenCompose(entityService -> entityService.search(searchText, pageable));
     }

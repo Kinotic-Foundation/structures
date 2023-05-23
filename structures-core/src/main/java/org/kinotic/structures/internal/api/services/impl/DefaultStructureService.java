@@ -5,8 +5,8 @@ import co.elastic.clients.elasticsearch._types.mapping.DynamicMapping;
 import co.elastic.clients.elasticsearch._types.query_dsl.TermQuery;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.StructureService;
-import org.kinotic.structures.internal.api.services.StructureConversionService;
 import org.kinotic.structures.internal.api.services.ElasticConversionResult;
+import org.kinotic.structures.internal.api.services.StructureConversionService;
 import org.kinotic.structures.internal.config.StructuresProperties;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -27,9 +27,10 @@ public class DefaultStructureService extends AbstractCrudService<Structure> impl
     public DefaultStructureService(ElasticsearchAsyncClient esAsyncClient,
                                    ReactiveElasticsearchOperations esOperations,
                                    StructuresProperties structuresProperties,
-                                   StructureConversionService structureConversionService) {
+                                   StructureConversionService structureConversionService,
+                                   CrudServiceTemplate crudServiceTemplate) {
         // FIXME: should we use the prefix in the structure index name?
-        super("structure", Structure.class, esAsyncClient, esOperations);
+        super("structure", Structure.class, esAsyncClient, esOperations, crudServiceTemplate);
         this.structuresProperties = structuresProperties;
         this.structureConversionService = structureConversionService;
     }
@@ -124,7 +125,7 @@ public class DefaultStructureService extends AbstractCrudService<Structure> impl
 
     @Override
     public CompletableFuture<Page<Structure>> findAllPublishedForNamespace(String namespace, Pageable pageable) {
-        return crudServiceTemplate.findAll(indexName, type, pageable, builder -> builder
+        return crudServiceTemplate.findAll(indexName, pageable, type, builder -> builder
                 .query(q -> q
                         .bool(b -> b
                                 .filter(TermQuery.of(tq -> tq.field("namespace").value(namespace))._toQuery(),

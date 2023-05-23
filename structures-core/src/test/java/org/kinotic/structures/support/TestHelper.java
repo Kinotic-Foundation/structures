@@ -8,6 +8,7 @@ import org.kinotic.continuum.idl.api.schema.C3Type;
 import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
 import org.kinotic.structures.api.decorators.IdDecorator;
 import org.kinotic.structures.api.decorators.TextDecorator;
+import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.EntitiesService;
 import org.kinotic.structures.api.services.StructureService;
@@ -16,7 +17,6 @@ import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -83,12 +83,11 @@ public class TestHelper {
                     } catch (JsonProcessingException e) {
                         return CompletableFuture.failedFuture(e);
                     }
-                    ByteBuffer buffer = ByteBuffer.wrap(jsonData);
-                    return entitiesService.save(structure.getId(), buffer)
+                    return entitiesService.save(structure.getId(), RawJson.of(jsonData))
                                           .thenCompose(saved -> {
                                               try {
-                                                  System.out.println(new String(saved.array()));
-                                                  Person savedPerson = objectMapper.readValue(saved.array(),
+                                                  System.out.println(new String(saved.data()));
+                                                  Person savedPerson = objectMapper.readValue(saved.data(),
                                                                                               Person.class);
                                                   return CompletableFuture.completedFuture(new StructureAndPersonHolder(structure,
                                                                                                                         savedPerson));
