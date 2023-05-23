@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -73,28 +74,40 @@ public class TestHelper {
         }
     }
 
-    public Mono<StructureAndPersonHolder> createDataForSingleEntityTest(){
+    public Mono<StructureAndPersonHolder> createStructureAndEntities(int numberOfPeopleToCreate){
         return Mono.fromFuture(() -> createPersonStructure()
                 .thenCompose(structure -> {
-                    Person person = createTestPerson();
-                    byte[] jsonData;
-                    try {
-                        jsonData = objectMapper.writeValueAsBytes(person);
-                    } catch (JsonProcessingException e) {
-                        return CompletableFuture.failedFuture(e);
+                    List<CompletableFuture<Person>> completableFutures = new ArrayList<>();
+
+                    for(int i = 0; i < numberOfPeopleToCreate; i++){
+                        Person person = createTestPerson();
+                        byte[] jsonData;
+                        try {
+                            jsonData = objectMapper.writeValueAsBytes(person);
+                        } catch (JsonProcessingException e) {
+                            return CompletableFuture.failedFuture(e);
+                        }
+                        completableFutures.add(entitiesService.save(structure.getId(), RawJson.from(jsonData))
+                                                              .thenCompose(saved -> {
+                                                                  try {
+                                                                      Person savedPerson = objectMapper.readValue(saved.data(),
+                                                                                                                  Person.class);
+                                                                      return CompletableFuture.completedFuture(savedPerson);
+                                                                  } catch (IOException e) {
+                                                                      return CompletableFuture.failedFuture(e);
+                                                                  }
+                                                              }));
                     }
-                    return entitiesService.save(structure.getId(), RawJson.of(jsonData))
-                                          .thenCompose(saved -> {
-                                              try {
-                                                  System.out.println(new String(saved.data()));
-                                                  Person savedPerson = objectMapper.readValue(saved.data(),
-                                                                                              Person.class);
-                                                  return CompletableFuture.completedFuture(new StructureAndPersonHolder(structure,
-                                                                                                                        savedPerson));
-                                              } catch (IOException e) {
-                                                  return CompletableFuture.failedFuture(e);
-                                              }
-                                          });
+
+                    return CompletableFuture.allOf(completableFutures.toArray(new CompletableFuture[0]))
+                                            .thenApply(v -> {
+                                                StructureAndPersonHolder holder = new StructureAndPersonHolder();
+                                                holder.setStructure(structure);
+                                                for(CompletableFuture<Person> future : completableFutures){
+                                                    holder.addPerson(future.join());
+                                                }
+                                                return holder;
+                                            });
                 }));
     }
 

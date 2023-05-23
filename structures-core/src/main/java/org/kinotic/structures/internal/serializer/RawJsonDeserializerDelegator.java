@@ -40,7 +40,7 @@ public class RawJsonDeserializerDelegator extends JsonpDeserializerBase<RawJson>
                 jacksonParser.nextToken();
             }
 
-            return RawJson.fromParser(jacksonParser, objectMapper);
+            return RawJson.from(jacksonParser, objectMapper);
 
         } catch (IOException e) {
             throw new IllegalStateException(e);

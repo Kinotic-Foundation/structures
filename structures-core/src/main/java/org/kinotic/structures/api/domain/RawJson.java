@@ -39,11 +39,21 @@ public final class RawJson {
         return ByteBuffer.wrap(data);
     }
 
-    public static RawJson of(byte[] data) {
+    /**
+     * Helper method to get a RawJson from a byte array
+     * @param data the data to use
+     * @return a RawJson instance
+     */
+    public static RawJson from(byte[] data) {
         return new RawJson(data);
     }
 
-    public static RawJson of(ByteBuffer buffer) {
+    /**
+     * Helper method to get a RawJson from a ByteBuffer
+     * @param buffer the buffer to use
+     * @return a RawJson instance
+     */
+    public static RawJson from(ByteBuffer buffer) {
         return new RawJson(buffer);
     }
 
@@ -54,8 +64,8 @@ public final class RawJson {
      * @return a RawJson instance
      * @throws IOException if there is an error parsing the json
      */
-    public static RawJson fromParser(JsonParser parser,
-                                     ObjectMapper objectMapper) throws IOException {
+    public static RawJson from(JsonParser parser,
+                               ObjectMapper objectMapper) throws IOException {
         if(parser.currentToken() != JsonToken.START_ARRAY
                 && parser.currentToken() != JsonToken.START_OBJECT) {
             throw new JsonParseException(parser, "The root of a RawJson must be an array or object", parser.getCurrentLocation());

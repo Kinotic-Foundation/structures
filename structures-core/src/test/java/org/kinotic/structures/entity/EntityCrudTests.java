@@ -33,6 +33,7 @@ import org.kinotic.structures.support.StructureAndPersonHolder;
 import org.kinotic.structures.support.TestHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
@@ -54,17 +55,20 @@ public class EntityCrudTests extends ElasticsearchTestBase {
     private ElasticsearchAsyncClient esAsyncClient;
 
     private StructureAndPersonHolder createAndVerify(){
+        return createAndVerify(1);
+    }
+
+    private StructureAndPersonHolder createAndVerify(int numberOfPeopleToCreate){
         StructureAndPersonHolder ret = new StructureAndPersonHolder();
 
-        StepVerifier.create(testHelper.createDataForSingleEntityTest())
+        StepVerifier.create(testHelper.createStructureAndEntities(numberOfPeopleToCreate))
                     .expectNextMatches(structureAndPersonHolder -> {
                         boolean matches = structureAndPersonHolder.getStructure() != null &&
-                                structureAndPersonHolder.getPerson() != null &&
                                 structureAndPersonHolder.getStructure().getId() != null &&
-                                structureAndPersonHolder.getPerson().getId() != null;
+                                structureAndPersonHolder.getPersons().size() == numberOfPeopleToCreate;
                         if(matches){
                             ret.setStructure(structureAndPersonHolder.getStructure());
-                            ret.setPerson(structureAndPersonHolder.getPerson());
+                            ret.setPersons(structureAndPersonHolder.getPersons());
                         }
                         return matches;
                     })
@@ -74,22 +78,22 @@ public class EntityCrudTests extends ElasticsearchTestBase {
 
     @Test
     public void testCreateAndDeleteItem() {
-        StructureAndPersonHolder holder = createAndVerify();
+        StructureAndPersonHolder holder = createAndVerify(1);
 
         Assertions.assertNotNull(holder);
 
         StepVerifier.create(Mono.fromFuture(entitiesService.deleteById(holder.getStructure().getId(),
-                                                                       holder.getPerson().getId())))
+                                                                       holder.getFirstPerson().getId())))
                     .verifyComplete();
     }
 
     @Test
     public void testFindById(){
-        StructureAndPersonHolder holder = createAndVerify();
+        StructureAndPersonHolder holder = createAndVerify(1);
 
         Assertions.assertNotNull(holder);
 
-        StepVerifier.create(Mono.fromFuture(entitiesService.findById(holder.getStructure().getId(), holder.getPerson().getId())))
+        StepVerifier.create(Mono.fromFuture(entitiesService.findById(holder.getStructure().getId(), holder.getFirstPerson().getId())))
                 .expectNextMatches(found -> {
                     boolean ret;
                     try {
@@ -97,7 +101,7 @@ public class EntityCrudTests extends ElasticsearchTestBase {
                                                                     Person.class);
                         Assertions.assertNotNull(savedPerson);
 
-                        ret = savedPerson.equals(holder.getPerson());
+                        ret = savedPerson.equals(holder.getFirstPerson());
 
                     } catch (IOException e) {
                         throw new RuntimeException(e);
@@ -105,6 +109,22 @@ public class EntityCrudTests extends ElasticsearchTestBase {
                     return ret;
                 })
                 .verifyComplete();
+
+    }
+
+    @Test
+    public void testFindAll(){
+        StructureAndPersonHolder holder = createAndVerify(10);
+
+        Assertions.assertNotNull(holder);
+
+        StepVerifier.create(Mono.fromFuture(entitiesService.findAll(holder.getStructure().getId(),
+                                                                    Pageable.ofSize(10))))
+                    .expectNextMatches(rawJsons -> rawJsons.getTotalElements() == 10
+                                        && rawJsons.getTotalPages() == 1
+                                        && rawJsons.getContent().size() == 10)
+                    .verifyComplete();
+
 
     }
 
