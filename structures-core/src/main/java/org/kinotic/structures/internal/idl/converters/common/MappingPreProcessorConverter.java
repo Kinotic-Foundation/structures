@@ -48,6 +48,12 @@ public class MappingPreProcessorConverter<R, S extends BaseConversionState> impl
         C3Decorator decorator = pair.getLeft();
         MappingPreProcessor<C3Decorator, C3Type, R> preProcessor = pair.getRight();
 
+        if(!preProcessor.supportC3Type().isAssignableFrom(c3Type.getClass())){
+            throw new IllegalArgumentException("Decorator: " + preProcessor.implementsDecorator().getName()
+                                               + " does not support C3Type: " + c3Type.getClass().getName()
+                                               + " on field: " + fieldName + " of structure: " + structure.getName() + "");
+        }
+
         return preProcessor.process(structure, fieldName, decorator, c3Type,
                                     new BasicMappingContext<>(conversionContext));
     }

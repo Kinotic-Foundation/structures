@@ -19,6 +19,11 @@ public class FlattenedDecoratorInstance implements ElasticMappingPreProcessor<Fl
     }
 
     @Override
+    public Class<ObjectC3Type> supportC3Type() {
+        return ObjectC3Type.class;
+    }
+
+    @Override
     public Property process(Structure structure,
                             String fieldName,
                             FlattenedDecorator decorator,

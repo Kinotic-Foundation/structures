@@ -10,6 +10,13 @@ import org.kinotic.structures.api.domain.Structure;
  */
 public interface MappingPreProcessor<D extends C3Decorator,T extends C3Type, R> extends C3DecoratorInstance<D> {
 
+    /**
+     * The {@link C3Type} class that is supported by this {@link MappingPreProcessor}
+     * @return the supported class type
+     */
+    Class<T> supportC3Type();
+
+
     R process(Structure structure,
               String fieldName,
               D decorator,

@@ -21,6 +21,11 @@ public class TextDecoratorInstance implements ElasticMappingPreProcessor<TextDec
     }
 
     @Override
+    public Class<StringC3Type> supportC3Type() {
+        return StringC3Type.class;
+    }
+
+    @Override
     public Property process(Structure structure,
                             String fieldName,
                             TextDecorator decorator,
