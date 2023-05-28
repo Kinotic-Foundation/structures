@@ -13,20 +13,13 @@ import java.util.UUID;
 @Component
 public class IdDecoratorInstance implements UpsertFieldPreProcessor<IdDecorator, String, String> {
 
-    private static final String TYPE_NAME = "Id";
-
     @Override
     public Class<IdDecorator> implementsDecorator() {
         return IdDecorator.class;
     }
 
     @Override
-    public String decoratorTypeName() {
-        return TYPE_NAME;
-    }
-
-    @Override
-    public Class<String> getFieldType() {
+    public Class<String> supportsFieldType() {
         return String.class;
     }
 

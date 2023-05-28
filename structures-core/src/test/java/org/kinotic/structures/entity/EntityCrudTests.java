@@ -78,7 +78,7 @@ public class EntityCrudTests extends ElasticsearchTestBase {
 
     @Test
     public void testCreateAndDeleteItem() {
-        StructureAndPersonHolder holder = createAndVerify(1);
+        StructureAndPersonHolder holder = createAndVerify();
 
         Assertions.assertNotNull(holder);
 
@@ -89,7 +89,7 @@ public class EntityCrudTests extends ElasticsearchTestBase {
 
     @Test
     public void testFindById(){
-        StructureAndPersonHolder holder = createAndVerify(1);
+        StructureAndPersonHolder holder = createAndVerify();
 
         Assertions.assertNotNull(holder);
 

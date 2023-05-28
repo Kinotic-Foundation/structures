@@ -16,11 +16,4 @@ public interface C3DecoratorInstance<T extends C3Decorator> {
      */
     Class<T> implementsDecorator();
 
-    /**
-     * FIXME: remove this since it is kinda hacky, instead scan for all class that extend {@link C3Decorator}
-     * Logical type name used to register the {@link C3Decorator} with Jackson as a subtype
-     * @return string containing the logical type name or null if the {@link C3Decorator} should not be registered
-     */
-    String decoratorTypeName();
-
 }

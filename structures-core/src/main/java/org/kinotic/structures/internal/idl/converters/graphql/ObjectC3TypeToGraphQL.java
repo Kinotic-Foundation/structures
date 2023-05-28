@@ -1,12 +1,14 @@
 package org.kinotic.structures.internal.idl.converters.graphql;
 
 import graphql.schema.GraphQLInputObjectType;
+import graphql.schema.GraphQLNonNull;
 import graphql.schema.GraphQLObjectType;
 import org.kinotic.continuum.idl.api.converter.C3ConversionContext;
 import org.kinotic.continuum.idl.api.converter.Cacheable;
 import org.kinotic.continuum.idl.api.converter.SpecificC3TypeConverter;
 import org.kinotic.continuum.idl.api.schema.C3Type;
 import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
+import org.kinotic.continuum.idl.api.schema.decorators.NotNullC3Decorator;
 import org.kinotic.structures.api.decorators.ReadOnlyDecorator;
 import org.kinotic.structures.api.decorators.runtime.GraphQLTypeHolder;
 
@@ -40,6 +42,11 @@ public class ObjectC3TypeToGraphQL implements SpecificC3TypeConverter<GraphQLTyp
 
             GraphQLTypeHolder fieldValue = conversionContext.convert(entry.getValue());
 
+            if(isNotNull(entry.getValue())){
+                fieldValue = new GraphQLTypeHolder(GraphQLNonNull.nonNull(fieldValue.getInputType()),
+                                                   GraphQLNonNull.nonNull(fieldValue.getOutputType()));;
+            }
+
             conversionContext.state().endProcessingField();
 
             outputBuilder.field(newFieldDefinition()
@@ -59,6 +66,9 @@ public class ObjectC3TypeToGraphQL implements SpecificC3TypeConverter<GraphQLTyp
         return !c3Type.containsDecorator(ReadOnlyDecorator.class);
     }
 
+    private boolean isNotNull(C3Type c3Type){
+        return c3Type.containsDecorator(NotNullC3Decorator.class);
+    }
 
     @Override
     public Set<Class<? extends C3Type>> supports() {

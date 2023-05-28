@@ -1,16 +1,16 @@
 package org.kinotic.structures.internal.api.decorators;
 
 import org.kinotic.continuum.idl.api.schema.decorators.C3Decorator;
-import org.kinotic.structures.api.decorators.runtime.DecoratorProcessor;
+import org.kinotic.structures.api.decorators.runtime.UpsertFieldPreProcessor;
 
 /**
- * {@link DecoratorLogic} holds a {@link C3Decorator} and its {@link DecoratorProcessor}
+ * {@link DecoratorLogic} holds a {@link C3Decorator} and its {@link UpsertFieldPreProcessor}
  * The {@link C3Decorator} is the decorator that was assigned to some data.
- * The {@link DecoratorProcessor} will be provided with the {@link C3Decorator} and the value to process.
+ * The {@link UpsertFieldPreProcessor} will be provided with the {@link C3Decorator} and the value to process.
  *
  * Created by Navíd Mitchell 🤪 on 5/10/23.
  */
-public class DecoratorLogic<D extends C3Decorator, R, T, P extends DecoratorProcessor<D, R, T>> {
+public class DecoratorLogic<D extends C3Decorator, R, T, P extends UpsertFieldPreProcessor<D, R, T>> {
 
     private final D decorator;
 

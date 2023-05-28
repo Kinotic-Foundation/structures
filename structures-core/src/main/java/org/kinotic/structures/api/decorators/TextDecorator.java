@@ -1,5 +1,6 @@
 package org.kinotic.structures.api.decorators;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.kinotic.continuum.idl.api.schema.StringC3Type;
 import org.kinotic.continuum.idl.api.schema.decorators.C3Decorator;
 import org.kinotic.continuum.idl.api.schema.decorators.DecoratorTarget;
@@ -11,6 +12,9 @@ import java.util.List;
  * Created by Navíd Mitchell 🤪 on 5/14/23.
  */
 public class TextDecorator extends C3Decorator {
+
+    @JsonIgnore
+    public static final String type = "Text";
 
     public TextDecorator() {
         this.targets = List.of(DecoratorTarget.FIELD);

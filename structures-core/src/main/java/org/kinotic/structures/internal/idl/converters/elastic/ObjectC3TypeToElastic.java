@@ -1,5 +1,6 @@
 package org.kinotic.structures.internal.idl.converters.elastic;
 
+import co.elastic.clients.elasticsearch._types.mapping.DynamicMapping;
 import co.elastic.clients.elasticsearch._types.mapping.ObjectProperty;
 import co.elastic.clients.elasticsearch._types.mapping.Property;
 import org.kinotic.continuum.idl.api.converter.C3ConversionContext;
@@ -22,7 +23,8 @@ public class ObjectC3TypeToElastic implements SpecificC3TypeConverter<Property, 
 
     @Override
     public Property convert(ObjectC3Type objectC3Type, C3ConversionContext<Property, ElasticConversionState> conversionContext) {
-        ObjectProperty.Builder builder = new ObjectProperty.Builder();
+        ObjectProperty.Builder builder = new ObjectProperty.Builder()
+                                                           .dynamic(DynamicMapping.Strict);
 
         for(Map.Entry<String, C3Type> entry : objectC3Type.getProperties().entrySet()){
 

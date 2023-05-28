@@ -6,8 +6,8 @@ import org.kinotic.continuum.idl.api.converter.C3ConversionContext;
 import org.kinotic.continuum.idl.api.converter.GenericC3TypeConverter;
 import org.kinotic.continuum.idl.api.schema.C3Type;
 import org.kinotic.continuum.idl.api.schema.decorators.C3Decorator;
-import org.kinotic.structures.api.decorators.runtime.DecoratorProcessor;
 import org.kinotic.structures.api.decorators.runtime.MappingContext;
+import org.kinotic.structures.api.decorators.runtime.MappingPreProcessor;
 import org.kinotic.structures.api.domain.Structure;
 
 import java.util.HashMap;
@@ -15,20 +15,22 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Adapter that allows {@link DecoratorProcessor} to be used as a {@link GenericC3TypeConverter}
+ * Adapter that allows {@link MappingPreProcessor} to be used as a {@link GenericC3TypeConverter}
  * Created by Navíd Mitchell 🤪 on 5/12/23.
  */
 public class MappingPreProcessorConverter<R, S extends BaseConversionState> implements GenericC3TypeConverter<R, C3Type, S> {
 
-    private final Map<Class<C3Decorator>, DecoratorProcessor<C3Decorator, R, MappingContext<R>>> preProcessors;
+    private final Map<Class<C3Decorator>, MappingPreProcessor<C3Decorator, C3Type, R>> preProcessors;
 
-    public MappingPreProcessorConverter(List<DecoratorProcessor<C3Decorator, R, MappingContext<R>>> preProcessors) {
+    public MappingPreProcessorConverter(List<MappingPreProcessor<C3Decorator, C3Type, R>> preProcessors) {
         this.preProcessors = new HashMap<>(preProcessors.size());
 
-        for(DecoratorProcessor<C3Decorator, R, MappingContext<R>> preProcessor : preProcessors){
+        for(MappingPreProcessor<C3Decorator, C3Type, R> preProcessor : preProcessors){
 
             if(this.preProcessors.containsKey(preProcessor.implementsDecorator())){
-                throw new IllegalArgumentException("Duplicate Mapping PreProcessor for decorator: " + preProcessor.implementsDecorator());
+                MappingPreProcessor<C3Decorator, C3Type, R> existing = this.preProcessors.get(preProcessor.implementsDecorator());
+                throw new IllegalArgumentException("Duplicate MappingPreProcessor for decorator: " + preProcessor.implementsDecorator()
+                + "\n existing: " + existing.getClass().getName() + " new: " + preProcessor.getClass().getName());
             }
 
             this.preProcessors.put(preProcessor.implementsDecorator(), preProcessor);
@@ -37,17 +39,17 @@ public class MappingPreProcessorConverter<R, S extends BaseConversionState> impl
 
     @Override
     public R convert(C3Type c3Type, C3ConversionContext<R, S> conversionContext) {
-        Pair<C3Decorator, DecoratorProcessor<C3Decorator, R, MappingContext<R>>> pair = findForC3Type(c3Type);
+        Pair<C3Decorator, MappingPreProcessor<C3Decorator, C3Type, R>> pair = findForC3Type(c3Type);
         // Sanity Check, should never happen since supports should be called before calling this method
-        Validate.notNull(pair, "No Mapping PreProcessor found for C3Type: " + c3Type);
+        Validate.notNull(pair, "No MappingPreProcessor found for C3Type: " + c3Type);
 
         Structure structure = conversionContext.state().getStructureBeingConverted();
         String fieldName = conversionContext.state().getCurrentFieldName();
         C3Decorator decorator = pair.getLeft();
-        DecoratorProcessor<C3Decorator, R, MappingContext<R>> preProcessor = pair.getRight();
+        MappingPreProcessor<C3Decorator, C3Type, R> preProcessor = pair.getRight();
 
-        return preProcessor.process(structure, fieldName, decorator,
-                                    new BasicMappingContext<>(c3Type, conversionContext));
+        return preProcessor.process(structure, fieldName, decorator, c3Type,
+                                    new BasicMappingContext<>(conversionContext));
     }
 
     @Override
@@ -60,18 +62,18 @@ public class MappingPreProcessorConverter<R, S extends BaseConversionState> impl
     }
 
     /**
-     * Finds the first {@link C3Decorator} that has a {@link DecoratorProcessor} registered for it
-     * NOTE: This should be reliable since we currently only allow one decorator per type.
+     * Finds the first {@link C3Decorator} that has a {@link MappingPreProcessor} registered for it
+     * NOTE: We currently only allow one {@link MappingPreProcessor} implementation per concrete {@link C3Decorator}.
      *       If we need more than one decorator per type we will need to change this method to return a list.
      *       Additionally, ordering of decorators would need to be supported.
      *
-     * @param c3Type to find a {@link DecoratorProcessor} for
-     * @return the first {@link C3Decorator} that has a {@link DecoratorProcessor} registered for it or null if none found
+     * @param c3Type to find a {@link MappingPreProcessor} for
+     * @return the first {@link C3Decorator} that has a {@link MappingPreProcessor} registered for it or null if none found
      */
-    private Pair<C3Decorator, DecoratorProcessor<C3Decorator, R, MappingContext<R>>> findForC3Type(C3Type c3Type){
-        Pair<C3Decorator, DecoratorProcessor<C3Decorator, R, MappingContext<R>>> ret = null;
+    private Pair<C3Decorator, MappingPreProcessor<C3Decorator, C3Type, R>> findForC3Type(C3Type c3Type){
+        Pair<C3Decorator, MappingPreProcessor<C3Decorator, C3Type, R>> ret = null;
         for(C3Decorator decorator : c3Type.getDecorators()){
-            DecoratorProcessor<C3Decorator, R, MappingContext<R>> processor = preProcessors.get(decorator.getClass());
+            MappingPreProcessor<C3Decorator, C3Type, R> processor = preProcessors.get(decorator.getClass());
             if(processor != null){
                 ret = Pair.of(decorator, processor);
                 break;
@@ -81,17 +83,10 @@ public class MappingPreProcessorConverter<R, S extends BaseConversionState> impl
     }
 
     private static class BasicMappingContext<R, S> implements MappingContext<R> {
-        private final C3Type c3Type;
         private final C3ConversionContext<R, S> conversionContext;
 
-        public BasicMappingContext(C3Type c3Type, C3ConversionContext<R, S> conversionContext) {
-            this.c3Type = c3Type;
+        public BasicMappingContext(C3ConversionContext<R, S> conversionContext) {
             this.conversionContext = conversionContext;
-        }
-
-        @Override
-        public C3Type value() {
-            return c3Type;
         }
 
         @Override

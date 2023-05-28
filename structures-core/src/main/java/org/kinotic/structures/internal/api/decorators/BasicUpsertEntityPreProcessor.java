@@ -76,7 +76,7 @@ public class BasicUpsertEntityPreProcessor implements UpsertEntityPreProcessor {
 
                         C3Decorator decorator = preProcessorLogic.getDecorator();
                         UpsertFieldPreProcessor<C3Decorator, Object, Object> preProcessor = preProcessorLogic.getProcessor();
-                        Object input = objectMapper.readValue(jsonParser, preProcessor.getFieldType());
+                        Object input = objectMapper.readValue(jsonParser, preProcessor.supportsFieldType());
                         Object value = preProcessor.process(structure, fieldName, decorator, input);
 
                         if(value != null) {

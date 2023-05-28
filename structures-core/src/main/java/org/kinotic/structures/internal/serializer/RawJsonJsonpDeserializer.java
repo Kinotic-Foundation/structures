@@ -15,11 +15,11 @@ import java.util.EnumSet;
 /**
  * Created by Navíd Mitchell 🤪 on 5/22/23.
  */
-public class RawJsonDeserializerDelegator extends JsonpDeserializerBase<RawJson> implements JsonpDeserializer<RawJson> {
+public class RawJsonJsonpDeserializer extends JsonpDeserializerBase<RawJson> implements JsonpDeserializer<RawJson> {
 
     private final ObjectMapper objectMapper;
 
-    public RawJsonDeserializerDelegator(ObjectMapper objectMapper) {
+    public RawJsonJsonpDeserializer(ObjectMapper objectMapper) {
         super(EnumSet.allOf(JsonParser.Event.class));
         this.objectMapper = objectMapper;
     }

@@ -23,7 +23,7 @@ public class ElasticConverterStrategy extends AbstractIdlConverterStrategy<Prope
             new ObjectC3TypeToElastic()
     );
 
-    public ElasticConverterStrategy(List<ElasticMappingPreProcessor<?>> elasticMappingPreProcessors) {
+    public ElasticConverterStrategy(List<ElasticMappingPreProcessor<?, ?>> elasticMappingPreProcessors) {
         // FIXME: get the generics correct here. Seems I shouldn't have to suppress the warnings.
         //noinspection unchecked,rawtypes
         super(specificTypeConverters, List.of(new MappingPreProcessorConverter(elasticMappingPreProcessors)));

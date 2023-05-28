@@ -15,7 +15,7 @@ import co.elastic.clients.transport.JsonEndpoint;
 import co.elastic.clients.transport.endpoints.EndpointWithResponseMapperAttr;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.kinotic.structures.api.domain.RawJson;
-import org.kinotic.structures.internal.serializer.RawJsonDeserializerDelegator;
+import org.kinotic.structures.internal.serializer.RawJsonJsonpDeserializer;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -242,7 +242,7 @@ public class CrudServiceTemplate {
     private <T> JsonpDeserializer<T> getDeserializer(Class<T> type) {
         if(RawJson.class.isAssignableFrom(type)){
             //noinspection unchecked
-            return (JsonpDeserializer<T>) new RawJsonDeserializerDelegator(objectMapper);
+            return (JsonpDeserializer<T>) new RawJsonJsonpDeserializer(objectMapper);
         }
 
         // Try the built-in deserializers first to avoid repeated lookups in the Jsonp mapper for client-defined classes
