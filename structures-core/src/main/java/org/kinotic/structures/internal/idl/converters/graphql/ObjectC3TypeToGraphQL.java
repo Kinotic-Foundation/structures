@@ -53,7 +53,9 @@ public class ObjectC3TypeToGraphQL implements SpecificC3TypeConverter<GraphQLTyp
                                         .name(fieldName)
                                         .type(fieldValue.getOutputType()));
 
-            if(isTypeRequiredForInput(entry.getValue())){
+            // input type can be null in some cases such as a Union type.
+            // This can create a paradigm mismatch between OpenApi and GraphQL, but we cannot do anything about it.
+            if(fieldValue.getInputType() != null && isTypeRequiredForInput(entry.getValue())){
                 inputBuilder.field(newInputObjectField()
                                            .name(fieldName)
                                            .type(fieldValue.getInputType()));
