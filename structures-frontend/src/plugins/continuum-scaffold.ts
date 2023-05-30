@@ -19,10 +19,8 @@ class ServiceRegistry implements IServiceRegistry {
 @injectable()
 class EventBus extends EB {
 
-    constructor(cri: string,
-                headers?: Map<string, string>,
-                data?: Uint8Array) {
-        super(cri, headers, data);
+    constructor() {
+        super()
     }
 }
 
