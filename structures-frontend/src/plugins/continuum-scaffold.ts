@@ -1,9 +1,8 @@
 
 import { container, cid, injectable } from 'inversify-props'
-import {EventBus, IEventBus, IServiceProxy, IServiceRegistry, ServiceProxy} from '@kinotic/continuum'
+import {EventBus as EB, IEventBus, IServiceProxy, IServiceRegistry, ServiceProxy} from '@kinotic/continuum'
 
-// @ts-ignore
-@injectable
+@injectable()
 class ServiceRegistry implements IServiceRegistry {
 
     public eventBus?: IEventBus
@@ -14,6 +13,16 @@ class ServiceRegistry implements IServiceRegistry {
         } else {
             throw new Error('No event bus has been configured')
         }
+    }
+}
+
+@injectable()
+class EventBus extends EB {
+
+    constructor(cri: string,
+                headers?: Map<string, string>,
+                data?: Uint8Array) {
+        super(cri, headers, data);
     }
 }
 
