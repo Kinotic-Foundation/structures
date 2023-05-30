@@ -109,7 +109,7 @@ import {
     Order,
     Page,
     Pageable
-} from '@kinotic-foundation/continuum-js'
+} from '@kinotic/continuum'
 import { mdiDelete, mdiPlus } from '@mdi/js'
 
 @Component({
@@ -168,7 +168,7 @@ export default class CrudIdentifiableAssociationDialog extends Vue {
 
         const ids: string[] = []
         for (const policy of this.syncedAssociatedIdentifiables) {
-            ids.push(policy.identity)
+            ids.push(policy.id)
         }
 
         try {

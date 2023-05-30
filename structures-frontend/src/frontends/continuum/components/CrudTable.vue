@@ -95,7 +95,7 @@ import {
   IDataSource,
   IEditableDataSource,
   DataSourceUtils
-} from '@kinotic-foundation/continuum-js'
+} from '@kinotic/continuum'
 import Confirm from './Confirm.vue'
 
 // noinspection TypeScriptValidateTypes
@@ -217,7 +217,7 @@ export default class CrudTable extends Vue {
         const index = this.items.indexOf(item)
 
         if (await (this.$refs.confirm as Confirm).open('Delete Item', 'Are you sure you want to do this?', { color: 'error' })) {
-          (this.dataSource as IEditableDataSource<any>).deleteByIdentity(item.identity).then(() => {
+          (this.dataSource as IEditableDataSource<any>).deleteById(item.id).then(() => {
                 this.items.splice(index, 1)
                 this.totalItems--
                 if ((this.totalItems / this.options.itemsPerPage) < this.options.page && this.options.page > 1) {

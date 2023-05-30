@@ -15,7 +15,7 @@ export const ConfiguredRouterOptions: RouterOptions = {
   routes: [
       { // This is where we have to configure the default route
             path: '/',
-            redirect: '/structures-admin-namespaces'
+            redirect: '/namespaces'
       },
       ...continuumRoutes, // must be provided for 404 ect..
 

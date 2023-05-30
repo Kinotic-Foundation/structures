@@ -1,5 +1,5 @@
 import {container, inject, injectable} from 'inversify-props'
-import {IEventBus} from '@kinotic-foundation/continuum-js'
+import {IEventBus} from '@kinotic/continuum'
 import Keycloak from "keycloak-js"
 
 export interface IUserState {

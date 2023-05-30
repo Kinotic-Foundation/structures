@@ -1,4 +1,5 @@
 import { RouteConfig } from 'vue-router'
+import {ServiceIdentifierConstants} from "@/frontends/iam/Constants";
 
 const adminRoutes: RouteConfig[] = [
     {
@@ -12,37 +13,47 @@ const adminRoutes: RouteConfig[] = [
         },
         children: [
             {
-                path: '/structures-admin-namespaces', component: () => import('@/frontends/structures-admin/pages/structures/namespaces/Namespaces.vue'),
+                path: '/namespaces', component: () => import('@/frontends/continuum/layouts/NestedLayout.vue'),
                 meta: {
-                    authenticationRequired: true,
                     icon: 'fa-sitemap',
                     title: 'Namespaces'
-                }
+                },
+                children: [
+                    {
+                        path: '',
+                        component: () => import('@/frontends/continuum/pages/BasicCrudList.vue'),
+                        props: {
+                            crudServiceIdentifier: 'org.kinotic.structures.api.services.NamespaceService',
+                            headers: [
+                                { text: 'Name', value: 'id', width: 300, sortable: true },
+                                { text: 'Description', value: 'description', sortable: false }
+                            ]
+                        }
+                    },
+                    {
+                        path: 'edit/:identity', component: () => import('@/frontends/structures-admin/pages/structures/namespaces/NamespaceAddEdit.vue'), props: true
+                    },
+                    {
+                        path: 'add', component: () => import('@/frontends/structures-admin/pages/structures/namespaces/NamespaceAddEdit.vue')
+                    }
+                ]
             },
-            {
-                path: '/structures-admin', component: () => import('@/frontends/structures-admin/pages/structures/structures/Structures.vue'),
-                meta: {
-                    authenticationRequired: true,
-                    icon: 'fa-toolbox',
-                    title: 'Structures'
-                }
-            },
-            {
-                path: '/structures-admin-traits', component: () => import('@/frontends/structures-admin/pages/structures/traits/Traits.vue'),
-                meta: {
-                    authenticationRequired: true,
-                    icon: 'fa-tools',
-                    title: 'Traits'
-                }
-            },
-            {
-                path: '/structure-items/:structureId', component: () => import('@/frontends/structures-admin/pages/structures/items/GenericItem.vue'), props: true,
-                meta: {
-                    authenticationRequired: true,
-                    noShow: true,
-                    title: 'Items'
-                }
-            }
+            // {
+            //     path: '/structures-admin', component: () => import('@/frontends/structures-admin/pages/structures/structures/Structures.vue'),
+            //     meta: {
+            //         authenticationRequired: true,
+            //         icon: 'fa-toolbox',
+            //         title: 'Structures'
+            //     }
+            // },
+            // {
+            //     path: '/structure-items/:structureId', component: () => import('@/frontends/structures-admin/pages/structures/items/GenericItem.vue'), props: true,
+            //     meta: {
+            //         authenticationRequired: true,
+            //         noShow: true,
+            //         title: 'Items'
+            //     }
+            // }
         ]
     }
 ]
