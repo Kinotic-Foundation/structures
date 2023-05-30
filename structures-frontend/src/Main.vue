@@ -6,7 +6,7 @@
   import Vue from 'vue'
   import { Component } from 'vue-property-decorator'
   import { inject } from 'inversify-props'
-  import { IEventBus } from '@kinotic/continuum'
+  import {IEventBus} from '@kinotic/continuum'
   import Keycloak from "keycloak-js"
   import {IUserState} from "@/frontends/continuum";
 

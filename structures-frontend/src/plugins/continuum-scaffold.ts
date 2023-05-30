@@ -1,8 +1,10 @@
 
-import { container } from 'inversify-props'
+import { container, cid, injectable } from 'inversify-props'
 import {EventBus, IEventBus, IServiceProxy, IServiceRegistry, ServiceProxy} from '@kinotic/continuum'
 
-export class ServiceRegistry implements IServiceRegistry {
+// @ts-ignore
+@injectable
+class ServiceRegistry implements IServiceRegistry {
 
     public eventBus?: IEventBus
 
@@ -17,4 +19,5 @@ export class ServiceRegistry implements IServiceRegistry {
 
 container.addSingleton<IEventBus>(EventBus)
 container.addSingleton<IServiceRegistry>(ServiceRegistry)
-container.get(ServiceRegistry).eventBus = container.get(EventBus)
+const registry: ServiceRegistry = container.get<IServiceRegistry>(cid.IServiceRegistry)
+registry.eventBus = container.get<IEventBus>(cid.IEventBus)
