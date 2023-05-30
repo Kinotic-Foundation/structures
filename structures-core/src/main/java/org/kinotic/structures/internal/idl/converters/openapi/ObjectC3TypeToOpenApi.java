@@ -25,6 +25,7 @@ public class ObjectC3TypeToOpenApi implements SpecificC3TypeConverter<Schema<?>,
                              C3ConversionContext<Schema<?>, OpenApiConversionState> conversionContext) {
 
         ObjectSchema objectSchema = new ObjectSchema();
+        objectSchema.setName(objectC3Type.getName());
 
         for(Map.Entry<String, C3Type> entry : objectC3Type.getProperties().entrySet()){
 

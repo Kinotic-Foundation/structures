@@ -19,6 +19,7 @@ public class GraphQLConverterStrategy extends AbstractIdlConverterStrategy<Graph
             new PrimitiveC3TypeToGraphQL(),
             new ArrayC3TypeToGraphQL(),
             new DateC3TypeToGraphQL(),
+            new UnionC3TypeToGraphQL(),
             new ObjectC3TypeToGraphQL());
 
     public GraphQLConverterStrategy(List<GraphQLMappingPreProcessor<?, ?>> graphQLMappingPreProcessors) {

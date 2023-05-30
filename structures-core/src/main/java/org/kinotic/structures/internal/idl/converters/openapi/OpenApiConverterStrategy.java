@@ -19,6 +19,7 @@ public class OpenApiConverterStrategy extends AbstractIdlConverterStrategy<Schem
         new PrimitiveC3TypeToOpenApi(),
         new ArrayC3TypeToOpenApi(),
         new DateC3TypeToOpenApi(),
+        new UnionC3TypeToOpenApi(),
         new ObjectC3TypeToOpenApi()
     );
 
