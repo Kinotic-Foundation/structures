@@ -1,6 +1,7 @@
 import 'reflect-metadata'
 import Vue from 'vue'
 import vuetify from './plugins/vuetify'
+import './plugins/continuum-scaffold'
 import './plugins/vue-highlight'
 import './plugins/vue-editor-ace'
 import './plugins/vue-notification'
@@ -15,11 +16,12 @@ import '@/frontends/services'
 // now load app specific entry points
 import '@/frontends/states'
 import Main from '@/Main.vue'
-import Keycloak, {KeycloakOnLoad} from "keycloak-js"
+import Keycloak, {KeycloakOnLoad} from 'keycloak-js'
 
 // Vue.config.productionTip = false
 
-if(process.env.VUE_APP_KEYCLOAK_SUPPORT === "true") {
+
+if(process.env.VUE_APP_KEYCLOAK_SUPPORT === 'true') {
 
   let initOptions = {
     url: process.env.VUE_APP_KEYCLOAK_URL,

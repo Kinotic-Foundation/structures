@@ -1,41 +1,41 @@
-import {Trait} from '@/frontends/structures-admin/pages/structures/traits/Trait'
+import {DecoratedProperty, ObjectC3Type} from '@kinotic/continuum-idl-js'
 
 export class Structure {
 
     public id: string
     public name: string
+    public namespace: string
     public description: string
+    public entityDefinition: ObjectC3Type
     public created: number
+    public updated: number
     public published: boolean
     public publishedTimestamp: number
-    public namespace: string
-    public traits: Map<string, Trait>
-    public metadata: Map<string, string>
-    public updated: number
+    public itemIndex: string
+    public decoratedProperties: DecoratedProperty[]
 
 
     constructor(id: string,
                 name: string,
+                namespace: string,
                 description: string,
+                entityDefinition: ObjectC3Type,
                 created: number,
+                updated: number,
                 published: boolean,
                 publishedTimestamp: number,
-                namespace: string,
-                deleted: boolean,
-                deletedTimestamp: number,
-                traits: Map<string, Trait>,
-                metadata: Map<string, string>,
-                updated: number) {
+                itemIndex: string,
+                decoratedProperties: DecoratedProperty[]) {
         this.id = id
         this.name = name
+        this.namespace = namespace
         this.description = description
+        this.entityDefinition = entityDefinition
         this.created = created
+        this.updated = updated
         this.published = published
         this.publishedTimestamp = publishedTimestamp
-        this.namespace = namespace
-        this.traits = traits
-        this.metadata = metadata
-        this.updated = updated
+        this.itemIndex = itemIndex
+        this.decoratedProperties = decoratedProperties
     }
-
 }

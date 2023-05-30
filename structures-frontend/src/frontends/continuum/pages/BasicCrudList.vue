@@ -16,7 +16,7 @@
 import { PropType } from 'vue'
 import { Component, Prop, Vue } from 'vue-property-decorator'
 import { DataTableHeader } from 'vuetify'
-import { Identifiable, ICrudServiceProxy, ICrudServiceProxyFactory } from '@kinotic-foundation/continuum-js'
+import { Identifiable, ICrudServiceProxy, ICrudServiceProxyFactory } from '@kinotic/continuum'
 import CrudTable from '@/frontends/continuum/components/CrudTable.vue'
 import { inject } from 'inversify-props'
 
@@ -64,7 +64,7 @@ export default class BasicCrudList extends Vue {
   }
 
   public onEditItem(identifiable: Identifiable<string>) {
-    this.$router.push(`${this.$route.path}/edit/${identifiable.identity}`)
+    this.$router.push(`${this.$route.path}/edit/${identifiable.id}`)
   }
 
 }

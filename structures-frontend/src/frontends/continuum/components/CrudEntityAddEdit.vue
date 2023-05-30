@@ -56,7 +56,7 @@
 import { PropType } from 'vue'
 import { Component, Prop, Vue, PropSync, Emit } from 'vue-property-decorator'
 import { inject } from 'inversify-props'
-import { ICrudServiceProxy, ICrudServiceProxyFactory, Identifiable } from '@kinotic-foundation/continuum-js'
+import { ICrudServiceProxy, ICrudServiceProxyFactory, Identifiable } from '@kinotic/continuum'
 import { mdiClose } from '@mdi/js'
 
 // Function that takes an input value as an argument and return either true / false or a string with an error message
@@ -120,7 +120,7 @@ export default class CrudEntityAddEdit extends Vue {
             this.editing = true
             this.loading = true
 
-            this.crudServiceProxy.findByIdentity(this.identity).then((item: Identifiable<string>) => {
+            this.crudServiceProxy.findById(this.identity).then((item: Identifiable<string>) => {
                 this.syncedEntity = item
 
                 this.afterLoad(item)

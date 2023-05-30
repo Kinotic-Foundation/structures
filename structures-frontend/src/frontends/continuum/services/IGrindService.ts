@@ -1,4 +1,4 @@
-import { IServiceProxy, IServiceRegistry } from '@kinotic-foundation/continuum-js'
+import { IServiceProxy, IServiceRegistry } from '@kinotic/continuum'
 import { container, inject, injectable } from 'inversify-props'
 import { Observable } from 'rxjs'
 import { Result } from '../domain/grind/Result'
