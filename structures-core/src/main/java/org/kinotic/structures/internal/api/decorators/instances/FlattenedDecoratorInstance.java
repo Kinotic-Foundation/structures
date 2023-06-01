@@ -7,10 +7,12 @@ import org.kinotic.structures.api.decorators.FlattenedDecorator;
 import org.kinotic.structures.api.decorators.runtime.ElasticMappingPreProcessor;
 import org.kinotic.structures.api.decorators.runtime.MappingContext;
 import org.kinotic.structures.api.domain.Structure;
+import org.springframework.stereotype.Component;
 
 /**
  * Created by Navíd Mitchell 🤪 on 5/26/23.
  */
+@Component
 public class FlattenedDecoratorInstance implements ElasticMappingPreProcessor<FlattenedDecorator, ObjectC3Type> {
 
     @Override

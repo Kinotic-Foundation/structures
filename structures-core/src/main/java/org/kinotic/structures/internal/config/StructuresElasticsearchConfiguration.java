@@ -13,9 +13,8 @@ import org.apache.http.client.CredentialsProvider;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestClientBuilder;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.kinotic.structures.api.config.StructuresProperties;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.data.elasticsearch.client.ClientConfiguration;
@@ -27,8 +26,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Created by Navíd Mitchell 🤪 on 4/26/23.
  */
 @Configuration
-@EnableConfigurationProperties
-@ComponentScan(basePackages = "org.kinotic.structures")
 @Profile("!test")
 public class StructuresElasticsearchConfiguration extends ReactiveElasticsearchConfiguration {
 

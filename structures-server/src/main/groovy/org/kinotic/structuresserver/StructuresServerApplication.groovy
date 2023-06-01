@@ -10,14 +10,12 @@ import org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfig
 import org.springframework.boot.autoconfigure.graphql.GraphQlAutoConfiguration
 import org.springframework.boot.autoconfigure.graphql.reactive.GraphQlWebFluxAutoConfiguration
 import org.springframework.boot.autoconfigure.hazelcast.HazelcastAutoConfiguration
-import org.springframework.boot.context.properties.EnableConfigurationProperties
 
 @SpringBootApplication(exclude = [HazelcastAutoConfiguration.class,
 								  JpaRepositoriesAutoConfiguration.class,
 								  GraphQlAutoConfiguration.class,
 								  GraphQlWebFluxAutoConfiguration.class,
 								  ReactiveElasticsearchRestClientAutoConfiguration.class])
-@EnableConfigurationProperties
 @EnableContinuum
 @EnableStructures
 @EnableContinuumGateway

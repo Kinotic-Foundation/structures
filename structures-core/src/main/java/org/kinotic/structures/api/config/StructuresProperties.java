@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.config;
+package org.kinotic.structures.api.config;
 
 
 import lombok.AllArgsConstructor;
@@ -7,6 +7,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.kinotic.structures.internal.api.services.impl.StructuresHelper;
+import org.kinotic.structures.internal.config.ElasticConnectionInfo;
+import org.kinotic.structures.internal.config.OpenApiSecurityType;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
@@ -33,12 +35,15 @@ public class StructuresProperties {
     private Duration elasticSocketTimeout = Duration.ofMinutes(1);
     @NotNull
     private List<ElasticConnectionInfo> elasticConnections = List.of(new ElasticConnectionInfo("localhost", 9200));
-    @NotBlank
-    private String elasticUsername = "";
-    @NotBlank
-    private String elasticPassword = "";
+
+    private String elasticUsername = null;
+    private String elasticPassword = null;
 
     private OpenApiSecurityType openApiSecurityType = OpenApiSecurityType.NONE;
+
+    private int openApiPort = 8080;
+    @NotBlank
+    private String openApiPath = "/api";
 
     @PostConstruct
     public void validate(){

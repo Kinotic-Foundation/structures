@@ -15,7 +15,6 @@ logging:
     io:
       vertx: DEBUG
 
-structures:
-  elastic-use-ssl: false
-  elastic-username: structures
-  elastic-password: pass79
+#structures:
+#  elastic-username: structures
+#  elastic-password: pass79

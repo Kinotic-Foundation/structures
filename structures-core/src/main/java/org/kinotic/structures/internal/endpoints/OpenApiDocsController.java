@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.controllers;
+package org.kinotic.structures.internal.endpoints;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;

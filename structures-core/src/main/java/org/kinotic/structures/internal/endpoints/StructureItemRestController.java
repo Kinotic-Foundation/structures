@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.controllers;
+package org.kinotic.structures.internal.endpoints;
 
 /**
  * Created by Navíd Mitchell 🤪 on 3/18/23.

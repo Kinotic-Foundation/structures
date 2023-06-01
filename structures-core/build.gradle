@@ -17,6 +17,9 @@ dependencies {
 	implementation 'org.reactivestreams:reactive-streams'
 	implementation 'io.projectreactor:reactor-core'
 
+	implementation 'io.vertx:vertx-web'
+	implementation 'com.github.rworsnop:vertx-beans'
+
 	implementation "org.kinotic:continuum-core:${continuumVersion}"
 	implementation "org.kinotic:continuum-core-vertx:${continuumVersion}"
 	implementation "org.kinotic:continuum-idl:${continuumVersion}"
