@@ -1,8 +1,9 @@
-import { IServiceProxy, IServiceRegistry } from '@kinotic/continuum'
-import { container, inject, injectable } from 'inversify-props'
+import {Continuum, IServiceProxy} from '@kinotic/continuum'
 import { Observable } from 'rxjs'
 import { Result } from '../domain/grind/Result'
 import { JobDefinition } from '../domain/grind/JobDefinition'
+import {reactive} from "vue";
+
 
 /**
  * Grind Service
@@ -45,19 +46,17 @@ export interface IGrindServiceFactory {
 
 }
 
-@injectable()
+
 export class GrindServiceFactory implements IGrindServiceFactory {
 
-    private serviceRegistry: IServiceRegistry
 
-    constructor(@inject() serviceRegistry: IServiceRegistry) {
-        this.serviceRegistry = serviceRegistry
+    constructor() {
     }
 
     grindServiceProxy(serviceIdentifier: string): IGrindServiceProxy {
-        return new GrindServiceProxy(this.serviceRegistry.serviceProxy(serviceIdentifier));
+        return new GrindServiceProxy(Continuum.serviceProxy(serviceIdentifier))
     }
 
 }
 
-container.addSingleton<IGrindServiceFactory>(GrindServiceFactory)
+export const GRIND_SERVICE_FACTORY: IGrindServiceFactory = reactive(new GrindServiceFactory())

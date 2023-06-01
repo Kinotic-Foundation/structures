@@ -1,6 +1,7 @@
 import VueRouter, {NavigationGuardNext, Route, RouterOptions} from 'vue-router'
-import {container, inject, injectable} from 'inversify-props'
-import {IFrontendState, IUserState} from "./states";
+import {StructuresStates} from '@/frontends/states';
+import {reactive} from 'vue';
+
 
 export interface IContinuumUI {
 
@@ -10,14 +11,7 @@ export interface IContinuumUI {
 
 }
 
-@injectable()
-class ContinuumUI implements IContinuumUI{
-
-    @inject()
-    private frontendState!: IFrontendState
-
-    @inject()
-    private userState!: IUserState
+class ContinuumUI implements IContinuumUI {
 
     private router!: VueRouter
 
@@ -32,7 +26,7 @@ class ContinuumUI implements IContinuumUI{
             let { authenticationRequired } = to.meta
 
             if ((authenticationRequired === undefined || authenticationRequired)
-                    && !this.userState.isAuthenticated()){
+                    && !StructuresStates.getUserState().isAuthenticated()){
 
                 next({ path: '/login' })
             } else {
@@ -40,7 +34,7 @@ class ContinuumUI implements IContinuumUI{
             }
         })
 
-        this.frontendState.initialize(this.router)
+        StructuresStates.getFrontendState().initialize(this.router)
         return this.router
     }
 
@@ -50,4 +44,4 @@ class ContinuumUI implements IContinuumUI{
 
 }
 
-container.addSingleton<IContinuumUI>(ContinuumUI)
+export const CONTINUUM_UI: IContinuumUI = reactive(new ContinuumUI())

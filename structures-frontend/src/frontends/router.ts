@@ -1,8 +1,7 @@
 import Vue from 'vue'
 import Router, {RouterOptions} from 'vue-router'
-import { IContinuumUI } from './continuum'
+import {CONTINUUM_UI, IContinuumUI} from './continuum'
 import continuumRoutes from './continuum/routes'
-import { container, cid } from 'inversify-props'
 // import developRoutes from './develop/routes'
 // import iamRoutes from './iam/routes'
 
@@ -30,4 +29,5 @@ export const ConfiguredRouterOptions: RouterOptions = {
   ]
 }
 
-export const router = container.get<IContinuumUI>(cid.IContinuumUI).initialize(ConfiguredRouterOptions)
+
+export const router = CONTINUUM_UI.initialize(ConfiguredRouterOptions)

@@ -12,8 +12,7 @@
 <script lang="ts">
 
     import {Component, Vue} from "vue-property-decorator"
-    import {inject} from "inversify-props"
-    import {IContinuumUI} from "@/frontends/continuum"
+    import {CONTINUUM_UI} from "@/frontends/continuum"
 
 
     @Component({
@@ -21,13 +20,10 @@
     })
     export default class LoginKeycloak extends Vue {
 
-        @inject()
-        private continuumUI!: IContinuumUI
-
         public async created() {
           // only could have reached here if we have properly been authenticated
 
-          await this.continuumUI.navigate('/')
+          await CONTINUUM_UI.navigate('/')
 
         }
 

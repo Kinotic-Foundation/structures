@@ -100,15 +100,15 @@
 
 <script lang="ts">
 import { Component, Prop, Vue, PropSync } from 'vue-property-decorator'
-import { inject } from 'inversify-props'
 import {
-    Direction,
-    ICrudServiceProxy,
-    ICrudServiceProxyFactory,
-    Identifiable,
-    Order,
-    Page,
-    Pageable
+  Continuum,
+  Direction,
+  ICrudServiceProxy,
+  ICrudServiceProxyFactory,
+  Identifiable,
+  Order,
+  Page,
+  Pageable
 } from '@kinotic/continuum'
 import { mdiDelete, mdiPlus } from '@mdi/js'
 
@@ -132,8 +132,6 @@ export default class CrudIdentifiableAssociationDialog extends Vue {
     /**
      * Services
      */
-    @inject()
-    private crudServiceProxyFactory!: ICrudServiceProxyFactory
     private crudServiceProxy!: ICrudServiceProxy<any>
 
     /**
@@ -156,7 +154,7 @@ export default class CrudIdentifiableAssociationDialog extends Vue {
     }
 
     public mounted() {
-        this.crudServiceProxy = this.crudServiceProxyFactory.crudServiceProxy(this.crudServiceIdentifier)
+        this.crudServiceProxy = Continuum.crudServiceProxy(this.crudServiceIdentifier)
     }
 
     public async openAddAssociatedIdentifiablesDialog() {
