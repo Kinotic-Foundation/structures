@@ -16,9 +16,8 @@
 import { PropType } from 'vue'
 import { Component, Prop, Vue } from 'vue-property-decorator'
 import { DataTableHeader } from 'vuetify'
-import { Identifiable, ICrudServiceProxy, ICrudServiceProxyFactory } from '@kinotic/continuum'
+import {Identifiable, ICrudServiceProxy, Continuum} from '@kinotic/continuum'
 import CrudTable from '@/frontends/continuum/components/CrudTable.vue'
-import { inject } from 'inversify-props'
 
 /**
  * Provides a List page that can be used with the {@link CrudLayout}
@@ -46,8 +45,6 @@ export default class BasicCrudList extends Vue {
   /**
    * Services
    */
-  @inject()
-  private crudServiceProxyFactory!: ICrudServiceProxyFactory
   private dataSource!: ICrudServiceProxy<any>
 
   constructor() {
@@ -56,7 +53,7 @@ export default class BasicCrudList extends Vue {
 
   // Lifecycle hooks
   public created() {
-    this.dataSource = this.crudServiceProxyFactory.crudServiceProxy(this.crudServiceIdentifier)
+    this.dataSource = Continuum.crudServiceProxy(this.crudServiceIdentifier)
   }
 
   public onAddItem() {

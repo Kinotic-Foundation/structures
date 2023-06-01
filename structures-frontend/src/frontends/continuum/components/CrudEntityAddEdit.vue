@@ -55,8 +55,7 @@
 <script lang="ts">
 import { PropType } from 'vue'
 import { Component, Prop, Vue, PropSync, Emit } from 'vue-property-decorator'
-import { inject } from 'inversify-props'
-import { ICrudServiceProxy, ICrudServiceProxyFactory, Identifiable } from '@kinotic/continuum'
+import {Continuum, ICrudServiceProxy, Identifiable} from '@kinotic/continuum'
 import { mdiClose } from '@mdi/js'
 
 // Function that takes an input value as an argument and return either true / false or a string with an error message
@@ -85,8 +84,6 @@ export default class CrudEntityAddEdit extends Vue {
     /**
      * Services
      */
-    @inject()
-    private crudServiceProxyFactory!: ICrudServiceProxyFactory
     private crudServiceProxy!: ICrudServiceProxy<any>
 
     /**
@@ -114,7 +111,7 @@ export default class CrudEntityAddEdit extends Vue {
             ( v ) => !!v || this.identityLabel + ' is required'
         ]
 
-        this.crudServiceProxy = this.crudServiceProxyFactory.crudServiceProxy(this.crudServiceIdentifier)
+        this.crudServiceProxy = Continuum.crudServiceProxy(this.crudServiceIdentifier)
 
         if (this.identity !== null) {
             this.editing = true

@@ -1,14 +1,13 @@
 import 'reflect-metadata'
 import Vue from 'vue'
 import vuetify from './plugins/vuetify'
-import './plugins/continuum-scaffold'
+import {router} from '@/frontends/router'
 import './plugins/vue-highlight'
 import './plugins/vue-editor-ace'
 import './plugins/vue-notification'
 import './plugins/vue-composition-api'
 import './registerServiceWorker'
 import './frontends/continuum'
-import {router} from '@/frontends/router'
 
 // Make sure services get autowired early during App entry!
 import '@/frontends/services'

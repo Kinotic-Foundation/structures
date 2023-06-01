@@ -5,7 +5,6 @@
 <script lang="ts">
   import Vue from 'vue'
   import { Component } from 'vue-property-decorator'
-  import { inject } from 'inversify-props'
   import {IEventBus} from '@kinotic/continuum'
   import Keycloak from "keycloak-js"
   import {IUserState} from "@/frontends/continuum";
@@ -16,11 +15,7 @@
     props: { keycloak: Keycloak }
   })
   export default class Main extends Vue {
-
-    @inject()
     public eventBus!: IEventBus
-
-    @inject()
     private userState!: IUserState
 
     public async created() {

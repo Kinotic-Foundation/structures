@@ -47,8 +47,7 @@
     import { Subscription } from 'rxjs'
     import { Result, ResultType } from '../domain/grind/Result'
     import { Step, StepState } from '../domain/grind/Step'
-    import { inject } from 'inversify-props'
-    import { IGrindServiceFactory, IGrindServiceProxy } from '../services/IGrindService'
+    import { IGrindServiceFactory, IGrindServiceProxy } from '@/frontends/continuum'
     import { v4 as uuidv4 } from 'uuid'
     import { JobDefinition } from '../domain/grind/JobDefinition'
     import { OrbitSpinner } from 'epic-spinners'
@@ -56,6 +55,7 @@
     import { StepInfo } from '../domain/grind/StepInfo'
     import { Progress } from '../domain/grind/Progress'
     import { PropType } from 'vue'
+    import {StructuresServices} from "@/frontends/services";
 
     @Component({
         components: { GrindList, OrbitSpinner }
@@ -75,8 +75,6 @@
         @Prop({ type: Array as PropType<any[]> , required: false })
         public executeMethodArgs?: any[] | undefined
 
-        @inject()
-        private grindServiceFactory!: IGrindServiceFactory
         private grindServiceProxy!: IGrindServiceProxy
 
         private active: boolean = false
@@ -97,7 +95,7 @@
 
         // Lifecycle hooks
         public mounted() {
-            this.grindServiceProxy = this.grindServiceFactory.grindServiceProxy(this.serviceIdentifier)
+            this.grindServiceProxy = StructuresServices.getGrindServiceFactory().grindServiceProxy(this.serviceIdentifier)
 
             this.grindServiceProxy.describeJob(this.describeMethodIdentifier, this.describeMethodArgs)
                 .then((jobDefinition: JobDefinition) => {

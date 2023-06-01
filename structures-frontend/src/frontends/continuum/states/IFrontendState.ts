@@ -1,4 +1,3 @@
-import { container, injectable } from 'inversify-props'
 import { reactive, markRaw } from '@vue/composition-api'
 import VueRouter, { RouteConfig, Route, RouteRecord, NavigationGuardNext} from 'vue-router'
 
@@ -32,8 +31,7 @@ export interface IFrontendState {
 /**
  * Base functionality for FrontendLayout and navigation functionality
  */
-@injectable()
-class FrontendState implements IFrontendState {
+export class FrontendState implements IFrontendState {
 
     public drawerOpen: boolean = true
 
@@ -102,10 +100,5 @@ class FrontendState implements IFrontendState {
     }
 
 }
-
-
-container.addSingleton<IFrontendState>(FrontendState).onActivation((context, frontendState) => {
-    // This line is what does the magic and makes the class a "state" object that vue can react too
-    return reactive<IFrontendState>(frontendState) as IFrontendState
-})
-
+// @ts-ignore
+export const FRONTEND_STATE: IFrontendState = reactive(new FrontendState())
