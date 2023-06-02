@@ -6,14 +6,14 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.kinotic.structures.internal.api.services.impl.StructuresHelper;
+import org.apache.commons.lang3.Validate;
+import org.kinotic.structures.internal.util.StructuresUtils;
 import org.kinotic.structures.internal.config.ElasticConnectionInfo;
 import org.kinotic.structures.internal.config.OpenApiSecurityType;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
-import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import java.time.Duration;
 import java.util.List;
@@ -42,17 +42,27 @@ public class StructuresProperties {
     private OpenApiSecurityType openApiSecurityType = OpenApiSecurityType.NONE;
 
     private int openApiPort = 8080;
-    @NotBlank
-    private String openApiPath = "/api";
+
+    private String openApiPath = "/api/";
 
     @PostConstruct
     public void validate(){
         // this will validate we do not contain invalid characters
         // FIXME: should we limit the number of chars as well?
-        StructuresHelper.indexNameValidation(indexPrefix);
+        StructuresUtils.indexNameValidation(indexPrefix);
     }
 
     public boolean hasElasticUsernameAndPassword(){
         return elasticUsername != null && !elasticUsername.isBlank() &&  elasticPassword != null && !elasticPassword.isBlank();
+    }
+
+    public StructuresProperties setOpenApiPath(String path){
+        Validate.notBlank(path, "openApiPath must not be blank");
+        if(path.endsWith("/")){
+            this.openApiPath = path;
+        }else{
+            this.openApiPath = path + "/";
+        }
+        return this;
     }
 }

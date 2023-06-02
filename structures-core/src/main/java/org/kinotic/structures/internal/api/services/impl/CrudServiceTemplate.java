@@ -35,13 +35,15 @@ import java.util.function.Consumer;
 public class CrudServiceTemplate {
 
     private final ElasticsearchAsyncClient esAsyncClient;
-    private final ObjectMapper objectMapper;
+    private final RawJsonJsonpDeserializer rawJsonJsonpDeserializer;
 
 
-    public CrudServiceTemplate(ElasticsearchAsyncClient esAsyncClient, ObjectMapper objectMapper) {
+    public CrudServiceTemplate(ElasticsearchAsyncClient esAsyncClient,
+                               ObjectMapper objectMapper) {
         this.esAsyncClient = esAsyncClient;
-        this.objectMapper = objectMapper;
+        rawJsonJsonpDeserializer = new RawJsonJsonpDeserializer(objectMapper);
     }
+
 
     /**
      * Counts the number of documents in the index. Also allows for customization of the {@link CountRequest}.
@@ -60,6 +62,7 @@ public class CrudServiceTemplate {
                             })
                             .thenApply(CountResponse::count);
     }
+
 
     /**
      * Creates an index with the given name. Also allows for customization of the {@link CreateIndexRequest}.
@@ -101,6 +104,7 @@ public class CrudServiceTemplate {
                             });
     }
 
+
     /**
      * Provides base functionality to get a {@link Page} of documents from elasticsearch. With the ability to customize the {@link SearchRequest}.
      * NOTE: not all customizations are supported, only the ones that make sense for a {@link Page} of documents.
@@ -113,12 +117,12 @@ public class CrudServiceTemplate {
      * @param builderConsumer to customize the {@link SearchRequest}, or null if no customization is needed
      * @return a {@link CompletableFuture} that will complete with a {@link Page} of documents
      */
-    public <T> CompletableFuture<Page<T>> findAll(String indexName,
-                                                  Pageable pageable,
-                                                  Class<T> type,
-                                                  Consumer<SearchRequest.Builder> builderConsumer){
+    public <T> CompletableFuture<Page<T>> search(String indexName,
+                                                 Pageable pageable,
+                                                 Class<T> type,
+                                                 Consumer<SearchRequest.Builder> builderConsumer){
 
-        return findAll(indexName, pageable, getDeserializer(type), builderConsumer)
+        return search(indexName, pageable, getDeserializer(type), builderConsumer)
                 .thenApply(response -> {
                     HitsMetadata<T> hitsMetadata = response.hits();
                     List<T> content = new ArrayList<>(hitsMetadata.hits().size());
@@ -131,6 +135,7 @@ public class CrudServiceTemplate {
                 });
     }
 
+
     /**
      * Provides base functionality to get a {@link Page} of documents from elasticsearch. With the ability to customize the {@link SearchRequest}.
      * @param indexName name of the index to search
@@ -140,10 +145,10 @@ public class CrudServiceTemplate {
      * @return a {@link CompletableFuture} that will complete with a {@link SearchResponse} of documents
      * @param <T> type of the documents to return
      */
-    public <T> CompletableFuture<SearchResponse<T>> findAll(String indexName,
-                                                            Pageable pageable,
-                                                            JsonpDeserializer<T> deserializer,
-                                                            Consumer<SearchRequest.Builder> builderConsumer) {
+    public <T> CompletableFuture<SearchResponse<T>> search(String indexName,
+                                                           Pageable pageable,
+                                                           JsonpDeserializer<T> deserializer,
+                                                           Consumer<SearchRequest.Builder> builderConsumer) {
         @SuppressWarnings("unchecked")
         JsonEndpoint<SearchRequest, SearchResponse<T>, ErrorResponse> endpoint = (JsonEndpoint<SearchRequest, SearchResponse<T>, ErrorResponse>) SearchRequest._ENDPOINT;
         endpoint = new EndpointWithResponseMapperAttr<>(endpoint,
@@ -219,7 +224,6 @@ public class CrudServiceTemplate {
     }
 
 
-
     /**
      * Deletes a document by id. Also allows for customization of the {@link DeleteRequest}.
      * @param indexName name of the index to delete from
@@ -242,7 +246,7 @@ public class CrudServiceTemplate {
     private <T> JsonpDeserializer<T> getDeserializer(Class<T> type) {
         if(RawJson.class.isAssignableFrom(type)){
             //noinspection unchecked
-            return (JsonpDeserializer<T>) new RawJsonJsonpDeserializer(objectMapper);
+            return (JsonpDeserializer<T>) rawJsonJsonpDeserializer;
         }
 
         // Try the built-in deserializers first to avoid repeated lookups in the Jsonp mapper for client-defined classes

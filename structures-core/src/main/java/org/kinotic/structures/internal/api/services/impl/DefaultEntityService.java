@@ -65,12 +65,21 @@ public class DefaultEntityService implements EntityService {
 
     @Override
     public CompletableFuture<Page<RawJson>> findAll(Pageable pageable) {
-        return crudServiceTemplate.findAll(structure.getItemIndex(), pageable, RawJson.class, null);
+        return crudServiceTemplate.search(structure.getItemIndex(), pageable, RawJson.class, null);
     }
 
     @Override
     public CompletableFuture<Page<RawJson>> search(String searchText, Pageable pageable) {
-        return null;
+        return crudServiceTemplate.search(structure.getItemIndex(),
+                                          pageable,
+                                          RawJson.class,
+                                          b -> b.query(q -> {
+                                             q.queryString(qs -> {
+                                                 qs.query(searchText);
+                                                 return qs;
+                                             });
+                                              return q;
+                                          }));
     }
 
 }

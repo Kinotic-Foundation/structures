@@ -27,11 +27,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 @Configuration
 @Profile("!test")
-public class StructuresElasticsearchConfiguration extends ReactiveElasticsearchConfiguration {
+public class StructuresElasticsearchConfig extends ReactiveElasticsearchConfiguration {
 
     private final StructuresProperties structuresProperties;
 
-    public StructuresElasticsearchConfiguration(StructuresProperties structuresProperties) {
+    public StructuresElasticsearchConfig(StructuresProperties structuresProperties) {
         this.structuresProperties = structuresProperties;
     }
 

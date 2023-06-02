@@ -1,6 +1,16 @@
-package org.kinotic.structures.internal.api.services.impl;
+package org.kinotic.structures.internal.util;
 
-public class StructuresHelper {
+public class StructuresUtils {
+
+    /**
+     * Function will convert a structure namespace and name to a valid
+     * @param structureNamespace to convert
+     * @param structureName to convert
+     * @return a valid structure id
+     */
+    public static String structureNameToId(String structureNamespace, String structureName){
+        return (structureNamespace + "." + structureName).toLowerCase();
+    }
 
     /**
      * Function will validate the index name, ensures we can use it for creating an

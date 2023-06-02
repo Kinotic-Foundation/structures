@@ -8,7 +8,7 @@ import org.kinotic.continuum.idl.api.converter.Cacheable;
 import org.kinotic.continuum.idl.api.converter.SpecificC3TypeConverter;
 import org.kinotic.continuum.idl.api.schema.C3Type;
 import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
-import org.kinotic.structures.internal.api.services.impl.StructuresHelper;
+import org.kinotic.structures.internal.util.StructuresUtils;
 
 import java.util.Map;
 import java.util.Set;
@@ -29,7 +29,7 @@ public class ObjectC3TypeToElastic implements SpecificC3TypeConverter<Property, 
         for(Map.Entry<String, C3Type> entry : objectC3Type.getProperties().entrySet()){
 
             String fieldName = entry.getKey();
-            StructuresHelper.fieldNameValidation(fieldName);
+            StructuresUtils.fieldNameValidation(fieldName);
 
             conversionContext.state().beginProcessingField(fieldName, entry.getValue());
 

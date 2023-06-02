@@ -8,6 +8,7 @@ import org.kinotic.structures.api.services.StructureService;
 import org.kinotic.structures.internal.api.services.ElasticConversionResult;
 import org.kinotic.structures.internal.api.services.StructureConversionService;
 import org.kinotic.structures.api.config.StructuresProperties;
+import org.kinotic.structures.internal.util.StructuresUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.elasticsearch.core.ReactiveElasticsearchOperations;
@@ -58,11 +59,14 @@ public class DefaultStructureService extends AbstractCrudService<Structure> impl
             return CompletableFuture.failedFuture(new IllegalArgumentException("Structure entityDefinition must not be null"));
         }
 
-        String logicalIndexName = (structure.getNamespace().trim() + "." + structure.getName().trim()).toLowerCase();
+        structure.setNamespace(structure.getNamespace().trim());
+        structure.setName(structure.getName().trim());
+
+        String logicalIndexName = StructuresUtils.structureNameToId(structure.getNamespace(), structure.getName());
 
         // will throw an exception if invalid
         try {
-            StructuresHelper.indexNameValidation(logicalIndexName);
+            StructuresUtils.indexNameValidation(logicalIndexName);
         } catch (IllegalArgumentException e) {
             return CompletableFuture.failedFuture(e);
         }
@@ -125,7 +129,7 @@ public class DefaultStructureService extends AbstractCrudService<Structure> impl
 
     @Override
     public CompletableFuture<Page<Structure>> findAllPublishedForNamespace(String namespace, Pageable pageable) {
-        return crudServiceTemplate.findAll(indexName, pageable, type, builder -> builder
+        return crudServiceTemplate.search(indexName, pageable, type, builder -> builder
                 .query(q -> q
                         .bool(b -> b
                                 .filter(TermQuery.of(tq -> tq.field("namespace").value(namespace))._toQuery(),

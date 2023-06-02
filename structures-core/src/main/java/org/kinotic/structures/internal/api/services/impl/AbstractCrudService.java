@@ -45,7 +45,6 @@ public abstract class AbstractCrudService<T extends Identifiable<String>> implem
                        .block();
     }
 
-
     @Override
     public CompletableFuture<T> save(T entity) {
         // FIXME: add support for versioning, and optimistic locking with errors if version is out of date
@@ -75,7 +74,7 @@ public abstract class AbstractCrudService<T extends Identifiable<String>> implem
 
     @Override
     public CompletableFuture<Page<T>> findAll(Pageable pageable) {
-        return crudServiceTemplate.findAll(indexName, pageable, type, null);
+        return crudServiceTemplate.search(indexName, pageable, type, null);
     }
 
 }

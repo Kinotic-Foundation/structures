@@ -1,6 +1,7 @@
 package org.kinotic.structures.internal.api.services.impl;
 
 import io.swagger.v3.oas.models.*;
+import io.swagger.v3.oas.models.examples.Example;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.media.*;
 import io.swagger.v3.oas.models.parameters.Parameter;
@@ -9,6 +10,7 @@ import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.responses.ApiResponses;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
+import org.apache.commons.text.WordUtils;
 import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.StructureService;
@@ -16,11 +18,10 @@ import org.kinotic.structures.internal.api.services.OpenApiConversionResult;
 import org.kinotic.structures.internal.api.services.OpenApiService;
 import org.kinotic.structures.internal.api.services.StructureConversionService;
 import org.kinotic.structures.internal.config.OpenApiSecurityType;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -30,8 +31,6 @@ import java.util.concurrent.CompletableFuture;
  */
 @Component
 public class DefaultOpenApiService implements OpenApiService {
-
-    private static final Logger log = LoggerFactory.getLogger(DefaultOpenApiService.class);
 
     private final StructureService structureService;
     private final StructureConversionService structureConversionService;
@@ -75,8 +74,7 @@ public class DefaultOpenApiService implements OpenApiService {
                                    }
 
                                    Paths paths = new Paths();
-                                   String basePath = structuresProperties.getOpenApiPath().endsWith("/")
-                                           ? structuresProperties.getOpenApiPath() : structuresProperties.getOpenApiPath() + "/";
+                                   String basePath = structuresProperties.getOpenApiPath();
 
                                    for(Structure structure : structures.getContent()){
                                        // Add path items for the structure
@@ -99,97 +97,85 @@ public class DefaultOpenApiService implements OpenApiService {
 
     public void addPathItemsForStructure(Paths paths, String basePath, Structure structure){
 
-        // Create a path item for all the operations with "/api/"+structure.getId()
+        String structureName = WordUtils.capitalize(structure.getName());
+
+        // Create a path item for all the operations with basePath/structureNamespace/structureName/:id"
+        PathItem byIdPathItem = new PathItem();
+
+        // Operation for get by id
+        Operation getByIdOperation = createOperation("Get "+structureName+" by Id",
+                                                     "get"+structureName+"ById",
+                                                     structure,
+                                                     1);
+
+
+
+        getByIdOperation.addParametersItem(new Parameter().name("id")
+                                                          .in("path")
+                                                          .required(true)
+                                                          .schema(new StringSchema())
+                                                          .description("The id of the "+structureName+" to get"));
+
+        byIdPathItem.get(getByIdOperation);
+
+        // Operation for delete
+        Operation deleteOperation = createOperation("Delete "+structureName,
+                                                    "delete"+structureName,
+                                                    structure,
+                                                    0);
+
+        deleteOperation.addParametersItem(new Parameter().name("id")
+                                                         .in("path")
+                                                         .required(true)
+                                                         .schema(new StringSchema())
+                                                         .description("The id of the "+structureName+" to delete"));
+
+        byIdPathItem.delete(deleteOperation);
+
+        // add the path item to the paths
+        paths.put(basePath + structure.getNamespace() + "/" + structure.getName() + "/{id}", byIdPathItem);
+
+
+        // Create a path item for all the operations with basePath/structureNamespace/structureName/
         PathItem structurePathItem = new PathItem();
 
-        Operation getAllOperation = createOperation("Get all "+structure.getName(),
-                                                    "getAll"+structure.getName(),
-                                                    structure.getName(),
-                                                    2);
-
-        getAllOperation.addParametersItem(new Parameter().name("page")
-                                                         .in("query")
-                                                         .description("The page number to get")
-                                                         .required(false)
-                                                         .schema(new IntegerSchema()._default(0)));
-
-        getAllOperation.addParametersItem(new Parameter().name("size")
-                                                         .in("query")
-                                                         .description("The number of items per page")
-                                                         .required(false)
-                                                         .schema(new IntegerSchema()._default(25)));
-
-        structurePathItem.get(getAllOperation);
-
-        // Request body for upsert operations
-        Schema<?> refSchema = new Schema<>().$ref(structure.getName());
+        // Request body for save operations
+        Schema<?> refSchema = new Schema<>().$ref(Components.COMPONENTS_SCHEMAS_REF + structure.getName());
         RequestBody structureRequestBody = new RequestBody()
                 .content(new Content().addMediaType("application/json",
                                                     new MediaType().schema(refSchema)));
 
-        // Operation for create
-        Operation createOperation = createOperation("Upsert "+structure.getName(),
-                                                    "upsert"+structure.getName(),
-                                                    structure.getName(),
+        // Save Operation
+        Operation createOperation = createOperation("Save"+structureName,
+                                                    "save"+structureName,
+                                                    structure,
                                                     1);
         createOperation.requestBody(structureRequestBody);
 
         structurePathItem.post(createOperation);
 
-        paths.put(basePath + structure.getId(), structurePathItem);
-
-
-        // Create a path item for all the operations with "/api/"+structure.getId()+"/{id}"
-        PathItem byIdPathItem = new PathItem();
-
-        // Operation for get by id
-        Operation getByIdOperation = createOperation("Get "+structure.getName()+" by Id",
-                                                     "get"+structure.getName()+"ById",
-                                                     structure.getName(),
-                                                     1);
-
-        getByIdOperation.addParametersItem(new Parameter().name("id")
-                                                          .in("path")
-                                                          .description("The id of the "+structure.getName()+" to get")
-                                                          .required(true)
-                                                          .schema(new StringSchema()));
-
-        byIdPathItem.get(getByIdOperation);
-
-        // Operation for delete
-        Operation deleteOperation = createOperation("Delete "+structure.getName(),
-                                                    "delete"+structure.getName(),
-                                                    structure.getName(),
-                                                    0);
-
-        deleteOperation.addParametersItem(new Parameter().name("id")
-                                                         .in("path")
-                                                         .description("The id of the "+structure.getName()+" to delete")
-                                                         .required(true)
-                                                         .schema(new StringSchema()));
-
-        byIdPathItem.delete(deleteOperation);
-
-        paths.put(basePath + structure.getId()+"/{id}", byIdPathItem);
-
-        // Create a path item for all the operations with "/api/"+structure.getId()+"/search"
-        PathItem searchPathItem = new PathItem();
-        Operation searchOperation = createOperation("Search "+structure.getName(),
-                                                    "search"+structure.getName(),
-                                                    structure.getName(),
+        // Find All Operation
+        Operation getAllOperation = createOperation("Find all "+structureName,
+                                                    "findAll"+structureName,
+                                                    structure,
                                                     2);
 
-        searchOperation.addParametersItem(new Parameter().name("page")
-                                                         .in("query")
-                                                         .description("The page number to get")
-                                                         .required(false)
-                                                         .schema(new IntegerSchema()._default(0)));
+        addPagingAndSortingParameters(getAllOperation);
 
-        searchOperation.addParametersItem(new Parameter().name("size")
-                                                         .in("query")
-                                                         .description("The number of items per page")
-                                                         .required(false)
-                                                         .schema(new IntegerSchema()._default(25)));
+        structurePathItem.get(getAllOperation);
+
+        // add the path item to the paths
+        paths.put(basePath + structure.getNamespace() + "/" + structure.getName(), structurePathItem);
+
+
+        // Create a path item for all the operations with basePath/structureNamespace/structureName/search
+        PathItem searchPathItem = new PathItem();
+        Operation searchOperation = createOperation("Search "+structureName,
+                                                    "search"+structureName,
+                                                    structure,
+                                                    2);
+
+        addPagingAndSortingParameters(searchOperation);
 
         RequestBody searchRequestBody = new RequestBody()
                 .content(new Content().addMediaType("text/plain",
@@ -197,75 +183,61 @@ public class DefaultOpenApiService implements OpenApiService {
         searchOperation.requestBody(searchRequestBody);
 
         searchPathItem.post(searchOperation);
-        paths.put(basePath + structure.getId()+"/search", searchPathItem);
+
+        // add the path item to the paths
+        paths.put(basePath + structure.getNamespace() + "/" + structure.getName() + "/search", searchPathItem);
 
 
-        // Create a path item for all the operations with "/api/"+structure.getId()+"/searchWithSort"
-        PathItem searchWithSortPathItem = new PathItem();
-        Operation searchWithSortOperation = createOperation("Search with Sort "+structure.getName(),
-                "searchWithSort"+structure.getName(),
-                structure.getName(),
-                2);
+//        // Create a path item for all the operations with "/api/"+structure.getId()+"/bulk-upsert"
+//        PathItem bulkUpsertPathItem = new PathItem();
+//        Operation bulkUpsertOperation = createOperation("Bulk Upsert "+structureName,
+//                                                        "bulkUpsert"+structureName,
+//                                                        structure,
+//                                                        0);
+//
+//        ArraySchema bulkUpsertSchema = new ArraySchema();
+//        bulkUpsertSchema.items(refSchema);
+//        RequestBody bulkUpsertRequestBody = new RequestBody()
+//                .content(new Content().addMediaType("application/json",
+//                                                    new MediaType().schema(bulkUpsertSchema)));
+//        bulkUpsertOperation.requestBody(bulkUpsertRequestBody);
+//
+//        bulkUpsertPathItem.post(bulkUpsertOperation);
+//        paths.put(basePath + structure.getId()+"/bulk-upsert", bulkUpsertPathItem);
+    }
 
-        searchWithSortOperation.addParametersItem(new Parameter().name("sortField")
-                .in("query")
-                .description("The field to apply sorting to")
-                .required(true)
-                .schema(new StringSchema()));
+    private void addPagingAndSortingParameters(Operation operation){
+        operation.addParametersItem(new Parameter().name("page")
+                                                   .in("query")
+                                                   .required(false)
+                                                   .schema(new IntegerSchema()._default(0))
+                                                   .description("The page number to get. The first page is 0. The default is 0."));
 
-        searchWithSortOperation.addParametersItem(new Parameter().name("isDescending")
-                .in("query")
-                .description("Should we sort descending")
-                .required(false)
-                .schema(new BooleanSchema()._default(false)));
+        operation.addParametersItem(new Parameter().name("size")
+                                                   .in("query")
+                                                   .required(false)
+                                                   .schema(new IntegerSchema()._default(25)
+                                                                              .maximum(BigDecimal.valueOf(100)))
+                                                   .description("The number of items per page. The default is 25."));
 
-        searchWithSortOperation.addParametersItem(new Parameter().name("page")
-                .in("query")
-                .description("The page number to get")
-                .required(false)
-                .schema(new IntegerSchema()._default(0)));
-
-        searchWithSortOperation.addParametersItem(new Parameter().name("size")
-                .in("query")
-                .description("The number of items per page")
-                .required(false)
-                .schema(new IntegerSchema()._default(25)));
-
-        RequestBody searchWithSortRequestBody = new RequestBody()
-                .content(new Content().addMediaType("text/plain",
-                        new MediaType().schema(new StringSchema())));
-        searchWithSortOperation.requestBody(searchWithSortRequestBody);
-
-        searchWithSortPathItem.post(searchWithSortOperation);
-        paths.put(basePath + structure.getId()+"/searchWithSort", searchWithSortPathItem);
-
-
-
-        // Create a path item for all the operations with "/api/"+structure.getId()+"/bulk-upsert"
-        PathItem bulkUpsertPathItem = new PathItem();
-        Operation bulkUpsertOperation = createOperation("Bulk Upsert "+structure.getName(),
-                                                        "bulkUpsert"+structure.getName(),
-                                                        structure.getName(),
-                                                        0);
-
-        ArraySchema bulkUpsertSchema = new ArraySchema();
-        bulkUpsertSchema.items(refSchema);
-        RequestBody bulkUpsertRequestBody = new RequestBody()
-                .content(new Content().addMediaType("application/json",
-                                                    new MediaType().schema(bulkUpsertSchema)));
-        bulkUpsertOperation.requestBody(bulkUpsertRequestBody);
-
-        bulkUpsertPathItem.post(bulkUpsertOperation);
-        paths.put(basePath + structure.getId()+"/bulk-upsert", bulkUpsertPathItem);
+        operation.addParametersItem(new Parameter().name("sort")
+                                                   .in("query")
+                                                   .required(false)
+                                                   .schema(new StringSchema())
+                                                   .description("The field to apply sorting to."
+                                                                        +  " Multiple sort fields can be applied by separating them with a comma."
+                                                                        +  " The sort order for each sort field will be ascending unless it is prefixed with a minus (“-“), in which case it will be descending.")
+                                                   .examples(Map.of("Single Sort", new Example().value("name"),
+                                                                    "Multiple Sort", new Example().value("name,-age"))));
     }
 
     private Operation createOperation(String operationSummary,
                                       String operationId,
-                                      String structureName,
+                                      Structure structure,
                                       int responseType) {
 
         Operation operation = new Operation().summary(operationSummary)
-                                             .tags(List.of(structureName))
+                                             .tags(List.of(structure.getName()))
                                              .operationId(operationId);
 
         if(structuresProperties.getOpenApiSecurityType() == OpenApiSecurityType.BASIC){
@@ -282,14 +254,25 @@ public class DefaultOpenApiService implements OpenApiService {
         Content content = new Content();
         MediaType mediaType = new MediaType();
         if(responseType == 1){
-            mediaType.setSchema(new Schema<>().$ref(structureName));
+
+            mediaType.setSchema(new Schema<>().$ref(Components.COMPONENTS_SCHEMAS_REF + structure.getName()));
             content.addMediaType("application/json", mediaType);
             response.setContent(content);
+
         }else if(responseType == 2){
-            ObjectSchema searchHitsSchema = new ObjectSchema();
-            searchHitsSchema.addProperty("content", new ArraySchema().items(new Schema<>().$ref(structureName)));
-            searchHitsSchema.addProperty("totalElements", new IntegerSchema());
-            mediaType.setSchema(searchHitsSchema);
+
+            ObjectSchema pageSchema = new ObjectSchema();
+
+            pageSchema.addProperty("content", new ArraySchema()
+                    .items(new Schema<>().$ref(Components.COMPONENTS_SCHEMAS_REF + structure.getName())));
+
+            pageSchema.addProperty("size", new IntegerSchema()
+                    .description("The number of entities per page"));
+
+            pageSchema.addProperty("totalElements", new IntegerSchema()
+                    .description("The total number of entities"));
+
+            mediaType.setSchema(pageSchema);
             content.addMediaType("application/json", mediaType);
             response.setContent(content);
         }
