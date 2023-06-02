@@ -3,7 +3,7 @@ package org.kinotic.structures.internal.endpoints;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.RoutingContext;
 import org.kinotic.structures.api.domain.RawJson;
-import org.kinotic.structures.internal.util.VertxWebUtils;
+import org.kinotic.structures.internal.utils.VertxWebUtil;
 
 import java.util.function.BiFunction;
 
@@ -24,7 +24,7 @@ class SingleEntityHandler implements BiFunction<RawJson, Throwable, Void> {
             context.response().putHeader("Content-Type", "application/json");
             context.response().end(Buffer.buffer(rawJson.data()));
         } else {
-            VertxWebUtils.writeException(context.response(), throwable);
+            VertxWebUtil.writeException(context.response(), throwable);
         }
         return null;
     }

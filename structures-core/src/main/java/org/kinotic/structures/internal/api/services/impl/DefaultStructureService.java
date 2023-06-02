@@ -8,7 +8,7 @@ import org.kinotic.structures.api.services.StructureService;
 import org.kinotic.structures.internal.api.services.ElasticConversionResult;
 import org.kinotic.structures.internal.api.services.StructureConversionService;
 import org.kinotic.structures.api.config.StructuresProperties;
-import org.kinotic.structures.internal.util.StructuresUtils;
+import org.kinotic.structures.internal.utils.StructuresUtil;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.elasticsearch.core.ReactiveElasticsearchOperations;
@@ -62,11 +62,11 @@ public class DefaultStructureService extends AbstractCrudService<Structure> impl
         structure.setNamespace(structure.getNamespace().trim());
         structure.setName(structure.getName().trim());
 
-        String logicalIndexName = StructuresUtils.structureNameToId(structure.getNamespace(), structure.getName());
+        String logicalIndexName = StructuresUtil.structureNameToId(structure.getNamespace(), structure.getName());
 
         // will throw an exception if invalid
         try {
-            StructuresUtils.indexNameValidation(logicalIndexName);
+            StructuresUtil.indexNameValidation(logicalIndexName);
         } catch (IllegalArgumentException e) {
             return CompletableFuture.failedFuture(e);
         }

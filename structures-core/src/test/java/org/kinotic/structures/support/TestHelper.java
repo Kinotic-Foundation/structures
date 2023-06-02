@@ -2,16 +2,13 @@ package org.kinotic.structures.support;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.kinotic.continuum.idl.api.directory.SchemaFactory;
-import org.kinotic.continuum.idl.api.schema.ArrayC3Type;
-import org.kinotic.continuum.idl.api.schema.C3Type;
 import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
-import org.kinotic.structures.api.decorators.IdDecorator;
-import org.kinotic.structures.api.decorators.TextDecorator;
 import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.EntitiesService;
 import org.kinotic.structures.api.services.StructureService;
+import org.kinotic.structures.internal.sample.Person;
+import org.kinotic.structures.internal.sample.TestDataService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
@@ -25,7 +22,7 @@ import java.util.concurrent.CompletableFuture;
 public class TestHelper {
 
     @Autowired
-    private SchemaFactory schemaFactory;
+    TestDataService testDataService;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -36,79 +33,55 @@ public class TestHelper {
     @Autowired
     private EntitiesService entitiesService;
 
-    public Person createTestPerson() {
-        return new Person()
-                .setFirstName("Jesse")
-                .setLastName("Pinkman")
-                .setAddresses(List.of(new Address()
-                                              .setStreet("1001 Central Ave NE")
-                                              .setCity("Albuquerque")
-                                              .setState("NM")
-                                              .setZip("87106")));
-    }
-
     public CompletableFuture<Structure> createPersonStructure() {
         Structure structure = new Structure();
         structure.setName("Person-" + System.currentTimeMillis());
         structure.setDescription("Defines a Person");
 
-        C3Type c3Type = schemaFactory.createForClass(Person.class);
-        if(c3Type instanceof ObjectC3Type){
-            ObjectC3Type personType = (ObjectC3Type) c3Type;
+        ObjectC3Type personType = testDataService.createPersonSchema();
 
-            // Add decorators
-            personType.getProperties().get("id").addDecorator(new IdDecorator());
-            ((ObjectC3Type)((ArrayC3Type)personType.getProperties().get("addresses"))
-                    .getContains())
-                    .getProperties()
-                    .get("street").addDecorator(new TextDecorator());
+        structure.setEntityDefinition(personType);
+        structure.setNamespace(personType.getNamespace());
 
-            structure.setEntityDefinition(personType);
-            structure.setNamespace(personType.getNamespace());
-
-            return structureService.save(structure)
-                                   .thenCompose(saved -> structureService.publish(saved.getId())
-                                                                         .thenApply(published -> saved));
-        }else{
-            return CompletableFuture.failedFuture(new RuntimeException("Failed to create structure for Person"));
-        }
+        return structureService.save(structure)
+                               .thenCompose(saved -> structureService.publish(saved.getId())
+                                                                     .thenApply(published -> saved));
     }
 
     public Mono<StructureAndPersonHolder> createStructureAndEntities(int numberOfPeopleToCreate){
         return Mono.fromFuture(() -> createPersonStructure()
-                .thenCompose(structure -> {
-                    List<CompletableFuture<Person>> completableFutures = new ArrayList<>();
-
-                    for(int i = 0; i < numberOfPeopleToCreate; i++){
-                        Person person = createTestPerson();
-                        byte[] jsonData;
-                        try {
-                            jsonData = objectMapper.writeValueAsBytes(person);
-                        } catch (JsonProcessingException e) {
-                            return CompletableFuture.failedFuture(e);
-                        }
-                        completableFutures.add(entitiesService.save(structure.getId(), RawJson.from(jsonData))
-                                                              .thenCompose(saved -> {
-                                                                  try {
-                                                                      Person savedPerson = objectMapper.readValue(saved.data(),
-                                                                                                                  Person.class);
-                                                                      return CompletableFuture.completedFuture(savedPerson);
-                                                                  } catch (IOException e) {
-                                                                      return CompletableFuture.failedFuture(e);
-                                                                  }
-                                                              }));
-                    }
-
-                    return CompletableFuture.allOf(completableFutures.toArray(new CompletableFuture[0]))
-                                            .thenApply(v -> {
-                                                StructureAndPersonHolder holder = new StructureAndPersonHolder();
-                                                holder.setStructure(structure);
-                                                for(CompletableFuture<Person> future : completableFutures){
-                                                    holder.addPerson(future.join());
-                                                }
-                                                return holder;
-                                            });
-                }));
+                .thenCompose(structure ->
+                     testDataService.createTestPeople(numberOfPeopleToCreate)
+                                    .thenCompose(people -> {
+                                        List<CompletableFuture<Person>> completableFutures = new ArrayList<>();
+                                        for(Person person : people){
+                                            byte[] jsonData;
+                                            try {
+                                                jsonData = objectMapper.writeValueAsBytes(person);
+                                            } catch (JsonProcessingException e) {
+                                                return CompletableFuture.failedFuture(e);
+                                            }
+                                            completableFutures.add(entitiesService.save(structure.getId(), RawJson.from(jsonData))
+                                                                                  .thenCompose(saved -> {
+                                                                                      try {
+                                                                                          Person savedPerson = objectMapper.readValue(saved.data(),
+                                                                                                                                      Person.class);
+                                                                                          return CompletableFuture.completedFuture(savedPerson);
+                                                                                      } catch (IOException e) {
+                                                                                          return CompletableFuture.failedFuture(e);
+                                                                                      }
+                                                                                  }));
+                                        }
+                                        return CompletableFuture.allOf(completableFutures.toArray(new CompletableFuture[0]))
+                                                                .thenApply(v -> {
+                                                                    StructureAndPersonHolder holder = new StructureAndPersonHolder();
+                                                                    holder.setStructure(structure);
+                                                                    for(CompletableFuture<Person> future : completableFutures){
+                                                                        holder.addPerson(future.join());
+                                                                    }
+                                                                    return holder;
+                                                                });
+                                    })));
     }
 
 //

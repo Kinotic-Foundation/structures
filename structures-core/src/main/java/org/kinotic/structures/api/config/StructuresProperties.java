@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.apache.commons.lang3.Validate;
-import org.kinotic.structures.internal.util.StructuresUtils;
+import org.kinotic.structures.internal.utils.StructuresUtil;
 import org.kinotic.structures.internal.config.ElasticConnectionInfo;
 import org.kinotic.structures.internal.config.OpenApiSecurityType;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -45,11 +45,16 @@ public class StructuresProperties {
 
     private String openApiPath = "/api/";
 
+    /**
+     * If true will initialize the Structures with sample data
+     */
+    private boolean initializeWithSampleData = false;
+
     @PostConstruct
     public void validate(){
         // this will validate we do not contain invalid characters
         // FIXME: should we limit the number of chars as well?
-        StructuresUtils.indexNameValidation(indexPrefix);
+        StructuresUtil.indexNameValidation(indexPrefix);
     }
 
     public boolean hasElasticUsernameAndPassword(){

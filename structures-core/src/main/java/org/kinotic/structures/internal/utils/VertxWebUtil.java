@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.util;
+package org.kinotic.structures.internal.utils;
 
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpServerResponse;
@@ -15,7 +15,7 @@ import java.util.List;
 /**
  * Created by Navíd Mitchell 🤪 on 6/1/23.
  */
-public class VertxWebUtils {
+public class VertxWebUtil {
 
     public static String validateAndReturnStructureId(RoutingContext ctx){
         String structureNamespace = ctx.pathParam("structureNamespace");
@@ -24,7 +24,7 @@ public class VertxWebUtils {
         Validate.notNull(structureNamespace, "structureNamespace must not be null");
         Validate.notNull(structureName, "structureName must not be null");
 
-        return StructuresUtils.structureNameToId(structureNamespace, structureName);
+        return StructuresUtil.structureNameToId(structureNamespace, structureName);
     }
 
     public static Pageable validateAndReturnPageable(RoutingContext ctx){

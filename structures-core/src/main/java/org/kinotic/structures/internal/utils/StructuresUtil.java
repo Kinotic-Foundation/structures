@@ -1,6 +1,6 @@
-package org.kinotic.structures.internal.util;
+package org.kinotic.structures.internal.utils;
 
-public class StructuresUtils {
+public class StructuresUtil {
 
     /**
      * Function will convert a structure namespace and name to a valid

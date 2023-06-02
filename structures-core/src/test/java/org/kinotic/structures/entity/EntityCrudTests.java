@@ -28,7 +28,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.kinotic.structures.ElasticsearchTestBase;
 import org.kinotic.structures.api.services.EntitiesService;
-import org.kinotic.structures.support.Person;
+import org.kinotic.structures.internal.sample.Person;
 import org.kinotic.structures.support.StructureAndPersonHolder;
 import org.kinotic.structures.support.TestHelper;
 import org.springframework.beans.factory.annotation.Autowired;

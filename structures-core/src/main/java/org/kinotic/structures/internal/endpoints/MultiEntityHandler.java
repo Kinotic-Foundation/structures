@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.RoutingContext;
 import org.kinotic.structures.api.domain.RawJson;
-import org.kinotic.structures.internal.util.VertxWebUtils;
+import org.kinotic.structures.internal.utils.VertxWebUtil;
 import org.springframework.data.domain.Page;
 
 import java.util.function.BiFunction;
@@ -32,10 +32,10 @@ class MultiEntityHandler implements BiFunction<Page<RawJson>, Throwable, Void> {
                 byte[] data = objectMapper.writeValueAsBytes(rawJsonPage);
                 context.response().end(Buffer.buffer(data));
             } catch (JsonProcessingException e) {
-                VertxWebUtils.writeException(context.response(), e);
+                VertxWebUtil.writeException(context.response(), e);
             }
         } else {
-            VertxWebUtils.writeException(context.response(), throwable);
+            VertxWebUtil.writeException(context.response(), throwable);
         }
         return null;
     }

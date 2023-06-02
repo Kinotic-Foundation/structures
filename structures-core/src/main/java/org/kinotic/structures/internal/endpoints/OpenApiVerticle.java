@@ -17,7 +17,7 @@ import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.EntitiesService;
 import org.kinotic.structures.internal.api.services.OpenApiService;
-import org.kinotic.structures.internal.util.VertxWebUtils;
+import org.kinotic.structures.internal.utils.VertxWebUtil;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
@@ -35,7 +35,7 @@ public class OpenApiVerticle extends AbstractVerticle {
     private final ObjectMapper objectMapper;
     private final OpenApiService openApiService;
     private final String apiBasePath;
-    private final Handler<RoutingContext> failureHandler = VertxWebUtils.createExceptionConvertingFailureHandler();
+    private final Handler<RoutingContext> failureHandler = VertxWebUtil.createExceptionConvertingFailureHandler();
 
     private HttpServer server;
 
@@ -65,7 +65,7 @@ public class OpenApiVerticle extends AbstractVerticle {
                   String id = ctx.pathParam("id");
                   Validate.notNull(id, "id must not be null");
 
-                  String structureId = VertxWebUtils.validateAndReturnStructureId(ctx);
+                  String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
 
                   entitiesService.findById(structureId, id)
                                  .handle(new SingleEntityHandler(ctx));
@@ -79,14 +79,14 @@ public class OpenApiVerticle extends AbstractVerticle {
                   String id = ctx.pathParam("id");
                   Validate.notNull(id, "id must not be null");
 
-                  String structureId = VertxWebUtils.validateAndReturnStructureId(ctx);
+                  String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
 
                   entitiesService.deleteById(structureId, id)
                                  .handle((BiFunction<Void, Throwable, Void>) (v, throwable) -> {
                                      if (throwable == null) {
                                          ctx.response().end();
                                      } else {
-                                         VertxWebUtils.writeException(ctx.response(), throwable);
+                                         VertxWebUtil.writeException(ctx.response(), throwable);
                                      }
                                      return null;
                                  });
@@ -100,7 +100,7 @@ public class OpenApiVerticle extends AbstractVerticle {
               .handler(BodyHandler.create(false))
               .handler(ctx -> {
 
-                  String structureId = VertxWebUtils.validateAndReturnStructureId(ctx);
+                  String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
 
                   entitiesService.save(structureId,
                                        new RawJson(ctx.getBody().getBytes()))
@@ -114,9 +114,9 @@ public class OpenApiVerticle extends AbstractVerticle {
               .failureHandler(failureHandler)
               .handler(ctx -> {
 
-                  String structureId = VertxWebUtils.validateAndReturnStructureId(ctx);
+                  String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
 
-                  Pageable pageable = VertxWebUtils.validateAndReturnPageable(ctx);
+                  Pageable pageable = VertxWebUtil.validateAndReturnPageable(ctx);
 
                   entitiesService.findAll(structureId,
                                           pageable)
@@ -130,9 +130,9 @@ public class OpenApiVerticle extends AbstractVerticle {
               .failureHandler(failureHandler)
               .handler(ctx -> {
 
-                  String structureId = VertxWebUtils.validateAndReturnStructureId(ctx);
+                  String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
 
-                  Pageable pageable = VertxWebUtils.validateAndReturnPageable(ctx);
+                  Pageable pageable = VertxWebUtil.validateAndReturnPageable(ctx);
 
                   String searchString = ctx.getBody().toString();
 

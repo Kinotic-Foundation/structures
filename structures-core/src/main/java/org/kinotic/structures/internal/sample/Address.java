@@ -1,4 +1,4 @@
-package org.kinotic.structures.support;
+package org.kinotic.structures.internal.sample;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
