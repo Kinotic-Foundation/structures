@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import org.apache.commons.lang3.tuple.Pair;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.kinotic.continuum.idl.api.schema.ArrayC3Type;
 import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
@@ -11,6 +12,9 @@ import org.kinotic.continuum.idl.api.schema.StringC3Type;
 import org.kinotic.continuum.internal.utils.ContinuumUtil;
 import org.kinotic.structures.api.decorators.IdDecorator;
 import org.kinotic.structures.api.decorators.TextDecorator;
+import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.api.services.StructureService;
+import org.kinotic.structures.internal.utils.StructuresUtil;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Component;
 
@@ -31,19 +35,25 @@ public class TestDataService {
     private static final String PEOPLE_KEY = "people";
     private static final String PEOPLE_WITH_ID_KEY = "people-with-id";
 
-    private final ResourceLoader resourceLoader;
-    private final ObjectMapper objectMapper;
+    private final StructureService structureService;
+
     private final AsyncLoadingCache<String, List<Person>> peopleCache;
 
-    public TestDataService(ResourceLoader resourceLoader, ObjectMapper objectMapper) {
-        this.resourceLoader = resourceLoader;
-        this.objectMapper = objectMapper;
+    public TestDataService(StructureService structureService,
+                           ResourceLoader resourceLoader,
+                           ObjectMapper objectMapper) {
+
+        this.structureService = structureService;
+
         peopleCache = Caffeine.newBuilder()
                               .maximumSize(10)
                               .expireAfterAccess(Duration.ofMinutes(5))
                               .buildAsync(new PeopleCacheLoader(resourceLoader, objectMapper));
     }
 
+    /**
+     * @return a {@link ObjectC3Type} representing a person.
+     */
     public ObjectC3Type createPersonSchema() {
         return new ObjectC3Type()
                 .setName("Person")
@@ -62,18 +72,66 @@ public class TestDataService {
                                                                                          "zip", new StringC3Type())))));
     }
 
+    /**
+     * Creates a person structure if it does not exist.
+     * @return a {@link CompletableFuture} that will return a {@link Pair} of the {@link Structure} and a {@link Boolean} indicating if the structure was created.
+     */
+    public CompletableFuture<Pair<Structure, Boolean>> createPersonStructureIfNotExists(){
+        String structureId = StructuresUtil.structureNameToId("org.kinotic.structures.internal.sample", "Person");
+        return structureService.findById(structureId)
+                               .thenCompose(structure -> {
+                                   if(structure != null){
+                                       return CompletableFuture.completedFuture(Pair.of(structure, false));
+                                   }else{
+                                       return createPersonStructure().thenApply(saved -> Pair.of(saved, true));
+                                   }
+                               });
+    }
+
+    /**
+     * Creates a {@link Person} {@link Structure} and publishes it.
+     * @return a {@link CompletableFuture} that will return the {@link Structure} that was created.
+     */
+    public CompletableFuture<Structure> createPersonStructure() {
+        Structure structure = new Structure();
+        structure.setName("Person");
+        structure.setNamespace("org.kinotic.structures.internal.sample");
+        structure.setDescription("Defines a Person");
+
+        ObjectC3Type personType = createPersonSchema();
+
+        structure.setEntityDefinition(personType);
+        structure.setNamespace(personType.getNamespace());
+
+        return structureService.save(structure)
+                               .thenCompose(saved -> structureService.publish(saved.getId())
+                                                                     .thenApply(published -> saved));
+    }
+
+    /**
+     * @return a {@link CompletableFuture} that will return a random {@link Person} from the cache.
+     */
     public CompletableFuture<Person> createTestPerson() {
         return peopleCache.get(PEOPLE_KEY).thenApply(people -> people.get(ContinuumUtil.getRandomNumberInRange(people.size() - 1)));
     }
 
+    /**
+     * @return a {@link CompletableFuture} that will return a random {@link Person} with the id populated, from the cache.
+     */
     public CompletableFuture<Person> createTestPersonWithId() {
         return peopleCache.get(PEOPLE_WITH_ID_KEY).thenApply(people -> people.get(ContinuumUtil.getRandomNumberInRange(people.size() - 1)));
     }
 
+    /**
+     * @return a {@link CompletableFuture} that will return a {@link List} of random {@link Person} from the cache.
+     */
     public CompletableFuture<List<Person>> createTestPeople(int numberToCreate) {
         return getPeopleCompletableFuture(numberToCreate, PEOPLE_KEY);
     }
 
+    /**
+     * @return a {@link CompletableFuture} that will return a {@link List} of random {@link Person} with the id populated, from the cache.
+     */
     public CompletableFuture<List<Person>> createTestPeopleWithId(int numberToCreate) {
         return getPeopleCompletableFuture(numberToCreate, PEOPLE_WITH_ID_KEY);
     }

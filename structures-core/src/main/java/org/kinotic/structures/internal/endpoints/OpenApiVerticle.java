@@ -3,6 +3,7 @@ package org.kinotic.structures.internal.endpoints;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.swagger.v3.oas.models.OpenAPI;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
@@ -18,10 +19,13 @@ import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.EntitiesService;
 import org.kinotic.structures.internal.api.services.OpenApiService;
 import org.kinotic.structures.internal.utils.VertxWebUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 import java.util.function.BiFunction;
+import java.util.function.Function;
 
 /**
  * We have one OpenApi spec for all {@link Structure}'s in a namespace. But this handles all namespaces and all structures.
@@ -29,6 +33,8 @@ import java.util.function.BiFunction;
  */
 @Component
 public class OpenApiVerticle extends AbstractVerticle {
+
+    private static final Logger log = LoggerFactory.getLogger(OpenApiVerticle.class);
 
     private final StructuresProperties properties;
     private final EntitiesService entitiesService;
@@ -145,29 +151,36 @@ public class OpenApiVerticle extends AbstractVerticle {
               });
 
         // Open API Docs
-        router.get(apiBasePath + "/api-docs/:structureNamespace/openapi.json")
+        router.get("/api-docs/:structureNamespace/openapi.json")
               .produces("application/json")
               .failureHandler(failureHandler)
               .handler(ctx ->{
-                  try {
+
                       String structureNamespace = ctx.pathParam("structureNamespace");
                       Validate.notNull(structureNamespace, "structureNamespace must not be null");
 
-                      //This wacky stuff is needed since we do not want nulls in our output
-                      ObjectMapper mapper = new ObjectMapper();
-                      mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+                      openApiService.getOpenApiSpec(structureNamespace)
+                              .thenApply((Function<OpenAPI, Void>) openAPI -> {
+                                  try {
 
-                      byte[] bytes = mapper.writeValueAsBytes(openApiService.getOpenApiSpec(structureNamespace));
-                      ctx.response().end(Buffer.buffer(bytes));
+                                      ObjectMapper mapper = new ObjectMapper();
+                                      mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+                                      byte[] bytes = mapper.writeValueAsBytes(openAPI);
+                                      ctx.response().putHeader("Content-Type", "application/json");
+                                      ctx.response().end(Buffer.buffer(bytes));
 
-                  } catch (JsonProcessingException e) {
-                      throw new IllegalArgumentException(e);
-                  }
+                                  } catch (JsonProcessingException e) {
+                                      VertxWebUtil.writeException(ctx.response(), e);
+                                  }
+                                  return null;
+                              });
               });
 
         // Begin listening for requests
         server.requestHandler(router).listen(properties.getOpenApiPort(), ar -> {
             if (ar.succeeded()) {
+                log.debug("Rest API listening on port " + properties.getOpenApiPort());
+                log.debug("OpenApi Json available at http://localhost:" + properties.getOpenApiPort() + "/api-docs/[STRUCTURE NAMESPACE]/openapi.json");
                 startPromise.complete();
             } else {
                 startPromise.fail(ar.cause());

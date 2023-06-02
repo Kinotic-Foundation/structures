@@ -2,11 +2,8 @@ package org.kinotic.structures.support;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
 import org.kinotic.structures.api.domain.RawJson;
-import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.EntitiesService;
-import org.kinotic.structures.api.services.StructureService;
 import org.kinotic.structures.internal.sample.Person;
 import org.kinotic.structures.internal.sample.TestDataService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,28 +25,11 @@ public class TestHelper {
     private ObjectMapper objectMapper;
 
     @Autowired
-    private StructureService structureService;
-
-    @Autowired
     private EntitiesService entitiesService;
 
-    public CompletableFuture<Structure> createPersonStructure() {
-        Structure structure = new Structure();
-        structure.setName("Person-" + System.currentTimeMillis());
-        structure.setDescription("Defines a Person");
-
-        ObjectC3Type personType = testDataService.createPersonSchema();
-
-        structure.setEntityDefinition(personType);
-        structure.setNamespace(personType.getNamespace());
-
-        return structureService.save(structure)
-                               .thenCompose(saved -> structureService.publish(saved.getId())
-                                                                     .thenApply(published -> saved));
-    }
 
     public Mono<StructureAndPersonHolder> createStructureAndEntities(int numberOfPeopleToCreate){
-        return Mono.fromFuture(() -> createPersonStructure()
+        return Mono.fromFuture(() -> testDataService.createPersonStructure()
                 .thenCompose(structure ->
                      testDataService.createTestPeople(numberOfPeopleToCreate)
                                     .thenCompose(people -> {

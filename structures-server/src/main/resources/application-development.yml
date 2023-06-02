@@ -15,6 +15,7 @@ logging:
     io:
       vertx: DEBUG
 
-#structures:
+structures:
+  initializeWithSampleData: true
 #  elastic-username: structures
 #  elastic-password: pass79

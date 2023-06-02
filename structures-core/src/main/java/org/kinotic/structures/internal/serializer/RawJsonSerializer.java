@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import org.kinotic.structures.api.domain.RawJson;
-import org.springframework.boot.jackson.JsonComponent;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -12,7 +11,6 @@ import java.nio.charset.StandardCharsets;
 /**
  * Created by Navíd Mitchell 🤪 on 5/22/23.
  */
-@JsonComponent
 public class RawJsonSerializer extends JsonSerializer<RawJson> {
 
     @Override

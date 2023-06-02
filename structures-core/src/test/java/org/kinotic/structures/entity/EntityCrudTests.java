@@ -124,8 +124,16 @@ public class EntityCrudTests extends ElasticsearchTestBase {
                                         && rawJsons.getTotalPages() == 1
                                         && rawJsons.getContent().size() == 10)
                     .verifyComplete();
+    }
 
+    @Test
+    public void findMissingEntity(){
+        StructureAndPersonHolder holder = createAndVerify();
 
+        Assertions.assertNotNull(holder);
+
+        StepVerifier.create(Mono.fromFuture(entitiesService.findById(holder.getStructure().getId(), "missing")))
+                    .verifyComplete();
     }
 
     //@Test

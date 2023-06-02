@@ -1,11 +1,15 @@
 package org.kinotic.structures.internal.config;
 
 import com.fasterxml.jackson.core.Version;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import org.apache.commons.lang3.tuple.Pair;
 import org.kinotic.continuum.idl.api.schema.decorators.C3Decorator;
 import org.kinotic.continuum.internal.utils.MetaUtil;
+import org.kinotic.structures.api.domain.RawJson;
+import org.kinotic.structures.internal.serializer.RawJsonDeserializer;
+import org.kinotic.structures.internal.serializer.RawJsonSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
@@ -45,8 +49,8 @@ public class StructuresJacksonConfig {
         }
 
         // register internal serializer deserializers
-//        ret.addDeserializer(Pageable.class, new PageableDeserializer());
-//        ret.addSerializer(Page.class, new PageSerializer());
+        ret.addDeserializer(RawJson.class, new RawJsonDeserializer(new ObjectMapper()));
+        ret.addSerializer(RawJson.class, new RawJsonSerializer());
 
         return ret;
     }
