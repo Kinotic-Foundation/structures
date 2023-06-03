@@ -21,7 +21,6 @@ import org.springframework.stereotype.Component;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -57,19 +56,18 @@ public class TestDataService {
     public ObjectC3Type createPersonSchema() {
         return new ObjectC3Type()
                 .setName("Person")
-                .setNamespace("org.kinotic.structures.internal.sample")
-                .setProperties(Map.of("id", new StringC3Type().addDecorator(new IdDecorator()),
-                                      "firstName", new StringC3Type(),
-                                      "lastName", new StringC3Type(),
-                                      "addresses", new ArrayC3Type()
-                                              .setContains(new ObjectC3Type()
-                                                                   .setName("Address")
-                                                                   .setNamespace("org.kinotic.structures.internal.sample")
-                                                                   .setProperties(Map.of("street", new StringC3Type()
-                                                                                                 .addDecorator(new TextDecorator()),
-                                                                                         "city", new StringC3Type(),
-                                                                                         "state", new StringC3Type(),
-                                                                                         "zip", new StringC3Type())))));
+                .setNamespace("org.kinotic.data")
+                .addProperty("id", new StringC3Type().addDecorator(new IdDecorator()))
+                .addProperty("firstName", new StringC3Type())
+                .addProperty("lastName", new StringC3Type())
+                .addProperty("addresses", new ArrayC3Type()
+                        .setContains(new ObjectC3Type()
+                                .setName("Address")
+                                .setNamespace("org.kinotic.data")
+                                .addProperty("street", new StringC3Type().addDecorator(new TextDecorator()))
+                                .addProperty("city", new StringC3Type())
+                                .addProperty("state", new StringC3Type())
+                                .addProperty("zip", new StringC3Type())));
     }
 
     /**
@@ -77,24 +75,25 @@ public class TestDataService {
      * @return a {@link CompletableFuture} that will return a {@link Pair} of the {@link Structure} and a {@link Boolean} indicating if the structure was created.
      */
     public CompletableFuture<Pair<Structure, Boolean>> createPersonStructureIfNotExists(){
-        String structureId = StructuresUtil.structureNameToId("org.kinotic.structures.internal.sample", "Person");
+        String structureId = StructuresUtil.structureNameToId("org.kinotic.data", "Person");
         return structureService.findById(structureId)
                                .thenCompose(structure -> {
                                    if(structure != null){
                                        return CompletableFuture.completedFuture(Pair.of(structure, false));
                                    }else{
-                                       return createPersonStructure().thenApply(saved -> Pair.of(saved, true));
+                                       return createPersonStructure(null).thenApply(saved -> Pair.of(saved, true));
                                    }
                                });
     }
 
     /**
      * Creates a {@link Person} {@link Structure} and publishes it.
+     * @param structureNameSuffix if not null will be appended to the structure name.
      * @return a {@link CompletableFuture} that will return the {@link Structure} that was created.
      */
-    public CompletableFuture<Structure> createPersonStructure() {
+    public CompletableFuture<Structure> createPersonStructure(String structureNameSuffix) {
         Structure structure = new Structure();
-        structure.setName("Person");
+        structure.setName("Person"+(structureNameSuffix != null ? structureNameSuffix : ""));
         structure.setNamespace("org.kinotic.structures.internal.sample");
         structure.setDescription("Defines a Person");
 
@@ -174,6 +173,5 @@ public class TestDataService {
             }
         }
     }
-
 
 }

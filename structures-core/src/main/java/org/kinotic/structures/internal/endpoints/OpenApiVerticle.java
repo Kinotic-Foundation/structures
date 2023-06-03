@@ -12,6 +12,8 @@ import io.vertx.core.http.HttpServer;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
+import io.vertx.ext.web.handler.CorsHandler;
+import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.domain.RawJson;
@@ -62,6 +64,8 @@ public class OpenApiVerticle extends AbstractVerticle {
 
         Router router = Router.router(vertx);
 
+        router.route().handler(CorsHandler.create("*"));
+
         // Get Entity By ID
         router.get(apiBasePath+":structureNamespace/:structureName/:id")
               .produces("application/json")
@@ -73,8 +77,8 @@ public class OpenApiVerticle extends AbstractVerticle {
 
                   String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
 
-                  entitiesService.findById(structureId, id)
-                                 .handle(new SingleEntityHandler(ctx));
+                  VertxCompletableFuture.from(vertx, entitiesService.findById(structureId, id))
+                                        .handle(new SingleEntityHandler(ctx));
               });
 
         // Delete Entity By ID
@@ -87,15 +91,15 @@ public class OpenApiVerticle extends AbstractVerticle {
 
                   String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
 
-                  entitiesService.deleteById(structureId, id)
-                                 .handle((BiFunction<Void, Throwable, Void>) (v, throwable) -> {
-                                     if (throwable == null) {
-                                         ctx.response().end();
-                                     } else {
-                                         VertxWebUtil.writeException(ctx.response(), throwable);
-                                     }
-                                     return null;
-                                 });
+                  VertxCompletableFuture.from(vertx, entitiesService.deleteById(structureId, id))
+                                        .handle((BiFunction<Void, Throwable, Void>) (v, throwable) -> {
+                                            if (throwable == null) {
+                                                ctx.response().end();
+                                            } else {
+                                                VertxWebUtil.writeException(ctx.response(), throwable);
+                                            }
+                                            return null;
+                                        });
               });
 
         // Save entity
@@ -108,9 +112,9 @@ public class OpenApiVerticle extends AbstractVerticle {
 
                   String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
 
-                  entitiesService.save(structureId,
-                                       new RawJson(ctx.getBody().getBytes()))
-                                 .handle(new SingleEntityHandler(ctx));
+                  VertxCompletableFuture.from(vertx, entitiesService.save(structureId,
+                                                                          new RawJson(ctx.getBody().getBytes())))
+                                        .handle(new SingleEntityHandler(ctx));
 
               });
 
@@ -124,9 +128,9 @@ public class OpenApiVerticle extends AbstractVerticle {
 
                   Pageable pageable = VertxWebUtil.validateAndReturnPageable(ctx);
 
-                  entitiesService.findAll(structureId,
-                                          pageable)
-                                 .handle(new MultiEntityHandler(ctx, objectMapper));
+                  VertxCompletableFuture.from(vertx, entitiesService.findAll(structureId,
+                                                                             pageable))
+                                        .handle(new MultiEntityHandler(ctx, objectMapper));
               });
 
         // Search for entities
@@ -144,10 +148,10 @@ public class OpenApiVerticle extends AbstractVerticle {
 
                   Validate.notBlank(searchString, "A request body containing a search string must be provided");
 
-                  entitiesService.search(structureId,
-                                         searchString,
-                                         pageable)
-                                 .handle(new MultiEntityHandler(ctx, objectMapper));
+                  VertxCompletableFuture.from(vertx, entitiesService.search(structureId,
+                                                                            searchString,
+                                                                            pageable))
+                                        .handle(new MultiEntityHandler(ctx, objectMapper));
               });
 
         // Open API Docs
@@ -156,24 +160,24 @@ public class OpenApiVerticle extends AbstractVerticle {
               .failureHandler(failureHandler)
               .handler(ctx ->{
 
-                      String structureNamespace = ctx.pathParam("structureNamespace");
-                      Validate.notNull(structureNamespace, "structureNamespace must not be null");
+                  String structureNamespace = ctx.pathParam("structureNamespace");
+                  Validate.notNull(structureNamespace, "structureNamespace must not be null");
 
-                      openApiService.getOpenApiSpec(structureNamespace)
-                              .thenApply((Function<OpenAPI, Void>) openAPI -> {
-                                  try {
+                  VertxCompletableFuture.from(vertx, openApiService.getOpenApiSpec(structureNamespace))
+                                        .thenApply((Function<OpenAPI, Void>) openAPI -> {
+                                            try {
 
-                                      ObjectMapper mapper = new ObjectMapper();
-                                      mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-                                      byte[] bytes = mapper.writeValueAsBytes(openAPI);
-                                      ctx.response().putHeader("Content-Type", "application/json");
-                                      ctx.response().end(Buffer.buffer(bytes));
+                                                ObjectMapper mapper = new ObjectMapper();
+                                                mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+                                                byte[] bytes = mapper.writeValueAsBytes(openAPI);
+                                                ctx.response().putHeader("Content-Type", "application/json");
+                                                ctx.response().end(Buffer.buffer(bytes));
 
-                                  } catch (JsonProcessingException e) {
-                                      VertxWebUtil.writeException(ctx.response(), e);
-                                  }
-                                  return null;
-                              });
+                                            } catch (JsonProcessingException e) {
+                                                VertxWebUtil.writeException(ctx.response(), e);
+                                            }
+                                            return null;
+                                        });
               });
 
         // Begin listening for requests

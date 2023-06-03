@@ -29,7 +29,7 @@ public class TestHelper {
 
 
     public Mono<StructureAndPersonHolder> createStructureAndEntities(int numberOfPeopleToCreate){
-        return Mono.fromFuture(() -> testDataService.createPersonStructure()
+        return Mono.fromFuture(() -> testDataService.createPersonStructure("-" + System.currentTimeMillis())
                 .thenCompose(structure ->
                      testDataService.createTestPeople(numberOfPeopleToCreate)
                                     .thenCompose(people -> {

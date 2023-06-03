@@ -8,6 +8,7 @@ import org.kinotic.continuum.idl.api.converter.SpecificC3TypeConverter;
 import org.kinotic.continuum.idl.api.schema.ArrayC3Type;
 import org.kinotic.continuum.idl.api.schema.ByteC3Type;
 import org.kinotic.continuum.idl.api.schema.C3Type;
+import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
 
 import java.util.Set;
 
@@ -27,7 +28,16 @@ public class ArrayC3TypeToOpenApi implements SpecificC3TypeConverter<Schema<?>, 
         if(c3Type.getContains() instanceof ByteC3Type){
             return new StringSchema().format("binary");
         } else {
-            return new ArraySchema().items(conversionContext.convert(c3Type.getContains()));
+
+            Schema<?> schema = conversionContext.convert(c3Type.getContains());
+
+            if(c3Type.getContains() instanceof ObjectC3Type){
+                ObjectC3Type objectC3Type = (ObjectC3Type) c3Type.getContains();
+                conversionContext.state().addReferenceSchema(objectC3Type.getName(), schema);
+                schema = new Schema<>().$ref("#/components/schemas/"+objectC3Type.getName());
+            }
+
+            return new ArraySchema().items(schema);
         }
     }
 

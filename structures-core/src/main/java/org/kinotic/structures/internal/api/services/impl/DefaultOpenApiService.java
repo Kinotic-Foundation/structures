@@ -46,57 +46,60 @@ public class DefaultOpenApiService implements OpenApiService {
 
     @Override
     public CompletableFuture<OpenAPI> getOpenApiSpec(String namespace) {
-        return structureService.findAllPublishedForNamespace(namespace, Pageable.ofSize(100))
-                               .thenComposeAsync(structures -> {
-                                   OpenAPI openAPI = new OpenAPI();
+        return structureService
+                .findAllPublishedForNamespace(namespace, Pageable.ofSize(100))
+                .thenComposeAsync(structures -> {
+                    OpenAPI openAPI = new OpenAPI();
 
-                                   Info info = new Info()
-                                           .title(namespace + " Structures API")
-                                           .version("1.0")
-                                           .description("Provides access to Structures Items for the " + namespace + " namespace");
-                                   openAPI.setInfo(info);
+                    Info info = new Info()
+                            .title(namespace + " Structures API")
+                            .version("1.0")
+                            .description("Provides access to Structures Items for the " + namespace + " namespace");
+                    openAPI.setInfo(info);
 
-                                   Components components = new Components();
+                    Components components = new Components();
 
-                                   // security scheme
-                                   if(structuresProperties.getOpenApiSecurityType() == OpenApiSecurityType.BASIC){
-                                       SecurityScheme securityScheme = new SecurityScheme();
-                                       securityScheme.setType(SecurityScheme.Type.HTTP);
-                                       securityScheme.setScheme("basic");
-                                       components.addSecuritySchemes("BasicAuth", securityScheme);
-                                       openAPI.setSecurity(List.of(new SecurityRequirement().addList("BasicAuth")));
-                                   } else if (structuresProperties.getOpenApiSecurityType() == OpenApiSecurityType.BEARER){
-                                       SecurityScheme securityScheme = new SecurityScheme();
-                                       securityScheme.setType(SecurityScheme.Type.HTTP);
-                                       securityScheme.setScheme("bearer");
-                                       components.addSecuritySchemes("BearerAuth", securityScheme);
-                                       openAPI.setSecurity(List.of(new SecurityRequirement().addList("BearerAuth")));
-                                   }
+                    // security scheme
+                    if(structuresProperties.getOpenApiSecurityType() == OpenApiSecurityType.BASIC){
+                        SecurityScheme securityScheme = new SecurityScheme();
+                        securityScheme.setType(SecurityScheme.Type.HTTP);
+                        securityScheme.setScheme("basic");
+                        components.addSecuritySchemes("BasicAuth", securityScheme);
+                        openAPI.setSecurity(List.of(new SecurityRequirement().addList("BasicAuth")));
+                    } else if (structuresProperties.getOpenApiSecurityType() == OpenApiSecurityType.BEARER){
+                        SecurityScheme securityScheme = new SecurityScheme();
+                        securityScheme.setType(SecurityScheme.Type.HTTP);
+                        securityScheme.setScheme("bearer");
+                        components.addSecuritySchemes("BearerAuth", securityScheme);
+                        openAPI.setSecurity(List.of(new SecurityRequirement().addList("BearerAuth")));
+                    }
 
-                                   Paths paths = new Paths();
-                                   String basePath = structuresProperties.getOpenApiPath();
+                    Paths paths = new Paths();
+                    String basePath = structuresProperties.getOpenApiPath();
 
-                                   for(Structure structure : structures.getContent()){
-                                       // Add path items for the structure
-                                       addPathItemsForStructure(paths, basePath, structure);
+                    for(Structure structure : structures.getContent()){
+                        // Add path items for the structure
+                        addPathItemsForStructure(paths, basePath, structure);
 
-                                       OpenApiConversionResult result = structureConversionService.convertToOpenApiMapping(structure);
+                        OpenApiConversionResult result = structureConversionService.convertToOpenApiMapping(structure);
 
-                                       components.addSchemas(structure.getName(), result.getObjectSchema());
+                        components.addSchemas(structure.getName(), result.getObjectSchema());
 
-                                       for(Map.Entry<String, Schema<?>> entry : result.getReferenceSchemas().entrySet()){
-                                           components.addSchemas(entry.getKey(), entry.getValue());
-                                       }
-                                   }
+                        for(Map.Entry<String, Schema<?>> entry : result.getReferenceSchemas().entrySet()){
+                            components.addSchemas(entry.getKey(), entry.getValue());
+                        }
+                    }
 
-                                   openAPI.setPaths(paths);
-                                   openAPI.components(components);
-                                   return CompletableFuture.completedFuture(openAPI);
-                               });
+                    openAPI.setPaths(paths);
+                    openAPI.components(components);
+                    return CompletableFuture.completedFuture(openAPI);
+                });
     }
 
     public void addPathItemsForStructure(Paths paths, String basePath, Structure structure){
 
+        String lowercaseNamespace = structure.getNamespace().toLowerCase();
+        String lowercaseName = structure.getName().toLowerCase();
         String structureName = WordUtils.capitalize(structure.getName());
 
         // Create a path item for all the operations with basePath/structureNamespace/structureName/:id"
@@ -104,6 +107,7 @@ public class DefaultOpenApiService implements OpenApiService {
 
         // Operation for get by id
         Operation getByIdOperation = createOperation("Get "+structureName+" by Id",
+                                                     "Gets " + structureName + " entities by their id.",
                                                      "get"+structureName+"ById",
                                                      structure,
                                                      1);
@@ -114,12 +118,13 @@ public class DefaultOpenApiService implements OpenApiService {
                                                           .in("path")
                                                           .required(true)
                                                           .schema(new StringSchema())
-                                                          .description("The id of the "+structureName+" to get"));
+                                                          .description("The id of the "+structureName+" to get."));
 
         byIdPathItem.get(getByIdOperation);
 
         // Operation for delete
         Operation deleteOperation = createOperation("Delete "+structureName,
+                                                    "Deletes " + structureName + " entities",
                                                     "delete"+structureName,
                                                     structure,
                                                     0);
@@ -128,12 +133,12 @@ public class DefaultOpenApiService implements OpenApiService {
                                                          .in("path")
                                                          .required(true)
                                                          .schema(new StringSchema())
-                                                         .description("The id of the "+structureName+" to delete"));
+                                                         .description("The id of the "+structureName+" to delete."));
 
         byIdPathItem.delete(deleteOperation);
 
         // add the path item to the paths
-        paths.put(basePath + structure.getNamespace() + "/" + structure.getName() + "/{id}", byIdPathItem);
+        paths.put(basePath + lowercaseNamespace + "/" + lowercaseName + "/{id}", byIdPathItem);
 
 
         // Create a path item for all the operations with basePath/structureNamespace/structureName/
@@ -142,11 +147,13 @@ public class DefaultOpenApiService implements OpenApiService {
         // Request body for save operations
         Schema<?> refSchema = new Schema<>().$ref(Components.COMPONENTS_SCHEMAS_REF + structure.getName());
         RequestBody structureRequestBody = new RequestBody()
+                .description("The "+structureName+" to save")
                 .content(new Content().addMediaType("application/json",
                                                     new MediaType().schema(refSchema)));
 
         // Save Operation
-        Operation createOperation = createOperation("Save"+structureName,
+        Operation createOperation = createOperation("Save "+structureName,
+                                                    "Saves or updates " + structureName + " entities.",
                                                     "save"+structureName,
                                                     structure,
                                                     1);
@@ -155,7 +162,8 @@ public class DefaultOpenApiService implements OpenApiService {
         structurePathItem.post(createOperation);
 
         // Find All Operation
-        Operation getAllOperation = createOperation("Find all "+structureName,
+        Operation getAllOperation = createOperation("Find all "+structureName +" entities",
+                                                    "Finds all " + structureName + " entities. Supports paging and sorting.",
                                                     "findAll"+structureName,
                                                     structure,
                                                     2);
@@ -165,12 +173,13 @@ public class DefaultOpenApiService implements OpenApiService {
         structurePathItem.get(getAllOperation);
 
         // add the path item to the paths
-        paths.put(basePath + structure.getNamespace() + "/" + structure.getName(), structurePathItem);
+        paths.put(basePath + lowercaseNamespace + "/" + lowercaseName, structurePathItem);
 
 
         // Create a path item for all the operations with basePath/structureNamespace/structureName/search
         PathItem searchPathItem = new PathItem();
-        Operation searchOperation = createOperation("Search "+structureName,
+        Operation searchOperation = createOperation("Search for "+structureName +" entities",
+                                                    "Searches for " + structureName + " entities matching the search criteria. Supports paging and sorting.",
                                                     "search"+structureName,
                                                     structure,
                                                     2);
@@ -178,6 +187,7 @@ public class DefaultOpenApiService implements OpenApiService {
         addPagingAndSortingParameters(searchOperation);
 
         RequestBody searchRequestBody = new RequestBody()
+                .description("The search criteria")
                 .content(new Content().addMediaType("text/plain",
                                                     new MediaType().schema(new StringSchema())));
         searchOperation.requestBody(searchRequestBody);
@@ -185,7 +195,7 @@ public class DefaultOpenApiService implements OpenApiService {
         searchPathItem.post(searchOperation);
 
         // add the path item to the paths
-        paths.put(basePath + structure.getNamespace() + "/" + structure.getName() + "/search", searchPathItem);
+        paths.put(basePath + lowercaseNamespace + "/" + lowercaseName + "/search", searchPathItem);
 
 
 //        // Create a path item for all the operations with "/api/"+structure.getId()+"/bulk-upsert"
@@ -232,11 +242,13 @@ public class DefaultOpenApiService implements OpenApiService {
     }
 
     private Operation createOperation(String operationSummary,
+                                      String description,
                                       String operationId,
                                       Structure structure,
                                       int responseType) {
 
         Operation operation = new Operation().summary(operationSummary)
+                                             .description(description)
                                              .tags(List.of(structure.getName()))
                                              .operationId(operationId);
 
@@ -267,10 +279,10 @@ public class DefaultOpenApiService implements OpenApiService {
                     .items(new Schema<>().$ref(Components.COMPONENTS_SCHEMAS_REF + structure.getName())));
 
             pageSchema.addProperty("size", new IntegerSchema()
-                    .description("The number of entities per page"));
+                    .description("The number of entities per page."));
 
             pageSchema.addProperty("totalElements", new IntegerSchema()
-                    .description("The total number of entities"));
+                    .description("The total number of entities."));
 
             mediaType.setSchema(pageSchema);
             content.addMediaType("application/json", mediaType);

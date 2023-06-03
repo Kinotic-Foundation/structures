@@ -21,6 +21,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.kinotic.continuum.api.Identifiable;
 import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
 import org.kinotic.structures.internal.idl.converters.common.DecoratedProperty;
@@ -72,4 +74,19 @@ public class Structure implements Identifiable<String> {
     @Field(type = FieldType.Flattened)
     private List<DecoratedProperty> decoratedProperties = null; // do not ever set, system managed
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Structure structure = (Structure) o;
+
+        return new EqualsBuilder().append(id, structure.id).isEquals();
+    }
+
+    @Override
+    public int hashCode() {
+        return new HashCodeBuilder(17, 37).append(id).toHashCode();
+    }
 }
