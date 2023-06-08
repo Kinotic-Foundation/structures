@@ -56,14 +56,14 @@ public class TestDataService {
     public ObjectC3Type createPersonSchema() {
         return new ObjectC3Type()
                 .setName("Person")
-                .setNamespace("org.kinotic.data")
+                .setNamespace("org.kinotic.sample")
                 .addProperty("id", new StringC3Type().addDecorator(new IdDecorator()))
                 .addProperty("firstName", new StringC3Type())
                 .addProperty("lastName", new StringC3Type())
                 .addProperty("addresses", new ArrayC3Type()
                         .setContains(new ObjectC3Type()
                                 .setName("Address")
-                                .setNamespace("org.kinotic.data")
+                                .setNamespace("org.kinotic.sample")
                                 .addProperty("street", new StringC3Type().addDecorator(new TextDecorator()))
                                 .addProperty("city", new StringC3Type())
                                 .addProperty("state", new StringC3Type())
@@ -94,7 +94,7 @@ public class TestDataService {
     public CompletableFuture<Structure> createPersonStructure(String structureNameSuffix) {
         Structure structure = new Structure();
         structure.setName("Person"+(structureNameSuffix != null ? structureNameSuffix : ""));
-        structure.setNamespace("org.kinotic.structures.internal.sample");
+        structure.setNamespace("org.kinotic.sample");
         structure.setDescription("Defines a Person");
 
         ObjectC3Type personType = createPersonSchema();

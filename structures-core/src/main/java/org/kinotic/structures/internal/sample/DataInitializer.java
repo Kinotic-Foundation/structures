@@ -51,7 +51,8 @@ public class DataInitializer {
                                                    }
                                                    completableFutures.add(entitiesService.save(structureBooleanPair.getLeft()
                                                                                                                    .getId(),
-                                                                                               RawJson.from(jsonData)));
+                                                                                               RawJson.from(jsonData),
+                                                                                               new DummyEntityContext()));
                                                }
                                                return CompletableFuture.allOf(completableFutures.toArray(new CompletableFuture[0]));
                                            });

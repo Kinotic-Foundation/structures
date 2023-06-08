@@ -47,7 +47,8 @@ public class CrudServiceTemplate {
 
     /**
      * Counts the number of documents in the index. Also allows for customization of the {@link CountRequest}.
-     * @param indexName name of the index to count
+     *
+     * @param indexName       name of the index to count
      * @param builderConsumer to customize the {@link CountRequest}, or null if no customization is needed
      * @return a {@link CompletableFuture} that will complete with the number of documents in the index
      */
@@ -55,7 +56,7 @@ public class CrudServiceTemplate {
                                          Consumer<CountRequest.Builder> builderConsumer) {
         return esAsyncClient.count(builder -> {
                                 builder.index(indexName);
-                                if(builderConsumer != null){
+                                if (builderConsumer != null) {
                                     builderConsumer.accept(builder);
                                 }
                                 return builder;
@@ -66,17 +67,18 @@ public class CrudServiceTemplate {
 
     /**
      * Creates an index with the given name. Also allows for customization of the {@link CreateIndexRequest}.
-     * @param indexName name of the index to create
-     * @param failIfExists if true will fail with an exception if the index already exists
+     *
+     * @param indexName       name of the index to create
+     * @param failIfExists    if true will fail with an exception if the index already exists
      * @param builderConsumer to customize the {@link CreateIndexRequest}, or null if no customization is needed
      * @return a {@link CompletableFuture} that will complete when the index has been created
      */
     public CompletableFuture<Void> createIndex(String indexName,
                                                boolean failIfExists,
-                                               Consumer<CreateIndexRequest.Builder> builderConsumer){
+                                               Consumer<CreateIndexRequest.Builder> builderConsumer) {
         return esAsyncClient.indices().exists(builder -> builder.index(indexName))
                             .thenCompose(exists -> {
-                                if(!exists.value()){
+                                if (!exists.value()) {
                                     return esAsyncClient.indices()
                                                         .create(builder -> {
                                                             builder.index(indexName);
@@ -87,17 +89,18 @@ public class CrudServiceTemplate {
                                                                     .store(st -> st.type(StorageType.Fs))
                                                             );
 
-                                                            if(builderConsumer != null){
+                                                            if (builderConsumer != null) {
                                                                 builderConsumer.accept(builder);
                                                             }
 
                                                             return builder;
                                                         })
                                                         .thenApply(response -> null);
-                                }else{
-                                    if(failIfExists){
-                                        return CompletableFuture.failedFuture(new IllegalArgumentException("Index already exists: " + indexName));
-                                    }else{
+                                } else {
+                                    if (failIfExists) {
+                                        return CompletableFuture.failedFuture(new IllegalArgumentException(
+                                                "Index already exists: " + indexName));
+                                    } else {
                                         return CompletableFuture.completedFuture(null);
                                     }
                                 }
@@ -120,13 +123,13 @@ public class CrudServiceTemplate {
     public <T> CompletableFuture<Page<T>> search(String indexName,
                                                  Pageable pageable,
                                                  Class<T> type,
-                                                 Consumer<SearchRequest.Builder> builderConsumer){
+                                                 Consumer<SearchRequest.Builder> builderConsumer) {
 
         return search(indexName, pageable, getDeserializer(type), builderConsumer)
                 .thenApply(response -> {
                     HitsMetadata<T> hitsMetadata = response.hits();
                     List<T> content = new ArrayList<>(hitsMetadata.hits().size());
-                    for(Hit<T> hit : hitsMetadata.hits()) {
+                    for (Hit<T> hit : hitsMetadata.hits()) {
                         content.add(hit.source());
                     }
                     return new PageImpl<>(content, pageable,
@@ -138,12 +141,13 @@ public class CrudServiceTemplate {
 
     /**
      * Provides base functionality to get a {@link Page} of documents from elasticsearch. With the ability to customize the {@link SearchRequest}.
-     * @param indexName name of the index to search
-     * @param pageable to use for the search
-     * @param deserializer to use to deserialize the documents
+     *
+     * @param indexName       name of the index to search
+     * @param pageable        to use for the search
+     * @param deserializer    to use to deserialize the documents
      * @param builderConsumer to customize the {@link SearchRequest}, or null if no customization is needed
+     * @param <T>             type of the documents to return
      * @return a {@link CompletableFuture} that will complete with a {@link SearchResponse} of documents
-     * @param <T> type of the documents to return
      */
     public <T> CompletableFuture<SearchResponse<T>> search(String indexName,
                                                            Pageable pageable,
@@ -152,7 +156,8 @@ public class CrudServiceTemplate {
         @SuppressWarnings("unchecked")
         JsonEndpoint<SearchRequest, SearchResponse<T>, ErrorResponse> endpoint = (JsonEndpoint<SearchRequest, SearchResponse<T>, ErrorResponse>) SearchRequest._ENDPOINT;
         endpoint = new EndpointWithResponseMapperAttr<>(endpoint,
-                                                        "co.elastic.clients:Deserializer:_global.search.TDocument", deserializer);
+                                                        "co.elastic.clients:Deserializer:_global.search.TDocument",
+                                                        deserializer);
 
         SearchRequest.Builder builder = new SearchRequest.Builder();
 
@@ -161,16 +166,18 @@ public class CrudServiceTemplate {
                .from(pageable.getPageNumber() * pageable.getPageSize())
                .size(pageable.getPageSize());
 
-        for(Sort.Order order : pageable.getSort()){
-            builder.sort(s -> s.field(f -> f.field(order.getProperty()).order(order.isAscending() ? SortOrder.Asc : SortOrder.Desc)));
+        for (Sort.Order order : pageable.getSort()) {
+            builder.sort(s -> s.field(f -> f.field(order.getProperty())
+                                            .order(order.isAscending() ? SortOrder.Asc : SortOrder.Desc)));
         }
 
-        if(builderConsumer != null){
+        if (builderConsumer != null) {
             builderConsumer.accept(builder);
         }
 
         //noinspection resource
-        return esAsyncClient._transport().performRequestAsync(builder.build(), endpoint, esAsyncClient._transportOptions());
+        return esAsyncClient._transport()
+                            .performRequestAsync(builder.build(), endpoint, esAsyncClient._transportOptions());
     }
 
 
@@ -195,48 +202,53 @@ public class CrudServiceTemplate {
 
     /**
      * Finds a document by id. Also allows for customization of the {@link GetRequest}.
-     * @param indexName name of the index to search
-     * @param id of the document to return
-     * @param deserializer to use to deserialize the document
+     *
+     * @param indexName       name of the index to search
+     * @param id              of the document to return
+     * @param deserializer    to use to deserialize the document
      * @param builderConsumer to customize the {@link GetRequest}, or null if no customization is needed
+     * @param <T>             type of the document to return
      * @return a {@link CompletableFuture} that will complete with the document
-     * @param <T> type of the document to return
      */
     public <T> CompletableFuture<GetResponse<T>> findById(String indexName,
                                                           String id,
                                                           JsonpDeserializer<T> deserializer,
-                                                          Consumer<GetRequest.Builder> builderConsumer){
+                                                          Consumer<GetRequest.Builder> builderConsumer) {
         //noinspection unchecked
         JsonEndpoint<GetRequest, GetResponse<T>, ErrorResponse> endpoint =
                 (JsonEndpoint<GetRequest, GetResponse<T>, ErrorResponse>) GetRequest._ENDPOINT;
 
-        endpoint = new EndpointWithResponseMapperAttr<>(endpoint, "co.elastic.clients:Deserializer:_global.get.TDocument", deserializer);
+        endpoint = new EndpointWithResponseMapperAttr<>(endpoint,
+                                                        "co.elastic.clients:Deserializer:_global.get.TDocument",
+                                                        deserializer);
 
         GetRequest.Builder builder = new GetRequest.Builder();
 
         builder.index(indexName).id(id);
-        if(builderConsumer != null){
+        if (builderConsumer != null) {
             builderConsumer.accept(builder);
         }
 
         //noinspection resource
-        return esAsyncClient._transport().performRequestAsync(builder.build(), endpoint, esAsyncClient._transportOptions());
+        return esAsyncClient._transport()
+                            .performRequestAsync(builder.build(), endpoint, esAsyncClient._transportOptions());
     }
 
 
     /**
      * Deletes a document by id. Also allows for customization of the {@link DeleteRequest}.
-     * @param indexName name of the index to delete from
-     * @param id of the document to delete
+     *
+     * @param indexName       name of the index to delete from
+     * @param id              of the document to delete
      * @param builderConsumer to customize the {@link DeleteRequest}, or null if no customization is needed
      * @return a {@link CompletableFuture} that will complete with the {@link DeleteResponse}
      */
     public CompletableFuture<DeleteResponse> deleteById(String indexName,
                                                         String id,
-                                                        Consumer<DeleteRequest.Builder> builderConsumer){
+                                                        Consumer<DeleteRequest.Builder> builderConsumer) {
         return esAsyncClient.delete(builder -> {
             builder.index(indexName).id(id);
-            if(builderConsumer != null){
+            if (builderConsumer != null) {
                 builderConsumer.accept(builder);
             }
             return builder;
@@ -244,7 +256,7 @@ public class CrudServiceTemplate {
     }
 
     private <T> JsonpDeserializer<T> getDeserializer(Class<T> type) {
-        if(RawJson.class.isAssignableFrom(type)){
+        if (RawJson.class.isAssignableFrom(type)) {
             //noinspection unchecked
             return (JsonpDeserializer<T>) rawJsonJsonpDeserializer;
         }

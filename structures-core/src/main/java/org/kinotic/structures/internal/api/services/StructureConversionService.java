@@ -5,7 +5,7 @@ import org.kinotic.structures.api.domain.Structure;
 
 /**
  * Handles converting {@link Structure}s to various mappings. Such as ElasticSearch, OpenAPI, GraphQL.
- * Created by Navíd Mitchell 🤪 on 5/11/23.
+ * Created by Navíd Mitchell 🤪on 5/11/23.
  */
 public interface StructureConversionService {
 

@@ -22,6 +22,7 @@ public class PrimitiveC3TypeToElastic implements SpecificC3TypeConverter<Propert
     private static final Property LONG = LongNumberProperty.of(f -> f)._toProperty();
     private static final Property SHORT = ShortNumberProperty.of(f -> f)._toProperty();
     private static final Property STRING = KeywordProperty.of(f -> f)._toProperty();
+    private static final Property ENUM = KeywordProperty.of(f -> f)._toProperty();
 
     private final MultipleSpecificC3TypeConverter<Property, ElasticConversionState> converter = new MultipleSpecificC3TypeConverter<>();
 
@@ -34,7 +35,8 @@ public class PrimitiveC3TypeToElastic implements SpecificC3TypeConverter<Propert
                  .addConverter(IntC3Type.class, (c3Type, context) -> INT)
                  .addConverter(LongC3Type.class, (c3Type, context) -> LONG)
                  .addConverter(ShortC3Type.class, (c3Type, context) -> SHORT)
-                 .addConverter(StringC3Type.class, (c3Type, context) -> STRING);
+                 .addConverter(StringC3Type.class, (c3Type, context) -> STRING)
+                 .addConverter(EnumC3Type.class, (c3Type, context) -> ENUM);
     }
 
     @Override

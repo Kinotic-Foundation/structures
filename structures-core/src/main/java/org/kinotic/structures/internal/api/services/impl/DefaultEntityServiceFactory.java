@@ -5,7 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.kinotic.continuum.idl.api.schema.decorators.C3Decorator;
 import org.kinotic.structures.api.decorators.runtime.UpsertFieldPreProcessor;
 import org.kinotic.structures.api.domain.Structure;
-import org.kinotic.structures.internal.api.decorators.BasicUpsertEntityPreProcessor;
+import org.kinotic.structures.internal.api.decorators.DelegatingUpsertPreProcessor;
+import org.kinotic.structures.internal.api.decorators.RawJsonUpsertPreProcessor;
 import org.kinotic.structures.internal.api.decorators.DecoratorLogic;
 import org.kinotic.structures.internal.api.services.EntityService;
 import org.kinotic.structures.internal.api.services.EntityServiceFactory;
@@ -69,12 +70,14 @@ public class DefaultEntityServiceFactory implements EntityServiceFactory {
             }
         }
 
-        BasicUpsertEntityPreProcessor upsertEntityPreProcessor
-                = new BasicUpsertEntityPreProcessor(objectMapper, structure, fieldPreProcessors);
+        RawJsonUpsertPreProcessor upsertEntityPreProcessor
+                = new RawJsonUpsertPreProcessor(objectMapper, structure, fieldPreProcessors);
 
         return CompletableFuture.completedFuture(new DefaultEntityService(structure,
                                                                           esAsyncClient,
                                                                           crudServiceTemplate,
-                                                                          upsertEntityPreProcessor));
+                                                                          new DelegatingUpsertPreProcessor(objectMapper,
+                                                                                                           structure,
+                                                                                                           fieldPreProcessors)));
     }
 }

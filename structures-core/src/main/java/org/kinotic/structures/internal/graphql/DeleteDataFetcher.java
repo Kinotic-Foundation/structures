@@ -3,6 +3,7 @@ package org.kinotic.structures.internal.graphql;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import org.kinotic.structures.api.services.EntitiesService;
+import org.kinotic.structures.internal.endpoints.RoutingContextToEntityContextAdapter;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -22,7 +23,9 @@ public class DeleteDataFetcher implements DataFetcher<CompletableFuture<String>>
     @Override
     public CompletableFuture<String> get(DataFetchingEnvironment environment) throws Exception {
         String id = environment.getArgument("id");
-        return entitiesService.deleteById(structureId, id)
-                .thenCompose(aVoid -> CompletableFuture.completedFuture(id));
+        return entitiesService.deleteById(structureId,
+                                          id,
+                                          new RoutingContextToEntityContextAdapter(environment.getContext()))
+                              .thenCompose(aVoid -> CompletableFuture.completedFuture(id));
     }
 }

@@ -4,22 +4,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.benmanes.caffeine.cache.AsyncCacheLoader;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import graphql.GraphQL;
 import graphql.schema.*;
 import org.apache.commons.text.WordUtils;
 import org.kinotic.structures.api.decorators.runtime.GraphQLTypeHolder;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.EntitiesService;
 import org.kinotic.structures.api.services.StructureService;
-import org.kinotic.structures.internal.api.services.ExecutionGraphQlServiceProvider;
+import org.kinotic.structures.internal.api.services.GraphQlProviderService;
 import org.kinotic.structures.internal.api.services.StructureConversionService;
 import org.kinotic.structures.internal.graphql.*;
 import org.springframework.data.domain.Pageable;
-import org.springframework.graphql.ExecutionGraphQlService;
-import org.springframework.graphql.execution.DefaultBatchLoaderRegistry;
-import org.springframework.graphql.execution.DefaultExecutionGraphQlService;
-import org.springframework.graphql.execution.GraphQlSource;
 import org.springframework.stereotype.Component;
-import reactor.core.publisher.Mono;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -39,14 +35,14 @@ import static graphql.schema.GraphQLObjectType.newObject;
  * Created by Navíd Mitchell 🤪 on 4/16/23.
  */
 @Component
-public class DefaultExecutionGraphQlServiceProvider implements ExecutionGraphQlServiceProvider {
+public class DefaultGraphQlProviderService implements GraphQlProviderService {
 
-    private final AsyncLoadingCache<String, ExecutionGraphQlService> cache;
+    private final AsyncLoadingCache<String, GraphQL> cache;
 
-    public DefaultExecutionGraphQlServiceProvider(StructureService structureService,
-                                                  EntitiesService entitiesService,
-                                                  StructureConversionService structureConversionService,
-                                                  ObjectMapper objectMapper) {
+    public DefaultGraphQlProviderService(StructureService structureService,
+                                         EntitiesService entitiesService,
+                                         StructureConversionService structureConversionService,
+                                         ObjectMapper objectMapper) {
         this.cache = Caffeine.newBuilder()
                              .expireAfterAccess(1, TimeUnit.HOURS)
                              .maximumSize(10_000)
@@ -57,8 +53,8 @@ public class DefaultExecutionGraphQlServiceProvider implements ExecutionGraphQlS
     }
 
     @Override
-    public Mono<ExecutionGraphQlService> getService(String namespace) {
-        return Mono.fromCompletionStage(cache.get(namespace));
+    public CompletableFuture<GraphQL> getGraphQL(String namespace) {
+        return cache.get(namespace);
     }
 
     @Override
@@ -66,8 +62,7 @@ public class DefaultExecutionGraphQlServiceProvider implements ExecutionGraphQlS
         cache.asMap().remove(namespace);
     }
 
-
-    private static class ExecutionGraphQlServiceCacheLoader implements AsyncCacheLoader<String, ExecutionGraphQlService> {
+    private static class ExecutionGraphQlServiceCacheLoader implements AsyncCacheLoader<String, GraphQL> {
 
         private final StructureService structureService;
         private final EntitiesService entitiesService;
@@ -85,19 +80,14 @@ public class DefaultExecutionGraphQlServiceProvider implements ExecutionGraphQlS
         }
 
         @Override
-        public CompletableFuture<ExecutionGraphQlService> asyncLoad(String key,
-                                                                    Executor executor) throws Exception {
+        public CompletableFuture<GraphQL> asyncLoad(String key, Executor executor) throws Exception {
             return createGraphQlSchema(key, executor)
                     .thenCompose(schema -> {
-                        GraphQlSource graphQlSource = GraphQlSource.builder(schema)
-                                                                   .configureGraphQl(builder -> builder.preparsedDocumentProvider(
-                                                                           new CachingPreparsedDocumentProvider()))
-                                                                   .build();
 
-                        DefaultExecutionGraphQlService service = new DefaultExecutionGraphQlService(graphQlSource);
-                        service.addDataLoaderRegistrar(new DefaultBatchLoaderRegistry());
+                        GraphQL.Builder builder = GraphQL.newGraphQL(schema)
+                                .preparsedDocumentProvider(new CachingPreparsedDocumentProvider());
 
-                        return CompletableFuture.completedFuture(service);
+                        return CompletableFuture.completedFuture(builder.build());
                     });
         }
 

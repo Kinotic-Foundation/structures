@@ -41,23 +41,17 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 
 	@Autowired
 	private StructureService structureService;
-//    @Autowired
-//    private ItemServiceInternal itemService;
-//	@Autowired
-//	private StructureTestHelper structureTestHelper;
-//
-//
 
 	private ObjectC3Type buildTestItemDefinition(boolean addInvalidField){
 		return new ObjectC3Type()
 				.setName("Person")
-				.setNamespace("kinotic")
+				.setNamespace("org.kinotic.sample")
 				.addProperty("name", new StringC3Type().addDecorator(new NotNullC3Decorator()))
 				.addProperty("description", new StringC3Type())
 				.addProperty("addresses", new ArrayC3Type(
 						new ObjectC3Type()
 								.setName("Address")
-								.setNamespace("kinotic")
+								.setNamespace("org.kinotic.sample")
 								.addProperty("street", new StringC3Type().addDecorator(new NotNullC3Decorator()))
 								.addProperty("city", new StringC3Type())
 								.addProperty("state", new StringC3Type())
@@ -71,7 +65,7 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 
 		Structure structure = new Structure();
 		structure.setName("Person")
-				 .setNamespace("kinotic")
+				 .setNamespace("org.kinotic.sample")
 				 .setDescription("Defines a Person")
 				 .setEntityDefinition(buildTestItemDefinition(false));
 
@@ -113,7 +107,7 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 	public void createStructureInvalidField() throws Exception{
 		Structure structure = new Structure();
 		structure.setName("Person")
-				 .setNamespace("kinotic_")
+				 .setNamespace("org.kinotic")
 				 .setDescription("Defines a Person")
 				 .setEntityDefinition(buildTestItemDefinition(true));
 

@@ -24,7 +24,7 @@ public class ObjectC3TypeToElastic implements SpecificC3TypeConverter<Property, 
     @Override
     public Property convert(ObjectC3Type objectC3Type, C3ConversionContext<Property, ElasticConversionState> conversionContext) {
         ObjectProperty.Builder builder = new ObjectProperty.Builder()
-                                                           .dynamic(DynamicMapping.Strict);
+                                                           .dynamic(DynamicMapping.False);
 
         for(Map.Entry<String, C3Type> entry : objectC3Type.getProperties().entrySet()){
 

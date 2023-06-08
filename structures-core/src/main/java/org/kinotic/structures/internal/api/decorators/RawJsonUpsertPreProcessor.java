@@ -9,6 +9,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.kinotic.continuum.idl.api.schema.decorators.C3Decorator;
 import org.kinotic.structures.api.decorators.IdDecorator;
 import org.kinotic.structures.api.decorators.runtime.UpsertFieldPreProcessor;
+import org.kinotic.structures.api.domain.EntityContext;
+import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.domain.Structure;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,9 +25,9 @@ import java.util.concurrent.CompletableFuture;
 /**
  * Created by Navíd Mitchell 🤪 on 5/5/23.
  */
-public class BasicUpsertEntityPreProcessor implements UpsertEntityPreProcessor {
+public class RawJsonUpsertPreProcessor implements UpsertPreProcessor<RawJson> {
 
-    private static final Logger log = LoggerFactory.getLogger(BasicUpsertEntityPreProcessor.class);
+    private static final Logger log = LoggerFactory.getLogger(RawJsonUpsertPreProcessor.class);
 
     private final ObjectMapper objectMapper;
     private final Structure structure;
@@ -34,9 +36,9 @@ public class BasicUpsertEntityPreProcessor implements UpsertEntityPreProcessor {
                                              UpsertFieldPreProcessor<C3Decorator, Object, Object>>> fieldPreProcessors;
 
 
-    public BasicUpsertEntityPreProcessor(ObjectMapper objectMapper,
-                                         Structure structure,
-                                         Map<String, DecoratorLogic<C3Decorator, Object, Object,
+    public RawJsonUpsertPreProcessor(ObjectMapper objectMapper,
+                                     Structure structure,
+                                     Map<String, DecoratorLogic<C3Decorator, Object, Object,
                                                  UpsertFieldPreProcessor<C3Decorator, Object, Object>>> fieldPreProcessors) {
         this.objectMapper = objectMapper;
         this.structure = structure;
@@ -44,11 +46,12 @@ public class BasicUpsertEntityPreProcessor implements UpsertEntityPreProcessor {
     }
 
     @Override
-    public CompletableFuture<RawEntity> process(byte[] bytes) {
+    public CompletableFuture<EntityHolder<RawJson>> process(RawJson entity, EntityContext context) {
 
         Deque<String> jsonPathStack = new ArrayDeque<>();
         String id = null;
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        byte[] bytes = entity.data();
 
         try(JsonParser jsonParser = objectMapper.createNonBlockingByteArrayParser();
             JsonGenerator jsonGenerator = objectMapper.getFactory().createGenerator(outputStream, JsonEncoding.UTF8)) {
@@ -77,7 +80,7 @@ public class BasicUpsertEntityPreProcessor implements UpsertEntityPreProcessor {
                         C3Decorator decorator = preProcessorLogic.getDecorator();
                         UpsertFieldPreProcessor<C3Decorator, Object, Object> preProcessor = preProcessorLogic.getProcessor();
                         Object input = objectMapper.readValue(jsonParser, preProcessor.supportsFieldType());
-                        Object value = preProcessor.process(structure, fieldName, decorator, input);
+                        Object value = preProcessor.process(structure, fieldName, decorator, input, context);
 
                         if(value != null) {
                             jsonGenerator.writeFieldName(fieldName);
@@ -87,6 +90,7 @@ public class BasicUpsertEntityPreProcessor implements UpsertEntityPreProcessor {
                             if(decorator instanceof IdDecorator){
                                 id = (String) value;
                             }
+
                         }else{
                             // skip the field
                             jsonParser.nextToken(); // move to value token
@@ -108,7 +112,7 @@ public class BasicUpsertEntityPreProcessor implements UpsertEntityPreProcessor {
             if(id == null){
                 return CompletableFuture.failedFuture(new IllegalArgumentException("No id field found in entity data"));
             }else{
-                return CompletableFuture.completedFuture(new RawEntity(id, outputStream.toByteArray()));
+                return CompletableFuture.completedFuture(new EntityHolder<>(id, new RawJson(outputStream.toByteArray())));
             }
 
         } catch (IOException e) {

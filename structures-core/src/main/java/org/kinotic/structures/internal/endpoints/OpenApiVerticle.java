@@ -59,12 +59,11 @@ public class OpenApiVerticle extends AbstractVerticle {
     }
 
     public void start(Promise<Void> startPromise) {
-
         server = vertx.createHttpServer();
 
         Router router = Router.router(vertx);
 
-        router.route().handler(CorsHandler.create("*"));
+        router.route().handler(CorsHandler.create(properties.getCorsAllowedOriginPattern()));
 
         // Get Entity By ID
         router.get(apiBasePath+":structureNamespace/:structureName/:id")
@@ -77,7 +76,10 @@ public class OpenApiVerticle extends AbstractVerticle {
 
                   String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
 
-                  VertxCompletableFuture.from(vertx, entitiesService.findById(structureId, id))
+                  VertxCompletableFuture.from(vertx, entitiesService.findById(structureId,
+                                                                              id,
+                                                                              RawJson.class,
+                                                                              new RoutingContextToEntityContextAdapter(ctx)))
                                         .handle(new SingleEntityHandler(ctx));
               });
 
@@ -91,7 +93,9 @@ public class OpenApiVerticle extends AbstractVerticle {
 
                   String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
 
-                  VertxCompletableFuture.from(vertx, entitiesService.deleteById(structureId, id))
+                  VertxCompletableFuture.from(vertx, entitiesService.deleteById(structureId,
+                                                                                id,
+                                                                                new RoutingContextToEntityContextAdapter(ctx)))
                                         .handle((BiFunction<Void, Throwable, Void>) (v, throwable) -> {
                                             if (throwable == null) {
                                                 ctx.response().end();
@@ -113,7 +117,8 @@ public class OpenApiVerticle extends AbstractVerticle {
                   String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
 
                   VertxCompletableFuture.from(vertx, entitiesService.save(structureId,
-                                                                          new RawJson(ctx.getBody().getBytes())))
+                                                                          new RawJson(ctx.getBody().getBytes()),
+                                                                          new RoutingContextToEntityContextAdapter(ctx)))
                                         .handle(new SingleEntityHandler(ctx));
 
               });
@@ -129,7 +134,9 @@ public class OpenApiVerticle extends AbstractVerticle {
                   Pageable pageable = VertxWebUtil.validateAndReturnPageable(ctx);
 
                   VertxCompletableFuture.from(vertx, entitiesService.findAll(structureId,
-                                                                             pageable))
+                                                                             pageable,
+                                                                             RawJson.class,
+                                                                             new RoutingContextToEntityContextAdapter(ctx)))
                                         .handle(new MultiEntityHandler(ctx, objectMapper));
               });
 
@@ -150,7 +157,9 @@ public class OpenApiVerticle extends AbstractVerticle {
 
                   VertxCompletableFuture.from(vertx, entitiesService.search(structureId,
                                                                             searchString,
-                                                                            pageable))
+                                                                            pageable,
+                                                                            RawJson.class,
+                                                                            new RoutingContextToEntityContextAdapter(ctx)))
                                         .handle(new MultiEntityHandler(ctx, objectMapper));
               });
 

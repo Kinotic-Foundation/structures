@@ -20,7 +20,7 @@ import org.kinotic.structures.internal.idl.converters.openapi.OpenApiConverterSt
 import org.springframework.stereotype.Component;
 
 /**
- * Created by Navíd Mitchell 🤪 on 5/11/23.
+ * Created by Navíd Mitchell 🤪on 5/11/23.
  */
 @Component
 public class DefaultStructureConversionService implements StructureConversionService {

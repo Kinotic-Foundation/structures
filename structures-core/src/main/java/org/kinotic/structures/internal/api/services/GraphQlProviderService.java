@@ -1,22 +1,24 @@
 package org.kinotic.structures.internal.api.services;
 
+import graphql.GraphQL;
 import org.springframework.graphql.ExecutionGraphQlService;
-import reactor.core.publisher.Mono;
+
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Supports the creation of {@link ExecutionGraphQlService} instances for a given namespace.
  * This is used to support multiple namespaces in a single application.
  *
- * Created by Navíd Mitchell 🤪 on 4/16/23.
+ * Created by Navíd Mitchell 🤪on 4/16/23.
  */
-public interface ExecutionGraphQlServiceProvider {
+public interface GraphQlProviderService {
 
     /**
-     * Provides a {@link ExecutionGraphQlService} for a given namespace
+     * Provides a {@link GraphQL} for a given namespace
      * @param namespace the structure namespace to provide a service for
-     * @return the {@link ExecutionGraphQlService}
+     * @return the {@link GraphQL}
      */
-    Mono<ExecutionGraphQlService> getService(String namespace);
+    CompletableFuture<GraphQL> getGraphQL(String namespace);
 
     /**
      * Evicts the cache for a given namespace

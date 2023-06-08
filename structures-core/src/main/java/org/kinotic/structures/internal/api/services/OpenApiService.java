@@ -5,7 +5,7 @@ import io.swagger.v3.oas.models.OpenAPI;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Created by Navíd Mitchell 🤪 on 3/18/23.
+ * Created by Navíd Mitchell 🤪on 3/18/23.
  */
 public interface OpenApiService {
 

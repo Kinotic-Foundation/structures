@@ -18,6 +18,7 @@ dependencies {
 	implementation 'io.projectreactor:reactor-core'
 
 	implementation 'io.vertx:vertx-web'
+	implementation 'io.vertx:vertx-web-graphql'
 	implementation 'com.github.rworsnop:vertx-beans'
 	implementation "me.escoffier.vertx:vertx-completable-future:${vertxCompletableFutureVersion}"
 

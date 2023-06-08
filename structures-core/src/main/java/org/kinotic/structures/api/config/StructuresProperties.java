@@ -45,6 +45,12 @@ public class StructuresProperties {
 
     private String openApiPath = "/api/";
 
+    private int graphqlPort = 8080;
+
+    private String graphqlPath = "/graphql/";
+
+    private String corsAllowedOriginPattern = "http://localhost";
+
     /**
      * If true will initialize the Structures with sample data
      */
@@ -67,6 +73,16 @@ public class StructuresProperties {
             this.openApiPath = path;
         }else{
             this.openApiPath = path + "/";
+        }
+        return this;
+    }
+
+    public StructuresProperties setGraphqlPath(String path) {
+        Validate.notBlank(path, "graphqlPath must not be blank");
+        if(path.endsWith("/")){
+            this.graphqlPath = path;
+        }else{
+            this.graphqlPath = path + "/";
         }
         return this;
     }

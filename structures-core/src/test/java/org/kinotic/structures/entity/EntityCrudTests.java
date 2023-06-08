@@ -27,7 +27,9 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.kinotic.structures.ElasticsearchTestBase;
+import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.services.EntitiesService;
+import org.kinotic.structures.internal.sample.DummyEntityContext;
 import org.kinotic.structures.internal.sample.Person;
 import org.kinotic.structures.support.StructureAndPersonHolder;
 import org.kinotic.structures.support.TestHelper;
@@ -61,7 +63,7 @@ public class EntityCrudTests extends ElasticsearchTestBase {
     private StructureAndPersonHolder createAndVerify(int numberOfPeopleToCreate){
         StructureAndPersonHolder ret = new StructureAndPersonHolder();
 
-        StepVerifier.create(testHelper.createStructureAndEntities(numberOfPeopleToCreate))
+        StepVerifier.create(testHelper.createPersonStructureAndEntities(numberOfPeopleToCreate))
                     .expectNextMatches(structureAndPersonHolder -> {
                         boolean matches = structureAndPersonHolder.getStructure() != null &&
                                 structureAndPersonHolder.getStructure().getId() != null &&
@@ -83,7 +85,8 @@ public class EntityCrudTests extends ElasticsearchTestBase {
         Assertions.assertNotNull(holder);
 
         StepVerifier.create(Mono.fromFuture(entitiesService.deleteById(holder.getStructure().getId(),
-                                                                       holder.getFirstPerson().getId())))
+                                                                       holder.getFirstPerson().getId(),
+                                                                       new DummyEntityContext())))
                     .verifyComplete();
     }
 
@@ -93,7 +96,10 @@ public class EntityCrudTests extends ElasticsearchTestBase {
 
         Assertions.assertNotNull(holder);
 
-        StepVerifier.create(Mono.fromFuture(entitiesService.findById(holder.getStructure().getId(), holder.getFirstPerson().getId())))
+        StepVerifier.create(Mono.fromFuture(entitiesService.findById(holder.getStructure().getId(),
+                                                                     holder.getFirstPerson().getId(),
+                                                                     RawJson.class,
+                                                                     new DummyEntityContext())))
                 .expectNextMatches(found -> {
                     boolean ret;
                     try {
@@ -119,7 +125,9 @@ public class EntityCrudTests extends ElasticsearchTestBase {
         Assertions.assertNotNull(holder);
 
         StepVerifier.create(Mono.fromFuture(entitiesService.findAll(holder.getStructure().getId(),
-                                                                    Pageable.ofSize(10))))
+                                                                    Pageable.ofSize(10),
+                                                                    RawJson.class,
+                                                                    new DummyEntityContext())))
                     .expectNextMatches(rawJsons -> rawJsons.getTotalElements() == 10
                                         && rawJsons.getTotalPages() == 1
                                         && rawJsons.getContent().size() == 10)
@@ -132,7 +140,10 @@ public class EntityCrudTests extends ElasticsearchTestBase {
 
         Assertions.assertNotNull(holder);
 
-        StepVerifier.create(Mono.fromFuture(entitiesService.findById(holder.getStructure().getId(), "missing")))
+        StepVerifier.create(Mono.fromFuture(entitiesService.findById(holder.getStructure().getId(),
+                                                                     "missing",
+                                                                     RawJson.class,
+                                                                     new DummyEntityContext())))
                     .verifyComplete();
     }
 

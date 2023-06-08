@@ -4,15 +4,15 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 /**
- * {@link RawEntity} holds the raw data and the id of an entity
+ * {@link EntityHolder} holds the data and the id for an entity
  * Created by Navíd Mitchell 🤪 on 5/11/23.
  */
 @Getter
 @RequiredArgsConstructor
-public class RawEntity {
+public class EntityHolder<T> {
 
     private final String id;
 
-    private final byte[] data;
+    private final T entity;
 
 }

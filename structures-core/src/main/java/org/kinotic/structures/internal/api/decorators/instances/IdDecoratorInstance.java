@@ -2,6 +2,7 @@ package org.kinotic.structures.internal.api.decorators.instances;
 
 import org.kinotic.structures.api.decorators.IdDecorator;
 import org.kinotic.structures.api.decorators.runtime.UpsertFieldPreProcessor;
+import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.Structure;
 import org.springframework.stereotype.Component;
 
@@ -24,7 +25,7 @@ public class IdDecoratorInstance implements UpsertFieldPreProcessor<IdDecorator,
     }
 
     @Override
-    public String process(Structure structure, String fieldName, IdDecorator decorator, String fieldValue) {
+    public String process(Structure structure, String fieldName, IdDecorator decorator, String fieldValue, EntityContext context) {
         return fieldValue != null && !fieldValue.isBlank() ? fieldValue : UUID.randomUUID().toString();
     }
 }

@@ -2,8 +2,7 @@ package org.kinotic.structures.internal.api.services.impl;
 
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import org.kinotic.continuum.core.api.crud.CrudService;
-import org.kinotic.structures.api.domain.RawJson;
+import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.services.EntitiesService;
 import org.kinotic.structures.api.services.StructureService;
 import org.kinotic.structures.internal.api.services.EntityService;
@@ -15,7 +14,7 @@ import org.springframework.stereotype.Component;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Created by Navíd Mitchell 🤪 on 5/10/23.
+ * Created by Navíd Mitchell 🤪on 5/10/23.
  */
 @Component
 public class DefaultEntitiesService implements EntitiesService {
@@ -24,46 +23,56 @@ public class DefaultEntitiesService implements EntitiesService {
 
     public DefaultEntitiesService(StructureService structureService,
                                   EntityServiceFactory entityServiceFactory){
-        this.entityServiceCache = Caffeine.newBuilder()
-                                          .buildAsync((key, executor) ->
-                                              structureService.findById(key)
-                                                              .thenComposeAsync(entityServiceFactory::createEntityService, executor));
+
+        this.entityServiceCache =
+                Caffeine.newBuilder()
+                        .buildAsync((key, executor) ->
+                                            structureService.findById(key)
+                                                            .thenComposeAsync(entityServiceFactory::createEntityService,
+                                                                              executor));
     }
 
     @Override
-    public CompletableFuture<RawJson> save(String structureId, RawJson entity) {
+    public <T> CompletableFuture<T> save(String structureId, T entity, EntityContext context) {
         return entityServiceCache.get(structureId)
-                                 .thenCompose(entityService -> entityService.save(entity));
+                                 .thenCompose(entityService -> entityService.save(entity, context));
     }
 
     @Override
-    public CompletableFuture<RawJson> findById(String structureId, String id) {
+    public <T> CompletableFuture<T> findById(String structureId, String id, Class<T> type, EntityContext context) {
         return entityServiceCache.get(structureId)
-                                 .thenCompose(entityService -> entityService.findById(id));
+                                 .thenCompose(entityService -> entityService.findById(id, type, context));
     }
 
     @Override
-    public CompletableFuture<Long> count(String structureId) {
+    public CompletableFuture<Long> count(String structureId, EntityContext context) {
         return entityServiceCache.get(structureId)
-                                 .thenCompose(CrudService::count);
+                                 .thenCompose(entityService -> entityService.count(context));
     }
 
     @Override
-    public CompletableFuture<Void> deleteById(String structureId, String id) {
+    public CompletableFuture<Void> deleteById(String structureId, String id, EntityContext context) {
         return entityServiceCache.get(structureId)
-                                 .thenCompose(entityService -> entityService.deleteById(id));
+                                 .thenCompose(entityService -> entityService.deleteById(id, context));
     }
 
     @Override
-    public CompletableFuture<Page<RawJson>> findAll(String structureId, Pageable pageable) {
+    public <T> CompletableFuture<Page<T>> findAll(String structureId,
+                                                  Pageable pageable,
+                                                  Class<T> type,
+                                                  EntityContext context) {
         return entityServiceCache.get(structureId)
-                                 .thenCompose(entityService -> entityService.findAll(pageable));
+                                 .thenCompose(entityService -> entityService.findAll(pageable, type, context));
     }
 
     @Override
-    public CompletableFuture<Page<RawJson>> search(String structureId, String searchText, Pageable pageable) {
+    public <T> CompletableFuture<Page<T>> search(String structureId,
+                                                 String searchText,
+                                                 Pageable pageable,
+                                                 Class<T> type,
+                                                 EntityContext context) {
         return entityServiceCache.get(structureId)
-                                 .thenCompose(entityService -> entityService.search(searchText, pageable));
+                                 .thenCompose(entityService -> entityService.search(searchText, pageable, type, context));
     }
 
 }

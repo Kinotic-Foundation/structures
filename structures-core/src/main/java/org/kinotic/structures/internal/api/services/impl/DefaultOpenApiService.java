@@ -27,7 +27,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Created by Navíd Mitchell 🤪 on 3/17/23.
+ * Created by Navíd Mitchell 🤪on 3/17/23.
  */
 @Component
 public class DefaultOpenApiService implements OpenApiService {
