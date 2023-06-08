@@ -10,6 +10,7 @@ import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.responses.ApiResponses;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
+import io.swagger.v3.oas.models.servers.Server;
 import org.apache.commons.text.WordUtils;
 import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.domain.Structure;
@@ -57,6 +58,10 @@ public class DefaultOpenApiService implements OpenApiService {
                             .description("Provides access to Structures Items for the " + namespace + " namespace");
                     openAPI.setInfo(info);
 
+                    if(structuresProperties.getOpenApiServerUrl() != null){
+                        openAPI.addServersItem(new Server().url(structuresProperties.getOpenApiServerUrl()));
+                    }
+
                     Components components = new Components();
 
                     // security scheme
@@ -66,7 +71,7 @@ public class DefaultOpenApiService implements OpenApiService {
                         securityScheme.setScheme("basic");
                         components.addSecuritySchemes("BasicAuth", securityScheme);
                         openAPI.setSecurity(List.of(new SecurityRequirement().addList("BasicAuth")));
-                    } else if (structuresProperties.getOpenApiSecurityType() == OpenApiSecurityType.BEARER){
+                    } else if (structuresProperties.getOpenApiSecurityType() == OpenApiSecurityType.BEARER) {
                         SecurityScheme securityScheme = new SecurityScheme();
                         securityScheme.setType(SecurityScheme.Type.HTTP);
                         securityScheme.setScheme("bearer");

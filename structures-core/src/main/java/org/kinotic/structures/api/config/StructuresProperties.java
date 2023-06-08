@@ -45,11 +45,20 @@ public class StructuresProperties {
 
     private String openApiPath = "/api/";
 
-    private int graphqlPort = 8080;
+    private String openApiServerUrl = "http://localhost:8080";
+
+    private int graphqlPort = 4000;
 
     private String graphqlPath = "/graphql/";
 
-    private String corsAllowedOriginPattern = "http://localhost";
+    /**
+     * The allowed origin pattern for CORS
+     * Defaults to "http://localhost"
+     * If you want to allow all origins use "*"
+     * Internally uses Java Regex Patterns to match
+     * @see java.util.regex.Pattern
+     */
+    private String corsAllowedOriginPattern = "http://localhost.*";
 
     /**
      * If true will initialize the Structures with sample data

@@ -225,7 +225,7 @@ public class DefaultGraphQlProviderService implements GraphQlProviderService {
                                        .type(GraphQLNonNull.nonNull(GraphQLInt)))
                         .field(newInputObjectField()
                                        .name("sort")
-                                       .type(GraphQLNonNull.nonNull(createSortType())));
+                                       .type(createSortType()));
             return inputBuilder.build();
         }
 

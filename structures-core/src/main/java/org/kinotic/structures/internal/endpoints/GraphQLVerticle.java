@@ -6,12 +6,13 @@ import io.vertx.core.http.HttpServer;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.CorsHandler;
-
 import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.internal.api.services.GraphQlProviderService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+
+import java.util.Set;
 
 /**
  * Created by Navíd Mitchell 🤪 on 6/7/23.
@@ -38,9 +39,12 @@ public class GraphQLVerticle extends AbstractVerticle {
 
         Router router = Router.router(vertx);
 
-        router.route().handler(CorsHandler.create(properties.getCorsAllowedOriginPattern()));
+        router.route().handler(CorsHandler.create(properties.getCorsAllowedOriginPattern())
+                                          .allowedHeaders(Set.of("Accept", "Authorization", "Content-Type")));
 
-        router.post(properties.getGraphqlPath()+":structureNamespace/")
+        router.post(properties.getGraphqlPath()+":structureNamespace")
+              .consumes("application/json")
+              .produces("application/json")
               .handler(BodyHandler.create(false))
               .handler(new GraphQLHandler(graphQlProviderService, "structureNamespace"));
 

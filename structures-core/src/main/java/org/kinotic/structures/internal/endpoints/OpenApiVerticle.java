@@ -26,6 +26,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
+import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -63,7 +64,8 @@ public class OpenApiVerticle extends AbstractVerticle {
 
         Router router = Router.router(vertx);
 
-        router.route().handler(CorsHandler.create(properties.getCorsAllowedOriginPattern()));
+        router.route().handler(CorsHandler.create(properties.getCorsAllowedOriginPattern())
+                                          .allowedHeaders(Set.of("Accept", "Authorization", "Content-Type")));
 
         // Get Entity By ID
         router.get(apiBasePath+":structureNamespace/:structureName/:id")
@@ -141,10 +143,11 @@ public class OpenApiVerticle extends AbstractVerticle {
               });
 
         // Search for entities
-        router.get(apiBasePath+":structureNamespace/:structureName/search")
+        router.post(apiBasePath+":structureNamespace/:structureName/search")
               .consumes("text/plain")
               .produces("application/json")
               .failureHandler(failureHandler)
+              .handler(BodyHandler.create(false))
               .handler(ctx -> {
 
                   String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
