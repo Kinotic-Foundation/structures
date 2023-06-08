@@ -8,7 +8,7 @@ import java.util.concurrent.CompletableFuture;
 
 /**
  * Provides access to entities for a given structure.
- * Created by Navíd Mitchell 🤪 on 5/10/23.
+ * Created by Navíd Mitchell 🤪on 5/10/23.
  */
 public interface EntitiesService {
 
@@ -68,6 +68,8 @@ public interface EntitiesService {
 
     /**
      * Returns a {@link Page} of entities matching the search text and paging restriction provided in the {@code Pageable} object.
+     * <p>
+     * You can find more information about the search syntax <a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html#query-string-syntax">here</a>
      *
      * @param structureId the id of the structure to save the entity for
      * @param searchText  the text to search for entities for

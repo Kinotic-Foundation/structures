@@ -14,6 +14,8 @@ import org.kinotic.structures.api.services.StructureService;
 import org.kinotic.structures.internal.api.services.GraphQlProviderService;
 import org.kinotic.structures.internal.api.services.StructureConversionService;
 import org.kinotic.structures.internal.graphql.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
@@ -64,6 +66,8 @@ public class DefaultGraphQlProviderService implements GraphQlProviderService {
 
     private static class ExecutionGraphQlServiceCacheLoader implements AsyncCacheLoader<String, GraphQL> {
 
+        private static final Logger log = LoggerFactory.getLogger(ExecutionGraphQlServiceCacheLoader.class);
+
         private final StructureService structureService;
         private final EntitiesService entitiesService;
         private final StructureConversionService structureConversionService;
@@ -95,6 +99,9 @@ public class DefaultGraphQlProviderService implements GraphQlProviderService {
             return structureService
                     .findAllPublishedForNamespace(namespace, Pageable.ofSize(100))
                     .thenComposeAsync(structures -> {
+
+                        long start = System.currentTimeMillis();
+                        log.debug("Creating GraphQL Schema for namespace: {}", namespace);
 
                         Map<String, GraphQLTypeHolder> structureTypeMap = new HashMap<>();
                         for(Structure structure : structures.getContent()){
@@ -180,11 +187,16 @@ public class DefaultGraphQlProviderService implements GraphQlProviderService {
                             }
 
                         }
-                        return CompletableFuture.completedFuture(GraphQLSchema.newSchema()
-                                                                              .query(queryBuilder.build())
-                                                                              .mutation(mutationBuilder.build())
-                                                                              .additionalType(pageableType)
-                                                                              .build());
+
+                        GraphQLSchema graphQLSchema = GraphQLSchema.newSchema()
+                                                                   .query(queryBuilder.build())
+                                                                   .mutation(mutationBuilder.build())
+                                                                   .additionalType(pageableType)
+                                                                   .build();
+
+                        log.debug("Finished creating GraphQL Schema for namespace: {} in {}ms", namespace, System.currentTimeMillis() - start);
+
+                        return CompletableFuture.completedFuture(graphQLSchema);
                     }, executor);
         }
 
