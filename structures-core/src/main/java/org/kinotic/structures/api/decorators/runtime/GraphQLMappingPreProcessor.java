@@ -8,7 +8,7 @@ import org.kinotic.structures.api.domain.Structure;
  * The {@link GraphQLMappingPreProcessor} is used to create an GraphQL mapping based on data available in the {@link C3Decorator}
  * Created by Navíd Mitchell 🤪 on 5/14/23.
  */
-public interface GraphQLMappingPreProcessor<D extends C3Decorator, T extends C3Type> extends MappingPreProcessor<D,T, GraphQLTypeHolder> {
+public interface GraphQLMappingPreProcessor<D extends C3Decorator> extends MappingPreProcessor<D, GraphQLTypeHolder> {
 
     /**
      * Process the given {@link Structure} and {@link C3Decorator} to create or modify an GraphQL mapping
@@ -23,6 +23,6 @@ public interface GraphQLMappingPreProcessor<D extends C3Decorator, T extends C3T
     GraphQLTypeHolder process(Structure structure,
                               String fieldName,
                               D decorator,
-                              T type,
+                              C3Type type,
                               MappingContext<GraphQLTypeHolder> context);
 }

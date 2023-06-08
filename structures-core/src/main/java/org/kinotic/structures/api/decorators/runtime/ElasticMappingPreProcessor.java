@@ -9,7 +9,7 @@ import org.kinotic.structures.api.domain.Structure;
  * {@link ElasticMappingPreProcessor} is used to create an ElasticSearch mapping based on data available in the {@link C3Decorator}
  * Created by Navíd Mitchell 🤪 on 5/12/23.
  */
-public interface ElasticMappingPreProcessor<D extends C3Decorator, T extends C3Type> extends MappingPreProcessor<D,T, Property> {
+public interface ElasticMappingPreProcessor<D extends C3Decorator> extends MappingPreProcessor<D, Property> {
 
     /**
      * Process the given {@link Structure} and {@link C3Decorator} to create or modify an ElasticSearch mapping
@@ -24,7 +24,7 @@ public interface ElasticMappingPreProcessor<D extends C3Decorator, T extends C3T
     Property process(Structure structure,
                      String fieldName,
                      D decorator,
-                     T type,
+                     C3Type type,
                      MappingContext<Property> context);
 
 }

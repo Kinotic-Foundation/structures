@@ -23,7 +23,7 @@ public class GraphQLConverterStrategy extends AbstractIdlConverterStrategy<Graph
             new EnumC3TypeToGraphQL(),
             new ObjectC3TypeToGraphQL());
 
-    public GraphQLConverterStrategy(List<GraphQLMappingPreProcessor<?, ?>> graphQLMappingPreProcessors) {
+    public GraphQLConverterStrategy(List<GraphQLMappingPreProcessor<?>> graphQLMappingPreProcessors) {
         //noinspection unchecked,rawtypes
         super(specificTypeConverters, List.of(new MappingPreProcessorConverter(graphQLMappingPreProcessors)));
     }

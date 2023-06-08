@@ -20,9 +20,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -141,22 +139,12 @@ public class TestDataService {
                                                                        String peopleKey) {
         return peopleCache.get(peopleKey).thenApply(people -> {
             int size = people.size();
-            Map<Integer, Void> usedNumbers = new HashMap<>();
             List<Person> ret = new ArrayList<>(numberToCreate);
             for(int i = 0; i < numberToCreate; i++) {
-                ret.add(people.get(getNumberNotUsed(usedNumbers, size - 1)));
+                ret.add(people.get(ContinuumUtil.getRandomNumberInRange(size - 1)));
             }
             return ret;
         });
-    }
-
-    private int getNumberNotUsed(Map<Integer, Void> usedNumbers, int max) {
-        int ret = ContinuumUtil.getRandomNumberInRange(max);
-        while(usedNumbers.containsKey(ret)) {
-            ret = ContinuumUtil.getRandomNumberInRange(max);
-        }
-        usedNumbers.put(ret, null);
-        return ret;
     }
 
     private static class PeopleCacheLoader implements CacheLoader<String, List<Person>> {

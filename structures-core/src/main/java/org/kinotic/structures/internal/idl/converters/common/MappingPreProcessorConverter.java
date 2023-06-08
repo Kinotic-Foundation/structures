@@ -20,15 +20,15 @@ import java.util.Map;
  */
 public class MappingPreProcessorConverter<R, S extends BaseConversionState> implements GenericC3TypeConverter<R, C3Type, S> {
 
-    private final Map<Class<C3Decorator>, MappingPreProcessor<C3Decorator, C3Type, R>> preProcessors;
+    private final Map<Class<C3Decorator>, MappingPreProcessor<C3Decorator, R>> preProcessors;
 
-    public MappingPreProcessorConverter(List<MappingPreProcessor<C3Decorator, C3Type, R>> preProcessors) {
+    public MappingPreProcessorConverter(List<MappingPreProcessor<C3Decorator, R>> preProcessors) {
         this.preProcessors = new HashMap<>(preProcessors.size());
 
-        for(MappingPreProcessor<C3Decorator, C3Type, R> preProcessor : preProcessors){
+        for(MappingPreProcessor<C3Decorator, R> preProcessor : preProcessors){
 
             if(this.preProcessors.containsKey(preProcessor.implementsDecorator())){
-                MappingPreProcessor<C3Decorator, C3Type, R> existing = this.preProcessors.get(preProcessor.implementsDecorator());
+                MappingPreProcessor<C3Decorator, R> existing = this.preProcessors.get(preProcessor.implementsDecorator());
                 throw new IllegalArgumentException("Duplicate MappingPreProcessor for decorator: " + preProcessor.implementsDecorator()
                 + "\n existing: " + existing.getClass().getName() + " new: " + preProcessor.getClass().getName());
             }
@@ -39,16 +39,16 @@ public class MappingPreProcessorConverter<R, S extends BaseConversionState> impl
 
     @Override
     public R convert(C3Type c3Type, C3ConversionContext<R, S> conversionContext) {
-        Pair<C3Decorator, MappingPreProcessor<C3Decorator, C3Type, R>> pair = findForC3Type(c3Type);
+        Pair<C3Decorator, MappingPreProcessor<C3Decorator, R>> pair = findForC3Type(c3Type);
         // Sanity Check, should never happen since supports should be called before calling this method
         Validate.notNull(pair, "No MappingPreProcessor found for C3Type: " + c3Type);
 
         Structure structure = conversionContext.state().getStructureBeingConverted();
         String fieldName = conversionContext.state().getCurrentFieldName();
         C3Decorator decorator = pair.getLeft();
-        MappingPreProcessor<C3Decorator, C3Type, R> preProcessor = pair.getRight();
+        MappingPreProcessor<C3Decorator, R> preProcessor = pair.getRight();
 
-        if(!preProcessor.supportC3Type().isAssignableFrom(c3Type.getClass())){
+        if(!preProcessor.supportC3Type(c3Type)){
             throw new IllegalArgumentException("Decorator: " + preProcessor.implementsDecorator().getName()
                                                + " does not support C3Type: " + c3Type.getClass().getName()
                                                + " on field: " + fieldName + " of structure: " + structure.getName() + "");
@@ -76,10 +76,10 @@ public class MappingPreProcessorConverter<R, S extends BaseConversionState> impl
      * @param c3Type to find a {@link MappingPreProcessor} for
      * @return the first {@link C3Decorator} that has a {@link MappingPreProcessor} registered for it or null if none found
      */
-    private Pair<C3Decorator, MappingPreProcessor<C3Decorator, C3Type, R>> findForC3Type(C3Type c3Type){
-        Pair<C3Decorator, MappingPreProcessor<C3Decorator, C3Type, R>> ret = null;
+    private Pair<C3Decorator, MappingPreProcessor<C3Decorator, R>> findForC3Type(C3Type c3Type){
+        Pair<C3Decorator, MappingPreProcessor<C3Decorator, R>> ret = null;
         for(C3Decorator decorator : c3Type.getDecorators()){
-            MappingPreProcessor<C3Decorator, C3Type, R> processor = preProcessors.get(decorator.getClass());
+            MappingPreProcessor<C3Decorator, R> processor = preProcessors.get(decorator.getClass());
             if(processor != null){
                 ret = Pair.of(decorator, processor);
                 break;

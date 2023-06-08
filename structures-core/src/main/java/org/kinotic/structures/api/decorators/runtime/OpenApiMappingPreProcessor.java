@@ -9,7 +9,7 @@ import org.kinotic.structures.api.domain.Structure;
  * The {@link OpenApiMappingPreProcessor} is used to create an OpenApi mapping based on data available in the {@link C3Decorator}
  * Created by Navíd Mitchell 🤪 on 5/15/23.
  */
-public interface OpenApiMappingPreProcessor<D extends C3Decorator, T extends C3Type> extends MappingPreProcessor<D,T, Schema<?>> {
+public interface OpenApiMappingPreProcessor<D extends C3Decorator> extends MappingPreProcessor<D, Schema<?>> {
 
     /**
      * Process the given {@link Structure} and {@link C3Decorator} to create or modify an OpenApi mapping
@@ -24,6 +24,6 @@ public interface OpenApiMappingPreProcessor<D extends C3Decorator, T extends C3T
     Schema<?> process(Structure structure,
                       String fieldName,
                       D decorator,
-                      T type,
+                      C3Type type,
                       MappingContext<Schema<?>> context);
 }
