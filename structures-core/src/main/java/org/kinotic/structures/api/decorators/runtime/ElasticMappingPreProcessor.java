@@ -4,12 +4,13 @@ import co.elastic.clients.elasticsearch._types.mapping.Property;
 import org.kinotic.continuum.idl.api.schema.C3Type;
 import org.kinotic.continuum.idl.api.schema.decorators.C3Decorator;
 import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.internal.idl.converters.elastic.ElasticConversionState;
 
 /**
  * {@link ElasticMappingPreProcessor} is used to create an ElasticSearch mapping based on data available in the {@link C3Decorator}
  * Created by Navíd Mitchell 🤪 on 5/12/23.
  */
-public interface ElasticMappingPreProcessor<D extends C3Decorator> extends MappingPreProcessor<D, Property> {
+public interface ElasticMappingPreProcessor<D extends C3Decorator> extends MappingPreProcessor<D, Property, ElasticConversionState> {
 
     /**
      * Process the given {@link Structure} and {@link C3Decorator} to create or modify an ElasticSearch mapping
@@ -25,6 +26,6 @@ public interface ElasticMappingPreProcessor<D extends C3Decorator> extends Mappi
                      String fieldName,
                      D decorator,
                      C3Type type,
-                     MappingContext<Property> context);
+                     MappingContext<Property, ElasticConversionState> context);
 
 }

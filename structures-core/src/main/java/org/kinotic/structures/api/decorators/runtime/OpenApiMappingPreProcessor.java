@@ -4,12 +4,13 @@ import io.swagger.v3.oas.models.media.Schema;
 import org.kinotic.continuum.idl.api.schema.C3Type;
 import org.kinotic.continuum.idl.api.schema.decorators.C3Decorator;
 import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.internal.idl.converters.openapi.OpenApiConversionState;
 
 /**
  * The {@link OpenApiMappingPreProcessor} is used to create an OpenApi mapping based on data available in the {@link C3Decorator}
  * Created by Navíd Mitchell 🤪 on 5/15/23.
  */
-public interface OpenApiMappingPreProcessor<D extends C3Decorator> extends MappingPreProcessor<D, Schema<?>> {
+public interface OpenApiMappingPreProcessor<D extends C3Decorator> extends MappingPreProcessor<D, Schema<?>, OpenApiConversionState> {
 
     /**
      * Process the given {@link Structure} and {@link C3Decorator} to create or modify an OpenApi mapping
@@ -25,5 +26,5 @@ public interface OpenApiMappingPreProcessor<D extends C3Decorator> extends Mappi
                       String fieldName,
                       D decorator,
                       C3Type type,
-                      MappingContext<Schema<?>> context);
+                      MappingContext<Schema<?>, OpenApiConversionState> context);
 }

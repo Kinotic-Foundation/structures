@@ -20,15 +20,15 @@ import java.util.Map;
  */
 public class MappingPreProcessorConverter<R, S extends BaseConversionState> implements GenericC3TypeConverter<R, C3Type, S> {
 
-    private final Map<Class<C3Decorator>, MappingPreProcessor<C3Decorator, R>> preProcessors;
+    private final Map<Class<C3Decorator>, MappingPreProcessor<C3Decorator, R, S>> preProcessors;
 
-    public MappingPreProcessorConverter(List<MappingPreProcessor<C3Decorator, R>> preProcessors) {
+    public MappingPreProcessorConverter(List<MappingPreProcessor<C3Decorator, R, S>> preProcessors) {
         this.preProcessors = new HashMap<>(preProcessors.size());
 
-        for(MappingPreProcessor<C3Decorator, R> preProcessor : preProcessors){
+        for(MappingPreProcessor<C3Decorator, R, S> preProcessor : preProcessors){
 
             if(this.preProcessors.containsKey(preProcessor.implementsDecorator())){
-                MappingPreProcessor<C3Decorator, R> existing = this.preProcessors.get(preProcessor.implementsDecorator());
+                MappingPreProcessor<C3Decorator, R, S> existing = this.preProcessors.get(preProcessor.implementsDecorator());
                 throw new IllegalArgumentException("Duplicate MappingPreProcessor for decorator: " + preProcessor.implementsDecorator()
                 + "\n existing: " + existing.getClass().getName() + " new: " + preProcessor.getClass().getName());
             }
@@ -39,14 +39,14 @@ public class MappingPreProcessorConverter<R, S extends BaseConversionState> impl
 
     @Override
     public R convert(C3Type c3Type, C3ConversionContext<R, S> conversionContext) {
-        Pair<C3Decorator, MappingPreProcessor<C3Decorator, R>> pair = findForC3Type(c3Type);
+        Pair<C3Decorator, MappingPreProcessor<C3Decorator, R, S>> pair = findForC3Type(c3Type);
         // Sanity Check, should never happen since supports should be called before calling this method
         Validate.notNull(pair, "No MappingPreProcessor found for C3Type: " + c3Type);
 
         Structure structure = conversionContext.state().getStructureBeingConverted();
         String fieldName = conversionContext.state().getCurrentFieldName();
         C3Decorator decorator = pair.getLeft();
-        MappingPreProcessor<C3Decorator, R> preProcessor = pair.getRight();
+        MappingPreProcessor<C3Decorator, R, S> preProcessor = pair.getRight();
 
         if(!preProcessor.supportC3Type(c3Type)){
             throw new IllegalArgumentException("Decorator: " + preProcessor.implementsDecorator().getName()
@@ -76,10 +76,10 @@ public class MappingPreProcessorConverter<R, S extends BaseConversionState> impl
      * @param c3Type to find a {@link MappingPreProcessor} for
      * @return the first {@link C3Decorator} that has a {@link MappingPreProcessor} registered for it or null if none found
      */
-    private Pair<C3Decorator, MappingPreProcessor<C3Decorator, R>> findForC3Type(C3Type c3Type){
-        Pair<C3Decorator, MappingPreProcessor<C3Decorator, R>> ret = null;
+    private Pair<C3Decorator, MappingPreProcessor<C3Decorator, R, S>> findForC3Type(C3Type c3Type){
+        Pair<C3Decorator, MappingPreProcessor<C3Decorator, R, S>> ret = null;
         for(C3Decorator decorator : c3Type.getDecorators()){
-            MappingPreProcessor<C3Decorator, R> processor = preProcessors.get(decorator.getClass());
+            MappingPreProcessor<C3Decorator, R, S> processor = preProcessors.get(decorator.getClass());
             if(processor != null){
                 ret = Pair.of(decorator, processor);
                 break;
@@ -88,7 +88,7 @@ public class MappingPreProcessorConverter<R, S extends BaseConversionState> impl
         return ret;
     }
 
-    private static class BasicMappingContext<R, S> implements MappingContext<R> {
+    private static class BasicMappingContext<R, S> implements MappingContext<R, S> {
         private final C3ConversionContext<R, S> conversionContext;
 
         public BasicMappingContext(C3ConversionContext<R, S> conversionContext) {
@@ -98,6 +98,11 @@ public class MappingPreProcessorConverter<R, S extends BaseConversionState> impl
         @Override
         public R convertInternal(C3Type c3Type) {
             return conversionContext.convert(c3Type);
+        }
+
+        @Override
+        public S state() {
+            return conversionContext.state();
         }
     }
 

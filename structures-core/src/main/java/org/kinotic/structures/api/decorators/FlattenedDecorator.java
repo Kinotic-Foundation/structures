@@ -10,6 +10,12 @@ import org.kinotic.continuum.idl.api.schema.decorators.DecoratorTarget;
 import java.util.List;
 
 /**
+ * By default, each subfield in an object is mapped and indexed separately.
+ * <p>
+ * The flattened type provides an alternative approach, where the entire object is mapped as a single field.
+ * Given an object, the flattened mapping will parse out its leaf values and index them into one field as keywords.
+ * The object’s contents can then be searched through simple queries and aggregations.
+ * <p>
  * Created by Navíd Mitchell 🤪 on 5/26/23.
  */
 @Getter

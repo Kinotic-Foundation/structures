@@ -9,6 +9,7 @@ import org.kinotic.structures.api.decorators.FlattenedDecorator;
 import org.kinotic.structures.api.decorators.runtime.ElasticMappingPreProcessor;
 import org.kinotic.structures.api.decorators.runtime.MappingContext;
 import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.internal.idl.converters.elastic.ElasticConversionState;
 import org.springframework.stereotype.Component;
 
 /**
@@ -36,7 +37,7 @@ public class FlattenedDecoratorInstance implements ElasticMappingPreProcessor<Fl
                             String fieldName,
                             FlattenedDecorator decorator,
                             C3Type type,
-                            MappingContext<Property> context) {
+                            MappingContext<Property, ElasticConversionState> context) {
 
         return FlattenedProperty.of(f -> f.depthLimit(decorator.getDepthLimit())
                                           .index(decorator.isIndex()))

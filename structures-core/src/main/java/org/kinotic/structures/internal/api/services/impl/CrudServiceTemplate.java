@@ -2,6 +2,7 @@ package org.kinotic.structures.internal.api.services.impl;
 
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import co.elastic.clients.elasticsearch._types.ErrorResponse;
+import co.elastic.clients.elasticsearch._types.FieldSort;
 import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch.core.*;
 import co.elastic.clients.elasticsearch.core.get.GetResult;
@@ -167,8 +168,20 @@ public class CrudServiceTemplate {
                .size(pageable.getPageSize());
 
         for (Sort.Order order : pageable.getSort()) {
-            builder.sort(s -> s.field(f -> f.field(order.getProperty())
-                                            .order(order.isAscending() ? SortOrder.Asc : SortOrder.Desc)));
+            builder.sort(s -> s.field(f -> {
+                String property = order.getProperty();
+                FieldSort.Builder fieldSortBuilder
+                        = f.field(property)
+                           .order(order.isAscending() ? SortOrder.Asc : SortOrder.Desc);
+
+                // This is a nested sort, so we must set an additional field
+                if(property.contains(".")){
+                    String baseField = property.substring(0, property.lastIndexOf("."));
+                    fieldSortBuilder.nested(n -> n.path(baseField));
+                }
+
+                return fieldSortBuilder;
+            }));
         }
 
         if (builderConsumer != null) {

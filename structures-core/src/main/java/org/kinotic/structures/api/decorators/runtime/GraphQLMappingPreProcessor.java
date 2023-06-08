@@ -3,12 +3,13 @@ package org.kinotic.structures.api.decorators.runtime;
 import org.kinotic.continuum.idl.api.schema.C3Type;
 import org.kinotic.continuum.idl.api.schema.decorators.C3Decorator;
 import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.internal.idl.converters.graphql.GraphQLConversionState;
 
 /**
  * The {@link GraphQLMappingPreProcessor} is used to create an GraphQL mapping based on data available in the {@link C3Decorator}
  * Created by Navíd Mitchell 🤪 on 5/14/23.
  */
-public interface GraphQLMappingPreProcessor<D extends C3Decorator> extends MappingPreProcessor<D, GraphQLTypeHolder> {
+public interface GraphQLMappingPreProcessor<D extends C3Decorator> extends MappingPreProcessor<D, GraphQLTypeHolder, GraphQLConversionState> {
 
     /**
      * Process the given {@link Structure} and {@link C3Decorator} to create or modify an GraphQL mapping
@@ -24,5 +25,5 @@ public interface GraphQLMappingPreProcessor<D extends C3Decorator> extends Mappi
                               String fieldName,
                               D decorator,
                               C3Type type,
-                              MappingContext<GraphQLTypeHolder> context);
+                              MappingContext<GraphQLTypeHolder, GraphQLConversionState> context);
 }

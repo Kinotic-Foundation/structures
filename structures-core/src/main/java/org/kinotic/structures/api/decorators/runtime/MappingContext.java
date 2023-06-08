@@ -7,7 +7,7 @@ import org.kinotic.continuum.idl.api.schema.C3Type;
  * @param <R> the type of value that this {@link MappingContext} can convert to.
  * Created by Navíd Mitchell 🤪 on 5/12/23.
  */
-public interface MappingContext<R> {
+public interface MappingContext<R, S> {
 
     /**
      * This allows the {@link MappingPreProcessor} to convert a type that it cannot convert by itself.
@@ -16,4 +16,8 @@ public interface MappingContext<R> {
      */
     R convertInternal(C3Type c3Type);
 
+    /**
+     * @return the state of this {@link MappingContext}
+     */
+    S state();
 }

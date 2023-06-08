@@ -11,6 +11,7 @@ import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
 import org.kinotic.continuum.idl.api.schema.StringC3Type;
 import org.kinotic.continuum.internal.utils.ContinuumUtil;
 import org.kinotic.structures.api.decorators.IdDecorator;
+import org.kinotic.structures.api.decorators.NestedDecorator;
 import org.kinotic.structures.api.decorators.TextDecorator;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.StructureService;
@@ -67,7 +68,8 @@ public class TestDataService {
                                 .addProperty("street", new StringC3Type().addDecorator(new TextDecorator()))
                                 .addProperty("city", new StringC3Type())
                                 .addProperty("state", new StringC3Type())
-                                .addProperty("zip", new StringC3Type())));
+                                .addProperty("zip", new StringC3Type()))
+                        .addDecorator(new NestedDecorator()));
     }
 
     /**

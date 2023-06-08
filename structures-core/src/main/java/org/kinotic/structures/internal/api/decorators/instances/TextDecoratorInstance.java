@@ -8,6 +8,7 @@ import org.kinotic.structures.api.decorators.TextDecorator;
 import org.kinotic.structures.api.decorators.runtime.ElasticMappingPreProcessor;
 import org.kinotic.structures.api.decorators.runtime.MappingContext;
 import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.internal.idl.converters.elastic.ElasticConversionState;
 import org.springframework.stereotype.Component;
 
 /**
@@ -31,7 +32,7 @@ public class TextDecoratorInstance implements ElasticMappingPreProcessor<TextDec
                             String fieldName,
                             TextDecorator decorator,
                             C3Type type,
-                            MappingContext<Property> context) {
+                            MappingContext<Property, ElasticConversionState> context) {
 
         return TextProperty.of(f -> f)._toProperty();
     }

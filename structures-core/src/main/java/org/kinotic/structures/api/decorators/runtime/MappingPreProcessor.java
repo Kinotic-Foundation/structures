@@ -8,7 +8,7 @@ import org.kinotic.structures.api.domain.Structure;
  * The {@link MappingPreProcessor} is used to create a mapping based on data available in the {@link C3Decorator}
  * Created by Navíd Mitchell 🤪 on 5/26/23.
  */
-public interface MappingPreProcessor<D extends C3Decorator, R> extends C3DecoratorInstance<D> {
+public interface MappingPreProcessor<D extends C3Decorator, R, S> extends C3DecoratorInstance<D> {
 
     /**
      * Verify that this {@link MappingPreProcessor} supports the given {@link C3Type}
@@ -30,6 +30,6 @@ public interface MappingPreProcessor<D extends C3Decorator, R> extends C3Decorat
               String fieldName,
               D decorator,
               C3Type type,
-              MappingContext<R> context);
+              MappingContext<R, S> context);
 
 }
