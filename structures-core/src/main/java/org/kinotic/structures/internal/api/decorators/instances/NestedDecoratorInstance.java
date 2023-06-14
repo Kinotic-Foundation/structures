@@ -48,7 +48,7 @@ public class NestedDecoratorInstance implements ElasticMappingPreProcessor<Neste
             Property property = context.convertInternal(arrayC3Type.getContains());
             // sanity check
             if(!property.isObject()){
-                throw new IllegalArgumentException("Nested decorator can only be applied to Arrays of ObjectC3Type");
+                throw new IllegalArgumentException("Nested decorator can only be applied to Arrays of ObjectC3Types");
             }
 
             builder.properties(property.object().properties());

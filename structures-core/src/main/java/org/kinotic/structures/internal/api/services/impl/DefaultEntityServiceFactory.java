@@ -36,7 +36,6 @@ public class DefaultEntityServiceFactory implements EntityServiceFactory {
     private final Map<String, DeleteEntityPreProcessor<?>> deleteEntityPreProcessorMap;
     private final Map<String, FindAllPreProcessor<?>> findAllPreProcessorMap;
     private final Map<String, FindByIdPreProcessor<?>> findByIdPreProcessorMap;
-    private final Map<String, GetEntityPreProcessor<?>> getEntityPreProcessorMap;
     private final Map<String, SearchPreProcessor<?>> searchPreProcessorMap;
 
     public DefaultEntityServiceFactory(ObjectMapper objectMapper,
@@ -47,7 +46,6 @@ public class DefaultEntityServiceFactory implements EntityServiceFactory {
                                        List<DeleteEntityPreProcessor<?>> deleteEntityPreProcessors,
                                        List<FindAllPreProcessor<?>> findAllPreProcessors,
                                        List<FindByIdPreProcessor<?>> findByIdPreProcessors,
-                                       List<GetEntityPreProcessor<?>> getEntityPreProcessors,
                                        List<SearchPreProcessor<?>> searchPreProcessors) {
         this.objectMapper = objectMapper;
         this.esAsyncClient = esAsyncClient;
@@ -60,9 +58,7 @@ public class DefaultEntityServiceFactory implements EntityServiceFactory {
         this.deleteEntityPreProcessorMap = StructuresUtil.listToMap(deleteEntityPreProcessors, p -> p.implementsDecorator().getName());
         this.findAllPreProcessorMap = StructuresUtil.listToMap(findAllPreProcessors, p -> p.implementsDecorator().getName());
         this.findByIdPreProcessorMap = StructuresUtil.listToMap(findByIdPreProcessors, p -> p.implementsDecorator().getName());
-        this.getEntityPreProcessorMap = StructuresUtil.listToMap(getEntityPreProcessors, p -> p.implementsDecorator().getName());
         this.searchPreProcessorMap = StructuresUtil.listToMap(searchPreProcessors, p -> p.implementsDecorator().getName());
-
     }
 
     @SuppressWarnings("unchecked")
@@ -76,7 +72,6 @@ public class DefaultEntityServiceFactory implements EntityServiceFactory {
         List<Triple<String, C3Decorator, DeleteEntityPreProcessor<C3Decorator>>> deletePreProcessors = new ArrayList<>();
         List<Triple<String, C3Decorator, FindAllPreProcessor<C3Decorator>>>findAllPreProcessors = new ArrayList<>();
         List<Triple<String, C3Decorator, FindByIdPreProcessor<C3Decorator>>>findByIdPreProcessors = new ArrayList<>();
-        List<Triple<String, C3Decorator, GetEntityPreProcessor<C3Decorator>>> getPreProcessors = new ArrayList<>();
         List<Triple<String, C3Decorator, SearchPreProcessor<C3Decorator>>> searchPreProcessors = new ArrayList<>();
 
         for(DecoratedProperty decoratedProperty : structure.getDecoratedProperties()){
@@ -122,14 +117,6 @@ public class DefaultEntityServiceFactory implements EntityServiceFactory {
                                                          findByIdPreProcessor));
                 }
 
-                GetEntityPreProcessor<C3Decorator> getEntityPreProcessor =
-                        (GetEntityPreProcessor<C3Decorator>)getEntityPreProcessorMap.get(decorator.getClass().getName());
-                if(getEntityPreProcessor != null){
-                    getPreProcessors.add(Triple.of(decoratedProperty.getJsonPath(),
-                                                    decorator,
-                                                    getEntityPreProcessor));
-                }
-
                 SearchPreProcessor<C3Decorator> searchPreProcessor =
                         (SearchPreProcessor<C3Decorator>)searchPreProcessorMap.get(decorator.getClass().getName());
                 if(searchPreProcessor != null){
@@ -150,7 +137,6 @@ public class DefaultEntityServiceFactory implements EntityServiceFactory {
                                                                                                          deletePreProcessors,
                                                                                                          findAllPreProcessors,
                                                                                                          findByIdPreProcessors,
-                                                                                                         getPreProcessors,
                                                                                                          searchPreProcessors)));
     }
 

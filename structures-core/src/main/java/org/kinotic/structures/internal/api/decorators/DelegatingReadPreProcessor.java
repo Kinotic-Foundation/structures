@@ -13,6 +13,8 @@ import org.kinotic.structures.api.domain.Structure;
 import java.util.List;
 
 /**
+ * Keeps track of all read operations pre-processors for a given structure.
+ * This allows for the logic path to only call the pre-processors that are needed for a given operation and structure.
  * Created by Navíd Mitchell 🤪on 6/13/23.
  */
 public class DelegatingReadPreProcessor {
@@ -21,20 +23,17 @@ public class DelegatingReadPreProcessor {
     private final List<Triple<String, C3Decorator, DeleteEntityPreProcessor<C3Decorator>>> deletePreProcessors;
     private final List<Triple<String, C3Decorator, FindAllPreProcessor<C3Decorator>>>findAllPreProcessors;
     private final List<Triple<String, C3Decorator, FindByIdPreProcessor<C3Decorator>>>findByIdPreProcessors;
-    private final List<Triple<String, C3Decorator, GetEntityPreProcessor<C3Decorator>>> getPreProcessors;
     private final List<Triple<String, C3Decorator, SearchPreProcessor<C3Decorator>>> searchPreProcessors;
 
     public DelegatingReadPreProcessor(List<Triple<String, C3Decorator, CountEntityPreProcessor<C3Decorator>>> countPreProcessors,
                                       List<Triple<String, C3Decorator, DeleteEntityPreProcessor<C3Decorator>>> deletePreProcessors,
                                       List<Triple<String, C3Decorator, FindAllPreProcessor<C3Decorator>>> findAllPreProcessors,
                                       List<Triple<String, C3Decorator, FindByIdPreProcessor<C3Decorator>>> findByIdPreProcessors,
-                                      List<Triple<String, C3Decorator, GetEntityPreProcessor<C3Decorator>>> getPreProcessors,
                                       List<Triple<String, C3Decorator, SearchPreProcessor<C3Decorator>>> searchPreProcessors) {
         this.countPreProcessors = countPreProcessors;
         this.deletePreProcessors = deletePreProcessors;
         this.findAllPreProcessors = findAllPreProcessors;
         this.findByIdPreProcessors = findByIdPreProcessors;
-        this.getPreProcessors = getPreProcessors;
         this.searchPreProcessors = searchPreProcessors;
     }
 
@@ -74,16 +73,6 @@ public class DelegatingReadPreProcessor {
         if(findByIdPreProcessors != null && !findByIdPreProcessors.isEmpty()){
             for(Triple<String, C3Decorator, FindByIdPreProcessor<C3Decorator>> tuple : findByIdPreProcessors){
                 tuple.getRight().beforeFindById(structure, tuple.getLeft(), tuple.getMiddle(), builder, context);
-            }
-        }
-    }
-
-    public void beforeGet(Structure structure,
-                          GetRequest.Builder builder,
-                          EntityContext context) {
-        if(getPreProcessors != null && !getPreProcessors.isEmpty()){
-            for(Triple<String, C3Decorator, GetEntityPreProcessor<C3Decorator>> tuple : getPreProcessors){
-                tuple.getRight().beforeGet(structure, tuple.getLeft(), tuple.getMiddle(), builder, context);
             }
         }
     }
