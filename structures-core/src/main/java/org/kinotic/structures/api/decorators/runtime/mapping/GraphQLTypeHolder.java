@@ -1,4 +1,4 @@
-package org.kinotic.structures.api.decorators.runtime;
+package org.kinotic.structures.api.decorators.runtime.mapping;
 
 import graphql.schema.GraphQLInputType;
 import graphql.schema.GraphQLOutputType;

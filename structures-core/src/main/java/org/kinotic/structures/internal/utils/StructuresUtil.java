@@ -1,5 +1,12 @@
 package org.kinotic.structures.internal.utils;
 
+import org.apache.commons.lang3.Validate;
+
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+
 public class StructuresUtil {
 
     /**
@@ -72,6 +79,30 @@ public class StructuresUtil {
                 || fieldName.getBytes().length > 255){
             throw new IllegalArgumentException("Field Name is not in correct format, \ncannot contain - + . .. \\ / * ? \" < > | , # : ; space, or be longer than 255 bytes");
         }
+    }
+
+    /**
+     * Function will convert a List to a Map using the provided mapping function.
+     * @param list to convert
+     * @param mappingFunction to use derive the key from the value
+     * @return a map of the list
+     * @param <K> the type of the key
+     * @param <T> the type of the list
+     * @throws IllegalArgumentException if multiple values map to the same key
+     */
+    public static <K, T> Map<K, T> listToMap(List<T> list, Function<T, K> mappingFunction){
+        Validate.notNull(list, "list cannot be null");
+        Map<K, T> ret = new LinkedHashMap<>(list.size());
+        for(T value : list){
+            K key = mappingFunction.apply(value);
+            if(ret.containsKey(key)){
+                T existing = ret.get(key);
+                throw new IllegalArgumentException("Multiple values that map to the same key: " + key
+                                                           + "\n existing: " + existing.getClass().getName() + " new: " + value.getClass().getName());
+            }
+            ret.put(key, value);
+        }
+        return ret;
     }
 
 }

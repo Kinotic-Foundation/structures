@@ -6,7 +6,7 @@ import io.swagger.v3.oas.models.media.ObjectSchema;
 import io.swagger.v3.oas.models.media.Schema;
 import org.kinotic.continuum.idl.api.converter.IdlConverter;
 import org.kinotic.continuum.idl.api.converter.IdlConverterFactory;
-import org.kinotic.structures.api.decorators.runtime.GraphQLTypeHolder;
+import org.kinotic.structures.api.decorators.runtime.mapping.GraphQLTypeHolder;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.internal.api.services.OpenApiConversionResult;
 import org.kinotic.structures.internal.api.services.StructureConversionService;

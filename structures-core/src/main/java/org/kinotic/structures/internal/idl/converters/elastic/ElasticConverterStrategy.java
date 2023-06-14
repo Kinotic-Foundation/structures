@@ -3,7 +3,7 @@ package org.kinotic.structures.internal.idl.converters.elastic;
 import co.elastic.clients.elasticsearch._types.mapping.Property;
 import org.kinotic.continuum.idl.api.converter.SpecificC3TypeConverter;
 import org.kinotic.continuum.idl.internal.api.converter.AbstractIdlConverterStrategy;
-import org.kinotic.structures.api.decorators.runtime.ElasticMappingPreProcessor;
+import org.kinotic.structures.api.decorators.runtime.mapping.ElasticMappingPreProcessor;
 import org.kinotic.structures.internal.idl.converters.common.MappingPreProcessorConverter;
 import org.springframework.stereotype.Component;
 

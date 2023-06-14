@@ -8,7 +8,7 @@ import com.fasterxml.jackson.core.async.ByteArrayFeeder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.kinotic.continuum.idl.api.schema.decorators.C3Decorator;
 import org.kinotic.structures.api.decorators.IdDecorator;
-import org.kinotic.structures.api.decorators.runtime.UpsertFieldPreProcessor;
+import org.kinotic.structures.api.decorators.runtime.crud.UpsertFieldPreProcessor;
 import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.domain.Structure;
@@ -32,14 +32,12 @@ public class RawJsonUpsertPreProcessor implements UpsertPreProcessor<RawJson> {
     private final ObjectMapper objectMapper;
     private final Structure structure;
     // Map of json path to decorator logic
-    private final Map<String, DecoratorLogic<C3Decorator, Object, Object,
-                                             UpsertFieldPreProcessor<C3Decorator, Object, Object>>> fieldPreProcessors;
+    private final Map<String, DecoratorLogic> fieldPreProcessors;
 
 
     public RawJsonUpsertPreProcessor(ObjectMapper objectMapper,
                                      Structure structure,
-                                     Map<String, DecoratorLogic<C3Decorator, Object, Object,
-                                                 UpsertFieldPreProcessor<C3Decorator, Object, Object>>> fieldPreProcessors) {
+                                     Map<String, DecoratorLogic> fieldPreProcessors) {
         this.objectMapper = objectMapper;
         this.structure = structure;
         this.fieldPreProcessors = fieldPreProcessors;
@@ -70,8 +68,7 @@ public class RawJsonUpsertPreProcessor implements UpsertPreProcessor<RawJson> {
                     String currentJsonPath = !jsonPathStack.isEmpty() ? jsonPathStack.peekFirst() + "." + fieldName : fieldName;
                     jsonPathStack.addFirst(currentJsonPath);
 
-                    DecoratorLogic<C3Decorator, Object, Object,
-                            UpsertFieldPreProcessor<C3Decorator, Object, Object>> preProcessorLogic = fieldPreProcessors.get(currentJsonPath);
+                    DecoratorLogic preProcessorLogic = fieldPreProcessors.get(currentJsonPath);
 
                     if(preProcessorLogic != null){
 

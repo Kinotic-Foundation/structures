@@ -7,7 +7,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import graphql.GraphQL;
 import graphql.schema.*;
 import org.apache.commons.text.WordUtils;
-import org.kinotic.structures.api.decorators.runtime.GraphQLTypeHolder;
+import org.kinotic.structures.api.decorators.runtime.mapping.GraphQLTypeHolder;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.EntitiesService;
 import org.kinotic.structures.api.services.StructureService;

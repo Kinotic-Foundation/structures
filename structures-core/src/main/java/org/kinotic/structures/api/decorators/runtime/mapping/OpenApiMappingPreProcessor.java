@@ -1,4 +1,4 @@
-package org.kinotic.structures.api.decorators.runtime;
+package org.kinotic.structures.api.decorators.runtime.mapping;
 
 import io.swagger.v3.oas.models.media.Schema;
 import org.kinotic.continuum.idl.api.schema.C3Type;

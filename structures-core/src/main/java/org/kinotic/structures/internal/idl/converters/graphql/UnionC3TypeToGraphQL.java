@@ -7,7 +7,7 @@ import org.kinotic.continuum.idl.api.converter.SpecificC3TypeConverter;
 import org.kinotic.continuum.idl.api.schema.C3Type;
 import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
 import org.kinotic.continuum.idl.api.schema.UnionC3Type;
-import org.kinotic.structures.api.decorators.runtime.GraphQLTypeHolder;
+import org.kinotic.structures.api.decorators.runtime.mapping.GraphQLTypeHolder;
 
 import java.util.Set;
 

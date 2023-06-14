@@ -1,6 +1,7 @@
-package org.kinotic.structures.api.decorators.runtime;
+package org.kinotic.structures.api.decorators.runtime.crud;
 
 import org.kinotic.continuum.idl.api.schema.decorators.C3Decorator;
+import org.kinotic.structures.api.decorators.runtime.C3DecoratorInstance;
 import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.Structure;
 

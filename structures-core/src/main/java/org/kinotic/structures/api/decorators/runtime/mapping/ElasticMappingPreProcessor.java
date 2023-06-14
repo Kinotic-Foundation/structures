@@ -1,4 +1,4 @@
-package org.kinotic.structures.api.decorators.runtime;
+package org.kinotic.structures.api.decorators.runtime.mapping;
 
 import co.elastic.clients.elasticsearch._types.mapping.Property;
 import org.kinotic.continuum.idl.api.schema.C3Type;

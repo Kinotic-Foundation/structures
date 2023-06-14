@@ -6,11 +6,11 @@ import org.kinotic.continuum.idl.api.converter.C3ConversionContext;
 import org.kinotic.continuum.idl.api.converter.GenericC3TypeConverter;
 import org.kinotic.continuum.idl.api.schema.C3Type;
 import org.kinotic.continuum.idl.api.schema.decorators.C3Decorator;
-import org.kinotic.structures.api.decorators.runtime.MappingContext;
-import org.kinotic.structures.api.decorators.runtime.MappingPreProcessor;
+import org.kinotic.structures.api.decorators.runtime.mapping.MappingContext;
+import org.kinotic.structures.api.decorators.runtime.mapping.MappingPreProcessor;
 import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.internal.utils.StructuresUtil;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -20,21 +20,11 @@ import java.util.Map;
  */
 public class MappingPreProcessorConverter<R, S extends BaseConversionState> implements GenericC3TypeConverter<R, C3Type, S> {
 
-    private final Map<Class<C3Decorator>, MappingPreProcessor<C3Decorator, R, S>> preProcessors;
+    private final Map<String, MappingPreProcessor<C3Decorator, R, S>> preProcessors;
 
     public MappingPreProcessorConverter(List<MappingPreProcessor<C3Decorator, R, S>> preProcessors) {
-        this.preProcessors = new HashMap<>(preProcessors.size());
-
-        for(MappingPreProcessor<C3Decorator, R, S> preProcessor : preProcessors){
-
-            if(this.preProcessors.containsKey(preProcessor.implementsDecorator())){
-                MappingPreProcessor<C3Decorator, R, S> existing = this.preProcessors.get(preProcessor.implementsDecorator());
-                throw new IllegalArgumentException("Duplicate MappingPreProcessor for decorator: " + preProcessor.implementsDecorator()
-                + "\n existing: " + existing.getClass().getName() + " new: " + preProcessor.getClass().getName());
-            }
-
-            this.preProcessors.put(preProcessor.implementsDecorator(), preProcessor);
-        }
+        this.preProcessors = StructuresUtil.listToMap(preProcessors,
+                                                      processor -> processor.implementsDecorator().getName());
     }
 
     @Override
@@ -79,7 +69,7 @@ public class MappingPreProcessorConverter<R, S extends BaseConversionState> impl
     private Pair<C3Decorator, MappingPreProcessor<C3Decorator, R, S>> findForC3Type(C3Type c3Type){
         Pair<C3Decorator, MappingPreProcessor<C3Decorator, R, S>> ret = null;
         for(C3Decorator decorator : c3Type.getDecorators()){
-            MappingPreProcessor<C3Decorator, R, S> processor = preProcessors.get(decorator.getClass());
+            MappingPreProcessor<C3Decorator, R, S> processor = preProcessors.get(decorator.getClass().getName());
             if(processor != null){
                 ret = Pair.of(decorator, processor);
                 break;

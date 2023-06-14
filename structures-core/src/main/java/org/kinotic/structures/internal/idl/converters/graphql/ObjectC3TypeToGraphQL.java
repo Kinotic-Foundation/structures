@@ -10,7 +10,7 @@ import org.kinotic.continuum.idl.api.schema.C3Type;
 import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
 import org.kinotic.continuum.idl.api.schema.decorators.NotNullC3Decorator;
 import org.kinotic.structures.api.decorators.ReadOnlyDecorator;
-import org.kinotic.structures.api.decorators.runtime.GraphQLTypeHolder;
+import org.kinotic.structures.api.decorators.runtime.mapping.GraphQLTypeHolder;
 
 import java.util.Map;
 import java.util.Set;

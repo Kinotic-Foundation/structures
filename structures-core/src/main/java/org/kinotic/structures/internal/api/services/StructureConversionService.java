@@ -1,6 +1,6 @@
 package org.kinotic.structures.internal.api.services;
 
-import org.kinotic.structures.api.decorators.runtime.GraphQLTypeHolder;
+import org.kinotic.structures.api.decorators.runtime.mapping.GraphQLTypeHolder;
 import org.kinotic.structures.api.domain.Structure;
 
 /**

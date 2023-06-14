@@ -2,8 +2,6 @@ package org.kinotic.structures.internal.api.decorators;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.Validate;
-import org.kinotic.continuum.idl.api.schema.decorators.C3Decorator;
-import org.kinotic.structures.api.decorators.runtime.UpsertFieldPreProcessor;
 import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.domain.Structure;
@@ -22,8 +20,7 @@ public class DelegatingUpsertPreProcessor implements UpsertPreProcessor<Object> 
 
     public DelegatingUpsertPreProcessor(ObjectMapper objectMapper,
                                         Structure structure,
-                                        Map<String, DecoratorLogic<C3Decorator, Object, Object,
-                                            UpsertFieldPreProcessor<C3Decorator, Object, Object>>> fieldPreProcessors) {
+                                        Map<String, DecoratorLogic> fieldPreProcessors) {
         rawJsonUpsertPreProcessor = new RawJsonUpsertPreProcessor(objectMapper, structure, fieldPreProcessors);
 
         mapUpsertPreProcessor = new MapUpsertPreProcessor();
