@@ -33,11 +33,16 @@ public class UnionC3TypeToElastic implements SpecificC3TypeConverter<Property, U
             for(Map.Entry<String, C3Type> field : c3Type.getProperties().entrySet()) {
                 // we only add the discriminator property once, but all types must have it
                 if(!field.getKey().equals(discriminator)) {
-                    try {
+
+                    C3Type prop = merged.getProperties().get(field.getKey());
+                    if(prop != null){
+                        if(!prop.equals(field.getValue())){
+                            throw new IllegalArgumentException("Field '" + field.getKey() + "' is defined in multiple types in the union '" + unionType.getName() + "' with different types");
+                        }
+                    }else {
                         merged.addProperty(field.getKey(), field.getValue());
-                    } catch (IllegalArgumentException e) {
-                        throw new IllegalArgumentException("Field '" + field.getKey() + "' is defined in multiple types in the union '" + unionType.getName() + "'");
                     }
+
                 }else{
                     if(!(field.getValue() instanceof StringC3Type)){
                         throw new IllegalArgumentException("The discriminator field '" + discriminator + "' must be a StringC3Type");
