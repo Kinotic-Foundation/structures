@@ -20,7 +20,7 @@ dependencies {
 	implementation 'io.vertx:vertx-web'
 	implementation 'io.vertx:vertx-web-graphql'
 	implementation 'com.github.rworsnop:vertx-beans'
-	implementation "me.escoffier.vertx:vertx-completable-future:${vertxCompletableFutureVersion}"
+	implementation 'me.escoffier.vertx:vertx-completable-future'
 
 	implementation "org.kinotic:continuum-core:${continuumVersion}"
 	implementation "org.kinotic:continuum-core-vertx:${continuumVersion}"

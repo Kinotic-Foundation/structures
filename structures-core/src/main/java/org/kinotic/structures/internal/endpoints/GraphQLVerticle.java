@@ -36,7 +36,6 @@ public class GraphQLVerticle extends AbstractVerticle {
     @Override
     public void start(Promise<Void> startPromise) {
         server = vertx.createHttpServer();
-
         Router router = Router.router(vertx);
 
         router.route().handler(CorsHandler.create(properties.getCorsAllowedOriginPattern())
