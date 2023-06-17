@@ -5,7 +5,6 @@ import co.elastic.clients.elasticsearch._types.mapping.DynamicMapping;
 import co.elastic.clients.elasticsearch._types.mapping.TypeMapping;
 import co.elastic.clients.elasticsearch._types.query_dsl.TermQuery;
 import org.kinotic.structures.api.config.StructuresProperties;
-import org.kinotic.structures.api.decorators.MultiTenancyType;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.StructureService;
 import org.kinotic.structures.internal.api.services.ElasticConversionResult;
@@ -162,9 +161,10 @@ public class DefaultStructureService extends AbstractCrudService<Structure> impl
                                              .properties(result.getObjectProperty().properties());
 
                                     // if shared multi tenancy make sure routing is required
-                                    if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
-                                        builder.routing(b -> b.required(true));
-                                    }
+                                    // TODO: see if we need this or it should be optional
+//                                    if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
+//                                        builder.routing(b -> b.required(true));
+//                                    }
 
                                     return builder;
                                 });

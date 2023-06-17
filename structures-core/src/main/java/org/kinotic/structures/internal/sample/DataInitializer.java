@@ -42,8 +42,8 @@ public class DataInitializer {
                                if(structureBooleanPair.getRight()) {
                                    return CompletableFuture.allOf(createPeople(structureBooleanPair.getLeft(),
                                                                                300,
-                                                                               "kinotic1",
-                                                                               "structures1"),
+                                                                               "kinotic",
+                                                                               "structures"),
                                                                   createPeople(structureBooleanPair.getLeft(),
                                                                                250,
                                                                                "kinotic2",
