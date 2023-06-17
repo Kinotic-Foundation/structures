@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.domain.RawJson;
+import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.EntitiesService;
 import org.springframework.stereotype.Component;
 
@@ -39,28 +40,43 @@ public class DataInitializer {
             testDataService.createPersonStructureIfNotExists()
                            .thenCompose(structureBooleanPair -> {
                                if(structureBooleanPair.getRight()) {
-                                   return testDataService.createTestPeople(500)
-                                           .thenCompose(people -> {
-                                               List<CompletableFuture<RawJson>> completableFutures = new ArrayList<>();
-                                               for(Person person : people){
-                                                   byte[] jsonData;
-                                                   try {
-                                                       jsonData = objectMapper.writeValueAsBytes(person);
-                                                   } catch (JsonProcessingException e) {
-                                                       return CompletableFuture.failedFuture(e);
-                                                   }
-                                                   completableFutures.add(entitiesService.save(structureBooleanPair.getLeft()
-                                                                                                                   .getId(),
-                                                                                               RawJson.from(jsonData),
-                                                                                               new DummyEntityContext("kinotic",
-                                                                                                                      "structures")));
-                                               }
-                                               return CompletableFuture.allOf(completableFutures.toArray(new CompletableFuture[0]));
-                                           });
+                                   return CompletableFuture.allOf(createPeople(structureBooleanPair.getLeft(),
+                                                                               300,
+                                                                               "kinotic1",
+                                                                               "structures1"),
+                                                                  createPeople(structureBooleanPair.getLeft(),
+                                                                               250,
+                                                                               "kinotic2",
+                                                                               "structures2"));
                                } else {
                                    return null;
                                }
                            }).thenApply(aVoid -> null);
         }
     }
+
+    private CompletableFuture<Void> createPeople(Structure structure,
+                                                 int numberOfPeopleToCreate,
+                                                 String tenantId,
+                                                 String participantId){
+        return testDataService.createTestPeople(numberOfPeopleToCreate)
+                              .thenCompose(people -> {
+                                  List<CompletableFuture<RawJson>> completableFutures = new ArrayList<>();
+                                  for(Person person : people){
+                                      byte[] jsonData;
+                                      try {
+                                          jsonData = objectMapper.writeValueAsBytes(person);
+                                      } catch (JsonProcessingException e) {
+                                          return CompletableFuture.failedFuture(e);
+                                      }
+                                      completableFutures.add(entitiesService.save(structure.getId(),
+                                                                                  RawJson.from(jsonData),
+                                                                                  new DummyEntityContext(tenantId,
+                                                                                                         participantId)));
+                                  }
+                                  return CompletableFuture.allOf(completableFutures.toArray(new CompletableFuture[0]));
+                              });
+    }
+
+
 }

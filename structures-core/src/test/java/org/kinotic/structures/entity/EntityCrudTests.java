@@ -126,6 +126,30 @@ public class EntityCrudTests extends ElasticsearchTestBase {
     }
 
     @Test
+    public void testCount(){
+        EntityContext context1 = new DummyEntityContext("tenant1", "user1");
+        EntityContext context2 = new DummyEntityContext("tenant2", "user2");
+
+        StructureAndPersonHolder holder1 = createAndVerify(10, context1, "-testCount");
+
+        Assertions.assertNotNull(holder1);
+
+        StructureAndPersonHolder holder2 = createAndVerify(10, context2, "-testCount");
+
+        Assertions.assertNotNull(holder2);
+
+        StepVerifier.create(Mono.fromFuture(entitiesService.count(holder1.getStructure().getId(), context1)))
+                    .expectNext(10L)
+                    .as("Verifying Tenant 1 has 10 entities")
+                    .verifyComplete();
+
+        StepVerifier.create(Mono.fromFuture(entitiesService.count(holder2.getStructure().getId(), context2)))
+                    .expectNext(10L)
+                    .as("Verifying Tenant 2 has 10 entities")
+                    .verifyComplete();
+    }
+
+    @Test
     public void testFindAll(){
 
         EntityContext context1 = new DummyEntityContext("tenant1", "user1");

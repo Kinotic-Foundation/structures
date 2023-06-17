@@ -61,7 +61,7 @@ public class DelegatingReadPreProcessor {
                              DeleteRequest.Builder builder,
                              EntityContext context) {
 
-        // add multi tenancy functionality if needed
+        // add multi tenancy filters if needed
         if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
             builder.routing(context.getParticipant().getTenantId());
         }
@@ -91,7 +91,7 @@ public class DelegatingReadPreProcessor {
                                GetRequest.Builder builder,
                                EntityContext context){
 
-        // add multi tenancy functionality if needed
+        // add multi tenancy filters if needed
         if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
             builder.routing(context.getParticipant().getTenantId());
             builder.sourceExcludes(structuresProperties.getTenantIdFieldName());
@@ -103,7 +103,7 @@ public class DelegatingReadPreProcessor {
                              Query.Builder queryBuilder,
                              EntityContext context) {
 
-        // add multi tenancy functionality if needed
+        // add multi tenancy filters if needed
         if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
             builder.routing(context.getParticipant().getTenantId());
             queryBuilder
@@ -120,7 +120,7 @@ public class DelegatingReadPreProcessor {
 
     private Query.Builder createQueryWithTenantLogic(Structure structure, EntityContext context, Consumer<String> routingConsumer) {
         Query.Builder queryBuilder = new Query.Builder();
-        // add multi tenancy functionality if needed
+        // add multi tenancy filters if needed
         if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
             routingConsumer.accept(context.getParticipant().getTenantId());
             queryBuilder
