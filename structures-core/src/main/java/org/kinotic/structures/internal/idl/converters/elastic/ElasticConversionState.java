@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import org.kinotic.structures.api.decorators.MultiTenancyType;
 import org.kinotic.structures.internal.idl.converters.common.BaseConversionState;
 
 /**
@@ -14,5 +15,10 @@ import org.kinotic.structures.internal.idl.converters.common.BaseConversionState
 @Accessors(chain = true)
 @NoArgsConstructor
 public class ElasticConversionState extends BaseConversionState {
+
+    /**
+     * The {@link MultiTenancyType} detected while converting the structure
+     */
+    private MultiTenancyType multiTenancyType;
 
 }

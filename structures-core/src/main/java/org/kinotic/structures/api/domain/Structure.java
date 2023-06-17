@@ -25,6 +25,7 @@ import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.kinotic.continuum.api.Identifiable;
 import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
+import org.kinotic.structures.api.decorators.MultiTenancyType;
 import org.kinotic.structures.internal.idl.converters.common.DecoratedProperty;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.*;
@@ -52,6 +53,8 @@ public class Structure implements Identifiable<String> {
 
     @Field(type = FieldType.Text)
     private String description = null;
+
+    private MultiTenancyType multiTenancyType = null;
 
     @Field(type = FieldType.Flattened)
     private ObjectC3Type entityDefinition = null;

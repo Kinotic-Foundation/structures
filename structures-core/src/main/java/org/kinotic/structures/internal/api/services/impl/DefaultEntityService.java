@@ -4,6 +4,7 @@ import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import co.elastic.clients.elasticsearch._types.Refresh;
 import co.elastic.clients.util.BinaryData;
 import co.elastic.clients.util.ContentType;
+import org.kinotic.structures.api.decorators.MultiTenancyType;
 import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.domain.Structure;
@@ -41,74 +42,124 @@ public class DefaultEntityService implements EntityService {
     @SuppressWarnings("unchecked")
     @Override
     public <T> CompletableFuture<T> save(T entity, EntityContext context) {
-        return (CompletableFuture<T>) delegatingUpsertPreProcessor
-                .process(entity, context)
-                .thenCompose(entityHolder -> {
+        return validateTenant(context)
+                .thenCompose(unused -> (CompletableFuture<T>) delegatingUpsertPreProcessor
+                        .process(entity, context)
+                        .thenCompose(entityHolder -> {
 
-                    // This is a bit of a hack since the BinaryData type does not work properly with complex objects
-                    // https://github.com/elastic/elasticsearch-java/issues/574
+                            String entityId = (structure.getMultiTenancyType() == MultiTenancyType.SHARED)
+                                    ? context.getParticipant().getTenantId() + "-" + entityHolder.getId()
+                                    : entityHolder.getId();
 
-                    if(entityHolder.getEntity() instanceof RawJson){
-                        RawJson rawEntity = (RawJson) entityHolder.getEntity();
-                        BinaryData binaryData = BinaryData.of(rawEntity.data(), ContentType.APPLICATION_JSON);
-                        return esAsyncClient.index(i -> i
-                                                    .index(structure.getItemIndex())
-                                                    .id(entityHolder.getId())
-                                                    .document(binaryData)
-                                                    .refresh(Refresh.True))
-                                            .thenApply(indexResponse -> new RawJson(rawEntity.data()));
-                    }else{
-                        return esAsyncClient.index(i -> i
-                                                    .index(structure.getItemIndex())
-                                                    .id(entityHolder.getId())
-                                                    .document(entityHolder.getEntity())
-                                                    .refresh(Refresh.True))
-                                            .thenApply(indexResponse -> entityHolder.getEntity());
-                    }
-                });
+                            String routing = (structure.getMultiTenancyType() == MultiTenancyType.SHARED)
+                                    ? context.getParticipant().getTenantId()
+                                    : null;
+
+                            // This is a bit of a hack since the BinaryData type does not work properly to retrieve complex objects, but does work to store them.
+                            // https://github.com/elastic/elasticsearch-java/issues/574
+                            if(entityHolder.getEntity() instanceof RawJson){
+                                RawJson rawEntity = (RawJson) entityHolder.getEntity();
+                                BinaryData binaryData = BinaryData.of(rawEntity.data(), ContentType.APPLICATION_JSON);
+                                return esAsyncClient.index(i -> i
+                                                            .index(structure.getItemIndex())
+                                                            .id(entityId)
+                                                            .routing(routing)
+                                                            .document(binaryData)
+                                                            .refresh(Refresh.True))
+                                                    .thenApply(indexResponse -> new RawJson(rawEntity.data()));
+                            }else{
+                                return esAsyncClient.index(i -> i
+                                                            .index(structure.getItemIndex())
+                                                            .id(entityId)
+                                                            .routing(routing)
+                                                            .document(entityHolder.getEntity())
+                                                            .refresh(Refresh.True))
+                                                    .thenApply(indexResponse -> entityHolder.getEntity());
+                            }
+                        }));
     }
 
     @Override
     public <T> CompletableFuture<T> findById(String id, Class<T> type, EntityContext context) {
-        return crudServiceTemplate.findById(structure.getItemIndex(), id, type,
-                                            builder -> delegatingReadPreProcessor.beforeFindById(structure, builder, context));
+        return validateTenantAndComposeId(id, context)
+                .thenCompose(composedId -> crudServiceTemplate
+                        .findById(structure.getItemIndex(), composedId, type,
+                                  builder -> delegatingReadPreProcessor.beforeFindById(structure, builder, context)));
     }
 
     @Override
     public CompletableFuture<Long> count(EntityContext context) {
-        return crudServiceTemplate.count(structure.getItemIndex(),
-                                         builder -> delegatingReadPreProcessor.beforeCount(structure, builder, context));
+        return validateTenant(context)
+                .thenCompose(unused -> crudServiceTemplate
+                        .count(structure.getItemIndex(),
+                               builder -> delegatingReadPreProcessor.beforeCount(structure, builder, context)));
     }
 
     @Override
     public CompletableFuture<Void> deleteById(String id, EntityContext context) {
-        return crudServiceTemplate.deleteById(structure.getItemIndex(), id,
-                                              builder -> delegatingReadPreProcessor.beforeDelete(structure, builder, context))
-                                  .thenApply(deleteResponse -> null);
+        return validateTenantAndComposeId(id, context)
+                .thenCompose(composedId -> crudServiceTemplate
+                        .deleteById(structure.getItemIndex(), composedId,
+                                    builder -> delegatingReadPreProcessor.beforeDelete(structure, builder, context))
+                        .thenApply(deleteResponse -> null));
     }
 
     @Override
     public <T> CompletableFuture<Page<T>> findAll(Pageable pageable, Class<T> type, EntityContext context) {
-        return crudServiceTemplate.search(structure.getItemIndex(), pageable, type,
-                                          builder -> delegatingReadPreProcessor.beforeFindAll(structure, builder, context));
+        return validateTenant(context)
+                .thenCompose(unused -> crudServiceTemplate
+                        .search(structure.getItemIndex(), pageable, type,
+                                builder -> delegatingReadPreProcessor.beforeFindAll(structure, builder, context)));
     }
 
     @Override
     public <T> CompletableFuture<Page<T>> search(String searchText, Pageable pageable, Class<T> type, EntityContext context) {
-        return crudServiceTemplate.search(structure.getItemIndex(),
-                                          pageable,
-                                          type,
-                                          builder -> {
-                                              builder.query(q -> {
-                                                  q.queryString(qs -> {
-                                                      qs.query(searchText);
-                                                      return qs;
-                                                  });
-                                                  return q;
-                                              });
+        return validateTenant(context)
+                .thenCompose(unused -> crudServiceTemplate
+                        .search(structure.getItemIndex(),
+                                pageable,
+                                type,
+                                builder -> {
+                                    builder.query(q -> {
+                                        q.queryString(qs -> {
+                                            qs.query(searchText);
+                                            return qs;
+                                        });
+                                        return q;
+                                    });
 
-                                              delegatingReadPreProcessor.beforeSearch(structure, builder, context);
-                                          });
+                                    delegatingReadPreProcessor.beforeSearch(structure, builder, context);
+                                }));
+    }
+
+    private CompletableFuture<String> validateTenantAndComposeId(final String id, final EntityContext context){
+        return validateTenant(context)
+                .thenApply(unused -> {
+                    String ret;
+                    if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
+                        String tenantId = context.getParticipant().getTenantId();
+                        if(!id.startsWith(tenantId)){
+                            ret = tenantId + "-" + id;
+                        }else{
+                            ret = id;
+                        }
+                    }else{
+                        ret = id;
+                    }
+                    return ret;
+                });
+    }
+
+    private CompletableFuture<Void> validateTenant(final EntityContext context){
+        if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
+            if(context.getParticipant() != null && context.getParticipant().getTenantId() != null) {
+                return CompletableFuture.completedFuture(null);
+            }else{
+                return CompletableFuture.failedFuture(new IllegalArgumentException("TenantId is required when MultiTenancyType is SHARED"));
+            }
+        }else{
+            return CompletableFuture.completedFuture(null);
+        }
     }
 
 }

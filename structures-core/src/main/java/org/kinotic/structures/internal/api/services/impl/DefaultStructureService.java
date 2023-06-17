@@ -2,12 +2,14 @@ package org.kinotic.structures.internal.api.services.impl;
 
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import co.elastic.clients.elasticsearch._types.mapping.DynamicMapping;
+import co.elastic.clients.elasticsearch._types.mapping.TypeMapping;
 import co.elastic.clients.elasticsearch._types.query_dsl.TermQuery;
+import org.kinotic.structures.api.config.StructuresProperties;
+import org.kinotic.structures.api.decorators.MultiTenancyType;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.StructureService;
 import org.kinotic.structures.internal.api.services.ElasticConversionResult;
 import org.kinotic.structures.internal.api.services.StructureConversionService;
-import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.internal.utils.StructuresUtil;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -98,10 +100,9 @@ public class DefaultStructureService extends AbstractCrudService<Structure> impl
                         structure.setItemIndex(this.structuresProperties.getIndexPrefix().trim().toLowerCase()+logicalIndexName);
 
                         // Try and create ES mapping to make sure IDL is valid
-                        structureConversionService.convertToElasticMapping(structure);
+                        ElasticConversionResult result = structureConversionService.convertToElasticMapping(structure);
 
-                        // FIXME: make sure that every C3Type has only a single decorator with the same implementation type
-                        // For example two decorators instances that both implement UpsertFieldPreProcessor or MappingPreProcessor
+                        structure.setMultiTenancyType(result.getMultiTenancyType());
 
                         ret = super.save(structure);
                     }
@@ -155,8 +156,18 @@ public class DefaultStructureService extends AbstractCrudService<Structure> impl
 
                             ret = crudServiceTemplate.createIndex(structure.getItemIndex(), true, indexBuilder -> {
 
-                                indexBuilder.mappings(m -> m.dynamic(DynamicMapping.Strict)
-                                                            .properties(result.getObjectProperty().properties()));
+                                indexBuilder.mappings(m -> {
+                                    TypeMapping.Builder builder =
+                                            m.dynamic(DynamicMapping.Strict)
+                                             .properties(result.getObjectProperty().properties());
+
+                                    // if shared multi tenancy make sure routing is required
+                                    if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
+                                        builder.routing(b -> b.required(true));
+                                    }
+
+                                    return builder;
+                                });
 
                             })
                             .thenCompose(createIndexResponse -> {

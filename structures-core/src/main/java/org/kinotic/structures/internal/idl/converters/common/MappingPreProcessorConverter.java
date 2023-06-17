@@ -60,7 +60,7 @@ public class MappingPreProcessorConverter<R, S extends BaseConversionState> impl
     /**
      * Finds the first {@link C3Decorator} that has a {@link MappingPreProcessor} registered for it
      * NOTE: We currently only allow one {@link MappingPreProcessor} implementation per concrete {@link C3Decorator}.
-     *       If we need more than one decorator per type we will need to change this method to return a list.
+     *       If we need more than one {@link MappingPreProcessor} per {@link C3Decorator} we will need to change this method to return a list.
      *       Additionally, ordering of decorators would need to be supported.
      *
      * @param c3Type to find a {@link MappingPreProcessor} for

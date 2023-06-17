@@ -10,9 +10,7 @@ import org.kinotic.continuum.idl.api.schema.ArrayC3Type;
 import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
 import org.kinotic.continuum.idl.api.schema.StringC3Type;
 import org.kinotic.continuum.internal.utils.ContinuumUtil;
-import org.kinotic.structures.api.decorators.IdDecorator;
-import org.kinotic.structures.api.decorators.NestedDecorator;
-import org.kinotic.structures.api.decorators.TextDecorator;
+import org.kinotic.structures.api.decorators.*;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.StructureService;
 import org.kinotic.structures.internal.utils.StructuresUtil;
@@ -54,8 +52,8 @@ public class TestDataService {
     /**
      * @return a {@link ObjectC3Type} representing a person.
      */
-    public ObjectC3Type createPersonSchema() {
-        return new ObjectC3Type()
+    public ObjectC3Type createPersonSchema(MultiTenancyType multiTenancyType){
+        ObjectC3Type ret =  new ObjectC3Type()
                 .setName("Person")
                 .setNamespace("org.kinotic.sample")
                 .addProperty("id", new StringC3Type().addDecorator(new IdDecorator()))
@@ -70,6 +68,10 @@ public class TestDataService {
                                 .addProperty("state", new StringC3Type())
                                 .addProperty("zip", new StringC3Type()))
                         .addDecorator(new NestedDecorator()));
+
+        ret.addDecorator(new EntityDecorator().setMultiTenancyType(multiTenancyType));
+
+        return ret;
     }
 
     /**
@@ -99,7 +101,7 @@ public class TestDataService {
         structure.setNamespace("org.kinotic.sample");
         structure.setDescription("Defines a Person");
 
-        ObjectC3Type personType = createPersonSchema();
+        ObjectC3Type personType = createPersonSchema(MultiTenancyType.SHARED);
 
         structure.setEntityDefinition(personType);
         structure.setNamespace(personType.getNamespace());

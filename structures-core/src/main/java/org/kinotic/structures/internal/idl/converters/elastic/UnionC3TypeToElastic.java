@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
+ * TODO: should root / enity objects be allowed to be an union type.
  * Created by Navíd Mitchell 🤪 on 5/26/23.
  */
 public class UnionC3TypeToElastic implements SpecificC3TypeConverter<Property, UnionC3Type, ElasticConversionState> {

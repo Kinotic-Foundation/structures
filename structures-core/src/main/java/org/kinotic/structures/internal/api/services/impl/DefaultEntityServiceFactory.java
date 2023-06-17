@@ -4,6 +4,7 @@ import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.tuple.Triple;
 import org.kinotic.continuum.idl.api.schema.decorators.C3Decorator;
+import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.decorators.runtime.crud.*;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.internal.api.decorators.DecoratorLogic;
@@ -28,6 +29,7 @@ import java.util.concurrent.CompletableFuture;
 @Component
 public class DefaultEntityServiceFactory implements EntityServiceFactory {
 
+    private final StructuresProperties structuresProperties;
     private final ObjectMapper objectMapper;
     private final ElasticsearchAsyncClient esAsyncClient;
     private final CrudServiceTemplate crudServiceTemplate;
@@ -38,7 +40,8 @@ public class DefaultEntityServiceFactory implements EntityServiceFactory {
     private final Map<String, FindByIdPreProcessor<?>> findByIdPreProcessorMap;
     private final Map<String, SearchPreProcessor<?>> searchPreProcessorMap;
 
-    public DefaultEntityServiceFactory(ObjectMapper objectMapper,
+    public DefaultEntityServiceFactory(StructuresProperties structuresProperties,
+                                       ObjectMapper objectMapper,
                                        ElasticsearchAsyncClient esAsyncClient,
                                        CrudServiceTemplate crudServiceTemplate,
                                        List<UpsertFieldPreProcessor<?, ?, ?>> upsertFieldPreProcessors,
@@ -47,6 +50,8 @@ public class DefaultEntityServiceFactory implements EntityServiceFactory {
                                        List<FindAllPreProcessor<?>> findAllPreProcessors,
                                        List<FindByIdPreProcessor<?>> findByIdPreProcessors,
                                        List<SearchPreProcessor<?>> searchPreProcessors) {
+
+        this.structuresProperties = structuresProperties;
         this.objectMapper = objectMapper;
         this.esAsyncClient = esAsyncClient;
         this.crudServiceTemplate = crudServiceTemplate;
@@ -133,7 +138,8 @@ public class DefaultEntityServiceFactory implements EntityServiceFactory {
                                                                           new DelegatingUpsertPreProcessor(objectMapper,
                                                                                                            structure,
                                                                                                            fieldPreProcessors),
-                                                                          new DelegatingReadPreProcessor(countPreProcessors,
+                                                                          new DelegatingReadPreProcessor(structuresProperties,
+                                                                                                         countPreProcessors,
                                                                                                          deletePreProcessors,
                                                                                                          findAllPreProcessors,
                                                                                                          findByIdPreProcessors,

@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.kinotic.continuum.idl.api.schema.C3Type;
+import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.domain.Structure;
 
 import java.util.ArrayDeque;
@@ -24,6 +25,8 @@ public class BaseConversionState {
 
     private Structure structureBeingConverted;
 
+    private StructuresProperties structuresProperties;
+
     private final List<DecoratedProperty> decoratedProperties = new LinkedList<>();
 
     @Getter(AccessLevel.NONE) private final Deque<String> propertyStack = new ArrayDeque<>();
@@ -32,6 +35,12 @@ public class BaseConversionState {
 
     @Setter(AccessLevel.NONE) private String currentJsonPath;
 
+    /**
+     * Must be called before processing a field.
+     * This ensures the current field name and json path are set correctly
+     * @param fieldName being processed
+     * @param value being processed
+     */
     public void beginProcessingField(String fieldName, C3Type value){
         currentFieldName = fieldName;
         // Store decorators for use later with their corresponding json path and type
@@ -45,8 +54,18 @@ public class BaseConversionState {
         }
     }
 
+    /**
+     * Must be called after processing a field.
+     */
     public void endProcessingField(){
         propertyStack.removeFirst();
+    }
+
+    /**
+     * @return the nesting depth of the current property being processed
+     */
+    public int fieldDepth(){
+        return propertyStack.size();
     }
 
 }

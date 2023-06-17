@@ -6,11 +6,12 @@ import io.swagger.v3.oas.models.media.ObjectSchema;
 import io.swagger.v3.oas.models.media.Schema;
 import org.kinotic.continuum.idl.api.converter.IdlConverter;
 import org.kinotic.continuum.idl.api.converter.IdlConverterFactory;
+import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.decorators.runtime.mapping.GraphQLTypeHolder;
 import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.internal.api.services.ElasticConversionResult;
 import org.kinotic.structures.internal.api.services.OpenApiConversionResult;
 import org.kinotic.structures.internal.api.services.StructureConversionService;
-import org.kinotic.structures.internal.api.services.ElasticConversionResult;
 import org.kinotic.structures.internal.idl.converters.elastic.ElasticConversionState;
 import org.kinotic.structures.internal.idl.converters.elastic.ElasticConverterStrategy;
 import org.kinotic.structures.internal.idl.converters.graphql.GraphQLConversionState;
@@ -25,15 +26,18 @@ import org.springframework.stereotype.Component;
 @Component
 public class DefaultStructureConversionService implements StructureConversionService {
 
+    private final StructuresProperties structuresProperties;
     private final IdlConverterFactory idlConverterFactory;
     private final ElasticConverterStrategy elasticConverterStrategy;
     private final GraphQLConverterStrategy graphQLConverterStrategy;
     private final OpenApiConverterStrategy openApiConverterStrategy;
 
-    public DefaultStructureConversionService(IdlConverterFactory idlConverterFactory,
+    public DefaultStructureConversionService(StructuresProperties structuresProperties,
+                                             IdlConverterFactory idlConverterFactory,
                                              ElasticConverterStrategy elasticConverterStrategy,
                                              GraphQLConverterStrategy graphQLConverterStrategy,
                                              OpenApiConverterStrategy openApiConverterStrategy) {
+        this.structuresProperties = structuresProperties;
         this.idlConverterFactory = idlConverterFactory;
         this.elasticConverterStrategy = elasticConverterStrategy;
         this.graphQLConverterStrategy = graphQLConverterStrategy;
@@ -45,7 +49,9 @@ public class DefaultStructureConversionService implements StructureConversionSer
 
         IdlConverter<Property, ElasticConversionState> converter = idlConverterFactory.createConverter(elasticConverterStrategy);
 
-        converter.getConversionContext().state().setStructureBeingConverted(structure);
+        ElasticConversionState state = converter.getConversionContext().state();
+        state.setStructureBeingConverted(structure);
+        state.setStructuresProperties(structuresProperties);
 
         Property esProperty = converter.convert(structure.getEntityDefinition());
 
@@ -55,14 +61,16 @@ public class DefaultStructureConversionService implements StructureConversionSer
             throw new IllegalStateException("EntityDefinition must be an object");
         }
 
-        return new ElasticConversionResult(ret, converter.getConversionContext().state().getDecoratedProperties());
+        return new ElasticConversionResult(ret, state.getDecoratedProperties(), state.getMultiTenancyType());
     }
 
     @Override
     public GraphQLTypeHolder convertToGraphQLMapping(Structure structure) {
         IdlConverter<GraphQLTypeHolder, GraphQLConversionState> converter = idlConverterFactory.createConverter(graphQLConverterStrategy);
 
-        converter.getConversionContext().state().setStructureBeingConverted(structure);
+        GraphQLConversionState state = converter.getConversionContext().state();
+        state.setStructureBeingConverted(structure);
+        state.setStructuresProperties(structuresProperties);
 
         return converter.convert(structure.getEntityDefinition());
     }
@@ -72,7 +80,9 @@ public class DefaultStructureConversionService implements StructureConversionSer
         ObjectSchema ret;
         IdlConverter<Schema<?>, OpenApiConversionState> converter = idlConverterFactory.createConverter(openApiConverterStrategy);
 
-        converter.getConversionContext().state().setStructureBeingConverted(structure);
+        OpenApiConversionState state = converter.getConversionContext().state();
+        state.setStructureBeingConverted(structure);
+        state.setStructuresProperties(structuresProperties);
 
         Schema<?> schema = converter.convert(structure.getEntityDefinition());
         if(schema instanceof ObjectSchema){
@@ -81,6 +91,6 @@ public class DefaultStructureConversionService implements StructureConversionSer
             throw new IllegalStateException("EntityDefinition did not convert to an OpenAPI ObjectSchema");
         }
 
-        return new OpenApiConversionResult(ret, converter.getConversionContext().state().getReferenceSchemas());
+        return new OpenApiConversionResult(ret, state.getReferenceSchemas());
     }
 }

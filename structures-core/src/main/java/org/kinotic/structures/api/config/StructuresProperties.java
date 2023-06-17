@@ -30,6 +30,8 @@ public class StructuresProperties {
     @NotNull
     private String indexPrefix = "struct_";
     @NotNull
+    private String tenantIdFieldName = "structuresTenantId";
+    @NotNull
     private Duration elasticConnectionTimeout = Duration.ofMinutes(1);
     @NotNull
     private Duration elasticSocketTimeout = Duration.ofMinutes(1);
