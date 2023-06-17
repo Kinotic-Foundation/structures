@@ -74,18 +74,23 @@ public class TestDataService {
         return ret;
     }
 
+    public CompletableFuture<Pair<Structure, Boolean>> createPersonStructureIfNotExists(){
+        return createPersonStructureIfNotExists(null);
+    }
+
     /**
      * Creates a person structure if it does not exist.
      * @return a {@link CompletableFuture} that will return a {@link Pair} of the {@link Structure} and a {@link Boolean} indicating if the structure was created.
      */
-    public CompletableFuture<Pair<Structure, Boolean>> createPersonStructureIfNotExists(){
-        String structureId = StructuresUtil.structureNameToId("org.kinotic.data", "Person");
+    public CompletableFuture<Pair<Structure, Boolean>> createPersonStructureIfNotExists(String structureNameSuffix){
+        String structureId = StructuresUtil.structureNameToId("org.kinotic.sample",
+                                                              "Person"+(structureNameSuffix != null ? structureNameSuffix : ""));
         return structureService.findById(structureId)
                                .thenCompose(structure -> {
                                    if(structure != null){
                                        return CompletableFuture.completedFuture(Pair.of(structure, false));
                                    }else{
-                                       return createPersonStructure(null).thenApply(saved -> Pair.of(saved, true));
+                                       return createPersonStructure(structureNameSuffix).thenApply(saved -> Pair.of(saved, true));
                                    }
                                });
     }

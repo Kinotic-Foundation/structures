@@ -2,9 +2,10 @@ package org.kinotic.structures.support;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.RawJson;
+import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.EntitiesService;
-import org.kinotic.structures.internal.sample.DummyEntityContext;
 import org.kinotic.structures.internal.sample.Person;
 import org.kinotic.structures.internal.sample.TestDataService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,11 +30,21 @@ public class TestHelper {
     private EntitiesService entitiesService;
 
 
-    public Mono<StructureAndPersonHolder> createPersonStructureAndEntities(int numberOfPeopleToCreate){
-        return Mono.fromFuture(() -> testDataService.createPersonStructure("-" + System.currentTimeMillis())
-                .thenCompose(structure ->
+    /**
+     * Creates a {@link org.kinotic.structures.api.domain.Structure} if it does not exist with the given name suffix and then creates the given number of people
+     * @param numberOfPeopleToCreate the number of people to create
+     * @param entityContext the {@link EntityContext} to use when creating the entities
+     * @param structureNameSuffix the suffix to append to the structure name or null to not append anything
+     * @return a {@link Mono} that will emit a {@link StructureAndPersonHolder} when complete
+     */
+    public Mono<StructureAndPersonHolder> createPersonStructureAndEntities(int numberOfPeopleToCreate,
+                                                                           EntityContext entityContext,
+                                                                           String structureNameSuffix){
+        return Mono.fromFuture(() -> testDataService.createPersonStructureIfNotExists(structureNameSuffix)
+                .thenCompose(pair ->
                      testDataService.createTestPeople(numberOfPeopleToCreate)
                                     .thenCompose(people -> {
+                                        Structure structure = pair.getLeft();
                                         List<CompletableFuture<Person>> completableFutures = new ArrayList<>();
                                         for(Person person : people){
                                             byte[] jsonData;
@@ -44,7 +55,7 @@ public class TestHelper {
                                             }
                                             completableFutures.add(entitiesService.save(structure.getId(),
                                                                                         RawJson.from(jsonData),
-                                                                                        new DummyEntityContext())
+                                                                                        entityContext)
                                                                                   .thenCompose(saved -> {
                                                                                       try {
                                                                                           Person savedPerson = objectMapper.readValue(saved.data(),

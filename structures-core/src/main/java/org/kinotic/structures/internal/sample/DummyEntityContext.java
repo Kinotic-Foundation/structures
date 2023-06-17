@@ -13,10 +13,22 @@ import java.util.Map;
  */
 public class DummyEntityContext implements EntityContext {
 
-    private final Participant participant = new DefaultParticipant("dummy",
-                                                                   "coolTenant",
-                                                                   Map.of(MetadataConstants.TYPE_KEY, "dummy"),
-                                                                   List.of("ADMIN"));
+    private final Participant participant;
+
+    public DummyEntityContext() {
+        participant = new DefaultParticipant("kinotic",
+                                             "dummy",
+                                             Map.of(MetadataConstants.TYPE_KEY, "dummy"),
+                                             List.of("ADMIN"));
+    }
+
+    public DummyEntityContext(String tenantId,
+                              String participantId) {
+        participant = new DefaultParticipant(tenantId,
+                                             participantId,
+                                             Map.of(MetadataConstants.TYPE_KEY, "dummy"),
+                                             List.of("ADMIN"));
+    }
 
     @Override
     public Participant getParticipant() {

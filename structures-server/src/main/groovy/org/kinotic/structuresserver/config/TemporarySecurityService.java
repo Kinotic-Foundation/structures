@@ -14,7 +14,8 @@ import java.util.concurrent.CompletableFuture;
 public class TemporarySecurityService implements SecurityService {
 
     private static final String PASSWORD = "structures";
-    private static final Participant participant = new DefaultParticipant("admin", "kinotic",
+    private static final Participant participant = new DefaultParticipant("kinotic",
+                                                                          "admin",
                                                                           Map.of(MetadataConstants.TYPE_KEY, "user"),
                                                                           List.of("ADMIN"));
 

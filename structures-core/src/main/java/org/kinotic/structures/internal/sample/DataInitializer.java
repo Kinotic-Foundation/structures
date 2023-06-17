@@ -52,7 +52,8 @@ public class DataInitializer {
                                                    completableFutures.add(entitiesService.save(structureBooleanPair.getLeft()
                                                                                                                    .getId(),
                                                                                                RawJson.from(jsonData),
-                                                                                               new DummyEntityContext()));
+                                                                                               new DummyEntityContext("kinotic",
+                                                                                                                      "structures")));
                                                }
                                                return CompletableFuture.allOf(completableFutures.toArray(new CompletableFuture[0]));
                                            });

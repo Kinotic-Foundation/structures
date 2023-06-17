@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.kinotic.structures.ElasticsearchTestBase;
+import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.services.EntitiesService;
 import org.kinotic.structures.internal.sample.DummyEntityContext;
@@ -57,13 +58,19 @@ public class EntityCrudTests extends ElasticsearchTestBase {
     private ElasticsearchAsyncClient esAsyncClient;
 
     private StructureAndPersonHolder createAndVerify(){
-        return createAndVerify(1);
+        return createAndVerify(1,
+                               new DummyEntityContext(),
+                               "-" + System.currentTimeMillis());
     }
 
-    private StructureAndPersonHolder createAndVerify(int numberOfPeopleToCreate){
+    private StructureAndPersonHolder createAndVerify(int numberOfPeopleToCreate,
+                                                     EntityContext entityContext,
+                                                     String structureSuffix){
         StructureAndPersonHolder ret = new StructureAndPersonHolder();
 
-        StepVerifier.create(testHelper.createPersonStructureAndEntities(numberOfPeopleToCreate))
+        StepVerifier.create(testHelper.createPersonStructureAndEntities(numberOfPeopleToCreate,
+                                                                        entityContext,
+                                                                        structureSuffix))
                     .expectNextMatches(structureAndPersonHolder -> {
                         boolean matches = structureAndPersonHolder.getStructure() != null &&
                                 structureAndPersonHolder.getStructure().getId() != null &&
@@ -120,19 +127,37 @@ public class EntityCrudTests extends ElasticsearchTestBase {
 
     @Test
     public void testFindAll(){
-        StructureAndPersonHolder holder = createAndVerify(10);
 
-        Assertions.assertNotNull(holder);
+        EntityContext context1 = new DummyEntityContext("tenant1", "user1");
+        EntityContext context2 = new DummyEntityContext("tenant2", "user2");
 
-        StepVerifier.create(Mono.fromFuture(entitiesService.findAll(holder.getStructure().getId(),
-                                                                    Pageable.ofSize(10),
+        StructureAndPersonHolder holder1 = createAndVerify(10, context1, "-testAll");
+
+        Assertions.assertNotNull(holder1);
+
+        StructureAndPersonHolder holder2 = createAndVerify(10, context2, "-testAll");
+
+        Assertions.assertNotNull(holder2);
+
+        // TODO: verify all data items as well, not just sizes
+        StepVerifier.create(Mono.fromFuture(entitiesService.findAll(holder1.getStructure().getId(),
+                                                                    Pageable.ofSize(20), // make sure page size is larger than number of entities
                                                                     RawJson.class,
-                                                                    new DummyEntityContext())))
-                    .expectNextMatches(rawJsons -> {
-                        return rawJsons.getTotalElements() == 10
-                                && rawJsons.getTotalPages() == 1
-                                && rawJsons.getContent().size() == 10;
-                    })
+                                                                    context1)))
+                    .expectNextMatches(rawJsons -> rawJsons.getTotalElements() == 10
+                            && rawJsons.getTotalPages() == 1
+                            && rawJsons.getContent().size() == 10)
+                    .as("Verifying Tenant 1 has 10 entities")
+                    .verifyComplete();
+
+        StepVerifier.create(Mono.fromFuture(entitiesService.findAll(holder1.getStructure().getId(),
+                                                                    Pageable.ofSize(20), // make sure page size is larger than number of entities
+                                                                    RawJson.class,
+                                                                    context2)))
+                    .expectNextMatches(rawJsons -> rawJsons.getTotalElements() == 10
+                            && rawJsons.getTotalPages() == 1
+                            && rawJsons.getContent().size() == 10)
+                    .as("Verifying Tenant 2 has 10 entities")
                     .verifyComplete();
     }
 
