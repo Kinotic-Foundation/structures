@@ -1,6 +1,6 @@
 package org.kinotic.structures.api.decorators.runtime.crud;
 
-import co.elastic.clients.elasticsearch.core.CountRequest;
+import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import org.kinotic.continuum.idl.api.schema.decorators.C3Decorator;
 import org.kinotic.structures.api.decorators.runtime.C3DecoratorInstance;
 import org.kinotic.structures.api.domain.EntityContext;
@@ -14,7 +14,7 @@ public interface CountEntityPreProcessor <D extends C3Decorator> extends C3Decor
     void beforeCount(Structure structure,
                      String jsonPath,
                      D decorator,
-                     CountRequest.Builder builder,
+                     Query.Builder queryBuilder,
                      EntityContext context);
 
 }

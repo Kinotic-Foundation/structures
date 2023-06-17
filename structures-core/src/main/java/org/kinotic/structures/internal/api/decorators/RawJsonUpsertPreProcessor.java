@@ -7,7 +7,9 @@ import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.async.ByteArrayFeeder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.kinotic.continuum.idl.api.schema.decorators.C3Decorator;
+import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.decorators.IdDecorator;
+import org.kinotic.structures.api.decorators.MultiTenancyType;
 import org.kinotic.structures.api.decorators.runtime.crud.UpsertFieldPreProcessor;
 import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.RawJson;
@@ -29,15 +31,18 @@ public class RawJsonUpsertPreProcessor implements UpsertPreProcessor<RawJson> {
 
     private static final Logger log = LoggerFactory.getLogger(RawJsonUpsertPreProcessor.class);
 
+    private final StructuresProperties structuresProperties;
     private final ObjectMapper objectMapper;
     private final Structure structure;
     // Map of json path to decorator logic
     private final Map<String, DecoratorLogic> fieldPreProcessors;
 
 
-    public RawJsonUpsertPreProcessor(ObjectMapper objectMapper,
+    public RawJsonUpsertPreProcessor(StructuresProperties structuresProperties,
+                                     ObjectMapper objectMapper,
                                      Structure structure,
                                      Map<String, DecoratorLogic> fieldPreProcessors) {
+        this.structuresProperties = structuresProperties;
         this.objectMapper = objectMapper;
         this.structure = structure;
         this.fieldPreProcessors = fieldPreProcessors;
@@ -56,6 +61,17 @@ public class RawJsonUpsertPreProcessor implements UpsertPreProcessor<RawJson> {
             ByteArrayFeeder feeder = (ByteArrayFeeder) jsonParser.getNonBlockingInputFeeder();
             feeder.feedInput(bytes, 0, bytes.length);
             feeder.endOfInput();
+
+            // if this is a multi tenant structure the first thing to do is add the tenant id
+            if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
+                if(jsonParser.nextToken() == JsonToken.START_OBJECT) {
+                    jsonGenerator.writeStartObject();
+                    jsonGenerator.writeFieldName(structuresProperties.getTenantIdFieldName());
+                    jsonGenerator.writeString(context.getParticipant().getTenantId());
+                }else{
+                    throw new IllegalStateException("Expected start object token");
+                }
+            }
 
             while (jsonParser.nextToken() != null) {
 

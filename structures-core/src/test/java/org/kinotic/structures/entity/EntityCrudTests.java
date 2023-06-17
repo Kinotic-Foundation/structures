@@ -128,9 +128,11 @@ public class EntityCrudTests extends ElasticsearchTestBase {
                                                                     Pageable.ofSize(10),
                                                                     RawJson.class,
                                                                     new DummyEntityContext())))
-                    .expectNextMatches(rawJsons -> rawJsons.getTotalElements() == 10
-                                        && rawJsons.getTotalPages() == 1
-                                        && rawJsons.getContent().size() == 10)
+                    .expectNextMatches(rawJsons -> {
+                        return rawJsons.getTotalElements() == 10
+                                && rawJsons.getTotalPages() == 1
+                                && rawJsons.getContent().size() == 10;
+                    })
                     .verifyComplete();
     }
 

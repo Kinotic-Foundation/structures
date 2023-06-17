@@ -2,6 +2,7 @@ package org.kinotic.structures.internal.api.services.impl;
 
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import co.elastic.clients.elasticsearch._types.Refresh;
+import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import co.elastic.clients.util.BinaryData;
 import co.elastic.clients.util.ContentType;
 import org.kinotic.structures.api.decorators.MultiTenancyType;
@@ -120,15 +121,14 @@ public class DefaultEntityService implements EntityService {
                                 pageable,
                                 type,
                                 builder -> {
-                                    builder.query(q -> {
-                                        q.queryString(qs -> {
-                                            qs.query(searchText);
-                                            return qs;
-                                        });
-                                        return q;
-                                    });
 
-                                    delegatingReadPreProcessor.beforeSearch(structure, builder, context);
+                                    Query.Builder queryBuilder = new Query.Builder();
+                                    queryBuilder.queryString(qs -> qs.query(searchText));
+
+                                    delegatingReadPreProcessor.beforeSearch(structure, builder, queryBuilder, context);
+
+                                    builder.query(queryBuilder.build());
+
                                 }));
     }
 

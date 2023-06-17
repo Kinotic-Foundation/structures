@@ -37,7 +37,6 @@ public class DefaultEntityServiceFactory implements EntityServiceFactory {
     private final Map<String, CountEntityPreProcessor<?>> countEntityPreProcessorMap;
     private final Map<String, DeleteEntityPreProcessor<?>> deleteEntityPreProcessorMap;
     private final Map<String, FindAllPreProcessor<?>> findAllPreProcessorMap;
-    private final Map<String, FindByIdPreProcessor<?>> findByIdPreProcessorMap;
     private final Map<String, SearchPreProcessor<?>> searchPreProcessorMap;
 
     public DefaultEntityServiceFactory(StructuresProperties structuresProperties,
@@ -48,7 +47,6 @@ public class DefaultEntityServiceFactory implements EntityServiceFactory {
                                        List<CountEntityPreProcessor<?>> countEntityPreProcessors,
                                        List<DeleteEntityPreProcessor<?>> deleteEntityPreProcessors,
                                        List<FindAllPreProcessor<?>> findAllPreProcessors,
-                                       List<FindByIdPreProcessor<?>> findByIdPreProcessors,
                                        List<SearchPreProcessor<?>> searchPreProcessors) {
 
         this.structuresProperties = structuresProperties;
@@ -62,7 +60,6 @@ public class DefaultEntityServiceFactory implements EntityServiceFactory {
         this.countEntityPreProcessorMap = StructuresUtil.listToMap(countEntityPreProcessors, p -> p.implementsDecorator().getName());
         this.deleteEntityPreProcessorMap = StructuresUtil.listToMap(deleteEntityPreProcessors, p -> p.implementsDecorator().getName());
         this.findAllPreProcessorMap = StructuresUtil.listToMap(findAllPreProcessors, p -> p.implementsDecorator().getName());
-        this.findByIdPreProcessorMap = StructuresUtil.listToMap(findByIdPreProcessors, p -> p.implementsDecorator().getName());
         this.searchPreProcessorMap = StructuresUtil.listToMap(searchPreProcessors, p -> p.implementsDecorator().getName());
     }
 
@@ -76,7 +73,6 @@ public class DefaultEntityServiceFactory implements EntityServiceFactory {
         List<Triple<String, C3Decorator, CountEntityPreProcessor<C3Decorator>>> countPreProcessors = new ArrayList<>();
         List<Triple<String, C3Decorator, DeleteEntityPreProcessor<C3Decorator>>> deletePreProcessors = new ArrayList<>();
         List<Triple<String, C3Decorator, FindAllPreProcessor<C3Decorator>>>findAllPreProcessors = new ArrayList<>();
-        List<Triple<String, C3Decorator, FindByIdPreProcessor<C3Decorator>>>findByIdPreProcessors = new ArrayList<>();
         List<Triple<String, C3Decorator, SearchPreProcessor<C3Decorator>>> searchPreProcessors = new ArrayList<>();
 
         for(DecoratedProperty decoratedProperty : structure.getDecoratedProperties()){
@@ -114,14 +110,6 @@ public class DefaultEntityServiceFactory implements EntityServiceFactory {
                                                        findAllPreProcessor));
                 }
 
-                FindByIdPreProcessor<C3Decorator> findByIdPreProcessor =
-                        (FindByIdPreProcessor<C3Decorator>)findByIdPreProcessorMap.get(decorator.getClass().getName());
-                if(findByIdPreProcessor != null){
-                    findByIdPreProcessors.add(Triple.of(decoratedProperty.getJsonPath(),
-                                                         decorator,
-                                                         findByIdPreProcessor));
-                }
-
                 SearchPreProcessor<C3Decorator> searchPreProcessor =
                         (SearchPreProcessor<C3Decorator>)searchPreProcessorMap.get(decorator.getClass().getName());
                 if(searchPreProcessor != null){
@@ -135,14 +123,14 @@ public class DefaultEntityServiceFactory implements EntityServiceFactory {
         return CompletableFuture.completedFuture(new DefaultEntityService(structure,
                                                                           esAsyncClient,
                                                                           crudServiceTemplate,
-                                                                          new DelegatingUpsertPreProcessor(objectMapper,
+                                                                          new DelegatingUpsertPreProcessor(structuresProperties,
+                                                                                                           objectMapper,
                                                                                                            structure,
                                                                                                            fieldPreProcessors),
                                                                           new DelegatingReadPreProcessor(structuresProperties,
                                                                                                          countPreProcessors,
                                                                                                          deletePreProcessors,
                                                                                                          findAllPreProcessors,
-                                                                                                         findByIdPreProcessors,
                                                                                                          searchPreProcessors)));
     }
 

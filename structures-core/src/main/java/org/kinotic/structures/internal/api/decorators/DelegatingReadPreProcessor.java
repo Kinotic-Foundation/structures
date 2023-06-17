@@ -1,5 +1,6 @@
 package org.kinotic.structures.internal.api.decorators;
 
+import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import co.elastic.clients.elasticsearch.core.CountRequest;
 import co.elastic.clients.elasticsearch.core.DeleteRequest;
 import co.elastic.clients.elasticsearch.core.GetRequest;
@@ -13,6 +14,7 @@ import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.Structure;
 
 import java.util.List;
+import java.util.function.Consumer;
 
 /**
  * Keeps track of all read operations pre-processors for a given structure.
@@ -22,23 +24,21 @@ import java.util.List;
 public class DelegatingReadPreProcessor {
 
     private final StructuresProperties structuresProperties;
+    // Im probably going to remove or refine these pre-processors. Since as it stands I do not think they are very useful.
     private final List<Triple<String, C3Decorator, CountEntityPreProcessor<C3Decorator>>> countPreProcessors;
     private final List<Triple<String, C3Decorator, DeleteEntityPreProcessor<C3Decorator>>> deletePreProcessors;
     private final List<Triple<String, C3Decorator, FindAllPreProcessor<C3Decorator>>>findAllPreProcessors;
-    private final List<Triple<String, C3Decorator, FindByIdPreProcessor<C3Decorator>>>findByIdPreProcessors;
     private final List<Triple<String, C3Decorator, SearchPreProcessor<C3Decorator>>> searchPreProcessors;
 
     public DelegatingReadPreProcessor(StructuresProperties structuresProperties,
                                       List<Triple<String, C3Decorator, CountEntityPreProcessor<C3Decorator>>> countPreProcessors,
                                       List<Triple<String, C3Decorator, DeleteEntityPreProcessor<C3Decorator>>> deletePreProcessors,
                                       List<Triple<String, C3Decorator, FindAllPreProcessor<C3Decorator>>> findAllPreProcessors,
-                                      List<Triple<String, C3Decorator, FindByIdPreProcessor<C3Decorator>>> findByIdPreProcessors,
                                       List<Triple<String, C3Decorator, SearchPreProcessor<C3Decorator>>> searchPreProcessors) {
         this.structuresProperties = structuresProperties;
         this.countPreProcessors = countPreProcessors;
         this.deletePreProcessors = deletePreProcessors;
         this.findAllPreProcessors = findAllPreProcessors;
-        this.findByIdPreProcessors = findByIdPreProcessors;
         this.searchPreProcessors = searchPreProcessors;
     }
 
@@ -46,16 +46,15 @@ public class DelegatingReadPreProcessor {
                             CountRequest.Builder builder,
                             EntityContext context) {
 
-        // add multi tenancy functionality if needed
-        if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
-            builder.routing(context.getParticipant().getTenantId());
-        }
+        Query.Builder queryBuilder = createQueryWithTenantLogic(structure, context, builder::routing);
 
         if(countPreProcessors != null && !countPreProcessors.isEmpty()){
             for(Triple<String, C3Decorator, CountEntityPreProcessor<C3Decorator>> tuple : countPreProcessors){
-                tuple.getRight().beforeCount(structure, tuple.getLeft(), tuple.getMiddle(), builder, context);
+                tuple.getRight().beforeCount(structure, tuple.getLeft(), tuple.getMiddle(), queryBuilder, context);
             }
         }
+
+        builder.query(queryBuilder.build());
     }
 
     public void beforeDelete(Structure structure,
@@ -78,16 +77,14 @@ public class DelegatingReadPreProcessor {
                               SearchRequest.Builder builder,
                               EntityContext context) {
 
-        // add multi tenancy functionality if needed
-        if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
-            builder.routing(context.getParticipant().getTenantId());
-        }
+        Query.Builder queryBuilder = createQueryWithTenantLogic(structure, context, builder::routing);
 
         if(findAllPreProcessors != null && !findAllPreProcessors.isEmpty()){
             for(Triple<String, C3Decorator, FindAllPreProcessor<C3Decorator>> tuple : findAllPreProcessors){
-                tuple.getRight().beforeFindAll(structure, tuple.getLeft(), tuple.getMiddle(), builder, context);
+                tuple.getRight().beforeFindAll(structure, tuple.getLeft(), tuple.getMiddle(), queryBuilder, context);
             }
         }
+        builder.query(queryBuilder.build());
     }
 
     public void beforeFindById(Structure structure,
@@ -99,21 +96,19 @@ public class DelegatingReadPreProcessor {
             builder.routing(context.getParticipant().getTenantId());
             builder.sourceExcludes(structuresProperties.getTenantIdFieldName());
         }
-
-        if(findByIdPreProcessors != null && !findByIdPreProcessors.isEmpty()){
-            for(Triple<String, C3Decorator, FindByIdPreProcessor<C3Decorator>> tuple : findByIdPreProcessors){
-                tuple.getRight().beforeFindById(structure, tuple.getLeft(), tuple.getMiddle(), builder, context);
-            }
-        }
     }
 
     public void beforeSearch(Structure structure,
                              SearchRequest.Builder builder,
+                             Query.Builder queryBuilder,
                              EntityContext context) {
 
         // add multi tenancy functionality if needed
         if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
             builder.routing(context.getParticipant().getTenantId());
+            queryBuilder
+                    .bool(b -> b.filter(qb -> qb.term(tq -> tq.field(structuresProperties.getTenantIdFieldName())
+                                                              .value(context.getParticipant().getTenantId()))));
         }
 
         if(searchPreProcessors != null && !searchPreProcessors.isEmpty()){
@@ -121,6 +116,18 @@ public class DelegatingReadPreProcessor {
                 tuple.getRight().beforeSearch(structure, tuple.getLeft(), tuple.getMiddle(), builder, context);
             }
         }
+    }
+
+    private Query.Builder createQueryWithTenantLogic(Structure structure, EntityContext context, Consumer<String> routingConsumer) {
+        Query.Builder queryBuilder = new Query.Builder();
+        // add multi tenancy functionality if needed
+        if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
+            routingConsumer.accept(context.getParticipant().getTenantId());
+            queryBuilder
+                    .bool(b -> b.filter(qb -> qb.term(tq -> tq.field(structuresProperties.getTenantIdFieldName())
+                                                              .value(context.getParticipant().getTenantId()))));
+        }
+        return queryBuilder;
     }
 
 }
