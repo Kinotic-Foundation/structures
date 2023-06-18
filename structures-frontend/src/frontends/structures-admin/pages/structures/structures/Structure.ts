@@ -1,18 +1,19 @@
 import {DecoratedProperty, ObjectC3Type} from '@kinotic/continuum-idl-js'
+import {Identifiable} from '@kinotic/continuum'
 
-export class Structure {
+export class Structure implements Identifiable<string> {
 
     public id: string
     public name: string
     public namespace: string
     public description: string
     public entityDefinition: ObjectC3Type
-    public created: number
-    public updated: number
-    public published: boolean
-    public publishedTimestamp: number
-    public itemIndex: string
-    public decoratedProperties: DecoratedProperty[]
+    public created: number // do not ever set, system managed
+    public updated: number // do not ever set, system managed
+    public published: boolean // do not ever set, system managed
+    public publishedTimestamp: number // do not ever set, system managed
+    public itemIndex: string // do not ever set, system managed
+    public decoratedProperties: DecoratedProperty[] // do not ever set, system managed
 
 
     constructor(id: string,

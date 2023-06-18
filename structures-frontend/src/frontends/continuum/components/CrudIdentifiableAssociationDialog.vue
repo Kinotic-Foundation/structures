@@ -25,7 +25,7 @@
                     <tr v-for="(item, index) in syncedAssociatedIdentifiables"
                         :key="index">
                         <td>
-                            {{ item.identity }}
+                            {{ item.id }}
                         </td>
                         <td>
                             {{ item.description }}
@@ -71,7 +71,7 @@
                                 <v-checkbox dense v-model="selectedAssociatedIdentifiables" :value="item"></v-checkbox>
                             </td>
                             <td>
-                                {{ item.identity }}
+                                {{ item.id }}
                             </td>
                             <td>
                                 {{ item.description }}
@@ -126,7 +126,7 @@ export default class CrudIdentifiableAssociationDialog extends Vue {
     @Prop({type: String, required: true})
     public title!: string
 
-    @PropSync('associatedIdentifiables', {type: Array, required: false, default: { identity: '' }})
+    @PropSync('associatedIdentifiables', {type: Array, required: false, default: { id: '' }})
     public syncedAssociatedIdentifiables!: Array<Identifiable<string>>
 
     /**
@@ -173,7 +173,7 @@ export default class CrudIdentifiableAssociationDialog extends Vue {
             const pageable: Pageable = {
                 pageNumber: 0,
                 pageSize: 50, // TODO: add infinite scroll paging support https://peachscript.github.io/vue-infinite-loading/
-                sort: { orders: [new Order('identity', Direction.ASC)] }
+                sort: { orders: [new Order('id', Direction.ASC)] }
             }
 
             const page: Page<Identifiable<string>> = await this.crudServiceProxy.findByIdNotIn(ids, pageable)

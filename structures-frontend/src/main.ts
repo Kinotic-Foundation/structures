@@ -5,7 +5,6 @@ import {router} from '@/frontends/router'
 import './plugins/vue-highlight'
 import './plugins/vue-editor-ace'
 import './plugins/vue-notification'
-import './plugins/vue-composition-api'
 import './registerServiceWorker'
 import './frontends/continuum'
 

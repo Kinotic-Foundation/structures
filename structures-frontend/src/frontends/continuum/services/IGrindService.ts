@@ -1,8 +1,7 @@
 import {Continuum, IServiceProxy} from '@kinotic/continuum'
-import { Observable } from 'rxjs'
-import { Result } from '../domain/grind/Result'
 import { JobDefinition } from '../domain/grind/JobDefinition'
-import {reactive} from "vue";
+import {reactive} from 'vue'
+import {Observable} from 'rxjs'
 
 
 /**
@@ -12,7 +11,7 @@ export interface IGrindServiceProxy {
 
     describeJob(methodIdentifier: string, args?: any[] | undefined): Promise<JobDefinition>
 
-    executeJob(methodIdentifier: string, args?: any[] | undefined): Observable<Result>
+    executeJob(methodIdentifier: string, args?: any[] | undefined): Observable<any>
 
 }
 
@@ -28,8 +27,8 @@ class GrindServiceProxy implements IGrindServiceProxy {
         return this.serviceProxy.invoke(methodIdentifier, args) as Promise<JobDefinition>
     }
 
-    executeJob(methodIdentifier: string, args?: any[] | undefined): Observable<Result> {
-        return this.serviceProxy.invokeStream(methodIdentifier, args) as Observable<Result>
+    executeJob(methodIdentifier: string, args?: any[] | undefined): Observable<any> {
+        return this.serviceProxy.invokeStream(methodIdentifier, args) as Observable<any>
     }
 
 

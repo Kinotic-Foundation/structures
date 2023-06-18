@@ -1,4 +1,4 @@
-import { reactive, markRaw } from '@vue/composition-api'
+import { reactive, markRaw } from 'vue'
 import VueRouter, { RouteConfig, Route, RouteRecord, NavigationGuardNext} from 'vue-router'
 
 export interface IFrontendState {

@@ -1,1 +1,1 @@
-export * from './IGrindService'
+export * from '@/frontends/continuum/services/IGrindService'

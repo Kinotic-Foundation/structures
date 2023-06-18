@@ -8,6 +8,8 @@
             :server-items-length="totalItems"
             :options.sync="options"
             :loading="loading"
+            :single-expand="singleExpand"
+            :show-expand="singleExpand"
             item-key="identity"
             loading-text="Loading... Please wait"
             class="elevation-1"
@@ -61,9 +63,11 @@
                 </v-icon>
                 <v-icon title="Delete"
                         small
+                        class="mr-2"
                         @click="deleteItem(item)">
                     {{icons.deleteIcon}}
                 </v-icon>
+                <slot name="additional-actions" :item="{ item }"></slot>
             </template>
 
         </v-data-table>
@@ -121,6 +125,9 @@ export default class CrudTable extends Vue {
 
     @Prop({ type: Boolean, required: false, default: true })
     public mustSort!: boolean
+
+    @Prop({ type: Boolean, required: false, default: false })
+    public singleExpand!: boolean
 
     /**
      * Icons
@@ -298,7 +305,7 @@ export default class CrudTable extends Vue {
         (this.$notify as any as { close: (value: string) => void }).close('crudTableAlert')
     }
 
-    private displayAlert(text: string) {
+    public displayAlert(text: string) {
         this.$notify({ group: 'alert', type: 'crudTableAlert', text})
     }
 

@@ -49,12 +49,17 @@ public class DelegatingReadPreProcessor {
         Query.Builder queryBuilder = createQueryWithTenantLogic(structure, context, builder::routing);
 
         if(countPreProcessors != null && !countPreProcessors.isEmpty()){
+            if(queryBuilder == null){
+                queryBuilder = new Query.Builder();
+            }
             for(Triple<String, C3Decorator, CountEntityPreProcessor<C3Decorator>> tuple : countPreProcessors){
                 tuple.getRight().beforeCount(structure, tuple.getLeft(), tuple.getMiddle(), queryBuilder, context);
             }
         }
 
-        builder.query(queryBuilder.build());
+        if(queryBuilder != null){
+            builder.query(queryBuilder.build());
+        }
     }
 
     public void beforeDelete(Structure structure,
@@ -80,11 +85,17 @@ public class DelegatingReadPreProcessor {
         Query.Builder queryBuilder = createQueryWithTenantLogic(structure, context, builder::routing);
 
         if(findAllPreProcessors != null && !findAllPreProcessors.isEmpty()){
+            if(queryBuilder == null){
+                queryBuilder = new Query.Builder();
+            }
             for(Triple<String, C3Decorator, FindAllPreProcessor<C3Decorator>> tuple : findAllPreProcessors){
                 tuple.getRight().beforeFindAll(structure, tuple.getLeft(), tuple.getMiddle(), queryBuilder, context);
             }
         }
-        builder.query(queryBuilder.build());
+
+        if(queryBuilder != null){
+            builder.query(queryBuilder.build());
+        }
     }
 
     public void beforeFindById(Structure structure,
@@ -119,10 +130,11 @@ public class DelegatingReadPreProcessor {
     }
 
     private Query.Builder createQueryWithTenantLogic(Structure structure, EntityContext context, Consumer<String> routingConsumer) {
-        Query.Builder queryBuilder = new Query.Builder();
+        Query.Builder queryBuilder = null;
         // add multi tenancy filters if needed
         if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
             routingConsumer.accept(context.getParticipant().getTenantId());
+            queryBuilder = new Query.Builder();
             queryBuilder
                     .bool(b -> b.filter(qb -> qb.term(tq -> tq.field(structuresProperties.getTenantIdFieldName())
                                                               .value(context.getParticipant().getTenantId()))));

@@ -1,6 +1,6 @@
-import {Continuum} from '@kinotic/continuum'
+import { Continuum } from '@kinotic/continuum'
 import Keycloak from "keycloak-js"
-import {reactive} from "@vue/composition-api";
+import {reactive} from "vue";
 
 export interface IUserState {
 

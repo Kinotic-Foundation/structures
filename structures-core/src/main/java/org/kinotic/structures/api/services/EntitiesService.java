@@ -1,5 +1,6 @@
 package org.kinotic.structures.api.services;
 
+import org.kinotic.continuum.api.annotations.Publish;
 import org.kinotic.structures.api.domain.EntityContext;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -10,6 +11,7 @@ import java.util.concurrent.CompletableFuture;
  * Provides access to entities for a given structure.
  * Created by Navíd Mitchell 🤪on 5/10/23.
  */
+@Publish
 public interface EntitiesService {
 
     /**
