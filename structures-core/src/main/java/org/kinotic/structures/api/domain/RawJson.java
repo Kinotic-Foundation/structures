@@ -81,4 +81,8 @@ public final class RawJson {
         }
     }
 
+    @Override
+    public String toString() {
+        return new String(data);
+    }
 }

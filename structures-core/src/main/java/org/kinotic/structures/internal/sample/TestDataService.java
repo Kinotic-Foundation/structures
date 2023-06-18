@@ -50,9 +50,20 @@ public class TestDataService {
     }
 
     /**
+     * @param multiTenancyType the {@link MultiTenancyType} to use for the {@link EntityDecorator}
      * @return a {@link ObjectC3Type} representing a person.
      */
     public ObjectC3Type createPersonSchema(MultiTenancyType multiTenancyType){
+        return createPersonSchema(multiTenancyType, false);
+    }
+
+
+    /**
+     * @param multiTenancyType the {@link MultiTenancyType} to use for the {@link EntityDecorator}
+     * @param addInvalidField  if true an invalid field will be added to the schema
+     * @return a {@link ObjectC3Type} representing a person.
+     */
+    public ObjectC3Type createPersonSchema(MultiTenancyType multiTenancyType, boolean addInvalidField){
         ObjectC3Type ret =  new ObjectC3Type()
                 .setName("Person")
                 .setNamespace("org.kinotic.sample")
@@ -66,7 +77,7 @@ public class TestDataService {
                                 .addProperty("street", new StringC3Type().addDecorator(new TextDecorator()))
                                 .addProperty("city", new StringC3Type())
                                 .addProperty("state", new StringC3Type())
-                                .addProperty("zip", new StringC3Type()))
+                                .addProperty("zip"+(addInvalidField ? "." : ""), new StringC3Type()))
                         .addDecorator(new NestedDecorator()));
 
         ret.addDecorator(new EntityDecorator().setMultiTenancyType(multiTenancyType));
@@ -131,26 +142,54 @@ public class TestDataService {
     }
 
     /**
+     * Creates a {@link CompletableFuture} that will return a {@link List} of static {@link Person} from the cache.
+     * Each call will return the exact same {@link List} of {@link Person}.
+     * @param numberToCreate the number of {@link Person} to create.
      * @return a {@link CompletableFuture} that will return a {@link List} of random {@link Person} from the cache.
      */
     public CompletableFuture<List<Person>> createTestPeople(int numberToCreate) {
-        return getPeopleCompletableFuture(numberToCreate, PEOPLE_KEY);
+        return getPeopleCompletableFuture(numberToCreate, false, PEOPLE_KEY);
     }
 
     /**
+     * Creates a {@link CompletableFuture} that will return a {@link List} of static {@link Person} with the id populated, from the cache.
+     * Each call will return the exact same {@link List} of {@link Person}.
+     * @param numberToCreate the number of {@link Person} with the id populated, to create.
      * @return a {@link CompletableFuture} that will return a {@link List} of random {@link Person} with the id populated, from the cache.
      */
     public CompletableFuture<List<Person>> createTestPeopleWithId(int numberToCreate) {
-        return getPeopleCompletableFuture(numberToCreate, PEOPLE_WITH_ID_KEY);
+        return getPeopleCompletableFuture(numberToCreate, false, PEOPLE_WITH_ID_KEY);
+    }
+
+    /**
+     * @param numberToCreate the number of random {@link Person} to create.
+     * @return a {@link CompletableFuture} that will return a {@link List} of random {@link Person} from the cache.
+     */
+    public CompletableFuture<List<Person>> createRandomTestPeople(int numberToCreate) {
+        return getPeopleCompletableFuture(numberToCreate, true, PEOPLE_KEY);
+    }
+
+    /**
+     * @param numberToCreate the number of random {@link Person} with the id populated, to create.
+     * @return a {@link CompletableFuture} that will return a {@link List} of random {@link Person} with the id populated, from the cache.
+     */
+    public CompletableFuture<List<Person>> createRandomTestPeopleWithId(int numberToCreate) {
+        return getPeopleCompletableFuture(numberToCreate, true, PEOPLE_WITH_ID_KEY);
     }
 
     private CompletableFuture<List<Person>> getPeopleCompletableFuture(int numberToCreate,
+                                                                       boolean random,
                                                                        String peopleKey) {
         return peopleCache.get(peopleKey).thenApply(people -> {
             int size = people.size();
+            if(!random && size < numberToCreate){
+                throw new IllegalArgumentException("Cannot create "+numberToCreate+" people, a max of "+size+" are available." +
+                                                           "\nIf you must create more people, use one of the random variants.");
+            }
+
             List<Person> ret = new ArrayList<>(numberToCreate);
             for(int i = 0; i < numberToCreate; i++) {
-                ret.add(people.get(ContinuumUtil.getRandomNumberInRange(size - 1)));
+                ret.add(people.get((random ? ContinuumUtil.getRandomNumberInRange(size - 1) : i)));
             }
             return ret;
         });

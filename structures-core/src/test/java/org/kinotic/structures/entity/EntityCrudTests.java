@@ -27,14 +27,16 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.kinotic.structures.ElasticsearchTestBase;
+import org.kinotic.structures.api.domain.DefaultEntityContext;
 import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.services.EntitiesService;
-import org.kinotic.structures.api.domain.DefaultEntityContext;
 import org.kinotic.structures.internal.sample.DummyParticipant;
 import org.kinotic.structures.internal.sample.Person;
 import org.kinotic.structures.support.StructureAndPersonHolder;
 import org.kinotic.structures.support.TestHelper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.Pageable;
@@ -49,6 +51,8 @@ import java.nio.charset.StandardCharsets;
 @SpringBootTest
 public class EntityCrudTests extends ElasticsearchTestBase {
 
+    private static final Logger log = LoggerFactory.getLogger(EntityCrudTests.class);
+
     @Autowired
     private EntitiesService entitiesService;
     @Autowired
@@ -60,16 +64,19 @@ public class EntityCrudTests extends ElasticsearchTestBase {
 
     private StructureAndPersonHolder createAndVerify(){
         return createAndVerify(1,
+                               true,
                                new DefaultEntityContext(new DummyParticipant()),
                                "-" + System.currentTimeMillis());
     }
 
     private StructureAndPersonHolder createAndVerify(int numberOfPeopleToCreate,
+                                                     boolean randomPeople,
                                                      EntityContext entityContext,
                                                      String structureSuffix){
         StructureAndPersonHolder ret = new StructureAndPersonHolder();
 
         StepVerifier.create(testHelper.createPersonStructureAndEntities(numberOfPeopleToCreate,
+                                                                        randomPeople,
                                                                         entityContext,
                                                                         structureSuffix))
                     .expectNextMatches(structureAndPersonHolder -> {
@@ -131,11 +138,11 @@ public class EntityCrudTests extends ElasticsearchTestBase {
         EntityContext context1 = new DefaultEntityContext(new DummyParticipant("tenant1", "user1"));
         EntityContext context2 = new DefaultEntityContext(new DummyParticipant("tenant2", "user2"));
 
-        StructureAndPersonHolder holder1 = createAndVerify(10, context1, "-testCount");
+        StructureAndPersonHolder holder1 = createAndVerify(10, true, context1, "-testCount");
 
         Assertions.assertNotNull(holder1);
 
-        StructureAndPersonHolder holder2 = createAndVerify(10, context2, "-testCount");
+        StructureAndPersonHolder holder2 = createAndVerify(10, true, context2, "-testCount");
 
         Assertions.assertNotNull(holder2);
 
@@ -156,11 +163,11 @@ public class EntityCrudTests extends ElasticsearchTestBase {
         EntityContext context1 = new DefaultEntityContext(new DummyParticipant("tenant1", "user1"));
         EntityContext context2 = new DefaultEntityContext(new DummyParticipant("tenant2", "user2"));
 
-        StructureAndPersonHolder holder1 = createAndVerify(10, context1, "-testAll");
+        StructureAndPersonHolder holder1 = createAndVerify(10, true, context1, "-testAll");
 
         Assertions.assertNotNull(holder1);
 
-        StructureAndPersonHolder holder2 = createAndVerify(10, context2, "-testAll");
+        StructureAndPersonHolder holder2 = createAndVerify(10, true, context2, "-testAll");
 
         Assertions.assertNotNull(holder2);
 
@@ -183,6 +190,55 @@ public class EntityCrudTests extends ElasticsearchTestBase {
                             && rawJsons.getTotalPages() == 1
                             && rawJsons.getContent().size() == 10)
                     .as("Verifying Tenant 2 has 10 entities")
+                    .verifyComplete();
+    }
+
+    @Test
+    public void testSearch(){
+        EntityContext context1 = new DefaultEntityContext(new DummyParticipant("tenant1", "user1"));
+        EntityContext context2 = new DefaultEntityContext(new DummyParticipant("tenant2", "user2"));
+
+        StructureAndPersonHolder holder1 = createAndVerify(10, false, context1, "-testSearch");
+
+        Assertions.assertNotNull(holder1);
+
+        StructureAndPersonHolder holder2 = createAndVerify(10, false, context2, "-testSearch");
+
+        Assertions.assertNotNull(holder2);
+
+        // TODO: verify all data items as well, not just sizes
+        StepVerifier.create(Mono.fromFuture(entitiesService.search(holder1.getStructure().getId(),
+                                                                    "lastName: Z*",
+                                                                    Pageable.ofSize(20), // make sure page size is larger than number of entities
+                                                                    RawJson.class,
+                                                                    context1)))
+                    .expectNextMatches(rawJsons -> {
+                        boolean b = rawJsons.getTotalElements() == 2
+                                && rawJsons.getTotalPages() == 1
+                                && rawJsons.getContent().size() == 2;
+                        if(!b){
+                            log.error("Wrong Data, Wat! Raw:\n"+rawJsons.getContent());
+                        }
+                        return b;
+                    })
+                    .as("Verifying search for Tenant 1 has 2 entities")
+                    .verifyComplete();
+
+        StepVerifier.create(Mono.fromFuture(entitiesService.search(holder1.getStructure().getId(),
+                                                                    "lastName: Z*",
+                                                                    Pageable.ofSize(20), // make sure page size is larger than number of entities
+                                                                    RawJson.class,
+                                                                    context2)))
+                    .expectNextMatches(rawJsons -> {
+                        boolean b = rawJsons.getTotalElements() == 2
+                                && rawJsons.getTotalPages() == 1
+                                && rawJsons.getContent().size() == 2;
+                        if(!b){
+                            log.error("Wrong Data, Wat! Raw:\n"+rawJsons.getContent());
+                        }
+                        return b;
+                    })
+                    .as("Verifying search for Tenant 2 has 2 entities")
                     .verifyComplete();
     }
 

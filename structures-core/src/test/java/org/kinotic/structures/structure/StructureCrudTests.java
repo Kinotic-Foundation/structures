@@ -20,13 +20,11 @@ package org.kinotic.structures.structure;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.kinotic.continuum.idl.api.schema.ArrayC3Type;
-import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
-import org.kinotic.continuum.idl.api.schema.StringC3Type;
-import org.kinotic.continuum.idl.api.schema.decorators.NotNullC3Decorator;
 import org.kinotic.structures.ElasticsearchTestBase;
+import org.kinotic.structures.api.decorators.MultiTenancyType;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.StructureService;
+import org.kinotic.structures.internal.sample.TestDataService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -41,24 +39,8 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 
 	@Autowired
 	private StructureService structureService;
-
-	private ObjectC3Type buildTestItemDefinition(boolean addInvalidField){
-		return new ObjectC3Type()
-				.setName("Person")
-				.setNamespace("org.kinotic.sample")
-				.addProperty("name", new StringC3Type().addDecorator(new NotNullC3Decorator()))
-				.addProperty("description", new StringC3Type())
-				.addProperty("addresses", new ArrayC3Type(
-						new ObjectC3Type()
-								.setName("Address")
-								.setNamespace("org.kinotic.sample")
-								.addProperty("street", new StringC3Type().addDecorator(new NotNullC3Decorator()))
-								.addProperty("city", new StringC3Type())
-								.addProperty("state", new StringC3Type())
-								.addProperty("zip"+(addInvalidField ? "." : ""), new StringC3Type())
-				));
-	}
-
+	@Autowired
+	private TestDataService testDataService;
 
 	@Test
 	public void createPublishAndDeleteStructure() throws Exception {
@@ -67,7 +49,7 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 		structure.setName("Person")
 				 .setNamespace("org.kinotic.sample")
 				 .setDescription("Defines a Person")
-				 .setEntityDefinition(buildTestItemDefinition(false));
+				 .setEntityDefinition(testDataService.createPersonSchema(MultiTenancyType.NONE, false));
 
 		CompletableFuture<Structure> future = structureService.save(structure);
 
@@ -107,9 +89,9 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 	public void createStructureInvalidField() throws Exception{
 		Structure structure = new Structure();
 		structure.setName("Person")
-				 .setNamespace("org.kinotic")
+				 .setNamespace("org.kinotic.sample")
 				 .setDescription("Defines a Person")
-				 .setEntityDefinition(buildTestItemDefinition(true));
+				 .setEntityDefinition(testDataService.createPersonSchema(MultiTenancyType.NONE, true));
 
 		CompletableFuture<Structure> future = structureService.save(structure);
 

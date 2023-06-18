@@ -60,7 +60,7 @@ public class DataInitializer {
                                                  int numberOfPeopleToCreate,
                                                  String tenantId,
                                                  String participantId){
-        return testDataService.createTestPeople(numberOfPeopleToCreate)
+        return testDataService.createRandomTestPeople(numberOfPeopleToCreate)
                               .thenCompose(people -> {
                                   List<CompletableFuture<RawJson>> completableFutures = new ArrayList<>();
                                   for(Person person : people){
