@@ -3,6 +3,7 @@ package org.kinotic.structures.internal.sample;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.kinotic.structures.api.config.StructuresProperties;
+import org.kinotic.structures.api.domain.DefaultEntityContext;
 import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.EntitiesService;
@@ -71,8 +72,8 @@ public class DataInitializer {
                                       }
                                       completableFutures.add(entitiesService.save(structure.getId(),
                                                                                   RawJson.from(jsonData),
-                                                                                  new DummyEntityContext(tenantId,
-                                                                                                         participantId)));
+                                                                                  new DefaultEntityContext(new DummyParticipant(tenantId,
+                                                                                                           participantId))));
                                   }
                                   return CompletableFuture.allOf(completableFutures.toArray(new CompletableFuture[0]));
                               });

@@ -124,7 +124,7 @@ public class DelegatingReadPreProcessor {
 
         if(searchPreProcessors != null && !searchPreProcessors.isEmpty()){
             for(Triple<String, C3Decorator, SearchPreProcessor<C3Decorator>> tuple : searchPreProcessors){
-                tuple.getRight().beforeSearch(structure, tuple.getLeft(), tuple.getMiddle(), builder, context);
+                tuple.getRight().beforeSearch(structure, tuple.getLeft(), tuple.getMiddle(), queryBuilder, context);
             }
         }
     }

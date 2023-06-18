@@ -1,6 +1,6 @@
 package org.kinotic.structures.api.decorators.runtime.crud;
 
-import co.elastic.clients.elasticsearch.core.SearchRequest;
+import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import org.kinotic.continuum.idl.api.schema.decorators.C3Decorator;
 import org.kinotic.structures.api.decorators.runtime.C3DecoratorInstance;
 import org.kinotic.structures.api.domain.EntityContext;
@@ -14,6 +14,6 @@ public interface SearchPreProcessor <D extends C3Decorator> extends C3DecoratorI
     void beforeSearch(Structure structure,
                       String jsonPath,
                       D decorator,
-                      SearchRequest.Builder builder,
+                      Query.Builder queryBuilder,
                       EntityContext context);
 }

@@ -30,7 +30,8 @@ import org.kinotic.structures.ElasticsearchTestBase;
 import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.services.EntitiesService;
-import org.kinotic.structures.internal.sample.DummyEntityContext;
+import org.kinotic.structures.api.domain.DefaultEntityContext;
+import org.kinotic.structures.internal.sample.DummyParticipant;
 import org.kinotic.structures.internal.sample.Person;
 import org.kinotic.structures.support.StructureAndPersonHolder;
 import org.kinotic.structures.support.TestHelper;
@@ -59,7 +60,7 @@ public class EntityCrudTests extends ElasticsearchTestBase {
 
     private StructureAndPersonHolder createAndVerify(){
         return createAndVerify(1,
-                               new DummyEntityContext(),
+                               new DefaultEntityContext(new DummyParticipant()),
                                "-" + System.currentTimeMillis());
     }
 
@@ -93,7 +94,7 @@ public class EntityCrudTests extends ElasticsearchTestBase {
 
         StepVerifier.create(Mono.fromFuture(entitiesService.deleteById(holder.getStructure().getId(),
                                                                        holder.getFirstPerson().getId(),
-                                                                       new DummyEntityContext())))
+                                                                       new DefaultEntityContext(new DummyParticipant()))))
                     .verifyComplete();
     }
 
@@ -106,7 +107,7 @@ public class EntityCrudTests extends ElasticsearchTestBase {
         StepVerifier.create(Mono.fromFuture(entitiesService.findById(holder.getStructure().getId(),
                                                                      holder.getFirstPerson().getId(),
                                                                      RawJson.class,
-                                                                     new DummyEntityContext())))
+                                                                     new DefaultEntityContext(new DummyParticipant()))))
                 .expectNextMatches(found -> {
                     boolean ret;
                     try {
@@ -127,8 +128,8 @@ public class EntityCrudTests extends ElasticsearchTestBase {
 
     @Test
     public void testCount(){
-        EntityContext context1 = new DummyEntityContext("tenant1", "user1");
-        EntityContext context2 = new DummyEntityContext("tenant2", "user2");
+        EntityContext context1 = new DefaultEntityContext(new DummyParticipant("tenant1", "user1"));
+        EntityContext context2 = new DefaultEntityContext(new DummyParticipant("tenant2", "user2"));
 
         StructureAndPersonHolder holder1 = createAndVerify(10, context1, "-testCount");
 
@@ -152,8 +153,8 @@ public class EntityCrudTests extends ElasticsearchTestBase {
     @Test
     public void testFindAll(){
 
-        EntityContext context1 = new DummyEntityContext("tenant1", "user1");
-        EntityContext context2 = new DummyEntityContext("tenant2", "user2");
+        EntityContext context1 = new DefaultEntityContext(new DummyParticipant("tenant1", "user1"));
+        EntityContext context2 = new DefaultEntityContext(new DummyParticipant("tenant2", "user2"));
 
         StructureAndPersonHolder holder1 = createAndVerify(10, context1, "-testAll");
 
@@ -194,7 +195,7 @@ public class EntityCrudTests extends ElasticsearchTestBase {
         StepVerifier.create(Mono.fromFuture(entitiesService.findById(holder.getStructure().getId(),
                                                                      "missing",
                                                                      RawJson.class,
-                                                                     new DummyEntityContext())))
+                                                                     new DefaultEntityContext(new DummyParticipant()))))
                     .verifyComplete();
     }
 
