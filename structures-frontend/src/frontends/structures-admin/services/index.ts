@@ -1,2 +1,2 @@
-export * from './IEntitiesService'
+export * from './IJsonEntitiesService'
 export * from './IStructureService'

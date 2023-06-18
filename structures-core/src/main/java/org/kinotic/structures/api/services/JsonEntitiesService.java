@@ -1,7 +1,8 @@
 package org.kinotic.structures.api.services;
 
 import org.kinotic.continuum.api.annotations.Publish;
-import org.kinotic.structures.api.domain.EntityContext;
+import org.kinotic.continuum.core.api.security.Participant;
+import org.kinotic.structures.api.domain.RawJson;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -9,9 +10,10 @@ import java.util.concurrent.CompletableFuture;
 
 /**
  * Provides access to entities for a given structure.
- * Created by Navíd Mitchell 🤪on 5/10/23.
+ * Created by Nic Padilla 🤪on 6/18/23.
  */
-public interface EntitiesService {
+@Publish
+public interface JsonEntitiesService {
 
     /**
      * Saves a given entity. Use the returned instance for further operations as the save operation might have changed the
@@ -19,53 +21,51 @@ public interface EntitiesService {
      *
      * @param structureId the id of the structure to save the entity for
      * @param entity      must not be {@literal null}
-     * @param context     the context for this operation
+     * @param participant the participant of the logged-in user
      * @return {@link CompletableFuture} emitting the saved entity
      * @throws IllegalArgumentException in case the given {@literal entity} is {@literal null}
      */
-    <T> CompletableFuture<T> save(String structureId, T entity, EntityContext context);
+    CompletableFuture<RawJson> save(String structureId, RawJson entity, Participant participant);
 
     /**
      * Retrieves an entity by its id.
      *
      * @param structureId the id of the structure to save the entity for
      * @param id          must not be {@literal null}
-     * @param type        the type of the entity
-     * @param context     the context for this operation
+     * @param participant the participant of the logged-in user
      * @return {@link CompletableFuture} with the entity with the given id or {@link CompletableFuture} emitting null if none found
      * @throws IllegalArgumentException in case the given {@literal id} is {@literal null}
      */
-    <T> CompletableFuture<T> findById(String structureId, String id, Class<T> type, EntityContext context);
+    CompletableFuture<RawJson> findById(String structureId, String id, Participant participant);
 
     /**
      * Returns the number of entities available.
      * @param structureId the id of the structure to count
-     * @param context     the context for this operation
+     * @param participant the participant of the logged-in user
      * @return {@link CompletableFuture} emitting the number of entities.
      */
-    CompletableFuture<Long> count(String structureId, EntityContext context);
+    CompletableFuture<Long> count(String structureId, Participant participant);
 
     /**
      * Deletes the entity with the given id.
      *
      * @param structureId the id of the structure to save the entity for
      * @param id          must not be {@literal null}
-     * @param context     the context for this operation
+     * @param participant the participant of the logged-in user
      * @return {@link CompletableFuture} emitting when delete is complete
      * @throws IllegalArgumentException in case the given {@literal id} is {@literal null}
      */
-    CompletableFuture<Void> deleteById(String structureId, String id, EntityContext context);
+    CompletableFuture<Void> deleteById(String structureId, String id, Participant participant);
 
     /**
      * Returns a {@link Page} of entities meeting the paging restriction provided in the {@code Pageable} object.
      *
      * @param structureId the id of the structure to save the entity for
      * @param pageable    the page settings to be used
-     * @param type        the type of the entity
-     * @param context     the context for this operation
+     * @param participant the participant of the logged-in user
      * @return a page of entities
      */
-    <T> CompletableFuture<Page<T>> findAll(String structureId, Pageable pageable, Class<T> type, EntityContext context);
+    CompletableFuture<Page<RawJson>> findAll(String structureId, Pageable pageable, Participant participant);
 
     /**
      * Returns a {@link Page} of entities matching the search text and paging restriction provided in the {@code Pageable} object.
@@ -75,10 +75,9 @@ public interface EntitiesService {
      * @param structureId the id of the structure to save the entity for
      * @param searchText  the text to search for entities for
      * @param pageable    the page settings to be used
-     * @param type        the type of the entity
-     * @param context     the context for this operation
+     * @param participant the participant of the logged-in user
      * @return a page of entities
      */
-    <T> CompletableFuture<Page<T>> search(String structureId, String searchText, Pageable pageable, Class<T> type, EntityContext context);
+    CompletableFuture<Page<RawJson>> search(String structureId, String searchText, Pageable pageable, Participant participant);
 
 }

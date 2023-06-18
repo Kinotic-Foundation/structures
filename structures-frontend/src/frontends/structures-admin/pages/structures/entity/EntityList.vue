@@ -63,7 +63,7 @@
 <script lang="ts">
 import {Component, Prop, Vue} from 'vue-property-decorator'
 import {DataOptions, DataTableHeader} from 'vuetify'
-import {Identifiable, DataSourceUtils, Order, Direction, Pageable, Page, Continuum} from '@kinotic/continuum'
+import {Identifiable, Order, Direction, Pageable, Page, Continuum} from '@kinotic/continuum'
 import CrudTable from '@/frontends/continuum/components/CrudTable.vue'
 import {
   mdiPlus,
@@ -77,10 +77,13 @@ import {
   mdiArrowCollapseRight,
   mdiUmbraco, mdiMagnify, mdiChevronLeft, mdiChevronRight
 } from '@mdi/js'
-import {EntitiesService, IEntitiesService, IStructureService} from "@/frontends/structures-admin/services";
+import {
+  IJsonEntitiesService,
+  IStructureService,
+  JsonEntitiesService
+} from "@/frontends/structures-admin/services";
 import DatetimeUtil from "@/frontends/structures-admin/pages/structures/util/DatetimeUtil";
 import {Structure} from "@/frontends/structures-admin/pages/structures/structures/Structure";
-import {C3Decorator, C3Type, ObjectC3Type} from "@kinotic/continuum-idl-js";
 
 /**
  * Provides a List page that can be used with the {@link CrudLayout}
@@ -135,7 +138,7 @@ export default class EntityList extends Vue {
   /**
    * Services
    */
-  private entitiesService!: IEntitiesService
+  private jsonEntitiesService: IJsonEntitiesService = new JsonEntitiesService()
   private structureService!: IStructureService
 
   private options: DataOptions = {
@@ -149,15 +152,12 @@ export default class EntityList extends Vue {
     mustSort: true
   }
 
-
   constructor() {
     super()
   }
 
-
   // Lifecycle hooks
   public created() {
-    this.entitiesService = new EntitiesService('org.kinotic.structures.api.services.EntitiesService')
     this.structureService = Continuum.crudServiceProxy('org.kinotic.structures.api.services.StructureService') as IStructureService
   }
 
@@ -238,9 +238,9 @@ export default class EntityList extends Vue {
       let queryPromise!: Promise<Page<any>>
 
       if (this.searchText !== null && this.searchText.length > 0) {
-        queryPromise = this.entitiesService.search(this.structureId, this.searchText, pageable)
+        queryPromise = this.jsonEntitiesService.search(this.structureId, this.searchText, pageable)
       } else {
-        queryPromise = this.entitiesService.findAll(this.structureId, pageable)
+        queryPromise = this.jsonEntitiesService.findAll(this.structureId, pageable)
       }
 
       queryPromise.then((page: Page<any>) => {
@@ -265,7 +265,6 @@ export default class EntityList extends Vue {
       })
     }
   }
-
 }
 </script>
 

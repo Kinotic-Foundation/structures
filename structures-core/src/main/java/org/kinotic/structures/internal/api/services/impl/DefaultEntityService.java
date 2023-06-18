@@ -123,9 +123,10 @@ public class DefaultEntityService implements EntityService {
                                 builder -> {
 
                                     Query.Builder queryBuilder = new Query.Builder();
-                                    queryBuilder.queryString(qs -> qs.query(searchText));
 
                                     delegatingReadPreProcessor.beforeSearch(structure, builder, queryBuilder, context);
+
+                                    builder.q(searchText);
 
                                     builder.query(queryBuilder.build());
 

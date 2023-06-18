@@ -67,7 +67,7 @@
 import { Component, Prop, Vue } from 'vue-property-decorator'
 import CrudEntityAddEdit from '@/frontends/continuum/components/CrudEntityAddEdit.vue'
 import {Structure} from '@/frontends/structures-admin/pages/structures/structures/Structure'
-import {IdC3Type, IdDecorator, ObjectC3Type} from '@kinotic/continuum-idl-js'
+import {IdC3Type, ObjectC3Type} from '@kinotic/continuum-idl-js'
 import {IndexNameHelper} from '@/frontends/structures-admin/pages/structures/util/IndexNameHelper'
 import {Namespace} from '@/frontends/structures-admin/pages/structures/namespaces/Namespace'
 import {Continuum, ICrudServiceProxy, Pageable} from '@kinotic/continuum'
