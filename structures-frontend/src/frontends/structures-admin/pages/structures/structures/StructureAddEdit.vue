@@ -64,14 +64,14 @@
 </template>
 
 <script lang="ts">
-import { Component, Prop, Vue } from 'vue-property-decorator'
+import {Component, Prop, Vue} from 'vue-property-decorator'
 import CrudEntityAddEdit from '@/frontends/continuum/components/CrudEntityAddEdit.vue'
 import {Structure} from '@/frontends/structures-admin/pages/structures/structures/Structure'
-import {IdC3Type, ObjectC3Type} from '@kinotic/continuum-idl-js'
+import {BooleanC3Type, EntityDecorator, IdC3Type, MultiTenancyType, ObjectC3Type} from '@kinotic/continuum-idl-js'
 import {IndexNameHelper} from '@/frontends/structures-admin/pages/structures/util/IndexNameHelper'
 import {Namespace} from '@/frontends/structures-admin/pages/structures/namespaces/Namespace'
 import {Continuum, ICrudServiceProxy, Pageable} from '@kinotic/continuum'
-import {IStructureService} from "@/frontends/structures-admin/services";
+import {IStructureService, StructureService} from "@/frontends/structures-admin/services";
 
 type RuleValidator = (value: any) => string | boolean
 
@@ -102,7 +102,7 @@ export default class StructureAddEdit extends Vue {
     }
   ]
   private namespaceService: ICrudServiceProxy<Namespace> = Continuum.crudServiceProxy(this.namespaceServiceIdentifier)
-  private structureService: IStructureService = Continuum.crudServiceProxy('org.kinotic.structures.api.services.StructureService') as IStructureService
+  private structureService: IStructureService = new StructureService(Continuum.serviceProxy('org.kinotic.structures.api.services.StructureService'))
 
 
   constructor() {
@@ -145,9 +145,17 @@ export default class StructureAddEdit extends Vue {
 
   }
 
-  public updateStructure(structure: any){
+  public updateStructure(structure: Structure){
     structure.namespace = this.selectedNamespace.id
-    structure.entityDefinition = new ObjectC3Type().addProperty('id', new IdC3Type())
+    let objectC3Type: ObjectC3Type = new ObjectC3Type()
+    objectC3Type = objectC3Type.addProperty('id', new IdC3Type())
+    objectC3Type = objectC3Type.addProperty('isValid', new BooleanC3Type())
+    structure.entityDefinition = objectC3Type
+    structure.entityDefinition.namespace = this.selectedNamespace.id
+    structure.entityDefinition.name = structure.name
+    let entityDecorator: EntityDecorator = new EntityDecorator()
+    entityDecorator.multiTenancyType = MultiTenancyType.SHARED
+    structure.entityDefinition.addDecorator(entityDecorator)
   }
 
   private displayAlert(text: string) {

@@ -4,6 +4,7 @@ import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import co.elastic.clients.elasticsearch._types.mapping.DynamicMapping;
 import co.elastic.clients.elasticsearch._types.mapping.TypeMapping;
 import co.elastic.clients.elasticsearch._types.query_dsl.TermQuery;
+import org.apache.commons.lang3.Validate;
 import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.StructureService;
@@ -45,6 +46,12 @@ public class DefaultStructureService extends AbstractCrudService<Structure> impl
                                 .filter(TermQuery.of(tq -> tq.field("namespace").value(namespace))._toQuery()
                                 )
                         )));
+    }
+
+    @Override
+    public CompletableFuture<Structure> create(Structure entity) {
+        Validate.notNull(entity);
+        return save(entity);
     }
 
     @Override

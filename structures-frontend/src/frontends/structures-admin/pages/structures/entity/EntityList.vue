@@ -61,7 +61,7 @@
 </template>
 
 <script lang="ts">
-import {Component, Prop, Vue} from 'vue-property-decorator'
+import {Component, Prop, Vue, Watch} from 'vue-property-decorator'
 import {DataOptions, DataTableHeader} from 'vuetify'
 import {Identifiable, Order, Direction, Pageable, Page, Continuum} from '@kinotic/continuum'
 import CrudTable from '@/frontends/continuum/components/CrudTable.vue'
@@ -80,7 +80,7 @@ import {
 import {
   IJsonEntitiesService,
   IStructureService,
-  JsonEntitiesService
+  JsonEntitiesService, StructureService
 } from "@/frontends/structures-admin/services";
 import DatetimeUtil from "@/frontends/structures-admin/pages/structures/util/DatetimeUtil";
 import {Structure} from "@/frontends/structures-admin/pages/structures/structures/Structure";
@@ -139,7 +139,7 @@ export default class EntityList extends Vue {
    * Services
    */
   private jsonEntitiesService: IJsonEntitiesService = new JsonEntitiesService()
-  private structureService!: IStructureService
+  private structureService: IStructureService = new StructureService(Continuum.serviceProxy('org.kinotic.structures.api.services.StructureService'))
 
   private options: DataOptions = {
     page: 1,
@@ -148,17 +148,12 @@ export default class EntityList extends Vue {
     sortDesc: [],
     groupBy: [],
     groupDesc: [],
-    multiSort: true,
+    multiSort: false,// FIXME: look at supporting multi-sort.
     mustSort: true
   }
 
   constructor() {
     super()
-  }
-
-  // Lifecycle hooks
-  public created() {
-    this.structureService = Continuum.crudServiceProxy('org.kinotic.structures.api.services.StructureService') as IStructureService
   }
 
   public mounted() {
@@ -187,6 +182,13 @@ export default class EntityList extends Vue {
         console.error(`Error occurred during retrieval of structure properties : ${error.message}`)
         this.displayAlert(error.message)
       })
+  }
+
+  @Watch('options')
+  public watchPagination(value: any, oldValue: any) {
+    if (this.finishedInitialLoad) {
+      this.find()
+    }
   }
 
   public onResize() {

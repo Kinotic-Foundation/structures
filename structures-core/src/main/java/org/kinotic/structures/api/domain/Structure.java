@@ -38,7 +38,7 @@ import java.util.List;
 @Accessors(chain = true)
 @NoArgsConstructor
 @Document(indexName = "structure")
-@Setting(shards = 5, replicas = 2)
+@Setting(shards = 2, replicas = 2)
 public class Structure implements Identifiable<String> {
 
     @Id

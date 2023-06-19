@@ -27,8 +27,10 @@
             </v-icon>
           </template>
 
-          <template v-slot:expanded-item="{ item }" >
-            <td :colspan="headers.length" class="pa-6"><pre>{{item.entityDefinition.properties}}</pre></td>
+          <template v-slot:expanded-item="{ item }"  >
+            <td :colspan="headers.length" class="pa-6" :key="item.id">
+              <pre>{{item?.entityDefinition}}</pre>
+            </td>
           </template>
 
           <template #additional-actions="{ item }" >
@@ -67,7 +69,7 @@
 <script lang="ts">
 import { Component, Vue } from 'vue-property-decorator'
 import { DataTableHeader } from 'vuetify'
-import {Identifiable, Continuum} from '@kinotic/continuum'
+import {Continuum, Identifiable} from '@kinotic/continuum'
 import CrudTable from '@/frontends/continuum/components/CrudTable.vue'
 import {
   mdiPlus,
@@ -81,7 +83,7 @@ import {
   mdiArrowCollapseRight,
   mdiUmbraco
 } from '@mdi/js'
-import {IStructureService} from '@/frontends/structures-admin/services/IStructureService'
+import {IStructureService, StructureService} from '@/frontends/structures-admin/services/IStructureService'
 import DatetimeUtil from '@/frontends/structures-admin/pages/structures/util/DatetimeUtil'
 
 /**
@@ -114,7 +116,7 @@ export default class StructuresList extends Vue {
   /**
    * Services
    */
-  private dataSource!: IStructureService
+  private dataSource: IStructureService = new StructureService(Continuum.serviceProxy('org.kinotic.structures.api.services.StructureService'))
   private publishingId: string = ""
 
   private icons = {
@@ -134,10 +136,6 @@ export default class StructuresList extends Vue {
     super()
   }
 
-  // Lifecycle hooks
-  public created() {
-    this.dataSource = Continuum.crudServiceProxy('org.kinotic.structures.api.services.StructureService') as IStructureService
-  }
 
   public onAddItem() {
     this.$router.push(`${this.$route.path }/add`)

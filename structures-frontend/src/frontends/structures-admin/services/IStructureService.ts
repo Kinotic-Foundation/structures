@@ -1,4 +1,4 @@
-import {CrudServiceProxy, ICrudServiceProxy, Page, Pageable} from '@kinotic/continuum'
+import {Continuum, CrudServiceProxy, ICrudServiceProxy, IServiceProxy, Page, Pageable} from '@kinotic/continuum'
 import {Structure} from '@/frontends/structures-admin/pages/structures/structures/Structure'
 export interface IStructureService extends ICrudServiceProxy<Structure> {
 
@@ -34,6 +34,10 @@ export interface IStructureService extends ICrudServiceProxy<Structure> {
 }
 
 export class StructureService extends CrudServiceProxy<Structure> {
+
+    constructor(serviceProxy: IServiceProxy) {
+        super(serviceProxy)
+    }
 
     public findAllPublishedForNamespace(namespace: string, pageable: Pageable): Promise<Page<Structure>> {
         return this.serviceProxy.invoke('findAllPublishedForNamespace', [namespace, pageable])

@@ -10,7 +10,7 @@
             :loading="loading"
             :single-expand="singleExpand"
             :show-expand="singleExpand"
-            item-key="identity"
+            item-key="id"
             loading-text="Loading... Please wait"
             class="elevation-1"
             @page-count="pageCount = $event"
