@@ -63,24 +63,22 @@
 <script lang="ts">
 import {Component, Prop, Vue, Watch} from 'vue-property-decorator'
 import {DataOptions, DataTableHeader} from 'vuetify'
-import {Identifiable, Order, Direction, Pageable, Page, Continuum} from '@kinotic/continuum'
+import {Identifiable, Order, Direction, Pageable, Page} from '@kinotic/continuum'
 import CrudTable from '@/frontends/continuum/components/CrudTable.vue'
 import {
   mdiPlus,
   mdiPencil,
   mdiDelete,
-  mdiClose,
-  mdiDatabase,
-  mdiMinusCircle,
-  mdiPlusCircle,
   mdiArrowCollapseLeft,
   mdiArrowCollapseRight,
-  mdiUmbraco, mdiMagnify, mdiChevronLeft, mdiChevronRight
+  mdiMagnify,
+  mdiChevronLeft,
+  mdiChevronRight
 } from '@mdi/js'
 import {
   IJsonEntitiesService,
   IStructureService,
-  JsonEntitiesService, StructureService
+  Structures
 } from "@/frontends/structures-admin/services";
 import DatetimeUtil from "@/frontends/structures-admin/pages/structures/util/DatetimeUtil";
 import {Structure} from "@/frontends/structures-admin/pages/structures/structures/Structure";
@@ -138,8 +136,8 @@ export default class EntityList extends Vue {
   /**
    * Services
    */
-  private jsonEntitiesService: IJsonEntitiesService = new JsonEntitiesService()
-  private structureService: IStructureService = new StructureService(Continuum.serviceProxy('org.kinotic.structures.api.services.StructureService'))
+  private jsonEntitiesService: IJsonEntitiesService = Structures.getJsonEntitiesService()
+  private structureService: IStructureService = Structures.getStructureService()
 
   private options: DataOptions = {
     page: 1,
