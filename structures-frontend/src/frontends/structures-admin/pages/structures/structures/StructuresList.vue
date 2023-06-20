@@ -69,7 +69,7 @@
 <script lang="ts">
 import { Component, Vue } from 'vue-property-decorator'
 import { DataTableHeader } from 'vuetify'
-import {Continuum, Identifiable} from '@kinotic/continuum'
+import {Identifiable} from '@kinotic/continuum'
 import CrudTable from '@/frontends/continuum/components/CrudTable.vue'
 import {
   mdiPlus,
@@ -85,6 +85,7 @@ import {
 } from '@mdi/js'
 import {IStructureService, StructureService} from '@/frontends/structures-admin/services/IStructureService'
 import DatetimeUtil from '@/frontends/structures-admin/pages/structures/util/DatetimeUtil'
+import {Structures} from "@/frontends/structures-admin/services";
 
 /**
  * Provides a List page that can be used with the {@link CrudLayout}
@@ -116,7 +117,7 @@ export default class StructuresList extends Vue {
   /**
    * Services
    */
-  private dataSource: IStructureService = new StructureService(Continuum.serviceProxy('org.kinotic.structures.api.services.StructureService'))
+  private dataSource: IStructureService = Structures.getStructureService()
   private publishingId: string = ""
 
   private icons = {

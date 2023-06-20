@@ -1,4 +1,5 @@
 import {Continuum, IServiceProxy, Page, Pageable} from '@kinotic/continuum'
+import {reactive} from 'vue'
 
 
 export interface IJsonEntitiesService {
@@ -99,3 +100,4 @@ export class JsonEntitiesService implements IJsonEntitiesService {
 
 }
 
+export const JSON_ENTITIES_SERVICE: IJsonEntitiesService = reactive(new JsonEntitiesService())
