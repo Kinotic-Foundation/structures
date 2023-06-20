@@ -224,7 +224,10 @@ public class DefaultStructureService extends AbstractCrudService<Structure> impl
 
     @Override
     public CompletableFuture<Page<Structure>> search(String searchText, Pageable pageable) {
-        return null;
+        return crudServiceTemplate.search(indexName,
+                                          pageable,
+                                          Structure.class,
+                                          builder -> builder.q(searchText));
     }
 
 }

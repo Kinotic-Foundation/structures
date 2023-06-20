@@ -6,10 +6,13 @@ import io.vertx.core.http.HttpServer;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.CorsHandler;
+import org.kinotic.continuum.core.api.security.SecurityService;
+import org.kinotic.continuum.gateway.api.security.AuthenticationHandler;
 import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.internal.api.services.GraphQlProviderService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.Set;
@@ -24,13 +27,16 @@ public class GraphQLVerticle extends AbstractVerticle {
 
     private final StructuresProperties properties;
     private final GraphQlProviderService graphQlProviderService;
+    private final SecurityService securityService;
 
     private HttpServer server;
 
     public GraphQLVerticle(StructuresProperties properties,
-                           GraphQlProviderService graphQlProviderService) {
+                           GraphQlProviderService graphQlProviderService,
+                           @Autowired(required = false) SecurityService securityService) {
         this.properties = properties;
         this.graphQlProviderService = graphQlProviderService;
+        this.securityService = securityService;
     }
 
     @Override
@@ -40,6 +46,10 @@ public class GraphQLVerticle extends AbstractVerticle {
 
         router.route().handler(CorsHandler.create(properties.getCorsAllowedOriginPattern())
                                           .allowedHeaders(Set.of("Accept", "Authorization", "Content-Type")));
+
+        if(securityService !=null){
+            router.route().handler(new AuthenticationHandler(securityService, vertx));
+        }
 
         router.post(properties.getGraphqlPath()+":structureNamespace")
               .consumes("application/json")

@@ -1,6 +1,7 @@
 package org.kinotic.structures.internal.endpoints;
 
 import io.vertx.ext.web.RoutingContext;
+import org.kinotic.continuum.core.api.event.EventConstants;
 import org.kinotic.continuum.core.api.security.Participant;
 import org.kinotic.structures.api.domain.EntityContext;
 
@@ -17,6 +18,6 @@ public class RoutingContextToEntityContextAdapter implements EntityContext {
 
     @Override
     public Participant getParticipant() {
-        return null;
+        return routingContext.get(EventConstants.SENDER_HEADER);
     }
 }

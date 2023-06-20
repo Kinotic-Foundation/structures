@@ -1,12 +1,13 @@
 package org.kinotic.structures.api.domain;
 
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import lombok.experimental.Accessors;
 import org.kinotic.continuum.api.Identifiable;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.elasticsearch.annotations.*;
+import org.springframework.data.elasticsearch.annotations.Document;
+import org.springframework.data.elasticsearch.annotations.Field;
+import org.springframework.data.elasticsearch.annotations.FieldType;
+import org.springframework.data.elasticsearch.annotations.Setting;
 
 import java.util.Date;
 
@@ -14,16 +15,19 @@ import java.util.Date;
 @Setter
 @Accessors(chain = true)
 @NoArgsConstructor
+@RequiredArgsConstructor
 @Document(indexName = "namespace")
 @Setting(shards = 2, replicas = 2)
 public class Namespace implements Identifiable<String> {
 
     @Id
     @Field(type = FieldType.Keyword)
-    private String id = null;
+    @NonNull
+    private String id;
 
     @Field(type = FieldType.Text)
-    private String description = null;
+    @NonNull
+    private String description;
 
     @Field(type=FieldType.Date)
     private Date updated = null;

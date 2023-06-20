@@ -15,6 +15,8 @@ import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.CorsHandler;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.apache.commons.lang3.Validate;
+import org.kinotic.continuum.core.api.security.SecurityService;
+import org.kinotic.continuum.gateway.api.security.AuthenticationHandler;
 import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.domain.Structure;
@@ -23,6 +25,7 @@ import org.kinotic.structures.internal.api.services.OpenApiService;
 import org.kinotic.structures.internal.utils.VertxWebUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
@@ -43,6 +46,7 @@ public class OpenApiVerticle extends AbstractVerticle {
     private final EntitiesService entitiesService;
     private final ObjectMapper objectMapper;
     private final OpenApiService openApiService;
+    private final SecurityService securityService;
     private final String apiBasePath;
     private final Handler<RoutingContext> failureHandler = VertxWebUtil.createExceptionConvertingFailureHandler();
 
@@ -51,11 +55,13 @@ public class OpenApiVerticle extends AbstractVerticle {
     public OpenApiVerticle(StructuresProperties properties,
                            EntitiesService entitiesService,
                            ObjectMapper objectMapper,
-                           OpenApiService openApiService) {
+                           OpenApiService openApiService,
+                           @Autowired(required = false) SecurityService securityService) {
         this.properties = properties;
         this.entitiesService = entitiesService;
         this.objectMapper = objectMapper;
         this.openApiService = openApiService;
+        this.securityService = securityService;
         apiBasePath = properties.getOpenApiPath();
     }
 
@@ -66,6 +72,36 @@ public class OpenApiVerticle extends AbstractVerticle {
 
         router.route().handler(CorsHandler.create(properties.getCorsAllowedOriginPattern())
                                           .allowedHeaders(Set.of("Accept", "Authorization", "Content-Type")));
+
+        // Open API Docs
+        router.get("/api-docs/:structureNamespace/openapi.json")
+              .produces("application/json")
+              .failureHandler(failureHandler)
+              .handler(ctx ->{
+
+                  String structureNamespace = ctx.pathParam("structureNamespace");
+                  Validate.notNull(structureNamespace, "structureNamespace must not be null");
+
+                  VertxCompletableFuture.from(vertx, openApiService.getOpenApiSpec(structureNamespace))
+                                        .thenApply((Function<OpenAPI, Void>) openAPI -> {
+                                            try {
+
+                                                ObjectMapper mapper = new ObjectMapper();
+                                                mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+                                                byte[] bytes = mapper.writeValueAsBytes(openAPI);
+                                                ctx.response().putHeader("Content-Type", "application/json");
+                                                ctx.response().end(Buffer.buffer(bytes));
+
+                                            } catch (JsonProcessingException e) {
+                                                VertxWebUtil.writeException(ctx.response(), e);
+                                            }
+                                            return null;
+                                        });
+              });
+
+        if(securityService !=null){
+            router.route().handler(new AuthenticationHandler(securityService, vertx));
+        }
 
         // Get Entity By ID
         router.get(apiBasePath+":structureNamespace/:structureName/:id")
@@ -166,31 +202,6 @@ public class OpenApiVerticle extends AbstractVerticle {
                                         .handle(new MultiEntityHandler(ctx, objectMapper));
               });
 
-        // Open API Docs
-        router.get("/api-docs/:structureNamespace/openapi.json")
-              .produces("application/json")
-              .failureHandler(failureHandler)
-              .handler(ctx ->{
-
-                  String structureNamespace = ctx.pathParam("structureNamespace");
-                  Validate.notNull(structureNamespace, "structureNamespace must not be null");
-
-                  VertxCompletableFuture.from(vertx, openApiService.getOpenApiSpec(structureNamespace))
-                                        .thenApply((Function<OpenAPI, Void>) openAPI -> {
-                                            try {
-
-                                                ObjectMapper mapper = new ObjectMapper();
-                                                mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-                                                byte[] bytes = mapper.writeValueAsBytes(openAPI);
-                                                ctx.response().putHeader("Content-Type", "application/json");
-                                                ctx.response().end(Buffer.buffer(bytes));
-
-                                            } catch (JsonProcessingException e) {
-                                                VertxWebUtil.writeException(ctx.response(), e);
-                                            }
-                                            return null;
-                                        });
-              });
 
         // Begin listening for requests
         server.requestHandler(router).listen(properties.getOpenApiPort(), ar -> {

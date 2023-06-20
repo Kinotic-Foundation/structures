@@ -12,6 +12,7 @@ import org.kinotic.continuum.idl.api.schema.StringC3Type;
 import org.kinotic.continuum.internal.utils.ContinuumUtil;
 import org.kinotic.structures.api.decorators.*;
 import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.api.services.NamespaceService;
 import org.kinotic.structures.api.services.StructureService;
 import org.kinotic.structures.internal.utils.StructuresUtil;
 import org.springframework.core.io.ResourceLoader;
@@ -33,14 +34,17 @@ public class TestDataService {
     private static final String PEOPLE_KEY = "people";
     private static final String PEOPLE_WITH_ID_KEY = "people-with-id";
 
+    private final NamespaceService namespaceService;
     private final StructureService structureService;
 
     private final AsyncLoadingCache<String, List<Person>> peopleCache;
 
-    public TestDataService(StructureService structureService,
+    public TestDataService(NamespaceService namespaceService,
+                           StructureService structureService,
                            ResourceLoader resourceLoader,
                            ObjectMapper objectMapper) {
 
+        this.namespaceService = namespaceService;
         this.structureService = structureService;
 
         peopleCache = Caffeine.newBuilder()
@@ -72,12 +76,12 @@ public class TestDataService {
                 .addProperty("lastName", new StringC3Type())
                 .addProperty("addresses", new ArrayC3Type()
                         .setContains(new ObjectC3Type()
-                                .setName("Address")
-                                .setNamespace("org.kinotic.sample")
-                                .addProperty("street", new StringC3Type().addDecorator(new TextDecorator()))
-                                .addProperty("city", new StringC3Type())
-                                .addProperty("state", new StringC3Type())
-                                .addProperty("zip"+(addInvalidField ? "." : ""), new StringC3Type()))
+                                             .setName("Address")
+                                             .setNamespace("org.kinotic.sample")
+                                             .addProperty("street", new StringC3Type().addDecorator(new TextDecorator()))
+                                             .addProperty("city", new StringC3Type())
+                                             .addProperty("state", new StringC3Type())
+                                             .addProperty("zip"+(addInvalidField ? "." : ""), new StringC3Type()))
                         .addDecorator(new NestedDecorator()));
 
         ret.addDecorator(new EntityDecorator().setMultiTenancyType(multiTenancyType));
@@ -122,9 +126,10 @@ public class TestDataService {
         structure.setEntityDefinition(personType);
         structure.setNamespace(personType.getNamespace());
 
-        return structureService.save(structure)
-                               .thenCompose(saved -> structureService.publish(saved.getId())
-                                                                     .thenApply(published -> saved));
+        return namespaceService.createNamespaceIfNotExist("org.kinotic.sample", "Sample namespace")
+                               .thenCompose(v -> structureService.save(structure)
+                                                                 .thenCompose(saved -> structureService.publish(saved.getId())
+                                                                                                       .thenApply(published -> saved)));
     }
 
     /**
