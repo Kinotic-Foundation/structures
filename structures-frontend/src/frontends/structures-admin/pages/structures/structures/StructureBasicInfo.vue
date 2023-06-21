@@ -11,7 +11,7 @@
         :disabled="structure.published"
         :hint="selectedNamespace.id + (selectedNamespace.description ? ' | ' + selectedNamespace.description : '')"
         :error-messages="namespaceErrorMessage"
-        @select="selected"
+        @change="selected"
         item-text="id"
         return-object
         persistent-hint
