@@ -82,6 +82,7 @@ import {
 } from "@/frontends/structures-admin/services";
 import DatetimeUtil from "@/frontends/structures-admin/pages/structures/util/DatetimeUtil";
 import {Structure} from "@/frontends/structures-admin/pages/structures/structures/Structure";
+import {StructureUtil} from "@/frontends/structures-admin/pages/structures/util/StructureUtil";
 
 /**
  * Provides a List page that can be used with the {@link CrudLayout}
@@ -167,10 +168,17 @@ export default class EntityList extends Vue {
               let fieldName = key.charAt(0).toUpperCase() + key.slice(1)
               let sortable: boolean = true
               // FIXME: how to ensure we don't try and sort on full text search fields?
-              if (definition.type === "ref" || definition.type === "array" || definition.type === "object") {
+              if (definition.type === "ref" || definition.type === "array" || definition.type === "object" || (definition.type === "string" && StructureUtil.hasDecorator('Text', definition.decorators))) {
                 sortable = false
               }
-              this.headers.push({text: fieldName, value: key, sortable: sortable})
+              let headerDef: any = {text: fieldName, value: key, sortable: sortable}
+              //
+              if(key === 'id'){
+                headerDef.width = 300
+              } else if(sortable){
+                headerDef.width = 150
+              }
+              this.headers.push(headerDef)
               this.keys.push(key)
             }
           }
