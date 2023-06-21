@@ -154,6 +154,7 @@ export default class CrudEntityAddEdit extends Vue {
 
     public async save() {
         this.hideAlert()
+
         if ((this.$refs.form as Vue & { validate: () => boolean }).validate()) {
             this.loading = true
 

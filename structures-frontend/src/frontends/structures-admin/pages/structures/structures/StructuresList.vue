@@ -34,31 +34,40 @@
           </template>
 
           <template #additional-actions="{ item }" >
-            <v-icon small
-                    class="mr-2"
-                    v-show="!item.item.published"
-                    :key="'publish-'+item.item.id"
-                    @click="publish(item.item)"
-                    title="Publish">
-              fab fa-product-hunt
-            </v-icon>
-            <v-icon small
-                    class="mr-2"
-                    v-show="item.item.published"
-                    @click="toStructureItemsPage(item.item)"
-                    title="Manage">
-              {{icons.database}}
-            </v-icon>
-            <v-icon small
-                    class="mr-2 red--text"
-                    v-show="item.item.published"
-                    :disabled="publishingId.length > 0"
-                    :loading="publishingId === item.item.id"
-                    :key="'unpublish-'+item.item.id"
-                    @click="unPublish(item.item)"
-                    title="Un-Publish">
-              {{ icons.unpublish }}
-            </v-icon>
+            <v-btn small
+                   icon
+                   class="mr-2"
+                   v-show="!item.item.published"
+                   :key="'publish-'+item.item.id"
+                   :loading="item['publishing']"
+                   @click="publish(item)"
+                   title="Publish">
+              <v-icon small>
+                fab fa-product-hunt
+              </v-icon>
+            </v-btn>
+            <v-btn small
+                   icon
+                   class="mr-2"
+                   v-show="item.item.published"
+                   @click="toStructureItemsPage(item.item)"
+                   title="Manage">
+              <v-icon small>
+                {{icons.database}}
+              </v-icon>
+            </v-btn>
+            <v-btn small
+                   icon
+                   class="mr-2 red--text"
+                   v-show="item.item.published"
+                   :loading="item['publishing']"
+                   :key="'unpublish-'+item.item.id"
+                   @click="unPublish(item)"
+                   title="Un-Publish">
+              <v-icon small>
+                {{ icons.unpublish }}
+              </v-icon>
+            </v-btn>
           </template>
         </CrudTable>
       </v-col>
@@ -72,18 +81,10 @@ import { DataTableHeader } from 'vuetify'
 import {Identifiable} from '@kinotic/continuum'
 import CrudTable from '@/frontends/continuum/components/CrudTable.vue'
 import {
-  mdiPlus,
-  mdiPencil,
-  mdiDelete,
-  mdiClose,
   mdiDatabase,
-  mdiMinusCircle,
-  mdiPlusCircle,
-  mdiArrowCollapseLeft,
-  mdiArrowCollapseRight,
   mdiUmbraco
 } from '@mdi/js'
-import {IStructureService, StructureService} from '@/frontends/structures-admin/services/IStructureService'
+import {IStructureService} from '@/frontends/structures-admin/services/IStructureService'
 import DatetimeUtil from '@/frontends/structures-admin/pages/structures/util/DatetimeUtil'
 import {Structures} from "@/frontends/structures-admin/services";
 
@@ -118,18 +119,10 @@ export default class StructuresList extends Vue {
    * Services
    */
   private dataSource: IStructureService = Structures.getStructureService()
-  private publishingId: string = ""
+  private loading: {[key: string]: boolean} = {}
 
   private icons = {
-    close: mdiClose,
-    add: mdiPlus,
-    edit: mdiPencil,
-    delete: mdiDelete,
     database: mdiDatabase,
-    minus: mdiMinusCircle,
-    plus: mdiPlusCircle,
-    arrowLeft: mdiArrowCollapseLeft,
-    arrowRight: mdiArrowCollapseRight,
     unpublish: mdiUmbraco
   }
 
@@ -147,16 +140,15 @@ export default class StructuresList extends Vue {
   }
 
   public async publish(item: any){
-    console.log(JSON.stringify(item))
+    item['publishing'] = true
     if(confirm('Are you sure you want to Publish this Structure?')) {
       let table: any = this.$refs?.crudTable
       try {
-        this.publishingId = item.id
-        await this.dataSource.publish(item.id)
+        await this.dataSource.publish(item.item.id)
         table?.find() // refresh table
-        this.publishingId = ""
+        delete item['publishing']
       }catch (error: any){
-        this.publishingId = ""
+        delete item['publishing']
         console.log(error.stack)
         table?.displayAlert(error.message)
       }
@@ -164,16 +156,15 @@ export default class StructuresList extends Vue {
   }
 
   public async unPublish(item: any){
-    console.log(JSON.stringify(item))
+    item['publishing'] = true
     if(confirm('Are you sure you want to Remove Published Status for this Structure? \nAll data saved under this Structure will be permanently deleted, proceed with caution.')) {
       let table: any = this.$refs?.crudTable
       try {
-        this.publishingId = item.id
-        await this.dataSource.unPublish(item.id)
+        await this.dataSource.unPublish(item.item.id)
         table?.find() // refresh table
-        this.publishingId = ""
+        delete item['publishing']
       }catch (error: any){
-        this.publishingId = ""
+        delete item['publishing']
         console.log(error.stack)
         table?.displayAlert(error.message)
       }
