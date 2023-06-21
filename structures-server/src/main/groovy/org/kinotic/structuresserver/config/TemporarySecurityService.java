@@ -4,6 +4,7 @@ import org.kinotic.continuum.core.api.security.DefaultParticipant;
 import org.kinotic.continuum.core.api.security.MetadataConstants;
 import org.kinotic.continuum.core.api.security.Participant;
 import org.kinotic.continuum.core.api.security.SecurityService;
+import org.springframework.stereotype.Component;
 
 import javax.security.sasl.AuthenticationException;
 import java.util.List;
@@ -11,6 +12,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
+@Component
 public class TemporarySecurityService implements SecurityService {
 
     private static final String PASSWORD = "structures";
