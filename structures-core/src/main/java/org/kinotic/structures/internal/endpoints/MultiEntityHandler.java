@@ -29,6 +29,7 @@ class MultiEntityHandler implements BiFunction<Page<RawJson>, Throwable, Void> {
         if (throwable == null) {
             try {
                 context.response().putHeader("Content-Type", "application/json");
+                context.response().setStatusCode(200);
                 byte[] data = objectMapper.writeValueAsBytes(rawJsonPage);
                 context.response().end(Buffer.buffer(data));
             } catch (JsonProcessingException e) {

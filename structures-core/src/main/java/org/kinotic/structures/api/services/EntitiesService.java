@@ -1,6 +1,5 @@
 package org.kinotic.structures.api.services;
 
-import org.kinotic.continuum.api.annotations.Publish;
 import org.kinotic.structures.api.domain.EntityContext;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -24,6 +23,16 @@ public interface EntitiesService {
      * @throws IllegalArgumentException in case the given {@literal entity} is {@literal null}
      */
     <T> CompletableFuture<T> save(String structureId, T entity, EntityContext context);
+
+    /**
+     * Saves all given entities.
+     * @param structureId the id of the structure to save the entity for
+     * @param entities all the entities to save
+     * @param context the context for this operation
+     * @return {@link CompletableFuture} that will complete when all entities have been saved
+     * @param <T> the type of the entities
+     */
+    <T> CompletableFuture<Void> bulkSave(String structureId, T entities, EntityContext context);
 
     /**
      * Retrieves an entity by its id.

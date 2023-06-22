@@ -17,11 +17,6 @@
 
 package org.kinotic.structures.entity;
 
-import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
-import co.elastic.clients.elasticsearch._types.Refresh;
-import co.elastic.clients.elasticsearch.core.GetResponse;
-import co.elastic.clients.util.BinaryData;
-import co.elastic.clients.util.ContentType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -45,7 +40,6 @@ import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest
@@ -59,8 +53,6 @@ public class EntityCrudTests extends ElasticsearchTestBase {
     private TestHelper testHelper;
     @Autowired
     private ObjectMapper objectMapper;
-    @Autowired
-    private ElasticsearchAsyncClient esAsyncClient;
 
     private StructureAndPersonHolder createAndVerify(){
         return createAndVerify(1,
@@ -254,34 +246,6 @@ public class EntityCrudTests extends ElasticsearchTestBase {
                                                                      new DefaultEntityContext(new DummyParticipant()))))
                     .verifyComplete();
     }
-
-    //@Test
-    public void testBinaryDataIngestion() throws Exception {
-        String index = "binary-ingestion-test";
-        String id = "foo-bar";
-
-        BinaryData data = BinaryData.of("{\"id\":\"27082ce1-d9ab-404e-a810-f2894640edf4\",\"firstName\":\"Jesse\",\"lastName\":\"Pinkman\",\"addresses\":[{\"street\":\"1001 Central Ave NE\",\"city\":\"Albuquerque\",\"state\":\"NM\",\"zip\":\"87106\"}]}".getBytes(), ContentType.APPLICATION_JSON);
-
-        esAsyncClient.index(i -> i
-                .index(index)
-                .id(id)
-                .document(data)
-                .refresh(Refresh.True)
-        ).get();
-
-        GetResponse<BinaryData> getResponse = esAsyncClient.get(g -> g
-                                                                 .index(index)
-                                                                 .id(id)
-                , BinaryData.class
-        ).get();
-
-        Assertions.assertEquals(id, getResponse.id());
-        Assertions.assertEquals(
-                "{\"id\":\"27082ce1-d9ab-404e-a810-f2894640edf4\",\"firstName\":\"Jesse\",\"lastName\":\"Pinkman\",\"addresses\":[{\"street\":\"1001 Central Ave NE\",\"city\":\"Albuquerque\",\"state\":\"NM\",\"zip\":\"87106\"}]}",
-                new String(getResponse.source().asByteBuffer().array(), StandardCharsets.UTF_8)
-        );
-    }
-
 
 
 //

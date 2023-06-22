@@ -19,15 +19,13 @@ import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 /**
  * Created by Navíd Mitchell 🤪 on 5/5/23.
  */
-public class RawJsonUpsertPreProcessor implements UpsertPreProcessor<RawJson> {
+public class RawJsonUpsertPreProcessor implements UpsertPreProcessor<RawJson, RawJson> {
 
     private static final Logger log = LoggerFactory.getLogger(RawJsonUpsertPreProcessor.class);
 
@@ -48,30 +46,28 @@ public class RawJsonUpsertPreProcessor implements UpsertPreProcessor<RawJson> {
         this.fieldPreProcessors = fieldPreProcessors;
     }
 
-    @Override
-    public CompletableFuture<EntityHolder<RawJson>> process(RawJson entity, EntityContext context) {
-
+    /**
+     * Will process the given {@link RawJson} and return a new {@link RawJson} with the appropriate decorators applied
+     * Handles both single and array of entities
+     * @param json the json to process
+     * @param context the context of the entity
+     * @return a new {@link RawJson} with the appropriate decorators applied
+     */
+    private CompletableFuture<List<EntityHolder<RawJson>>> doProcess(RawJson json, EntityContext context, boolean processArray){
         Deque<String> jsonPathStack = new ArrayDeque<>();
-        String id = null;
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        byte[] bytes = entity.data();
+        byte[] bytes = json.data();
+        List<EntityHolder<RawJson>> ret = new ArrayList<>();
+        int objectDepth = 0;
+        int arrayDepth = 0;
 
-        try(JsonParser jsonParser = objectMapper.createNonBlockingByteArrayParser();
-            JsonGenerator jsonGenerator = objectMapper.getFactory().createGenerator(outputStream, JsonEncoding.UTF8)) {
+        try(JsonParser jsonParser = objectMapper.createNonBlockingByteArrayParser()) {
             ByteArrayFeeder feeder = (ByteArrayFeeder) jsonParser.getNonBlockingInputFeeder();
             feeder.feedInput(bytes, 0, bytes.length);
             feeder.endOfInput();
 
-            // if this is a multi tenant structure the first thing to do is add the tenant id
-            if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
-                if(jsonParser.nextToken() == JsonToken.START_OBJECT) {
-                    jsonGenerator.writeStartObject();
-                    jsonGenerator.writeFieldName(structuresProperties.getTenantIdFieldName());
-                    jsonGenerator.writeString(context.getParticipant().getTenantId());
-                }else{
-                    throw new IllegalStateException("Expected start object token");
-                }
-            }
+            String currentId = null;
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            JsonGenerator jsonGenerator = objectMapper.getFactory().createGenerator(outputStream, JsonEncoding.UTF8);
 
             while (jsonParser.nextToken() != null) {
 
@@ -98,17 +94,18 @@ public class RawJsonUpsertPreProcessor implements UpsertPreProcessor<RawJson> {
                         if(value != null) {
                             jsonGenerator.writeFieldName(fieldName);
                             jsonGenerator.writeObject(value);
-
-                            // We hard code the id logic here, in the future we may create a more general approach if the need arises
-                            if(decorator instanceof IdDecorator){
-                                id = (String) value;
-                            }
-
                         }else{
-                            // skip the field
-                            jsonParser.nextToken(); // move to value token
-                            // while loop will skip the value
+                            jsonGenerator.writeNullField(fieldName);
                         }
+
+                        // We hard code the id logic here, in the future we may create a more general approach if the need arises
+                        if(decorator instanceof IdDecorator){
+                            // if this is the id we add the special _id field for elasticsearch to use
+                            currentId = (structure.getMultiTenancyType() == MultiTenancyType.SHARED)
+                                    ? context.getParticipant().getTenantId() + "-" + value
+                                    : (String) value;
+                        }
+
                     }else{
                         jsonGenerator.copyCurrentEvent(jsonParser);
                     }
@@ -116,21 +113,86 @@ public class RawJsonUpsertPreProcessor implements UpsertPreProcessor<RawJson> {
                     jsonPathStack.removeFirst();
 
                 }else{
-                    jsonGenerator.copyCurrentEvent(jsonParser);
+
+                    // if this is a multi tenant structure the first thing to do is add the tenant id
+                    // beginning new object we can add tenant id here
+                    if(structure.getMultiTenancyType() == MultiTenancyType.SHARED
+                            && token == JsonToken.START_OBJECT
+                            && objectDepth == 0) {
+
+                        jsonGenerator.writeStartObject();
+                        jsonGenerator.writeFieldName(structuresProperties.getTenantIdFieldName());
+                        jsonGenerator.writeString(context.getParticipant().getTenantId());
+
+                    }else if(token == JsonToken.END_OBJECT && objectDepth == 1){
+
+                        if(currentId == null){
+                            throw new IllegalStateException("Could not find id for object");
+                        }
+
+                        // This is the end of the object, so we store the object
+                        jsonGenerator.writeEndObject();
+                        jsonGenerator.flush();
+                        ret.add(new EntityHolder<>(currentId, new RawJson(outputStream.toByteArray())));
+                        outputStream.reset();
+                        currentId = null;
+                    }else{
+                        if(!shouldSkipToken(token, jsonParser.getCurrentValue(), arrayDepth, processArray)){
+                            jsonGenerator.copyCurrentEvent(jsonParser);
+                        }
+                    }
+
+                    if(token == JsonToken.START_OBJECT){
+                        objectDepth++;
+                    }else if(token == JsonToken.END_OBJECT){
+                        objectDepth--;
+                    }
+
+                    if(token == JsonToken.START_ARRAY){
+                        arrayDepth++;
+                    }else if(token == JsonToken.END_ARRAY){
+                        arrayDepth--;
+                    }
                 }
             }
 
             jsonGenerator.flush();
 
-            if(id == null){
-                return CompletableFuture.failedFuture(new IllegalArgumentException("No id field found in entity data"));
-            }else{
-                return CompletableFuture.completedFuture(new EntityHolder<>(id, new RawJson(outputStream.toByteArray())));
-            }
+            return CompletableFuture.completedFuture(ret);
 
         } catch (IOException e) {
             return CompletableFuture.failedFuture(e);
         }
     }
+
+    private boolean shouldSkipToken(JsonToken token, Object currentValue, int arrayDepth, boolean processArray){
+        boolean ret = false;
+        if(processArray) {
+            if (token == JsonToken.START_ARRAY && arrayDepth == 0) {
+                ret = true;
+            } else if (token == JsonToken.END_ARRAY && arrayDepth == 1) {
+                ret = true;
+            } else if (arrayDepth == 1 && (  ",".equals(currentValue) || " ".equals(currentValue) )) {
+                ret = true;
+            }
+        }
+        return ret;
+    }
+
+    @Override
+    public CompletableFuture<EntityHolder<RawJson>> process(RawJson entity, EntityContext context) {
+        return doProcess(entity, context, false).thenApply(list -> {
+            if(list.size() != 1){
+                throw new IllegalStateException("Expected exactly one entity to be returned");
+            }
+            return list.get(0);
+        });
+    }
+
+    @Override
+    public CompletableFuture<List<EntityHolder<RawJson>>> processArray(RawJson entities, EntityContext context) {
+        return doProcess(entities, context, true);
+    }
+
 
 }

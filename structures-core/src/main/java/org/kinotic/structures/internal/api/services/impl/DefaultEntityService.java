@@ -3,6 +3,7 @@ package org.kinotic.structures.internal.api.services.impl;
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import co.elastic.clients.elasticsearch._types.Refresh;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
+import co.elastic.clients.elasticsearch.core.BulkRequest;
 import co.elastic.clients.util.BinaryData;
 import co.elastic.clients.util.ContentType;
 import org.kinotic.structures.api.decorators.MultiTenancyType;
@@ -11,6 +12,7 @@ import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.internal.api.decorators.DelegatingReadPreProcessor;
 import org.kinotic.structures.internal.api.decorators.DelegatingUpsertPreProcessor;
+import org.kinotic.structures.internal.api.decorators.EntityHolder;
 import org.kinotic.structures.internal.api.services.EntityService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -48,10 +50,6 @@ public class DefaultEntityService implements EntityService {
                         .process(entity, context)
                         .thenCompose(entityHolder -> {
 
-                            String entityId = (structure.getMultiTenancyType() == MultiTenancyType.SHARED)
-                                    ? context.getParticipant().getTenantId() + "-" + entityHolder.getId()
-                                    : entityHolder.getId();
-
                             String routing = (structure.getMultiTenancyType() == MultiTenancyType.SHARED)
                                     ? context.getParticipant().getTenantId()
                                     : null;
@@ -63,7 +61,7 @@ public class DefaultEntityService implements EntityService {
                                 BinaryData binaryData = BinaryData.of(rawEntity.data(), ContentType.APPLICATION_JSON);
                                 return esAsyncClient.index(i -> i
                                                             .index(structure.getItemIndex())
-                                                            .id(entityId)
+                                                            .id(entityHolder.getId())
                                                             .routing(routing)
                                                             .document(binaryData)
                                                             .refresh(Refresh.True))
@@ -71,13 +69,55 @@ public class DefaultEntityService implements EntityService {
                             }else{
                                 return esAsyncClient.index(i -> i
                                                             .index(structure.getItemIndex())
-                                                            .id(entityId)
+                                                            .id(entityHolder.getId())
                                                             .routing(routing)
                                                             .document(entityHolder.getEntity())
                                                             .refresh(Refresh.True))
                                                     .thenApply(indexResponse -> entityHolder.getEntity());
                             }
                         }));
+    }
+
+    @Override
+    public <T> CompletableFuture<Void> bulkSave(T entities, EntityContext context) {
+        return validateTenant(context)
+                .thenCompose(unused -> delegatingUpsertPreProcessor
+                        .processArray(entities, context)
+                        .thenCompose(list -> {
+                                String routing = (structure.getMultiTenancyType() == MultiTenancyType.SHARED)
+                                        ? context.getParticipant().getTenantId()
+                                        : null;
+
+                                BulkRequest.Builder br = new BulkRequest.Builder();
+                                br.routing(routing);
+
+                                for(EntityHolder<?> entityHolder : list){
+
+                                    Object data;
+                                    if(entityHolder.getEntity() instanceof RawJson){
+                                        RawJson rawEntity = (RawJson) entityHolder.getEntity();
+                                        data = BinaryData.of(rawEntity.data(), ContentType.APPLICATION_JSON);
+                                    }else{
+                                        data = entityHolder.getEntity();
+                                    }
+
+                                    br.operations(op -> op
+                                            .index(idx -> idx
+                                                    .index(structure.getItemIndex())
+                                                    .id(entityHolder.getId())
+                                                    .document(data)
+                                            ));
+                                }
+
+                                return esAsyncClient.bulk(br.build()).thenCompose(bulkResponse -> {
+                                    if(bulkResponse.errors()){
+                                        return CompletableFuture.failedFuture(new RuntimeException("Bulk save failed with errors"));
+                                    }else{
+                                        return CompletableFuture.completedFuture(bulkResponse);
+                                    }
+                                });
+
+                        })).thenApply(unused -> null);
     }
 
     @Override

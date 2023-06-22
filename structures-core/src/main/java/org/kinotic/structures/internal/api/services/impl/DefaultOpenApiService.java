@@ -166,6 +166,26 @@ public class DefaultOpenApiService implements OpenApiService {
 
         structurePathItem.post(createOperation);
 
+
+        // Bulk Save Operation
+        PathItem bulkSavePathItem = new PathItem();
+        Operation bulkSaveOperation = createOperation("Bulk Save for "+structureName + " entities",
+                                                        "Saves or updates multiple " + structureName + " entities.",
+                                                        "bulkSave"+structureName,
+                                                        structure,
+                                                        0);
+
+        ArraySchema bulkSaveSchema = new ArraySchema();
+        bulkSaveSchema.items(refSchema);
+        RequestBody bulkSaveRequestBody = new RequestBody()
+                .content(new Content().addMediaType("application/json",
+                                                    new MediaType().schema(bulkSaveSchema)));
+        bulkSaveOperation.requestBody(bulkSaveRequestBody);
+
+        bulkSavePathItem.post(bulkSaveOperation);
+        paths.put(basePath + lowercaseNamespace + "/" + lowercaseName + "/bulk", bulkSavePathItem);
+
+
         // Find All Operation
         Operation getAllOperation = createOperation("Find all "+structureName +" entities",
                                                     "Finds all " + structureName + " entities. Supports paging and sorting.",
@@ -201,24 +221,6 @@ public class DefaultOpenApiService implements OpenApiService {
 
         // add the path item to the paths
         paths.put(basePath + lowercaseNamespace + "/" + lowercaseName + "/search", searchPathItem);
-
-
-//        // Create a path item for all the operations with "/api/"+structure.getId()+"/bulk-upsert"
-//        PathItem bulkUpsertPathItem = new PathItem();
-//        Operation bulkUpsertOperation = createOperation("Bulk Upsert "+structureName,
-//                                                        "bulkUpsert"+structureName,
-//                                                        structure,
-//                                                        0);
-//
-//        ArraySchema bulkUpsertSchema = new ArraySchema();
-//        bulkUpsertSchema.items(refSchema);
-//        RequestBody bulkUpsertRequestBody = new RequestBody()
-//                .content(new Content().addMediaType("application/json",
-//                                                    new MediaType().schema(bulkUpsertSchema)));
-//        bulkUpsertOperation.requestBody(bulkUpsertRequestBody);
-//
-//        bulkUpsertPathItem.post(bulkUpsertOperation);
-//        paths.put(basePath + structure.getId()+"/bulk-upsert", bulkUpsertPathItem);
     }
 
     private void addPagingAndSortingParameters(Operation operation){

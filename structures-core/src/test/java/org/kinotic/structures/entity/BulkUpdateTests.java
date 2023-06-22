@@ -1,64 +1,94 @@
 package org.kinotic.structures.entity;
 
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.kinotic.structures.ElasticsearchTestBase;
+import org.kinotic.structures.api.domain.DefaultEntityContext;
+import org.kinotic.structures.api.domain.EntityContext;
+import org.kinotic.structures.api.domain.RawJson;
+import org.kinotic.structures.api.services.EntitiesService;
+import org.kinotic.structures.internal.sample.DummyParticipant;
+import org.kinotic.structures.support.StructureAndPersonHolder;
+import org.kinotic.structures.support.TestHelper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
 
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest
 public class BulkUpdateTests extends ElasticsearchTestBase {
 
-//    @Autowired
-//    private ItemServiceInternal itemService;
-//    @Autowired
-//    private StructureTestHelper structureTestHelper;
-//    @Autowired
-//    private StructureServiceInternal structureService;
-//    @Autowired
-//    private RestHighLevelClient highLevelClient;
-//
-//    @Test
-//    public void bulkUpdateTest() throws Exception {
-//
-//        Structure structure = structureTestHelper.getDeviceStructure();
-//        itemService.requestBulkUpdatesForStructure(structure.getId());
-//
-//        for(int i = 0; i < 6000; i++){
-//            TypeCheckMap obj = new TypeCheckMap();
-//            obj.put("id", String.valueOf(i));
-//            obj.put("ip", "192.168.0.123");
-//            obj.put("mac", "000000000001");
-//            obj.put("label", "Device-"+i);
-//            obj.put("description", "This is a description for device "+i);
-//            itemService.pushItemForBulkUpdate(structure.getId(), obj, null);
-//        }
-//
-//        Thread.sleep(10000);// give time for ES to flush the new item
-//
-//        long firstCount = itemService.count(structure.getId(), null);
-//        Assert.isTrue(firstCount == 5000, "Bulk upload didn't complete properly before flush");
-//
-//        itemService.flushAndCloseBulkUpdate(structure.getId());
-//
-//        Thread.sleep(5000);
-//
-//        long secondCount = itemService.count(structure.getId(), null);
-//        Assert.isTrue(secondCount == 6000, "Bulk upload didn't complete properly after flush");
-//
-//        // run through deletion
-//        DeleteByQueryRequest deleteByQueryRequest = new DeleteByQueryRequest(structure.getItemIndex());
-//        deleteByQueryRequest.setBatchSize(3000);
-//        deleteByQueryRequest.setQuery(new MatchAllQueryBuilder());
-//        BulkByScrollResponse response = highLevelClient.deleteByQuery(deleteByQueryRequest, RequestOptions.DEFAULT);
-//
-//        Assertions.assertEquals(response.getStatus().getDeleted(), 6000);
-//
-//        Thread.sleep(10000);
-//
-//        structureService.delete(structure.getId());
-//
-//    }
+    @Autowired
+    private EntitiesService entitiesService;
+    @Autowired
+    private TestHelper testHelper;
+
+    private StructureAndPersonHolder createAndVerifyBulk(int numberOfPeopleToCreate,
+                                                         boolean randomPeople,
+                                                         EntityContext entityContext,
+                                                         String structureSuffix){
+        StructureAndPersonHolder ret = new StructureAndPersonHolder();
+
+        StepVerifier.create(testHelper.createPersonStructureAndEntitiesBulk(numberOfPeopleToCreate,
+                                                                            randomPeople,
+                                                                            entityContext,
+                                                                            structureSuffix))
+                    .expectNextMatches(structureAndPersonHolder -> {
+                        boolean matches = structureAndPersonHolder.getStructure() != null &&
+                                structureAndPersonHolder.getStructure().getId() != null &&
+                                structureAndPersonHolder.getPersons().size() == numberOfPeopleToCreate;
+                        if(matches){
+                            ret.setStructure(structureAndPersonHolder.getStructure());
+                            ret.setPersons(structureAndPersonHolder.getPersons());
+                        }
+                        return matches;
+                    })
+                    .verifyComplete();
+        return ret;
+    }
+
+    @Test
+    public void testBulk() throws InterruptedException{
+        int numberOfPeopleToCreate = 50;
+        EntityContext context1 = new DefaultEntityContext(new DummyParticipant("tenant1", "user1"));
+        EntityContext context2 = new DefaultEntityContext(new DummyParticipant("tenant2", "user2"));
+
+        StructureAndPersonHolder holder1 = createAndVerifyBulk(numberOfPeopleToCreate, true, context1, "-testBulk");
+
+        Assertions.assertNotNull(holder1);
+
+        StructureAndPersonHolder holder2 = createAndVerifyBulk(numberOfPeopleToCreate, true, context2, "-testBulk");
+
+        Assertions.assertNotNull(holder2);
+
+        // We have to wait since bulk updates are not queryable until they are indexed
+        Thread.sleep(5000);
+
+        // TODO: verify all data items as well, not just sizes
+        StepVerifier.create(Mono.fromFuture(entitiesService.findAll(holder1.getStructure().getId(),
+                                                                    Pageable.ofSize(numberOfPeopleToCreate * 2),// make sure page size is larger than number of entities
+                                                                    RawJson.class,
+                                                                    context1)))
+                    .expectNextMatches(rawJsons -> rawJsons.getTotalElements() == numberOfPeopleToCreate
+                            && rawJsons.getTotalPages() == 1
+                            && rawJsons.getContent().size() == numberOfPeopleToCreate)
+                    .as("Verifying Tenant 1 has "+numberOfPeopleToCreate+" entities")
+                    .verifyComplete();
+
+        StepVerifier.create(Mono.fromFuture(entitiesService.findAll(holder1.getStructure().getId(),
+                                                                    Pageable.ofSize(numberOfPeopleToCreate * 2), // make sure page size is larger than number of entities
+                                                                    RawJson.class,
+                                                                    context2)))
+                    .expectNextMatches(rawJsons -> rawJsons.getTotalElements() == numberOfPeopleToCreate
+                            && rawJsons.getTotalPages() == 1
+                            && rawJsons.getContent().size() == numberOfPeopleToCreate)
+                    .as("Verifying Tenant 2 has "+numberOfPeopleToCreate+" entities")
+                    .verifyComplete();
+    }
 
 }

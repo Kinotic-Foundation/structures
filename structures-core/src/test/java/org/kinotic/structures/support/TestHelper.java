@@ -44,8 +44,7 @@ public class TestHelper {
                                                                            String structureNameSuffix){
         return Mono.fromFuture(() -> testDataService
                 .createPersonStructureIfNotExists(structureNameSuffix)
-                .thenCompose(pair ->
-                                     createPeopleWithCorrectMethod(numberOfPeopleToCreate, randomPeople)
+                .thenCompose(pair -> createTestPeopleWithCorrectMethod(numberOfPeopleToCreate, randomPeople)
                                              .thenCompose(people -> {
                                                  Structure structure = pair.getLeft();
                                                  List<CompletableFuture<Person>> completableFutures = new ArrayList<>();
@@ -81,8 +80,36 @@ public class TestHelper {
                                              })));
     }
 
-    private CompletableFuture<List<Person>> createPeopleWithCorrectMethod(int numberOfPeopleToCreate,
-                                                                          boolean randomPeople){
+    public Mono<StructureAndPersonHolder> createPersonStructureAndEntitiesBulk(int numberOfPeopleToCreate,
+                                                                               boolean randomPeople,
+                                                                               EntityContext entityContext,
+                                                                               String structureNameSuffix){
+        return Mono.fromFuture(() -> testDataService
+                .createPersonStructureIfNotExists(structureNameSuffix)
+                .thenCompose(pair -> createTestPeopleWithCorrectMethod(numberOfPeopleToCreate, randomPeople)
+                                             .thenCompose(people -> {
+                                                 Structure structure = pair.getLeft();
+                                                 byte[] jsonData;
+                                                 try {
+                                                     jsonData = objectMapper.writeValueAsBytes(people);
+                                                 } catch (JsonProcessingException e) {
+                                                     return CompletableFuture.failedFuture(e);
+                                                 }
+                                                 return entitiesService.bulkSave(structure.getId(),
+                                                                                 RawJson.from(jsonData),
+                                                                                 entityContext)
+                                                         .thenCompose(unused -> {
+                                                             return CompletableFuture
+                                                                     .completedFuture(new StructureAndPersonHolder(
+                                                                             structure,
+                                                                             people));
+                                                         });
+                                             })));
+    }
+
+
+    private CompletableFuture<List<Person>> createTestPeopleWithCorrectMethod(int numberOfPeopleToCreate,
+                                                                              boolean randomPeople){
         if(randomPeople){
             return testDataService.createRandomTestPeople(numberOfPeopleToCreate);
         }else {

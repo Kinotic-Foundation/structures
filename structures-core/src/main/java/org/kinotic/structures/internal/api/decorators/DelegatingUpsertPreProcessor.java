@@ -7,13 +7,15 @@ import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.domain.Structure;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
  * Created by Navíd Mitchell 🤪 on 6/7/23.
  */
-public class DelegatingUpsertPreProcessor implements UpsertPreProcessor<Object> {
+public class DelegatingUpsertPreProcessor implements UpsertPreProcessor<Object, Object> {
 
     private final RawJsonUpsertPreProcessor rawJsonUpsertPreProcessor;
     private final MapUpsertPreProcessor mapUpsertPreProcessor;
@@ -46,5 +48,31 @@ public class DelegatingUpsertPreProcessor implements UpsertPreProcessor<Object> 
         }
         //noinspection unchecked
         return (CompletableFuture<EntityHolder<Object>>) ret;
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public CompletableFuture<List<EntityHolder<Object>>> processArray(Object entities, EntityContext context) {
+        Validate.notNull(entities, "entities must not be null");
+
+        Object ret;
+        if(entities instanceof RawJson) {
+            ret = rawJsonUpsertPreProcessor.processArray((RawJson) entities, context);
+        } else if(entities instanceof List) {
+            List<?> list = (List<?>) entities;
+            if(list.size() > 0){
+                Object first = list.get(0);
+                if(first instanceof Map){
+                    ret = mapUpsertPreProcessor.processArray((List<Map<?, ?>>) entities, context);
+                }else{
+                    ret = pojoUpsertPreProcessor.processArray((List<Object>) entities, context);
+                }
+            }else{
+                ret = CompletableFuture.completedFuture(new ArrayList<>());
+            }
+        }else {
+            throw new IllegalArgumentException("Unsupported type: " + entities.getClass().getName());
+        }
+        return (CompletableFuture<List<EntityHolder<Object>>>) ret;
     }
 }

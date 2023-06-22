@@ -258,7 +258,7 @@ export default class StructureAddEdit extends Vue {
   overflow-y: scroll;
 }
 .editor-width {
-  width: 50em;
+  width: 100%;
   overflow-x: scroll;
 }
 

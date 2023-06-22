@@ -39,6 +39,12 @@ public class DefaultEntitiesService implements EntitiesService {
     }
 
     @Override
+    public <T> CompletableFuture<Void> bulkSave(String structureId, T entities, EntityContext context) {
+        return entityServiceCache.get(structureId)
+                                 .thenCompose(entityService -> entityService.bulkSave(entities, context));
+    }
+
+    @Override
     public <T> CompletableFuture<T> findById(String structureId, String id, Class<T> type, EntityContext context) {
         return entityServiceCache.get(structureId)
                                  .thenCompose(entityService -> entityService.findById(id, type, context));

@@ -22,6 +22,7 @@ class SingleEntityHandler implements BiFunction<RawJson, Throwable, Void> {
     public Void apply(RawJson rawJson, Throwable throwable) {
         if (throwable == null) {
             context.response().putHeader("Content-Type", "application/json");
+            context.response().setStatusCode(200);
             context.response().end(Buffer.buffer(rawJson.data()));
         } else {
             VertxWebUtil.writeException(context.response(), throwable);

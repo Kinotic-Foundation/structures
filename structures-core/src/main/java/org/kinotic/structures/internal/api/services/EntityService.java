@@ -25,6 +25,15 @@ public interface EntityService {
     <T> CompletableFuture<T> save(T entity, EntityContext context);
 
     /**
+     * Saves all given entities.
+     * @param entities all the entities to save
+     * @param context the context for this operation
+     * @return {@link CompletableFuture} that will complete when all entities have been saved
+     * @param <T> the type of the entities
+     */
+    <T> CompletableFuture<Void> bulkSave(T entities, EntityContext context);
+
+    /**
      * Retrieves an entity by its id.
      *
      * @param id      must not be {@literal null}
