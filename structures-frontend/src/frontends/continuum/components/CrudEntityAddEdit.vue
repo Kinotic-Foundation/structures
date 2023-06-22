@@ -22,7 +22,7 @@
                 </v-toolbar>
             </div>
             <v-list>
-                <v-subheader>Basic Information</v-subheader>
+                <v-subheader v-if="showBasicInfoSubheader" >Basic Information</v-subheader>
                 <v-list-item>
                     <v-list-item-content>
                         <v-form ref="form"
@@ -86,6 +86,9 @@ export default class CrudEntityAddEdit extends Vue {
 
     @Prop({type: Boolean, required: false, default: true})
     public identityEditable!: boolean
+
+    @Prop({type: Boolean, required: false, default: true})
+    public showBasicInfoSubheader!: boolean
 
     @PropSync('entity', {type: Object as PropType<Identifiable<string>>, required: false, default: { id: '' }})
     public syncedEntity!: Identifiable<string>
