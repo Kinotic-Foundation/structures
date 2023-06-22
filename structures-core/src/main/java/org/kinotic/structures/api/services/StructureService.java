@@ -18,42 +18,44 @@
 package org.kinotic.structures.api.services;
 
 import org.kinotic.continuum.api.annotations.Publish;
-import org.kinotic.structures.api.domain.*;
+import org.kinotic.continuum.core.api.crud.IdentifiableCrudService;
+import org.kinotic.structures.api.domain.Structure;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
-import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
 
 @Publish
-public interface StructureService {
+public interface StructureService extends IdentifiableCrudService<Structure, String> {
 
-    StructureHolder save(StructureHolder structureHolder) throws AlreadyExistsException, IOException;
+    /**
+     * Finds all published structures for the given namespace.
+     * @param namespace the namespace to find structures for
+     * @param pageable the page to return
+     * @return a future that will complete with a page of structures
+     */
+    CompletableFuture<Page<Structure>> findAllPublishedForNamespace(String namespace, Pageable pageable);
 
-    Structures getAll(int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException;
+    /**
+     * Counts all structures for the given namespace.
+     * @param namespace the namespace to find structures for
+     * @return a future that will complete with a page of structures
+     */
+    CompletableFuture<Long> countForNamespace(String namespace);
 
-    Structures getAllIdLike(String idLike, int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException;
+    /**
+     * Publishes the structure with the given id.
+     * This will make the structure available for use to read and write items for.
+     * @param structureId the id of the structure to publish
+     * @return a future that will complete when the structure has been published
+     */
+    CompletableFuture<Void> publish(String structureId);
 
-    StructureHolder getStructureById(String id) throws IOException;
-
-    Structures getAllPublishedAndIdLike(String idLike, int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException;
-
-    Structures getAllPublished(int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException;
-
-    Structures getAllPublishedForNamespace(String namespace, int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException;
-
-    Structures getAllNamespaceEquals(String namespace, int numberPerPage, int page, String columnToSortBy, boolean descending) throws IOException;
-
-    void delete(String structureId) throws IOException, PermenentTraitException;
-
-    void publish(String structureId) throws IOException;
-    StructureHolder unPublish(String structureId) throws IOException;
-
-    void addTraitToStructure(String structureId, String fieldName, Trait newTrait) throws IOException;
-
-    void insertTraitBeforeAnotherForStructure(String structureId, String movingTraitName, String insertBeforeTraitName) throws IOException;
-
-    void insertTraitAfterAnotherForStructure(String structureId, String movingTraitName, String insertAfterTraitName) throws IOException;
-
-    String getJsonSchema(String structureId) throws IOException;
-
-    String getElasticSearchBaseMapping(String structureId) throws IOException;
+    /**
+     * Un-publish the structure with the given id.
+     * @param structureId the id of the structure to un-publish
+     * @return a future that will complete when the structure has been unpublished
+     */
+    CompletableFuture<Void> unPublish(String structureId);
 
 }

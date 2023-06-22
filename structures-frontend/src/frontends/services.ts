@@ -4,5 +4,14 @@
 // import './main/services'
 // import './admin/services'
 // import './develop/services'
-import './continuum/services'
 import './structures-admin/services/index.ts'
+import {GRIND_SERVICE_FACTORY, IGrindServiceFactory} from './continuum/services'
+
+
+export namespace StructuresServices {
+
+    export function getGrindServiceFactory(): IGrindServiceFactory {
+        return GRIND_SERVICE_FACTORY
+    }
+
+}

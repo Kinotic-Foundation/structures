@@ -1,24 +1,15 @@
 # General properties shared by all profiles
+spring:
+  main:
+    web-application-type: none
 
 logging:
   level:
     com:
       kinotic: INFO
 
-server:
-  port: 8989
-
 management:
   endpoints:
     web:
       exposure:
         include: health,info
-
-spring:
-  graphql:
-    schema:
-      printer:
-        enabled: true
-      file-extensions: [".graphql"]
-    graphiql:
-      enabled: true

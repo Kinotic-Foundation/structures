@@ -56,9 +56,9 @@ out/
 
 *.zip
 
-structures-server/src/main/resources/webroot/
-
-structures-server/src/main/resources/public/
+#structures-server/src/main/resources/webroot/
+#
+#structures-server/src/main/resources/public/
 
 .idea/jpa-buddy.xml
 

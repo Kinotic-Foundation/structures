@@ -1,6 +1,6 @@
-import {container, inject, injectable} from 'inversify-props'
-import {IEventBus} from '@kinotic-foundation/continuum-js'
+import { Continuum } from '@kinotic/continuum'
 import Keycloak from "keycloak-js"
+import {reactive} from "vue";
 
 export interface IUserState {
 
@@ -13,11 +13,7 @@ export interface IUserState {
     getUri(): string
 }
 
-@injectable()
 export class UserState implements IUserState{
-
-    @inject()
-    private eventBus!: IEventBus
 
     private keycloak!: Keycloak
 
@@ -29,7 +25,7 @@ export class UserState implements IUserState{
 
     authenticate(url: string, accessKey: string, secretToken: string): Promise<void> {
         return new Promise((resolve, reject) => {
-            this.eventBus.connect(url, accessKey, secretToken)
+            Continuum.connect(url, accessKey, secretToken)
                 .then(value => {
                     this.authenticated = true
                     resolve()
@@ -72,4 +68,4 @@ export class UserState implements IUserState{
 
 }
 
-container.addSingleton<IUserState>(UserState)
+export const USER_STATE: IUserState = reactive(new UserState())

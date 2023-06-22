@@ -1,13 +1,13 @@
 import 'reflect-metadata'
 import Vue from 'vue'
 import vuetify from './plugins/vuetify'
+import {router} from '@/frontends/router'
 import './plugins/vue-highlight'
 import './plugins/vue-editor-ace'
 import './plugins/vue-notification'
-import './plugins/vue-composition-api'
+import './plugins/prism-editor'
 import './registerServiceWorker'
 import './frontends/continuum'
-import {router} from '@/frontends/router'
 
 // Make sure services get autowired early during App entry!
 import '@/frontends/services'
@@ -15,11 +15,12 @@ import '@/frontends/services'
 // now load app specific entry points
 import '@/frontends/states'
 import Main from '@/Main.vue'
-import Keycloak, {KeycloakOnLoad} from "keycloak-js"
+import Keycloak, {KeycloakOnLoad} from 'keycloak-js'
 
 // Vue.config.productionTip = false
 
-if(process.env.VUE_APP_KEYCLOAK_SUPPORT === "true") {
+
+if(process.env.VUE_APP_KEYCLOAK_SUPPORT === 'true') {
 
   let initOptions = {
     url: process.env.VUE_APP_KEYCLOAK_URL,

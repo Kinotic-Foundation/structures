@@ -2,7 +2,7 @@ spring:
   main:
     allow-circular-references: true
   elasticsearch:
-    uris: ${STRUCTURES_ELASTIC_URIS:127.0.0.1:9200} # needed for actuator health health checks
+    uris: ${STRUCTURES_ELASTIC_URIS:127.0.0.1:9200} # needed for actuator health checks
 
 logging:
   level:

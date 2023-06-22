@@ -6,14 +6,12 @@ import org.kinotic.structures.api.annotations.EnableStructures;
 import org.springframework.boot.test.util.TestPropertyValues;
 import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 @EnableContinuum
 @EnableStructures
 @EnableContinuumGateway
-@ComponentScan("org.kinotic.structuresserver.traits.lifecycle")
 public class TestConfiguration {
     public static final ElasticsearchTestContainer ELASTICSEARCH_CONTAINER;
     static {

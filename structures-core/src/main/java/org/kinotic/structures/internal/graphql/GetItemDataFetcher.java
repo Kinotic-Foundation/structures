@@ -2,26 +2,33 @@ package org.kinotic.structures.internal.graphql;
 
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
-import org.kinotic.structures.internal.api.services.ItemServiceInternal;
+import org.kinotic.structures.api.services.EntitiesService;
+import org.kinotic.structures.internal.endpoints.RoutingContextToEntityContextAdapter;
 
-import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Created by Navíd Mitchell 🤪 on 4/17/23.
  */
-public class GetItemDataFetcher implements DataFetcher<LinkedHashMap<String, Object>>{
+@SuppressWarnings("rawtypes")
+public class GetItemDataFetcher implements DataFetcher<CompletableFuture<Map>> {
 
         private final String structureId;
-        private final ItemServiceInternal itemService;
+        private final EntitiesService entitiesService;
 
-        public GetItemDataFetcher(String structureId, ItemServiceInternal itemService) {
+        public GetItemDataFetcher(String structureId, EntitiesService entitiesService) {
             this.structureId = structureId;
-            this.itemService = itemService;
+            this.entitiesService = entitiesService;
         }
 
         @Override
-        public LinkedHashMap<String, Object> get(DataFetchingEnvironment environment) throws Exception {
+        public CompletableFuture<Map> get(DataFetchingEnvironment environment) throws Exception {
             String id = environment.getArgument("id");
-            return itemService.getItemById(structureId, id, null).orElseThrow();
+            return entitiesService.findById(structureId,
+                                            id,
+                                            Map.class,
+                                            new RoutingContextToEntityContextAdapter(environment.getContext()));
         }
 }
+

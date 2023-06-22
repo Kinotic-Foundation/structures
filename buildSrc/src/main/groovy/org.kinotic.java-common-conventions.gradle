@@ -2,6 +2,7 @@ plugins {
     // Apply the java Plugin to add support for Java.
     id 'java'
     id 'io.spring.dependency-management'
+    id 'io.freefair.lombok'
 }
 
 group 'org.kinotic'
@@ -19,6 +20,10 @@ dependencyManagement {
     }
     dependencies {
         dependency 'com.h2database:h2:1.4.197' // We override the version provided by Spring to be compatible with Ignite which is used by Continuum
+        dependency "co.elastic.clients:elasticsearch-java:${elasticClientVersion}"
+        dependency "org.elasticsearch:elasticsearch:${elasticClientVersion}"
+        dependency "org.elasticsearch.client:elasticsearch-rest-client:${elasticClientVersion}"
+        dependency "org.elasticsearch.client:elasticsearch-rest-high-level-client:${elasticClientVersion}"
         dependency "org.apache.lucene:lucene-analyzers-common:${luceneVersion}"
         dependency "org.apache.lucene:lucene-backwards-codecs:${luceneVersion}"
         dependency "org.apache.lucene:lucene-core:${luceneVersion}"
@@ -37,11 +42,14 @@ dependencyManagement {
         dependency "org.springframework.security:spring-security-crypto:${springSecurityVersion}"
         dependency "org.springframework.security:spring-security-config:${springSecurityVersion}"
         dependency "org.springframework.security:spring-security-test:${springSecurityVersion}"
+        // must be overridden for the elastic client
+        dependency 'jakarta.json:jakarta.json-api:2.0.1'
     }
 }
 
 dependencies {
   implementation 'org.apache.commons:commons-lang3'
+  implementation 'org.apache.commons:commons-text'
 
   implementation 'ch.qos.logback:logback-core'
   implementation 'ch.qos.logback:logback-classic'

@@ -34,7 +34,7 @@
 import { PropType } from 'vue'
 import { Component, Emit, Prop, Vue, Watch } from 'vue-property-decorator'
 import { DataOptions, DataTableHeader } from 'vuetify'
-import { IDataSource } from '@kinotic-foundation/continuum-js'
+import { IDataSource } from '@kinotic/continuum'
 import {
   mdiMagnify,
   mdiArrowCollapseLeft,
@@ -48,9 +48,8 @@ import {
   Order,
   Page,
   Pageable
-} from '@kinotic-foundation/continuum-js'
+} from '@kinotic/continuum'
 import Confirm from './Confirm.vue'
-import { inject } from 'inversify-props'
 
 // noinspection TypeScriptValidateTypes
 @Component({

@@ -96,8 +96,8 @@
         mdiAccount,
     } from '@mdi/js'
     import {Component, Vue} from "vue-property-decorator"
-    import {inject} from "inversify-props";
-    import {IContinuumUI, IUserState} from "@/frontends/continuum";
+    import {CONTINUUM_UI, IUserState} from "@/frontends/continuum";
+    import {StructuresStates} from "@/frontends/states";
 
     type RuleValidator = (value: any) => string | boolean
 
@@ -105,12 +105,6 @@
         components: { }
     })
     export default class Login extends Vue {
-
-        @inject()
-        private userState!: IUserState
-
-        @inject()
-        private continuumUI!: IContinuumUI
 
         private icons: any = {
             user: mdiAccount,
@@ -123,16 +117,16 @@
         private loading: boolean = false
         private loginRules: RuleValidator[] = [ (v) => !!v || 'Login required']
         private passwordRules: RuleValidator[] = [ (v) => !!v || 'Password required']
-
+        private userState: IUserState = StructuresStates.getUserState()
 
         public async handleLogin() {
             if ((this.$refs.form as Vue & { validate: () => boolean }).validate()) {
                 this.loading = true
                 try{
 
-                    await this.userState.authenticate(this.userState.getUri(), this.login, this.password)
+                    await this.userState.authenticate(StructuresStates.getUserState().getUri(), this.login, this.password)
 
-                    await this.continuumUI.navigate('/')
+                    await CONTINUUM_UI.navigate('/')
 
                 } catch (error: any) {
                     this.displayAlert((error.message ? error.message : error))

@@ -1,11 +1,13 @@
-export class Namespace {
-    public name: string
+import { Identifiable } from '@kinotic/continuum'
+export class Namespace implements Identifiable<string> {
+    public id: string
     public description: string
     public updated: number
 
-    constructor(name: string, description: string, updated: number) {
-        this.name = name;
+    constructor(id: string, description: string, updated: number) {
+        this.id = id;
         this.description = description;
         this.updated = updated;
     }
+
 }

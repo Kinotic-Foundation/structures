@@ -16,6 +16,6 @@ logging:
       vertx: DEBUG
 
 structures:
-  elastic-use-ssl: false
-  elastic-username: structures
-  elastic-password: pass79
+  initializeWithSampleData: true
+#  elastic-username: structures
+#  elastic-password: pass79
