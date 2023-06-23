@@ -53,11 +53,25 @@
     const urlParams = new URLSearchParams(window.location.search);
     return urlParams.get(name);
   }
+
+  function getBaseUrl(){
+      let prefix = 'http'
+      if(window.location.protocol.startsWith('https')){
+          prefix = 'https'
+      }
+      let port = getQueryParam("port")
+      if(port === null){
+          // standard prod deployment, use our default port
+          port = '4000'
+      }
+      return `${prefix}://${window.location.hostname}:${port}`
+  }
+
   const namespace = getQueryParam('namespace') || 'default';
   GraphQLPlayground.init(document.getElementById('root'), {
-    endpoint: `/graphql/${namespace}`,
+    endpoint: `${getBaseUrl()}/graphql/${namespace}`,
   })
-})</script>
+})
+</script>
 </body>
-
 </html>

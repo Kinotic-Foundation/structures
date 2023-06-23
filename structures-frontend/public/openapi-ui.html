@@ -23,10 +23,22 @@
         return urlParams.get(name);
     }
 
+    function getBaseUrl(){
+        let prefix = 'http'
+        if(window.location.protocol.startsWith('https')){
+            prefix = 'https'
+        }
+        let port = getQueryParam("port")
+        if(port === null){
+            port = '8080'
+        }
+        return `${prefix}://${window.location.hostname}:${port}`
+    }
+
     (async () => {
         const namespace = getQueryParam('namespace') || 'default';
         const elementsApi = document.getElementById('elementsApi');
-        const text = await fetch(`/api-docs/${namespace}/openapi.json`).then(res => res.text())
+        const text = await fetch(`${getBaseUrl()}/api-docs/${namespace}/openapi.json`).then(res => res.text())
         elementsApi.apiDescriptionDocument = text;
     })();
 </script>

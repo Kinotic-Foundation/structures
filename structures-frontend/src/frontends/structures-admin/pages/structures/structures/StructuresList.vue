@@ -13,8 +13,10 @@
             <a :href="'/openapi-ui.html?namespace='+item.namespace" target="_blank" >{{ item.namespace }}</a>
             <v-btn icon
                    small
+                   class="pl-2"
                    title="GraphQL"
-                   :href="'/graphql-ui.html?namespace='+item.namespace" >
+                   :href="'/graphql-ui.html?namespace='+item.namespace"
+                   target="_blank" >
               <v-icon small>
                 {{ icons.graph }}
               </v-icon>
