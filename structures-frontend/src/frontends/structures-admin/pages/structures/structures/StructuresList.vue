@@ -9,6 +9,17 @@
                    @edit-item="onEditItem"
                    ref="crudTable">
 
+          <template v-slot:item.namespace="{ item }">
+            <a :href="'/openapi-ui.html?namespace='+item.namespace" target="_blank" >{{ item.namespace }}</a>
+            <v-btn icon
+                   small
+                   title="GraphQL"
+                   :href="'/graphql-ui.html?namespace='+item.namespace" >
+              <v-icon small>
+                {{ icons.graph }}
+              </v-icon>
+            </v-btn>
+          </template>
           <template v-slot:item.created="{ item }">
             {{ DatetimeUtil.formatDate(item.created) }}
           </template>
@@ -82,7 +93,8 @@ import {Identifiable} from '@kinotic/continuum'
 import CrudTable from '@/frontends/continuum/components/CrudTable.vue'
 import {
   mdiDatabase,
-  mdiUmbraco
+  mdiUmbraco,
+  mdiGraphql
 } from '@mdi/js'
 import {IStructureService} from '@/frontends/structures-admin/services/IStructureService'
 import DatetimeUtil from '@/frontends/structures-admin/pages/structures/util/DatetimeUtil'
@@ -123,7 +135,8 @@ export default class StructuresList extends Vue {
 
   private icons = {
     database: mdiDatabase,
-    unpublish: mdiUmbraco
+    unpublish: mdiUmbraco,
+    graph: mdiGraphql
   }
 
   constructor() {
