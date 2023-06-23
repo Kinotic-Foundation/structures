@@ -178,6 +178,14 @@ public class DefaultGraphQlProviderService implements GraphQlProviderService {
                                                                                                entitiesService)));
 
                                 mutationBuilder.field(newFieldDefinition()
+                                                              .name("bulkSave" + structureName)
+                                                              .type(GraphQLBoolean)
+                                                              .argument(newArgument().name("input")
+                                                                                     .type(GraphQLNonNull.nonNull(GraphQLList.list(GraphQLNonNull.nonNull(inputType)))))
+                                                              .dataFetcher(new BulkSaveDataFetcher(entry.getKey(),
+                                                                                               entitiesService)));
+
+                                mutationBuilder.field(newFieldDefinition()
                                                               .name("delete" + structureName)
                                                               .type(GraphQLID)
                                                               .argument(newArgument().name("id")

@@ -30,10 +30,12 @@ public class DelegatingUpsertPreProcessor implements UpsertPreProcessor<Object, 
                                                                   objectMapper,
                                                                   structure,
                                                                   fieldPreProcessors);
-        mapUpsertPreProcessor = new MapUpsertPreProcessor();
+        mapUpsertPreProcessor = new MapUpsertPreProcessor(structure,
+                                                          fieldPreProcessors);
         pojoUpsertPreProcessor = new PojoUpsertPreProcessor();
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public CompletableFuture<EntityHolder<Object>> process(Object entity, EntityContext context) {
         Validate.notNull(entity, "entity must not be null");
@@ -42,11 +44,10 @@ public class DelegatingUpsertPreProcessor implements UpsertPreProcessor<Object, 
         if(entity instanceof RawJson) {
             ret = rawJsonUpsertPreProcessor.process((RawJson) entity, context);
         } else if(entity instanceof Map) {
-            ret = mapUpsertPreProcessor.process((Map<?, ?>) entity, context);
+            ret = mapUpsertPreProcessor.process((Map<Object, Object>) entity, context);
         } else {
             ret = pojoUpsertPreProcessor.process(entity, context);
         }
-        //noinspection unchecked
         return (CompletableFuture<EntityHolder<Object>>) ret;
     }
 
@@ -63,7 +64,7 @@ public class DelegatingUpsertPreProcessor implements UpsertPreProcessor<Object, 
             if(list.size() > 0){
                 Object first = list.get(0);
                 if(first instanceof Map){
-                    ret = mapUpsertPreProcessor.processArray((List<Map<?, ?>>) entities, context);
+                    ret = mapUpsertPreProcessor.processArray((List<Map<Object, Object>>) entities, context);
                 }else{
                     ret = pojoUpsertPreProcessor.processArray((List<Object>) entities, context);
                 }
