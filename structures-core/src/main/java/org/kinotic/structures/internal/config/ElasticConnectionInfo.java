@@ -9,15 +9,15 @@ import lombok.experimental.Accessors;
 @Getter
 @Setter
 @Accessors(chain = true)
-@RequiredArgsConstructor
+@NoArgsConstructor
 @AllArgsConstructor
 public class ElasticConnectionInfo {
 
     private String scheme = "http";
 
-    private final String host;
+    private String host = "localhost";
 
-    private final int port;
+    private int port = 9200;
 
     public String toHostAndPort(){
         return host + ":" + port;

@@ -36,7 +36,7 @@ public class StructuresProperties {
     @NotNull
     private Duration elasticSocketTimeout = Duration.ofMinutes(1);
     @NotNull
-    private List<ElasticConnectionInfo> elasticConnections = List.of(new ElasticConnectionInfo("localhost", 9200));
+    private List<ElasticConnectionInfo> elasticConnections = List.of(new ElasticConnectionInfo());
 
     private String elasticUsername = null;
     private String elasticPassword = null;
