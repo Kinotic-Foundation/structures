@@ -1,4 +1,4 @@
-import {DecoratedProperty, ObjectC3Type} from '@kinotic/continuum-idl-js'
+import {DecoratedProperty, ObjectC3Type} from '@kinotic/continuum-idl'
 import {Identifiable} from '@kinotic/continuum'
 
 export class Structure implements Identifiable<string> {

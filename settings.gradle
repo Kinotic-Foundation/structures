@@ -1,6 +1,6 @@
 rootProject.name = 'structures'
 
-includeBuild('../continuum-framework')
+//includeBuild('../continuum-framework')
 
 rootDir.listFiles().each {
     if (it.directory && new File(it, 'settings.gradle').exists()) {

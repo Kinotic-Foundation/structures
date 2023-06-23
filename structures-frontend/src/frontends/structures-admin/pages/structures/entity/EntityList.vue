@@ -161,7 +161,6 @@ export default class EntityList extends Vue {
           this.structure = structure
           this.structureProperties = this.structure.entityDefinition.properties
           let keys: string[] = Object.keys(this.structureProperties)
-          console.log(`keys ${keys}`)
           for (let key of keys) {
             if (this.structureProperties.hasOwnProperty(key)) {
               let definition: any = this.structureProperties[key]

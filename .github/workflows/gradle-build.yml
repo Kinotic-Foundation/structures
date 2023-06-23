@@ -3,7 +3,7 @@ name: Build and Publish to Maven
 on:
   push:
     branches:
-      - main
+      - develop
 
 jobs:
   gradle_build_and_publish:

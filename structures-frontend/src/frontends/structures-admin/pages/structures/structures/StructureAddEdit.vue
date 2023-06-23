@@ -51,7 +51,7 @@ import {
   IdC3Type,
   MultiTenancyType,
   ObjectC3Type
-} from '@kinotic/continuum-idl-js'
+} from '@kinotic/continuum-idl'
 import {
   mdiFormatText,
   mdiBugCheck
