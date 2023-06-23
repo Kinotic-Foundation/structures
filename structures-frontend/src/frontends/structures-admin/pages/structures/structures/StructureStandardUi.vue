@@ -215,7 +215,7 @@ import {
   StringC3Type,
   TextC3Decorator,
   UnionC3Type
-} from "@kinotic/continuum-idl-js"
+} from "@kinotic/continuum-idl"
 import {IndexNameHelper} from "@/frontends/structures-admin/pages/structures/util/IndexNameHelper"
 import {PropType} from "vue";
 import {Identifiable} from "@kinotic/continuum";

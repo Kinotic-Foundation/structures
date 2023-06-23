@@ -13,8 +13,8 @@
   },
   "main": "main.ts",
   "dependencies": {
-    "@kinotic/continuum": "file:.yalc/@kinotic/continuum",
-    "@kinotic/continuum-idl-js": "file:.yalc/@kinotic/continuum-idl-js",
+    "@kinotic/continuum": "2.2.0",
+    "@kinotic/continuum-idl": "0.2.0",
     "aws-sdk": "^2.771.0",
     "bcryptjs": "^2.4.3",
     "epic-spinners": "^1.1.0",

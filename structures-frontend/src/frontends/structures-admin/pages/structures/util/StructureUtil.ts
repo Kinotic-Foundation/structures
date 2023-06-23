@@ -1,4 +1,4 @@
-import {C3Decorator} from '@kinotic/continuum-idl-js'
+import {C3Decorator} from '@kinotic/continuum-idl'
 
 export class StructureUtil {
     public static hasDecorator(decoratorName: string, decorators: C3Decorator[] | undefined): boolean {

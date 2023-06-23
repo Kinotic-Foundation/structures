@@ -1069,11 +1069,15 @@
     "@jridgewell/resolve-uri" "3.1.0"
     "@jridgewell/sourcemap-codec" "1.4.14"
 
-"@kinotic/continuum-idl-js@file:.yalc/@kinotic/continuum-idl-js":
-  version "0.1.0-b7faf755"
+"@kinotic/continuum-idl@0.2.0":
+  version "0.2.0"
+  resolved "https://registry.yarnpkg.com/@kinotic/continuum-idl/-/continuum-idl-0.2.0.tgz#8e671e7fe9242352bd47d9ad59587a9523813c43"
+  integrity sha512-AgbyH2/hNROIMabWZQYlKgEaJ8PrwEDuoJ1VdxuxAb4Lwa6KOapGS1ixNxjg47oestWK3vxWvaxIIuQAVJl23Q==
 
-"@kinotic/continuum@file:.yalc/@kinotic/continuum":
-  version "2.1.0-505d7a0d"
+"@kinotic/continuum@2.2.0":
+  version "2.2.0"
+  resolved "https://registry.yarnpkg.com/@kinotic/continuum/-/continuum-2.2.0.tgz#510e7a4978f7bc1d1664af34ba6f4d6dbf0b48a6"
+  integrity sha512-As5RXMi9dymmE6jUg+LAIAFneGe407bon70gtY2bgIM4XB4JZ9Ry4QLxpZ2YHagfdQP2kZcjWzff7Q6GBLa0KA==
   dependencies:
     "@stomp/rx-stomp" "^2.0.0"
     "@stomp/stompjs" "^7.0.0"
