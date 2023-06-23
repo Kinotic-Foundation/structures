@@ -149,7 +149,7 @@ export default class StructuresList extends Vue {
         delete item['publishing']
       }catch (error: any){
         delete item['publishing']
-        console.log(error.stack)
+        console.error(error.stack, error)
         table?.displayAlert(error.message)
       }
     }
@@ -165,7 +165,7 @@ export default class StructuresList extends Vue {
         delete item['publishing']
       }catch (error: any){
         delete item['publishing']
-        console.log(error.stack)
+        console.error(error.stack, error)
         table?.displayAlert(error.message)
       }
     }
