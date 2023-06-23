@@ -33,7 +33,8 @@ services:
     ports:
       - "127.0.0.1:58503:58503"
       - "127.0.0.1:58504:58504"
-      - "127.0.0.1:8989:8989"
+      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:80:80"
     environment:
       SPRING_PROFILES_ACTIVE: production
       STRUCTURES_INDEX_PREFIX: struct_

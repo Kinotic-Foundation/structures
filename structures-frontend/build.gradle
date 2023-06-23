@@ -45,12 +45,12 @@ node {
 }
 
 task deleteDist(type: Delete){
-    delete "${project.projectDir.parent}/structures-server/src/main/resources/public/", "${project.projectDir}/dist/"
+    delete "${project.projectDir.parent}/structures-server/src/main/resources/webroot/", "${project.projectDir}/dist/"
 }
 
 task copyDist(type: Copy){
     from "${project.projectDir}/dist"
-    into "${project.projectDir.parent}/structures-server/src/main/resources/public"
+    into "${project.projectDir.parent}/structures-server/src/main/resources/webroot"
     mustRunAfter 'yarnBuild'
 }
 
