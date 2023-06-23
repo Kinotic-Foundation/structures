@@ -54,7 +54,7 @@ services:
       STRUCTURES_OPEN_API_SERVER_URL: http://127.0.0.1:8080
       STRUCTURES_GRAPHQL_PORT: 4000
       STRUCTURES_GRAPHQL_PATH: /graphql/
-      STRUCTURES_CORS_ALLOWED_ORIGIN_PATTERN: *
+      STRUCTURES_CORS_ALLOWED_ORIGIN_PATTERN: '*'
       STRUCTURES_INITIALIZE_WITH_SAMPLE_DATA: true
     stdin_open: true # docker run -i
     tty: true        # docker run -t
