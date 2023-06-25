@@ -6,6 +6,8 @@ import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.EntitiesService;
 import org.kinotic.structures.internal.api.services.EntityService;
+import org.kinotic.structures.internal.api.services.EntityServiceFactory;
+import org.kinotic.structures.internal.api.services.StructureDAO;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
@@ -21,11 +23,14 @@ public class DefaultEntitiesService implements EntitiesService {
 
     private final AsyncLoadingCache<String, EntityService> entityServiceCache;
 
-    public DefaultEntitiesService(EntityServiceCacheLoader entityServiceCacheLoader){
+    public DefaultEntitiesService(StructureDAO structureDAO,
+                                  EntityServiceFactory entityServiceFactory){
         entityServiceCache = Caffeine.newBuilder()
                                      .expireAfterAccess(20, TimeUnit.HOURS)
                                      .maximumSize(10_000)
-                                     .buildAsync(entityServiceCacheLoader);
+                                     .buildAsync((key, executor) -> structureDAO.findById(key)
+                                                                        .thenComposeAsync(entityServiceFactory::createEntityService,
+                                                                         executor));
     }
 
     @Override
