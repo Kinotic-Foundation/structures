@@ -1,6 +1,7 @@
 package org.kinotic.structures.internal.api.services.impl;
 
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
+import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.domain.Namespace;
 import org.kinotic.structures.api.services.NamespaceService;
 import org.kinotic.structures.api.services.StructureService;
@@ -19,9 +20,14 @@ public class DefaultNamespaceService extends AbstractCrudService<Namespace> impl
 
     public DefaultNamespaceService(ElasticsearchAsyncClient esAsyncClient,
                                    ReactiveElasticsearchOperations esOperations,
+                                   StructuresProperties structuresProperties,
                                    StructureService structureService,
                                    CrudServiceTemplate crudServiceTemplate) {
-        super("namespace", Namespace.class, esAsyncClient, esOperations, crudServiceTemplate);
+        super("namespace",
+              Namespace.class,
+              esAsyncClient,
+              esOperations,
+              crudServiceTemplate);
         this.structureService = structureService;
     }
 

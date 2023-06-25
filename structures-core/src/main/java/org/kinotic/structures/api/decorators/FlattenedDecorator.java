@@ -21,7 +21,7 @@ import java.util.List;
 @Getter
 @Setter
 @Accessors(chain = true)
-public class FlattenedDecorator extends C3Decorator {
+public final class FlattenedDecorator extends C3Decorator {
 
     @JsonIgnore
     public static final String type = "Flattened";

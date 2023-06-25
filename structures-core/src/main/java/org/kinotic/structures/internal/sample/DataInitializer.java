@@ -10,8 +10,6 @@ import org.kinotic.structures.api.services.EntitiesService;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -62,20 +60,16 @@ public class DataInitializer {
                                                  String participantId){
         return testDataService.createRandomTestPeople(numberOfPeopleToCreate)
                               .thenCompose(people -> {
-                                  List<CompletableFuture<RawJson>> completableFutures = new ArrayList<>();
-                                  for(Person person : people){
-                                      byte[] jsonData;
-                                      try {
-                                          jsonData = objectMapper.writeValueAsBytes(person);
-                                      } catch (JsonProcessingException e) {
-                                          return CompletableFuture.failedFuture(e);
-                                      }
-                                      completableFutures.add(entitiesService.save(structure.getId(),
-                                                                                  RawJson.from(jsonData),
-                                                                                  new DefaultEntityContext(new DummyParticipant(tenantId,
-                                                                                                           participantId))));
+                                  byte[] jsonData;
+                                  try {
+                                      jsonData = objectMapper.writeValueAsBytes(people);
+                                  } catch (JsonProcessingException e) {
+                                      return CompletableFuture.failedFuture(e);
                                   }
-                                  return CompletableFuture.allOf(completableFutures.toArray(new CompletableFuture[0]));
+                                  return entitiesService.bulkSave(structure.getId(),
+                                                                  RawJson.from(jsonData),
+                                                                  new DefaultEntityContext(new DummyParticipant(tenantId,
+                                                                                                                participantId)));
                               });
     }
 

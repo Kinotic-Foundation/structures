@@ -9,7 +9,7 @@ import io.vertx.ext.web.handler.CorsHandler;
 import org.kinotic.continuum.core.api.security.SecurityService;
 import org.kinotic.continuum.gateway.api.security.AuthenticationHandler;
 import org.kinotic.structures.api.config.StructuresProperties;
-import org.kinotic.structures.internal.api.services.GraphQlProviderService;
+import org.kinotic.structures.internal.api.services.GraphQLProviderService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,16 +26,16 @@ public class GraphQLVerticle extends AbstractVerticle {
     private static final Logger log = LoggerFactory.getLogger(GraphQLVerticle.class);
 
     private final StructuresProperties properties;
-    private final GraphQlProviderService graphQlProviderService;
+    private final GraphQLProviderService graphQLProviderService;
     private final SecurityService securityService;
 
     private HttpServer server;
 
     public GraphQLVerticle(StructuresProperties properties,
-                           GraphQlProviderService graphQlProviderService,
+                           GraphQLProviderService graphQLProviderService,
                            @Autowired(required = false) SecurityService securityService) {
         this.properties = properties;
-        this.graphQlProviderService = graphQlProviderService;
+        this.graphQLProviderService = graphQLProviderService;
         this.securityService = securityService;
     }
 
@@ -55,7 +55,7 @@ public class GraphQLVerticle extends AbstractVerticle {
               .consumes("application/json")
               .produces("application/json")
               .handler(BodyHandler.create(false))
-              .handler(new GraphQLHandler(graphQlProviderService, "structureNamespace"));
+              .handler(new GraphQLHandler(graphQLProviderService, "structureNamespace"));
 
         // Begin listening for requests
         server.requestHandler(router).listen(properties.getGraphqlPort(), ar -> {

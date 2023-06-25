@@ -9,7 +9,7 @@ import java.util.List;
 /**
  * Created by Navíd Mitchell 🤪 on 5/9/23.
  */
-public class ReadOnlyDecorator extends C3Decorator {
+public final class ReadOnlyDecorator extends C3Decorator {
 
     @JsonIgnore
     public static final String type = "ReadOnly";

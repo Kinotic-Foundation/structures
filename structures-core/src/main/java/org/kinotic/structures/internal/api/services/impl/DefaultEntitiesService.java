@@ -3,15 +3,15 @@ package org.kinotic.structures.internal.api.services.impl;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.kinotic.structures.api.domain.EntityContext;
+import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.EntitiesService;
-import org.kinotic.structures.api.services.StructureService;
 import org.kinotic.structures.internal.api.services.EntityService;
-import org.kinotic.structures.internal.api.services.EntityServiceFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by Navíd Mitchell 🤪on 5/10/23.
@@ -21,15 +21,11 @@ public class DefaultEntitiesService implements EntitiesService {
 
     private final AsyncLoadingCache<String, EntityService> entityServiceCache;
 
-    public DefaultEntitiesService(StructureService structureService,
-                                  EntityServiceFactory entityServiceFactory){
-
-        this.entityServiceCache =
-                Caffeine.newBuilder()
-                        .buildAsync((key, executor) ->
-                                            structureService.findById(key)
-                                                            .thenComposeAsync(entityServiceFactory::createEntityService,
-                                                                              executor));
+    public DefaultEntitiesService(EntityServiceCacheLoader entityServiceCacheLoader){
+        entityServiceCache = Caffeine.newBuilder()
+                                     .expireAfterAccess(20, TimeUnit.HOURS)
+                                     .maximumSize(10_000)
+                                     .buildAsync(entityServiceCacheLoader);
     }
 
     @Override
@@ -81,4 +77,8 @@ public class DefaultEntitiesService implements EntitiesService {
                                  .thenCompose(entityService -> entityService.search(searchText, pageable, type, context));
     }
 
+    @Override
+    public void evictCachesFor(Structure structure) {
+        entityServiceCache.asMap().remove(structure.getId());
+    }
 }

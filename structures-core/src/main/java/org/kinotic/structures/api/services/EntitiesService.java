@@ -1,6 +1,7 @@
 package org.kinotic.structures.api.services;
 
 import org.kinotic.structures.api.domain.EntityContext;
+import org.kinotic.structures.api.domain.Structure;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -89,5 +90,11 @@ public interface EntitiesService {
      * @return a page of entities
      */
     <T> CompletableFuture<Page<T>> search(String structureId, String searchText, Pageable pageable, Class<T> type, EntityContext context);
+
+    /**
+     * Evicts the cache for a given structure
+     * @param structure to evict the cache for
+     */
+    void evictCachesFor(Structure structure);
 
 }

@@ -6,8 +6,6 @@ import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.Structure;
 import org.springframework.stereotype.Component;
 
-import java.util.UUID;
-
 /**
  * Created by Navíd Mitchell 🤪 on 5/9/23.
  */
@@ -26,6 +24,9 @@ public class IdDecoratorInstance implements UpsertFieldPreProcessor<IdDecorator,
 
     @Override
     public String process(Structure structure, String fieldName, IdDecorator decorator, String fieldValue, EntityContext context) {
-        return fieldValue != null && !fieldValue.isBlank() ? fieldValue : UUID.randomUUID().toString();
+        if(fieldValue == null || fieldValue.isBlank()){
+            throw new IllegalArgumentException("Id field cannot be null or blank");
+        }
+        return fieldValue;
     }
 }

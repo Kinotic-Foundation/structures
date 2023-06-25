@@ -14,7 +14,7 @@ import io.vertx.ext.web.handler.graphql.impl.GraphQLBatch;
 import io.vertx.ext.web.handler.graphql.impl.GraphQLInput;
 import io.vertx.ext.web.handler.graphql.impl.GraphQLQuery;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
-import org.kinotic.structures.internal.api.services.GraphQlProviderService;
+import org.kinotic.structures.internal.api.services.GraphQLProviderService;
 
 import java.util.List;
 import java.util.Map;
@@ -29,12 +29,12 @@ import static java.util.stream.Collectors.toList;
  */
 public class GraphQLHandler implements Handler<RoutingContext> {
 
-    private final GraphQlProviderService graphQlProviderService;
+    private final GraphQLProviderService graphQLProviderService;
     private final String namespacePathParameter;
 
-    public GraphQLHandler(GraphQlProviderService graphQlProviderService,
+    public GraphQLHandler(GraphQLProviderService graphQLProviderService,
                           String namespacePathParameter) {
-        this.graphQlProviderService = graphQlProviderService;
+        this.graphQLProviderService = graphQLProviderService;
         this.namespacePathParameter = namespacePathParameter;
     }
 
@@ -185,8 +185,8 @@ public class GraphQLHandler implements Handler<RoutingContext> {
 
         String namespace = rc.pathParam(namespacePathParameter);
 
-        return VertxCompletableFuture.from(rc.vertx(), graphQlProviderService
-                .getGraphQL(namespace)
+        return VertxCompletableFuture.from(rc.vertx(), graphQLProviderService
+                .getOrCreateGraphQL(namespace)
                 .thenCompose(graphQL -> graphQL.executeAsync(builder.build())
                                                .thenApply(executionResult -> new JsonObject(executionResult.toSpecification()))));
     }

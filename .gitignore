@@ -71,3 +71,5 @@ website/.vitepress/dist/
 structures-frontend/.env.development
 structures-frontend/.env.production
 structures-frontend/node_modules
+
+structures-server/src/main/resources/webroot/
