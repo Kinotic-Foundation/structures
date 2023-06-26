@@ -169,7 +169,6 @@ public class DefaultEntityService implements EntityService {
                                     builder.q(searchText);
 
                                     builder.query(queryBuilder.build());
-
                                 }));
     }
 

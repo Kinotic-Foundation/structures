@@ -53,6 +53,7 @@ public class StructuresProperties {
 
     private String graphqlPath = "/graphql/";
 
+
     /**
      * The allowed origin pattern for CORS
      * Defaults to "http://localhost"
