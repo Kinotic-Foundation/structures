@@ -5,22 +5,19 @@
 <script lang="ts">
   import Vue from 'vue'
   import { Component } from 'vue-property-decorator'
-  import {IEventBus} from '@kinotic/continuum'
   import Keycloak from "keycloak-js"
-  import {IUserState} from "@/frontends/continuum";
-
+  import {USER_STATE} from "@/frontends/continuum";
+  import { Continuum } from '@kinotic/continuum'
 
   @Component({
     components: { },
     props: { keycloak: Keycloak }
   })
   export default class Main extends Vue {
-    public eventBus!: IEventBus
-    private userState!: IUserState
 
     public async created() {
       if(process.env.VUE_APP_KEYCLOAK_SUPPORT === "true") {
-        await this.userState.authenticateKeycloak(this.userState.getUri(), this.$props.keycloak)
+        await USER_STATE.authenticateKeycloak(USER_STATE.getUri(), this.$props.keycloak)
         setInterval(async () => {
           try {
             let refreshed: boolean = await this.$props.keycloak.updateToken(70)
@@ -45,7 +42,7 @@
     }
 
     public beforeDestroy() {
-      this.eventBus.disconnect()
+        Continuum.disconnect()
     }
 
   }
