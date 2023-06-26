@@ -1,6 +1,7 @@
 import { Continuum } from '@kinotic/continuum'
 import Keycloak from "keycloak-js"
 import {reactive} from "vue";
+import {CONTINUUM_UI} from "@/frontends/continuum";
 
 export interface IUserState {
 
@@ -41,7 +42,15 @@ export class UserState implements IUserState{
 
     authenticateKeycloak(url: string, keycloak: Keycloak): Promise<void> {
         this.keycloak = keycloak
-        return this.authenticate(url, this.keycloak.tokenParsed?.email as string, this.keycloak.token as string)
+        if(process.env.VUE_APP_KEYCLOAK_ROLE !== "none") {
+            if(!this.keycloak.hasRealmRole(process.env.VUE_APP_KEYCLOAK_ROLE)){
+                return CONTINUUM_UI.navigate("/access-denied").then()
+            }else{
+                return this.authenticate(url, this.keycloak.tokenParsed?.email as string, this.keycloak.token as string)
+            }
+        }else{
+            return this.authenticate(url, this.keycloak.tokenParsed?.email as string, this.keycloak.token as string)
+        }
     }
 
     isAuthenticated(): boolean {

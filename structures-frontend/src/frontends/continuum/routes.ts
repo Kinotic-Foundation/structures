@@ -7,6 +7,13 @@ let continuumRoutes: RouteConfig[] = [
             authenticationRequired: false
         },
         component: () => import(/* webpackChunkName: "main" */'@/frontends/continuum/pages/FourOFour.vue')
+    },
+    {
+        path: '/access-denied',
+        meta:{
+            authenticationRequired: false
+        },
+        component: () => import(/* webpackChunkName: "main" */'@/frontends/continuum/pages/AccessDenied.vue')
     }
 ]
 
