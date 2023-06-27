@@ -221,19 +221,21 @@ export default class CrudTable extends Vue {
 
     public async deleteItem(item: Identifiable<string>) {
         this.hideAlert()
-        const index = this.items.indexOf(item)
 
-        if (await (this.$refs.confirm as Confirm).open('Delete Item', 'Are you sure you want to do this?', { color: 'error' })) {
-          (this.dataSource as IEditableDataSource<any>).deleteById(item.id).then(() => {
-                this.items.splice(index, 1)
-                this.totalItems--
-                if ((this.totalItems / this.options.itemsPerPage) < this.options.page && this.options.page > 1) {
-                    this.options.page--
-                    this.find()
-                }
-            }).catch((error: any) => {
-                this.displayAlert(error.message)
-            })
+        if(item.id !== null){
+            const index = this.items.indexOf(item)
+            if (await (this.$refs.confirm as Confirm).open('Delete Item', 'Are you sure you want to do this?', { color: 'error' })) {
+                (this.dataSource as IEditableDataSource<any>).deleteById(item.id).then(() => {
+                    this.items.splice(index, 1)
+                    this.totalItems--
+                    if ((this.totalItems / this.options.itemsPerPage) < this.options.page && this.options.page > 1) {
+                        this.options.page--
+                        this.find()
+                    }
+                }).catch((error: any) => {
+                    this.displayAlert(error.message)
+                })
+            }
         }
     }
 

@@ -166,7 +166,9 @@ export default class CrudIdentifiableAssociationDialog extends Vue {
 
         const ids: string[] = []
         for (const policy of this.syncedAssociatedIdentifiables) {
-            ids.push(policy.id)
+            if(policy.id !== null){
+                ids.push(policy.id)
+            }
         }
 
         try {
