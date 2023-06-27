@@ -1074,10 +1074,10 @@
   resolved "https://registry.yarnpkg.com/@kinotic/continuum-idl/-/continuum-idl-0.2.0.tgz#8e671e7fe9242352bd47d9ad59587a9523813c43"
   integrity sha512-AgbyH2/hNROIMabWZQYlKgEaJ8PrwEDuoJ1VdxuxAb4Lwa6KOapGS1ixNxjg47oestWK3vxWvaxIIuQAVJl23Q==
 
-"@kinotic/continuum@2.2.0":
-  version "2.2.0"
-  resolved "https://registry.yarnpkg.com/@kinotic/continuum/-/continuum-2.2.0.tgz#510e7a4978f7bc1d1664af34ba6f4d6dbf0b48a6"
-  integrity sha512-As5RXMi9dymmE6jUg+LAIAFneGe407bon70gtY2bgIM4XB4JZ9Ry4QLxpZ2YHagfdQP2kZcjWzff7Q6GBLa0KA==
+"@kinotic/continuum@2.2.1":
+  version "2.2.1"
+  resolved "https://registry.yarnpkg.com/@kinotic/continuum/-/continuum-2.2.1.tgz#fa36a5a8923990933b99e74cc2594de94215b216"
+  integrity sha512-UPO+Pz7k3WlbfZx45kVjaMwfKKVCNZCo/qs93f+KWMTrokg/KnnFWeSqxYHctzWKmtR//nsxJdQVt8hhmlIavA==
   dependencies:
     "@stomp/rx-stomp" "^2.0.0"
     "@stomp/stompjs" "^7.0.0"
