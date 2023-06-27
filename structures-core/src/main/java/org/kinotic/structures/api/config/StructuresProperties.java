@@ -1,15 +1,14 @@
 package org.kinotic.structures.api.config;
 
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.apache.commons.lang3.Validate;
-import org.kinotic.structures.internal.utils.StructuresUtil;
 import org.kinotic.structures.internal.config.ElasticConnectionInfo;
 import org.kinotic.structures.internal.config.OpenApiSecurityType;
+import org.kinotic.structures.internal.utils.StructuresUtil;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
@@ -22,24 +21,43 @@ import java.util.List;
 @Setter
 @Accessors(chain = true)
 @NoArgsConstructor
-@AllArgsConstructor
 @Component
 @ConfigurationProperties(prefix = "structures")
 public class StructuresProperties {
 
     @NotNull
     private String indexPrefix = "struct_";
+
     @NotNull
     private String tenantIdFieldName = "structuresTenantId";
+
     @NotNull
-    private Duration elasticConnectionTimeout = Duration.ofMinutes(1);
+    private Duration elasticConnectionTimeout = Duration.ofSeconds(5);
+
     @NotNull
     private Duration elasticSocketTimeout = Duration.ofMinutes(1);
+
+    /**
+     * The interval to check the health of the elastic cluster
+     */
+    @NotNull
+    private Duration elasticHealthCheckInterval = Duration.ofSeconds(10);
+
     @NotNull
     private List<ElasticConnectionInfo> elasticConnections = List.of(new ElasticConnectionInfo());
 
     private String elasticUsername = null;
+
     private String elasticPassword = null;
+
+    /**
+     * The allowed origin pattern for CORS
+     * Defaults to "http://localhost.*"
+     * If you want to allow all origins use "*"
+     * Internally uses Java Regex Patterns to match
+     * @see java.util.regex.Pattern
+     */
+    private String corsAllowedOriginPattern = "http://localhost.*";
 
     private OpenApiSecurityType openApiSecurityType = OpenApiSecurityType.NONE;
 
@@ -53,15 +71,20 @@ public class StructuresProperties {
 
     private String graphqlPath = "/graphql/";
 
+    /**
+     * The port that the static files and the health check will be served from
+     */
+    private int webServerPort = 80;
 
     /**
-     * The allowed origin pattern for CORS
-     * Defaults to "http://localhost"
-     * If you want to allow all origins use "*"
-     * Internally uses Java Regex Patterns to match
-     * @see java.util.regex.Pattern
+     * The path that the health check will be served from
      */
-    private String corsAllowedOriginPattern = "http://localhost.*";
+    private String healthCheckPath = "/health/";
+
+    /**
+     * If true static files will be served from resources/webroot
+     */
+    private boolean enableStaticFileServer = false;
 
     /**
      * If true will initialize the Structures with sample data
