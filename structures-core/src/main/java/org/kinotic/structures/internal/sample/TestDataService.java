@@ -127,7 +127,7 @@ public class TestDataService {
         structure.setNamespace(personType.getNamespace());
 
         return namespaceService.createNamespaceIfNotExist("org.kinotic.sample", "Sample namespace")
-                               .thenCompose(v -> structureService.save(structure)
+                               .thenCompose(v -> structureService.create(structure)
                                                                  .thenCompose(saved -> structureService.publish(saved.getId())
                                                                                                        .thenApply(published -> saved)));
     }

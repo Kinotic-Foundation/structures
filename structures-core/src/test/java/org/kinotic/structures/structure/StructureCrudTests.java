@@ -51,7 +51,7 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 				 .setDescription("Defines a Person")
 				 .setEntityDefinition(testDataService.createPersonSchema(MultiTenancyType.NONE, false));
 
-		CompletableFuture<Structure> future = structureService.save(structure);
+		CompletableFuture<Structure> future = structureService.create(structure);
 
 		StepVerifier.create(Mono.fromFuture(future))
 					.expectNextMatches(savedStructure -> {
@@ -86,340 +86,53 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 	}
 
 	@Test
-	public void createStructureInvalidField() throws Exception{
+	public void createStructureInvalidField(){
 		Structure structure = new Structure();
 		structure.setName("Person")
 				 .setNamespace("org.kinotic.sample")
 				 .setDescription("Defines a Person")
 				 .setEntityDefinition(testDataService.createPersonSchema(MultiTenancyType.NONE, true));
 
-		CompletableFuture<Structure> future = structureService.save(structure);
+		CompletableFuture<Structure> future = structureService.create(structure);
 
 		StepVerifier.create(Mono.fromFuture(future))
 					.expectError(IllegalArgumentException.class)
 					.verify();
 	}
 
-//
-//	@Test
-//	public void tryCreateDuplicateStructure(){
-//		Assertions.assertThrows(AlreadyExistsException.class, () -> {
-//			Structure structure = new Structure();
-//			structure.setName("Computer2-" + System.currentTimeMillis());
-//			structure.setNamespace("some_other_org_");
-//			structure.setDescription("Defines the Computer Device properties");
-//
-//
-//			Optional<Trait> vpnIpOptional = traitService.getTraitByName("VpnIp");
-//			Optional<Trait> ipOptional = traitService.getTraitByName("Ip");
-//			Optional<Trait> macOptional = traitService.getTraitByName("Mac");
-//
-//			structure.getTraits().put("vpnIp", vpnIpOptional.get());
-//			structure.getTraits().put("ip", ipOptional.get());
-//			structure.getTraits().put("mac", macOptional.get());
-//			// should also get createdTime, updateTime, and deleted by default
-//
-//			structure = structureService.save(structure);
-//			String structureId = structure.getId(); // save for later deletion
-//			try {
-//				structure.setId("");
-//				structure.setCreated(0);
-//				structure.setUpdated(0L);
-//				structureService.save(structure);
-//			} catch (AlreadyExistsException aee) {
-//				throw aee;
-//			} finally {
-//				structureService.delete(structureId);
-//			}
-//		});
-//	}
-//
-//
-//	@Test
-//	public void tryCreateUpdateStructure_WithoutGettingFreshFromDb(){
-//		Assertions.assertThrows(OptimisticLockingFailureException.class, () -> {
-//			Structure structure = new Structure();
-//			structure.setName("Computer42-" + System.currentTimeMillis());
-//			structure.setNamespace("some_other_org_");
-//			structure.setDescription("Defines the Computer Device properties");
-//
-//
-//			Optional<Trait> vpnIpOptional = traitService.getTraitByName("VpnIp");
-//			Optional<Trait> ipOptional = traitService.getTraitByName("Ip");
-//			Optional<Trait> macOptional = traitService.getTraitByName("Mac");
-//
-//			structure.getTraits().put("vpnIp", vpnIpOptional.get());
-//			structure.getTraits().put("ip", ipOptional.get());
-//			structure.getTraits().put("mac", macOptional.get());
-//			// should also get createdTime, updateTime, and deleted by default
-//
-//			structure = structureService.save(structure);
-//
-//			Structure clone = new Structure();// break pass by reference chain
-//			clone.setId(structure.getId());
-//			clone.setDescription(structure.getDescription());
-//			clone.setCreated(structure.getCreated());
-//			clone.setPublished(structure.isPublished());
-//			clone.setPublishedTimestamp(structure.getPublishedTimestamp());
-//			clone.setName(structure.getName());
-//			clone.setNamespace(structure.getNamespace());
-//			clone.setTraits(structure.getTraits());
-//			clone.setMetadata(structure.getMetadata());
-//			clone.setUpdated(structure.getUpdated());
-//
-//			structure.setDescription("Some New Description");
-//			structure = structureService.save(structure);// make sure our updated field has new value
-//
-//			Assertions.assertTrue(structure.getUpdated() > clone.getUpdated(), "Updated Structure did not get new updated time value");
-//
-//			try {
-//				clone.setDescription("Should Fail because this object is out of sync with db");
-//				structureService.save(clone);
-//			} catch (OptimisticLockingFailureException olfe) {
-//				throw olfe;
-//			} finally {
-//				structureService.delete(structure.getId());
-//			}
-//		});
-//	}
-//
-//	@Test
-//	public void addToTraitMapNotPublishedAndValidate() throws AlreadyExistsException, IOException, PermenentTraitException {
-//		Structure structure = new Structure();
-//		structure.setName("Computer3-" + System.currentTimeMillis());
-//		structure.setNamespace("some_other_org_");
-//		structure.setDescription("Defines the Computer Device properties");
-//
-//
-//		Optional<Trait> vpnIpOptional = traitService.getTraitByName("VpnIp");
-//		Optional<Trait> ipOptional = traitService.getTraitByName("Ip");
-//		Optional<Trait> macOptional = traitService.getTraitByName("Mac");
-//
-//		structure.getTraits().put("vpnIp", vpnIpOptional.get());
-//		structure.getTraits().put("ip", ipOptional.get());
-//		// should also get createdTime, updateTime, and deleted by default
-//
-//		structure = structureService.save(structure);
-//
-//		try {
-//
-//			structureService.addTraitToStructure(structure.getId(), "mac", macOptional.get());
-//
-//			Optional<Structure> optional = structureService.getById(structure.getId());
-//			Structure saved = optional.get();
-//			int index = 0;
-//			for (Map.Entry<String, Trait> traitEntry : saved.getTraits().entrySet()) {
-//				if (index == 0 && !traitEntry.getKey().equals("vpnIp")) {
-//					throw new IllegalStateException("Order of Trait Map not what it should be, index 0 should be \'vpnIp\' but got \'" + traitEntry.getKey());
-//				} else if (index == 1 && !traitEntry.getKey().equals("ip")) {
-//					throw new IllegalStateException("Order of Trait Map not what it should be, index 1 should be \'ip\' but got \'" + traitEntry.getKey());
-//				} else if (index == 2 && !traitEntry.getKey().equals("id")) {
-//					throw new IllegalStateException("Order of Trait Map not what it should be, index 2 should be \'id\' but got \'" + traitEntry.getKey());
-//				} else if (index == 3 && !traitEntry.getKey().equals("deleted")) {
-//					throw new IllegalStateException("Order of Trait Map not what it should be, index 3 should be \'deleted\' but got \'" + traitEntry.getKey());
-//				} else if (index == 4 && !traitEntry.getKey().equals("deletedTime")) {
-//					throw new IllegalStateException("Order of Trait Map not what it should be, index 4 should be \'deletedTime\' but got \'" + traitEntry.getKey());
-//				} else if (index == 5 && !traitEntry.getKey().equals("updatedTime")) {
-//					throw new IllegalStateException("Order of Trait Map not what it should be, index 5 should be \'updatedTime\' but got \'" + traitEntry.getKey());
-//				} else if (index == 6 && !traitEntry.getKey().equals("structureId")) {
-//					throw new IllegalStateException("Order of Trait Map not what it should be, index 6 should be \'structureId\' but got \'" + traitEntry.getKey());
-//				} else if (index == 7 && !traitEntry.getKey().equals("mac")) {
-//					throw new IllegalStateException("Order of Trait Map not what it should be, index 7 should be \'mac\' but got \'" + traitEntry.getKey());
-//				}
-//
-//				index++;
-//			}
-//
-//
-//		} catch (Exception e) {
-//			throw e;
-//		} finally {
-//			structureService.delete(structure.getId());
-//		}
-//
-//	}
-//
-//	@Test
-//	public void addToTraitMapAlreadyPublishedAndValidate() throws AlreadyExistsException, IOException, PermenentTraitException {
-//		Structure structure = new Structure();
-//		structure.setName("Computer4-" + System.currentTimeMillis());
-//		structure.setNamespace("some_other_org_");
-//		structure.setDescription("Defines the Computer Device properties");
-//
-//
-//		Optional<Trait> vpnIpOptional = traitService.getTraitByName("VpnIp");
-//		Optional<Trait> ipOptional = traitService.getTraitByName("Ip");
-//		Optional<Trait> macOptional = traitService.getTraitByName("Mac");
-//
-//		structure.getTraits().put("vpnIp", vpnIpOptional.get());
-//		structure.getTraits().put("ip", ipOptional.get());
-//		// should also get createdTime, updateTime, and deleted by default
-//
-//		structure = structureService.save(structure);
-//
-//		try {
-//
-//			structureService.publish(structure.getId());
-//
-//			structureService.addTraitToStructure(structure.getId(), "mac", macOptional.get());
-//
-//			Optional<Structure> optional = structureService.getById(structure.getId());
-//			Structure saved = optional.get();
-//			int index = 0;
-//			for (Map.Entry<String, Trait> traitEntry : saved.getTraits().entrySet()) {
-//				if (index == 0 && !traitEntry.getKey().equals("vpnIp")) {
-//					throw new IllegalStateException("Order of Trait Map not what it should be, index 0 should be \'vpnIp\' but got \'" + traitEntry.getKey());
-//				} else if (index == 1 && !traitEntry.getKey().equals("ip")) {
-//					throw new IllegalStateException("Order of Trait Map not what it should be, index 1 should be \'ip\' but got \'" + traitEntry.getKey());
-//				} else if (index == 2 && !traitEntry.getKey().equals("id")) {
-//					throw new IllegalStateException("Order of Trait Map not what it should be, index 2 should be \'id\' but got \'" + traitEntry.getKey());
-//				} else if (index == 3 && !traitEntry.getKey().equals("deleted")) {
-//					throw new IllegalStateException("Order of Trait Map not what it should be, index 3 should be \'deleted\' but got \'" + traitEntry.getKey());
-//				} else if (index == 4 && !traitEntry.getKey().equals("deletedTime")) {
-//					throw new IllegalStateException("Order of Trait Map not what it should be, index 4 should be \'deletedTime\' but got \'" + traitEntry.getKey());
-//				} else if (index == 5 && !traitEntry.getKey().equals("updatedTime")) {
-//					throw new IllegalStateException("Order of Trait Map not what it should be, index 5 should be \'updatedTime\' but got \'" + traitEntry.getKey());
-//				} else if (index == 6 && !traitEntry.getKey().equals("structureId")) {
-//					throw new IllegalStateException("Order of Trait Map not what it should be, index 6 should be \'structureId\' but got \'" + traitEntry.getKey());
-//				} else if (index == 7 && !traitEntry.getKey().equals("mac")) {
-//					throw new IllegalStateException("Order of Trait Map not what it should be, index 7 should be \'mac\' but got \'" + traitEntry.getKey());
-//				}
-//
-//				index++;
-//			}
-//
-//
-//		} catch (Exception e) {
-//			throw e;
-//		} finally {
-//			structureService.delete(structure.getId());
-//		}
-//
-//	}
-//
-//	@Test
-//	public void publishAndDeleteAStructure() throws AlreadyExistsException, IOException, PermenentTraitException {
-//		Structure structure = new Structure();
-//		structure.setName("Computer9-" + System.currentTimeMillis());
-//		structure.setNamespace("some_other_org_");
-//		structure.setDescription("Defines the Computer Device properties");
-//
-//
-//		Optional<Trait> vpnIpOptional = traitService.getTraitByName("VpnIp");
-//		Optional<Trait> ipOptional = traitService.getTraitByName("Ip");
-//		Optional<Trait> macOptional = traitService.getTraitByName("Mac");
-//
-//		structure.getTraits().put("vpnIp", vpnIpOptional.get());
-//		structure.getTraits().put("ip", ipOptional.get());
-//		structure.getTraits().put("mac", macOptional.get());
-//		// should also get createdTime, updateTime, and deleted by default
-//
-//		structure = structureService.save(structure);
-//
-//		structureService.publish(structure.getId());
-//
-//		structureService.delete(structure.getId());
-//	}
-//
-//	@Test
-//	public void publishAndDeleteAStructureWithAnItem() {
-//		Assertions.assertThrows(IllegalStateException.class, () -> {
-//			Structure structure = new Structure();
-//			structure.setName("Computer10-" + System.currentTimeMillis());
-//			structure.setNamespace("some_other_org_");
-//			structure.setDescription("Defines the Computer Device properties");
-//
-//
-//			Optional<Trait> vpnIpOptional = traitService.getTraitByName("VpnIp");
-//			Optional<Trait> ipOptional = traitService.getTraitByName("Ip");
-//			Optional<Trait> macOptional = traitService.getTraitByName("Mac");
-//
-//			structure.getTraits().put("vpnIp", vpnIpOptional.get());
-//			structure.getTraits().put("ip", ipOptional.get());
-//			structure.getTraits().put("mac", macOptional.get());
-//			// should also get createdTime, updateTime, and deleted by default
-//
-//			structure = structureService.save(structure);
-//			structureService.publish(structure.getId());
-//
-//			// now we can create an item with the above fields
-//			TypeCheckMap obj = new TypeCheckMap();
-//			obj.put("ip", "192.0.2.11");
-//			obj.put("mac", "000000000001");
-//			TypeCheckMap saved = null;
-//
-//			try {
-//				saved = itemService.upsertItem(structure.getId(), obj, null);
-//
-//				Thread.sleep(1000);// give time for ES to flush the new item
-//
-//				// should throw an exception if there is items created for the structure
-//				// cannot delete something that has data out there.
-//				structureService.delete(structure.getId());
-//			} catch (IllegalStateException ise) {
-//				throw ise;
-//			} finally {
-//				// now delete the item so we can delete the structure.
-//				if (saved != null) {
-//					itemService.delete(structure.getId(), saved.getString("id"), null);
-//				}
-//
-//				Thread.sleep(1000);// give time for ES to flush the new item
-//				structureService.delete(structure.getId());
-//			}
-//		});
-//
-//	}
-//
-//	@Test
-//	public void publishManyNamespacesAndQueryForOneNamespace() throws IOException, AlreadyExistsException, PermenentTraitException {
-//		Structure office1 = structureTestHelper.getOfficeStructure("org.kinotic.");
-//		Structure computer = structureTestHelper.getComputerStructure("org.kinotic.");
-//		Structure office2 = structureTestHelper.getOfficeStructure("some_name_space_");
-//		Structure computer1 = structureTestHelper.getComputerStructure("some_name_space_");
-//		Structure computer2 = structureTestHelper.getComputerStructure("some_name_space_");
-//		Structure computer3 = structureTestHelper.getComputerStructure("some_name_space_");
-//
-//		try {
-//
-//			Structures query1 = structureService.getAllPublishedForNamespace("some_name_space_", 100, 0, "name", true);
-//
-//			Assertions.assertEquals(4, query1.getTotalElements(), "Structure Namespace query did not return expected results");
-//
-//			Structures query2 = structureService.getAllPublishedForNamespace("org.kinotic.", 100, 0, "name", true);
-//
-//			Assertions.assertEquals(2, query2.getTotalElements(), "Second Structure Namespace query did not return expected results");
-//
-//		} catch (IOException ioe) {
-//			throw ioe;
-//		} finally {
-//			structureService.delete(office1.getId());
-//			structureService.delete(computer.getId());
-//			structureService.delete(office2.getId());
-//			structureService.delete(computer1.getId());
-//			structureService.delete(computer2.getId());
-//			structureService.delete(computer3.getId());
-//		}
-//	}
-//
-//
-//	@Test
-//	public void publishAndUnpublishThenDeleteAStructure() throws Exception {
-//		Structure structure = structureTestHelper.getSimpleItemStructure();
-//
-//
-//		// now we can create an item with the above fields
-//		TypeCheckMap obj = new TypeCheckMap();
-//		obj.put("ip", "192.0.2.11");
-//		obj.put("mac", "000000000001");
-//
-//		TypeCheckMap saved = itemService.upsertItem(structure.getId(), obj, null);
-//		Assertions.assertNotNull(saved);
-//
-//		// unpublish - should remove everything and unpublish the structure
-//		StructureHolder holder = structureService.unPublish(structure.getId());
-//		Assertions.assertFalse(holder.getStructure().isPublished());
-//
-//		structureService.delete(structure.getId());
-//	}
+	@Test
+	public void createStructureWithSameNameError() throws Exception {
+		Structure structure = new Structure();
+		structure.setName("Person")
+				 .setNamespace("org.kinotic.sample")
+				 .setDescription("Defines a Person")
+				 .setEntityDefinition(testDataService.createPersonSchema(MultiTenancyType.NONE, false));
+
+		CompletableFuture<Structure> future = structureService.create(structure);
+
+		StepVerifier.create(Mono.fromFuture(future))
+					.expectNextMatches(savedStructure -> {
+						Assertions.assertNotNull(savedStructure.getId());
+						Assertions.assertNotNull(savedStructure.getCreated());
+						Assertions.assertNotNull(savedStructure.getUpdated());
+						Assertions.assertEquals(structure.getName(), savedStructure.getName());
+						Assertions.assertEquals(structure.getDescription(), savedStructure.getDescription());
+						Assertions.assertEquals(structure.getEntityDefinition(), savedStructure.getEntityDefinition());
+						return true;
+					})
+					.expectComplete()
+					.verify();
+
+		CompletableFuture<Structure> future2 = structureService.create(structure);
+
+		StepVerifier.create(Mono.fromFuture(future2))
+					.expectError(IllegalArgumentException.class)
+					.verify();
+
+		CompletableFuture<Void> delFuture = structureService.deleteById(future.get().getId());
+
+		StepVerifier.create(Mono.fromFuture(delFuture))
+					.expectComplete()
+					.verify();
+	}
 }

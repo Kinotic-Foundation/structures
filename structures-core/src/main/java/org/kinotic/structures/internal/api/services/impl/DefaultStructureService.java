@@ -2,7 +2,6 @@ package org.kinotic.structures.internal.api.services.impl;
 
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import co.elastic.clients.elasticsearch._types.mapping.DynamicMapping;
-import co.elastic.clients.elasticsearch._types.mapping.TypeMapping;
 import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.StructureService;
@@ -49,50 +48,29 @@ public class DefaultStructureService implements StructureService {
     }
 
     @Override
-    public CompletableFuture<Structure> save(Structure structure) {
-
-        if (structure.getName() == null || structure.getName().isBlank() || structure.getName().contains(".")) {
-            return CompletableFuture.failedFuture(new IllegalArgumentException("Structure Name Invalid"));
-        }
-        if (structure.getNamespace() == null || structure.getNamespace().isBlank()) {
-            return CompletableFuture.failedFuture(new IllegalArgumentException("Structure Namespace Invalid"));
-        }
-        if (structure.getEntityDefinition() == null) {
-            return CompletableFuture.failedFuture(new IllegalArgumentException(
-                    "Structure entityDefinition must not be null"));
-        }
-
-        structure.setNamespace(structure.getNamespace().trim());
-        structure.setName(structure.getName().trim());
-
-        String logicalIndexName = StructuresUtil.structureNameToId(structure.getNamespace(), structure.getName());
-
-        // will throw an exception if invalid
+    public CompletableFuture<Structure> create(Structure structure) {
+        String logicalIndexName;
         try {
+            // will throw an exception if invalid
+            validateStructure(structure);
+
+            structure.setNamespace(structure.getNamespace().trim());
+            structure.setName(structure.getName().trim());
+            logicalIndexName = StructuresUtil.structureNameToId(structure.getNamespace(), structure.getName());
+
             StructuresUtil.indexNameValidation(logicalIndexName);
+
         } catch (IllegalArgumentException e) {
             return CompletableFuture.failedFuture(e);
         }
 
         return findById(logicalIndexName)
                 .thenCompose(existingStructure -> {
-
                     CompletableFuture<Structure> ret;
-
                     // Check if this is an existing structure or new one
                     if (existingStructure != null) {
-
-                        // trying to save a new structure with an existing name
-                        if (structure.getId() == null) {
-                            ret = CompletableFuture.failedFuture(new IllegalArgumentException(
-                                    "Structure Namespace+Name must be unique, '" + logicalIndexName + "' already exists."));
-                        } else {
-                            // updating an existing structure, reconcile the differences
-                            structure.setUpdated(new Date());
-
-                            // FIXME: reconcile structure differences (should be async)
-                            ret = structureDAO.save(structure);
-                        }
+                        ret = CompletableFuture.failedFuture(new IllegalArgumentException(
+                                "Structure Namespace+Name must be unique, '" + logicalIndexName + "' already exists."));
                     } else {
                         // new structure
                         structure.setId(logicalIndexName);
@@ -112,6 +90,37 @@ public class DefaultStructureService implements StructureService {
                     }
                     return ret;
                 });
+    }
+
+    @Override
+    public CompletableFuture<Structure> save(Structure structure) {
+
+        try {
+            if (structure.getId() == null || structure.getId().isBlank()) {
+                throw new IllegalArgumentException("Structure Id Invalid");
+            }
+            validateStructure(structure);
+        } catch (IllegalArgumentException e) {
+            return CompletableFuture.failedFuture(e);
+        }
+
+        // updating an existing structure, reconcile the differences
+        structure.setUpdated(new Date());
+
+        // FIXME: reconcile structure differences (should be async)
+        return structureDAO.save(structure);
+    }
+
+    private void validateStructure(Structure structure){
+        if (structure.getName() == null || structure.getName().isBlank() || structure.getName().contains(".")) {
+            throw new IllegalArgumentException("Structure Name Invalid");
+        }
+        if (structure.getNamespace() == null || structure.getNamespace().isBlank()) {
+            throw new IllegalArgumentException("Structure Namespace Invalid");
+        }
+        if (structure.getEntityDefinition() == null) {
+            throw new IllegalArgumentException("Structure entityDefinition must not be null");
+        }
     }
 
     @Override
@@ -167,36 +176,25 @@ public class DefaultStructureService implements StructureService {
                                     "Structure is already published"));
                         } else {
 
-                            ElasticConversionResult result = structureConversionService.convertToElasticMapping(
-                                    structure);
+                            ElasticConversionResult result = structureConversionService.convertToElasticMapping(structure);
 
-                            ret = crudServiceTemplate.createIndex(structure.getItemIndex(), true, indexBuilder -> {
+                            ret = crudServiceTemplate
+                                    .createIndex(structure.getItemIndex(), true, indexBuilder -> {
 
-                                                         indexBuilder.mappings(m -> {
-                                                             TypeMapping.Builder builder =
-                                                                     m.dynamic(DynamicMapping.Strict)
-                                                                      .properties(result.getObjectProperty().properties());
+                                        indexBuilder.mappings(m -> m.dynamic(DynamicMapping.Strict)
+                                                                    .properties(result.getObjectProperty().properties()));
 
-                                                             // if shared multi tenancy make sure routing is required
-                                                             // TODO: see if we need this or it should be optional
-//                                    if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
-//                                        builder.routing(b -> b.required(true));
-//                                    }
+                                    })
+                                    .thenCompose(createIndexResponse -> {
+                                        // update tracking fields
+                                        structure.setPublished(true);
+                                        structure.setPublishedTimestamp(new Date());
+                                        structure.setUpdated(structure.getPublishedTimestamp());
+                                        structure.setDecoratedProperties(result.getDecoratedProperties());
 
-                                                             return builder;
-                                                         });
-
-                                                     })
-                                                     .thenCompose(createIndexResponse -> {
-                                                         // update tracking fields
-                                                         structure.setPublished(true);
-                                                         structure.setPublishedTimestamp(new Date());
-                                                         structure.setUpdated(structure.getPublishedTimestamp());
-                                                         structure.setDecoratedProperties(result.getDecoratedProperties());
-
-                                                         return structureDAO.save(structure)
-                                                                            .thenApply(structure1 -> null);
-                                                     });
+                                        return structureDAO.save(structure)
+                                                           .thenApply(structure1 -> null);
+                                    });
                         }
                     } else {
                         ret = CompletableFuture.failedFuture(new IllegalArgumentException("No Structure found with id: " + structureId));
