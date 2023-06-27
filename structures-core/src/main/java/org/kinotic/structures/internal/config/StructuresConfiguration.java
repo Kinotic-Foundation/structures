@@ -1,6 +1,9 @@
 package org.kinotic.structures.internal.config;
 
+import io.vertx.core.Vertx;
+import io.vertx.ext.healthchecks.HealthChecks;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 
@@ -11,4 +14,10 @@ import org.springframework.context.annotation.Configuration;
 @EnableConfigurationProperties
 @ComponentScan(basePackages = "org.kinotic.structures")
 public class StructuresConfiguration {
+
+    @Bean
+    public HealthChecks healthChecks(Vertx vertx){
+        return HealthChecks.create(vertx);
+    }
+
 }

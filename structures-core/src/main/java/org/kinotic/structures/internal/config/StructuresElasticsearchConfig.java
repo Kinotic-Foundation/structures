@@ -90,6 +90,13 @@ public class StructuresElasticsearchConfig extends ReactiveElasticsearchConfigur
             });
         }
 
+        int connectTimeout = Long.valueOf(structuresProperties.getElasticConnectionTimeout().toMillis()).intValue();
+        int socketTimeout = Long.valueOf(structuresProperties.getElasticSocketTimeout().toMillis()).intValue();
+
+        builder.setRequestConfigCallback(requestConfigBuilder -> requestConfigBuilder
+                .setConnectTimeout(connectTimeout)
+                .setSocketTimeout(socketTimeout));
+
         RestClient restClient = builder.build();
 
         // Create the transport with a Jackson mapper

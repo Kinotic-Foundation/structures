@@ -9,9 +9,6 @@ ext {
 dependencies {
 	implementation project(':structures-core')
 
-	implementation 'org.springframework.boot:spring-boot-starter-webflux'
-	implementation 'org.springframework.boot:spring-boot-starter-security'
-	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	implementation 'org.springframework.boot:spring-boot-starter-graphql'
 
 	implementation "com.apollographql.federation:federation-graphql-java-support:${federationJvmVersion}"
