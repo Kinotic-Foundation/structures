@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "allowSyntheticDefaultImports": true,
+    "declaration": true,
+    "esModuleInterop": true,
+    "importHelpers": true,
+    "module": "ES2020",
+    "moduleResolution": "node",
+    "outDir": "dist",
+    "rootDir": "src",
+    "strict": true,
+    "target": "esnext",
+  },
+  "lib": [
+    "esnext"
+  ],
+  "include": [
+    "src/**/*"
+  ],
+  "ts-node": {
+    "esm": true
+  }
+}

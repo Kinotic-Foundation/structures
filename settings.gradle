@@ -7,3 +7,6 @@ rootDir.listFiles().each {
         include ":${it.name}"
     }
 }
+
+include 'structures-js:structures-data'
+include 'structures-js:structures-cli'
