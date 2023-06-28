@@ -7,8 +7,12 @@ export class Helper {
 
         properties.forEach((property: PropertyDeclaration) => {
             const propertyType = property.getType()
+            const propertyTypeText = propertyType.getText()
+            const propertySymbol = property.getSymbol()
+            const propertySymbolName = propertySymbol?.getName()
+            const propertySymbolDeclarations = propertySymbol?.getDeclarations()
             const annotations = property.getDecorators()
-            console.log(`Property: ${property.getName()}, Type: ${propertyType.getText()}`)
+            console.log(`Property: ${property.getName()}, Type: ${propertyTypeText}`)
             if (annotations.length > 0) {
                 console.log("Annotations:")
                 annotations.forEach((annotation: Decorator) => {

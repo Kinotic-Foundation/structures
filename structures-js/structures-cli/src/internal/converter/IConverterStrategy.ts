@@ -1,4 +1,4 @@
-import { ITypeConverter } from './ITypeConverter'
+import { ITypeConverter } from './ITypeConverter.js'
 import {PrettyPrintableError} from '@oclif/core/lib/errors';
 
 export type Logger = {
@@ -24,12 +24,12 @@ export type Logger = {
  *
  * Created by Navíd Mitchell 🤪 on 4/26/23.
  */
-export interface IConverterStrategy<BASE_TYPE, T extends BASE_TYPE, S> {
+export interface IConverterStrategy<BASE_TYPE, S> {
 
   /**
    * An array of {@link ITypeConverter}'s that will be used to convert a specific language type.
    */
-  typeConverters(): Array<ITypeConverter<BASE_TYPE, T, S>>
+  typeConverters(): Array<ITypeConverter<BASE_TYPE, BASE_TYPE, S>>
 
   /**
    * The object that will be available via the {@link IConversionContext#state()}.

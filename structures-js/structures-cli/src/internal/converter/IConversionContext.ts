@@ -1,6 +1,6 @@
 import { C3Type } from '@kinotic/continuum-idl'
-import {IConverterStrategy} from './IConverterStrategy';
-import {DefaultConversionContext} from './DefaultConversionContext';
+import {IConverterStrategy} from './IConverterStrategy.js'
+import {DefaultConversionContext} from './DefaultConversionContext.js'
 
 /**
  * {@link IConversionContext} allows for conversion of a specific language type to Continuum IDL types.
@@ -36,6 +36,6 @@ export interface IConversionContext<BASE_TYPE, S> {
  * If state needs to be reset a new {@link IConversionContext} should be created.
  * @param strategy
  */
-export function createConversionContext<BASE_TYPE, T extends BASE_TYPE, S>(strategy: IConverterStrategy<BASE_TYPE, T, S>): IConversionContext<BASE_TYPE, S>{
+export function createConversionContext<BASE_TYPE, S>(strategy: IConverterStrategy<BASE_TYPE, S>): IConversionContext<BASE_TYPE, S>{
   return new DefaultConversionContext(strategy)
 }

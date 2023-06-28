@@ -1,5 +1,5 @@
 import { C3Type } from '@kinotic/continuum-idl'
-import { IConversionContext } from './IConversionContext'
+import { IConversionContext } from './IConversionContext.js'
 
 /**
  * {@link ITypeConverter} are the base interface for converting a specific type to a {@link C3Type}.

@@ -1,6 +1,9 @@
 import {Args, Command, Flags} from '@oclif/core'
 import path from 'node:path'
-import {Project} from 'ts-morph'
+import {ClassDeclaration, Project} from 'ts-morph'
+import {createConversionContext} from '../internal/converter/IConversionContext.js'
+import {TypescriptConverterStrategy} from '../internal/converter/typescript/TypescriptConverterStrategy.js'
+import {TypescriptConversionState} from '../internal/converter/typescript/TypescriptConversionState.js'
 
 export default class Synchronize extends Command {
   static description = 'Synchronize the local Entity definitions with the Structures Server'
@@ -27,7 +30,36 @@ export default class Synchronize extends Command {
     const entitiesPath = path.resolve(flags.entities)
     project.addSourceFilesAtPaths(entitiesPath + '/*.ts')
 
-    this.log(`Synchronizing Entities in namespace ${args.namespace} from ${flags.entities}!`)
+    const sourceFiles = project.getSourceFiles(entitiesPath +'/*.ts');
+    for (const sourceFile of sourceFiles) {
+      this.log('----')
+      this.log(` Path : ${sourceFile.getFilePath()} `)
+      this.log(` BaseName : ${sourceFile.getBaseName()} `)
+
+      const exportedDeclarations = sourceFile.getExportedDeclarations()
+      exportedDeclarations.forEach((exportedDeclarationEntries, name) => {
+        this.log(`map entry name: ${name}`)
+        exportedDeclarationEntries.forEach((exportedDeclaration) => {
+          if (ClassDeclaration.isClassDeclaration(exportedDeclaration)) {
+
+            try {
+              this.log('Converting class')
+              const conversionContext =
+                      createConversionContext(new TypescriptConverterStrategy(new TypescriptConversionState(args.namespace, project), this))
+              const c3Type = conversionContext.convert(exportedDeclaration)
+
+              this.log('Printing C3Type')
+              this.log(JSON.stringify(c3Type))
+            } catch (e) {
+            }
+
+          } else {
+            // This is some other kind of declaration (e.g. an interface)
+            this.log(`Other declaration: ${exportedDeclaration.getText()}`)
+          }
+        })
+      })
+    }
   }
 
 }

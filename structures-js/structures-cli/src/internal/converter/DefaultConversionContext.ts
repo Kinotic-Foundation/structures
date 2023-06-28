@@ -1,20 +1,20 @@
 import {C3Type} from '@kinotic/continuum-idl'
-import {IConversionContext} from './IConversionContext'
-import {IConverterStrategy, Logger} from './IConverterStrategy'
-import {ITypeConverter} from './ITypeConverter'
+import {IConversionContext} from './IConversionContext.js'
+import {IConverterStrategy, Logger} from './IConverterStrategy.js'
+import {ITypeConverter} from './ITypeConverter.js'
 
 /**
  * Created by Navíd Mitchell 🤪 on 4/26/23.
  */
 export class DefaultConversionContext<BASE_TYPE, S> implements IConversionContext<BASE_TYPE, S> {
 
-  private readonly strategy: IConverterStrategy<BASE_TYPE, any, S>
+  private readonly strategy: IConverterStrategy<BASE_TYPE, S>
   private readonly conversionDepthStack: Array<BASE_TYPE> = []
   private readonly errorStack: Array<BASE_TYPE> = []
   private readonly _state: S
   private readonly logger: Logger
 
-  constructor(strategy: IConverterStrategy<BASE_TYPE, any, S>) {
+  constructor(strategy: IConverterStrategy<BASE_TYPE, S>) {
     this.strategy = strategy
     let state = strategy.initialState()
     if(state instanceof Function){
@@ -43,7 +43,7 @@ export class DefaultConversionContext<BASE_TYPE, S> implements IConversionContex
       }else{
         // this causes the stack to unwind, so this is intentional
         // noinspection ExceptionCaughtLocallyJS
-        throw new Error("No ITypeConverter can be found for " + JSON.stringify(value) + "\nWhen using strategy " + this.strategy.constructor.name)
+        throw new Error("No ITypeConverter can be found for " + value + "\nWhen using strategy " + this.strategy.constructor.name)
       }
     } catch (e: any) {
       this.logException(e)
@@ -82,16 +82,16 @@ export class DefaultConversionContext<BASE_TYPE, S> implements IConversionContex
         }
       }
       if(this.conversionDepthStack.length === 1) { // we are at the top of the stack during recursion
-        let sb: string = "Error occurred during conversion.\n" + e.message + "\n"
+        let sb: string = "Error occurred during conversion.\nMessage: " + e.message + "\n"
         let objectCount = 1
         for (let value of this.errorStack) {
           sb += "\t".repeat(objectCount)
           sb += "- "
-          sb += JSON.stringify(value)
+          sb += value?.constructor?.name
           sb += "\n"
           objectCount++
         }
-        this.logger.error(sb)
+        this.logger.log(sb)
         this.errorStack.length = 0 // we have printed reset
       }
   }
