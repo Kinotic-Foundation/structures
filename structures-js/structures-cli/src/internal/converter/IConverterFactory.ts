@@ -1,6 +1,5 @@
-import { IConverter } from './IConverter'
 import { IConverterStrategy } from './IConverterStrategy'
-import {IConversionContext} from './IConversionContext';
+import {IConversionContext} from './IConversionContext'
 
 /**
  * Creates {@link IConversionContext} instances based on a {@link IConverterStrategy}

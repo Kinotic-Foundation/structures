@@ -9,8 +9,8 @@ dependencies:
     specifier: ^0.2.0
     version: 0.2.0
   '@oclif/core':
-    specifier: ^2
-    version: 2.0.1
+    specifier: ^2.8.10
+    version: 2.8.10(@types/node@16.18.36)(typescript@4.9.5)
   '@oclif/plugin-autocomplete':
     specifier: ^2.3.1
     version: 2.3.1(@types/node@16.18.36)(typescript@4.9.5)
@@ -757,40 +757,6 @@ packages:
       wrap-ansi: 7.0.0
     dev: true
 
-  /@oclif/core@2.0.1:
-    resolution: {integrity: sha512-Etscb7mTVnRsY66i0aQoSKYD7bsbtrwbFzh7inp2ZyD3kldaoTY6sBQMqIQQQNcqpnQmwC/QjcbysfJtBccD/Q==}
-    engines: {node: '>=14.0.0'}
-    dependencies:
-      '@oclif/linewrap': 1.0.0
-      '@oclif/screen': 3.0.4
-      ansi-escapes: 4.3.2
-      ansi-styles: 4.3.0
-      cardinal: 2.1.1
-      chalk: 4.1.2
-      clean-stack: 3.0.1
-      cli-progress: 3.12.0
-      debug: 4.3.4(supports-color@8.1.1)
-      ejs: 3.1.9
-      fs-extra: 9.1.0
-      get-package-type: 0.1.0
-      globby: 11.1.0
-      hyperlinker: 1.0.0
-      indent-string: 4.0.0
-      is-wsl: 2.2.0
-      js-yaml: 3.14.1
-      natural-orderby: 2.0.3
-      object-treeify: 1.1.33
-      password-prompt: 1.1.2
-      semver: 7.5.3
-      string-width: 4.2.3
-      strip-ansi: 6.0.1
-      supports-color: 8.1.1
-      supports-hyperlinks: 2.3.0
-      tslib: 2.5.3
-      widest-line: 3.1.0
-      wrap-ansi: 7.0.0
-    dev: false
-
   /@oclif/core@2.8.10(@types/node@16.18.36)(typescript@4.9.5):
     resolution: {integrity: sha512-coRn9vYDEnoE8Vg20aavts9+Bt5QrHhbdh0cDkImopV0MgT8i/VmgL04D33+qoHQH20XzBOMqrjk+bqQzqyaHg==}
     engines: {node: '>=14.0.0'}
@@ -997,6 +963,7 @@ packages:
     resolution: {integrity: sha512-IMsTN1dXEXaOSre27j/ywGbBjrzx0FNd1XmuhCWCB9NTPrhWI1Ifbz+YLSEcstfQfocYsrbrIessxXb2oon4lA==}
     engines: {node: '>=12.0.0'}
     deprecated: Deprecated in favor of @oclif/core
+    dev: true
 
   /@oclif/test@2.3.23(@types/node@16.18.36)(typescript@4.9.5):
     resolution: {integrity: sha512-SEbVaE6KxA6+pwDdgcogy2CLu+GdR0p5yAbIFN0LeakeQvdjaUGdaz0vX/VN7+QaKr08jmjhHO5VpF2iaRuVZg==}
