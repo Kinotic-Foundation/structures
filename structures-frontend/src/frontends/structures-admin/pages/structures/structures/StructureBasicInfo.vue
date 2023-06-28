@@ -1,24 +1,24 @@
 <template>
-  <div>
-    <v-text-field v-model='structure.name' label='Name' :rules="nameRules" ></v-text-field>
+    <div>
+        <v-text-field v-model='structure.name' label='Name' :rules="nameRules"></v-text-field>
 
-    <v-text-field v-model='structure.description' label='Description'></v-text-field>
+        <v-text-field v-model='structure.description' label='Description'></v-text-field>
 
-    <v-select
-        label="Namespace"
-        v-model="selectedNamespace"
-        :items="namespaces"
-        :disabled="structure.published"
-        :hint="selectedNamespace.id + (selectedNamespace.description ? ' | ' + selectedNamespace.description : '')"
-        :error-messages="namespaceErrorMessage"
-        @change="selected"
-        item-text="id"
-        return-object
-        persistent-hint
-        hide-selected
-        single-line >
-    </v-select>
-  </div>
+        <v-select
+            label="Namespace"
+            v-model="selectedNamespace"
+            :items="namespaces"
+            :disabled="structure.published"
+            :hint="selectedNamespace.id + (selectedNamespace.description ? ' | ' + selectedNamespace.description : '')"
+            :error-messages="namespaceErrorMessage"
+            @change="selected"
+            item-text="id"
+            return-object
+            persistent-hint
+            hide-selected
+            single-line>
+        </v-select>
+    </div>
 </template>
 
 <script lang="ts">
@@ -33,87 +33,87 @@ import {IndexNameHelper} from "@/frontends/structures-admin/pages/structures/uti
 type RuleValidator = (value: any) => string | boolean
 
 @Component({
-  components: { }
+    components: {}
 })
 export default class StructureStandardUi extends Vue {
 
-  @PropSync('entity', {type: Object as PropType < Identifiable < string >>, required: true})
-  public structure!: Structure
+    @PropSync('entity', {type: Object as PropType<Identifiable<string>>, required: true})
+    public structure!: Structure
 
 
-  private namespaceServiceIdentifier: string = 'org.kinotic.structures.api.services.NamespaceService'
-  private namespaceService: ICrudServiceProxy<Namespace> = Continuum.crudServiceProxy(this.namespaceServiceIdentifier)
-  private selectedNamespace: Namespace = new Namespace("", "", 0)
-  private namespaceErrorMessage: string = ""
-  private namespaces: Namespace[] = []
-  private nameRules: RuleValidator[] = [
-    (v) => {
-      let ret: string = IndexNameHelper.checkNameAndNamespace(v as string, 'Name')
-      return ret.length === 0 ? true : ret
-    }
-  ]
-  private structureNamespaceLoaded: boolean = false
+    private namespaceServiceIdentifier: string = 'org.kinotic.structures.api.services.NamespaceService'
+    private namespaceService: ICrudServiceProxy<Namespace> = Continuum.crudServiceProxy(this.namespaceServiceIdentifier)
+    private selectedNamespace: Namespace = new Namespace("", "", 0)
+    private namespaceErrorMessage: string = ""
+    private namespaces: Namespace[] = []
+    private nameRules: RuleValidator[] = [
+        (v) => {
+            let ret: string = IndexNameHelper.checkNameAndNamespace(v as string, 'Name')
+            return ret.length === 0 ? true : ret
+        }
+    ]
+    private structureNamespaceLoaded: boolean = false
 
-  constructor() {
-    super();
-  }
-
-  public mounted() {
-    const pageable: Pageable = {
-      pageNumber: 0,
-      pageSize: 100,
-      sort: null
+    constructor() {
+        super();
     }
 
-    this.namespaceService.findAll(pageable)
-        .then((response) => {
-          this.namespaces = response.content
-        })
-        .catch((error) => {
-          console.error("Error setting up to add/edit Structure")
-          this.displayAlert(error.message)
-        })
+    public mounted() {
+        const pageable: Pageable = {
+            pageNumber: 0,
+            pageSize: 100,
+            sort: null
+        }
 
-    this.loadNamespace(this.structure)
-  }
+        this.namespaceService.findAll(pageable)
+            .then((response) => {
+                this.namespaces = response.content
+            })
+            .catch((error) => {
+                console.error("Error setting up to add/edit Structure")
+                this.displayAlert(error.message)
+            })
 
-  @Emit()
-  public update(): Structure {
-    return this.structure
-  }
-
-  @Watch('structure')
-  public watchStructure(value: any, oldValue: any) {
-    if(value !== undefined && value !== null){
-      if(value.id !== ''){
-        this.loadNamespace(value)
-      }
+        this.loadNamespace(this.structure)
     }
-  }
 
-  private selected() {
-    this.structureNamespaceLoaded = true
-    this.structure.namespace = this.selectedNamespace.id
-    this.update()
-  }
-
-  private displayAlert(text: string) {
-    this.$notify({ group: 'alert', type: 'crudEntityAddEditAlert', text })
-  }
-
-  private loadNamespace(structure: Structure) {
-    if(!this.structureNamespaceLoaded && structure.namespace !== ''){
-      this.namespaceService.findById(structure.namespace)
-          .then((namespace) => {
-            this.selectedNamespace = namespace
-            this.structureNamespaceLoaded = true
-          })
-          .catch((error) => {
-            console.error("Error setting up to add/edit Structure", error)
-            this.displayAlert(error.message)
-          })
+    @Emit()
+    public update(): Structure {
+        return this.structure
     }
-  }
+
+    @Watch('structure')
+    public watchStructure(value: any, oldValue: any) {
+        if (value !== undefined && value !== null) {
+            if (value.id !== '') {
+                this.loadNamespace(value)
+            }
+        }
+    }
+
+    private selected() {
+        this.structureNamespaceLoaded = true
+        this.structure.namespace = this.selectedNamespace.id
+        this.update()
+    }
+
+    private displayAlert(text: string) {
+        this.$notify({group: 'alert', type: 'crudEntityAddEditAlert', text})
+    }
+
+    private loadNamespace(structure: Structure) {
+        if (!this.structureNamespaceLoaded && structure.namespace !== '') {
+            this.namespaceService.findById(structure.namespace)
+                .then((namespace) => {
+                    this.selectedNamespace = namespace
+                    this.structureNamespaceLoaded = true
+                })
+                .catch((error) => {
+                    console.error("Error setting up to add/edit Structure", error)
+                    this.displayAlert(error.message)
+                })
+        }
+    }
 }
 </script>
 
