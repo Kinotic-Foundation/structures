@@ -1,7 +1,7 @@
 {
   "name": "structures-cli",
   "version": "0.1.0",
-  "description": "Structures CLI provides functionality to interact with the Structures server",
+  "description": "Structures CLI provides the ability to interact with the Structures Server",
   "author": "Kinotic Developers",
   "bin": {
     "structures": "./bin/run.js"
@@ -10,6 +10,7 @@
   "license": "MIT",
   "main": "dist/index.js",
   "repository": "https://github.com/Kinotic-Foundatio/structures",
+  "type": "module",
   "files": [
     "/bin",
     "/dist",
@@ -42,7 +43,7 @@
     "shx": "^0.3.3",
     "ts-node": "^10.9.1",
     "tslib": "^2.5.3",
-    "typescript": "^4.9.5"
+    "typescript": "^5.0.2"
   },
   "oclif": {
     "bin": "structures",

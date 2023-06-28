@@ -10,10 +10,10 @@ describe('C3-IDL', () => {
 
             // Create a new TypeScript project
             const project = new Project({
-                tsConfigFilePath: "tsconfig.json"
+                tsConfigFilePath: "/Users/navid/workspace/git/continuum/structures/structures-js/structures-ui-example/tsconfig.json"
             })
             project.enableLogging(true)
-            project.addSourceFilesAtPaths('test/**/*.ts');
+            project.addSourceFilesAtPaths('/Users/navid/workspace/git/continuum/structures/structures-js/structures-ui-example/src/domain/*.ts');
 
             console.log("Directories:")
             const directories = project.getDirectories()
@@ -24,7 +24,7 @@ describe('C3-IDL', () => {
             }
 
             console.log("Source Files:")
-            const sourceFiles = project.getSourceFiles('test/**/*.ts');
+            const sourceFiles = project.getSourceFiles('/Users/navid/workspace/git/continuum/structures/structures-js/structures-ui-example/src/domain/*.ts');
             for (const sourceFile of sourceFiles) {
                 console.log('----')
                 console.log(` Path : ${sourceFile.getFilePath()} `)

@@ -1,23 +1,35 @@
 import { ITypeConverter } from './ITypeConverter'
+import {PrettyPrintableError} from '@oclif/core/lib/errors';
 
+export type Logger = {
+  log: (message?: string, ...args: any[]) => void
+  warn(input: string | Error): string | Error
+  error(input: string | Error, options: {
+                                          code?: string;
+                                          exit: false;
+                                        } & PrettyPrintableError): void
+  error(input: string | Error, options?: {
+                                           code?: string;
+                                           exit?: number;
+                                         } & PrettyPrintableError): never
+}
 
 /**
- * The {@link IConverterStrategy} is used to determine how to convert a Continuum IDL to a specific language type.
+ * The {@link IConverterStrategy} is used to determine how to convert a specific language type to a Continuum IDL.
  * The {@link IConverterStrategy} should be reusable and thread safe.
  *
+ * @param <BASE_TYPE> The base type to convert from
  * @param <T> The type to convert to
  * @param <S> The state type
  *
  * Created by Navíd Mitchell 🤪 on 4/26/23.
  */
-export interface IConverterStrategy<T, S> {
+export interface IConverterStrategy<BASE_TYPE, T extends BASE_TYPE, S> {
 
   /**
-   * Searches for a {@link ITypeConverter} that can convert the given value
-   * @param value to find a converter for
-   * @return the {@link ITypeConverter} that can convert the given value
+   * An array of {@link ITypeConverter}'s that will be used to convert a specific language type.
    */
-  converterFor(value: T): ITypeConverter<T, S>
+  typeConverters(): Array<ITypeConverter<BASE_TYPE, T, S>>
 
   /**
    * The object that will be available via the {@link IConversionContext#state()}.
@@ -26,13 +38,11 @@ export interface IConverterStrategy<T, S> {
    * This will be called each time a new {@link IConversionContext} is created.
    * @return the conversion context state.
    */
-  initialState(): S
+  initialState(): S | (() => S)
 
   /**
-   * Determines if caching is turned on for this strategy.
-   * If shouldCache is true and the {@link ITypeConverter} extends {@link ICacheable} then the results of the conversion will be cached and reused
-   * @return true if the results of the converts should be cached
+   * Returns a logger that can be used to log messages.
    */
-  shouldCache(): boolean
+  logger(): Logger | (() => Logger)
 
 }
