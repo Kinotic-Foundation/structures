@@ -77,6 +77,11 @@ public class RawJsonUpsertPreProcessor implements UpsertPreProcessor<RawJson, Ra
 
                     String fieldName = jsonParser.getCurrentName();
 
+                    // if the stack depth and the object depth are the same we are at a new field in the same object so pop the stack
+                    if(jsonPathStack.size() == objectDepth){
+                        jsonPathStack.removeFirst();
+                    }
+
                     String currentJsonPath = !jsonPathStack.isEmpty() ? jsonPathStack.peekFirst() + "." + fieldName : fieldName;
                     jsonPathStack.addFirst(currentJsonPath);
 
@@ -107,6 +112,10 @@ public class RawJsonUpsertPreProcessor implements UpsertPreProcessor<RawJson, Ra
                                 throw new IllegalArgumentException("Id field cannot be null or blank");
                             }
 
+                            if(currentId != null){
+                                throw new IllegalArgumentException("Found multiple id fields in object");
+                            }
+
                             // if this is the id we add the special _id field for elasticsearch to use
                             currentId = (structure.getMultiTenancyType() == MultiTenancyType.SHARED)
                                     ? context.getParticipant().getTenantId() + "-" + value
@@ -115,8 +124,6 @@ public class RawJsonUpsertPreProcessor implements UpsertPreProcessor<RawJson, Ra
                     }else{
                         jsonGenerator.copyCurrentEvent(jsonParser);
                     }
-
-                    jsonPathStack.removeFirst();
 
                 }else{
 
@@ -151,6 +158,12 @@ public class RawJsonUpsertPreProcessor implements UpsertPreProcessor<RawJson, Ra
                     if(token == JsonToken.START_OBJECT){
                         objectDepth++;
                     }else if(token == JsonToken.END_OBJECT){
+
+                        // if the stack depth and the object depth are the same, the last field is done so pop the stack
+                        if(jsonPathStack.size() == objectDepth){
+                            jsonPathStack.removeFirst();
+                        }
+
                         objectDepth--;
                     }
 

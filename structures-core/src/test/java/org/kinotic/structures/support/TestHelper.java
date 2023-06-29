@@ -6,6 +6,7 @@ import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.EntitiesService;
+import org.kinotic.structures.internal.sample.Car;
 import org.kinotic.structures.internal.sample.Person;
 import org.kinotic.structures.internal.sample.TestDataService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +30,33 @@ public class TestHelper {
     @Autowired
     private EntitiesService entitiesService;
 
+    public CompletableFuture<Void> bulkSaveCarsAsRawJson(List<Car> cars, Structure structure, EntityContext entityContext){
+        byte[] jsonData;
+        try {
+            jsonData = objectMapper.writeValueAsBytes(cars);
+        } catch (JsonProcessingException e) {
+            return CompletableFuture.failedFuture(new IllegalStateException(e));
+        }
+        return entitiesService.bulkSave(structure.getId(), RawJson.from(jsonData), entityContext);
+    }
+
+
+    public CompletableFuture<Car> saveCarAsRawJson(Car car, Structure structure, EntityContext entityContext){
+        byte[] jsonData;
+        try {
+            jsonData = objectMapper.writeValueAsBytes(car);
+        } catch (JsonProcessingException e) {
+            return CompletableFuture.failedFuture(new IllegalStateException(e));
+        }
+        return entitiesService.save(structure.getId(), RawJson.from(jsonData), entityContext)
+                              .thenApply(entity -> {
+                                  try {
+                                      return objectMapper.readValue(entity.data(), Car.class);
+                                  } catch (IOException e) {
+                                      throw new IllegalStateException(e);
+                                  }
+                              });
+    }
 
     /**
      * Creates a {@link org.kinotic.structures.api.domain.Structure} if it does not exist with the given name suffix and then creates the given number of people

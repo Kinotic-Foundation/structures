@@ -1,5 +1,6 @@
 package org.kinotic.structures.entity;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -7,16 +8,26 @@ import org.kinotic.structures.ElasticsearchTestBase;
 import org.kinotic.structures.api.domain.DefaultEntityContext;
 import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.RawJson;
+import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.EntitiesService;
+import org.kinotic.structures.internal.sample.Car;
 import org.kinotic.structures.internal.sample.DummyParticipant;
+import org.kinotic.structures.internal.sample.Person;
+import org.kinotic.structures.internal.sample.TestDataService;
 import org.kinotic.structures.support.StructureAndPersonHolder;
 import org.kinotic.structures.support.TestHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 
 @ExtendWith(SpringExtension.class)
@@ -27,6 +38,8 @@ public class BulkUpdateTests extends ElasticsearchTestBase {
     private EntitiesService entitiesService;
     @Autowired
     private TestHelper testHelper;
+    @Autowired
+    private TestDataService testDataService;
 
     private StructureAndPersonHolder createAndVerifyBulk(int numberOfPeopleToCreate,
                                                          boolean randomPeople,
@@ -89,6 +102,45 @@ public class BulkUpdateTests extends ElasticsearchTestBase {
                             && rawJsons.getContent().size() == numberOfPeopleToCreate)
                     .as("Verifying Tenant 2 has "+numberOfPeopleToCreate+" entities")
                     .verifyComplete();
+    }
+
+    @Test
+    public void bulkSaveObjectWithMultipleIds() throws Exception{
+        EntityContext entityContext = new DefaultEntityContext(new DummyParticipant());
+        CompletableFuture<Pair<Structure, Boolean>> createStructure = testDataService.createCarStructureIfNotExists("-bulkMultipleIds");
+
+        StepVerifier.create(Mono.fromFuture(createStructure))
+                    .expectNextMatches(pair -> pair.getLeft() != null && pair.getRight())
+                    .verifyComplete();
+
+        Structure structure = createStructure.join().getLeft();
+
+        List<Person> personList = testDataService.createRandomTestPeopleWithId(50).join();
+
+        Assertions.assertEquals(50, personList.size(), "Failed to create test person");
+
+        List<Car> cars = new ArrayList<>(50);
+        for(Person person : personList){
+            int count = cars.size();
+            Car car = new Car();
+            car.setId(UUID.randomUUID().toString());
+            car.setMake("Honda-"+count);
+            car.setModel("Civic-"+count);
+            car.setYear("2019");
+            car.setOwner(person);
+            cars.add(car);
+        }
+
+        testHelper.bulkSaveCarsAsRawJson(cars, structure, entityContext).join();
+
+        // We have to wait since bulk updates are not queryable until they are indexed
+        Thread.sleep(5000);
+
+        Page<RawJson> page = entitiesService.findAll(structure.getId(), Pageable.ofSize(10), RawJson.class, entityContext).join();
+
+        Assertions.assertEquals(5, page.getTotalPages(), "Wrong number of pages");
+
+        Assertions.assertEquals(50, page.getTotalElements(), "Wrong number of entities");
     }
 
 }
