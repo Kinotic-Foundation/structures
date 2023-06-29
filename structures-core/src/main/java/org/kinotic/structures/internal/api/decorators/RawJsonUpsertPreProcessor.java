@@ -19,7 +19,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
@@ -162,7 +161,7 @@ public class RawJsonUpsertPreProcessor implements UpsertPreProcessor<RawJson, Ra
 
             return CompletableFuture.completedFuture(ret);
 
-        } catch (IOException e) {
+        } catch (Exception e) {
             return CompletableFuture.failedFuture(e);
         }
     }
