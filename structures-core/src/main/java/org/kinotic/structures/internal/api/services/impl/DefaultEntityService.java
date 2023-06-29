@@ -186,11 +186,7 @@ public class DefaultEntityService implements EntityService {
                     String ret;
                     if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
                         String tenantId = context.getParticipant().getTenantId();
-                        if(!id.startsWith(tenantId)){
-                            ret = tenantId + "-" + id;
-                        }else{
-                            ret = id;
-                        }
+                        ret = tenantId + "-" + id;
                     }else{
                         ret = id;
                     }
