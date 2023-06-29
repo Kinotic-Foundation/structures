@@ -43,7 +43,7 @@ export class DefaultConversionContext<BASE_TYPE, S> implements IConversionContex
       }else{
         // this causes the stack to unwind, so this is intentional
         // noinspection ExceptionCaughtLocallyJS
-        throw new Error("No ITypeConverter can be found for " + value + "\nWhen using strategy " + this.strategy.constructor.name)
+        throw new Error('No ITypeConverter can be found for ' + this.strategy.valueToString(value) + '\nWhen using strategy ' + this.strategy.constructor.name)
       }
     } catch (e: any) {
       this.logException(e)
@@ -82,13 +82,15 @@ export class DefaultConversionContext<BASE_TYPE, S> implements IConversionContex
         }
       }
       if(this.conversionDepthStack.length === 1) { // we are at the top of the stack during recursion
-        let sb: string = "Error occurred during conversion.\nMessage: " + e.message + "\n"
+        let sb: string = 'Error occurred during conversion.\nException: ' + e.message + '\nStack:\n'
         let objectCount = 1
         for (let value of this.errorStack) {
-          sb += "\t".repeat(objectCount)
-          sb += "- "
-          sb += value?.constructor?.name
-          sb += "\n"
+          const spacer = '  '.repeat(objectCount)
+          sb += spacer
+          sb += '- '
+          sb += this.strategy.valueToString(value)
+                             .replaceAll('\n', '\n  ' + spacer)
+          sb += '\n'
           objectCount++
         }
         this.logger.log(sb)

@@ -45,4 +45,10 @@ export interface IConverterStrategy<BASE_TYPE, S> {
    */
   logger(): Logger | (() => Logger)
 
+  /**
+   * Prints a value to a string.
+   * This is used in error messages to help the user understand what value caused the error.
+   */
+  valueToString(value: BASE_TYPE): string
+
 }

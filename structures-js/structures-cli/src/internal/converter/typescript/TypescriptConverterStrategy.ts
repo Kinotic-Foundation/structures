@@ -1,5 +1,5 @@
 import {IConverterStrategy, Logger} from '../IConverterStrategy.js'
-import {Node, Project} from 'ts-morph'
+import {Node} from 'ts-morph'
 import {TypescriptConversionState} from './TypescriptConversionState.js'
 import {ITypeConverter} from '../ITypeConverter.js'
 import {ClassToC3Type} from './ClassToC3Type.js'
@@ -26,6 +26,10 @@ export class TypescriptConverterStrategy implements IConverterStrategy<Node, Typ
 
   typeConverters(): Array<ITypeConverter<Node, Node, TypescriptConversionState>> {
     return this._typeConverters
+  }
+
+  valueToString(value: Node): string {
+    return value.print()
   }
 
 }

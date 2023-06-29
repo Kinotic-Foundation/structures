@@ -50,6 +50,10 @@ public class DefaultEntityService implements EntityService {
                         .process(entity, context)
                         .thenCompose(entityHolder -> {
 
+                            if(entityHolder.getId() == null || entityHolder.getId().isEmpty()){
+                                return CompletableFuture.failedFuture(new IllegalArgumentException("Entity must have an id"));
+                            }
+
                             String routing = (structure.getMultiTenancyType() == MultiTenancyType.SHARED)
                                     ? context.getParticipant().getTenantId()
                                     : null;
@@ -92,6 +96,10 @@ public class DefaultEntityService implements EntityService {
                                 br.routing(routing);
 
                                 for(EntityHolder<?> entityHolder : list){
+
+                                    if(entityHolder.getId() == null || entityHolder.getId().isEmpty()){
+                                        return CompletableFuture.failedFuture(new IllegalArgumentException("All Entities must have an id"));
+                                    }
 
                                     Object data;
                                     if(entityHolder.getEntity() instanceof RawJson){

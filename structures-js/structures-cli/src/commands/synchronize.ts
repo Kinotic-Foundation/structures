@@ -36,6 +36,8 @@ export default class Synchronize extends Command {
       this.log(` Path : ${sourceFile.getFilePath()} `)
       this.log(` BaseName : ${sourceFile.getBaseName()} `)
 
+      const conversionContext = createConversionContext(new TypescriptConverterStrategy(new TypescriptConversionState(args.namespace, project), this))
+
       const exportedDeclarations = sourceFile.getExportedDeclarations()
       exportedDeclarations.forEach((exportedDeclarationEntries, name) => {
         this.log(`map entry name: ${name}`)
@@ -44,13 +46,13 @@ export default class Synchronize extends Command {
 
             try {
               this.log('Converting class')
-              const conversionContext =
-                      createConversionContext(new TypescriptConverterStrategy(new TypescriptConversionState(args.namespace, project), this))
+
               const c3Type = conversionContext.convert(exportedDeclaration)
 
               this.log('Printing C3Type')
               this.log(JSON.stringify(c3Type))
             } catch (e) {
+              //this.log(`Error converting class: ${e}`)
             }
 
           } else {
