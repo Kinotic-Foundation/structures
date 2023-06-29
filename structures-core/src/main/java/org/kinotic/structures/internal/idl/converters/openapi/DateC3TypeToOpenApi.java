@@ -16,7 +16,7 @@ public class DateC3TypeToOpenApi implements SpecificC3TypeConverter<Schema<?>, D
 
     private static final Set<Class<? extends C3Type>> supports = Set.of(DateC3Type.class);
 
-    private static final Schema<?> DATE = new StringSchema().type("date-time");
+    private static final Schema<?> DATE = new StringSchema().format("date-time");
 
     @Override
     public Schema<?> convert(DateC3Type dateC3Type, C3ConversionContext<Schema<?>, OpenApiConversionState> conversionContext) {

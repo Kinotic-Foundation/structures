@@ -1,7 +1,7 @@
-import {Entity, Id} from '@kinotic/structures-data'
+import {Entity, Id, MultiTenancyType} from '@kinotic/structures-data'
 import {Address} from './Address'
 
-@Entity()
+@Entity(MultiTenancyType.SHARED)
 export class Person {
 
     @Id

@@ -15,19 +15,14 @@ export class ClassToC3Type implements ITypeConverter<Node, ClassDeclaration, Typ
     properties.forEach((property: PropertyDeclaration) => {
       const propertyName = property.getName()
       let converted
-      // if this is an object we must resolve the source file first
+
+      // if this is an object we must resolve ClassDeclaration
       if(property.getType().isObject()){
-
-
-
-        const propertyType = property.getTypeNode()?.getText();
-        if(!propertyType) {
-          throw new Error("Source could not be found")
-        }
-        const nestedClass = conversionContext.state().project.getSourceFile(property.getSourceFile().getFilePath())?.getClass(propertyType)
+        const nestedClass = property?.getType()?.getSymbol()?.getValueDeclaration()
         if (!nestedClass){
-          throw new Error("Class could not be found "+propertyType)
+          throw new Error("Class could not be found "+property.getName())
         }
+
         converted = conversionContext.convert(nestedClass)
 
       }else {

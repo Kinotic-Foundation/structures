@@ -41,7 +41,7 @@ public class StructuresProperties {
      * The interval to check the health of the elastic cluster
      */
     @NotNull
-    private Duration elasticHealthCheckInterval = Duration.ofSeconds(10);
+    private Duration elasticHealthCheckInterval = Duration.ofMinutes(1);
 
     @NotNull
     private List<ElasticConnectionInfo> elasticConnections = List.of(new ElasticConnectionInfo());

@@ -1,6 +1,6 @@
 {
   "name": "@kinotic/structures-data",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "author": "Kinotic Foundation <develop@kinotic.org>",
   "license": "MIT",
   "type": "module",
@@ -33,6 +33,6 @@
   },
   "dependencies": {
     "@kinotic/continuum": "^2.2.1",
-    "@kinotic/continuum-idl": "^0.2.0"
+    "@kinotic/continuum-idl": "^0.2.2"
   }
 }

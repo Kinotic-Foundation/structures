@@ -9,8 +9,8 @@ dependencies:
     specifier: ^2.2.1
     version: 2.2.1
   '@kinotic/continuum-idl':
-    specifier: ^0.2.0
-    version: 0.2.0
+    specifier: ^0.2.1
+    version: 0.2.1
 
 devDependencies:
   reflect-metadata:
@@ -288,8 +288,8 @@ packages:
       '@jridgewell/sourcemap-codec': 1.4.15
     dev: true
 
-  /@kinotic/continuum-idl@0.2.0:
-    resolution: {integrity: sha512-AgbyH2/hNROIMabWZQYlKgEaJ8PrwEDuoJ1VdxuxAb4Lwa6KOapGS1ixNxjg47oestWK3vxWvaxIIuQAVJl23Q==}
+  /@kinotic/continuum-idl@0.2.1:
+    resolution: {integrity: sha512-mcqoqTAwIMf7skPxA9p1swG5201qCc4vqMQtuhDdgZ8ChktScfezia2USi7juBjw0xoUOkBjqoBYAqvO5dLfbg==}
     dev: false
 
   /@kinotic/continuum@2.2.1:
