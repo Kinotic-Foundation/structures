@@ -107,7 +107,7 @@ public class BulkUpdateTests extends ElasticsearchTestBase {
     @Test
     public void bulkSaveObjectWithMultipleIds() throws Exception{
         EntityContext entityContext = new DefaultEntityContext(new DummyParticipant());
-        CompletableFuture<Pair<Structure, Boolean>> createStructure = testDataService.createCarStructureIfNotExists("-bulkMultipleIds");
+        CompletableFuture<Pair<Structure, Boolean>> createStructure = testDataService.createCarStructureIfNotExists("-bulkSaveMultipleIds");
 
         StepVerifier.create(Mono.fromFuture(createStructure))
                     .expectNextMatches(pair -> pair.getLeft() != null && pair.getRight())
@@ -132,6 +132,45 @@ public class BulkUpdateTests extends ElasticsearchTestBase {
         }
 
         testHelper.bulkSaveCarsAsRawJson(cars, structure, entityContext).join();
+
+        // We have to wait since bulk updates are not queryable until they are indexed
+        Thread.sleep(5000);
+
+        Page<RawJson> page = entitiesService.findAll(structure.getId(), Pageable.ofSize(10), RawJson.class, entityContext).join();
+
+        Assertions.assertEquals(5, page.getTotalPages(), "Wrong number of pages");
+
+        Assertions.assertEquals(50, page.getTotalElements(), "Wrong number of entities");
+    }
+
+    //@Test
+    public void bulkUpdateObjectWithMultipleIds() throws Exception{
+        EntityContext entityContext = new DefaultEntityContext(new DummyParticipant());
+        CompletableFuture<Pair<Structure, Boolean>> createStructure = testDataService.createCarStructureIfNotExists("-bulkUpdateMultipleIds");
+
+        StepVerifier.create(Mono.fromFuture(createStructure))
+                    .expectNextMatches(pair -> pair.getLeft() != null && pair.getRight())
+                    .verifyComplete();
+
+        Structure structure = createStructure.join().getLeft();
+
+        List<Person> personList = testDataService.createRandomTestPeopleWithId(50).join();
+
+        Assertions.assertEquals(50, personList.size(), "Failed to create test person");
+
+        List<Car> cars = new ArrayList<>(50);
+        for(Person person : personList){
+            int count = cars.size();
+            Car car = new Car();
+            car.setId(UUID.randomUUID().toString());
+            car.setMake("Honda-"+count);
+            car.setModel("Civic-"+count);
+            car.setYear("2019");
+            car.setOwner(person);
+            cars.add(car);
+        }
+
+        testHelper.bulkUpdateCarsAsRawJson(cars, structure, entityContext).join();
 
         // We have to wait since bulk updates are not queryable until they are indexed
         Thread.sleep(5000);
