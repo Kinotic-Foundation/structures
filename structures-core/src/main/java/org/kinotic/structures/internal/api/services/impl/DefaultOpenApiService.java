@@ -158,33 +158,13 @@ public class DefaultOpenApiService implements OpenApiService {
 
         // Save Operation
         Operation createOperation = createOperation("Save "+structureName,
-                                                    "Saves or updates " + structureName + " entities.",
+                                                    "Saves " + structureName + " entities.",
                                                     "save"+structureName,
                                                     structure,
                                                     1);
         createOperation.requestBody(structureRequestBody);
 
         structurePathItem.post(createOperation);
-
-
-        // Bulk Save Operation
-        PathItem bulkSavePathItem = new PathItem();
-        Operation bulkSaveOperation = createOperation("Bulk Save for "+structureName + " entities",
-                                                        "Saves or updates multiple " + structureName + " entities.",
-                                                        "bulkSave"+structureName,
-                                                        structure,
-                                                        0);
-
-        ArraySchema bulkSaveSchema = new ArraySchema();
-        bulkSaveSchema.items(refSchema);
-        RequestBody bulkSaveRequestBody = new RequestBody()
-                .content(new Content().addMediaType("application/json",
-                                                    new MediaType().schema(bulkSaveSchema)));
-        bulkSaveOperation.requestBody(bulkSaveRequestBody);
-
-        bulkSavePathItem.post(bulkSaveOperation);
-        paths.put(basePath + lowercaseNamespace + "/" + lowercaseName + "/bulk", bulkSavePathItem);
-
 
         // Find All Operation
         Operation getAllOperation = createOperation("Find all "+structureName +" entities",
@@ -197,8 +177,60 @@ public class DefaultOpenApiService implements OpenApiService {
 
         structurePathItem.get(getAllOperation);
 
-        // add the path item to the paths
+        // add the path item for all paths like basePath/structureNamespace/structureName/
         paths.put(basePath + lowercaseNamespace + "/" + lowercaseName, structurePathItem);
+
+
+        // Update Operation
+        PathItem updatePathItem = new PathItem();
+        Operation updateOperation = createOperation("Update "+structureName,
+                                                    "Updates " + structureName + " entities.",
+                                                    "update"+structureName,
+                                                    structure,
+                                                    1);
+        updateOperation.requestBody(structureRequestBody);
+        updatePathItem.post(updateOperation);
+        paths.put(basePath + lowercaseNamespace + "/" + lowercaseName + "/update", updatePathItem);
+
+
+        // Bulk Save Operation
+        PathItem bulkSavePathItem = new PathItem();
+        Operation bulkSaveOperation = createOperation("Bulk Save for "+structureName + " entities",
+                                                      "Saves multiple " + structureName + " entities.",
+                                                      "bulkSave"+structureName,
+                                                      structure,
+                                                      0);
+
+        ArraySchema bulkSaveSchema = new ArraySchema();
+        bulkSaveSchema.items(refSchema);
+        RequestBody bulkSaveRequestBody = new RequestBody()
+                .content(new Content().addMediaType("application/json",
+                                                    new MediaType().schema(bulkSaveSchema)));
+        bulkSaveOperation.requestBody(bulkSaveRequestBody);
+
+        bulkSavePathItem.post(bulkSaveOperation);
+        paths.put(basePath + lowercaseNamespace + "/" + lowercaseName + "/bulk", bulkSavePathItem);
+
+
+        // Bulk Update Operation
+        PathItem bulkUpdatePathItem = new PathItem();
+        Operation bulkUpdateOperation = createOperation("Bulk Update for "+structureName + " entities",
+                                                      "Updates multiple " + structureName + " entities.",
+                                                      "bulkUpdate"+structureName,
+                                                      structure,
+                                                      0);
+
+        ArraySchema bulkUpdateSchema = new ArraySchema();
+        bulkUpdateSchema.items(refSchema);
+        RequestBody bulkUpdateRequestBody = new RequestBody()
+                .content(new Content().addMediaType("application/json",
+                                                    new MediaType().schema(bulkUpdateSchema)));
+        bulkUpdateOperation.requestBody(bulkUpdateRequestBody);
+
+        bulkUpdatePathItem.post(bulkUpdateOperation);
+        paths.put(basePath + lowercaseNamespace + "/" + lowercaseName + "/bulk-update", bulkUpdatePathItem);
+
+
 
 
         // Create a path item for all the operations with basePath/structureNamespace/structureName/search

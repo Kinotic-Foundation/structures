@@ -7,6 +7,7 @@ export class TypescriptConversionState {
 
   private readonly _namespace: string
   private readonly _project: Project
+  public currentPropertyName: string | null = null
 
   constructor(namespace: string, project: Project) {
     this._namespace = namespace

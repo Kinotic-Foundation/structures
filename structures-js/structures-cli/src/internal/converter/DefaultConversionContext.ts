@@ -60,7 +60,7 @@ export class DefaultConversionContext<BASE_TYPE, S> implements IConversionContex
   private selectConverter(value: BASE_TYPE): ITypeConverter<BASE_TYPE, any, S> | null{
     let ret: ITypeConverter<BASE_TYPE, any, S> | null = null
     for (let converter of this.strategy.typeConverters()) {
-      if(converter.supports(value)){
+      if(converter.supports(value, this.state())){
         ret = converter
         break
       }

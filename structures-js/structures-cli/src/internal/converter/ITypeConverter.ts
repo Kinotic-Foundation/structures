@@ -17,9 +17,10 @@ export interface ITypeConverter<BASE_TYPE, T extends BASE_TYPE, S> {
    * Checks if the given value is supported by this converter
    *
    * @param value to check if supported
+   * @param conversionState the state of the conversion, that is contained in the {@link IConversionContext}
    * @return true if this converter can convert the type false if not
    */
-  supports(value: BASE_TYPE): boolean
+  supports(value: BASE_TYPE, conversionState: S): boolean
 
   /**
    * Converts the given value to a {@link C3Type}.

@@ -4,6 +4,8 @@ import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import co.elastic.clients.elasticsearch._types.Refresh;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import co.elastic.clients.elasticsearch.core.BulkRequest;
+import co.elastic.clients.elasticsearch.core.UpdateRequest;
+import co.elastic.clients.elasticsearch.core.bulk.BulkOperation;
 import co.elastic.clients.util.BinaryData;
 import co.elastic.clients.util.ContentType;
 import org.kinotic.structures.api.decorators.MultiTenancyType;
@@ -17,7 +19,10 @@ import org.kinotic.structures.internal.api.services.EntityService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 /**
  * Created by Navíd Mitchell 🤪 on 5/2/23.
@@ -45,6 +50,103 @@ public class DefaultEntityService implements EntityService {
     @SuppressWarnings("unchecked")
     @Override
     public <T> CompletableFuture<T> save(T entity, EntityContext context) {
+        return doPersist(entity, context, entityHolder -> {
+
+            String routing = (structure.getMultiTenancyType() == MultiTenancyType.SHARED)
+                    ? context.getParticipant().getTenantId()
+                    : null;
+
+            // This is a bit of a hack since the BinaryData type does not work properly to retrieve complex objects, but does work to store them.
+            // https://github.com/elastic/elasticsearch-java/issues/574
+            if(entityHolder.getEntity() instanceof RawJson){
+                RawJson rawEntity = (RawJson) entityHolder.getEntity();
+                BinaryData binaryData = BinaryData.of(rawEntity.data(), ContentType.APPLICATION_JSON);
+                return esAsyncClient.index(i -> i
+                                            .routing(routing)
+                                            .index(structure.getItemIndex())
+                                            .id(entityHolder.getId())
+                                            .document(binaryData)
+                                            .refresh(Refresh.True))
+                                    .thenApply(indexResponse -> (T) rawEntity);
+            }else{
+                return esAsyncClient.index(i -> i
+                                            .routing(routing)
+                                            .index(structure.getItemIndex())
+                                            .id(entityHolder.getId())
+                                            .document(entityHolder.getEntity())
+                                            .refresh(Refresh.True))
+                                    .thenApply(indexResponse -> (T) entityHolder.getEntity());
+            }
+        });
+    }
+
+    @Override
+    public <T> CompletableFuture<Void> bulkSave(T entities, EntityContext context) {
+        return doBulkPersist(entities,
+                             context,
+                             entityHolder -> BulkOperation.of(b -> b
+                                     .index(idx -> idx.index(structure.getItemIndex())
+                                                      .id(entityHolder.getId())
+                                                      .document(entityHolder.getEntity())
+                                     )));
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public <T> CompletableFuture<T> update(T entity, EntityContext context) {
+        return doPersist(entity, context, entityHolder -> {
+
+            String routing = (structure.getMultiTenancyType() == MultiTenancyType.SHARED)
+                    ? context.getParticipant().getTenantId()
+                    : null;
+
+            // This is a bit of a hack since the BinaryData type does not work properly to retrieve complex objects, but does work to store them.
+            // https://github.com/elastic/elasticsearch-java/issues/574
+            if(entityHolder.getEntity() instanceof RawJson){
+                RawJson rawEntity = (RawJson) entityHolder.getEntity();
+                BinaryData binaryData = BinaryData.of(rawEntity.data(), ContentType.APPLICATION_JSON);
+                return esAsyncClient.update(UpdateRequest.of(u -> u
+                                            .routing(routing)
+                                            .index(structure.getItemIndex())
+                                            .id(entityHolder.getId())
+                                            .doc(binaryData)
+                                            .docAsUpsert(true)
+                                            .detectNoop(false)
+                                            .refresh(Refresh.True)), BinaryData.class)
+                                    .thenApply(updateResponse -> (T) rawEntity);
+
+            }else{
+                return esAsyncClient.update(UpdateRequest.of(u -> u
+                                            .routing(routing)
+                                            .index(structure.getItemIndex())
+                                            .id(entityHolder.getId())
+                                            .doc(entityHolder.getEntity())
+                                            .docAsUpsert(true)
+                                            .detectNoop(false)
+                                            .refresh(Refresh.True)), entityHolder.getEntity().getClass())
+                                    .thenApply(updateResponse -> (T) entityHolder.getEntity());
+            }
+        });
+    }
+
+    @Override
+    public <T> CompletableFuture<Void> bulkUpdate(T entities, EntityContext context) {
+        return doBulkPersist(entities,
+                             context,
+                             entityHolder -> BulkOperation.of(b -> b
+                                     .update(u -> u
+                                             .index(structure.getItemIndex())
+                                             .id(entityHolder.getId())
+                                             .action(upB -> upB.doc(entityHolder.getEntity())
+                                                               .docAsUpsert(true)
+                                                               .detectNoop(false))
+                                     )));
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> CompletableFuture<T> doPersist(T entity,
+                                               EntityContext context,
+                                               Function<EntityHolder, CompletableFuture<T>> persistLogic){
         return validateTenant(context)
                 .thenCompose(unused -> (CompletableFuture<T>) delegatingUpsertPreProcessor
                         .process(entity, context)
@@ -54,79 +156,57 @@ public class DefaultEntityService implements EntityService {
                                 return CompletableFuture.failedFuture(new IllegalArgumentException("Entity must have an id"));
                             }
 
-                            String routing = (structure.getMultiTenancyType() == MultiTenancyType.SHARED)
-                                    ? context.getParticipant().getTenantId()
-                                    : null;
-
-                            // This is a bit of a hack since the BinaryData type does not work properly to retrieve complex objects, but does work to store them.
-                            // https://github.com/elastic/elasticsearch-java/issues/574
-                            if(entityHolder.getEntity() instanceof RawJson){
-                                RawJson rawEntity = (RawJson) entityHolder.getEntity();
-                                BinaryData binaryData = BinaryData.of(rawEntity.data(), ContentType.APPLICATION_JSON);
-                                return esAsyncClient.index(i -> i
-                                                            .index(structure.getItemIndex())
-                                                            .id(entityHolder.getId())
-                                                            .routing(routing)
-                                                            .document(binaryData)
-                                                            .refresh(Refresh.True))
-                                                    .thenApply(indexResponse -> new RawJson(rawEntity.data()));
-                            }else{
-                                return esAsyncClient.index(i -> i
-                                                            .index(structure.getItemIndex())
-                                                            .id(entityHolder.getId())
-                                                            .routing(routing)
-                                                            .document(entityHolder.getEntity())
-                                                            .refresh(Refresh.True))
-                                                    .thenApply(indexResponse -> entityHolder.getEntity());
-                            }
+                            return persistLogic.apply(entityHolder)
+                                               .thenApply(response -> entityHolder.getEntity());
                         }));
     }
 
-    @Override
-    public <T> CompletableFuture<Void> bulkSave(T entities, EntityContext context) {
+    @SuppressWarnings("unchecked")
+    private <T> CompletableFuture<Void> doBulkPersist(T entities,
+                                                      EntityContext context,
+                                                      Function<EntityHolder, BulkOperation> persistLogic){
         return validateTenant(context)
                 .thenCompose(unused -> delegatingUpsertPreProcessor
                         .processArray(entities, context)
                         .thenCompose(list -> {
-                                String routing = (structure.getMultiTenancyType() == MultiTenancyType.SHARED)
-                                        ? context.getParticipant().getTenantId()
-                                        : null;
 
-                                BulkRequest.Builder br = new BulkRequest.Builder();
-                                br.routing(routing);
+                            String routing = (structure.getMultiTenancyType() == MultiTenancyType.SHARED)
+                                    ? context.getParticipant().getTenantId()
+                                    : null;
 
-                                for(EntityHolder<?> entityHolder : list){
+                            BulkRequest.Builder br = new BulkRequest.Builder();
+                            br.routing(routing);
 
-                                    if(entityHolder.getId() == null || entityHolder.getId().isEmpty()){
-                                        return CompletableFuture.failedFuture(new IllegalArgumentException("All Entities must have an id"));
-                                    }
+                            List<BulkOperation> bulkOperations = new ArrayList<>(list.size());
+                            for(EntityHolder entityHolder : list){
 
-                                    Object data;
-                                    if(entityHolder.getEntity() instanceof RawJson){
-                                        RawJson rawEntity = (RawJson) entityHolder.getEntity();
-                                        data = BinaryData.of(rawEntity.data(), ContentType.APPLICATION_JSON);
-                                    }else{
-                                        data = entityHolder.getEntity();
-                                    }
-
-                                    br.operations(op -> op
-                                            .index(idx -> idx
-                                                    .index(structure.getItemIndex())
-                                                    .id(entityHolder.getId())
-                                                    .document(data)
-                                            ));
+                                if(entityHolder.getId() == null || entityHolder.getId().isEmpty()){
+                                    return CompletableFuture.failedFuture(new IllegalArgumentException("All Entities must have an id"));
                                 }
 
-                                return esAsyncClient.bulk(br.build()).thenCompose(bulkResponse -> {
-                                    if(bulkResponse.errors()){
-                                        return CompletableFuture.failedFuture(new RuntimeException("Bulk save failed with errors"));
-                                    }else{
-                                        return CompletableFuture.completedFuture(bulkResponse);
-                                    }
-                                });
+                                // This is a bit of a hack since the BinaryData type does not work properly to retrieve complex objects, but does work to store them.
+                                // https://github.com/elastic/elasticsearch-java/issues/574
+                                if(entityHolder.getEntity() instanceof RawJson){
+                                    RawJson rawEntity = (RawJson) entityHolder.getEntity();
+                                    entityHolder.setEntity(BinaryData.of(rawEntity.data(), ContentType.APPLICATION_JSON));
+                                }
+
+                                bulkOperations.add(persistLogic.apply(entityHolder));
+                            }
+
+                            br.operations(bulkOperations);
+
+                            return esAsyncClient.bulk(br.build()).thenCompose(bulkResponse -> {
+                                if(bulkResponse.errors()){
+                                    return CompletableFuture.failedFuture(new RuntimeException("Bulk save failed with errors"));
+                                }else{
+                                    return CompletableFuture.completedFuture(bulkResponse);
+                                }
+                            });
 
                         })).thenApply(unused -> null);
     }
+
 
     @Override
     public <T> CompletableFuture<T> findById(String id, Class<T> type, EntityContext context) {

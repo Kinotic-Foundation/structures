@@ -53,10 +53,10 @@ public class RawJsonUpsertPreProcessor implements UpsertPreProcessor<RawJson, Ra
      * @param context the context of the entity
      * @return a new {@link RawJson} with the appropriate decorators applied
      */
-    private CompletableFuture<List<EntityHolder<RawJson>>> doProcess(RawJson json, EntityContext context, boolean processArray){
+    private CompletableFuture<List<EntityHolder>> doProcess(RawJson json, EntityContext context, boolean processArray){
         Deque<String> jsonPathStack = new ArrayDeque<>();
         byte[] bytes = json.data();
-        List<EntityHolder<RawJson>> ret = new ArrayList<>();
+        List<EntityHolder> ret = new ArrayList<>();
         int objectDepth = 0;
         int arrayDepth = 0;
 
@@ -146,7 +146,7 @@ public class RawJsonUpsertPreProcessor implements UpsertPreProcessor<RawJson, Ra
                         // This is the end of the object, so we store the object
                         jsonGenerator.writeEndObject();
                         jsonGenerator.flush();
-                        ret.add(new EntityHolder<>(currentId, new RawJson(outputStream.toByteArray())));
+                        ret.add(new EntityHolder(currentId, new RawJson(outputStream.toByteArray())));
                         outputStream.reset();
                         currentId = null;
                     }else{
@@ -199,7 +199,7 @@ public class RawJsonUpsertPreProcessor implements UpsertPreProcessor<RawJson, Ra
     }
 
     @Override
-    public CompletableFuture<EntityHolder<RawJson>> process(RawJson entity, EntityContext context) {
+    public CompletableFuture<EntityHolder> process(RawJson entity, EntityContext context) {
         return doProcess(entity, context, false).thenApply(list -> {
             if(list.size() != 1){
                 throw new IllegalStateException("Expected exactly one entity to be returned");
@@ -209,7 +209,7 @@ public class RawJsonUpsertPreProcessor implements UpsertPreProcessor<RawJson, Ra
     }
 
     @Override
-    public CompletableFuture<List<EntityHolder<RawJson>>> processArray(RawJson entities, EntityContext context) {
+    public CompletableFuture<List<EntityHolder>> processArray(RawJson entities, EntityContext context) {
         return doProcess(entities, context, true);
     }
 

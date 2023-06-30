@@ -30,6 +30,16 @@ public class TestHelper {
     @Autowired
     private EntitiesService entitiesService;
 
+    public CompletableFuture<Void> bulkUpdateCarsAsRawJson(List<Car> cars, Structure structure, EntityContext entityContext){
+        byte[] jsonData;
+        try {
+            jsonData = objectMapper.writeValueAsBytes(cars);
+        } catch (JsonProcessingException e) {
+            return CompletableFuture.failedFuture(new IllegalStateException(e));
+        }
+        return entitiesService.bulkUpdate(structure.getId(), RawJson.from(jsonData), entityContext);
+    }
+
     public CompletableFuture<Void> bulkSaveCarsAsRawJson(List<Car> cars, Structure structure, EntityContext entityContext){
         byte[] jsonData;
         try {
@@ -40,7 +50,6 @@ public class TestHelper {
         return entitiesService.bulkSave(structure.getId(), RawJson.from(jsonData), entityContext);
     }
 
-
     public CompletableFuture<Car> saveCarAsRawJson(Car car, Structure structure, EntityContext entityContext){
         byte[] jsonData;
         try {
@@ -49,6 +58,24 @@ public class TestHelper {
             return CompletableFuture.failedFuture(new IllegalStateException(e));
         }
         return entitiesService.save(structure.getId(), RawJson.from(jsonData), entityContext)
+                              .thenApply(entity -> {
+                                  try {
+                                      return objectMapper.readValue(entity.data(), Car.class);
+                                  } catch (IOException e) {
+                                      throw new IllegalStateException(e);
+                                  }
+                              });
+    }
+
+
+    public CompletableFuture<Car> updateCarAsRawJson(Car car, Structure structure, EntityContext entityContext){
+        byte[] jsonData;
+        try {
+            jsonData = objectMapper.writeValueAsBytes(car);
+        } catch (JsonProcessingException e) {
+            return CompletableFuture.failedFuture(new IllegalStateException(e));
+        }
+        return entitiesService.update(structure.getId(), RawJson.from(jsonData), entityContext)
                               .thenApply(entity -> {
                                   try {
                                       return objectMapper.readValue(entity.data(), Car.class);

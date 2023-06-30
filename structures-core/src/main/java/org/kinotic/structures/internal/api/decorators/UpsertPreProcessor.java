@@ -12,9 +12,22 @@ import java.util.concurrent.CompletableFuture;
  */
 public interface UpsertPreProcessor<T, ARRAY_TYPE> {
 
-    CompletableFuture<EntityHolder<T>> process(T entity, EntityContext context);
+    /**
+     * Processes a single entity before it is upserted.
+     * This applies all decorator logic to fields that have decorators.
+     * @param entity to process
+     * @param context the context for this operation
+     * @return {@link CompletableFuture} emitting the processed entity
+     */
+    CompletableFuture<EntityHolder> process(T entity, EntityContext context);
 
-    CompletableFuture<List<EntityHolder<T>>> processArray(ARRAY_TYPE entities, EntityContext context);
+    /**
+     * Processes an array of entities before they are upserted.
+     * This applies all decorator logic to fields that have decorators.
+     * @param entities to process
+     * @param context the context for this operation
+     * @return {@link CompletableFuture} emitting the processed entities
+     */
+    CompletableFuture<List<EntityHolder>> processArray(ARRAY_TYPE entities, EntityContext context);
 
 }
-

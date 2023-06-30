@@ -47,6 +47,18 @@ public class DefaultEntitiesService implements EntitiesService {
     }
 
     @Override
+    public <T> CompletableFuture<T> update(String structureId, T entity, EntityContext context) {
+        return cache.get(structureId)
+                    .thenCompose(entityService -> entityService.update(entity, context));
+    }
+
+    @Override
+    public <T> CompletableFuture<Void> bulkUpdate(String structureId, T entities, EntityContext context) {
+        return cache.get(structureId)
+                    .thenCompose(entityService -> entityService.bulkUpdate(entities, context));
+    }
+
+    @Override
     public <T> CompletableFuture<T> findById(String structureId, String id, Class<T> type, EntityContext context) {
         return cache.get(structureId)
                     .thenCompose(entityService -> entityService.findById(id, type, context));

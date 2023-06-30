@@ -4,6 +4,9 @@ import {TypescriptConversionState} from './TypescriptConversionState.js'
 import {IConversionContext} from '../IConversionContext.js'
 import {C3Type, ObjectC3Type} from '@kinotic/continuum-idl'
 
+/**
+ * Converts a typescript class to a C3Type
+ */
 export class ClassToC3Type implements ITypeConverter<Node, ClassDeclaration, TypescriptConversionState>{
 
   convert(value: ClassDeclaration, conversionContext: IConversionContext<Node, TypescriptConversionState>): C3Type {
@@ -14,8 +17,9 @@ export class ClassToC3Type implements ITypeConverter<Node, ClassDeclaration, Typ
     const properties = value.getProperties()
     properties.forEach((property: PropertyDeclaration) => {
       const propertyName = property.getName()
-      let converted
+      conversionContext.state().currentPropertyName = propertyName
 
+      let converted
       // if this is an object we must resolve ClassDeclaration
       if(property.getType().isObject()){
         const nestedClass = property?.getType()?.getSymbol()?.getValueDeclaration()
@@ -29,6 +33,7 @@ export class ClassToC3Type implements ITypeConverter<Node, ClassDeclaration, Typ
         converted = conversionContext.convert(property)
       }
       ret.addProperty(propertyName, converted);
+      conversionContext.state().currentPropertyName = null;
     })
 
     return ret

@@ -49,13 +49,13 @@ public class MapUpsertPreProcessor implements UpsertPreProcessor<Map<Object, Obj
     }
 
     @Override
-    public CompletableFuture<EntityHolder<Map<Object, Object>>> process(Map<Object, Object> entity,
+    public CompletableFuture<EntityHolder> process(Map<Object, Object> entity,
                                                                         EntityContext context) {
         try {
             // ids are not allowed to be nested
             if(idFieldPreProcessor != null && !idFieldPreProcessor.getLeft().contains(".")){
                 String id = processIdField(entity, context);
-                return CompletableFuture.completedFuture(new EntityHolder<>(id, entity));
+                return CompletableFuture.completedFuture(new EntityHolder(id, entity));
             }else{
                 return CompletableFuture.failedFuture(new IllegalStateException("No id field found"));
             }
@@ -89,15 +89,15 @@ public class MapUpsertPreProcessor implements UpsertPreProcessor<Map<Object, Obj
     }
 
     @Override
-    public CompletableFuture<List<EntityHolder<Map<Object, Object>>>> processArray(List<Map<Object, Object>> entities,
+    public CompletableFuture<List<EntityHolder>> processArray(List<Map<Object, Object>> entities,
                                                                                    EntityContext context) {
         try {
             // ids are not allowed to be nested
             if(idFieldPreProcessor != null && !idFieldPreProcessor.getLeft().contains(".")){
-                List<EntityHolder<Map<Object, Object>>> entityHolders = new ArrayList<>();
+                List<EntityHolder> entityHolders = new ArrayList<>();
                 for(Map<Object, Object> entity : entities) {
                     String id = processIdField(entity, context);
-                    entityHolders.add(new EntityHolder<>(id, entity));
+                    entityHolders.add(new EntityHolder(id, entity));
                 }
                 return CompletableFuture.completedFuture(entityHolders);
             }else{

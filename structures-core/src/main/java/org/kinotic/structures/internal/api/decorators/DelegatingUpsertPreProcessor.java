@@ -37,7 +37,7 @@ public class DelegatingUpsertPreProcessor implements UpsertPreProcessor<Object, 
 
     @SuppressWarnings("unchecked")
     @Override
-    public CompletableFuture<EntityHolder<Object>> process(Object entity, EntityContext context) {
+    public CompletableFuture<EntityHolder> process(Object entity, EntityContext context) {
         Validate.notNull(entity, "entity must not be null");
 
         Object ret;
@@ -48,12 +48,12 @@ public class DelegatingUpsertPreProcessor implements UpsertPreProcessor<Object, 
         } else {
             ret = pojoUpsertPreProcessor.process(entity, context);
         }
-        return (CompletableFuture<EntityHolder<Object>>) ret;
+        return (CompletableFuture<EntityHolder>) ret;
     }
 
     @SuppressWarnings("unchecked")
     @Override
-    public CompletableFuture<List<EntityHolder<Object>>> processArray(Object entities, EntityContext context) {
+    public CompletableFuture<List<EntityHolder>> processArray(Object entities, EntityContext context) {
         Validate.notNull(entities, "entities must not be null");
 
         Object ret;
@@ -74,6 +74,6 @@ public class DelegatingUpsertPreProcessor implements UpsertPreProcessor<Object, 
         }else {
             throw new IllegalArgumentException("Unsupported type: " + entities.getClass().getName());
         }
-        return (CompletableFuture<List<EntityHolder<Object>>>) ret;
+        return (CompletableFuture<List<EntityHolder>>) ret;
     }
 }

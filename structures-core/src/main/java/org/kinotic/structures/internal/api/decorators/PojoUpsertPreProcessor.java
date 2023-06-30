@@ -11,12 +11,12 @@ import java.util.concurrent.CompletableFuture;
 public class PojoUpsertPreProcessor implements UpsertPreProcessor<Object, List<Object>>{
 
     @Override
-    public CompletableFuture<EntityHolder<Object>> process(Object entity, EntityContext context) {
+    public CompletableFuture<EntityHolder> process(Object entity, EntityContext context) {
         return null;
     }
 
     @Override
-    public CompletableFuture<List<EntityHolder<Object>>> processArray(List<Object> entities, EntityContext context) {
+    public CompletableFuture<List<EntityHolder>> processArray(List<Object> entities, EntityContext context) {
         return null;
     }
 }

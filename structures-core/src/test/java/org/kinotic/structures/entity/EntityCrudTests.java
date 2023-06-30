@@ -301,7 +301,7 @@ public class EntityCrudTests extends ElasticsearchTestBase {
            .setYear(null)
            .setOwner(person);
 
-        Car result2 = testHelper.saveCarAsRawJson(car, structure, entityContext).join();
+        Car result2 = testHelper.updateCarAsRawJson(car, structure, entityContext).join();
 
         Assertions.assertEquals(car.getId(), result2.getId(), "Car id does not match after partial update");
 

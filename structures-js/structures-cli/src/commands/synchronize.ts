@@ -49,8 +49,7 @@ export default class Synchronize extends Command {
               let c3Type: C3Type | null = null
               try {
                 c3Type = conversionContext.convert(exportedDeclaration)
-              } catch (e) {
-              } // We ignore this error since the converter will print any errors
+              } catch (e) {} // We ignore this error since the converter will print any errors
 
               if (c3Type != null) {
 
@@ -69,7 +68,7 @@ export default class Synchronize extends Command {
 
                 entities.push(c3Type)
               }else{
-                this.error(`Could not convert ${name} to a C3Type. The process will terminate.`)
+                this.log(`Error: Could not convert ${name} to a C3Type. The process will terminate.`)
                 return;
               }
             }

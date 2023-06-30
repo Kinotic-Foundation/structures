@@ -172,11 +172,46 @@ public class OpenApiVerticle extends AbstractVerticle {
                   String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
 
                   VertxCompletableFuture.from(vertx, entitiesService.bulkSave(structureId,
-                                                                          new RawJson(ctx.getBody().getBytes()),
-                                                                          new RoutingContextToEntityContextAdapter(ctx)))
+                                                                              new RawJson(ctx.getBody().getBytes()),
+                                                                              new RoutingContextToEntityContextAdapter(ctx)))
                                         .handle(new NoValueHandler(ctx));
 
               });
+
+        // Update entity
+        router.post(apiBasePath+":structureNamespace/:structureName/update")
+              .consumes("application/json")
+              .produces("application/json")
+              .failureHandler(failureHandler)
+              .handler(BodyHandler.create(false))
+              .handler(ctx -> {
+
+                  String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
+
+                  VertxCompletableFuture.from(vertx, entitiesService.update(structureId,
+                                                                            new RawJson(ctx.getBody().getBytes()),
+                                                                            new RoutingContextToEntityContextAdapter(ctx)))
+                                        .handle(new SingleEntityHandler(ctx));
+
+              });
+
+        // Bulk Update
+        router.post(apiBasePath+":structureNamespace/:structureName/bulk-update")
+              .consumes("application/json")
+              .produces("application/json")
+              .failureHandler(failureHandler)
+              .handler(BodyHandler.create(false))
+              .handler(ctx -> {
+
+                  String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
+
+                  VertxCompletableFuture.from(vertx, entitiesService.bulkUpdate(structureId,
+                                                                                new RawJson(ctx.getBody().getBytes()),
+                                                                                new RoutingContextToEntityContextAdapter(ctx)))
+                                        .handle(new NoValueHandler(ctx));
+
+              });
+
 
         // Find all entities
         router.get(apiBasePath+":structureNamespace/:structureName")
