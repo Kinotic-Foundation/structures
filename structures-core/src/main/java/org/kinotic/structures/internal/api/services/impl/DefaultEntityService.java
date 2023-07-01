@@ -174,8 +174,6 @@ public class DefaultEntityService implements EntityService {
 
                             br.operations(bulkOperations);
 
-                            // FIXME: need to check for the bulk update an empty string as the thing returns in error
-
                             return esAsyncClient.bulk(br.build()).thenCompose(bulkResponse -> {
                                 if(bulkResponse.errors()){
                                     return CompletableFuture.failedFuture(new IllegalArgumentException("Bulk save failed with errors"));
