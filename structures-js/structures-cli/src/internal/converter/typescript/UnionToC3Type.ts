@@ -13,15 +13,24 @@ export class UnionToC3Type implements ITypeConverter<Node, Node, TypescriptConve
     const ret: UnionC3Type = new UnionC3Type()
 
     value.getType().getUnionTypes().forEach((unionType: Type) => {
-      const unionDeclaration = unionType?.getSymbol()?.getValueDeclaration()
-      if(unionDeclaration) {
-        if(ClassDeclaration.isClassDeclaration(unionDeclaration)) {
-          ret.types.push(conversionContext.convert(unionDeclaration) as ObjectC3Type)
-        }else{
-          throw new Error("Structures only supports classes in union types")
+
+      if(!unionType.isUndefined() && !unionType.isNull()) {
+
+        const unionDeclaration = unionType?.getSymbol()?.getValueDeclaration()
+
+        if (unionDeclaration) {
+          if (ClassDeclaration.isClassDeclaration(unionDeclaration)) {
+            ret.types.push(conversionContext.convert(unionDeclaration) as ObjectC3Type)
+          } else {
+            throw new Error("Structures only supports classes in union types")
+          }
+        } else {
+          throw new Error("Class could not be found for union type " + unionType.getText())
         }
+
       }else{
-        throw new Error("Class could not be found for union type "+unionType.getText())
+        // We can know if we should set notnull decorator or not.
+
       }
     })
     return ret

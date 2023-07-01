@@ -9,9 +9,9 @@ export class ArrayToC3Type  implements ITypeConverter<Node, Node, TypescriptConv
   convert(value: Node, conversionContext: IConversionContext<Node, TypescriptConversionState>): C3Type {
     const ret: ArrayC3Type = new ArrayC3Type()
 
-    const arrayValueDeclaration = value.getType()?.getArrayElementType()?.getSymbol()?.getValueDeclaration()
-    if(arrayValueDeclaration) {
-      ret.contains = conversionContext.convert(arrayValueDeclaration)
+    const arrayElementType = value.getType()?.getArrayElementType()
+    if(arrayElementType) {
+      //ret.contains = conversionContext.convert(arrayValueDeclaration)
     }else{
       throw new Error("Type could not be found for array type "+value.getType().getText())
     }

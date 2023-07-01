@@ -11,7 +11,7 @@ import { IConversionContext } from './IConversionContext.js'
  *
  * Created by Navíd Mitchell 🤪 on 4/26/23.
  */
-export interface ITypeConverter<BASE_TYPE, T extends BASE_TYPE, S> {
+export interface ITypeConverter<BASE_TYPE, T, S> {
 
   /**
    * Checks if the given value is supported by this converter

@@ -1,6 +1,6 @@
 import {Entity, Id, MultiTenancyType} from '@kinotic/structures-data'
 import {Address} from './Address'
-import {Car, Motorcycle, Vehicle} from './Vehicles'
+import {Car, Motorcycle} from './Vehicles'
 
 @Entity(MultiTenancyType.SHARED)
 export class Person {
@@ -8,7 +8,7 @@ export class Person {
     @Id
     public id!: string
 
-    public firstName!: string
+    public firstName?: string
 
     public lastName!: string
 
@@ -18,9 +18,10 @@ export class Person {
 
     public vehicle!: Car | Motorcycle
 
-    public favoriteColors!: string[]
+    // public favoriteVehicles!: Vehicle[]
+    //
+    // public favoriteColors!: string[]
+    //
+    // public favoriteNumbers!: number[]
 
-    public favoriteNumbers!: number[]
-
-    public favoriteVehicles!: Vehicle[]
 }

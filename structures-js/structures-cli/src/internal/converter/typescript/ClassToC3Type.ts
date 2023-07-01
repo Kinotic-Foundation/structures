@@ -21,7 +21,7 @@ export class ClassToC3Type implements ITypeConverter<Node, ClassDeclaration, Typ
 
       let converted
       // if this is an object we must resolve ClassDeclaration
-      if(property.getType().isObject()){
+      if(property.getType().isObject() && !property.getType().isArray()){
         const nestedClass = property?.getType()?.getSymbol()?.getValueDeclaration()
         if (!nestedClass){
           throw new Error("Class could not be found "+property.getName())
@@ -35,7 +35,6 @@ export class ClassToC3Type implements ITypeConverter<Node, ClassDeclaration, Typ
       ret.addProperty(propertyName, converted);
       conversionContext.state().currentPropertyName = null;
     })
-
     return ret
   }
 

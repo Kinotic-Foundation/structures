@@ -314,4 +314,5 @@ public class EntityCrudTests extends ElasticsearchTestBase {
         Assertions.assertNotNull(page2.getContent().get(0).getYear(), "Expected year to be null after partial update");
         Assertions.assertNotNull(page2.getContent().get(0).getOwner(), "Expected owner to be set after partial update");
     }
+
 }
