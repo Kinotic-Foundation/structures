@@ -107,6 +107,13 @@ public class DefaultStructureService implements StructureService {
         // updating an existing structure, reconcile the differences
         structure.setUpdated(new Date());
 
+        // FIXME: when we try and index an entity we have not published the index gets created automatically, so we need to not save any entities \
+        //  when the structure is not published.
+
+        // FIXME: need to check for the builk update an empty string as the thing returns in error
+
+        // FIXME: what to do when the namespace changes on an unpublished structure?  right now you end up with a broken id and index name
+
         // FIXME: reconcile structure differences (should be async)
         return structureDAO.save(structure);
     }
