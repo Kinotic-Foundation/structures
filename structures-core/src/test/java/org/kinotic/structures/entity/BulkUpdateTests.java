@@ -143,7 +143,7 @@ public class BulkUpdateTests extends ElasticsearchTestBase {
         Assertions.assertEquals(50, page.getTotalElements(), "Wrong number of entities");
     }
 
-    //@Test
+    @Test
     public void bulkUpdateObjectWithMultipleIds() throws Exception{
         EntityContext entityContext = new DefaultEntityContext(new DummyParticipant());
         CompletableFuture<Pair<Structure, Boolean>> createStructure = testDataService.createCarStructureIfNotExists("-bulkUpdateMultipleIds");

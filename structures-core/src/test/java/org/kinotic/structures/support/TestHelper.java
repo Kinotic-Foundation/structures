@@ -72,13 +72,14 @@ public class TestHelper {
         byte[] jsonData;
         try {
             jsonData = objectMapper.writeValueAsBytes(car);
-        } catch (JsonProcessingException e) {
+        } catch (Exception e) {
             return CompletableFuture.failedFuture(new IllegalStateException(e));
         }
+
         return entitiesService.update(structure.getId(), RawJson.from(jsonData), entityContext)
                               .thenApply(entity -> {
                                   try {
-                                      return objectMapper.readValue(entity.data(), Car.class);
+                                      return objectMapper.readValue(jsonData, Car.class);
                                   } catch (IOException e) {
                                       throw new IllegalStateException(e);
                                   }
@@ -88,7 +89,7 @@ public class TestHelper {
     /**
      * Creates a {@link org.kinotic.structures.api.domain.Structure} if it does not exist with the given name suffix and then creates the given number of people
      * @param numberOfPeopleToCreate the number of people to create
-     * @param randomPeople if true random people will be created, if false if a static list of people will be created
+     * @param randomPeople if true random people will be created, if false a static list of people will be created
      * @param entityContext the {@link EntityContext} to use when creating the entities
      * @param structureNameSuffix the suffix to append to the structure name or null to not append anything
      * @return a {@link Mono} that will emit a {@link StructureAndPersonHolder} when complete
@@ -153,12 +154,10 @@ public class TestHelper {
                                                  return entitiesService.bulkSave(structure.getId(),
                                                                                  RawJson.from(jsonData),
                                                                                  entityContext)
-                                                         .thenCompose(unused -> {
-                                                             return CompletableFuture
-                                                                     .completedFuture(new StructureAndPersonHolder(
-                                                                             structure,
-                                                                             people));
-                                                         });
+                                                         .thenCompose(unused -> CompletableFuture
+                                                                 .completedFuture(new StructureAndPersonHolder(
+                                                                         structure,
+                                                                         people)));
                                              })));
     }
 

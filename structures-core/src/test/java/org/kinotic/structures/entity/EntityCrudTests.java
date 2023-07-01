@@ -258,8 +258,8 @@ public class EntityCrudTests extends ElasticsearchTestBase {
                     .verifyComplete();
     }
 
-    //@Test
-    public void testPartialUpdate(){
+    @Test
+    public void testPartialUpdate() throws Exception {
         EntityContext entityContext = new DefaultEntityContext(new DummyParticipant());
         CompletableFuture<Pair<Structure, Boolean>> createStructure = testDataService.createCarStructureIfNotExists("-partialUpdate");
 
@@ -303,12 +303,17 @@ public class EntityCrudTests extends ElasticsearchTestBase {
 
         Car result2 = testHelper.updateCarAsRawJson(car, structure, entityContext).join();
 
+        Thread.sleep(1000);
+
         Assertions.assertEquals(car.getId(), result2.getId(), "Car id does not match after partial update");
 
         Page<Car> page2 = entitiesService.findAll(structure.getId(), Pageable.ofSize(10), Car.class, entityContext).join();
 
         Assertions.assertEquals(1, page2.getTotalElements(), "Wrong number of entities after partial update");
 
+        Assertions.assertNotNull(page2.getContent().get(0).getMake(), "Expected make to be null after partial update");
+        Assertions.assertNotNull(page2.getContent().get(0).getModel(), "Expected model to be null after partial update");
+        Assertions.assertNotNull(page2.getContent().get(0).getYear(), "Expected year to be null after partial update");
         Assertions.assertNotNull(page2.getContent().get(0).getOwner(), "Expected owner to be set after partial update");
     }
 }

@@ -100,32 +100,14 @@ public class DefaultEntityService implements EntityService {
                     ? context.getParticipant().getTenantId()
                     : null;
 
-            // This is a bit of a hack since the BinaryData type does not work properly to retrieve complex objects, but does work to store them.
-            // https://github.com/elastic/elasticsearch-java/issues/574
-            if(entityHolder.getEntity() instanceof RawJson){
-                RawJson rawEntity = (RawJson) entityHolder.getEntity();
-                BinaryData binaryData = BinaryData.of(rawEntity.data(), ContentType.APPLICATION_JSON);
-                return esAsyncClient.update(UpdateRequest.of(u -> u
-                                            .routing(routing)
-                                            .index(structure.getItemIndex())
-                                            .id(entityHolder.getId())
-                                            .doc(binaryData)
-                                            .docAsUpsert(true)
-                                            .detectNoop(false)
-                                            .refresh(Refresh.True)), BinaryData.class)
-                                    .thenApply(updateResponse -> (T) rawEntity);
-
-            }else{
-                return esAsyncClient.update(UpdateRequest.of(u -> u
-                                            .routing(routing)
-                                            .index(structure.getItemIndex())
-                                            .id(entityHolder.getId())
-                                            .doc(entityHolder.getEntity())
-                                            .docAsUpsert(true)
-                                            .detectNoop(false)
-                                            .refresh(Refresh.True)), entityHolder.getEntity().getClass())
-                                    .thenApply(updateResponse -> (T) entityHolder.getEntity());
-            }
+            return esAsyncClient.update(UpdateRequest.of(u -> u
+                                        .routing(routing)
+                                        .index(structure.getItemIndex())
+                                        .id(entityHolder.getId())
+                                        .doc(entityHolder.getEntity())
+                                        .docAsUpsert(true)
+                                        .refresh(Refresh.True)), entityHolder.getEntity().getClass())
+                                .thenApply(updateResponse -> (T) entityHolder.getEntity());
         });
     }
 
@@ -139,7 +121,7 @@ public class DefaultEntityService implements EntityService {
                                              .id(entityHolder.getId())
                                              .action(upB -> upB.doc(entityHolder.getEntity())
                                                                .docAsUpsert(true)
-                                                               .detectNoop(false))
+                                                               .detectNoop(true))
                                      )));
     }
 
@@ -161,7 +143,6 @@ public class DefaultEntityService implements EntityService {
                         }));
     }
 
-    @SuppressWarnings("unchecked")
     private <T> CompletableFuture<Void> doBulkPersist(T entities,
                                                       EntityContext context,
                                                       Function<EntityHolder, BulkOperation> persistLogic){
@@ -184,21 +165,20 @@ public class DefaultEntityService implements EntityService {
                                     return CompletableFuture.failedFuture(new IllegalArgumentException("All Entities must have an id"));
                                 }
 
-                                // This is a bit of a hack since the BinaryData type does not work properly to retrieve complex objects, but does work to store them.
-                                // https://github.com/elastic/elasticsearch-java/issues/574
-                                if(entityHolder.getEntity() instanceof RawJson){
-                                    RawJson rawEntity = (RawJson) entityHolder.getEntity();
-                                    entityHolder.setEntity(BinaryData.of(rawEntity.data(), ContentType.APPLICATION_JSON));
-                                }
-
                                 bulkOperations.add(persistLogic.apply(entityHolder));
+                            }
+
+                            if(bulkOperations.isEmpty()){
+                                return CompletableFuture.failedFuture(new IllegalArgumentException("No items found to create bulk request for"));
                             }
 
                             br.operations(bulkOperations);
 
+                            // FIXME: need to check for the bulk update an empty string as the thing returns in error
+
                             return esAsyncClient.bulk(br.build()).thenCompose(bulkResponse -> {
                                 if(bulkResponse.errors()){
-                                    return CompletableFuture.failedFuture(new RuntimeException("Bulk save failed with errors"));
+                                    return CompletableFuture.failedFuture(new IllegalArgumentException("Bulk save failed with errors"));
                                 }else{
                                     return CompletableFuture.completedFuture(bulkResponse);
                                 }

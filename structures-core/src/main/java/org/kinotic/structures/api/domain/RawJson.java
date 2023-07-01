@@ -1,17 +1,21 @@
 package org.kinotic.structures.api.domain;
 
+import co.elastic.clients.json.JsonpMapper;
+import co.elastic.clients.json.JsonpSerializable;
+import co.elastic.clients.json.jackson.JacksonJsonpGenerator;
 import com.fasterxml.jackson.core.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Class is used to represent raw json data
  * Created by Navíd Mitchell 🤪 on 5/22/23.
  */
-public final class RawJson {
+public final class RawJson implements JsonpSerializable {
 
     private byte[] data;
 
@@ -84,5 +88,19 @@ public final class RawJson {
     @Override
     public String toString() {
         return new String(data);
+    }
+
+    @Override
+    public void serialize(jakarta.json.stream.JsonGenerator generator, JsonpMapper mapper) {
+        if(generator instanceof JacksonJsonpGenerator){
+            String json = new String(data, StandardCharsets.UTF_8);
+            try {
+                ((JacksonJsonpGenerator) generator).jacksonGenerator().writeRawValue(json);
+            } catch (IOException e) {
+                throw new IllegalStateException("Unable to write raw json", e);
+            }
+        }else{
+            throw new UnsupportedOperationException("Only JacksonJsonpGenerator is supported");
+        }
     }
 }
