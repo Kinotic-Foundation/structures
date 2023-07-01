@@ -33,6 +33,6 @@
   },
   "dependencies": {
     "@kinotic/continuum": "^2.2.1",
-    "@kinotic/continuum-idl": "^0.2.2"
+    "@kinotic/continuum-idl": "^0.6.0"
   }
 }

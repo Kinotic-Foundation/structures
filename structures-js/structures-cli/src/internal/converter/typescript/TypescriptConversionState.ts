@@ -18,7 +18,6 @@ export class TypescriptConversionState {
     return this._namespace
   }
 
-
   get project(): Project {
     return this._project
   }

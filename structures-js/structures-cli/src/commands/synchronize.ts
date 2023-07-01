@@ -5,6 +5,7 @@ import {createConversionContext} from '../internal/converter/IConversionContext.
 import {TypescriptConverterStrategy} from '../internal/converter/typescript/TypescriptConverterStrategy.js'
 import {TypescriptConversionState} from '../internal/converter/typescript/TypescriptConversionState.js'
 import {C3Type, EntityDecorator, MultiTenancyType} from '@kinotic/continuum-idl'
+import {tsDecoratorToC3Decorator} from '../internal/converter/typescript/Utils.js'
 
 export default class Synchronize extends Command {
   static description = 'Synchronize the local Entity definitions with the Structures Server'
@@ -42,29 +43,18 @@ export default class Synchronize extends Command {
       exportedDeclarations.forEach((exportedDeclarationEntries, name) => {
         exportedDeclarationEntries.forEach((exportedDeclaration) => {
           if (ClassDeclaration.isClassDeclaration(exportedDeclaration)) {
-            // We only convert entities TODO: see if we can insure this is actually a structures entity
+            // We only convert entities TODO: see if we can insure this is actually a structures decorator Entity
             const decorator = exportedDeclaration.getDecorator('Entity')
             if(decorator != null) {
 
               let c3Type: C3Type | null = null
               try {
-                c3Type = conversionContext.convert(exportedDeclaration)
+                c3Type = conversionContext.convert(exportedDeclaration.getType())
               } catch (e) {} // We ignore this error since the converter will print any errors
 
               if (c3Type != null) {
 
-                const entityDecorator = new EntityDecorator()
-                if (decorator.getArguments().length == 1) {
-                  const argument = decorator.getArguments()[0]
-                  if (argument?.getText() == 'MultiTenancyType.SHARED') {
-                    entityDecorator.multiTenancyType = MultiTenancyType.SHARED
-                  } else if (argument?.getText() == 'MultiTenancyType.NONE') {
-                    entityDecorator.multiTenancyType = MultiTenancyType.NONE
-                  } else {
-                    throw new Error(`Unsupported MultiTenancyType ${argument?.getText()}`)
-                  }
-                }
-                c3Type.addDecorator(entityDecorator)
+                c3Type.addDecorator(tsDecoratorToC3Decorator(decorator))
 
                 entities.push(c3Type)
               }else{
