@@ -39,7 +39,6 @@ public interface EntitiesService {
      * Updates a given entity. This will only override the fields that are present in the given entity.
      * If any fields are not present in the given entity data they will not be changed.
      * If the entity does not exist it will be created.
-     * Use the returned instance for further operations as the save operation might have changed the entity instance.
      *
      * @param structureId the id of the structure to save the entity for
      * @param entity      must not be {@literal null}

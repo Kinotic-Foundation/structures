@@ -30,8 +30,8 @@ public class DefaultEntitiesService implements EntitiesService {
                         .expireAfterAccess(20, TimeUnit.HOURS)
                         .maximumSize(10_000)
                         .buildAsync((key, executor) -> structureDAO.findById(key)
-                                                                        .thenComposeAsync(entityServiceFactory::createEntityService,
-                                                                         executor));
+                                                                   .thenComposeAsync(entityServiceFactory::createEntityService,
+                                                                                     executor));
     }
 
     @Override

@@ -303,8 +303,6 @@ public class EntityCrudTests extends ElasticsearchTestBase {
 
         Car result2 = testHelper.updateCarAsRawJson(car, structure, entityContext).join();
 
-        Thread.sleep(1000);
-
         Assertions.assertEquals(car.getId(), result2.getId(), "Car id does not match after partial update");
 
         Page<Car> page2 = entitiesService.findAll(structure.getId(), Pageable.ofSize(10), Car.class, entityContext).join();

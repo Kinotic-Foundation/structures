@@ -67,6 +67,12 @@ public class DefaultEntityServiceFactory implements EntityServiceFactory {
     @Override
     public CompletableFuture<EntityService> createEntityService(Structure structure) {
 
+        if(structure == null){
+           return CompletableFuture.failedFuture(new IllegalArgumentException("Structure must not be null"));
+        } else if (!structure.isPublished()) {
+            return CompletableFuture.failedFuture(new IllegalArgumentException("Structure must be published"));
+        }
+
         // Map of jsonPath to DecoratorLogic
         Map<String, DecoratorLogic> fieldPreProcessors = new LinkedHashMap<>();
 

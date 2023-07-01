@@ -22,8 +22,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.kinotic.structures.ElasticsearchTestBase;
 import org.kinotic.structures.api.decorators.MultiTenancyType;
+import org.kinotic.structures.api.domain.DefaultEntityContext;
 import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.api.services.EntitiesService;
 import org.kinotic.structures.api.services.StructureService;
+import org.kinotic.structures.internal.sample.DummyParticipant;
 import org.kinotic.structures.internal.sample.TestDataService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -41,6 +44,8 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 	private StructureService structureService;
 	@Autowired
 	private TestDataService testDataService;
+	@Autowired
+	private EntitiesService entitiesService;
 
 	@Test
 	public void createPublishAndDeleteStructure() throws Exception {
@@ -126,6 +131,42 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 		CompletableFuture<Structure> future2 = structureService.create(structure);
 
 		StepVerifier.create(Mono.fromFuture(future2))
+					.expectError(IllegalArgumentException.class)
+					.verify();
+
+		CompletableFuture<Void> delFuture = structureService.deleteById(future.get().getId());
+
+		StepVerifier.create(Mono.fromFuture(delFuture))
+					.expectComplete()
+					.verify();
+	}
+
+	@Test
+	public void tryOperationOnNotPublishedStructure() throws Exception {
+		Structure structure = new Structure();
+		structure.setName("Person")
+				 .setNamespace("org.kinotic.sample")
+				 .setDescription("Defines a Person")
+				 .setEntityDefinition(testDataService.createPersonSchema(MultiTenancyType.NONE, false));
+
+		CompletableFuture<Structure> future = structureService.create(structure);
+
+		StepVerifier.create(Mono.fromFuture(future))
+					.expectNextMatches(savedStructure -> {
+						Assertions.assertNotNull(savedStructure.getId());
+						Assertions.assertNotNull(savedStructure.getCreated());
+						Assertions.assertNotNull(savedStructure.getUpdated());
+						Assertions.assertEquals(structure.getName(), savedStructure.getName());
+						Assertions.assertEquals(structure.getDescription(), savedStructure.getDescription());
+						Assertions.assertEquals(structure.getEntityDefinition(), savedStructure.getEntityDefinition());
+						return true;
+					})
+					.expectComplete()
+					.verify();
+
+		CompletableFuture<Long> countFuture = entitiesService.count(future.get().getId(), new DefaultEntityContext(new DummyParticipant()));
+
+		StepVerifier.create(Mono.fromFuture(countFuture))
 					.expectError(IllegalArgumentException.class)
 					.verify();
 
