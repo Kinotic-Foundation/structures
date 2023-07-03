@@ -218,12 +218,12 @@ import {
     IntC3Type,
     LongC3Type,
     MapC3Type,
-    NotNullC3Decorator,
+    NotNullDecorator,
     ObjectC3Type,
     ReferenceC3Type,
     ShortC3Type,
     StringC3Type,
-    TextC3Decorator,
+    TextDecorator,
     UnionC3Type
 } from "@kinotic/continuum-idl"
 import {IndexNameHelper} from "@/frontends/structures-admin/pages/structures/util/IndexNameHelper"
@@ -335,10 +335,10 @@ export default class StructureStandardUi extends Vue {
         }
         this.propertyType.metadata.description = this.propertyDescription
 
-        this.checkForDecoratorAndManage("NotNull", new NotNullC3Decorator(), this.propertyType, this.propertyNotNull)
+        this.checkForDecoratorAndManage("NotNull", new NotNullDecorator(), this.propertyType, this.propertyNotNull)
 
         if (this.propertyType.type === "string") {
-            this.checkForDecoratorAndManage("Text", new TextC3Decorator(), this.propertyType, this.propertyText)
+            this.checkForDecoratorAndManage("Text", new TextDecorator(), this.propertyType, this.propertyText)
         }
         if (this.propertyType.type === "enum") {
             if ((this.propertyType as EnumC3Type)?.values === undefined) {
@@ -348,10 +348,10 @@ export default class StructureStandardUi extends Vue {
         }
 
         if (this.propertyType.type === "array" && this.propertyArrayContainsType !== null) {
-            this.checkForDecoratorAndManage("NotNull", new NotNullC3Decorator(), this.propertyArrayContainsType, this.arrayContainsPropertyNotNull)
+            this.checkForDecoratorAndManage("NotNull", new NotNullDecorator(), this.propertyArrayContainsType, this.arrayContainsPropertyNotNull)
 
             if (this.propertyArrayContainsType?.type === "string") {
-                this.checkForDecoratorAndManage("Text", new TextC3Decorator(), this.propertyArrayContainsType, this.propertyText)
+                this.checkForDecoratorAndManage("Text", new TextDecorator(), this.propertyArrayContainsType, this.propertyText)
             }
             if (this.propertyArrayContainsType.type === "enum") {
                 if ((this.propertyArrayContainsType as EnumC3Type)?.values === undefined) {

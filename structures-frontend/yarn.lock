@@ -1069,10 +1069,10 @@
     "@jridgewell/resolve-uri" "3.1.0"
     "@jridgewell/sourcemap-codec" "1.4.14"
 
-"@kinotic/continuum-idl@0.2.0":
-  version "0.2.0"
-  resolved "https://registry.yarnpkg.com/@kinotic/continuum-idl/-/continuum-idl-0.2.0.tgz#8e671e7fe9242352bd47d9ad59587a9523813c43"
-  integrity sha512-AgbyH2/hNROIMabWZQYlKgEaJ8PrwEDuoJ1VdxuxAb4Lwa6KOapGS1ixNxjg47oestWK3vxWvaxIIuQAVJl23Q==
+"@kinotic/continuum-idl@0.6.0":
+  version "0.6.0"
+  resolved "https://registry.yarnpkg.com/@kinotic/continuum-idl/-/continuum-idl-0.6.0.tgz#e82164fe23b8ab1484306cf75e5f8b9feabe6ef3"
+  integrity sha512-ONyyyVgtZ4xIMTiYBderWGGGRTHTErd3UpoJaUi5WLvqim/PeGiLj31mmo+JdRi+WeJJqlN9emIMLYo3C5Wz0g==
 
 "@kinotic/continuum@2.2.1":
   version "2.2.1"
