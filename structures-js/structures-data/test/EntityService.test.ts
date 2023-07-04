@@ -16,7 +16,6 @@ describe('EntityServiceTest', () => {
             environment = await new DockerComposeEnvironment(composeFilePath, composeFile)
                 .withWaitStrategy('structures-server', Wait.forHealthCheck())
                 .withEnvironment({"STRUCTURES_INITIALIZE_WITH_SAMPLE_DATA": "true"})
-                .
                 .up()
 
 
