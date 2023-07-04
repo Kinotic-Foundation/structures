@@ -20,6 +20,12 @@ export class ClassToC3Type implements ITypeConverter<Type, Type, TypescriptConve
     for(const property of properties){
       const propertyName = property.getName()
 
+      conversionContext.state().currentPropertyName = propertyName
+
+      if(!conversionContext.state().convertingUnion){
+        conversionContext.state().nearestPropertyNameNotInUnion = propertyName
+      }
+
       const valueDeclaration = property.getValueDeclarationOrThrow("No value declaration could be found for property "+propertyName)
 
       const converted = conversionContext.convert(valueDeclaration.getType())
@@ -36,6 +42,12 @@ export class ClassToC3Type implements ITypeConverter<Type, Type, TypescriptConve
       }
 
       ret.addProperty(propertyName, converted);
+
+      conversionContext.state().currentPropertyName = null
+
+      if(!conversionContext.state().convertingUnion){
+        conversionContext.state().nearestPropertyNameNotInUnion = null
+      }
     }
     return ret
   }

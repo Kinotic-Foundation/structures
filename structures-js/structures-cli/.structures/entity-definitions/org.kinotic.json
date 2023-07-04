@@ -61,6 +61,7 @@
       "vehicle": {
         "type": "union",
         "namespace": "org.kinotic",
+        "name": "Vehicle",
         "types": [
           {
             "type": "object",

@@ -30,6 +30,7 @@ public interface EntityService {
      * @param context the context for this operation
      * @return {@link CompletableFuture} that will complete when all entities have been saved
      * @param <T> the type of the entities
+     * TODO: this contract is a little wierd because as it stands it needs to be a list or a RawJson object for entities
      */
     <T> CompletableFuture<Void> bulkSave(T entities, EntityContext context);
 
@@ -52,6 +53,7 @@ public interface EntityService {
      * @param context the context for this operation
      * @return {@link CompletableFuture} that will complete when all entities have been saved
      * @param <T> the type of the entities
+     * TODO: this contract is a little wierd because as it stands it needs to be a list or a RawJson object for entities
      */
     <T> CompletableFuture<Void> bulkUpdate(T entities, EntityContext context);
 

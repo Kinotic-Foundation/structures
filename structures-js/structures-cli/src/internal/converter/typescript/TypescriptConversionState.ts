@@ -8,6 +8,8 @@ export class TypescriptConversionState {
   private readonly _namespace: string
   private readonly _project: Project
   public currentPropertyName: string | null = null
+  public nearestPropertyNameNotInUnion: string | null = null
+  public convertingUnion: boolean = false
 
   constructor(namespace: string, project: Project) {
     this._namespace = namespace

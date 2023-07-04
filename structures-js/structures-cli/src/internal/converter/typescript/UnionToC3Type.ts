@@ -28,6 +28,8 @@ export class UnionToC3Type implements ITypeConverter<Type, Type, TypescriptConve
     // Another example: let var?: MyEnum
     // Which provides the union types of undefined | MyEnum.FIRST | MyEnum.SECOND ect..
 
+    conversionContext.state().convertingUnion = true
+
     value.getUnionTypes().forEach((unionType: Type) => {
 
       if(!unionType.isUndefined() && !unionType.isNull()) {
@@ -91,16 +93,17 @@ export class UnionToC3Type implements ITypeConverter<Type, Type, TypescriptConve
       }
     }else{
       const unionType = new UnionC3Type()
-      // if(conversionContext.state().currentPropertyName !== null){
-      //   unionType.name = capitalize(conversionContext.state().currentPropertyName as string)
-      // }else{
-      //   throw new Error("The current property name is not set in the conversion state")
-      // }
+      if(conversionContext.state().nearestPropertyNameNotInUnion !== null){
+        unionType.name = capitalize(conversionContext.state().nearestPropertyNameNotInUnion as string)
+      }else{
+        throw new Error("The current property name is not set in the conversion state")
+      }
       unionType.namespace = conversionContext.state().namespace
       unionType.types = converted as ObjectC3Type[]
       ret = unionType
     }
 
+    conversionContext.state().convertingUnion = false
     return ret
   }
 
