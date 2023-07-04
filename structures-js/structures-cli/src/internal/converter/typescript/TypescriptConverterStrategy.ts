@@ -1,19 +1,24 @@
-import {IConverterStrategy, Logger} from '../IConverterStrategy.js'
 import {Type} from 'ts-morph'
+import {IConverterStrategy, Logger} from '../IConverterStrategy.js'
 import {TypescriptConversionState} from './TypescriptConversionState.js'
 import {ITypeConverter} from '../ITypeConverter.js'
 import {ClassToC3Type} from './ClassToC3Type.js'
 import {PrimitiveToC3Type} from './PrimitiveToC3Type.js'
 import {UnionToC3Type} from './UnionToC3Type.js'
 import {ArrayToC3Type} from './ArrayToC3Type.js'
+import {EnumToC3Type} from './EnumToC3Type.js'
 
 export class TypescriptConverterStrategy implements IConverterStrategy<Type, TypescriptConversionState>{
 
   private readonly _initialState: (() => TypescriptConversionState) | TypescriptConversionState
   private readonly _logger: Logger
+  // The order here is important.
+  // Arrays are considered objects but objects are not arrays. So the array converter must come before the class converter
+  // Enums ar considered unions but unions are not enums. So the enum converter must come before the union converter
   private readonly _typeConverters = [new PrimitiveToC3Type(),
                                       new ArrayToC3Type(),
                                       new ClassToC3Type(),
+                                      new EnumToC3Type(),
                                       new UnionToC3Type()]
 
   constructor(initialState: (() => TypescriptConversionState) | TypescriptConversionState, logger: Logger) {

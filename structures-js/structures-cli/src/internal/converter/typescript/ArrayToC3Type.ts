@@ -4,7 +4,7 @@ import {TypescriptConversionState} from './TypescriptConversionState.js'
 import {IConversionContext} from '../IConversionContext.js'
 import {ITypeConverter} from '../ITypeConverter.js'
 
-export class ArrayToC3Type  implements ITypeConverter<Type, Type, TypescriptConversionState> {
+export class ArrayToC3Type implements ITypeConverter<Type, Type, TypescriptConversionState> {
 
   convert(value: Type, conversionContext: IConversionContext<Type, TypescriptConversionState>): C3Type {
     const ret: ArrayC3Type = new ArrayC3Type()

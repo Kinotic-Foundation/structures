@@ -5,7 +5,6 @@ import org.kinotic.continuum.idl.api.converter.C3ConversionContext;
 import org.kinotic.continuum.idl.api.converter.SpecificC3TypeConverter;
 import org.kinotic.continuum.idl.api.schema.C3Type;
 import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
-import org.kinotic.continuum.idl.api.schema.StringC3Type;
 import org.kinotic.continuum.idl.api.schema.UnionC3Type;
 
 import java.util.Map;
@@ -28,31 +27,19 @@ public class UnionC3TypeToElastic implements SpecificC3TypeConverter<Property, U
         merged.setName(unionType.getName());
         merged.setNamespace(unionType.getNamespace());
 
-        String discriminator = unionType.getDiscriminator();
-
         for (ObjectC3Type c3Type : unionType.getTypes()) {
             for(Map.Entry<String, C3Type> field : c3Type.getProperties().entrySet()) {
-                // we only add the discriminator property once, but all types must have it
-                if(!field.getKey().equals(discriminator)) {
 
-                    C3Type prop = merged.getProperties().get(field.getKey());
-                    if(prop != null){
-                        if(!prop.equals(field.getValue())){
-                            throw new IllegalArgumentException("Field '" + field.getKey() + "' is defined in multiple types in the union '" + unionType.getName() + "' with different types");
-                        }
-                    }else {
-                        merged.addProperty(field.getKey(), field.getValue());
+                C3Type prop = merged.getProperties().get(field.getKey());
+                if(prop != null){
+                    if(!prop.equals(field.getValue())){
+                        throw new IllegalArgumentException("Field '" + field.getKey() + "' is defined in multiple types in the union '" + unionType.getName() + "' with different types");
                     }
-
-                }else{
-                    if(!(field.getValue() instanceof StringC3Type)){
-                        throw new IllegalArgumentException("The discriminator field '" + discriminator + "' must be a StringC3Type");
-                    }
+                }else {
+                    merged.addProperty(field.getKey(), field.getValue());
                 }
             }
         }
-
-        merged.addProperty(discriminator, new StringC3Type());
 
         return conversionContext.convert(merged);
     }

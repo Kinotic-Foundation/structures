@@ -13,13 +13,12 @@ export class ClassToC3Type implements ITypeConverter<Type, Type, TypescriptConve
   convert(value: Type, conversionContext: IConversionContext<Type, TypescriptConversionState>): C3Type {
     const ret: ObjectC3Type = new ObjectC3Type()
 
-     ret.name = value.getSymbolOrThrow("No Symbol could be found for object").getName()
+     ret.name = value.getSymbolOrThrow("No Symbol could be found for object: "+value.getText()).getName()
      ret.namespace = conversionContext.state().namespace
 
     const properties = value.getProperties()
     for(const property of properties){
       const propertyName = property.getName()
-      conversionContext.state().currentPropertyName = propertyName
 
       const valueDeclaration = property.getValueDeclarationOrThrow("No value declaration could be found for property "+propertyName)
 
@@ -37,7 +36,6 @@ export class ClassToC3Type implements ITypeConverter<Type, Type, TypescriptConve
       }
 
       ret.addProperty(propertyName, converted);
-      conversionContext.state().currentPropertyName = null;
     }
     return ret
   }

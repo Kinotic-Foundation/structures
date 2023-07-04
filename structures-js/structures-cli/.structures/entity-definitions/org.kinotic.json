@@ -1,0 +1,120 @@
+[
+  {
+    "decorators": [
+      {
+        "type": "Entity",
+        "multiTenancyType": 1
+      }
+    ],
+    "type": "object",
+    "namespace": "org.kinotic",
+    "name": "Person",
+    "properties": {
+      "id": {
+        "decorators": [
+          {
+            "type": "Id"
+          }
+        ],
+        "type": "string"
+      },
+      "firstName": {
+        "type": "string"
+      },
+      "lastName": {
+        "type": "string"
+      },
+      "retirementStatus": {
+        "type": "enum",
+        "namespace": "org.kinotic",
+        "name": "RetirementStatus",
+        "values": [
+          "RETIRED",
+          "ACTIVE"
+        ]
+      },
+      "age": {
+        "type": "int"
+      },
+      "address": {
+        "type": "object",
+        "namespace": "org.kinotic",
+        "name": "Address",
+        "properties": {
+          "street1": {
+            "type": "string"
+          },
+          "street2": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "zip": {
+            "type": "string"
+          }
+        }
+      },
+      "vehicle": {
+        "type": "union",
+        "namespace": "org.kinotic",
+        "types": [
+          {
+            "type": "object",
+            "namespace": "org.kinotic",
+            "name": "Car",
+            "properties": {
+              "numberOfDoors": {
+                "type": "int"
+              },
+              "vehicleType": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "namespace": "org.kinotic",
+            "name": "Motorcycle",
+            "properties": {
+              "hasSideCar": {
+                "type": "boolean"
+              },
+              "vehicleType": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      },
+      "favoriteColors": {
+        "type": "array",
+        "contains": {
+          "type": "string"
+        }
+      },
+      "favoriteVehicles": {
+        "type": "array",
+        "contains": {
+          "type": "object",
+          "namespace": "org.kinotic",
+          "name": "Vehicle",
+          "properties": {
+            "vehicleType": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "favoriteNumbers": {
+        "type": "array",
+        "contains": {
+          "type": "int"
+        }
+      }
+    }
+  }
+]

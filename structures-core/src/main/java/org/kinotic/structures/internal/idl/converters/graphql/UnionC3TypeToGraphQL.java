@@ -23,7 +23,7 @@ public class UnionC3TypeToGraphQL implements SpecificC3TypeConverter<GraphQLType
                                      C3ConversionContext<GraphQLTypeHolder, GraphQLConversionState> conversionContext) {
 
         GraphQLUnionType.Builder unionBuilder = GraphQLUnionType.newUnionType();
-        unionBuilder.name(c3Type.getDiscriminator());
+        unionBuilder.name(c3Type.getName());
 
         for(ObjectC3Type objectC3Type : c3Type.getTypes()){
             GraphQLTypeHolder typeHolder = conversionContext.convert(objectC3Type);

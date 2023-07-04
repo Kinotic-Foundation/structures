@@ -1,6 +1,5 @@
 package org.kinotic.structures.internal.idl.converters.openapi;
 
-import io.swagger.v3.oas.models.media.Discriminator;
 import io.swagger.v3.oas.models.media.ObjectSchema;
 import io.swagger.v3.oas.models.media.Schema;
 import org.kinotic.continuum.idl.api.converter.C3ConversionContext;
@@ -24,9 +23,6 @@ public class UnionC3TypeToOpenApi implements SpecificC3TypeConverter<Schema<?>, 
                              C3ConversionContext<Schema<?>, OpenApiConversionState> conversionContext) {
 
         ObjectSchema unionSchema = new ObjectSchema();
-        Discriminator discriminator = new Discriminator();
-        discriminator.setPropertyName(c3Type.getDiscriminator());
-        unionSchema.setDiscriminator(discriminator);
 
         for(ObjectC3Type objectC3Type : c3Type.getTypes()){
 

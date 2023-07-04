@@ -1,6 +1,6 @@
 {
   "name": "structures-cli",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Structures CLI provides the ability to interact with the Structures Server",
   "author": "Kinotic Developers",
   "bin": {
@@ -18,16 +18,18 @@
     "/oclif.manifest.json"
   ],
   "dependencies": {
+    "@kinotic/continuum-idl": "^0.7.0",
     "@oclif/core": "^2.8.10",
-    "@oclif/plugin-help": "^5",
-    "@oclif/plugin-plugins": "^2.4.7",
-    "@kinotic/continuum-idl": "^0.6.0",
     "@oclif/plugin-autocomplete": "^2.3.1",
+    "@oclif/plugin-help": "^5",
     "@oclif/plugin-not-found": "^2.3.26",
+    "@oclif/plugin-plugins": "^2.4.7",
     "@oclif/plugin-update": "^3.1.21",
     "@oclif/plugin-warn-if-update-available": "^2.0.40",
     "inquirer": "^9.2.7",
-    "ts-morph": "^19.0.0"
+    "radash": "^11.0.0",
+    "ts-morph": "^19.0.0",
+    "yaml": "^2.3.1"
   },
   "devDependencies": {
     "@oclif/test": "^2.3.23",
@@ -58,8 +60,7 @@
       "@oclif/plugin-autocomplete"
     ],
     "topicSeparator": " ",
-    "topics": {
-    }
+    "topics": {}
   },
   "scripts": {
     "build": "shx rm -rf dist && tsc -b",

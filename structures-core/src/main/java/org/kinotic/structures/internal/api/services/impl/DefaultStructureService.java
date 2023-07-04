@@ -84,6 +84,9 @@ public class DefaultStructureService implements StructureService {
                         // Try and create ES mapping to make sure IDL is valid
                         ElasticConversionResult result = structureConversionService.convertToElasticMapping(structure);
 
+                        // TODO: how to ensure structures namespace name match the C3Type name
+                        // Should we just use the Structures one?
+
                         structure.setMultiTenancyType(result.getMultiTenancyType());
 
                         ret = structureDAO.save(structure);

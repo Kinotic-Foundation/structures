@@ -20,6 +20,7 @@ public class ElasticConverterStrategy extends AbstractIdlConverterStrategy<Prope
             new PrimitiveC3TypeToElastic(),
             new ArrayC3TypeToElastic(),
             new DateC3TypeToElastic(),
+            new UnionC3TypeToElastic(),
             new ObjectC3TypeToElastic()
     );
 

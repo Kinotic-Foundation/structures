@@ -1,11 +1,34 @@
 import {Args, Command, Flags} from '@oclif/core'
 import path from 'node:path'
+import {promises as fs} from 'node:fs'
 import {ClassDeclaration, Project} from 'ts-morph'
+import {C3Type} from '@kinotic/continuum-idl'
 import {createConversionContext} from '../internal/converter/IConversionContext.js'
 import {TypescriptConverterStrategy} from '../internal/converter/typescript/TypescriptConverterStrategy.js'
 import {TypescriptConversionState} from '../internal/converter/typescript/TypescriptConversionState.js'
-import {C3Type, EntityDecorator, MultiTenancyType} from '@kinotic/continuum-idl'
 import {tsDecoratorToC3Decorator} from '../internal/converter/typescript/Utils.js'
+
+function isEmpty(value: any): boolean {
+  if (value === null || value === undefined) {
+    return true;
+  }
+
+  if (Array.isArray(value)) {
+    return value.every(isEmpty);
+  }
+  else if (typeof (value) === 'object') {
+    return Object.values(value).every(isEmpty);
+  }
+
+  return false;
+}
+
+function replacer(key: any, value: any) {
+  return isEmpty(value)
+         ? undefined
+         : value;
+}
+
 
 export default class Synchronize extends Command {
   static description = 'Synchronize the local Entity definitions with the Structures Server'
@@ -16,6 +39,7 @@ export default class Synchronize extends Command {
 
   static flags = {
     entities: Flags.string({char: 'e', description: 'Path to the directory containing the Entity definitions', required: true}),
+    debug: Flags.boolean({char: 'd', description: 'Enable debug logging', required: false, default: false}),
   }
 
   static args = {
@@ -30,7 +54,9 @@ export default class Synchronize extends Command {
       tsConfigFilePath: path.resolve('tsconfig.json')
     })
 
-    project.enableLogging(true)
+    if(flags.debug) {
+      project.enableLogging(true)
+    }
     const entitiesPath = path.resolve(flags.entities)
     project.addSourceFilesAtPaths(entitiesPath + '/*.ts')
 
@@ -68,9 +94,19 @@ export default class Synchronize extends Command {
     }
 
     // save the c3types to the local filesystem
-    const json = JSON.stringify(entities, null, 2)
-    this.log("JSON:")
-    this.log(json)
+    const json = JSON.stringify(entities, replacer, 2)
+    if(flags.debug){
+      this.log("Entities JSON:")
+      this.log(json)
+    }
+
+    if(json && json.length > 0) {
+      const outputPath = path.resolve('.structures', 'entity-definitions', args.namespace + '.json')
+      await fs.mkdir(path.dirname(outputPath), {recursive: true})
+      await fs.writeFile(outputPath, json)
+    }else{
+      this.log("No entities found to synchronize.")
+    }
   }
 
 
