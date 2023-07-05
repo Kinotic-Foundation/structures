@@ -1,4 +1,4 @@
-import {Continuum, IServiceProxy} from '@kinotic/continuum'
+import {Continuum, IServiceProxy} from '@kinotic/continuum-client'
 import { JobDefinition } from '../domain/grind/JobDefinition'
 import {reactive} from 'vue'
 import {Observable} from 'rxjs'

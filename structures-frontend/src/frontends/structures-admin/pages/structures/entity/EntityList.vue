@@ -63,7 +63,7 @@
 <script lang="ts">
 import {Component, Prop, Vue, Watch} from 'vue-property-decorator'
 import {DataOptions, DataTableHeader} from 'vuetify'
-import {Identifiable, Order, Direction, Pageable, Page} from '@kinotic/continuum'
+import {Identifiable, Order, Direction, Pageable, Page} from '@kinotic/continuum-client'
 import CrudTable from '@/frontends/continuum/components/CrudTable.vue'
 import {
   mdiPlus,

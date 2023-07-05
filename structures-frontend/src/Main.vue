@@ -7,7 +7,7 @@
   import { Component } from 'vue-property-decorator'
   import Keycloak from "keycloak-js"
   import {USER_STATE} from "@/frontends/continuum";
-  import { Continuum } from '@kinotic/continuum'
+  import { Continuum } from '@kinotic/continuum-client'
 
   @Component({
     components: { },

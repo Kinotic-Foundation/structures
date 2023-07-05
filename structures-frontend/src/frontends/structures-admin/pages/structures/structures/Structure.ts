@@ -1,5 +1,5 @@
 import {DecoratedProperty, ObjectC3Type} from '@kinotic/continuum-idl'
-import {Identifiable} from '@kinotic/continuum'
+import {Identifiable} from '@kinotic/continuum-client'
 
 export class Structure implements Identifiable<string | null> {
 

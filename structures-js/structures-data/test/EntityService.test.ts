@@ -1,8 +1,11 @@
 import {describe, it, expect, beforeAll, afterAll} from 'vitest'
 import path from 'node:path'
 import {v2 as compose} from 'docker-compose'
-import {Continuum} from '@kinotic/continuum'
+import {Continuum} from '@kinotic/continuum-client'
 import {PersonEntityService} from './services/PersonEntityService.js'
+import { WebSocket } from 'ws'
+
+Object.assign(global, { WebSocket})
 
 describe('EntityServiceTest', () => {
 
@@ -11,9 +14,18 @@ describe('EntityServiceTest', () => {
 
     beforeAll(async () => {
         try {
-            //await compose.upAll({cwd: path.resolve(composeFilePath), log: true})
+            const resolvedPath = path.resolve(composeFilePath)
+
+            await compose.pullAll({cwd: resolvedPath, log: true})
+
+            await compose.upAll({
+                cwd: resolvedPath,
+                commandOptions:[['-e',"STRUCTURES_INITIALIZE_WITH_SAMPLE_DATA=true"]],
+                log: true
+            })
 
             await Continuum.connect('ws://127.0.0.1:58503/v1', 'admin', 'structures')
+            console.log('Connected to continuum')
         } catch (e) {
             console.error(e)
             throw e
@@ -22,7 +34,7 @@ describe('EntityServiceTest', () => {
 
     afterAll(async () => {
         try {
-          //  await compose.down({cwd: path.resolve(composeFilePath), log: true})
+            await compose.down({cwd: path.resolve(composeFilePath), log: true})
         } catch (e) {
             console.error(e)
             throw e
@@ -33,10 +45,20 @@ describe('EntityServiceTest', () => {
     it('Test Find All',
         () => {
             return personEntityService.findAll({pageNumber: 0, pageSize: 10, sort: null})
-                .then((page) => {
-                    expect(page.totalElements).toBeGreaterThan(0)
-                    expect(page.size).toEqual(10)
-                })
-        })
+                                      .then((page) => {
+                                          expect(page.totalElements).toBeGreaterThan(0)
+                                          expect(page.size).toEqual(10)
+                                      })
+        }
+    )
+
+    it('Test Count',
+        () => {
+            return personEntityService.count()
+                                      .then((count) => {
+                                          expect(count).toBeGreaterThan(0)
+                                      })
+        }
+    )
 
 })

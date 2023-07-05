@@ -25,7 +25,7 @@
 
 import {Component, Emit, PropSync, Vue, Watch} from "vue-property-decorator";
 import {PropType} from "vue";
-import {Continuum, ICrudServiceProxy, Identifiable, Pageable} from "@kinotic/continuum";
+import {Continuum, ICrudServiceProxy, Identifiable, Pageable} from "@kinotic/continuum-client";
 import {Structure} from "@/frontends/structures-admin/pages/structures/structures/Structure";
 import {Namespace} from "@/frontends/structures-admin/pages/structures/namespaces/Namespace";
 import {IndexNameHelper} from "@/frontends/structures-admin/pages/structures/util/IndexNameHelper";

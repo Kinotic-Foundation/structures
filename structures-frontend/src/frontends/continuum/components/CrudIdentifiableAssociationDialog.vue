@@ -109,7 +109,7 @@ import {
   Order,
   Page,
   Pageable
-} from '@kinotic/continuum'
+} from '@kinotic/continuum-client'
 import { mdiDelete, mdiPlus } from '@mdi/js'
 
 @Component({

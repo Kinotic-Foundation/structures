@@ -16,7 +16,7 @@
 import { PropType } from 'vue'
 import { Component, Prop, Vue } from 'vue-property-decorator'
 import { DataTableHeader } from 'vuetify'
-import {Identifiable, ICrudServiceProxy, Continuum} from '@kinotic/continuum'
+import {Identifiable, ICrudServiceProxy, Continuum} from '@kinotic/continuum-client'
 import CrudTable from '@/frontends/continuum/components/CrudTable.vue'
 
 /**

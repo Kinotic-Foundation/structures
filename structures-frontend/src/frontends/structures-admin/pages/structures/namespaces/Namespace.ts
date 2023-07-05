@@ -1,4 +1,4 @@
-import { Identifiable } from '@kinotic/continuum'
+import { Identifiable } from '@kinotic/continuum-client'
 export class Namespace implements Identifiable<string> {
     public id: string
     public description: string

@@ -1,4 +1,4 @@
-import {Continuum, IServiceProxy, Page, Pageable} from '@kinotic/continuum'
+import {Continuum, IServiceProxy, Page, Pageable} from '@kinotic/continuum-client'
 import {reactive} from 'vue'
 
 

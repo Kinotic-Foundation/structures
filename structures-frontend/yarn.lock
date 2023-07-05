@@ -1069,15 +1069,10 @@
     "@jridgewell/resolve-uri" "3.1.0"
     "@jridgewell/sourcemap-codec" "1.4.14"
 
-"@kinotic/continuum-idl@0.6.0":
-  version "0.6.0"
-  resolved "https://registry.yarnpkg.com/@kinotic/continuum-idl/-/continuum-idl-0.6.0.tgz#e82164fe23b8ab1484306cf75e5f8b9feabe6ef3"
-  integrity sha512-ONyyyVgtZ4xIMTiYBderWGGGRTHTErd3UpoJaUi5WLvqim/PeGiLj31mmo+JdRi+WeJJqlN9emIMLYo3C5Wz0g==
-
-"@kinotic/continuum@2.2.1":
+"@kinotic/continuum-client@2.2.1":
   version "2.2.1"
-  resolved "https://registry.yarnpkg.com/@kinotic/continuum/-/continuum-2.2.1.tgz#fa36a5a8923990933b99e74cc2594de94215b216"
-  integrity sha512-UPO+Pz7k3WlbfZx45kVjaMwfKKVCNZCo/qs93f+KWMTrokg/KnnFWeSqxYHctzWKmtR//nsxJdQVt8hhmlIavA==
+  resolved "https://registry.yarnpkg.com/@kinotic/continuum-client/-/continuum-client-2.2.1.tgz#3d6bc8bc93368e1d4a9ed9df9f69bb8ccdf947ec"
+  integrity sha512-o3kfNrXzqwZM87D9KCZQnIGmNmo5opEm3lJ8TCenv0HM3KZJSl3Bs5dipcrRt4Bdokdgt7DbHfAWoLriqE7GmQ==
   dependencies:
     "@stomp/rx-stomp" "^2.0.0"
     "@stomp/stompjs" "^7.0.0"
@@ -1085,6 +1080,11 @@
     rxjs "^7.8.0"
     typescript-optional "3.0.0-alpha.3"
     uuid "^9.0.0"
+
+"@kinotic/continuum-idl@0.6.0":
+  version "0.6.0"
+  resolved "https://registry.yarnpkg.com/@kinotic/continuum-idl/-/continuum-idl-0.6.0.tgz#e82164fe23b8ab1484306cf75e5f8b9feabe6ef3"
+  integrity sha512-ONyyyVgtZ4xIMTiYBderWGGGRTHTErd3UpoJaUi5WLvqim/PeGiLj31mmo+JdRi+WeJJqlN9emIMLYo3C5Wz0g==
 
 "@mdi/js@^5.6.55":
   version "5.9.55"

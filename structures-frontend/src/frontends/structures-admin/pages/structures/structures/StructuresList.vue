@@ -94,7 +94,7 @@
 <script lang="ts">
 import {Component, Vue} from 'vue-property-decorator'
 import {DataTableHeader} from 'vuetify'
-import {Identifiable} from '@kinotic/continuum'
+import {Identifiable} from '@kinotic/continuum-client'
 import CrudTable from '@/frontends/continuum/components/CrudTable.vue'
 import {
     mdiDatabase,

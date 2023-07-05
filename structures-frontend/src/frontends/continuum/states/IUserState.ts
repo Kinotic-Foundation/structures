@@ -1,4 +1,4 @@
-import { Continuum } from '@kinotic/continuum'
+import { Continuum } from '@kinotic/continuum-client'
 import Keycloak from "keycloak-js"
 import {reactive} from "vue";
 import {CONTINUUM_UI} from "@/frontends/continuum";

@@ -228,7 +228,7 @@ import {
 } from "@kinotic/continuum-idl"
 import {IndexNameHelper} from "@/frontends/structures-admin/pages/structures/util/IndexNameHelper"
 import {PropType} from "vue";
-import {Identifiable} from "@kinotic/continuum";
+import {Identifiable} from "@kinotic/continuum-client";
 import {StructureUtil} from "@/frontends/structures-admin/pages/structures/util/StructureUtil";
 
 

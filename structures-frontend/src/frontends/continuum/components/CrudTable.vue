@@ -99,7 +99,7 @@ import {
   IDataSource,
   IEditableDataSource,
   DataSourceUtils
-} from '@kinotic/continuum'
+} from '@kinotic/continuum-client'
 import Confirm from './Confirm.vue'
 
 // noinspection TypeScriptValidateTypes

@@ -58,7 +58,7 @@
 <script lang="ts">
 import { PropType } from 'vue'
 import { Component, Prop, Vue, PropSync, Emit } from 'vue-property-decorator'
-import {Continuum, ICrudServiceProxy, Identifiable} from '@kinotic/continuum'
+import {Continuum, ICrudServiceProxy, Identifiable} from '@kinotic/continuum-client'
 import { mdiClose } from '@mdi/js'
 
 // Function that takes an input value as an argument and return either true / false or a string with an error message

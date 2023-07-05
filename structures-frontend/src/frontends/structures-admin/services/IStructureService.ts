@@ -1,4 +1,4 @@
-import {Continuum, CrudServiceProxy, ICrudServiceProxy, IServiceProxy, Page, Pageable} from '@kinotic/continuum'
+import {Continuum, CrudServiceProxy, ICrudServiceProxy, IServiceProxy, Page, Pageable} from '@kinotic/continuum-client'
 import {Structure} from '@/frontends/structures-admin/pages/structures/structures/Structure'
 import {reactive} from 'vue'
 

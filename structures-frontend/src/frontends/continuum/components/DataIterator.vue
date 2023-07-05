@@ -34,7 +34,7 @@
 import { PropType } from 'vue'
 import { Component, Emit, Prop, Vue, Watch } from 'vue-property-decorator'
 import { DataOptions, DataTableHeader } from 'vuetify'
-import { IDataSource } from '@kinotic/continuum'
+import { IDataSource } from '@kinotic/continuum-client'
 import {
   mdiMagnify,
   mdiArrowCollapseLeft,
@@ -48,7 +48,7 @@ import {
   Order,
   Page,
   Pageable
-} from '@kinotic/continuum'
+} from '@kinotic/continuum-client'
 import Confirm from './Confirm.vue'
 
 // noinspection TypeScriptValidateTypes

@@ -1,4 +1,4 @@
-import {Continuum, IServiceProxy, Page, Pageable} from '@kinotic/continuum'
+import {Continuum, IServiceProxy, Page, Pageable} from '@kinotic/continuum-client'
 import {IEntityService} from '@/api/IEntityService.js'
 
 
@@ -11,9 +11,8 @@ export abstract class BaseEntityService<T> implements IEntityService<T>{
     private serviceProxy: IServiceProxy
     private readonly structuresId: string
 
-
     protected constructor(namespace: string, entityName: string) {
-        this.structuresId = namespace + '.' + entityName
+        this.structuresId = (namespace + '.' + entityName).toLowerCase()
         this.serviceProxy = Continuum.serviceProxy("org.kinotic.structures.api.services.JsonEntitiesService")
     }
 
