@@ -74,7 +74,7 @@ public class StructuresProperties {
     /**
      * The port that the static files and the health check will be served from
      */
-    private int webServerPort = 80;
+    private int webServerPort = 9090;
 
     /**
      * The path that the health check will be served from

@@ -1,23 +1,17 @@
 import {describe, it, expect, beforeAll, afterAll} from 'vitest'
-import {AlwaysPullPolicy, DockerComposeEnvironment, Wait} from 'testcontainers'
+import path from 'node:path'
+import {v2 as compose} from 'docker-compose'
 import {Continuum} from '@kinotic/continuum'
 import {PersonEntityService} from './services/PersonEntityService.js'
 
 describe('EntityServiceTest', () => {
 
     const composeFilePath = '../../'
-    const composeFile = 'docker-compose.yml'
     const personEntityService = new PersonEntityService()
-    let environment
-
 
     beforeAll(async () => {
         try {
-            environment = await new DockerComposeEnvironment(composeFilePath, composeFile)
-                .withWaitStrategy('structures-server', Wait.forHealthCheck())
-                .withEnvironment({"STRUCTURES_INITIALIZE_WITH_SAMPLE_DATA": "true"})
-                .up()
-
+            //await compose.upAll({cwd: path.resolve(composeFilePath), log: true})
 
             await Continuum.connect('ws://127.0.0.1:58503/v1', 'admin', 'structures')
         } catch (e) {
@@ -28,7 +22,7 @@ describe('EntityServiceTest', () => {
 
     afterAll(async () => {
         try {
-            await environment.down();
+          //  await compose.down({cwd: path.resolve(composeFilePath), log: true})
         } catch (e) {
             console.error(e)
             throw e
