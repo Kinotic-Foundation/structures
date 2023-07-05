@@ -1,4 +1,5 @@
 import {describe, it, expect, beforeAll, afterAll} from 'vitest'
+// @ts-ignore for some reason intellij is complaining about this even though esModuleInterop is enabled
 import path from 'node:path'
 import {v2 as compose} from 'docker-compose'
 import {Continuum} from '@kinotic/continuum-client'
@@ -20,7 +21,7 @@ describe('EntityServiceTest', () => {
 
             await compose.upAll({
                 cwd: resolvedPath,
-                commandOptions:[['-e',"STRUCTURES_INITIALIZE_WITH_SAMPLE_DATA=true"]],
+                composeOptions: [['--env-file', path.resolve('test/.env.test')]],
                 log: true
             })
 

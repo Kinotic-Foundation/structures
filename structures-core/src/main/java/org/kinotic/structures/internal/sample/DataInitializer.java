@@ -7,6 +7,8 @@ import org.kinotic.structures.api.domain.DefaultEntityContext;
 import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.EntitiesService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
@@ -17,6 +19,8 @@ import java.util.concurrent.CompletableFuture;
  */
 @Component
 public class DataInitializer {
+
+    private static final Logger log = LoggerFactory.getLogger(DataInitializer.class);
 
     private final TestDataService testDataService;
     private final ObjectMapper objectMapper;
@@ -36,6 +40,7 @@ public class DataInitializer {
     @PostConstruct
     public void init() {
         if (properties.isInitializeWithSampleData()) {
+            log.info("*** Initializing sample data ***");
             testDataService.createPersonStructureIfNotExists()
                            .thenCompose(structureBooleanPair -> {
                                if(structureBooleanPair.getRight()) {

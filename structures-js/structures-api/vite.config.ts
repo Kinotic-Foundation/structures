@@ -8,8 +8,8 @@ export default defineConfig({
     build: {
         lib: {
             entry: resolve(__dirname, 'src/index.ts'),
-            name: 'structures-data',
-            fileName: 'structures-data',
+            name: 'structures-api',
+            fileName: 'structures-api',
             formats: ["es", "cjs"],
         },
         sourcemap: true,

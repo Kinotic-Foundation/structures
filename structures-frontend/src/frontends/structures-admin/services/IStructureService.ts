@@ -1,6 +1,5 @@
 import {Continuum, CrudServiceProxy, ICrudServiceProxy, IServiceProxy, Page, Pageable} from '@kinotic/continuum-client'
 import {Structure} from '@/frontends/structures-admin/pages/structures/structures/Structure'
-import {reactive} from 'vue'
 
 
 export interface IStructureService extends ICrudServiceProxy<Structure> {
@@ -59,4 +58,4 @@ export class StructureService extends CrudServiceProxy<Structure> {
     }
 }
 
-export const STRUCTURE_SERVICE: IStructureService = reactive(new StructureService(Continuum.serviceProxy('org.kinotic.structures.api.services.StructureService')))
+export const STRUCTURE_SERVICE: IStructureService = new StructureService(Continuum.serviceProxy('org.kinotic.structures.api.services.StructureService'))

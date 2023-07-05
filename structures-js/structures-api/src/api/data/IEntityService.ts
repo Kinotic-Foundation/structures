@@ -1,4 +1,4 @@
-import {Page, Pageable} from '@kinotic/continuum'
+import {Page, Pageable} from '@kinotic/continuum-client'
 
 
 /**

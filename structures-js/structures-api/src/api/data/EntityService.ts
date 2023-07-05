@@ -6,7 +6,7 @@ import {IEntityService} from '@/api/IEntityService.js'
  * This is the base class for all entity services.
  * It provides the basic CRUD operations for entities.
  */
-export abstract class BaseEntityService<T> implements IEntityService<T>{
+export abstract class EntityService<T> implements IEntityService<T>{
 
     private serviceProxy: IServiceProxy
     private readonly structuresId: string

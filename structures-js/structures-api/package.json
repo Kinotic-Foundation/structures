@@ -1,16 +1,16 @@
 {
-  "name": "@kinotic/structures-data",
-  "version": "0.1.6",
+  "name": "@kinotic/structures-api",
+  "version": "0.1.0",
   "author": "Kinotic Foundation <develop@kinotic.org>",
   "license": "MIT",
   "type": "module",
-  "main": "./dist/structures-data.cjs",
-  "module": "./dist/structures-data.js",
+  "main": "./dist/structures-api.cjs",
+  "module": "./dist/structures-api.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/structures-data.js",
-      "require": "./dist/structures-data.cjs"
+      "import": "./dist/structures-api.js",
+      "require": "./dist/structures-api.cjs"
     }
   },
   "files": [
