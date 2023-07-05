@@ -1,5 +1,5 @@
 import {Continuum, IServiceProxy, Page, Pageable} from '@kinotic/continuum-client'
-import {IEntityService} from '@/api/IEntityService.js'
+import {IEntityService} from './IEntityService.js'
 
 
 /**

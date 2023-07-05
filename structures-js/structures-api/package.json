@@ -36,7 +36,6 @@
     "ws": "^8.13.0"
   },
   "dependencies": {
-    "@kinotic/continuum-client": "^2.2.1",
-    "@kinotic/continuum-idl": "^0.7.0"
+    "@kinotic/continuum-client": "^2.2.1"
   }
 }
