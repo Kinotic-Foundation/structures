@@ -23,6 +23,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.3.3",
+    "@types/ws": "^8.5.5",
     "docker-compose": "^0.24.1",
     "reflect-metadata": "^0.1.13",
     "testcontainers": "^9.9.1",

@@ -13,6 +13,9 @@ devDependencies:
   '@types/node':
     specifier: ^20.3.3
     version: 20.3.3
+  '@types/ws':
+    specifier: ^8.5.5
+    version: 8.5.5
   docker-compose:
     specifier: ^0.24.1
     version: 0.24.1
@@ -543,6 +546,12 @@ packages:
     resolution: {integrity: sha512-uvrvY6oN+3LiFiQmDCnuP65Qlryqvw5sbpKP7oce5cI/Ib3u3yY/DIkxIegT87MaVpnchUfSkEo2g9HeC7mUng==}
     dependencies:
       '@types/node': 18.16.19
+    dev: true
+
+  /@types/ws@8.5.5:
+    resolution: {integrity: sha512-lwhs8hktwxSjf9UaZ9tG5M03PGogvFaH8gUgLNbN9HKIg0dvv6q+gkSuJ8HN4/VbyxkuLzCjlN7GquQ0gUJfIg==}
+    dependencies:
+      '@types/node': 20.3.3
     dev: true
 
   /@vitest/expect@0.30.1:

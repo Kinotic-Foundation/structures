@@ -28,13 +28,22 @@ public interface JsonEntitiesService {
     CompletableFuture<RawJson> save(String structureId, RawJson entity, Participant participant);
 
     /**
-     * Saves all given entities.
+     * Updates all given entities, this gives an opportunity to perform partial updates of the data structure.
      * @param structureId the id of the structure to save the entity for
      * @param entities all the entities to save
      * @param participant the participant of the logged-in user
      * @return {@link CompletableFuture} that will complete when all entities have been saved
      */
     CompletableFuture<Void> bulkSave(String structureId, RawJson entities, Participant participant);
+
+    /**
+     * Saves all given entities.
+     * @param structureId the id of the structure to save the entity for
+     * @param entities all the entities to save
+     * @param participant the participant of the logged-in user
+     * @return {@link CompletableFuture} that will complete when all entities have been saved
+     */
+    CompletableFuture<Void> bulkUpdate(String structureId, RawJson entities, Participant participant);
 
     /**
      * Retrieves an entity by its id.
