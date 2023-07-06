@@ -3,7 +3,6 @@ plugins {
 	id 'org.kinotic.java-common-conventions'
 
 	id 'org.springframework.boot'
-	id 'groovy'
 	id 'application'
 }
 
@@ -17,13 +16,7 @@ configurations {
 	}
 }
 
-
-ext {
-	set('groovy.version', "${groovyVersion}")
-}
-
 dependencies {
-	implementation 'org.codehaus.groovy:groovy'
 	implementation 'org.springframework.boot:spring-boot-starter'
 
 	implementation "org.kinotic:continuum-core:${continuumVersion}"
