@@ -40,7 +40,7 @@ public class DelegatingUpsertPreProcessor implements UpsertPreProcessor<Object, 
     public CompletableFuture<EntityHolder> process(Object entity, EntityContext context) {
         Validate.notNull(entity, "entity must not be null");
 
-        Object ret;
+        CompletableFuture<EntityHolder> ret;
         if(entity instanceof RawJson) {
             ret = rawJsonUpsertPreProcessor.process((RawJson) entity, context);
         } else if(entity instanceof Map) {
@@ -48,7 +48,7 @@ public class DelegatingUpsertPreProcessor implements UpsertPreProcessor<Object, 
         } else {
             ret = pojoUpsertPreProcessor.process(entity, context);
         }
-        return (CompletableFuture<EntityHolder>) ret;
+        return ret;
     }
 
     @SuppressWarnings("unchecked")

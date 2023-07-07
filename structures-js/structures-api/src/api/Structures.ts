@@ -21,8 +21,8 @@ export namespace Structures {
         return ENTITIES_SERVICE
     }
 
-    export function createEntityService(namespace: string, entityName: string): IEntityService<any> {
-        return new EntityService(namespace, entityName)
+    export function createEntityService(structureNamespace: string, structureName: string): IEntityService<any> {
+        return new EntityService(structureNamespace, structureName)
     }
 
 }

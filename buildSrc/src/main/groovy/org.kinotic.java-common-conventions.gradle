@@ -40,11 +40,6 @@ dependencyManagement {
         dependency "org.apache.lucene:lucene-sandbox:${luceneVersion}"
         dependency "org.apache.lucene:lucene-spatial:${luceneVersion}"
         dependency "org.apache.lucene:lucene-suggest:${luceneVersion}"
-        dependency "org.springframework.security:spring-security-core:${springSecurityVersion}"
-        dependency "org.springframework.security:spring-security-web:${springSecurityVersion}"
-        dependency "org.springframework.security:spring-security-crypto:${springSecurityVersion}"
-        dependency "org.springframework.security:spring-security-config:${springSecurityVersion}"
-        dependency "org.springframework.security:spring-security-test:${springSecurityVersion}"
         // must be overridden for the elastic client
         dependency 'jakarta.json:jakarta.json-api:2.0.1'
     }
@@ -52,7 +47,7 @@ dependencyManagement {
 
 dependencies {
   implementation 'org.apache.commons:commons-lang3'
-  implementation 'org.apache.commons:commons-text'
+  implementation "org.apache.commons:commons-text:${apacheCommonsTextVersion}"
 
   implementation 'ch.qos.logback:logback-core'
   implementation 'ch.qos.logback:logback-classic'

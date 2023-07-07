@@ -235,8 +235,7 @@ public class DefaultStructureService implements StructureService {
                                                                       });
                                                });
                         } else {
-                            ret = CompletableFuture.failedFuture(new IllegalArgumentException(
-                                    "Structure is not published"));
+                            ret = CompletableFuture.failedFuture(new IllegalArgumentException("Structure is not published"));
                         }
                     } else {
                         ret = CompletableFuture.failedFuture(new IllegalArgumentException("No Structure found with id: " + structureId));

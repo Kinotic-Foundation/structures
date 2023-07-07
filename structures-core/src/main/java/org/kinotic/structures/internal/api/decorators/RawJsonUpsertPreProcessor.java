@@ -15,8 +15,6 @@ import org.kinotic.structures.api.decorators.runtime.crud.UpsertFieldPreProcesso
 import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.domain.Structure;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.util.*;
@@ -26,8 +24,6 @@ import java.util.concurrent.CompletableFuture;
  * Created by Navíd Mitchell 🤪 on 5/5/23.
  */
 public class RawJsonUpsertPreProcessor implements UpsertPreProcessor<RawJson, RawJson> {
-
-    private static final Logger log = LoggerFactory.getLogger(RawJsonUpsertPreProcessor.class);
 
     private final StructuresProperties structuresProperties;
     private final ObjectMapper objectMapper;
@@ -113,7 +109,7 @@ public class RawJsonUpsertPreProcessor implements UpsertPreProcessor<RawJson, Ra
                             }
 
                             if(currentId != null){
-                                throw new IllegalArgumentException("Found multiple id fields in object");
+                                throw new IllegalArgumentException("Found multiple id fields in entity");
                             }
 
                             // if this is the id we add the special _id field for elasticsearch to use
@@ -140,7 +136,7 @@ public class RawJsonUpsertPreProcessor implements UpsertPreProcessor<RawJson, Ra
                     }else if(token == JsonToken.END_OBJECT && objectDepth == 1){
 
                         if(currentId == null){
-                            throw new IllegalArgumentException("Could not find id for object");
+                            throw new IllegalArgumentException("Could not find id for entity");
                         }
 
                         // This is the end of the object, so we store the object

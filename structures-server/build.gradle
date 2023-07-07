@@ -9,10 +9,6 @@ ext {
 dependencies {
 	implementation project(':structures-core')
 
-	implementation 'org.springframework.boot:spring-boot-starter-graphql'
-
-	implementation "com.apollographql.federation:federation-graphql-java-support:${federationJvmVersion}"
-
 	// Additional Continuum Dependencies
 	implementation "org.kinotic:continuum-gateway:${continuumVersion}"
 

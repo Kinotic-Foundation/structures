@@ -96,8 +96,8 @@ export class EntityService<T> implements IEntityService<T>{
     private entitiesService: IEntitiesService
     private readonly structuresId: string
 
-    public constructor(namespace: string, entityName: string) {
-        this.structuresId = (namespace + '.' + entityName).toLowerCase()
+    public constructor(structureNamespace: string, structureName: string) {
+        this.structuresId = (structureNamespace + '.' + structureName).toLowerCase()
         this.entitiesService = new EntitiesService()
     }
 

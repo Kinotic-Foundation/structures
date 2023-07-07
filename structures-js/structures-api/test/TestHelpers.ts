@@ -11,6 +11,7 @@ import {
     StringC3Type
 } from '@kinotic/continuum-idl'
 import {Structures} from '../src/index.js'
+import {Person} from './domain/Person.js'
 
 const composeFilePath = '../../'
 
@@ -63,14 +64,78 @@ export function createPersonSchema(): ObjectC3Type {
     return ret
 }
 
-export async function createPersonStructure(){
+export async function createPersonStructureIfNotExist(suffix: string): Promise<Structure>{
+    const structureId = 'org.kinotic.sample.person' + suffix
+    let structure = await Structures.getStructureService().findById(structureId)
+    if(structure == null){
+        structure = await createPersonStructure(suffix)
+    }
+    return structure
+}
+
+export async function createPersonStructure(suffix: string): Promise<Structure>{
     const personStructure = new Structure('org.kinotic.sample',
-        'Person',
+        'Person' + suffix,
         createPersonSchema(),
         'Tracks people that are going to mars')
 
     await Structures.getNamespaceService().createNamespaceIfNotExist('org.kinotic.sample', 'Sample Data Namespace')
 
-    await Structures.getStructureService().create(personStructure)
+    const savedStructure = await Structures.getStructureService().create(personStructure)
 
+    await Structures.getStructureService().publish(savedStructure.id)
+
+    return savedStructure
+}
+
+export async function deleteStructure(structureId: string): Promise<void>{
+    await Structures.getStructureService().unPublish(structureId)
+    await Structures.getStructureService().deleteById(structureId)
+}
+
+export function createTestPeople(numberToCreate: number): Person[] {
+    const ret: Person[] = []
+    for (let i = 0; i < numberToCreate; i++) {
+        ret.push(createTestPerson())
+    }
+    return ret
+}
+
+export function createTestPerson(): Person {
+    const ret = new Person()
+    ret.firstName = 'John'
+    ret.lastName = 'Doe'
+    ret.age = 42
+    ret.address = {
+        street: '123 Main St',
+        city: 'Anytown',
+        state: 'CA',
+        zip: '12345'
+    }
+    return ret
+}
+
+export function generateRandomString(length){
+    let result = ''
+    const characters =
+              'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+    const charactersLength = characters.length
+    for (let i = 0; i < length; i++) {
+        result += characters.charAt(Math.floor(Math.random() * charactersLength))
+    }
+    return result
+}
+
+/**
+ * Logs the failure of a promise and then rethrows the error
+ * @param promise to log failure of
+ * @param message to log
+ */
+export async function logFailure<T>(promise: Promise<T>, message: string): Promise<T> {
+    try {
+        return await promise
+    } catch (e) {
+        console.error(message, e)
+        throw e
+    }
 }

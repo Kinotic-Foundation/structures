@@ -9,8 +9,8 @@ dependencies:
     specifier: ^2.2.1
     version: 2.2.1
   '@kinotic/continuum-idl':
-    specifier: ^0.9.0
-    version: 0.9.0
+    specifier: ^0.10.0
+    version: 0.10.0
 
 devDependencies:
   '@types/node':
@@ -318,8 +318,8 @@ packages:
       uuid: 9.0.0
     dev: false
 
-  /@kinotic/continuum-idl@0.9.0:
-    resolution: {integrity: sha512-Spa1LN5iabCa5thsDHWn+FzPPwAJPtIieqCwlLRjK7zWvhyH8IGWNyf9xz4Shhw4idpL5/FmCu9Sj1+jtjXnJw==}
+  /@kinotic/continuum-idl@0.10.0:
+    resolution: {integrity: sha512-xm82nsJfewkuPn4dKeowAPWvPkywx1THsODonxQTa+hoE4URioPjl2OSaCAZJXZ80XobkP+Mp5K1E4GifbXq5w==}
     dev: false
 
   /@microsoft/api-extractor-model@7.27.3(@types/node@20.3.3):
