@@ -1,4 +1,4 @@
-import {DecoratedProperty, ObjectC3Type} from '@kinotic/continuum-idl'
+import {ObjectC3Type} from '@kinotic/continuum-idl'
 import {Identifiable} from '@kinotic/continuum-client'
 
 export class Structure implements Identifiable<string | null> {
@@ -13,7 +13,6 @@ export class Structure implements Identifiable<string | null> {
     public published: boolean // do not ever set, system managed
     public publishedTimestamp: number // do not ever set, system managed
     public itemIndex: string // do not ever set, system managed
-    public decoratedProperties: DecoratedProperty[] // do not ever set, system managed
 
 
     constructor(id: string | null,
@@ -25,8 +24,7 @@ export class Structure implements Identifiable<string | null> {
                 updated: number,
                 published: boolean,
                 publishedTimestamp: number,
-                itemIndex: string,
-                decoratedProperties: DecoratedProperty[]) {
+                itemIndex: string) {
         this.id = id
         this.name = name
         this.namespace = namespace
@@ -37,6 +35,5 @@ export class Structure implements Identifiable<string | null> {
         this.published = published
         this.publishedTimestamp = publishedTimestamp
         this.itemIndex = itemIndex
-        this.decoratedProperties = decoratedProperties
     }
 }

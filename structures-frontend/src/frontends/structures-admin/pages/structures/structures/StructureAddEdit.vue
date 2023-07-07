@@ -85,7 +85,7 @@ export default class StructureAddEdit extends Vue {
     private objectC3Type: ObjectC3Type = new ObjectC3Type()
         .addProperty('id', new IdC3Type())
         .addDecorator(new EntityDecorator().withMultiTenancyType(MultiTenancyType.SHARED))
-    private structure: Structure = new Structure(null, '', '', '', this.objectC3Type, 0, 0, false, 0, '', [])
+    private structure: Structure = new Structure(null, '', '', '', this.objectC3Type, 0, 0, false, 0, '')
 
 
     private structureService: IStructureService = Structures.getStructureService()
