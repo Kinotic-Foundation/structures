@@ -25,7 +25,7 @@ services:
       elasticsearch:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl --silent --fail 127.0.0.1:80/health || exit 1"]
+      test: ["CMD-SHELL", "curl --silent --fail 127.0.0.1:9090/health || exit 1"]
       interval: 300s
       timeout: 10s
       retries: 3
@@ -34,7 +34,6 @@ services:
       - "127.0.0.1:9090:9090" # UI PORT
       - "127.0.0.1:4000:4000" # GraphQL Port
       - "127.0.0.1:8080:8080" # OpenAPI Port
-      - "127.0.0.1:8989:8989" # health port
       - "127.0.0.1:58503:58503"
       - "127.0.0.1:58504:58504"
     environment:
@@ -55,7 +54,7 @@ services:
       STRUCTURES_GRAPHQL_PORT: 4000
       STRUCTURES_GRAPHQL_PATH: /graphql/
       STRUCTURES_CORS_ALLOWED_ORIGIN_PATTERN: '*'
-      STRUCTURES_WEB_SERVER_PORT: 80
+      STRUCTURES_WEB_SERVER_PORT: 9090
       STRUCTURES_HEALTH_CHECK_PATH: /health/
       STRUCTURES_ENABLE_STATIC_FILE_SERVER: true
       STRUCTURES_INITIALIZE_WITH_SAMPLE_DATA: false
