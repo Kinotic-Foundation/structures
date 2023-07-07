@@ -33,6 +33,11 @@ public class DefaultJsonEntitiesService implements JsonEntitiesService {
     }
 
     @Override
+    public CompletableFuture<RawJson> update(String structureId, RawJson entity, Participant participant) {
+        return defaultEntitiesService.update(structureId, entity, new DefaultEntityContext(participant));
+    }
+
+    @Override
     public CompletableFuture<Void> bulkUpdate(String structureId, RawJson entities, Participant participant) {
         return defaultEntitiesService.bulkUpdate(structureId, entities, new DefaultEntityContext(participant));
     }

@@ -17,14 +17,14 @@ const composeFilePath = '../../'
 
 export async function initStructuresServer(): Promise<void> {
     try {
-        const resolvedPath = path.resolve(composeFilePath)
-
-        await compose.pullAll({cwd: resolvedPath, log: true})
-
-        await compose.upAll({
-            cwd: resolvedPath,
-            log: true
-        })
+        // const resolvedPath = path.resolve(composeFilePath)
+        //
+        // await compose.pullAll({cwd: resolvedPath, log: true})
+        //
+        // await compose.upAll({
+        //     cwd: resolvedPath,
+        //     log: true
+        // })
 
         await Continuum.connect('ws://127.0.0.1:58503/v1', 'admin', 'structures')
         console.log('Connected to continuum')
@@ -38,7 +38,7 @@ export async function shutdownStructuresServer(): Promise<void> {
     try {
         await Continuum.disconnect()
 
-        await compose.down({cwd: path.resolve(composeFilePath), log: true})
+      //  await compose.down({cwd: path.resolve(composeFilePath), log: true})
     } catch (e) {
         console.error(e)
         throw e

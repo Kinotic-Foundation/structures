@@ -74,7 +74,7 @@ describe('EntityServiceTest', () => {
             await expect(entityService.count()).resolves.toBe(1)
 
             // Delete the person
-            await expect(entityService.deleteById(savedPerson.id)).resolves.toBeUndefined()
+            await expect(entityService.deleteById(savedPerson.id)).resolves.toBeNull()
         }
     )
 
@@ -82,11 +82,10 @@ describe('EntityServiceTest', () => {
         async ({entityService}) => {
             // Create people
             const people: Person[] = createTestPeople(100)
-            await expect(entityService.bulkSave(people)).resolves.toBeUndefined()
+            await expect(entityService.bulkSave(people)).resolves.toBeNull()
 
             // Count the people
-            const count: number = await entityService.count()
-            expect(count).toBe(100)
+            await expect(entityService.count()).resolves.toBe(100)
 
             // Find all the people
             const page: Page<Person> = await entityService.findAll(new Pageable())
@@ -103,7 +102,7 @@ describe('EntityServiceTest', () => {
                 delete person.address
             }
 
-            await expect(entityService.bulkUpdate(page.content)).resolves.toBeUndefined()
+            await expect(entityService.bulkUpdate(page.content)).resolves.toBeNull()
 
             // Search for all the people
             const searchPage: Page<Person> = await entityService.search('firstName:Walter',new Pageable())

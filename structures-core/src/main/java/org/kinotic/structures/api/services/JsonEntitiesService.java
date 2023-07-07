@@ -37,6 +37,19 @@ public interface JsonEntitiesService {
     CompletableFuture<Void> bulkSave(String structureId, RawJson entities, Participant participant);
 
     /**
+     * Updates a given entity. This will only override the fields that are present in the given entity.
+     * If any fields are not present in the given entity data they will not be changed.
+     * If the entity does not exist it will be created.
+     *
+     * @param structureId the id of the structure to save the entity for
+     * @param entity      must not be {@literal null}
+     * @param participant the participant of the logged-in user
+     * @return {@link CompletableFuture} emitting the saved entity
+     * @throws IllegalArgumentException in case the given {@literal entity} is {@literal null}
+     */
+    CompletableFuture<RawJson> update(String structureId, RawJson entity, Participant participant);
+
+    /**
      * Saves all given entities.
      * @param structureId the id of the structure to save the entity for
      * @param entities all the entities to save
