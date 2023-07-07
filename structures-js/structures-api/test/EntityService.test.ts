@@ -13,7 +13,6 @@ import {
 import {Person} from './domain/Person.js'
 import {Page, Pageable} from '@kinotic/continuum-client'
 import {IEntityService, Structures, Structure} from '../src/index.js'
-import {s} from 'vitest/dist/types-e3c9754d.js'
 
 Object.assign(global, { WebSocket})
 
