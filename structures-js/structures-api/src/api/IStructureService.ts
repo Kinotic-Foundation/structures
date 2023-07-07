@@ -1,5 +1,5 @@
-import {Continuum, CrudServiceProxy, ICrudServiceProxy, IServiceProxy, Page, Pageable} from '@kinotic/continuum-client'
-import {Structure} from '@/frontends/structures-admin/pages/structures/structures/Structure'
+import {Continuum, CrudServiceProxy, ICrudServiceProxy, Page, Pageable} from '@kinotic/continuum-client'
+import {Structure} from '@/api/domain/Structure.js'
 
 
 export interface IStructureService extends ICrudServiceProxy<Structure> {
@@ -35,10 +35,10 @@ export interface IStructureService extends ICrudServiceProxy<Structure> {
     unPublish(structureId: string): Promise<void>
 }
 
-export class StructureService extends CrudServiceProxy<Structure> {
+export class StructureService extends CrudServiceProxy<Structure> implements IStructureService{
 
-    constructor(serviceProxy: IServiceProxy) {
-        super(serviceProxy)
+    constructor() {
+        super(Continuum.serviceProxy('org.kinotic.structures.api.services.StructureService'))
     }
 
     public findAllPublishedForNamespace(namespace: string, pageable: Pageable): Promise<Page<Structure>> {
@@ -57,5 +57,3 @@ export class StructureService extends CrudServiceProxy<Structure> {
         return this.serviceProxy.invoke('unPublish', [structureId])
     }
 }
-
-export const STRUCTURE_SERVICE: IStructureService = new StructureService(Continuum.serviceProxy('org.kinotic.structures.api.services.StructureService'))

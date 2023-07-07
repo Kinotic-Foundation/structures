@@ -1,5 +1,5 @@
 import {Page, Pageable} from '@kinotic/continuum-client'
-
+import {EntitiesService, IEntitiesService} from '@/api/IEntitiesService.js'
 
 /**
  * This is the base interface for all entity services.
@@ -85,4 +85,55 @@ export interface IEntityService<T> {
      */
     search(searchText: string, pageable: Pageable): Promise<Page<T>>;
 
+}
+
+/**
+ * This is the base class for all entity services.
+ * It provides the basic CRUD operations for entities.
+ */
+export class EntityService<T> implements IEntityService<T>{
+
+    private entitiesService: IEntitiesService
+    private readonly structuresId: string
+
+    public constructor(namespace: string, entityName: string) {
+        this.structuresId = (namespace + '.' + entityName).toLowerCase()
+        this.entitiesService = new EntitiesService()
+    }
+
+    public save(entity: T): Promise<T>{
+        return this.entitiesService.save(this.structuresId, entity)
+    }
+
+    public bulkSave(entities: T[]): Promise<void>{
+        return this.entitiesService.bulkSave(this.structuresId, entities)
+    }
+
+    public update(entity: T): Promise<T>{
+        return this.entitiesService.update(this.structuresId, entity)
+    }
+
+    public bulkUpdate(entities: T[]): Promise<void>{
+        return this.entitiesService.bulkUpdate(this.structuresId, entities)
+    }
+
+    public findById(id: string): Promise<T>{
+        return this.entitiesService.findById(this.structuresId, id)
+    }
+
+    public count(): Promise<number>{
+        return this.entitiesService.count(this.structuresId)
+    }
+
+    public deleteById(id: string): Promise<void>{
+        return this.entitiesService.deleteById(this.structuresId, id)
+    }
+
+    public findAll(pageable: Pageable): Promise<Page<T>>{
+        return this.entitiesService.findAll(this.structuresId, pageable)
+    }
+
+    public search(searchText: string, pageable: Pageable): Promise<Page<T>>{
+        return this.entitiesService.search(this.structuresId, searchText, pageable)
+    }
 }
