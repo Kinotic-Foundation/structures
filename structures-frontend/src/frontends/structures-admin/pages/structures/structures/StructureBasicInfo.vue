@@ -23,12 +23,11 @@
 
 <script lang="ts">
 
-import {Component, Emit, PropSync, Vue, Watch} from "vue-property-decorator";
-import {PropType} from "vue";
-import {Continuum, ICrudServiceProxy, Identifiable, Pageable} from "@kinotic/continuum-client";
-import {Structure} from "@/frontends/structures-admin/pages/structures/structures/Structure";
-import {Namespace} from "@/frontends/structures-admin/pages/structures/namespaces/Namespace";
-import {IndexNameHelper} from "@/frontends/structures-admin/pages/structures/util/IndexNameHelper";
+import {Component, Emit, PropSync, Vue, Watch} from 'vue-property-decorator'
+import {PropType} from 'vue'
+import {Continuum, ICrudServiceProxy, Identifiable, Pageable} from '@kinotic/continuum-client'
+import {Structure, Namespace} from '@kinotic/structures-api'
+import {IndexNameHelper} from '@/frontends/structures-admin/pages/structures/util/IndexNameHelper'
 
 type RuleValidator = (value: any) => string | boolean
 
@@ -55,7 +54,7 @@ export default class StructureStandardUi extends Vue {
     private structureNamespaceLoaded: boolean = false
 
     constructor() {
-        super();
+        super()
     }
 
     public mounted() {
@@ -70,7 +69,7 @@ export default class StructureStandardUi extends Vue {
                 this.namespaces = response.content
             })
             .catch((error) => {
-                console.error("Error setting up to add/edit Structure")
+                console.error('Error setting up to add/edit Structure')
                 this.displayAlert(error.message)
             })
 
@@ -109,7 +108,7 @@ export default class StructureStandardUi extends Vue {
                     this.structureNamespaceLoaded = true
                 })
                 .catch((error) => {
-                    console.error("Error setting up to add/edit Structure", error)
+                    console.error('Error setting up to add/edit Structure', error)
                     this.displayAlert(error.message)
                 })
         }

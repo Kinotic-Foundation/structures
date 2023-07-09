@@ -43,9 +43,10 @@
 </template>
 
 <script lang="ts">
+
 import {Component, Prop, Vue} from 'vue-property-decorator'
 import CrudEntityAddEdit from '@/frontends/continuum/components/CrudEntityAddEdit.vue'
-import {Structure} from '@/frontends/structures-admin/pages/structures/structures/Structure'
+import {Structure, Structures, IStructureService} from '@kinotic/structures-api'
 import {
     ArrayC3Type,
     C3Type,
@@ -58,15 +59,14 @@ import {
     mdiFormatText,
     mdiBugCheck
 } from '@mdi/js'
-import {IStructureService, Structures} from "@/frontends/structures-admin/services";
-import {PrismEditor} from "vue-prism-editor";
+import {PrismEditor} from 'vue-prism-editor'
 // import highlighting library
-import {highlight, languages} from 'prismjs/components/prism-core';
-import 'prismjs/components/prism-clike';
-import 'prismjs/components/prism-json';
-import 'prismjs/themes/prism-tomorrow.css';
-import StructureStandardUi from "@/frontends/structures-admin/pages/structures/structures/StructureStandardUi.vue";
-import StructureBasicInfo from "@/frontends/structures-admin/pages/structures/structures/StructureBasicInfo.vue";
+import {highlight, languages} from 'prismjs/components/prism-core'
+import 'prismjs/components/prism-clike'
+import 'prismjs/components/prism-json'
+import 'prismjs/themes/prism-tomorrow.css'
+import StructureStandardUi from '@/frontends/structures-admin/pages/structures/structures/StructureStandardUi.vue'
+import StructureBasicInfo from '@/frontends/structures-admin/pages/structures/structures/StructureBasicInfo.vue'
 
 
 @Component({
@@ -85,12 +85,12 @@ export default class StructureAddEdit extends Vue {
     private objectC3Type: ObjectC3Type = new ObjectC3Type()
         .addProperty('id', new IdC3Type())
         .addDecorator(new EntityDecorator().withMultiTenancyType(MultiTenancyType.SHARED))
-    private structure: Structure = new Structure(null, '', '', '', this.objectC3Type, 0, 0, false, 0, '')
+    private structure: Structure = new Structure('', '', this.objectC3Type, '')
 
 
     private structureService: IStructureService = Structures.getStructureService()
 
-    private entityDefinition: string = ""
+    private entityDefinition: string = ''
     private complexType: boolean = false
     private jsonSyntaxError: string = ''
 
@@ -110,7 +110,7 @@ export default class StructureAddEdit extends Vue {
                     this.loadEntityDefinition(structure)
                 })
                 .catch((error) => {
-                    console.error("Error setting up to add/edit Structure", error)
+                    console.error('Error setting up to add/edit Structure', error)
                     this.displayAlert(error.message)
                 })
         } else {
@@ -119,7 +119,7 @@ export default class StructureAddEdit extends Vue {
     }
 
     private highlighter(code: string) {
-        return highlight(code, languages.json); // languages.<insert language> to return html with markup
+        return highlight(code, languages.json) // languages.<insert language> to return html with markup
     }
 
     private displayAlert(text: string) {
@@ -130,7 +130,7 @@ export default class StructureAddEdit extends Vue {
         try {
             // FIXME: need to ensure here that we have valid C3Type objects
             JSON.parse(value as string)
-            this.jsonSyntaxError = ""
+            this.jsonSyntaxError = ''
             return true
         } catch (error: any) {
             this.jsonSyntaxError = error.message
@@ -147,19 +147,19 @@ export default class StructureAddEdit extends Vue {
     private loadEntityDefinition(structure: any) {
         Object.keys(structure.entityDefinition.properties).forEach((key) => {
             const value: C3Type = structure.entityDefinition.properties[key]
-            if (value.type === "object") {
+            if (value.type === 'object') {
                 this.complexType = true
-            } else if (value.type === "array" && ((value as ArrayC3Type).contains?.type === "object"
-                || (value as ArrayC3Type).contains?.type === "array"
-                || (value as ArrayC3Type).contains?.type === "map"
-                || (value as ArrayC3Type).contains?.type === "ref"
-                || (value as ArrayC3Type).contains?.type === "union")) {
+            } else if (value.type === 'array' && ((value as ArrayC3Type).contains?.type === 'object'
+                || (value as ArrayC3Type).contains?.type === 'array'
+                || (value as ArrayC3Type).contains?.type === 'map'
+                || (value as ArrayC3Type).contains?.type === 'ref'
+                || (value as ArrayC3Type).contains?.type === 'union')) {
                 this.complexType = true
-            } else if (value.type === "map") {
+            } else if (value.type === 'map') {
                 this.complexType = true
-            } else if (value.type === "ref") {
+            } else if (value.type === 'ref') {
                 this.complexType = true
-            } else if (value.type === "union") {
+            } else if (value.type === 'union') {
                 this.complexType = true
             }
         })

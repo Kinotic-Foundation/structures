@@ -75,13 +75,8 @@ import {
   mdiChevronLeft,
   mdiChevronRight
 } from '@mdi/js'
-import {
-  IJsonEntitiesService,
-  IStructureService,
-  Structures
-} from "@/frontends/structures-admin/services";
 import DatetimeUtil from "@/frontends/structures-admin/pages/structures/util/DatetimeUtil";
-import {Structure} from "@/frontends/structures-admin/pages/structures/structures/Structure";
+import {Structure, IStructureService, Structures, IEntitiesService} from '@kinotic/structures-api'
 import {StructureUtil} from "@/frontends/structures-admin/pages/structures/util/StructureUtil";
 
 /**
@@ -137,7 +132,7 @@ export default class EntityList extends Vue {
   /**
    * Services
    */
-  private jsonEntitiesService: IJsonEntitiesService = Structures.getJsonEntitiesService()
+  private entitiesService: IEntitiesService = Structures.getEntitiesService()
   private structureService: IStructureService = Structures.getStructureService()
 
   private options: DataOptions = {
@@ -245,9 +240,9 @@ export default class EntityList extends Vue {
       let queryPromise!: Promise<Page<any>>
 
       if (this.searchText !== null && this.searchText.length > 0) {
-        queryPromise = this.jsonEntitiesService.search(this.structureId, this.searchText, pageable)
+        queryPromise = this.entitiesService.search(this.structureId, this.searchText, pageable)
       } else {
-        queryPromise = this.jsonEntitiesService.findAll(this.structureId, pageable)
+        queryPromise = this.entitiesService.findAll(this.structureId, pageable)
       }
 
       queryPromise.then((page: Page<any>) => {

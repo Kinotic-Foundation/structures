@@ -101,9 +101,8 @@ import {
     mdiUmbraco,
     mdiGraphql
 } from '@mdi/js'
-import {IStructureService} from '@/frontends/structures-admin/services/IStructureService'
+import {Structures, IStructureService} from '@kinotic/structures-api'
 import DatetimeUtil from '@/frontends/structures-admin/pages/structures/util/DatetimeUtil'
-import {Structures} from "@/frontends/structures-admin/services";
 
 /**
  * Provides a List page that can be used with the {@link CrudLayout}

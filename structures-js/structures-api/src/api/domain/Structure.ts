@@ -15,7 +15,7 @@ export class Structure implements Identifiable<string> {
     constructor(namespace: string,
                 name: string,
                 entityDefinition: ObjectC3Type,
-                description: string | null | undefined) {
+                description?: string | null) {
         this.namespace = namespace
         this.name = name
         this.entityDefinition = entityDefinition

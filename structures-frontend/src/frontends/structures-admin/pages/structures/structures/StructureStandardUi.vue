@@ -203,7 +203,7 @@ import {
     mdiClose,
     mdiPlus
 } from '@mdi/js'
-import {Structure} from '@/frontends/structures-admin/pages/structures/structures/Structure'
+import {Structure} from '@kinotic/structures-api'
 import {
     ArrayC3Type,
     BooleanC3Type,

@@ -15,8 +15,8 @@
 <script lang="ts">
 import { Component, Prop, Vue } from 'vue-property-decorator'
 import CrudEntityAddEdit from '@/frontends/continuum/components/CrudEntityAddEdit.vue'
-import {Namespace} from "@/frontends/structures-admin/pages/structures/namespaces/Namespace";
-import {IndexNameHelper} from "@/frontends/structures-admin/pages/structures/util/IndexNameHelper";
+import {Namespace} from '@kinotic/structures-api'
+import {IndexNameHelper} from '@/frontends/structures-admin/pages/structures/util/IndexNameHelper'
 
 type RuleValidator = (value: any) => string | boolean
 
