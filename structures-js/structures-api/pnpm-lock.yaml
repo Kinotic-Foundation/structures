@@ -11,6 +11,9 @@ dependencies:
   '@kinotic/continuum-idl':
     specifier: ^0.10.0
     version: 0.10.0
+  delay:
+    specifier: ^6.0.0
+    version: 6.0.0
 
 devDependencies:
   '@types/node':
@@ -894,6 +897,11 @@ packages:
     dependencies:
       type-detect: 4.0.8
     dev: true
+
+  /delay@6.0.0:
+    resolution: {integrity: sha512-2NJozoOHQ4NuZuVIr5CWd0iiLVIRSDepakaovIN+9eIDHEhdCAEvSy2cuf1DCrPPQLvHmbqTHODlhHg8UCy4zw==}
+    engines: {node: '>=16'}
+    dev: false
 
   /diff@4.0.2:
     resolution: {integrity: sha512-58lmxKSA4BNyLz+HHMUzlOEpg09FV+ev6ZMe3vJihgdxzgcwZ8VoEEPmALCZG9LmqfVoNMMKpttIYTVG6uDY7A==}

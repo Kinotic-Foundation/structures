@@ -13,6 +13,7 @@ import {
 import {Person} from './domain/Person.js'
 import {Page, Pageable} from '@kinotic/continuum-client'
 import {IEntityService, Structures, Structure} from '../src/index.js'
+import delay from 'delay'
 
 Object.assign(global, { WebSocket})
 
@@ -87,6 +88,8 @@ describe('EntityServiceTest', () => {
             // Count the people
             await expect(entityService.count()).resolves.toBe(100)
 
+            await delay(1000)
+
             // Find all the people
             const page: Page<Person> = await entityService.findAll(new Pageable())
             expect(page).toBeDefined()
@@ -103,6 +106,8 @@ describe('EntityServiceTest', () => {
             }
 
             await expect(entityService.bulkUpdate(page.content)).resolves.toBeNull()
+
+            await delay(1000)
 
             // Search for all the people
             const searchPage: Page<Person> = await entityService.search('firstName:Walter',new Pageable())

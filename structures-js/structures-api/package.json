@@ -38,6 +38,7 @@
   },
   "dependencies": {
     "@kinotic/continuum-client": "^2.2.1",
-    "@kinotic/continuum-idl": "^0.10.0"
+    "@kinotic/continuum-idl": "^0.10.0",
+    "delay": "^6.0.0"
   }
 }
