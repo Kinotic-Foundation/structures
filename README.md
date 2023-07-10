@@ -1,6 +1,6 @@
 # Structures
 Structures is an open-source framework for data storage and retrieval, supporting schema evolution, data management, and providing a user-friendly GUI and OpenAPI interface for data management.
-![CI](https://github.com/kinotic/structures/actions/workflows/gradle-build.yml/badge.svg?branch=develop))
+![CI](https://github.com/kinotic-foundation/structures/actions/workflows/gradle-build.yml/badge.svg?branch=develop))
 
 ## Docs
 * [Home](https://kinotic-foundation.github.io/structures/)
