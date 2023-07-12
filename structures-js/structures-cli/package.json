@@ -18,7 +18,9 @@
     "/oclif.manifest.json"
   ],
   "dependencies": {
-    "@kinotic/continuum-idl": "^0.7.0",
+    "@kinotic/continuum-client": "^2.5.1",
+    "@kinotic/continuum-idl": "^0.10.0",
+    "@kinotic/structures-api": "^1.1.0",
     "@oclif/core": "^2.8.10",
     "@oclif/plugin-autocomplete": "^2.3.1",
     "@oclif/plugin-help": "^5",
@@ -27,8 +29,10 @@
     "@oclif/plugin-update": "^3.1.21",
     "@oclif/plugin-warn-if-update-available": "^2.0.40",
     "inquirer": "^9.2.7",
+    "open": "^9.1.0",
     "radash": "^11.0.0",
     "ts-morph": "^19.0.0",
+    "uuid": "^9.0.0",
     "yaml": "^2.3.1"
   },
   "devDependencies": {

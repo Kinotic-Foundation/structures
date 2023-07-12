@@ -1,6 +1,6 @@
 package org.kinotic.structures.api.domain;
 
-import org.kinotic.continuum.core.api.security.Participant;
+import org.kinotic.continuum.api.security.Participant;
 
 /**
  * Holds information for all "Entity" related operations.

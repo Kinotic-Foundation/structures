@@ -1,9 +1,9 @@
 package org.kinotic.structuresserver.config;
 
-import org.kinotic.continuum.core.api.security.DefaultParticipant;
-import org.kinotic.continuum.core.api.security.MetadataConstants;
-import org.kinotic.continuum.core.api.security.Participant;
-import org.kinotic.continuum.core.api.security.SecurityService;
+import org.kinotic.continuum.api.security.DefaultParticipant;
+import org.kinotic.continuum.api.security.ParticipantConstants;
+import org.kinotic.continuum.api.security.Participant;
+import org.kinotic.continuum.api.security.SecurityService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -25,7 +25,8 @@ public class TemporarySecurityService implements SecurityService {
     private static final String PASSWORD = "structures";
     private static final Participant participant = new DefaultParticipant("kinotic",
                                                                           "admin",
-                                                                          Map.of(MetadataConstants.TYPE_KEY, "user"),
+                                                                          Map.of(ParticipantConstants.PARTICIPANT_TYPE_METADATA_KEY,
+                                                                                 ParticipantConstants.PARTICIPANT_TYPE_USER),
                                                                           List.of("ADMIN"));
 
     @Override

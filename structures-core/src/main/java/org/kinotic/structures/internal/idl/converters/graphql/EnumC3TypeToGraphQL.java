@@ -21,6 +21,8 @@ public class EnumC3TypeToGraphQL implements SpecificC3TypeConverter<GraphQLTypeH
                                      C3ConversionContext<GraphQLTypeHolder, GraphQLConversionState> conversionContext) {
 
         GraphQLEnumType.Builder builder = GraphQLEnumType.newEnum();
+        builder.name(c3Type.getName());
+
         for (String value : c3Type.getValues()) {
             builder.value(value);
         }

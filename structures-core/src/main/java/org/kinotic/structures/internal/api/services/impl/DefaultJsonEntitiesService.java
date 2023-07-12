@@ -1,6 +1,6 @@
 package org.kinotic.structures.internal.api.services.impl;
 
-import org.kinotic.continuum.core.api.security.Participant;
+import org.kinotic.continuum.api.security.Participant;
 import org.kinotic.structures.api.domain.DefaultEntityContext;
 import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.services.JsonEntitiesService;

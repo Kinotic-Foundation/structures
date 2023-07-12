@@ -6,14 +6,11 @@ settings:
 
 dependencies:
   '@kinotic/continuum-client':
-    specifier: ^2.2.1
-    version: 2.2.1
+    specifier: ^2.5.1
+    version: 2.5.1
   '@kinotic/continuum-idl':
     specifier: ^0.10.0
     version: 0.10.0
-  delay:
-    specifier: ^6.0.0
-    version: 6.0.0
 
 devDependencies:
   '@types/node':
@@ -22,6 +19,9 @@ devDependencies:
   '@types/ws':
     specifier: ^8.5.5
     version: 8.5.5
+  delay:
+    specifier: ^6.0.0
+    version: 6.0.0
   docker-compose:
     specifier: ^0.24.1
     version: 0.24.1
@@ -310,8 +310,8 @@ packages:
       '@jridgewell/sourcemap-codec': 1.4.15
     dev: true
 
-  /@kinotic/continuum-client@2.2.1:
-    resolution: {integrity: sha512-o3kfNrXzqwZM87D9KCZQnIGmNmo5opEm3lJ8TCenv0HM3KZJSl3Bs5dipcrRt4Bdokdgt7DbHfAWoLriqE7GmQ==}
+  /@kinotic/continuum-client@2.5.1:
+    resolution: {integrity: sha512-8E443zdz+wpAl++FlUzs1uoqNHVtpRlUBV2YrvnypYVDxfTsgGEwDOd3M6EDK+0r6/KYMXKA2QLgq6xgpwwwwg==}
     dependencies:
       '@stomp/rx-stomp': 2.0.0(@stomp/stompjs@7.0.0)(rxjs@7.8.1)(uuid@9.0.0)
       '@stomp/stompjs': 7.0.0
@@ -901,7 +901,7 @@ packages:
   /delay@6.0.0:
     resolution: {integrity: sha512-2NJozoOHQ4NuZuVIr5CWd0iiLVIRSDepakaovIN+9eIDHEhdCAEvSy2cuf1DCrPPQLvHmbqTHODlhHg8UCy4zw==}
     engines: {node: '>=16'}
-    dev: false
+    dev: true
 
   /diff@4.0.2:
     resolution: {integrity: sha512-58lmxKSA4BNyLz+HHMUzlOEpg09FV+ev6ZMe3vJihgdxzgcwZ8VoEEPmALCZG9LmqfVoNMMKpttIYTVG6uDY7A==}

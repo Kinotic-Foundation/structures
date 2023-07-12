@@ -34,8 +34,8 @@ services:
       - "127.0.0.1:9090:9090" # UI PORT
       - "127.0.0.1:4000:4000" # GraphQL Port
       - "127.0.0.1:8080:8080" # OpenAPI Port
-      - "127.0.0.1:58503:58503"
-      - "127.0.0.1:58504:58504"
+      - "127.0.0.1:58503:58503" # Continuum Stomp Port
+      - "127.0.0.1:58504:58504" # Continuum REST Port
     environment:
       SPRING_PROFILES_ACTIVE: production
       STRUCTURES_INDEX_PREFIX: struct_
