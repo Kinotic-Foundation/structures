@@ -124,7 +124,7 @@
                 this.loading = true
                 try{
 
-                    await this.userState.authenticate(StructuresStates.getUserState().getUri(), this.login, this.password)
+                    await this.userState.authenticate(this.login, this.password)
 
                     await CONTINUUM_UI.navigate('/')
 

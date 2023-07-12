@@ -17,7 +17,7 @@
 
     public async created() {
       if(process.env.VUE_APP_KEYCLOAK_SUPPORT === "true") {
-        await USER_STATE.authenticateKeycloak(USER_STATE.getUri(), this.$props.keycloak)
+        await USER_STATE.authenticateKeycloak(this.$props.keycloak)
         setInterval(async () => {
           try {
             let refreshed: boolean = await this.$props.keycloak.updateToken(70)

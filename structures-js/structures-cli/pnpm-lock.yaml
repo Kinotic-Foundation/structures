@@ -67,6 +67,9 @@ devDependencies:
   '@types/node':
     specifier: ^16.18.36
     version: 16.18.36
+  '@types/uuid':
+    specifier: ^9.0.2
+    version: 9.0.2
   chai:
     specifier: ^4
     version: 4.0.0
@@ -1267,6 +1270,10 @@ packages:
 
   /@types/sinonjs__fake-timers@8.1.2:
     resolution: {integrity: sha512-9GcLXF0/v3t80caGs5p2rRfkB+a8VBGLJZVih6CNFkx8IZ994wiKKLSRs9nuFwk1HevWs/1mnUmkApGrSGsShA==}
+    dev: true
+
+  /@types/uuid@9.0.2:
+    resolution: {integrity: sha512-kNnC1GFBLuhImSnV7w4njQkUiJi0ZXUycu1rUaouPqiKlXkh77JKgdRnTAp1x5eBwcIwbtI+3otwzuIDEuDoxQ==}
     dev: true
 
   /@types/vinyl@2.0.7:

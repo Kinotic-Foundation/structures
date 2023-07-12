@@ -8,7 +8,14 @@ import {TypescriptConverterStrategy} from '../internal/converter/typescript/Type
 import {TypescriptConversionState} from '../internal/converter/typescript/TypescriptConversionState.js'
 import {tsDecoratorToC3Decorator} from '../internal/converter/typescript/Utils.js'
 import {Environment, loadEnvironment, saveEnvironment} from '../internal/state/Environment.js'
-import {ConnectedInfo, Continuum, EventConstants, IEvent, ParticipantConstants} from '@kinotic/continuum-client'
+import {
+  ConnectedInfo,
+  ConnectionInfo,
+  Continuum,
+  EventConstants,
+  IEvent,
+  ParticipantConstants
+} from '@kinotic/continuum-client'
 import { v4 as uuidv4 } from 'uuid'
 
 function isEmpty(value: any): boolean {
@@ -142,14 +149,24 @@ export class Synchronize extends Command {
     try {
       const serverURL: URL = new URL(server)
 
-      let hostToConnectTo: string
+      let connectionInfo: ConnectionInfo = {host: ''}
       if (serverURL.host === 'localhost' || serverURL.host === '127.0.0.1') {
-        hostToConnectTo = 'ws://' + serverURL.host + ':58503'
+        connectionInfo.host = serverURL.host
+        connectionInfo.port = parseInt(serverURL.port)
       } else {
-        hostToConnectTo = 'ws://' + server
+        connectionInfo.host = serverURL.host
+        if(serverURL.protocol === 'https:'){
+          connectionInfo.useSSL = true
+        }
+        if(serverURL.port){
+          connectionInfo.port = parseInt(serverURL.port)
+        }
       }
 
-      const connectedInfo: ConnectedInfo = await Continuum.connect(hostToConnectTo, ParticipantConstants.CLI_PARTICIPANT_ID, '')
+      connectionInfo.connectHeaders = {
+        login: ParticipantConstants.CLI_PARTICIPANT_ID
+      }
+      const connectedInfo: ConnectedInfo = await Continuum.connect(connectionInfo)
 
       if (connectedInfo) {
         const subscribeCRI = EventConstants.SERVICE_DESTINATION_PREFIX
@@ -166,7 +183,11 @@ export class Synchronize extends Command {
 
         await Continuum.disconnect()
 
-        await Continuum.connectAdvanced(hostToConnectTo, {session: sessionId})
+        connectionInfo.connectHeaders = {
+          session: sessionId
+        }
+
+        await Continuum.connect(connectionInfo)
 
         ret = true
       }else{
