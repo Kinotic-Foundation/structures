@@ -18,6 +18,7 @@
     "/oclif.manifest.json"
   ],
   "dependencies": {
+    "@inquirer/prompts": "^2.3.0",
     "@kinotic/continuum-client": "^2.5.1",
     "@kinotic/continuum-idl": "^0.10.0",
     "@kinotic/structures-api": "^1.1.0",
@@ -28,7 +29,6 @@
     "@oclif/plugin-plugins": "^2.4.7",
     "@oclif/plugin-update": "^3.1.21",
     "@oclif/plugin-warn-if-update-available": "^2.0.40",
-    "inquirer": "^9.2.7",
     "open": "^9.1.0",
     "radash": "^11.0.0",
     "ts-morph": "^19.0.0",
@@ -40,8 +40,8 @@
     "@oclif/test": "^2.3.23",
     "@types/chai": "^4",
     "@types/mocha": "^9.0.0",
-    "@types/uuid": "^9.0.2",
     "@types/node": "^18.15.11",
+    "@types/uuid": "^9.0.2",
     "@types/ws": "^8.5.5",
     "chai": "^4",
     "eslint": "^7.32.0",

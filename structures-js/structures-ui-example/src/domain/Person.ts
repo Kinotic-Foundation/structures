@@ -15,6 +15,8 @@ export class Person {
 
     public lastName!: string
 
+    public birthDate!: Date
+
     public retirementStatus?: RetirementStatus
 
     public age?: number

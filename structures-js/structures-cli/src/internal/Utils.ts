@@ -8,6 +8,8 @@ import {
   ParticipantConstants
 } from '@kinotic/continuum-client'
 import { v4 as uuidv4 } from 'uuid'
+import { confirm } from '@inquirer/prompts'
+import open from 'open'
 
 export type Logger = {
   log(message?: string, ...args: any[]): void;
@@ -25,6 +27,11 @@ export type Logger = {
 export async function connectAndUpgradeSession(server: string, logger: Logger): Promise<boolean>{
   try {
     const serverURL: URL = new URL(server)
+
+    if(serverURL.protocol !== 'http:' && serverURL.protocol !== 'https:'){
+      logger.log('Invalid server URL, only http and https are supported')
+      return false
+    }
 
     let connectionInfo: ConnectionInfo = {host: ''}
     if (serverURL.hostname === 'localhost' || serverURL.hostname === '127.0.0.1') {
@@ -48,11 +55,23 @@ export async function connectAndUpgradeSession(server: string, logger: Logger): 
     if (connectedInfo) {
 
       const scope = connectedInfo.replyToId + ':' + uuidv4()
-
+      const url = server + (server.endsWith('/') ? '' : '/') + '#/sessionUpgrade/' + encodeURIComponent(scope)
       logger.log('Authenticate your account at:')
-      logger.log(server + (server.endsWith('/') ? '' : '/') + '#/sessionUpgrade/' + encodeURIComponent(scope))
+      logger.log(url)
+
+      const answer = confirm({ message: 'Open in browser?' , default: true});
+      answer.then((value: any) => {
+        if(value){
+          open(url)
+        }
+      }, (reason: any) => {
+        // noop, since canceling the promise throws an error
+      })
 
       const sessionId = await receiveSessionId(scope)
+
+      // We got session id we don't care about the prompt anymore
+      answer.cancel()
 
       await Continuum.disconnect()
 
@@ -61,6 +80,8 @@ export async function connectAndUpgradeSession(server: string, logger: Logger): 
       }
 
       await Continuum.connect(connectionInfo)
+
+      logger.log('Connected to Structures Server')
 
       return true
     }else{

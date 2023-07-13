@@ -56,10 +56,6 @@ out/
 
 *.zip
 
-#structures-server/src/main/resources/webroot/
-#
-#structures-server/src/main/resources/public/
-
 .idea/jpa-buddy.xml
 
 website/node_modules
@@ -73,3 +69,6 @@ structures-frontend/.env.production
 structures-frontend/node_modules
 
 structures-server/src/main/resources/webroot/
+
+structures-js/structures-cli/.structures/
+structures-js/structures-ui-example/.structures/
