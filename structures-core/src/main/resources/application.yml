@@ -6,9 +6,3 @@ logging:
   level:
     org:
       kinotic: INFO
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info

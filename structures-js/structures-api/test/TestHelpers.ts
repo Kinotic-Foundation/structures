@@ -19,12 +19,12 @@ export async function initStructuresServer(): Promise<void> {
     try {
         const resolvedPath = path.resolve(composeFilePath)
 
-        // await compose.pullAll({cwd: resolvedPath, log: true})
-        //
-        // await compose.upAll({
-        //     cwd: resolvedPath,
-        //     log: true
-        // })
+        await compose.pullAll({cwd: resolvedPath, log: true})
+
+        await compose.upAll({
+            cwd: resolvedPath,
+            log: true
+        })
 
         await Continuum.connect({
             host:'127.0.0.1',
@@ -43,7 +43,7 @@ export async function shutdownStructuresServer(): Promise<void> {
     try {
         await Continuum.disconnect()
 
-      //  await compose.down({cwd: path.resolve(composeFilePath), log: true})
+        await compose.down({cwd: path.resolve(composeFilePath), log: true})
     } catch (e) {
         console.error(e)
         throw e

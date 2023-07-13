@@ -9,8 +9,6 @@ continuum-gateway:
 logging:
   level:
     org:
-      springframework:
-        web: DEBUG
       kinotic: TRACE
     io:
       vertx: DEBUG

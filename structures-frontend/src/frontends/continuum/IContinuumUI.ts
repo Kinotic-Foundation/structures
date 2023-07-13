@@ -18,17 +18,17 @@ class ContinuumUI implements IContinuumUI {
     constructor() {
     }
 
-    initialize(routerOptions: RouterOptions): VueRouter {
+    public initialize(routerOptions: RouterOptions): VueRouter {
         this.router = new VueRouter(routerOptions)
 
         this.router.beforeEach((to: Route, from: Route, next: NavigationGuardNext<Vue>) => {
             // @ts-ignore
-            let { authenticationRequired } = to.meta
+            const { authenticationRequired } = to.meta
 
             if ((authenticationRequired === undefined || authenticationRequired)
-                    && !StructuresStates.getUserState().isAuthenticated()){
+                    && !StructuresStates.getUserState().isAuthenticated()) {
 
-                next({ path: '/login' })
+                next({ name: 'login' , params:{referer: to.path}})
             } else {
                 next()
             }
@@ -38,7 +38,7 @@ class ContinuumUI implements IContinuumUI {
         return this.router
     }
 
-    navigate(path: string): Promise<Route> {
+    public navigate(path: string): Promise<Route> {
         return this.router.push(path)
     }
 

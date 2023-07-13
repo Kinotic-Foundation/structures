@@ -42,5 +42,8 @@
   ],
   "exclude": [
     "node_modules"
-  ]
+  ],
+  "vueCompilerOptions": {
+    "experimentalUseElementAccessInTemplate": true
+  }
 }
