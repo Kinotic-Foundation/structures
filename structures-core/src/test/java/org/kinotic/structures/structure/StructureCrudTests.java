@@ -51,7 +51,7 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 	public void createPublishAndDeleteStructure() throws Exception {
 
 		Structure structure = new Structure();
-		structure.setName("Person")
+		structure.setName("PersonWat")
 				 .setNamespace("org.kinotic.sample")
 				 .setDescription("Defines a Person")
 				 .setEntityDefinition(testDataService.createPersonSchema(MultiTenancyType.NONE, false));
@@ -91,9 +91,50 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 	}
 
 	@Test
+	public void tryOperationsOnPublishedStructure() throws Exception{
+		Structure structure = new Structure();
+		structure.setName("PersonBum")
+				 .setNamespace("org.kinotic.sample")
+				 .setDescription("Defines a Person")
+				 .setEntityDefinition(testDataService.createPersonSchema(MultiTenancyType.NONE, false));
+
+		CompletableFuture<Structure> future = structureService.create(structure);
+
+		StepVerifier.create(Mono.fromFuture(future))
+					.expectNextMatches(savedStructure -> {
+						Assertions.assertNotNull(savedStructure.getId());
+						Assertions.assertNotNull(savedStructure.getCreated());
+						Assertions.assertNotNull(savedStructure.getUpdated());
+						Assertions.assertEquals(structure.getName(), savedStructure.getName());
+						Assertions.assertEquals(structure.getDescription(), savedStructure.getDescription());
+						Assertions.assertEquals(structure.getEntityDefinition(), savedStructure.getEntityDefinition());
+						return true;
+					})
+					.expectComplete()
+					.verify();
+
+		CompletableFuture<Void> pubFuture = structureService.publish(future.get().getId());
+
+		StepVerifier.create(Mono.fromFuture(pubFuture))
+					.expectComplete()
+					.verify();
+
+		CompletableFuture<Void> delFuture = structureService.deleteById(future.get().getId());
+
+		StepVerifier.create(Mono.fromFuture(delFuture))
+					.expectError(IllegalStateException.class)
+					.verify();
+
+		CompletableFuture<Structure> saveFuture = structureService.save(structure);
+		StepVerifier.create(Mono.fromFuture(saveFuture))
+					.expectError(IllegalStateException.class)
+					.verify();
+	}
+
+	@Test
 	public void createStructureInvalidField(){
 		Structure structure = new Structure();
-		structure.setName("Person")
+		structure.setName("PersonStupid")
 				 .setNamespace("org.kinotic.sample")
 				 .setDescription("Defines a Person")
 				 .setEntityDefinition(testDataService.createPersonSchema(MultiTenancyType.NONE, true));
@@ -108,7 +149,7 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 	@Test
 	public void createStructureWithSameNameError() throws Exception {
 		Structure structure = new Structure();
-		structure.setName("Person")
+		structure.setName("PersonHomer")
 				 .setNamespace("org.kinotic.sample")
 				 .setDescription("Defines a Person")
 				 .setEntityDefinition(testDataService.createPersonSchema(MultiTenancyType.NONE, false));
@@ -144,7 +185,7 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 	@Test
 	public void tryOperationOnNotPublishedStructure() throws Exception {
 		Structure structure = new Structure();
-		structure.setName("Person")
+		structure.setName("PersonStoned")
 				 .setNamespace("org.kinotic.sample")
 				 .setDescription("Defines a Person")
 				 .setEntityDefinition(testDataService.createPersonSchema(MultiTenancyType.NONE, false));

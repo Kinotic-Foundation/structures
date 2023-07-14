@@ -13,22 +13,22 @@ import { IConversionContext } from './IConversionContext.js'
  */
 export interface ITypeConverter<BASE_TYPE, T, S> {
 
-  /**
-   * Checks if the given value is supported by this converter
-   *
-   * @param value to check if supported
-   * @param conversionState the state of the conversion, that is contained in the {@link IConversionContext}
-   * @return true if this converter can convert the type false if not
-   */
-  supports(value: BASE_TYPE, conversionState: S): boolean
+    /**
+     * Checks if the given value is supported by this converter
+     *
+     * @param value to check if supported
+     * @param conversionState the state of the conversion, that is contained in the {@link IConversionContext}
+     * @return true if this converter can convert the type false if not
+     */
+    supports(value: BASE_TYPE, conversionState: S): boolean
 
-  /**
-   * Converts the given value to a {@link C3Type}.
-   * @param value to convert
-   * @param conversionContext the context to use for conversion
-   * @return the converted type
-   */
-  convert(value: T,
-          conversionContext: IConversionContext<BASE_TYPE, S>): C3Type
+    /**
+     * Converts the given value to a {@link C3Type}.
+     * @param value to convert
+     * @param conversionContext the context to use for conversion
+     * @return the converted type
+     */
+    convert(value: T,
+            conversionContext: IConversionContext<BASE_TYPE, S>): C3Type
 
 }

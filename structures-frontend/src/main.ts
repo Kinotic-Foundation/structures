@@ -22,37 +22,37 @@ import Keycloak, {KeycloakOnLoad} from 'keycloak-js'
 
 if(process.env.VUE_APP_KEYCLOAK_SUPPORT === 'true') {
 
-  let initOptions = {
-    url: process.env.VUE_APP_KEYCLOAK_URL,
-    realm: process.env.VUE_APP_KEYCLOAK_REALM,
-    clientId: process.env.VUE_APP_KEYCLOAK_CLIENT_ID,
-    onLoad: 'login-required' as KeycloakOnLoad
-  }
-  let keycloak: Keycloak = new Keycloak(initOptions)
-
-  keycloak.init({ onLoad: initOptions.onLoad }).then((auth) => {
-    if (!auth) {
-      window.location.reload()
-    } else {
-
-      new Vue({
-        router,
-        vuetify,
-        render: (h) => h(Main, { props: { keycloak: keycloak } })
-      }).$mount('#main')
-
+    let initOptions = {
+        url: process.env.VUE_APP_KEYCLOAK_URL,
+        realm: process.env.VUE_APP_KEYCLOAK_REALM,
+        clientId: process.env.VUE_APP_KEYCLOAK_CLIENT_ID,
+        onLoad: 'login-required' as KeycloakOnLoad
     }
-  }).catch(() => {
-    console.error("Authenticated Failed");
-  });
+    let keycloak: Keycloak = new Keycloak(initOptions)
+
+    keycloak.init({ onLoad: initOptions.onLoad }).then((auth) => {
+        if (!auth) {
+            window.location.reload()
+        } else {
+
+            new Vue({
+                router,
+                vuetify,
+                render: (h) => h(Main, { props: { keycloak: keycloak } })
+            }).$mount('#main')
+
+        }
+    }).catch(() => {
+        console.error("Authenticated Failed")
+    })
 
 }else{
 
-  new Vue({
-    router,
-    vuetify,
-    render: (h) => h(Main)
-  }).$mount('#main')
+    new Vue({
+        router,
+        vuetify,
+        render: (h) => h(Main)
+    }).$mount('#main')
 
 }
 

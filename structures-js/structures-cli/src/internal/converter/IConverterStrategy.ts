@@ -2,16 +2,16 @@ import { ITypeConverter } from './ITypeConverter.js'
 import {PrettyPrintableError} from '@oclif/core/lib/errors';
 
 export type Logger = {
-  log: (message?: string, ...args: any[]) => void
-  warn(input: string | Error): string | Error
-  error(input: string | Error, options: {
-                                          code?: string;
-                                          exit: false;
-                                        } & PrettyPrintableError): void
-  error(input: string | Error, options?: {
-                                           code?: string;
-                                           exit?: number;
-                                         } & PrettyPrintableError): never
+    log: (message?: string, ...args: any[]) => void
+    warn(input: string | Error): string | Error
+    error(input: string | Error, options: {
+                                              code?: string;
+                                              exit: false;
+                                          } & PrettyPrintableError): void
+    error(input: string | Error, options?: {
+                                               code?: string;
+                                               exit?: number;
+                                           } & PrettyPrintableError): never
 }
 
 /**
@@ -26,29 +26,29 @@ export type Logger = {
  */
 export interface IConverterStrategy<BASE_TYPE, S> {
 
-  /**
-   * An array of {@link ITypeConverter}'s that will be used to convert a specific language type.
-   */
-  typeConverters(): Array<ITypeConverter<BASE_TYPE, BASE_TYPE, S>>
+    /**
+     * An array of {@link ITypeConverter}'s that will be used to convert a specific language type.
+     */
+    typeConverters(): Array<ITypeConverter<BASE_TYPE, BASE_TYPE, S>>
 
-  /**
-   * The object that will be available via the {@link IConversionContext#state()}.
-   * This can be a simple {@link Map} or something with better type safety.
-   * This should return a new instance each time it is called.
-   * This will be called each time a new {@link IConversionContext} is created.
-   * @return the conversion context state.
-   */
-  initialState(): S | (() => S)
+    /**
+     * The object that will be available via the {@link IConversionContext#state()}.
+     * This can be a simple {@link Map} or something with better type safety.
+     * This should return a new instance each time it is called.
+     * This will be called each time a new {@link IConversionContext} is created.
+     * @return the conversion context state.
+     */
+    initialState(): S | (() => S)
 
-  /**
-   * Returns a logger that can be used to log messages.
-   */
-  logger(): Logger | (() => Logger)
+    /**
+     * Returns a logger that can be used to log messages.
+     */
+    logger(): Logger | (() => Logger)
 
-  /**
-   * Prints a value to a string.
-   * This is used in error messages to help the user understand what value caused the error.
-   */
-  valueToString(value: BASE_TYPE): string
+    /**
+     * Prints a value to a string.
+     * This is used in error messages to help the user understand what value caused the error.
+     */
+    valueToString(value: BASE_TYPE): string
 
 }

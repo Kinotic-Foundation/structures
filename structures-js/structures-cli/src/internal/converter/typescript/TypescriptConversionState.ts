@@ -5,22 +5,22 @@ import {Project} from 'ts-morph'
  */
 export class TypescriptConversionState {
 
-  private readonly _namespace: string
-  private readonly _project: Project
-  public currentPropertyName: string | null = null
-  public nearestPropertyNameNotInUnion: string | null = null
-  public convertingUnion: boolean = false
+    private readonly _namespace: string
+    private readonly _project: Project
+    public currentPropertyName: string | null = null
+    public nearestPropertyNameNotInUnion: string | null = null
+    public convertingUnion: boolean = false
 
-  constructor(namespace: string, project: Project) {
-    this._namespace = namespace
-    this._project = project
-  }
+    constructor(namespace: string, project: Project) {
+        this._namespace = namespace
+        this._project = project
+    }
 
-  get namespace(): string {
-    return this._namespace
-  }
+    get namespace(): string {
+        return this._namespace
+    }
 
-  get project(): Project {
-    return this._project
-  }
+    get project(): Project {
+        return this._project
+    }
 }

@@ -14,18 +14,18 @@ import {DefaultConversionContext} from './DefaultConversionContext.js'
  */
 export interface IConversionContext<BASE_TYPE, S> {
 
-  /**
-   * Converts the given type to a {@link C3Type} by resolving the proper {@link ITypeConverter}.
-   *
-   * @param value to convert
-   * @return the converted value
-   */
-  convert(value: BASE_TYPE): C3Type
+    /**
+     * Converts the given type to a {@link C3Type} by resolving the proper {@link ITypeConverter}.
+     *
+     * @param value to convert
+     * @return the converted value
+     */
+    convert(value: BASE_TYPE): C3Type
 
-  /**
-   * @return the state of this {@link IConversionContext}
-   */
-  state(): S
+    /**
+     * @return the state of this {@link IConversionContext}
+     */
+    state(): S
 
 }
 
@@ -37,5 +37,5 @@ export interface IConversionContext<BASE_TYPE, S> {
  * @param strategy
  */
 export function createConversionContext<BASE_TYPE, S>(strategy: IConverterStrategy<BASE_TYPE, S>): IConversionContext<BASE_TYPE, S>{
-  return new DefaultConversionContext(strategy)
+    return new DefaultConversionContext(strategy)
 }

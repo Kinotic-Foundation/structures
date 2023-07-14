@@ -6,20 +6,20 @@ import {ITypeConverter} from '../ITypeConverter.js'
 
 export class ArrayToC3Type implements ITypeConverter<Type, Type, TypescriptConversionState> {
 
-  convert(value: Type, conversionContext: IConversionContext<Type, TypescriptConversionState>): C3Type {
-    const ret: ArrayC3Type = new ArrayC3Type()
+    convert(value: Type, conversionContext: IConversionContext<Type, TypescriptConversionState>): C3Type {
+        const ret: ArrayC3Type = new ArrayC3Type()
 
-    const arrayElementType = value?.getArrayElementType()
-    if(arrayElementType) {
-      ret.contains = conversionContext.convert(arrayElementType)
-    }else{
-      throw new Error("Type could not be found for array type "+value.getText())
+        const arrayElementType = value?.getArrayElementType()
+        if(arrayElementType) {
+            ret.contains = conversionContext.convert(arrayElementType)
+        }else{
+            throw new Error("Type could not be found for array type "+value.getText())
+        }
+        return ret
     }
-    return ret
-  }
 
-  supports(value: Type, conversionState: TypescriptConversionState): boolean {
-    return value.isArray()
-  }
+    supports(value: Type, conversionState: TypescriptConversionState): boolean {
+        return value.isArray()
+    }
 
 }

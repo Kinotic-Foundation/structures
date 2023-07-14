@@ -1,89 +1,91 @@
 {
-  "name": "structures-cli",
-  "version": "0.2.0",
-  "description": "Structures CLI provides the ability to interact with the Structures Server",
-  "author": "Kinotic Developers",
-  "bin": {
-    "structures": "./bin/run.js"
-  },
-  "homepage": "hhttps://kinotic-foundation.github.io/structures/",
-  "license": "MIT",
-  "main": "dist/index.js",
-  "repository": "https://github.com/Kinotic-Foundatio/structures",
-  "type": "module",
-  "files": [
-    "/bin",
-    "/dist",
-    "/npm-shrinkwrap.json",
-    "/oclif.manifest.json"
-  ],
-  "dependencies": {
-    "@inquirer/prompts": "^2.3.0",
-    "@kinotic/continuum-client": "^2.5.1",
-    "@kinotic/continuum-idl": "^0.10.0",
-    "@kinotic/structures-api": "^1.1.0",
-    "@oclif/core": "^2.8.10",
-    "@oclif/plugin-autocomplete": "^2.3.1",
-    "@oclif/plugin-help": "^5",
-    "@oclif/plugin-not-found": "^2.3.26",
-    "@oclif/plugin-plugins": "^2.4.7",
-    "@oclif/plugin-update": "^3.1.21",
-    "@oclif/plugin-warn-if-update-available": "^2.0.40",
-    "open": "^9.1.0",
-    "radash": "^11.0.0",
-    "ts-morph": "^19.0.0",
-    "uuid": "^9.0.0",
-    "ws": "^8.13.0",
-    "yaml": "^2.3.1"
-  },
-  "devDependencies": {
-    "@oclif/test": "^2.3.23",
-    "@types/chai": "^4",
-    "@types/mocha": "^9.0.0",
-    "@types/node": "^18.15.11",
-    "@types/uuid": "^9.0.2",
-    "@types/ws": "^8.5.5",
-    "chai": "^4",
-    "eslint": "^7.32.0",
-    "eslint-config-oclif": "^4",
-    "eslint-config-oclif-typescript": "^1.0.3",
-    "mocha": "^9",
-    "oclif": "^3",
-    "shx": "^0.3.3",
-    "ts-node": "^10.9.1",
-    "tslib": "^2.5.3",
-    "typescript": "^5.0.2"
-  },
-  "oclif": {
-    "bin": "structures",
-    "dirname": "structures",
-    "commands": "./dist/commands",
-    "plugins": [
-      "@oclif/plugin-help",
-      "@oclif/plugin-plugins",
-      "@oclif/plugin-update",
-      "@oclif/plugin-not-found",
-      "@oclif/plugin-warn-if-update-available",
-      "@oclif/plugin-autocomplete"
+    "name": "structures-cli",
+    "version": "0.2.0",
+    "description": "Structures CLI provides the ability to interact with the Structures Server",
+    "author": "Kinotic Developers",
+    "bin": {
+        "structures": "./bin/run.js"
+    },
+    "homepage": "hhttps://kinotic-foundation.github.io/structures/",
+    "license": "MIT",
+    "main": "dist/index.js",
+    "repository": "https://github.com/Kinotic-Foundatio/structures",
+    "type": "module",
+    "files": [
+        "/bin",
+        "/dist",
+        "/npm-shrinkwrap.json",
+        "/oclif.manifest.json"
     ],
-    "topicSeparator": " ",
-    "topics": {}
-  },
-  "scripts": {
-    "build": "shx rm -rf dist && tsc -b",
-    "lint": "eslint . --ext .ts --config .eslintrc",
-    "postpack": "shx rm -f oclif.manifest.json",
-    "posttest": "pnpm lint",
-    "prepack": "pnpm build && oclif manifest && oclif readme",
-    "test": "mocha --forbid-only \"test/**/*.test.ts\"",
-    "version": "oclif readme && git add README.md"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  },
-  "bugs": "https://github.com/https://github.com/Kinotic-Foundation/structures/structures/issues",
-  "keywords": [
-    "oclif"
-  ],
-  "types": "dist/index.d.ts"
+    "dependencies": {
+        "@kinotic/continuum-client": "^2.5.1",
+        "@kinotic/continuum-idl": "^0.10.0",
+        "@kinotic/structures-api": "^1.1.0",
+        "@oclif/core": "^2.8.10",
+        "@oclif/plugin-autocomplete": "^2.3.1",
+        "@oclif/plugin-help": "^5",
+        "@oclif/plugin-not-found": "^2.3.26",
+        "@oclif/plugin-plugins": "^2.4.7",
+        "@oclif/plugin-update": "^3.1.21",
+        "@oclif/plugin-warn-if-update-available": "^2.0.40",
+        "chalk": "^5.3.0",
+        "inquirer": "^9.2.8",
+        "open": "^9.1.0",
+        "radash": "^11.0.0",
+        "ts-morph": "^19.0.0",
+        "uuid": "^9.0.0",
+        "ws": "^8.13.0",
+        "yaml": "^2.3.1"
+    },
+    "devDependencies": {
+        "@oclif/test": "^2.3.23",
+        "@types/chai": "^4",
+        "@types/inquirer": "^9.0.3",
+        "@types/mocha": "^9.0.0",
+        "@types/node": "^18.15.11",
+        "@types/uuid": "^9.0.2",
+        "@types/ws": "^8.5.5",
+        "chai": "^4",
+        "eslint": "^7.32.0",
+        "eslint-config-oclif": "^4",
+        "eslint-config-oclif-typescript": "^1.0.3",
+        "mocha": "^9",
+        "oclif": "^3",
+        "shx": "^0.3.3",
+        "ts-node": "^10.9.1",
+        "tslib": "^2.5.3",
+        "typescript": "^5.0.2"
+    },
+    "oclif": {
+        "bin": "structures",
+        "dirname": "structures",
+        "commands": "./dist/commands",
+        "plugins": [
+            "@oclif/plugin-help",
+            "@oclif/plugin-plugins",
+            "@oclif/plugin-update",
+            "@oclif/plugin-not-found",
+            "@oclif/plugin-warn-if-update-available",
+            "@oclif/plugin-autocomplete"
+        ],
+        "topicSeparator": " ",
+        "topics": {}
+    },
+    "scripts": {
+        "build": "shx rm -rf dist && tsc -b",
+        "lint": "eslint . --ext .ts --config .eslintrc",
+        "postpack": "shx rm -f oclif.manifest.json",
+        "posttest": "pnpm lint",
+        "prepack": "pnpm build && oclif manifest && oclif readme",
+        "test": "mocha --forbid-only \"test/**/*.test.ts\"",
+        "version": "oclif readme && git add README.md"
+    },
+    "engines": {
+        "node": ">=18.0.0"
+    },
+    "bugs": "https://github.com/https://github.com/Kinotic-Foundation/structures/structures/issues",
+    "keywords": [
+        "oclif"
+    ],
+    "types": "dist/index.d.ts"
 }

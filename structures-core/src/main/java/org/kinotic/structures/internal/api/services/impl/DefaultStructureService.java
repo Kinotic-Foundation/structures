@@ -16,6 +16,8 @@ import org.springframework.stereotype.Component;
 
 import java.util.Date;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.function.Function;
 
 
 @Component
@@ -66,32 +68,31 @@ public class DefaultStructureService implements StructureService {
 
         return findById(logicalIndexName)
                 .thenCompose(existingStructure -> {
-                    CompletableFuture<Structure> ret;
+
                     // Check if this is an existing structure or new one
                     if (existingStructure != null) {
-                        ret = CompletableFuture.failedFuture(new IllegalArgumentException(
+                        return CompletableFuture.failedFuture(new IllegalArgumentException(
                                 "Structure Namespace+Name must be unique, '" + logicalIndexName + "' already exists."));
-                    } else {
-                        // new structure
-                        structure.setId(logicalIndexName);
-                        structure.setCreated(new Date());
-                        structure.setUpdated(structure.getCreated());
-                        // Store name of the elastic search index for items
-                        structure.setItemIndex(this.structuresProperties.getIndexPrefix()
-                                                                        .trim()
-                                                                        .toLowerCase() + logicalIndexName);
-
-                        // Try and create ES mapping to make sure IDL is valid
-                        ElasticConversionResult result = structureConversionService.convertToElasticMapping(structure);
-
-                        // TODO: how to ensure structures namespace name match the C3Type name
-                        // Should we just use the Structures one?
-
-                        structure.setMultiTenancyType(result.getMultiTenancyType());
-
-                        ret = structureDAO.save(structure);
                     }
-                    return ret;
+
+                    // new structure
+                    structure.setId(logicalIndexName);
+                    structure.setCreated(new Date());
+                    structure.setUpdated(structure.getCreated());
+                    // Store name of the elastic search index for items
+                    structure.setItemIndex(this.structuresProperties.getIndexPrefix()
+                                                                    .trim()
+                                                                    .toLowerCase() + logicalIndexName);
+
+                    // Try and create ES mapping to make sure IDL is valid
+                    ElasticConversionResult result = structureConversionService.convertToElasticMapping(structure);
+
+                    // TODO: how to ensure structures namespace name match the C3Type name
+                    // Should we just use the Structures one?
+
+                    structure.setMultiTenancyType(result.getMultiTenancyType());
+
+                    return  structureDAO.save(structure);
                 });
     }
 
@@ -107,16 +108,40 @@ public class DefaultStructureService implements StructureService {
             return CompletableFuture.failedFuture(e);
         }
 
-        // updating an existing structure, reconcile the differences
-        structure.setUpdated(new Date());
+        return findById(structure.getId())
+                .thenCompose(existingStructure -> {
+                    // short circuit validation
+                    if(existingStructure == null){
+                        return CompletableFuture.failedFuture(new IllegalArgumentException("Structure cannot be found for id: " + structure.getId()));
+                    }
 
-        // FIXME: when we try and index an entity we have not published the index gets created automatically, so we need to not save any entities \
-        //  when the structure is not published.
+                    if(existingStructure.isPublished()){
+                        return CompletableFuture
+                                .failedFuture(new IllegalStateException("Currently you cannot Save a Published Structure. You must Un-Publish it first."));
+                    }
 
-        // FIXME: what to do when the namespace changes on an unpublished structure?  right now you end up with a broken id and index name
+                    // updating an existing structure, reconcile the differences
+                    structure.setUpdated(new Date());
+                    structure.setCreated(existingStructure.getCreated());
+                    structure.setName(existingStructure.getName());
+                    structure.setNamespace(existingStructure.getNamespace());
+                    structure.setItemIndex(existingStructure.getItemIndex());
+                    structure.setPublished(false);
+                    structure.setPublishedTimestamp(null);
+                    structure.setDecoratedProperties(null);
 
-        // FIXME: reconcile structure differences (should be async)
-        return structureDAO.save(structure);
+                    // Try and create ES mapping to make sure IDL is valid
+                    ElasticConversionResult result = structureConversionService.convertToElasticMapping(structure);
+
+                    // TODO: how to ensure structures namespace name match the C3Type name
+                    // Should we just use the Structures one?
+                    structure.setMultiTenancyType(result.getMultiTenancyType());
+
+                    // FIXME: what to do when the namespace changes on an unpublished structure?  right now you end up with a broken id and index name
+
+                    // FIXME: reconcile structure differences (should be async)
+                    return structureDAO.save(structure);
+                });
     }
 
     private void validateStructure(Structure structure){
@@ -142,21 +167,20 @@ public class DefaultStructureService implements StructureService {
     }
 
     @Override
-    public CompletableFuture<Void> deleteById(String id) {
-        return findById(id)
+    public CompletableFuture<Void> deleteById(String structureId) {
+        return findById(structureId)
                 .thenCompose(structure -> {
-                    CompletableFuture<Void> ret;
-                    if (structure != null) {
-                        if (structure.isPublished()) {
-                            ret = CompletableFuture.failedFuture(new IllegalArgumentException(
-                                    "Structure must be unpublished before deleting"));
-                        } else {
-                            ret = structureDAO.deleteById(id);
-                        }
-                    } else {
-                        ret = CompletableFuture.failedFuture(new IllegalArgumentException("No Structure found with id: " + id));
+
+                    if(structure == null){
+                        return CompletableFuture.failedFuture(new IllegalArgumentException("Structure cannot be found for id: " + structureId));
                     }
-                    return ret;
+
+                    if(structure.isPublished()){
+                        return CompletableFuture
+                                .failedFuture(new IllegalStateException("Structure must be Un-Published before Deleting"));
+                    }
+
+                    return structureDAO.deleteById(structureId);
                 });
     }
 
@@ -175,39 +199,34 @@ public class DefaultStructureService implements StructureService {
         return findById(structureId)
                 .thenCompose(structure -> {
 
-                    CompletableFuture<Void> ret;
-
-                    if (structure != null) {
-
-                        if (structure.isPublished()) {
-                            ret = CompletableFuture.failedFuture(new IllegalArgumentException(
-                                    "Structure is already published"));
-                        } else {
-
-                            ElasticConversionResult result = structureConversionService.convertToElasticMapping(structure);
-
-                            ret = crudServiceTemplate
-                                    .createIndex(structure.getItemIndex(), true, indexBuilder -> {
-
-                                        indexBuilder.mappings(m -> m.dynamic(DynamicMapping.Strict)
-                                                                    .properties(result.getObjectProperty().properties()));
-
-                                    })
-                                    .thenCompose(createIndexResponse -> {
-                                        // update tracking fields
-                                        structure.setPublished(true);
-                                        structure.setPublishedTimestamp(new Date());
-                                        structure.setUpdated(structure.getPublishedTimestamp());
-                                        structure.setDecoratedProperties(result.getDecoratedProperties());
-
-                                        return structureDAO.save(structure)
-                                                           .thenApply(structure1 -> null);
-                                    });
-                        }
-                    } else {
-                        ret = CompletableFuture.failedFuture(new IllegalArgumentException("No Structure found with id: " + structureId));
+                    if(structure == null){
+                        return CompletableFuture.failedFuture(new IllegalArgumentException("Structure cannot be found for id: " + structureId));
                     }
-                    return ret;
+
+                    if(structure.isPublished()){
+                        return CompletableFuture
+                                .failedFuture(new IllegalStateException("Structure is already published"));
+                    }
+
+                    ElasticConversionResult result = structureConversionService.convertToElasticMapping(structure);
+
+                    return crudServiceTemplate
+                            .createIndex(structure.getItemIndex(), true, indexBuilder -> {
+
+                                indexBuilder.mappings(m -> m.dynamic(DynamicMapping.Strict)
+                                                            .properties(result.getObjectProperty().properties()));
+
+                            })
+                            .thenCompose(createIndexResponse -> {
+                                // update tracking fields
+                                structure.setPublished(true);
+                                structure.setPublishedTimestamp(new Date());
+                                structure.setUpdated(structure.getPublishedTimestamp());
+                                structure.setDecoratedProperties(result.getDecoratedProperties());
+
+                                return structureDAO.save(structure)
+                                                   .thenApply(structure1 -> null);
+                            });
                 });
     }
 
@@ -216,31 +235,27 @@ public class DefaultStructureService implements StructureService {
         return findById(structureId)
                 .thenCompose(structure -> {
 
-                    CompletableFuture<Void> ret;
-
-                    if (structure != null) {
-
-                        if (structure.isPublished()) {
-
-                            ret = esAsyncClient.indices()
-                                               .delete(builder -> builder.index(structure.getItemIndex()))
-                                               .thenCompose(deleteIndexResponse -> {
-                                                   structure.setPublished(false);
-                                                   structure.setPublishedTimestamp(null);
-                                                   structure.setUpdated(new Date());
-                                                   return structureDAO.save(structure)
-                                                                      .thenApply(structure1 -> {
-                                                                          cacheEvictionService.evictCachesFor(structure);
-                                                                          return null;
-                                                                      });
-                                               });
-                        } else {
-                            ret = CompletableFuture.failedFuture(new IllegalArgumentException("Structure is not published"));
-                        }
-                    } else {
-                        ret = CompletableFuture.failedFuture(new IllegalArgumentException("No Structure found with id: " + structureId));
+                    if(structure == null){
+                        return CompletableFuture.failedFuture(new IllegalArgumentException("Structure cannot be found for id: " + structureId));
                     }
-                    return ret;
+
+                    if(!structure.isPublished()){
+                        return CompletableFuture
+                                .failedFuture(new IllegalStateException("Structure is not published"));
+                    }
+
+                    return esAsyncClient.indices()
+                                        .delete(builder -> builder.index(structure.getItemIndex()))
+                                        .thenCompose(deleteIndexResponse -> {
+                                            structure.setPublished(false);
+                                            structure.setPublishedTimestamp(null);
+                                            structure.setUpdated(new Date());
+                                            return structureDAO.save(structure)
+                                                               .thenApply(structure1 -> {
+                                                                   cacheEvictionService.evictCachesFor(structure);
+                                                                   return null;
+                                                               });
+                                        });
                 });
     }
 
