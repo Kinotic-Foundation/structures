@@ -1,12 +1,11 @@
 import {Args, Command, Flags} from '@oclif/core'
 import path from 'path'
-import fsPromises from 'fs/promises'
 import {ClassDeclaration, Project} from 'ts-morph'
 import {C3Type, ObjectC3Type} from '@kinotic/continuum-idl'
 import {createConversionContext} from '../internal/converter/IConversionContext.js'
 import {TypescriptConverterStrategy} from '../internal/converter/typescript/TypescriptConverterStrategy.js'
 import {TypescriptConversionState} from '../internal/converter/typescript/TypescriptConversionState.js'
-import {tsDecoratorToC3Decorator} from '../internal/converter/typescript/Utils.js'
+import {tsDecoratorToC3Decorator} from '../internal/converter/typescript/ConverterUtils.js'
 import {resolveServer} from '../internal/state/Environment.js'
 import {
     Continuum
@@ -14,32 +13,13 @@ import {
 import {Structures, IStructureService, Structure} from '@kinotic/structures-api'
 import {connectAndUpgradeSession, Logger} from '../internal/Utils.js'
 import inquirer from 'inquirer'
-import { WebSocket } from 'ws'
 import chalk from 'chalk'
+import {StructuresProject, loadStructuresProject, NamespaceConfig} from '../internal/state/StructuresProject.js'
+
+import { WebSocket } from 'ws'
 
 // This is required when running Continuum from node
 Object.assign(global, { WebSocket})
-
-function isEmpty(value: any): boolean {
-    if (value === null || value === undefined) {
-        return true;
-    }
-
-    if (Array.isArray(value)) {
-        return value.every(isEmpty);
-    }
-    else if (typeof (value) === 'object') {
-        return Object.values(value).every(isEmpty);
-    }
-
-    return false;
-}
-
-function replacer(key: any, value: any) {
-    return isEmpty(value)
-           ? undefined
-           : value;
-}
 
 export class Synchronize extends Command {
     static description = 'Synchronize the local Entity definitions with the Structures Server'
@@ -49,9 +29,10 @@ export class Synchronize extends Command {
     ]
 
     static flags = {
-        entities: Flags.string({char: 'e', description: 'Path to the directory containing the Entity definitions', required: true}),
-        server: Flags.string({char: 's', description: 'The structures server to connect to'}),
-        debug: Flags.boolean({char: 'd', description: 'Enable debug logging', required: false, default: false}),
+        entities:   Flags.string({char: 'e', description: 'Path to the directory containing the Entity definitions', required: true}),
+        // generated:  Flags.string({char: 'g', description: 'Path to the directory to write generated Services'}),
+        server:     Flags.string({char: 's', description: 'The structures server to connect to'}),
+        verbose:      Flags.boolean({char: 'v', description: 'Enable verbose logging'}),
     }
 
     static args = {
@@ -62,26 +43,53 @@ export class Synchronize extends Command {
         const {args, flags} = await this.parse(Synchronize)
 
         try {
+            //
+            // const namespaceConfig = await this.loadNamespaceConfig(args.namespace)
+            //
+            //
+            // if(!namespaceConfig){
+            //     // noinspection ExceptionCaughtLocallyJS
+            //     throw new Error('No namespace specified and no default namespace found')
+            // }
+            //
+            // let entities = flags.entities || namespaceConfig?.entityPath
+            // let generated = flags.generated || namespaceConfig?.generatedPath
+            //
+            // if(!entities){
+            //     const answer = await inquirer.prompt({
+            //         type: 'input',
+            //         name: 'entities',
+            //         message: 'Please provide the path to the directory containing the Entity definitions',
+            //         default: 'src/entities'
+            //     })
+            //     if(answer.entities) {
+            //         entities = answer.entities
+            //     }else {
+            //         // noinspection ExceptionCaughtLocallyJS
+            //         throw new Error('No entities path provided')
+            //     }
+            // }
+
             const serverConfig = await resolveServer(this.config.configDir, flags.server)
 
             if (await connectAndUpgradeSession(serverConfig.url, this)) {
                 try {
                     const entitiesPath = path.resolve(flags.entities)
-                    const entities: ObjectC3Type[] = this.findAllEntities(entitiesPath, args.namespace, flags.debug)
+                    const convertedEntities: ObjectC3Type[] = this.findAllEntities(entitiesPath, args.namespace, flags.verbose)
 
                     await Structures.getNamespaceService().createNamespaceIfNotExist(args.namespace, '')
 
-                    if (entities.length > 0) {
+                    if (convertedEntities.length > 0) {
 
-                        for (const entity of entities) {
+                        for (const entity of convertedEntities) {
                             await this.synchronizeEntity(entity, this)
                         }
+
                         this.log('Synchronization Complete')
 
                     } else {
                         this.log('No Entities found to Synchronize')
                     }
-
                 } catch (e) {
                     if (e instanceof Error) {
                         this.error(e.message)
@@ -99,13 +107,15 @@ export class Synchronize extends Command {
         return
     }
 
-    private async writeEntitiesJsonToFilesystem(namespace: string, entities: ObjectC3Type[]): Promise<void> {
-        // save the c3types to the local filesystem
-        const json = JSON.stringify(entities, replacer, 2)
-        if(json && json.length > 0) {
-            const outputPath = path.resolve('.structures', 'entity-definitions', namespace + '.json')
-            await fsPromises.mkdir(path.dirname(outputPath), {recursive: true})
-            await fsPromises.writeFile(outputPath, json)
+    private async loadNamespaceConfig(namespace: string | undefined): Promise<NamespaceConfig | null>{
+
+        const project: StructuresProject = await loadStructuresProject()
+
+        const namespaceToLoad =  namespace || project.defaultNamespaceName
+        if(namespaceToLoad){
+            return project.findNamespaceConfig(namespaceToLoad)
+        }else{
+            return null
         }
     }
 

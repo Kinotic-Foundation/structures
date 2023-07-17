@@ -1,4 +1,4 @@
-import {Entity, Id, MultiTenancyType} from '@kinotic/structures-data'
+import {Entity, Id, MultiTenancyType, Precision, PrecisionType} from '@kinotic/structures-api'
 import {Address} from './Address.js'
 import {Car, Motorcycle, Vehicle} from './Vehicles.js'
 import {RetirementStatus} from './RetirementStatus.js'
@@ -19,6 +19,7 @@ export class Person {
 
     public retirementStatus?: RetirementStatus
 
+    @Precision(PrecisionType.SHORT)
     public age?: number
 
     public address!: Address

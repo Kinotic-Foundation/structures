@@ -5,9 +5,12 @@ settings:
   excludeLinksFromLockfile: false
 
 dependencies:
-  '@kinotic/structures-data':
-    specifier: link:.yalc/@kinotic/structures-data
-    version: link:.yalc/@kinotic/structures-data
+  '@kinotic/continuum-idl':
+    specifier: ^1.0.0
+    version: 1.0.0
+  '@kinotic/structures-api':
+    specifier: ^1.4.0
+    version: 1.4.0(@kinotic/continuum-client@2.5.1)(@kinotic/continuum-idl@1.0.0)
   vue:
     specifier: ^3.2.47
     version: 3.2.47
@@ -253,6 +256,47 @@ packages:
     resolution: {integrity: sha512-eF2rxCRulEKXHTRiDrDy6erMYWqNw4LPdQ8UQA4huuxaQsVeRPFl2oM8oDGxMFhJUWZf9McpLtJasDDZb/Bpeg==}
     dev: true
 
+  /@kinotic/continuum-client@2.5.1:
+    resolution: {integrity: sha512-8E443zdz+wpAl++FlUzs1uoqNHVtpRlUBV2YrvnypYVDxfTsgGEwDOd3M6EDK+0r6/KYMXKA2QLgq6xgpwwwwg==}
+    dependencies:
+      '@stomp/rx-stomp': 2.0.0(@stomp/stompjs@7.0.0)(rxjs@7.8.1)(uuid@9.0.0)
+      '@stomp/stompjs': 7.0.0
+      elliptic: 6.5.4
+      rxjs: 7.8.1
+      typescript-optional: 3.0.0-alpha.3
+      uuid: 9.0.0
+    dev: false
+
+  /@kinotic/continuum-idl@1.0.0:
+    resolution: {integrity: sha512-CRm2XbrxjSR2J15Ua8tEFfAoZ5BUPGUaMYR+VySURWi8igo4ZbFCCpJ9L5AJ6rqTH4HDIYqZDk47f9iTaF5f+A==}
+    dev: false
+
+  /@kinotic/structures-api@1.4.0(@kinotic/continuum-client@2.5.1)(@kinotic/continuum-idl@1.0.0):
+    resolution: {integrity: sha512-R/7BJ9KVp7MVxMllYIx68TsqqiHSkBFPXNCtgSs+CspNOturAZQu4/nJAKyNEgRBVG0gTWJiGiJmgwuDd8PoBA==}
+    peerDependencies:
+      '@kinotic/continuum-client': ^2.5.1
+      '@kinotic/continuum-idl': ^1.0.0
+    dependencies:
+      '@kinotic/continuum-client': 2.5.1
+      '@kinotic/continuum-idl': 1.0.0
+    dev: false
+
+  /@stomp/rx-stomp@2.0.0(@stomp/stompjs@7.0.0)(rxjs@7.8.1)(uuid@9.0.0):
+    resolution: {integrity: sha512-3UxTxAA3NWGnwFfIvN8AigJ7BxGXG0u5IK8K12mQ9cCMuaT/MM7xlyZnuV8sDbHiqqLlbwA1wk1fDfUyOTIeug==}
+    peerDependencies:
+      '@stomp/stompjs': ^7.0.0
+      rxjs: ^7.2.0
+      uuid: ^9.0.0
+    dependencies:
+      '@stomp/stompjs': 7.0.0
+      rxjs: 7.8.1
+      uuid: 9.0.0
+    dev: false
+
+  /@stomp/stompjs@7.0.0:
+    resolution: {integrity: sha512-fGdq4wPDnSV/KyOsjq4P+zLc8MFWC3lMmP5FBgLWKPJTYcuCbAIrnRGjB7q2jHZdYCOD5vxLuFoKIYLy5/u8Pw==}
+    dev: false
+
   /@vitejs/plugin-vue@4.1.0(vite@4.3.9)(vue@3.2.47):
     resolution: {integrity: sha512-++9JOAFdcXI3lyer9UKUV4rfoQ3T1RN8yDqoCLar86s0xQct5yblxAE+yWgRnU5/0FOlVCpTZpYSBV/bGWrSrQ==}
     engines: {node: ^14.18.0 || >=16.0.0}
@@ -443,11 +487,19 @@ packages:
     resolution: {integrity: sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw==}
     dev: true
 
+  /bn.js@4.12.0:
+    resolution: {integrity: sha512-c98Bf3tPniI+scsdk237ku1Dc3ujXQTSgyiPUDEOe7tRkhrqridvh8klBv0HCEso1OLOYcHuCv/cS6DNxKH+ZA==}
+    dev: false
+
   /brace-expansion@2.0.1:
     resolution: {integrity: sha512-XnAIvQ8eM+kC6aULx6wuQiwVsnzsi9d3WxzV3FpWTGA19F621kwdbsAcFKXgKUHZWsy+mY6iL1sHTxWEFCytDA==}
     dependencies:
       balanced-match: 1.0.2
     dev: true
+
+  /brorand@1.1.0:
+    resolution: {integrity: sha512-cKV8tMCEpQs4hK/ik71d6LrPOnpkpGBR0wzxqr68g2m/LB2GxVYQroAjMJZRVM1Y4BCjCKc3vAamxSzOY2RP+w==}
+    dev: false
 
   /csstype@2.6.21:
     resolution: {integrity: sha512-Z1PhmomIfypOpoMjRQB70jfvy/wxT50qW08YXO5lMIJkrdq4yOTR+AW7FqutScmB9NkLwxo+jU+kZLbofZZq/w==}
@@ -455,6 +507,18 @@ packages:
   /de-indent@1.0.2:
     resolution: {integrity: sha512-e/1zu3xH5MQryN2zdVaF0OrdNLUbvWxzMbi+iNA6Bky7l1RoP8a2fIbRocyHclXt/arDrrR6lL3TqFD9pMQTsg==}
     dev: true
+
+  /elliptic@6.5.4:
+    resolution: {integrity: sha512-iLhC6ULemrljPZb+QutR5TQGB+pdW6KGD5RSegS+8sorOZT+rdQFbsQFJgvN3eRqNALqJer4oQ16YvJHlU8hzQ==}
+    dependencies:
+      bn.js: 4.12.0
+      brorand: 1.1.0
+      hash.js: 1.1.7
+      hmac-drbg: 1.0.1
+      inherits: 2.0.4
+      minimalistic-assert: 1.0.1
+      minimalistic-crypto-utils: 1.0.1
+    dev: false
 
   /esbuild@0.17.19:
     resolution: {integrity: sha512-XQ0jAPFkK/u3LcVRcvVHQcTIqD6E2H1fvZMA5dQPSOWb3suUbWbfbRf94pjc0bNzRYLfIrDRQXr7X+LHIm5oHw==}
@@ -497,10 +561,29 @@ packages:
     dev: true
     optional: true
 
+  /hash.js@1.1.7:
+    resolution: {integrity: sha512-taOaskGt4z4SOANNseOviYDvjEJinIkRgmp7LbKP2YTTmVxWBl87s/uzK9r+44BclBSp2X7K1hqeNfz9JbBeXA==}
+    dependencies:
+      inherits: 2.0.4
+      minimalistic-assert: 1.0.1
+    dev: false
+
   /he@1.2.0:
     resolution: {integrity: sha512-F/1DnUGPopORZi0ni+CvrCgHQ5FyEAHRLSApuYWMmrbSwoN2Mn/7k+Gl38gJnR7yyDZk6WLXwiGod1JOWNDKGw==}
     hasBin: true
     dev: true
+
+  /hmac-drbg@1.0.1:
+    resolution: {integrity: sha512-Tti3gMqLdZfhOQY1Mzf/AanLiqh1WTiJgEj26ZuYQ9fbkLomzGchCws4FyrSd4VkpBfiNhaE1On+lOz894jvXg==}
+    dependencies:
+      hash.js: 1.1.7
+      minimalistic-assert: 1.0.1
+      minimalistic-crypto-utils: 1.0.1
+    dev: false
+
+  /inherits@2.0.4:
+    resolution: {integrity: sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==}
+    dev: false
 
   /lru-cache@6.0.0:
     resolution: {integrity: sha512-Jo6dJ04CmSjuznwJSS3pUeWmd/H0ffTlkXXgwZi+eq1UCmqQwCh+eLsYOYCwY991i2Fah4h1BEMCx4qThGbsiA==}
@@ -520,6 +603,14 @@ packages:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.4.15
     dev: true
+
+  /minimalistic-assert@1.0.1:
+    resolution: {integrity: sha512-UtJcAD4yEaGtjPezWuO9wC4nwUnVH/8/Im3yEHQP4b67cXlD/Qr9hdITCU1xDbSEXg2XKNaP8jsReV7vQd00/A==}
+    dev: false
+
+  /minimalistic-crypto-utils@1.0.1:
+    resolution: {integrity: sha512-JIYlbt6g8i5jKfJ3xz7rF0LXmv2TkDxBLUkiBeZ7bAx4GnnNMr8xFpGnOxn6GhTEHx3SjRrZEoU+j04prX1ktg==}
+    dev: false
 
   /minimatch@9.0.2:
     resolution: {integrity: sha512-PZOT9g5v2ojiTL7r1xF6plNHLtOeTpSlDI007As2NlA2aYBMfVom17yqa6QzhmDP8QOhn7LjHTg7DFCVSSa6yg==}
@@ -556,6 +647,12 @@ packages:
       fsevents: 2.3.2
     dev: true
 
+  /rxjs@7.8.1:
+    resolution: {integrity: sha512-AA3TVj+0A2iuIoQkWEK/tqFjBq2j+6PO6Y0zJcvzLAFhEFIO3HL0vls9hWLncZbAAbK0mar7oZ4V079I/qPMxg==}
+    dependencies:
+      tslib: 2.6.0
+    dev: false
+
   /semver@7.5.3:
     resolution: {integrity: sha512-QBlUtyVk/5EeHbi7X0fw6liDZc7BBmEaSYn01fMU1OUYbf6GPsbTtd8WmnqbI20SeycoHSeiybkE/q1Q+qlThQ==}
     engines: {node: '>=10'}
@@ -580,11 +677,24 @@ packages:
     resolution: {integrity: sha512-/OaKK0xYrs3DmxRYqL/yDc+FxFUVYhDlXMhRmv3z915w2HF1tnN1omB354j8VUGO/hbRzyD6Y3sA7v7GS/ceog==}
     engines: {node: '>=4'}
 
+  /tslib@2.6.0:
+    resolution: {integrity: sha512-7At1WUettjcSRHXCyYtTselblcHl9PJFFVKiCAy/bY97+BPZXSQ2wbq0P9s8tK2G7dFQfNnlJnPAiArVBVBsfA==}
+    dev: false
+
+  /typescript-optional@3.0.0-alpha.3:
+    resolution: {integrity: sha512-X2JbUQA+WK0P8gwiickO6s8yZnX/ufov6zx4hbvdYVqHFTz8fAYoh+8JMKxVzQuh2/aMUvF9KSNqXi4p6pNxuA==}
+    dev: false
+
   /typescript@5.0.2:
     resolution: {integrity: sha512-wVORMBGO/FAs/++blGNeAVdbNKtIh1rbBL2EyQ1+J9lClJ93KiiKe8PmFIVdXhHcyv44SL9oglmfeSsndo0jRw==}
     engines: {node: '>=12.20'}
     hasBin: true
     dev: true
+
+  /uuid@9.0.0:
+    resolution: {integrity: sha512-MXcSTerfPa4uqyzStbRoTgt5XIe3x5+42+q1sDuy3R5MDk66URdLMOZe5aPX/SQd+kuYAh0FdP/pO28IkQyTeg==}
+    hasBin: true
+    dev: false
 
   /vite@4.3.9:
     resolution: {integrity: sha512-qsTNZjO9NoJNW7KnOrgYwczm0WctJ8m/yqYAMAK9Lxt4SoySUfS5S8ia9K7JHpa3KEeMfyF8LoJ3c5NeBJy6pg==}

@@ -110,7 +110,7 @@ export default class CrudEntityAddEdit extends Vue {
     private dialog: boolean = false
     private valid: boolean = true
     private loading: boolean = false
-   private rulesForIdentity: RuleValidator[] = []
+    private rulesForIdentity: RuleValidator[] = []
 
     constructor() {
         super()
@@ -120,10 +120,10 @@ export default class CrudEntityAddEdit extends Vue {
     public mounted() {
         if(this.identityRules.length === 0){
             this.rulesForIdentity = [
-              ( v ) => !!v || this.identityLabel + ' is required'
+                ( v ) => !!v || this.identityLabel + ' is required'
             ]
         }else{
-          this.rulesForIdentity = this.identityRules
+            this.rulesForIdentity = this.identityRules
         }
 
         this.crudServiceProxy = Continuum.crudServiceProxy(this.crudServiceIdentifier)

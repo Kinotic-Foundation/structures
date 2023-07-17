@@ -10,10 +10,34 @@ import {
 import { v4 as uuidv4 } from 'uuid'
 import inquirer from 'inquirer'
 import open from 'open'
-import chalk from 'chalk'
+import pTimeout from 'p-timeout'
+import {ObjectC3Type} from '@kinotic/continuum-idl'
+import path from 'path'
+import fsPromises from 'fs/promises'
 
 export type Logger = {
     log(message?: string, ...args: any[]): void;
+}
+
+function isEmpty(value: any): boolean {
+    if (value === null || value === undefined) {
+        return true;
+    }
+
+    if (Array.isArray(value)) {
+        return value.every(isEmpty);
+    }
+    else if (typeof (value) === 'object') {
+        return Object.values(value).every(isEmpty);
+    }
+
+    return false;
+}
+
+export function jsonStringifyReplacer(key: any, value: any) {
+    return isEmpty(value)
+           ? undefined
+           : value;
 }
 
 /**
@@ -51,7 +75,10 @@ export async function connectAndUpgradeSession(server: string, logger: Logger): 
         connectionInfo.connectHeaders = {
             login: ParticipantConstants.CLI_PARTICIPANT_ID
         }
-        const connectedInfo: ConnectedInfo = await Continuum.connect(connectionInfo)
+        const connectedInfo: ConnectedInfo = await pTimeout(Continuum.connect(connectionInfo), {
+            milliseconds: 30000,
+            message: 'Connection timeout trying to connect to the Structures Server'
+        })
 
         if (connectedInfo) {
 
@@ -129,4 +156,18 @@ function receiveSessionId(scope: string): Promise<string> {
             }
         })
     })
+}
+
+/**
+ * Will save the c3types to the local filesystem
+ * @param namespace to save the entities forr
+ * @param entities to save
+ */
+export async function writeEntitiesJsonToFilesystem(namespace: string, entities: ObjectC3Type[]): Promise<void> {
+    const json = JSON.stringify(entities, jsonStringifyReplacer, 2)
+    if (json && json.length > 0) {
+        const outputPath = path.resolve('.structures', 'entity-definitions', namespace + '.json')
+        await fsPromises.mkdir(path.dirname(outputPath), {recursive: true})
+        await fsPromises.writeFile(outputPath, json)
+    }
 }

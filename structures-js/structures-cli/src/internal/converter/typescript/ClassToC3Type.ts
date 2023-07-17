@@ -3,7 +3,7 @@ import {C3Decorator, C3Type, ObjectC3Type} from '@kinotic/continuum-idl'
 import {TypescriptConversionState} from './TypescriptConversionState.js'
 import {IConversionContext} from '../IConversionContext.js'
 import {ITypeConverter} from '../ITypeConverter.js'
-import {tsDecoratorToC3Decorator} from './Utils.js'
+import {tsDecoratorToC3Decorator, convertPrecisionToC3Type} from './ConverterUtils.js'
 
 /**
  * Converts a typescript class to a C3Type
@@ -27,16 +27,30 @@ export class ClassToC3Type implements ITypeConverter<Type, Type, TypescriptConve
             }
 
             const valueDeclaration = property.getValueDeclarationOrThrow("No value declaration could be found for property "+propertyName)
-
-            const converted = conversionContext.convert(valueDeclaration.getType())
-
             // Typescript cannot detect that this can be a DecoratableNode, so we have to cast it
-            if((valueDeclaration as unknown as DecoratableNode)?.getDecorators()) {
+            const decoratableNode = valueDeclaration as unknown as DecoratableNode
+
+            let converted: C3Type
+
+            const precisionDecorator = decoratableNode?.getDecorator('Precision')
+            if(precisionDecorator){
+                // TODO: Verify this is a number type. This could also be a union type that has a number in the case of somehting like
+                // public myNumber: number | null
+                // or public myNumber?: number
+                converted = convertPrecisionToC3Type(precisionDecorator)
+            }else{
+                converted = conversionContext.convert(valueDeclaration.getType())
+            }
+
+            if(decoratableNode?.getDecorators()) {
                 const nodeWithDecorators = valueDeclaration as unknown as DecoratableNode
                 for (const decorator of nodeWithDecorators.getDecorators()) {
-                    const c3Decorator: C3Decorator = tsDecoratorToC3Decorator(decorator)
-                    if(!converted.containsDecorator(c3Decorator)){
-                        converted.addDecorator(c3Decorator)
+                    // We have already handled Precision above
+                    if(decorator.getName() !== 'Precision'){
+                        const c3Decorator: C3Decorator = tsDecoratorToC3Decorator(decorator)
+                        if(!converted.containsDecorator(c3Decorator)){
+                            converted.addDecorator(c3Decorator)
+                        }
                     }
                 }
             }

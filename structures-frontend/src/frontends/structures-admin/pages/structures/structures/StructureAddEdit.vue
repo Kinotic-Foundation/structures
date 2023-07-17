@@ -46,15 +46,13 @@
 
 import {Component, Prop, Vue} from 'vue-property-decorator'
 import CrudEntityAddEdit from '@/frontends/continuum/components/CrudEntityAddEdit.vue'
-import {Structure, Structures, IStructureService} from '@kinotic/structures-api'
+import {EntityDecorator, MultiTenancyType, Structure, Structures, IStructureService} from '@kinotic/structures-api'
 import {
     ArrayC3Type,
     C3Type,
-    EntityDecorator,
-    IdC3Type,
-    MultiTenancyType,
     ObjectC3Type
 } from '@kinotic/continuum-idl'
+import {IdC3Type} from '@/frontends/structures-admin/idl/decorators/IdC3Type'
 import {
     mdiFormatText,
     mdiBugCheck

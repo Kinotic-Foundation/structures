@@ -9,7 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@kinotic/structures-data": "link:.yalc/@kinotic/structures-data",
+    "@kinotic/continuum-idl": "^1.0.0",
+    "@kinotic/structures-api": "^1.4.0",
     "vue": "^3.2.47"
   },
   "devDependencies": {

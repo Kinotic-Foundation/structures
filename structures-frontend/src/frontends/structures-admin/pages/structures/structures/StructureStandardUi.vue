@@ -203,7 +203,7 @@ import {
     mdiClose,
     mdiPlus
 } from '@mdi/js'
-import {Structure} from '@kinotic/structures-api'
+import {Structure, TextDecorator} from '@kinotic/structures-api'
 import {
     ArrayC3Type,
     BooleanC3Type,
@@ -223,7 +223,6 @@ import {
     ReferenceC3Type,
     ShortC3Type,
     StringC3Type,
-    TextDecorator,
     UnionC3Type
 } from "@kinotic/continuum-idl"
 import {IndexNameHelper} from "@/frontends/structures-admin/pages/structures/util/IndexNameHelper"
