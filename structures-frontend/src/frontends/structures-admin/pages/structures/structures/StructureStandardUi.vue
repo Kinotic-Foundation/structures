@@ -178,17 +178,12 @@
                 </v-list>
                 <v-card-actions>
                     <v-spacer></v-spacer>
-                    <v-btn-toggle rounded>
-                        <v-btn large tile @click="closeDialog">
-                            Done
-                        </v-btn>
-                        <v-btn large tile @click="clearNewProperty">
-                            Reset
-                        </v-btn>
-                        <v-btn large tile @click="manageProperty" :disabled="!valid">
-                            {{ this.editing ? 'Update' : 'Add' }}
-                        </v-btn>
-                    </v-btn-toggle>
+                    <v-btn @click="closeDialog">
+                        Done
+                    </v-btn>
+                    <v-btn color="primary" @click="manageProperty" :disabled="!valid">
+                        {{ this.editing ? 'Update' : 'Add' }}
+                    </v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
@@ -224,11 +219,11 @@ import {
     ShortC3Type,
     StringC3Type,
     UnionC3Type
-} from "@kinotic/continuum-idl"
-import {IndexNameHelper} from "@/frontends/structures-admin/pages/structures/util/IndexNameHelper"
-import {PropType} from "vue";
-import {Identifiable} from "@kinotic/continuum-client";
-import {StructureUtil} from "@/frontends/structures-admin/pages/structures/util/StructureUtil";
+} from '@kinotic/continuum-idl'
+import {IndexNameHelper} from '@/frontends/structures-admin/pages/structures/util/IndexNameHelper'
+import {PropType} from 'vue'
+import {Identifiable} from '@kinotic/continuum-client'
+import {StructureUtil} from '@/frontends/structures-admin/pages/structures/util/StructureUtil'
 
 
 @Component({
@@ -258,12 +253,12 @@ export default class StructureStandardUi extends Vue {
     private keys: string[] = []
     private propertyType: C3Type = new StringC3Type()
     private propertyArrayContainsType: C3Type | null = null
-    private propertyName: string = ""
-    private propertyDescription: string = ""
+    private propertyName: string = ''
+    private propertyDescription: string = ''
     private propertyNotNull: boolean = false
     private arrayContainsPropertyNotNull: boolean = false
     private propertyText: boolean = false
-    private propertyEnumOptions: string = ""
+    private propertyEnumOptions: string = ''
     private arrayContainsPropertyTypes: C3Type[] = [
         new BooleanC3Type(),
         new ByteC3Type(),
@@ -334,25 +329,25 @@ export default class StructureStandardUi extends Vue {
         }
         this.propertyType.metadata.description = this.propertyDescription
 
-        this.checkForDecoratorAndManage("NotNull", new NotNullDecorator(), this.propertyType, this.propertyNotNull)
+        this.checkForDecoratorAndManage('NotNull', new NotNullDecorator(), this.propertyType, this.propertyNotNull)
 
-        if (this.propertyType.type === "string") {
-            this.checkForDecoratorAndManage("Text", new TextDecorator(), this.propertyType, this.propertyText)
+        if (this.propertyType.type === 'string') {
+            this.checkForDecoratorAndManage('Text', new TextDecorator(), this.propertyType, this.propertyText)
         }
-        if (this.propertyType.type === "enum") {
+        if (this.propertyType.type === 'enum') {
             if ((this.propertyType as EnumC3Type)?.values === undefined) {
                 (this.propertyType as EnumC3Type).values = []
             }
             (this.propertyType as EnumC3Type).values = this.propertyEnumOptions.split(',')
         }
 
-        if (this.propertyType.type === "array" && this.propertyArrayContainsType !== null) {
-            this.checkForDecoratorAndManage("NotNull", new NotNullDecorator(), this.propertyArrayContainsType, this.arrayContainsPropertyNotNull)
+        if (this.propertyType.type === 'array' && this.propertyArrayContainsType !== null) {
+            this.checkForDecoratorAndManage('NotNull', new NotNullDecorator(), this.propertyArrayContainsType, this.arrayContainsPropertyNotNull)
 
-            if (this.propertyArrayContainsType?.type === "string") {
-                this.checkForDecoratorAndManage("Text", new TextDecorator(), this.propertyArrayContainsType, this.propertyText)
+            if (this.propertyArrayContainsType?.type === 'string') {
+                this.checkForDecoratorAndManage('Text', new TextDecorator(), this.propertyArrayContainsType, this.propertyText)
             }
-            if (this.propertyArrayContainsType.type === "enum") {
+            if (this.propertyArrayContainsType.type === 'enum') {
                 if ((this.propertyArrayContainsType as EnumC3Type)?.values === undefined) {
                     (this.propertyArrayContainsType as EnumC3Type).values = []
                 }
@@ -375,12 +370,12 @@ export default class StructureStandardUi extends Vue {
     private clearNewProperty() {
         this.propertyType = new StringC3Type()
         this.propertyArrayContainsType = new StringC3Type()
-        this.propertyName = ""
-        this.propertyDescription = ""
+        this.propertyName = ''
+        this.propertyDescription = ''
         this.propertyNotNull = false
         this.arrayContainsPropertyNotNull = false
         this.propertyText = false
-        this.propertyEnumOptions = ""
+        this.propertyEnumOptions = ''
     }
 
     private deleteProperty(key: string) {
@@ -393,29 +388,29 @@ export default class StructureStandardUi extends Vue {
         this.editing = true
         this.propertyType = this.structure.entityDefinition.properties[key]
         this.propertyName = key
-        this.propertyDescription = this.propertyType.metadata?.description || ""
+        this.propertyDescription = this.propertyType.metadata?.description || ''
         if (this.propertyType?.decorators && this.propertyType.decorators.length > 0) {
             this.propertyType.decorators.forEach((decorator) => {
-                if (decorator.type === "NotNull") {
+                if (decorator.type === 'NotNull') {
                     this.propertyNotNull = true
-                } else if (decorator.type === "Text") {
+                } else if (decorator.type === 'Text') {
                     this.propertyText = true
                 }
             })
         }
 
-        if (this.propertyType.type === "enum") {
+        if (this.propertyType.type === 'enum') {
             this.propertyEnumOptions = (this.propertyType as EnumC3Type).values.join(',')
         }
 
-        if (this.propertyType.type === "array") {
+        if (this.propertyType.type === 'array') {
             this.propertyArrayContainsType = (this.propertyType as ArrayC3Type).contains
             if (this.propertyArrayContainsType !== null) {
                 if (this.propertyArrayContainsType?.decorators && this.propertyArrayContainsType?.decorators.length > 0) {
                     this.propertyArrayContainsType.decorators.forEach((decorator) => {
-                        if (decorator.type === "NotNull") {
+                        if (decorator.type === 'NotNull') {
                             this.arrayContainsPropertyNotNull = true
-                        } else if (decorator.type === "Text") {
+                        } else if (decorator.type === 'Text') {
                             this.propertyText = true
                         }
                     })
