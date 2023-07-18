@@ -41,6 +41,9 @@ dependencies:
   inquirer:
     specifier: ^9.2.8
     version: 9.2.8
+  liquidjs:
+    specifier: ^10.8.4
+    version: 10.8.4
   open:
     specifier: ^9.1.0
     version: 9.1.0
@@ -2161,6 +2164,11 @@ packages:
     engines: {node: '>=0.1.90'}
     dev: true
 
+  /commander@10.0.1:
+    resolution: {integrity: sha512-y4Mg2tXshplEbSGzx7amzPwKKOCGuoSRP/CjEdwwk0FOGlUbq6lKuoyDZTNZkmxHdJtp54hdfY/JUrdL7Xfdug==}
+    engines: {node: '>=14'}
+    dev: false
+
   /commander@7.1.0:
     resolution: {integrity: sha512-pRxBna3MJe6HKnBGsDyMv8ETbptw3axEdYHoqNh7gu5oDcew8fs0xnivZGm06Ogk8zGAJ9VX+OPEr2GXEQK4dg==}
     engines: {node: '>= 10'}
@@ -3816,6 +3824,14 @@ packages:
   /lines-and-columns@1.2.4:
     resolution: {integrity: sha512-7ylylesZQ/PV29jhEDl3Ufjo6ZX7gCqJr5F7PKrqc93v7fzSymt1BpwEU8nAUXs8qzzvqhbjhK5QZg6Mt/HkBg==}
     dev: true
+
+  /liquidjs@10.8.4:
+    resolution: {integrity: sha512-HSpYAFBVWxhwWsTKPBJgPm3bnwwIzAZjy17XhX7uJCKJ8H6A1YstZSFmPqMmWfSuJOg43RSx+qWVSA1Fu3+B2w==}
+    engines: {node: '>=14'}
+    hasBin: true
+    dependencies:
+      commander: 10.0.1
+    dev: false
 
   /load-json-file@5.3.0:
     resolution: {integrity: sha512-cJGP40Jc/VXUsp8/OrnyKyTZ1y6v/dphm3bioS+RrKXjK2BB6wHUd6JptZEFDGgGahMT+InnZO5i1Ei9mpC8Bw==}

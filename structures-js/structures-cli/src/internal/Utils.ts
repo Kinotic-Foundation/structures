@@ -117,7 +117,7 @@ export async function connectAndUpgradeSession(server: string, logger: Logger): 
             }
 
             await Continuum.connect(connectionInfo)
-
+            logger.log('Authenticated successfully\n')
             return true
         }else{
             logger.log("Could not connect to the Structures Server. Please check the server is running and the URL is correct.")

@@ -1,6 +1,6 @@
 {
     "name": "structures-cli",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "description": "Structures CLI provides the ability to interact with the Structures Server",
     "author": "Kinotic Developers",
     "bin": {
@@ -30,6 +30,7 @@
         "@oclif/plugin-warn-if-update-available": "^2.0.40",
         "chalk": "^5.3.0",
         "inquirer": "^9.2.8",
+        "liquidjs": "^10.8.4",
         "open": "^9.1.0",
         "p-timeout": "^6.1.2",
         "radash": "^11.0.0",
@@ -73,13 +74,14 @@
         "topics": {}
     },
     "scripts": {
-        "build": "shx rm -rf dist && tsc -b",
+        "build": "shx rm -rf dist && tsc -b && pnpm run copy-files",
         "lint": "eslint . --ext .ts --config .eslintrc",
         "postpack": "shx rm -f oclif.manifest.json",
         "posttest": "pnpm lint",
         "prepack": "pnpm build && oclif manifest && oclif readme",
         "test": "mocha --forbid-only \"test/**/*.test.ts\"",
-        "version": "oclif readme && git add README.md"
+        "version": "oclif readme && git add README.md",
+        "copy-files": "cp -r ./src/templates/  ./dist/templates/"
     },
     "engines": {
         "node": ">=18.0.0"
