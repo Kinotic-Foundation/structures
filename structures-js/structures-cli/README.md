@@ -8,11 +8,11 @@ Structures CLI
 # Usage
 <!-- usage -->
 ```sh-session
-$ npm install -g structures-cli
+$ npm install -g @kinotic/structures-cli
 $ structures COMMAND
 running command...
 $ structures (--version)
-structures-cli/0.3.0 darwin-x64 node-v18.15.0
+@kinotic/structures-cli/0.3.0 darwin-x64 node-v18.15.0
 $ structures --help [COMMAND]
 USAGE
   $ structures COMMAND
