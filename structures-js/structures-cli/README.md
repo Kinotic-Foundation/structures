@@ -1,11 +1,5 @@
-oclif-hello-world
+Structures CLI
 =================
-
-oclif example Hello World CLI
-
-[![oclif](https://img.shields.io/badge/cli-oclif-brightgreen.svg)](https://oclif.io)
-[![CircleCI](https://circleci.com/gh/oclif/hello-world/tree/main.svg?style=shield)](https://circleci.com/gh/oclif/hello-world/tree/main)
-[![GitHub license](https://img.shields.io/github/license/oclif/hello-world)](https://github.com/oclif/hello-world/blob/main/LICENSE)
 
 <!-- toc -->
 * [Usage](#usage)
@@ -18,7 +12,7 @@ $ npm install -g structures-cli
 $ structures COMMAND
 running command...
 $ structures (--version)
-structures-cli/0.0.0 darwin-x64 node-v18.15.0
+structures-cli/0.3.0 darwin-x64 node-v18.15.0
 $ structures --help [COMMAND]
 USAGE
   $ structures COMMAND
@@ -27,9 +21,8 @@ USAGE
 <!-- usagestop -->
 # Commands
 <!-- commands -->
-* [`structures hello PERSON`](#structures-hello-person)
-* [`structures hello world`](#structures-hello-world)
-* [`structures help [COMMANDS]`](#structures-help-commands)
+* [`structures autocomplete [SHELL]`](#structures-autocomplete-shell)
+* [`structures help [COMMAND]`](#structures-help-command)
 * [`structures plugins`](#structures-plugins)
 * [`structures plugins:install PLUGIN...`](#structures-pluginsinstall-plugin)
 * [`structures plugins:inspect PLUGIN...`](#structures-pluginsinspect-plugin)
@@ -39,66 +32,60 @@ USAGE
 * [`structures plugins:uninstall PLUGIN...`](#structures-pluginsuninstall-plugin-1)
 * [`structures plugins:uninstall PLUGIN...`](#structures-pluginsuninstall-plugin-2)
 * [`structures plugins update`](#structures-plugins-update)
+* [`structures synchronize NAMESPACE`](#structures-synchronize-namespace)
+* [`structures update [CHANNEL]`](#structures-update-channel)
 
-## `structures hello PERSON`
+## `structures autocomplete [SHELL]`
 
-Say hello
+display autocomplete installation instructions
 
 ```
 USAGE
-  $ structures hello PERSON -f <value>
+  $ structures autocomplete [SHELL] [-r]
 
 ARGUMENTS
-  PERSON  Person to say hello to
+  SHELL  (zsh|bash|powershell) Shell type
 
 FLAGS
-  -f, --from=<value>  (required) Who is saying hello
+  -r, --refresh-cache  Refresh cache (ignores displaying instructions)
 
 DESCRIPTION
-  Say hello
+  display autocomplete installation instructions
 
 EXAMPLES
-  $ oex hello friend --from oclif
-  hello friend from oclif! (./src/commands/hello/index.ts)
+  $ structures autocomplete
+
+  $ structures autocomplete bash
+
+  $ structures autocomplete zsh
+
+  $ structures autocomplete powershell
+
+  $ structures autocomplete --refresh-cache
 ```
 
-_See code: [dist/commands/hello/index.ts](https://github.com/Kinotic-Foundation/structures/structures/blob/v0.0.0/dist/commands/hello/index.ts)_
+_See code: [@oclif/plugin-autocomplete](https://github.com/oclif/plugin-autocomplete/blob/v2.3.3/src/commands/autocomplete/index.ts)_
 
-## `structures hello world`
+## `structures help [COMMAND]`
 
-Say hello world
+display help for structures
 
 ```
 USAGE
-  $ structures hello world
-
-DESCRIPTION
-  Say hello world
-
-EXAMPLES
-  $ structures hello world
-  hello world! (./src/commands/hello/world.ts)
-```
-
-## `structures help [COMMANDS]`
-
-Display help for structures.
-
-```
-USAGE
-  $ structures help [COMMANDS] [-n]
+  $ structures help [COMMAND] [--json] [--all]
 
 ARGUMENTS
-  COMMANDS  Command to show help for.
+  COMMAND  command to show help for
 
 FLAGS
-  -n, --nested-commands  Include all nested commands in the output.
+  --all   see all commands in CLI
+  --json  Format output as json.
 
 DESCRIPTION
-  Display help for structures.
+  display help for structures
 ```
 
-_See code: [@oclif/plugin-help](https://github.com/oclif/plugin-help/blob/v5.2.10/src/commands/help.ts)_
+_See code: [@oclif/plugin-help](https://github.com/oclif/plugin-help/blob/v5.0.0/src/commands/help.ts)_
 
 ## `structures plugins`
 
@@ -106,10 +93,13 @@ List installed plugins.
 
 ```
 USAGE
-  $ structures plugins [--core]
+  $ structures plugins [--json] [--core]
 
 FLAGS
   --core  Show core plugins.
+
+GLOBAL FLAGS
+  --json  Format output as json.
 
 DESCRIPTION
   List installed plugins.
@@ -118,7 +108,7 @@ EXAMPLES
   $ structures plugins
 ```
 
-_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v2.4.7/src/commands/plugins/index.ts)_
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v3.1.7/src/commands/plugins/index.ts)_
 
 ## `structures plugins:install PLUGIN...`
 
@@ -332,4 +322,69 @@ FLAGS
 DESCRIPTION
   Update installed plugins.
 ```
+
+## `structures synchronize NAMESPACE`
+
+Synchronize the local Entity definitions with the Structures Server
+
+```
+USAGE
+  $ structures synchronize NAMESPACE -e <value> -g <value> [-s <value>] [-v]
+
+ARGUMENTS
+  NAMESPACE  The namespace the Entities belong to
+
+FLAGS
+  -e, --entities=<value>   (required) Path to the directory containing the Entity definitions
+  -g, --generated=<value>  (required) Path to the directory to write generated Services
+  -s, --server=<value>     The structures server to connect to
+  -v, --verbose            Enable verbose logging
+
+DESCRIPTION
+  Synchronize the local Entity definitions with the Structures Server
+
+EXAMPLES
+  $ structures synchronize my.namespace --entities path/to/entities --generated path/to/services --server http://localhost:8080 --verbose
+
+  $ structures synchronize my.namespace -e path/to/entities -g path/to/services
+```
+
+_See code: [dist/commands/synchronize.ts](https://github.com/Kinotic-Foundatio/structures/blob/v0.3.0/dist/commands/synchronize.ts)_
+
+## `structures update [CHANNEL]`
+
+update the structures CLI
+
+```
+USAGE
+  $ structures update [CHANNEL] [-a] [-v <value> | -i] [--force]
+
+FLAGS
+  -a, --available        Install a specific version.
+  -i, --interactive      Interactively select version to install. This is ignored if a channel is provided.
+  -v, --version=<value>  Install a specific version.
+  --force                Force a re-download of the requested version.
+
+DESCRIPTION
+  update the structures CLI
+
+EXAMPLES
+  Update to the stable channel:
+
+    $ structures update stable
+
+  Update to a specific version:
+
+    $ structures update --version 1.0.0
+
+  Interactively select version:
+
+    $ structures update --interactive
+
+  See available versions:
+
+    $ structures update --available
+```
+
+_See code: [@oclif/plugin-update](https://github.com/oclif/plugin-update/blob/v3.1.27/src/commands/update.ts)_
 <!-- commandsstop -->
