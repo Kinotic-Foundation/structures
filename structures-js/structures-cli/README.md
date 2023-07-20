@@ -12,7 +12,7 @@ $ npm install -g @kinotic/structures-cli
 $ structures COMMAND
 running command...
 $ structures (--version)
-@kinotic/structures-cli/0.3.0 darwin-x64 node-v18.15.0
+@kinotic/structures-cli/0.4.0 darwin-x64 node-v18.17.0
 $ structures --help [COMMAND]
 USAGE
   $ structures COMMAND
@@ -329,7 +329,7 @@ Synchronize the local Entity definitions with the Structures Server
 
 ```
 USAGE
-  $ structures synchronize NAMESPACE -e <value> -g <value> [-s <value>] [-v]
+  $ structures synchronize NAMESPACE -e <value> -g <value> [-s <value>] [-p] [-v]
 
 ARGUMENTS
   NAMESPACE  The namespace the Entities belong to
@@ -337,6 +337,7 @@ ARGUMENTS
 FLAGS
   -e, --entities=<value>   (required) Path to the directory containing the Entity definitions
   -g, --generated=<value>  (required) Path to the directory to write generated Services
+  -p, --publish            Publish each Entity after save/update
   -s, --server=<value>     The structures server to connect to
   -v, --verbose            Enable verbose logging
 
@@ -344,12 +345,12 @@ DESCRIPTION
   Synchronize the local Entity definitions with the Structures Server
 
 EXAMPLES
-  $ structures synchronize my.namespace --entities path/to/entities --generated path/to/services --server http://localhost:8080 --verbose
+  $ structures synchronize my.namespace --entities path/to/entities --generated path/to/services --server http://localhost:9090 --publish --verbose
 
-  $ structures synchronize my.namespace -e path/to/entities -g path/to/services
+  $ structures synchronize my.namespace -e path/to/entities -g path/to/services --publish
 ```
 
-_See code: [dist/commands/synchronize.ts](https://github.com/Kinotic-Foundatio/structures/blob/v0.3.0/dist/commands/synchronize.ts)_
+_See code: [dist/commands/synchronize.ts](https://github.com/Kinotic-Foundation/structures/blob/v0.4.0/dist/commands/synchronize.ts)_
 
 ## `structures update [CHANNEL]`
 

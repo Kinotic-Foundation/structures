@@ -40,7 +40,7 @@ export class Synchronize extends Command {
 
     static examples = [
         '$ structures synchronize my.namespace --entities path/to/entities --generated path/to/services --server http://localhost:9090 --publish --verbose',
-        '$ structures synchronize my.namespace -e path/to/entities -g path/to/services --publish',
+        '$ structures synchronize my.namespace -e path/to/entities -g path/to/services -p',
     ]
 
     static flags = {
