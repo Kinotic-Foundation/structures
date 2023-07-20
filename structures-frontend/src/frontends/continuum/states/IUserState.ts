@@ -27,43 +27,39 @@ export class UserState implements IUserState{
 
     }
 
-    authenticate(login: string, passcode: string): Promise<void> {
-        return new Promise((resolve, reject) => {
-            let connectionInfo: ConnectionInfo =  this.createConnectionInfo()
-            connectionInfo.connectHeaders = {
-                login: login,
-                passcode: passcode
+    async authenticate(login: string, passcode: string): Promise<void> {
+        let connectionInfo: ConnectionInfo =  this.createConnectionInfo()
+        connectionInfo.connectHeaders = {
+            login: login,
+            passcode: passcode
+        }
+        try {
+            this.connectedInfo = await Continuum.connect(connectionInfo)
+            this.authenticated = true
+        }catch(reason: any){
+            if(reason){
+                throw new Error(reason)
+            }else{
+                throw new Error("Credentials invalid")
             }
-            Continuum.connect(connectionInfo)
-                .then(value => {
-                    this.authenticated = true
-                    this.connectedInfo = value
-                    resolve()
-                }).catch(reason => {
-                    if(reason){
-                        reject(new Error(reason))
-                    }else{
-                        reject(new Error("Credentials invalid"))
-                    }
-            })
-        })
+        }
     }
 
-    authenticateKeycloak(keycloak: Keycloak): Promise<void> {
+    async authenticateKeycloak(keycloak: Keycloak): Promise<void> {
         this.keycloak = keycloak
         if(process.env.VUE_APP_KEYCLOAK_ROLE !== "none") {
             if(!this.keycloak.hasRealmRole(process.env.VUE_APP_KEYCLOAK_ROLE)){
                 return CONTINUUM_UI.navigate("/access-denied").then()
             }else{
-                return this.authenticate(this.keycloak.tokenParsed?.email as string, this.keycloak.token as string)
+                await this.authenticate(this.keycloak.tokenParsed?.email as string, this.keycloak.token as string)
             }
         }else{
-            return this.authenticate(this.keycloak.tokenParsed?.email as string, this.keycloak.token as string)
+            await this.authenticate(this.keycloak.tokenParsed?.email as string, this.keycloak.token as string)
         }
     }
 
     isAuthenticated(): boolean {
-        return this.authenticated || (this.keycloak !== undefined && this.keycloak.authenticated === true)
+        return this.authenticated && (this.keycloak !== undefined && this.keycloak.authenticated === true)
     }
 
     createConnectionInfo(): ConnectionInfo {

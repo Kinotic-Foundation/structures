@@ -1069,10 +1069,10 @@
     "@jridgewell/resolve-uri" "3.1.0"
     "@jridgewell/sourcemap-codec" "1.4.14"
 
-"@kinotic/continuum-client@^2.5.1":
-  version "2.5.1"
-  resolved "https://registry.yarnpkg.com/@kinotic/continuum-client/-/continuum-client-2.5.1.tgz#f53281b1b86cf91be845e9de6ed704e73bb0ac9f"
-  integrity sha512-8E443zdz+wpAl++FlUzs1uoqNHVtpRlUBV2YrvnypYVDxfTsgGEwDOd3M6EDK+0r6/KYMXKA2QLgq6xgpwwwwg==
+"@kinotic/continuum-client@^2.5.2":
+  version "2.5.2"
+  resolved "https://registry.yarnpkg.com/@kinotic/continuum-client/-/continuum-client-2.5.2.tgz#c39bd3e408e89751d1c90cce7830063ebc2b51a2"
+  integrity sha512-oY0ZXR9PgJ0MKwuLWDLzYIMrR0k+ODdrwZrqElSOn6xniftynvxypG6xxWMf1gvGP0Bi7MqN+PbpClh5rKZBOw==
   dependencies:
     "@stomp/rx-stomp" "^2.0.0"
     "@stomp/stompjs" "^7.0.0"

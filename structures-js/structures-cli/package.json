@@ -90,5 +90,8 @@
     "keywords": [
         "oclif"
     ],
-    "types": "dist/index.d.ts"
+    "types": "dist/index.d.ts",
+    "volta": {
+        "node": "18.17.0"
+    }
 }

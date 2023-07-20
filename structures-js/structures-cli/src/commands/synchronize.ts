@@ -39,14 +39,15 @@ export class Synchronize extends Command {
     static description = 'Synchronize the local Entity definitions with the Structures Server'
 
     static examples = [
-        '$ structures synchronize my.namespace --entities path/to/entities --generated path/to/services --server http://localhost:8080 --verbose',
-        '$ structures synchronize my.namespace -e path/to/entities -g path/to/services',
+        '$ structures synchronize my.namespace --entities path/to/entities --generated path/to/services --server http://localhost:9090 --publish --verbose',
+        '$ structures synchronize my.namespace -e path/to/entities -g path/to/services --publish',
     ]
 
     static flags = {
         entities:   Flags.string({char: 'e', description: 'Path to the directory containing the Entity definitions', required: true}),
         generated:  Flags.string({char: 'g', description: 'Path to the directory to write generated Services', required: true}),
         server:     Flags.string({char: 's', description: 'The structures server to connect to'}),
+        publish:    Flags.boolean({char: 'p', description: 'Publish each Entity after save/update'}),
         verbose:    Flags.boolean({char: 'v', description: 'Enable verbose logging'}),
     }
 
@@ -83,7 +84,7 @@ export class Synchronize extends Command {
                     if (convertedEntities.length > 0) {
 
                         for (const entityInfo of convertedEntities) {
-                            await this.synchronizeEntity(entityInfo.entity, flags.verbose)
+                            await this.synchronizeEntity(entityInfo.entity, flags.publish, flags.verbose)
 
                             await this.generateEntityService(entityInfo, generatedPath)
                         }
@@ -170,7 +171,7 @@ export class Synchronize extends Command {
         return entities
     }
 
-    private async synchronizeEntity(entity:  ObjectC3Type, verbose: boolean): Promise<void> {
+    private async synchronizeEntity(entity:  ObjectC3Type, publish: boolean, verbose: boolean): Promise<void> {
         const structureService: IStructureService = Structures.getStructureService()
         const namespace = entity.namespace
         const name = entity.name
@@ -206,13 +207,20 @@ export class Synchronize extends Command {
                 if(verbose) {
                     this.log(`Updating Structure: ${namespace}.${name}`)
                 }
-                await structureService.save(structure)
+                structure = await structureService.save(structure)
             } else {
                 structure = new Structure(namespace, name, entity)
                 if(verbose) {
                     this.log(`Creating Structure: ${namespace}.${name}`)
                 }
-                await structureService.create(structure)
+                structure = await structureService.create(structure)
+            }
+            // publish if we need to
+            if(publish && structure.id !== null){
+                if(verbose) {
+                    this.log(`Publishing Structure: ${namespace}.${name}`)
+                }
+                await structureService.publish(structure.id)
             }
         } catch (e) {
             this.log(`Error Synchronizing Structure: ${namespace}.${name}`)

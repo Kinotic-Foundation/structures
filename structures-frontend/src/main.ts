@@ -32,7 +32,7 @@ if(process.env.VUE_APP_KEYCLOAK_SUPPORT === 'true') {
 
     keycloak.init({ onLoad: initOptions.onLoad }).then((auth) => {
         if (!auth) {
-            window.location.reload()
+            keycloak.redirectUri = window.location.origin
         } else {
 
             new Vue({
@@ -42,8 +42,8 @@ if(process.env.VUE_APP_KEYCLOAK_SUPPORT === 'true') {
             }).$mount('#main')
 
         }
-    }).catch(() => {
-        console.error("Authenticated Failed")
+    }).catch((error) => {
+        console.error("Authenticated Failed", error)
     })
 
 }else{

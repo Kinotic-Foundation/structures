@@ -13,7 +13,7 @@
   },
   "main": "main.ts",
   "dependencies": {
-    "@kinotic/continuum-client": "^2.5.1",
+    "@kinotic/continuum-client": "^2.5.2",
     "@kinotic/continuum-idl": "^1.0.0",
     "@kinotic/structures-api": "^1.4.0",
     "aws-sdk": "^2.771.0",

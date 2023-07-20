@@ -1,5 +1,16 @@
 <template>
-    <router-view />
+    <div v-if="USER_STATE().isAuthenticated()">
+        <router-view />
+    </div>
+    <div v-else >
+        <v-overlay :absolute="true"
+                   :value="!USER_STATE().isAuthenticated()">
+            <v-progress-circular
+                indeterminate
+                size="64"
+            ></v-progress-circular>
+        </v-overlay>
+    </div>
 </template>
 
 <script lang="ts">
@@ -10,6 +21,11 @@ import {USER_STATE} from "@/frontends/continuum";
 import { Continuum, ContinuumError } from '@kinotic/continuum-client'
 
 @Component({
+    methods: {
+        USER_STATE() {
+            return USER_STATE
+        }
+    },
     components: { },
     props: { keycloak: Keycloak }
 })
