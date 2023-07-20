@@ -2,7 +2,7 @@
 Structures is an open-source framework for data storage and retrieval, supporting schema evolution, data management, and providing a user-friendly GUI and OpenAPI interface for data management.
 
 ## Docs
-* [Home](https://kinotic-foundation.github.io/structures/)
+* [https://kinotic-foundation.github.io/structures/](https://kinotic-foundation.github.io/structures/)
 
 ### Projects
 * structures-core
