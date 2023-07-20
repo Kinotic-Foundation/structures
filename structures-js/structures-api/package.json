@@ -3,6 +3,8 @@
   "version": "1.4.0",
   "author": "Kinotic Foundation <develop@kinotic.org>",
   "license": "MIT",
+  "homepage": "https://kinotic-foundation.github.io/structures/",
+  "repository": "https://github.com/Kinotic-Foundation/structures",
   "type": "module",
   "main": "./dist/structures-api.cjs",
   "module": "./dist/structures-api.js",

@@ -6,10 +6,10 @@
     "bin": {
         "structures": "./bin/run.js"
     },
-    "homepage": "hhttps://kinotic-foundation.github.io/structures/",
+    "homepage": "https://kinotic-foundation.github.io/structures/",
+    "repository": "https://github.com/Kinotic-Foundation/structures",
     "license": "MIT",
     "main": "dist/index.js",
-    "repository": "https://github.com/Kinotic-Foundatio/structures",
     "type": "module",
     "files": [
         "/bin",
