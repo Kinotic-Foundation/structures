@@ -25,12 +25,10 @@
 
     function getBaseUrl(){
         let prefix = 'http'
+        let port = '8080'
         if(window.location.protocol.startsWith('https')){
             prefix = 'https'
-        }
-        let port = getQueryParam("port")
-        if(port === null){
-            port = '8080'
+            port = '443'
         }
         return `${prefix}://${window.location.hostname}:${port}`
     }

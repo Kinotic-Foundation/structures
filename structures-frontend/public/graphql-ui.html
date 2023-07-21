@@ -56,13 +56,10 @@
 
   function getBaseUrl(){
       let prefix = 'http'
+      let port = '4000'
       if(window.location.protocol.startsWith('https')){
           prefix = 'https'
-      }
-      let port = getQueryParam("port")
-      if(port === null){
-          // standard prod deployment, use our default port
-          port = '4000'
+          port = '443'
       }
       return `${prefix}://${window.location.hostname}:${port}`
   }
