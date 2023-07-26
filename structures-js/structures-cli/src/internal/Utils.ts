@@ -259,10 +259,10 @@ export function convertAllEntities(config: ConversionConfiguration): EntityInfo[
                                     entityConfiguration: entityConfig
                                 })
                             }else{
-                                throw new Error(`Error: Could not convert ${name} to a C3Type`)
+                                throw new Error(`Could not convert ${name} to a C3Type`)
                             }
                         }else{
-                            throw new Error(`Error: Could not convert ${name} to a C3Type`)
+                            throw new Error(`Could not convert ${name} to a C3Type`)
                         }
                     }
                 }

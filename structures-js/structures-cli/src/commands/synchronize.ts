@@ -108,10 +108,11 @@ export class Synchronize extends Command {
             await Continuum.disconnect()
         } catch (e) {
             if(e instanceof Error){
-                this.error(e.message)
+                this.log(chalk.red('Error: ') + e.message)
             }else{
-                this.error(e as string)
+                this.log(chalk.red('Error: ') + e as string)
             }
+            await Continuum.disconnect()
         }
         return
     }
@@ -182,7 +183,7 @@ export class Synchronize extends Command {
                 await structureService.publish(structure.id)
             }
         } catch (e) {
-            this.log(`Error Synchronizing Structure: ${namespace}.${name}`)
+            this.log(chalk.red('Error') + ` Synchronizing Structure: ${namespace}.${name}`)
         }
     }
 
