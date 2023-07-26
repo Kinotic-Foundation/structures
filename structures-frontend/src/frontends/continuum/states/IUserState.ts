@@ -1,7 +1,7 @@
 import {ConnectedInfo, ConnectionInfo, Continuum} from '@kinotic/continuum-client'
-import Keycloak from "keycloak-js"
-import {reactive} from "vue"
-import {CONTINUUM_UI} from "@/frontends/continuum"
+import Keycloak from 'keycloak-js'
+import {reactive} from 'vue'
+import {CONTINUUM_UI} from '@/frontends/continuum'
 
 export interface IUserState {
 
@@ -15,66 +15,66 @@ export interface IUserState {
 
 }
 
-export class UserState implements IUserState{
+export class UserState implements IUserState {
+
+    public connectedInfo: ConnectedInfo | null = null
 
     private keycloak!: Keycloak
 
     private authenticated: boolean = false
 
-    public connectedInfo: ConnectedInfo | null = null
-
-    constructor() {
-
-    }
-
-    async authenticate(login: string, passcode: string): Promise<void> {
-        let connectionInfo: ConnectionInfo =  this.createConnectionInfo()
+    public async authenticate(login: string, passcode: string): Promise<void> {
+        const connectionInfo: ConnectionInfo =  this.createConnectionInfo()
         connectionInfo.connectHeaders = {
-            login: login,
-            passcode: passcode
+            login,
+            passcode
         }
         try {
             this.connectedInfo = await Continuum.connect(connectionInfo)
             this.authenticated = true
-        }catch(reason: any){
-            if(reason){
+        } catch(reason: any) {
+            if(reason) {
                 throw new Error(reason)
-            }else{
-                throw new Error("Credentials invalid")
+            } else {
+                throw new Error('Credentials invalid')
             }
         }
     }
 
-    async authenticateKeycloak(keycloak: Keycloak): Promise<void> {
+    public async authenticateKeycloak(keycloak: Keycloak): Promise<void> {
         this.keycloak = keycloak
-        if(process.env.VUE_APP_KEYCLOAK_ROLE !== "none") {
-            if(!this.keycloak.hasRealmRole(process.env.VUE_APP_KEYCLOAK_ROLE)){
-                return CONTINUUM_UI.navigate("/access-denied").then()
-            }else{
+        if(process.env.VUE_APP_KEYCLOAK_ROLE !== 'none') {
+            if(!this.keycloak.hasRealmRole(process.env.VUE_APP_KEYCLOAK_ROLE)) {
+                return CONTINUUM_UI.navigate('/access-denied').then()
+            } else {
                 await this.authenticate(this.keycloak.tokenParsed?.email as string, this.keycloak.token as string)
             }
-        }else{
+        } else {
             await this.authenticate(this.keycloak.tokenParsed?.email as string, this.keycloak.token as string)
         }
     }
 
-    isAuthenticated(): boolean {
-        return this.authenticated && (this.keycloak !== undefined && this.keycloak.authenticated === true)
+    public isAuthenticated(): boolean {
+        if(process.env.VUE_APP_KEYCLOAK_SUPPORT === 'true') {
+            return this.authenticated && (this.keycloak !== undefined && this.keycloak.authenticated === true)
+        } else {
+            return this.authenticated
+        }
     }
 
-    createConnectionInfo(): ConnectionInfo {
-        let connectionInfo: ConnectionInfo = {
+    public createConnectionInfo(): ConnectionInfo {
+        const connectionInfo: ConnectionInfo = {
             host: '127.0.0.1',
             port: 58503
         }
-        if(window.location.hostname !== "127.0.0.1"
-            && window.location.hostname !== "localhost"){
-            if(window.location.protocol.startsWith('https')){
+        if(window.location.hostname !== '127.0.0.1'
+            && window.location.hostname !== 'localhost') {
+            if(window.location.protocol.startsWith('https')) {
                 connectionInfo.useSSL = true
             }
-            if(window.location.port !== ''){
+            if(window.location.port !== '') {
                 connectionInfo.port = 58503
-            }else {
+            } else {
                 connectionInfo.port = null
             }
             connectionInfo.host = window.location.hostname

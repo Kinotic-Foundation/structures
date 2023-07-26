@@ -22,13 +22,13 @@ import Keycloak, {KeycloakOnLoad} from 'keycloak-js'
 
 if(process.env.VUE_APP_KEYCLOAK_SUPPORT === 'true') {
 
-    let initOptions = {
+    const initOptions = {
         url: process.env.VUE_APP_KEYCLOAK_URL,
         realm: process.env.VUE_APP_KEYCLOAK_REALM,
         clientId: process.env.VUE_APP_KEYCLOAK_CLIENT_ID,
         onLoad: 'login-required' as KeycloakOnLoad
     }
-    let keycloak: Keycloak = new Keycloak(initOptions)
+    const keycloak: Keycloak = new Keycloak(initOptions)
 
     keycloak.init({ onLoad: initOptions.onLoad }).then((auth) => {
         if (!auth) {
@@ -38,15 +38,15 @@ if(process.env.VUE_APP_KEYCLOAK_SUPPORT === 'true') {
             new Vue({
                 router,
                 vuetify,
-                render: (h) => h(Main, { props: { keycloak: keycloak } })
+                render: (h) => h(Main, { props: { keycloak } })
             }).$mount('#main')
 
         }
     }).catch((error) => {
-        console.error("Authenticated Failed", error)
+        console.error('Authenticated Failed', error)
     })
 
-}else{
+} else {
 
     new Vue({
         router,
