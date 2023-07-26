@@ -34,7 +34,7 @@ export interface IConverterStrategy<BASE_TYPE, S> {
     /**
      * The object that will be available via the {@link IConversionContext#state()}.
      * This can be a simple {@link Map} or something with better type safety.
-     * This should return a new instance each time it is called.
+     * This can return a new instance each time it is called.
      * This will be called each time a new {@link IConversionContext} is created.
      * @return the conversion context state.
      */

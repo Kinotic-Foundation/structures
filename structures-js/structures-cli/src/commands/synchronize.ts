@@ -1,17 +1,14 @@
 import {Args, Command, Flags} from '@oclif/core'
 import path from 'path'
-import {ClassDeclaration, Project} from 'ts-morph'
-import {C3Type, ObjectC3Type} from '@kinotic/continuum-idl'
-import {createConversionContext} from '../internal/converter/IConversionContext.js'
-import {TypescriptConverterStrategy} from '../internal/converter/typescript/TypescriptConverterStrategy.js'
-import {TypescriptConversionState} from '../internal/converter/typescript/TypescriptConversionState.js'
-import {tsDecoratorToC3Decorator} from '../internal/converter/typescript/ConverterUtils.js'
+import {ObjectC3Type} from '@kinotic/continuum-idl'
 import {resolveServer} from '../internal/state/Environment.js'
 import {
     Continuum
 } from '@kinotic/continuum-client'
 import {Structures, IStructureService, Structure} from '@kinotic/structures-api'
-import {connectAndUpgradeSession} from '../internal/Utils.js'
+import {isStructuresProject, loadStructuresProject} from '../internal/state/StructuresProject.js'
+import {EntityInfo, connectAndUpgradeSession, convertAllEntities, ConversionConfiguration} from '../internal/Utils.js'
+import {TransformerFunctionLocator} from '../internal/TransformerFunctionLocator.js'
 import inquirer from 'inquirer'
 import chalk from 'chalk'
 import { Liquid } from 'liquidjs'
@@ -28,31 +25,23 @@ const engine = new Liquid({
     extname: '.liquid'
 });
 
-type EntityInfo = {
-    exportedFromFile: string,
-    exportedAs?: string,
-    defaultExport: boolean,
-    entity: ObjectC3Type
-}
-
 export class Synchronize extends Command {
     static description = 'Synchronize the local Entity definitions with the Structures Server'
 
     static examples = [
-        '$ structures synchronize my.namespace --entities path/to/entities --generated path/to/services --server http://localhost:9090 --publish --verbose',
-        '$ structures synchronize my.namespace -e path/to/entities -g path/to/services -p',
+        '$ structures synchronize my.namespace --server http://localhost:9090 --publish --verbose',
+        '$ structures synchronize my.namespace -p',
+        '$ structures synchronize',
     ]
 
     static flags = {
-        entities:   Flags.string({char: 'e', description: 'Path to the directory containing the Entity definitions', required: true}),
-        generated:  Flags.string({char: 'g', description: 'Path to the directory to write generated Services', required: true}),
         server:     Flags.string({char: 's', description: 'The structures server to connect to'}),
         publish:    Flags.boolean({char: 'p', description: 'Publish each Entity after save/update'}),
         verbose:    Flags.boolean({char: 'v', description: 'Enable verbose logging'}),
     }
 
     static args = {
-        namespace: Args.string({description: 'The namespace the Entities belong to', required: true}),
+        namespace: Args.string({description: 'The namespace the Entities belong to', required: false}),
     }
 
     async run(): Promise<void> {
@@ -60,16 +49,22 @@ export class Synchronize extends Command {
 
         try {
 
-            const entitiesPath = path.resolve(flags.entities)
-            const generatedPath = path.resolve(flags.generated)
-
-            if(!fs.existsSync(entitiesPath)){
-                this.error(`Entities path does not exist: ${entitiesPath}`)
+            if(!(await isStructuresProject())){
+                this.error('The working directory is not a Structures Project')
                 return
             }
-            if(!fs.existsSync(generatedPath)){
-                this.error(`Generated path does not exist: ${generatedPath}`)
-                return
+
+            const structuresProject= await loadStructuresProject()
+
+            let namespaceConfig
+            if(args.namespace){
+                namespaceConfig = structuresProject.findNamespaceConfig(args.namespace)
+                if(namespaceConfig === null){
+                    this.error(`No configured namespace found with name ${args.namespace}`)
+                    return
+                }
+            }else{
+                namespaceConfig = structuresProject.getDefaultNamespaceConfig()
             }
 
             const serverConfig = await resolveServer(this.config.configDir, flags.server)
@@ -77,23 +72,33 @@ export class Synchronize extends Command {
             if (await connectAndUpgradeSession(serverConfig.url, this)) {
                 try {
 
-                    const convertedEntities: EntityInfo[] = this.findAllEntities(entitiesPath, args.namespace, flags.verbose)
+                    await Structures.getNamespaceService().createNamespaceIfNotExist(namespaceConfig.namespaceName, '')
 
-                    await Structures.getNamespaceService().createNamespaceIfNotExist(args.namespace, '')
+                    const transformerFunctionLocator = new TransformerFunctionLocator(namespaceConfig.transformerFunctionsPaths || [], flags.verbose)
 
-                    if (convertedEntities.length > 0) {
-
-                        for (const entityInfo of convertedEntities) {
-                            await this.synchronizeEntity(entityInfo.entity, flags.publish, flags.verbose)
-
-                            await this.generateEntityService(entityInfo, generatedPath)
+                    for(const entitiesPath of namespaceConfig.entitiesPaths) {
+                        const config: ConversionConfiguration = {
+                            namespace: namespaceConfig.namespaceName,
+                            entitiesPath: entitiesPath,
+                            verbose: flags.verbose,
+                            transformerFunctionLocator: transformerFunctionLocator,
+                            logger: this
                         }
-
-                        this.log('Synchronization Complete')
-
-                    } else {
-                        this.log('No Entities found to Synchronize')
+                        await this.processEntityPath(config, namespaceConfig.generatedPath, flags.publish)
                     }
+
+                    for(const [externalEntitiesPath, entityConfigurations] of Object.entries(namespaceConfig.externalEntitiesPaths || {})){
+                        const config: ConversionConfiguration = {
+                            namespace: namespaceConfig.namespaceName,
+                            entitiesPath: externalEntitiesPath,
+                            verbose: flags.verbose,
+                            transformerFunctionLocator: transformerFunctionLocator,
+                            entityConfigurations: entityConfigurations,
+                            logger: this
+                        }
+                        await this.processEntityPath(config, namespaceConfig.generatedPath, flags.publish)
+                    }
+
                 } catch (e) {
                     if (e instanceof Error) {
                         this.error(e.message)
@@ -111,64 +116,25 @@ export class Synchronize extends Command {
         return
     }
 
-    private findAllEntities(entitiesPath: string, namespace: string, verbose: boolean): EntityInfo[]{
-        const entities: EntityInfo[] = []
-        const tsConfigFilePath = path.resolve('tsconfig.json')
-        if(!fs.existsSync(tsConfigFilePath)){
-            this.error(`No tsconfig.json found in working directory: ${process.cwd()}`)
+    private async processEntityPath(config: ConversionConfiguration, generatedPath: string, publish: boolean){
+        if (!fs.existsSync(config.entitiesPath)) {
+            throw new Error(`Entities path does not exist: ${config.entitiesPath}`)
         }
-        const project = new Project({
-            tsConfigFilePath: tsConfigFilePath
-        })
 
-        if(verbose) {
-            project.enableLogging(true)
+        const convertedEntities: EntityInfo[] = convertAllEntities(config)
+
+        if (convertedEntities.length > 0) {
+
+            for (const entityInfo of convertedEntities) {
+                await this.synchronizeEntity(entityInfo.entity, publish, config.verbose)
+
+                await this.generateEntityService(entityInfo, generatedPath)
+            }
+
+            this.logVerbose(`Synchronization Complete For namespace: ${config.namespace} and Entities Path: ${config.entitiesPath}`, config.verbose)
+        } else {
+            this.logVerbose(`No Entities found to Synchronize For namespace: ${config.namespace} and Entities Path: ${config.entitiesPath}`, config.verbose)
         }
-        project.addSourceFilesAtPaths(entitiesPath + '/*.ts')
-
-        const sourceFiles = project.getSourceFiles(entitiesPath +'/*.ts')
-        for (const sourceFile of sourceFiles) {
-
-            const conversionContext =
-                      createConversionContext(new TypescriptConverterStrategy(new TypescriptConversionState(namespace, project), this))
-
-            const exportedDeclarations = sourceFile.getExportedDeclarations()
-            exportedDeclarations.forEach((exportedDeclarationEntries, name) => {
-                exportedDeclarationEntries.forEach((exportedDeclaration) => {
-                    if (ClassDeclaration.isClassDeclaration(exportedDeclaration)) {
-                        const classDeclaration = exportedDeclaration as ClassDeclaration
-                        // We only convert entities
-                        const decorator = classDeclaration.getDecorator('Entity')
-                        if(decorator != null) {
-
-                            let c3Type: C3Type | null = null
-                            try {
-                                c3Type = conversionContext.convert(classDeclaration.getType())
-                            } catch (e) {} // We ignore this error since the converter will print any errors
-
-                            if (c3Type != null) {
-
-                                c3Type.addDecorator(tsDecoratorToC3Decorator(decorator))
-
-                                if (c3Type instanceof ObjectC3Type) {
-                                    entities.push({
-                                        exportedFromFile: classDeclaration.getSourceFile().getFilePath(),
-                                        exportedAs: classDeclaration.getName(),
-                                        defaultExport: classDeclaration.isDefaultExport(),
-                                        entity: c3Type
-                                    })
-                                }else{
-                                    throw new Error(`Error: Could not convert ${name} to a C3Type`)
-                                }
-                            }else{
-                                throw new Error(`Error: Could not convert ${name} to a C3Type`)
-                            }
-                        }
-                    }
-                })
-            })
-        }
-        return entities
     }
 
     private async synchronizeEntity(entity:  ObjectC3Type, publish: boolean, verbose: boolean): Promise<void> {
@@ -191,35 +157,28 @@ export class Synchronize extends Command {
                         message: `Type ${chalk.blue(name)} to Up-Publish or Press Enter to Skip.`,
                     })
                     if (answers.input === name) {
-                        if(verbose) {
-                            this.log(`Un-Publishing Structure: ${namespace}.${name}`)
-                        }
+                        this.logVerbose(`Un-Publishing Structure: ${namespace}.${name}`, verbose)
                         await structureService.unPublish(structureId)
                     } else {
-                        if(verbose) {
-                            this.log(`Skipping Synchronization of Structure: ${namespace}.${name}`)
-                        }
+                        this.logVerbose(`Skipping Synchronization of Structure: ${namespace}.${name}`, verbose)
                         return
                     }
                 }
                 // update existing structure
                 structure.entityDefinition = entity
-                if(verbose) {
-                    this.log(`Updating Structure: ${namespace}.${name}`)
-                }
+                this.logVerbose(`Updating Structure: ${namespace}.${name}`, verbose)
+
                 structure = await structureService.save(structure)
             } else {
                 structure = new Structure(namespace, name, entity)
-                if(verbose) {
-                    this.log(`Creating Structure: ${namespace}.${name}`)
-                }
+                this.logVerbose(`Creating Structure: ${namespace}.${name}`, verbose)
+
                 structure = await structureService.create(structure)
             }
             // publish if we need to
             if(publish && structure.id !== null){
-                if(verbose) {
-                    this.log(`Publishing Structure: ${namespace}.${name}`)
-                }
+                this.logVerbose(`Publishing Structure: ${namespace}.${name}`, verbose)
+
                 await structureService.publish(structure.id)
             }
         } catch (e) {
@@ -263,6 +222,11 @@ export class Synchronize extends Command {
         return relativePath;
     }
 
+    private logVerbose(message: string, verbose: boolean): void {
+        if (verbose) {
+            this.log(message)
+        }
+    }
 }
 
 

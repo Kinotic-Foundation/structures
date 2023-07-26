@@ -1,5 +1,5 @@
 <template>
-    <div v-if="USER_STATE().isAuthenticated()">
+    <div v-if="!useKeycloak || (useKeycloak && USER_STATE().isAuthenticated())">
         <router-view />
     </div>
     <div v-else >
@@ -30,6 +30,8 @@ import { Continuum, ContinuumError } from '@kinotic/continuum-client'
     props: { keycloak: Keycloak }
 })
 export default class Main extends Vue {
+
+    protected useKeycloak: boolean = process.env.VUE_APP_KEYCLOAK_SUPPORT === "true"
 
     public async created() {
         if(process.env.VUE_APP_KEYCLOAK_SUPPORT === "true") {

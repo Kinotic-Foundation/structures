@@ -7,17 +7,23 @@ import {
     Event,
     ParticipantConstants
 } from '@kinotic/continuum-client'
+import {EntityDecorator} from '@kinotic/structures-api'
+import fs from 'fs'
+import {Node, Project} from 'ts-morph'
 import { v4 as uuidv4 } from 'uuid'
 import inquirer from 'inquirer'
 import open from 'open'
 import pTimeout from 'p-timeout'
-import {ObjectC3Type} from '@kinotic/continuum-idl'
+import {C3Type, ObjectC3Type} from '@kinotic/continuum-idl'
 import path from 'path'
 import fsPromises from 'fs/promises'
-
-export type Logger = {
-    log(message?: string, ...args: any[]): void;
-}
+import {createConversionContext} from './converter/IConversionContext.js'
+import {Logger} from './converter/IConverterStrategy.js'
+import {tsDecoratorToC3Decorator} from './converter/typescript/ConverterUtils.js'
+import {TypescriptConversionState} from './converter/typescript/TypescriptConversionState.js'
+import {TypescriptConverterStrategy} from './converter/typescript/TypescriptConverterStrategy.js'
+import {EntityConfiguration} from './state/StructuresProject.js'
+import {TransformerFunctionLocator} from './TransformerFunctionLocator.js'
 
 function isEmpty(value: any): boolean {
     if (value === null || value === undefined) {
@@ -158,9 +164,117 @@ function receiveSessionId(scope: string): Promise<string> {
     })
 }
 
+export type EntityInfo = {
+    exportedFromFile: string,
+    exportedAs?: string,
+    defaultExport: boolean,
+    entity: ObjectC3Type
+    entityConfiguration?: EntityConfiguration
+}
+
+export type ConversionConfiguration = {
+    namespace: string,
+    entitiesPath: string,
+    verbose: boolean,
+    transformerFunctionLocator: TransformerFunctionLocator,
+    entityConfigurations?: EntityConfiguration[]
+    logger: Logger,
+}
+
+function getEntityDecoratorIfExists(node: Node){
+    if(Node.isClassDeclaration(node)){
+        return node.getDecorator('Entity')
+    }
+}
+
+export function pathToTsGlobPath(path: string): string{
+    return path.endsWith('.ts') ? path : (path.endsWith('/') ? path + '*.ts' : path + '/*.ts')
+}
+
+export function convertAllEntities(config: ConversionConfiguration): EntityInfo[]{
+    const entities: EntityInfo[] = []
+    const tsConfigFilePath = path.resolve('tsconfig.json')
+    if(!fs.existsSync(tsConfigFilePath)){
+        throw new Error(`No tsconfig.json found in working directory: ${process.cwd()}`)
+    }
+
+    const entityConfigMap = new Map<string, EntityConfiguration>()
+    if(config.entityConfigurations) {
+        for (const entityConfiguration of config.entityConfigurations) {
+            entityConfigMap.set(entityConfiguration.entityName, entityConfiguration)
+        }
+    }
+
+    const project = new Project({
+        tsConfigFilePath: tsConfigFilePath
+    })
+
+    if(config.verbose) {
+        project.enableLogging(true)
+    }
+
+    project.addSourceFilesAtPaths(pathToTsGlobPath(config.entitiesPath))
+
+    const sourceFiles = project.getSourceFiles()
+    for (const sourceFile of sourceFiles) {
+
+        const conversionContext =
+                  createConversionContext(new TypescriptConverterStrategy(new TypescriptConversionState(config.namespace,
+                      config.transformerFunctionLocator),
+                      config.logger))
+
+        const exportedDeclarations = sourceFile.getExportedDeclarations()
+        exportedDeclarations.forEach((exportedDeclarationEntries, name) => {
+            exportedDeclarationEntries.forEach((exportedDeclaration) => {
+                if (Node.isClassDeclaration(exportedDeclaration) || Node.isInterfaceDeclaration(exportedDeclaration)){
+                    const declaration = exportedDeclaration
+                    // We only convert entities
+                    const decorator = getEntityDecoratorIfExists(exportedDeclaration)
+                    const declarationName = declaration.getName()
+                    const entityConfig = (declarationName ? entityConfigMap.get(declarationName) : undefined)
+                    if(decorator || entityConfig) {
+
+                        let c3Type: C3Type | null = null
+                        try {
+                            conversionContext.state().entityConfiguration = entityConfig
+                            c3Type = conversionContext.convert(declaration.getType())
+                        } catch (e) {} // We ignore this error since the converter will print any errors
+
+                        if (c3Type != null) {
+
+                            if(decorator) {
+                                c3Type.addDecorator(tsDecoratorToC3Decorator(decorator))
+                            }else if(entityConfig){
+                                const entityDecorator= new EntityDecorator()
+                                entityDecorator.multiTenancyType = entityConfig.multiTenancyType
+                                c3Type.addDecorator(entityDecorator)
+                            }
+
+                            if (c3Type instanceof ObjectC3Type) {
+                                entities.push({
+                                    exportedFromFile: declaration.getSourceFile().getFilePath(),
+                                    exportedAs: declaration.getName(),
+                                    defaultExport: declaration.isDefaultExport(),
+                                    entity: c3Type,
+                                    entityConfiguration: entityConfig
+                                })
+                            }else{
+                                throw new Error(`Error: Could not convert ${name} to a C3Type`)
+                            }
+                        }else{
+                            throw new Error(`Error: Could not convert ${name} to a C3Type`)
+                        }
+                    }
+                }
+            })
+        })
+    }
+    return entities
+}
+
 /**
- * Will save the c3types to the local filesystem
- * @param namespace to save the entities forr
+ * Will save the C3Type(s) to the local filesystem
+ * @param namespace to save the entities to
  * @param entities to save
  */
 export async function writeEntitiesJsonToFilesystem(namespace: string, entities: ObjectC3Type[]): Promise<void> {

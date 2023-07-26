@@ -2,23 +2,23 @@ import { createStateManager } from './IStateManager.js'
 
 const ENVIRONMENT_KEY = 'structures-environment'
 
-export class ServerConfig {
+export class ServerConfiguration {
     name!: string
     url!: string
 }
 
 export class Environment {
 
-    public servers: ServerConfig[] = []
+    public servers: ServerConfiguration[] = []
 
-    public defaultServer!: ServerConfig
+    public defaultServer!: ServerConfiguration
 
     public hasServer(server: string): boolean {
         return this.findServer(server) !== null
     }
 
-    public findServer(server: string): ServerConfig | null {
-        let ret: ServerConfig | null = null
+    public findServer(server: string): ServerConfiguration | null {
+        let ret: ServerConfiguration | null = null
         for(const serverConfig of this.servers){
             if(serverConfig.name === server
                 || serverConfig.url === server){
@@ -50,13 +50,13 @@ export async function saveEnvironment(dataDir: string, environment: Environment)
     await stateManager.save(ENVIRONMENT_KEY, environment)
 }
 
-export async function resolveServer(dataDir: string, server?: string | null): Promise<ServerConfig>{
+export async function resolveServer(dataDir: string, server?: string | null): Promise<ServerConfiguration>{
     const environment = await loadEnvironment(dataDir)
-    let ret: ServerConfig | null
+    let ret: ServerConfiguration | null
     if(server){
         ret = environment.findServer(server)
         if(ret === null){
-            ret = new ServerConfig()
+            ret = new ServerConfiguration()
             ret.name = server
             ret.url = server
             environment.servers.push(ret)
