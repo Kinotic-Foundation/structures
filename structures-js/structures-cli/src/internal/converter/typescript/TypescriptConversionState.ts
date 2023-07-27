@@ -14,11 +14,8 @@ export class TypescriptConversionState {
     private _exclusionMap: Map<string, void> | null = null
     private _overridesMap: Map<string, OverrideConfiguration> | null = null
     private _transformsMap: Map<string, TransformConfiguration> | null = null
-    private _propertyStack: string[] = []
 
-    public currentJsonPath: string = ''
-    public nearestPropertyNameNotInUnion: string | null = null
-    public convertingUnion: boolean = false
+    public unionPropertyNameStack: string[] = []
 
     constructor(namespace: string, transformerFunctionLocator: TransformerFunctionLocator) {
         this._namespace = namespace
@@ -27,16 +24,6 @@ export class TypescriptConversionState {
 
     get namespace(): string {
         return this._namespace
-    }
-
-    beginProcessingProperty(name: string): void {
-        this.currentJsonPath = (this._propertyStack.length > 0  ? this._propertyStack[this._propertyStack.length - 1] + '.' : '') + name
-        this._propertyStack.push(this.currentJsonPath)
-    }
-
-    endProcessingProperty(): void {
-        this._propertyStack.pop()
-        this.currentJsonPath = this._propertyStack.length > 0 ? this._propertyStack[this._propertyStack.length - 1] : ''
     }
 
     get entityConfiguration(): EntityConfiguration | undefined {
@@ -71,18 +58,18 @@ export class TypescriptConversionState {
         }
     }
 
-    shouldExclude(): boolean {
+    shouldExclude(jsonPath: string): boolean {
         let ret = false
         if(this._exclusionMap){
-            ret = this._exclusionMap.has(this.currentJsonPath)
+            ret = this._exclusionMap.has(jsonPath)
         }
         return ret
     }
 
-    getOverrideType(): C3Type | null {
+    getOverrideType(jsonPath: string): C3Type | null {
         let ret: C3Type | null = null
         if(this._overridesMap){
-            const override = this._overridesMap.get(this.currentJsonPath)
+            const override = this._overridesMap.get(jsonPath)
             if(override){
                 ret = override.c3Type
             }
@@ -90,12 +77,15 @@ export class TypescriptConversionState {
         return ret
     }
 
-    getTransformFunction(): FunctionDeclaration | null {
+    getTransformFunction(jsonPath: string): FunctionDeclaration | null {
         let ret: FunctionDeclaration | null = null
         if(this._transformsMap){
-            const transform = this._transformsMap.get(this.currentJsonPath)
+            const transform = this._transformsMap.get(jsonPath)
             if(transform){
                 ret = this.transformerFunctionLocator.getTransformerFunction(transform.transformerFunctionName)
+                if(!ret){
+                    throw new Error(`No transformer function could be found with name ${transform.transformerFunctionName}`)
+                }
             }
         }
         return ret

@@ -20,20 +20,16 @@ export class ObjectLikeToC3Type implements ITypeConverter<Type, Type, Typescript
         for(const property of properties){
             const propertyName = property.getName()
 
-            conversionContext.state().beginProcessingProperty(propertyName)
+            conversionContext.beginProcessingProperty(propertyName)
 
-            if(!conversionContext.state().convertingUnion){
-                conversionContext.state().nearestPropertyNameNotInUnion = propertyName
-            }
-
-            if(!conversionContext.state().shouldExclude()) {
+            if(!conversionContext.state().shouldExclude(conversionContext.currentJsonPath)) {
 
                 let converted: C3Type | null = null
-                const override = conversionContext.state().getOverrideType()
+                const override = conversionContext.state().getOverrideType(conversionContext.currentJsonPath)
                 if(override){
                     converted = override
                 }else{
-                    const transform = conversionContext.state().getTransformFunction()
+                    const transform = conversionContext.state().getTransformFunction(conversionContext.currentJsonPath)
                     if(transform){
                         converted = conversionContext.convert(transform.getReturnType())
                     }else{
@@ -41,26 +37,22 @@ export class ObjectLikeToC3Type implements ITypeConverter<Type, Type, Typescript
                     }
                 }
 
-                if(converted) {
-                    ret.addProperty(propertyName, converted);
-                }else{
-                    throw new Error(`Unable to convert property ${conversionContext.state().currentJsonPath}}`)
-                }
+                ret.addProperty(propertyName, converted);
             }
 
-            conversionContext.state().endProcessingProperty()
-
-            if(!conversionContext.state().convertingUnion){
-                conversionContext.state().nearestPropertyNameNotInUnion = null
-            }
+            conversionContext.endProcessingProperty()
         }
         return ret
     }
 
-    private convertProperty(property: Symbol, propertyName: string, conversionContext: IConversionContext<Type, TypescriptConversionState>) {
+    private convertProperty(property: Symbol, propertyName: string, conversionContext: IConversionContext<Type, TypescriptConversionState>): C3Type {
         const valueDeclaration = property.getValueDeclarationOrThrow("No value declaration could be found for property " + propertyName)
 
         let converted: C3Type
+
+        if(valueDeclaration.getType().isUnion()){
+            conversionContext.state().unionPropertyNameStack.push(propertyName)
+        }
 
         if(valueDeclaration instanceof DecoratableNode){
             // Typescript cannot detect that this can be a DecoratableNode, so we have to cast it
@@ -90,6 +82,11 @@ export class ObjectLikeToC3Type implements ITypeConverter<Type, Type, Typescript
         }else{
             converted = conversionContext.convert(valueDeclaration.getType())
         }
+
+        if(valueDeclaration.getType().isUnion()){
+            conversionContext.state().unionPropertyNameStack.pop()
+        }
+
         return converted
     }
 

@@ -1,0 +1,20 @@
+{
+    "namespaces": [
+        {
+            "namespaceName": "org.test",
+            "entitiesPaths": [
+                "/Users/navid/Desktop/temp/azure-test/src/entities"
+            ],
+            "generatedPath": "/Users/navid/Desktop/temp/azure-test/src/services",
+            "validate": true,
+            "externalEntitiesPaths": {
+                "/Users/navid/Desktop/temp/azure-test/node_modules/@azure/arm-recoveryservicesbackup/types/arm-recoveryservicesbackup.d.ts": [
+                    {
+                        "entityName": "WorkloadType"
+                    }
+                ]
+            }
+        }
+    ],
+    "defaultNamespaceName": "org.test"
+}

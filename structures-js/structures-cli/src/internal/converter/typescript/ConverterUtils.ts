@@ -13,7 +13,6 @@ import {
     FlattenedDecorator,
     IdDecorator,
     MultiTenancyType,
-    PrecisionType,
     TextDecorator,
 } from '@kinotic/structures-api'
 import {Decorator} from 'ts-morph'

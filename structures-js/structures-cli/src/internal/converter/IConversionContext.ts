@@ -15,6 +15,24 @@ import {DefaultConversionContext} from './DefaultConversionContext.js'
 export interface IConversionContext<BASE_TYPE, S> {
 
     /**
+     * The current json path being processed.
+     * This is only updated if {@link beginProcessingProperty} and {@link endProcessingProperty} are called appropriately.
+     */
+    currentJsonPath: string
+
+    /**
+     * Should be called before processing a property.
+     * This improves debug output
+     * @param name of the property
+     */
+    beginProcessingProperty(name: string): void
+
+    /**
+     * Should be called after processing a property.
+     */
+    endProcessingProperty(): void
+
+    /**
      * Converts the given type to a {@link C3Type} by resolving the proper {@link ITypeConverter}.
      *
      * @param value to convert
@@ -26,7 +44,6 @@ export interface IConversionContext<BASE_TYPE, S> {
      * @return the state of this {@link IConversionContext}
      */
     state(): S
-
 }
 
 /**

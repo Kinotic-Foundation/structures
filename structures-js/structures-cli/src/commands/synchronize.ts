@@ -7,7 +7,13 @@ import {
 } from '@kinotic/continuum-client'
 import {Structures, IStructureService, Structure} from '@kinotic/structures-api'
 import {isStructuresProject, loadStructuresProject} from '../internal/state/StructuresProject.js'
-import {EntityInfo, connectAndUpgradeSession, convertAllEntities, ConversionConfiguration} from '../internal/Utils.js'
+import {
+    EntityInfo,
+    connectAndUpgradeSession,
+    convertAllEntities,
+    ConversionConfiguration,
+    writeEntityJsonToFilesystem
+} from '../internal/Utils.js'
 import {TransformerFunctionLocator} from '../internal/TransformerFunctionLocator.js'
 import inquirer from 'inquirer'
 import chalk from 'chalk'
@@ -38,6 +44,7 @@ export class Synchronize extends Command {
         server:     Flags.string({char: 's', description: 'The structures server to connect to'}),
         publish:    Flags.boolean({char: 'p', description: 'Publish each Entity after save/update'}),
         verbose:    Flags.boolean({char: 'v', description: 'Enable verbose logging'}),
+        dryRun:     Flags.boolean({description: 'Dry run enables verbose logging and does not save any changes to the server'})
     }
 
     static args = {
@@ -67,12 +74,18 @@ export class Synchronize extends Command {
                 namespaceConfig = structuresProject.getDefaultNamespaceConfig()
             }
 
-            const serverConfig = await resolveServer(this.config.configDir, flags.server)
+            let serverUrl = ''
+            if(!flags.dryRun) {
+                const serverConfig = await resolveServer(this.config.configDir, flags.server)
+                serverUrl = serverConfig.url
+            }
 
-            if (await connectAndUpgradeSession(serverConfig.url, this)) {
+            if (flags.dryRun || await connectAndUpgradeSession(serverUrl, this)) {
                 try {
 
-                    await Structures.getNamespaceService().createNamespaceIfNotExist(namespaceConfig.namespaceName, '')
+                    if(!flags.dryRun) {
+                        await Structures.getNamespaceService().createNamespaceIfNotExist(namespaceConfig.namespaceName, '')
+                    }
 
                     const transformerFunctionLocator = new TransformerFunctionLocator(namespaceConfig.transformerFunctionsPaths || [], flags.verbose)
 
@@ -80,8 +93,9 @@ export class Synchronize extends Command {
                         const config: ConversionConfiguration = {
                             namespace: namespaceConfig.namespaceName,
                             entitiesPath: entitiesPath,
-                            verbose: flags.verbose,
                             transformerFunctionLocator: transformerFunctionLocator,
+                            verbose: flags.verbose || flags.dryRun,
+                            dryRun: flags.dryRun,
                             logger: this
                         }
                         await this.processEntityPath(config, namespaceConfig.generatedPath, flags.publish)
@@ -91,9 +105,10 @@ export class Synchronize extends Command {
                         const config: ConversionConfiguration = {
                             namespace: namespaceConfig.namespaceName,
                             entitiesPath: externalEntitiesPath,
-                            verbose: flags.verbose,
                             transformerFunctionLocator: transformerFunctionLocator,
                             entityConfigurations: entityConfigurations,
+                            verbose: flags.verbose || flags.dryRun,
+                            dryRun: flags.dryRun,
                             logger: this
                         }
                         await this.processEntityPath(config, namespaceConfig.generatedPath, flags.publish)
@@ -127,9 +142,17 @@ export class Synchronize extends Command {
         if (convertedEntities.length > 0) {
 
             for (const entityInfo of convertedEntities) {
-                await this.synchronizeEntity(entityInfo.entity, publish, config.verbose)
 
-                await this.generateEntityService(entityInfo, generatedPath)
+                this.logVerbose(`Generated Structure Mapping for ${entityInfo.entity.namespace}.${entityInfo.entity.name}`, config.verbose)
+                if(config.verbose){
+                   await writeEntityJsonToFilesystem(generatedPath, entityInfo.entity, this)
+                }
+
+                if(!config.dryRun) {
+                    await this.synchronizeEntity(entityInfo.entity, publish, config.verbose)
+
+                    await this.generateEntityService(entityInfo, generatedPath)
+                }
             }
 
             this.logVerbose(`Synchronization Complete For namespace: ${config.namespace} and Entities Path: ${config.entitiesPath}`, config.verbose)
@@ -223,9 +246,13 @@ export class Synchronize extends Command {
         return relativePath;
     }
 
-    private logVerbose(message: string, verbose: boolean): void {
+    private logVerbose(message: string | ( () => string ), verbose: boolean): void {
         if (verbose) {
-            this.log(message)
+            if (typeof message === 'function') {
+                this.log(message())
+            }else{
+                this.log(message)
+            }
         }
     }
 }

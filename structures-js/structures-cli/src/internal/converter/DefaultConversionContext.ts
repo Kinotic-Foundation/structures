@@ -13,6 +13,8 @@ export class DefaultConversionContext<BASE_TYPE, S> implements IConversionContex
     private readonly errorStack: Array<BASE_TYPE> = []
     private readonly _state: S
     private readonly logger: Logger
+    private _propertyStack: string[] = []
+    public currentJsonPath: string = ''
 
     constructor(strategy: IConverterStrategy<BASE_TYPE, S>) {
         this.strategy = strategy
@@ -28,6 +30,16 @@ export class DefaultConversionContext<BASE_TYPE, S> implements IConversionContex
         }else{
             this.logger = logger
         }
+    }
+
+    public beginProcessingProperty(name: string): void {
+        this.currentJsonPath = (this._propertyStack.length > 0  ? this._propertyStack[this._propertyStack.length - 1] + '.' : '') + name
+        this._propertyStack.push(this.currentJsonPath)
+    }
+
+    public endProcessingProperty(): void {
+        this._propertyStack.pop()
+        this.currentJsonPath = this._propertyStack.length > 0 ? this._propertyStack[this._propertyStack.length - 1] : ''
     }
 
     public convert(value: BASE_TYPE): C3Type {
@@ -82,7 +94,7 @@ export class DefaultConversionContext<BASE_TYPE, S> implements IConversionContex
             }
         }
         if(this.conversionDepthStack.length === 1) { // we are at the top of the stack during recursion
-            let sb: string = 'Error occurred during conversion.\nException: ' + e.message + '\nStack:\n'
+            let sb: string = `\nError occurred during conversion.\nException: ${e.message}\nJsonPath: ${this.currentJsonPath}\nConversion Stack:\n`
             let objectCount = 1
             for (let value of this.errorStack) {
                 const spacer = '  '.repeat(objectCount)

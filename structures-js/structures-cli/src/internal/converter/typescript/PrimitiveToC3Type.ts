@@ -23,12 +23,16 @@ export class PrimitiveToC3Type extends SpecificTypesConverter<Type, TypescriptCo
             return new IntC3Type()
         })
 
-        map.set('Date', () => {
+        map.set('date', () => {
             return new DateC3Type()
         })
 
         super((arg: Type) => {
-            return arg.getText()
+            if(arg.isLiteral()){
+                return arg.getApparentType().getText().toLowerCase()
+            }else{
+                return arg.getText().toLowerCase()
+            }
         }, map)
     }
 }
