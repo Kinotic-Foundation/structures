@@ -27,6 +27,10 @@ import { TypescriptConversionState } from './converter/typescript/TypescriptConv
 import { TypescriptConverterStrategy } from './converter/typescript/TypescriptConverterStrategy.js'
 import { EntityConfiguration } from './state/StructuresProject.js'
 
+// How long to wait for connection establishment
+const TIMEOUT_MILLIS = 30_000
+const DEFAULT_PORT = 58503
+
 function isEmpty(value: any): boolean {
     if (value === null || value === undefined) {
         return true;
@@ -34,8 +38,7 @@ function isEmpty(value: any): boolean {
 
     if (Array.isArray(value)) {
         return value.every(isEmpty);
-    }
-    else if (typeof (value) === 'object') {
+    } else if (typeof (value) === 'object') {
         return Object.values(value).every(isEmpty);
     }
 
@@ -61,35 +64,37 @@ export async function connectAndUpgradeSession(server: string, logger: Logger): 
     try {
         const serverURL: URL = new URL(server)
 
-        if(serverURL.protocol !== 'http:' && serverURL.protocol !== 'https:'){
+        if(serverURL.protocol !== 'http:' && serverURL.protocol !== 'https:') {
             logger.log('Invalid server URL, only http and https are supported')
             return false
         }
 
-        let connectionInfo: ConnectionInfo = {host: ''}
+        let connectionInfo: ConnectionInfo = { host: '' }
         if (serverURL.hostname === 'localhost' || serverURL.hostname === '127.0.0.1') {
             connectionInfo.host = serverURL.hostname
-            connectionInfo.port = 58503
+            connectionInfo.port = DEFAULT_PORT
         } else {
             connectionInfo.host = serverURL.hostname
-            if(serverURL.protocol === 'https:'){
+            if(serverURL.protocol === 'https:') {
                 connectionInfo.useSSL = true
             }
-            if(serverURL.port){
-                connectionInfo.port = 58503
+            if(serverURL.port) {
+                connectionInfo.port = DEFAULT_PORT
             }
         }
 
         connectionInfo.connectHeaders = {
             login: ParticipantConstants.CLI_PARTICIPANT_ID
         }
+
+        logger.log('Attempting Continuum.connect() at: ', connectionInfo)
+
         const connectedInfo: ConnectedInfo = await pTimeout(Continuum.connect(connectionInfo), {
-            milliseconds: 30000,
+            milliseconds: TIMEOUT_MILLIS,
             message: 'Connection timeout trying to connect to the Structures Server'
         })
 
         if (connectedInfo) {
-
             const scope = connectedInfo.replyToId + ':' + uuidv4()
             const url = server + (server.endsWith('/') ? '' : '/') + '#/sessionUpgrade/' + encodeURIComponent(scope)
             logger.log('Authenticate your account at:')
@@ -104,14 +109,14 @@ export async function connectAndUpgradeSession(server: string, logger: Logger): 
             answers.then((value: any) => {
                 if(value?.confirm){
                     open(url)
-                }else{
+                } else {
                     logger.log('Browser will not be opened. You must authenticate your account before continuing.')
                 }
             }, (reason: any) => {
                 // noop, since canceling the promise throws an error
             })
 
-            const sessionId = await receiveSessionId(scope)
+            const sessionId = await receiveSessionId(scope, logger)
 
             // We got session id we don't care about the prompt anymore
             // This happens if the user opens the url in the browser and authenticates
@@ -127,7 +132,7 @@ export async function connectAndUpgradeSession(server: string, logger: Logger): 
             await Continuum.connect(connectionInfo)
             logger.log('Authenticated successfully\n')
             return true
-        }else{
+        } else {
             logger.log("Could not connect to the Structures Server. Please check the server is running and the URL is correct.")
             return false
         }
@@ -137,7 +142,7 @@ export async function connectAndUpgradeSession(server: string, logger: Logger): 
     }
 }
 
-function receiveSessionId(scope: string): Promise<string> {
+function receiveSessionId(scope: string, logger: Logger): Promise<string> {
     const subscribeCRI = EventConstants.SERVICE_DESTINATION_PREFIX + scope + '@continuum.cli.SessionUpgradeService'
 
     return new Promise<string>(( resolve, reject) => {
@@ -148,10 +153,13 @@ function receiveSessionId(scope: string): Promise<string> {
                 const replyEvent = new Event(replyTo)
                 const correlationId = value.getHeader(EventConstants.CORRELATION_ID_HEADER)
                 if (correlationId) {
+                    logger.log(`Using correlationId [${correlationId}]`)
                     replyEvent.setHeader(EventConstants.CORRELATION_ID_HEADER, correlationId)
                 }
                 replyEvent.setHeader(EventConstants.CONTENT_TYPE_HEADER, EventConstants.CONTENT_JSON)
                 Continuum.eventBus.send(replyEvent)
+            } else {
+                logger.log(`Did not receive header [${EventConstants.REPLY_TO_HEADER}]`)
             }
 
             subscription.unsubscribe()
@@ -159,7 +167,7 @@ function receiveSessionId(scope: string): Promise<string> {
             const jsonObj: Array<string> = JSON.parse(value.getDataString())
             if(jsonObj?.length > 0){
                 resolve(jsonObj[0])
-            }else {
+            } else {
                 reject('No Session Id found in data')
             }
         })
@@ -247,7 +255,7 @@ export function convertAllEntities(config: ConversionConfiguration): EntityInfo[
 
                             if(decorator) {
                                 c3Type.addDecorator(tsDecoratorToC3Decorator(decorator))
-                            }else if(entityConfig){
+                            } else if(entityConfig){
                                 const entityDecorator= new EntityDecorator()
                                 entityDecorator.multiTenancyType = entityConfig.multiTenancyType
                                 c3Type.addDecorator(entityDecorator)
@@ -261,7 +269,7 @@ export function convertAllEntities(config: ConversionConfiguration): EntityInfo[
                                     entity: c3Type,
                                     entityConfiguration: entityConfig
                                 })
-                            }else{
+                            } else {
                                 throw new Error(`Could not convert ${name} to a C3Type`)
                             }
                         }else{
