@@ -2,28 +2,30 @@ import {
     ConnectedInfo,
     ConnectionInfo,
     Continuum,
+    Event,
     EventConstants,
     IEvent,
-    Event,
     ParticipantConstants
 } from '@kinotic/continuum-client'
-import {EntityDecorator} from '@kinotic/structures-api'
+import { C3Type, ObjectC3Type } from '@kinotic/continuum-idl'
+import { EntityDecorator } from '@kinotic/structures-api'
+
 import fs from 'fs'
-import {Node, Project} from 'ts-morph'
-import { v4 as uuidv4 } from 'uuid'
+import fsPromises from 'fs/promises'
 import inquirer from 'inquirer'
 import open from 'open'
 import pTimeout from 'p-timeout'
-import {C3Type, ObjectC3Type} from '@kinotic/continuum-idl'
 import path from 'path'
-import fsPromises from 'fs/promises'
-import {createConversionContext} from './converter/IConversionContext.js'
-import {Logger} from './converter/IConverterStrategy.js'
-import {tsDecoratorToC3Decorator} from './converter/typescript/ConverterUtils.js'
-import {TypescriptConversionState} from './converter/typescript/TypescriptConversionState.js'
-import {TypescriptConverterStrategy} from './converter/typescript/TypescriptConverterStrategy.js'
-import {EntityConfiguration} from './state/StructuresProject.js'
-import {TransformerFunctionLocator} from './TransformerFunctionLocator.js'
+import { Node, Project } from 'ts-morph'
+import { v4 as uuidv4 } from 'uuid'
+
+import { TransformerFunctionLocator } from './TransformerFunctionLocator.js'
+import { createConversionContext } from './converter/IConversionContext.js'
+import { Logger } from './converter/IConverterStrategy.js'
+import { tsDecoratorToC3Decorator } from './converter/typescript/ConverterUtils.js'
+import { TypescriptConversionState } from './converter/typescript/TypescriptConversionState.js'
+import { TypescriptConverterStrategy } from './converter/typescript/TypescriptConverterStrategy.js'
+import { EntityConfiguration } from './state/StructuresProject.js'
 
 function isEmpty(value: any): boolean {
     if (value === null || value === undefined) {
