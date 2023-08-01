@@ -127,6 +127,8 @@ public class DefaultEntityServiceFactory implements EntityServiceFactory {
         }
 
         return CompletableFuture.completedFuture(new DefaultEntityService(structure,
+                                                                          structuresProperties,
+                                                                          objectMapper,
                                                                           esAsyncClient,
                                                                           crudServiceTemplate,
                                                                           new DelegatingUpsertPreProcessor(structuresProperties,

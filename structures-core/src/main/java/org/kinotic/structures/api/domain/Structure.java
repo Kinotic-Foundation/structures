@@ -23,6 +23,7 @@ import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.kinotic.continuum.api.Identifiable;
 import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
 import org.kinotic.structures.api.decorators.MultiTenancyType;
@@ -91,5 +92,14 @@ public class Structure implements Identifiable<String> {
     @Override
     public int hashCode() {
         return new HashCodeBuilder(17, 37).append(id).toHashCode();
+    }
+
+    @Override
+    public String toString() {
+        return new ToStringBuilder(this)
+                .append("id", id)
+                .append("description", description)
+                .append("multiTenancyType", multiTenancyType)
+                .toString();
     }
 }

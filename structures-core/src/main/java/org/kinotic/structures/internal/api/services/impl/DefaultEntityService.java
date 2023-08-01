@@ -9,6 +9,10 @@ import co.elastic.clients.elasticsearch.core.UpdateRequest;
 import co.elastic.clients.elasticsearch.core.bulk.BulkOperation;
 import co.elastic.clients.util.BinaryData;
 import co.elastic.clients.util.ContentType;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.commons.lang3.NotImplementedException;
+import org.assertj.core.condition.Not;
+import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.decorators.MultiTenancyType;
 import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.RawJson;
@@ -16,12 +20,18 @@ import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.internal.api.decorators.DelegatingReadPreProcessor;
 import org.kinotic.structures.internal.api.decorators.DelegatingUpsertPreProcessor;
 import org.kinotic.structures.internal.api.decorators.EntityHolder;
+import org.kinotic.structures.internal.api.decorators.MapUpsertPreProcessor;
 import org.kinotic.structures.internal.api.services.EntityService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
@@ -30,18 +40,27 @@ import java.util.function.Function;
  */
 public class DefaultEntityService implements EntityService {
 
+    private static final Logger log = LoggerFactory.getLogger(DefaultEntityService.class);
+
     private final Structure structure;
+    private final StructuresProperties structuresProperties;
+    private final ObjectMapper objectMapper;
     private final ElasticsearchAsyncClient esAsyncClient;
     private final CrudServiceTemplate crudServiceTemplate;
     private final DelegatingUpsertPreProcessor delegatingUpsertPreProcessor;
     private final DelegatingReadPreProcessor delegatingReadPreProcessor;
 
+
     public DefaultEntityService(Structure structure,
+                                StructuresProperties structuresProperties,
+                                ObjectMapper objectMapper,
                                 ElasticsearchAsyncClient esAsyncClient,
                                 CrudServiceTemplate crudServiceTemplate,
                                 DelegatingUpsertPreProcessor delegatingUpsertPreProcessor,
                                 DelegatingReadPreProcessor delegatingReadPreProcessor) {
         this.structure = structure;
+        this.structuresProperties = structuresProperties;
+        this.objectMapper = objectMapper;
         this.esAsyncClient = esAsyncClient;
         this.crudServiceTemplate = crudServiceTemplate;
         this.delegatingUpsertPreProcessor = delegatingUpsertPreProcessor;
@@ -217,7 +236,8 @@ public class DefaultEntityService implements EntityService {
         return validateTenant(context)
                 .thenCompose(unused -> crudServiceTemplate
                         .search(structure.getItemIndex(), pageable, type,
-                                builder -> delegatingReadPreProcessor.beforeFindAll(structure, builder, context)));
+                                builder -> delegatingReadPreProcessor.beforeFindAll(structure, builder, context))
+                        .thenApply(createParanoidCheck(type, context, "Find All")));
     }
 
     @Override
@@ -234,7 +254,58 @@ public class DefaultEntityService implements EntityService {
                                     delegatingReadPreProcessor.beforeSearch(structure, searchText, builder, queryBuilder, context);
 
                                     builder.query(queryBuilder.build());
-                                }));
+                                })
+                        .thenApply(createParanoidCheck(type, context, "Search")));
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private <T> Function<Page<T>, Page<T>> createParanoidCheck(Class<T> type, EntityContext context, String what){
+        return page -> {
+            // This is a temporary bit of code to make sure multi tenancy is working properly
+            if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
+                if(RawJson.class.isAssignableFrom(type)){
+                    List<RawJson> result = new ArrayList<>(page.getContent().size());
+                    for(RawJson rawJson : (List<RawJson>)page.getContent()){
+                        try {
+                            Map converted = objectMapper.readValue(rawJson.data(), Map.class);
+                            String tenant = (String) converted.get(structuresProperties.getTenantIdFieldName());
+                            if(tenant != null && tenant.equals(context.getParticipant().getTenantId())){
+                                result.add(rawJson);
+                            }else{
+                                log.error("{} Multi tenancy is not working properly for structure: {} and tenant: {}\nData:\n{}",
+                                          what,
+                                          structure,
+                                          context.getParticipant().getTenantId(),
+                                          converted);
+                            }
+                        } catch (IOException e) {
+                            throw new IllegalStateException("RawJson could not be deserialized for sanity check",e);
+                        }
+                    }
+                    return (Page<T>) new PageImpl<>(result, page.getPageable(), page.getTotalElements());
+
+                }else if(Map.class.isAssignableFrom(type)){
+                    List<Map> content = (List<Map>)page.getContent();
+                    List<Map> result = new ArrayList<>(content.size());
+                    for(Map map : content){
+                        String tenant = (String) map.get(structuresProperties.getTenantIdFieldName());
+                        if(tenant != null && tenant.equals(context.getParticipant().getTenantId())){
+                            result.add(map);
+                        }else{
+                            log.error("Multi tenancy is not working properly for structure: {} and tenant: {}\nData:\n{}",
+                                      structure,
+                                      context.getParticipant().getTenantId(),
+                                      map);
+                        }
+                    }
+                    return (Page<T>) new PageImpl<>(result, page.getPageable(), page.getTotalElements());
+                }else{
+                    throw new NotImplementedException("Pojo upsert is not implemented yet");
+                }
+            }else{
+                return page;
+            }
+        };
     }
 
     private CompletableFuture<String> validateTenantAndComposeId(final String id, final EntityContext context){

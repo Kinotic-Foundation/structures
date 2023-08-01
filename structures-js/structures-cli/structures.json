@@ -10,7 +10,9 @@
             "externalEntitiesPaths": {
                 "/Users/navid/Desktop/temp/azure-test/node_modules/@azure/arm-recoveryservicesbackup/types/arm-recoveryservicesbackup.d.ts": [
                     {
-                        "entityName": "ProtectionPolicyResource"
+                        "entityName": "ProtectionPolicyResource",
+                        "multiTenancyType": "SHARED",
+                        "excludeJsonPaths": ["tags"]
                     }
                 ]
             }

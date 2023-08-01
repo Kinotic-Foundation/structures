@@ -1,5 +1,6 @@
 package org.kinotic.structures.internal.api.decorators;
 
+import org.apache.commons.lang3.NotImplementedException;
 import org.kinotic.structures.api.domain.EntityContext;
 
 import java.util.List;
@@ -17,6 +18,6 @@ public class PojoUpsertPreProcessor implements UpsertPreProcessor<Object, List<O
 
     @Override
     public CompletableFuture<List<EntityHolder>> processArray(List<Object> entities, EntityContext context) {
-        return null;
+        throw new NotImplementedException("Pojo upsert is not implemented yet");
     }
 }

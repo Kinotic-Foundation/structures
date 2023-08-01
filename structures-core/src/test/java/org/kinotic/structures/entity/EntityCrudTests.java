@@ -341,14 +341,16 @@ public class EntityCrudTests extends ElasticsearchTestBase {
 
         Assertions.assertEquals(car.getId(), result2.getId(), "Car id does not match after partial update");
 
-        Page<Car> page2 = entitiesService.findAll(structure.getId(), Pageable.ofSize(10), Car.class, entityContext).join();
+        Page<RawJson> page2 = entitiesService.findAll(structure.getId(), Pageable.ofSize(10), RawJson.class, entityContext).join();
 
         Assertions.assertEquals(1, page2.getTotalElements(), "Wrong number of entities after partial update");
 
-        Assertions.assertNotNull(page2.getContent().get(0).getMake(), "Expected make to be null after partial update");
-        Assertions.assertNotNull(page2.getContent().get(0).getModel(), "Expected model to be null after partial update");
-        Assertions.assertNotNull(page2.getContent().get(0).getYear(), "Expected year to be null after partial update");
-        Assertions.assertNotNull(page2.getContent().get(0).getOwner(), "Expected owner to be set after partial update");
+        Car updatedCar = objectMapper.readValue(page2.getContent().get(0).data(), Car.class);
+
+        Assertions.assertNotNull(updatedCar.getMake(), "Expected make to be null after partial update");
+        Assertions.assertNotNull(updatedCar.getModel(), "Expected model to be null after partial update");
+        Assertions.assertNotNull(updatedCar.getYear(), "Expected year to be null after partial update");
+        Assertions.assertNotNull(updatedCar.getOwner(), "Expected owner to be set after partial update");
     }
 
 }
