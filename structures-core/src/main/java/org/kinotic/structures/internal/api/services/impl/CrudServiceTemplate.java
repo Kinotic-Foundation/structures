@@ -17,6 +17,8 @@ import co.elastic.clients.transport.endpoints.EndpointWithResponseMapperAttr;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.internal.serializer.RawJsonJsonpDeserializer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -34,6 +36,8 @@ import java.util.function.Consumer;
  */
 @Component
 public class CrudServiceTemplate {
+
+    private static final Logger log = LoggerFactory.getLogger(CrudServiceTemplate.class);
 
     private final ElasticsearchAsyncClient esAsyncClient;
     private final RawJsonJsonpDeserializer rawJsonJsonpDeserializer;
@@ -188,9 +192,13 @@ public class CrudServiceTemplate {
             builderConsumer.accept(builder);
         }
 
+        SearchRequest request = builder.build();
+
+        log.trace("Query: \n "+request.toString());
+
         //noinspection resource
         return esAsyncClient._transport()
-                            .performRequestAsync(builder.build(), endpoint, esAsyncClient._transportOptions());
+                            .performRequestAsync(request, endpoint, esAsyncClient._transportOptions());
     }
 
 

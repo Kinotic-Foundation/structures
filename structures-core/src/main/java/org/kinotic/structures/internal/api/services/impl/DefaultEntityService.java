@@ -3,6 +3,7 @@ package org.kinotic.structures.internal.api.services.impl;
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import co.elastic.clients.elasticsearch._types.Refresh;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
+import co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType;
 import co.elastic.clients.elasticsearch.core.BulkRequest;
 import co.elastic.clients.elasticsearch.core.UpdateRequest;
 import co.elastic.clients.elasticsearch.core.bulk.BulkOperation;
@@ -230,9 +231,7 @@ public class DefaultEntityService implements EntityService {
 
                                     Query.Builder queryBuilder = new Query.Builder();
 
-                                    delegatingReadPreProcessor.beforeSearch(structure, builder, queryBuilder, context);
-
-                                    builder.q(searchText);
+                                    delegatingReadPreProcessor.beforeSearch(structure, searchText, builder, queryBuilder, context);
 
                                     builder.query(queryBuilder.build());
                                 }));

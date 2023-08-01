@@ -41,11 +41,14 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -145,7 +148,7 @@ public class EntityCrudTests extends ElasticsearchTestBase {
 
         Assertions.assertNotNull(holder1);
 
-        StructureAndPersonHolder holder2 = createAndVerify(10, true, context2, "-testCount");
+        StructureAndPersonHolder holder2 = createAndVerify(20, true, context2, "-testCount");
 
         Assertions.assertNotNull(holder2);
 
@@ -155,8 +158,8 @@ public class EntityCrudTests extends ElasticsearchTestBase {
                     .verifyComplete();
 
         StepVerifier.create(Mono.fromFuture(entitiesService.count(holder2.getStructure().getId(), context2)))
-                    .expectNext(10L)
-                    .as("Verifying Tenant 2 has 10 entities")
+                    .expectNext(20L)
+                    .as("Verifying Tenant 2 has 20 entities")
                     .verifyComplete();
     }
 
@@ -170,7 +173,7 @@ public class EntityCrudTests extends ElasticsearchTestBase {
 
         Assertions.assertNotNull(holder1);
 
-        StructureAndPersonHolder holder2 = createAndVerify(10, true, context2, "-testAll");
+        StructureAndPersonHolder holder2 = createAndVerify(20, true, context2, "-testAll");
 
         Assertions.assertNotNull(holder2);
 
@@ -185,14 +188,14 @@ public class EntityCrudTests extends ElasticsearchTestBase {
                     .as("Verifying Tenant 1 has 10 entities")
                     .verifyComplete();
 
-        StepVerifier.create(Mono.fromFuture(entitiesService.findAll(holder1.getStructure().getId(),
+        StepVerifier.create(Mono.fromFuture(entitiesService.findAll(holder2.getStructure().getId(),
                                                                     Pageable.ofSize(20), // make sure page size is larger than number of entities
                                                                     RawJson.class,
                                                                     context2)))
-                    .expectNextMatches(rawJsons -> rawJsons.getTotalElements() == 10
+                    .expectNextMatches(rawJsons -> rawJsons.getTotalElements() == 20
                             && rawJsons.getTotalPages() == 1
-                            && rawJsons.getContent().size() == 10)
-                    .as("Verifying Tenant 2 has 10 entities")
+                            && rawJsons.getContent().size() == 20)
+                    .as("Verifying Tenant 2 has 20 entities")
                     .verifyComplete();
     }
 
@@ -205,7 +208,7 @@ public class EntityCrudTests extends ElasticsearchTestBase {
 
         Assertions.assertNotNull(holder1);
 
-        StructureAndPersonHolder holder2 = createAndVerify(10, false, context2, "-testSearch");
+        StructureAndPersonHolder holder2 = createAndVerify(20, false, context2, "-testSearch");
 
         Assertions.assertNotNull(holder2);
 
@@ -227,7 +230,7 @@ public class EntityCrudTests extends ElasticsearchTestBase {
                     .as("Verifying search for Tenant 1 has 2 entities")
                     .verifyComplete();
 
-        StepVerifier.create(Mono.fromFuture(entitiesService.search(holder1.getStructure().getId(),
+        StepVerifier.create(Mono.fromFuture(entitiesService.search(holder2.getStructure().getId(),
                                                                    "lastName: Z*",
                                                                    Pageable.ofSize(20), // make sure page size is larger than number of entities
                                                                    RawJson.class,
@@ -243,6 +246,39 @@ public class EntityCrudTests extends ElasticsearchTestBase {
                     })
                     .as("Verifying search for Tenant 2 has 2 entities")
                     .verifyComplete();
+    }
+
+
+    @Test
+    public void testMultiTenantSearch(){
+
+        HashMap<DefaultEntityContext, StructureAndPersonHolder> contextMap = new HashMap<>();
+        for(int i = 0; i < 10; i++){
+            int numberOfPeople = (int)(Math.random()*100);
+            DefaultEntityContext context = new DefaultEntityContext(new DummyParticipant("tenant"+i, "user"+i));
+            StructureAndPersonHolder holder = createAndVerify(numberOfPeople, true, context, "-testMultiTenantSearch");
+            Assertions.assertNotNull(holder);
+            contextMap.put(context,  holder);
+        }
+
+        contextMap.forEach((context, holder) -> {
+            StepVerifier.create(Mono.fromFuture(entitiesService.search(holder.getStructure().getId(),
+                            "lastName: *",
+                            Pageable.ofSize(20), // make sure page size is larger than number of entities
+                            RawJson.class,
+                            context)))
+                    .expectNextMatches(rawJsons -> {
+                        long expectedCount = holder.getPersons().size();
+                        long queriedCount = rawJsons.getTotalElements();
+                        if(expectedCount != queriedCount){
+                            log.error("Wrong Data, Wat! Expected: "+expectedCount+" and Queried: "+queriedCount);
+                        }
+                        return expectedCount == queriedCount;
+                    })
+                    .as("Verifying search for Multi Tenant, count queried does not match how many we stored")
+                    .verifyComplete();
+        });
+
     }
 
     @Test

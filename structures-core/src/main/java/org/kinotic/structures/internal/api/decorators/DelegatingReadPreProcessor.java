@@ -110,6 +110,7 @@ public class DelegatingReadPreProcessor {
     }
 
     public void beforeSearch(Structure structure,
+                             String searchText,
                              SearchRequest.Builder builder,
                              Query.Builder queryBuilder,
                              EntityContext context) {
@@ -118,8 +119,11 @@ public class DelegatingReadPreProcessor {
         if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
             builder.routing(context.getParticipant().getTenantId());
             queryBuilder
-                    .bool(b -> b.filter(qb -> qb.term(tq -> tq.field(structuresProperties.getTenantIdFieldName())
+                    .bool(b -> b.must(must -> must.queryString(qs -> qs.query(searchText).analyzeWildcard(true)))
+                                .filter(qb -> qb.term(tq -> tq.field(structuresProperties.getTenantIdFieldName())
                                                               .value(context.getParticipant().getTenantId()))));
+        }else{
+            queryBuilder.queryString(qs -> qs.query(searchText).analyzeWildcard(true));
         }
 
         if(searchPreProcessors != null && !searchPreProcessors.isEmpty()){
