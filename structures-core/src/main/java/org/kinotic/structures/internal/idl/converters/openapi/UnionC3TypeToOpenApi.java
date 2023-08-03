@@ -3,6 +3,7 @@ package org.kinotic.structures.internal.idl.converters.openapi;
 import io.swagger.v3.oas.models.media.ObjectSchema;
 import io.swagger.v3.oas.models.media.Schema;
 import org.kinotic.continuum.idl.api.converter.C3ConversionContext;
+import org.kinotic.continuum.idl.api.converter.Cacheable;
 import org.kinotic.continuum.idl.api.converter.SpecificC3TypeConverter;
 import org.kinotic.continuum.idl.api.schema.C3Type;
 import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
@@ -14,7 +15,7 @@ import java.util.Set;
  * {@link UnionC3TypeToOpenApi} is a {@link SpecificC3TypeConverter} that converts a {@link UnionC3Type} to a {@link Schema<?>}.
  * Created by Navíd Mitchell 🤪 on 5/27/23.
  */
-public class UnionC3TypeToOpenApi implements SpecificC3TypeConverter<Schema<?>, UnionC3Type, OpenApiConversionState> {
+public class UnionC3TypeToOpenApi implements SpecificC3TypeConverter<Schema<?>, UnionC3Type, OpenApiConversionState>, Cacheable {
 
     private static final Set<Class<? extends C3Type>> supports = Set.of(UnionC3Type.class);
 
