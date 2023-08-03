@@ -1,4 +1,4 @@
-import {BooleanC3Type, C3Type, EnumC3Type, ObjectC3Type, UnionC3Type} from '@kinotic/continuum-idl'
+import {BooleanC3Type, C3Type, EnumC3Type, ObjectC3Type, StringC3Type, UnionC3Type} from '@kinotic/continuum-idl'
 import {Type} from 'ts-morph'
 import {TypescriptConversionState} from './TypescriptConversionState.js'
 import {ITypeConverter} from '../ITypeConverter.js'
@@ -129,17 +129,20 @@ export class UnionToC3Type implements ITypeConverter<Type, Type, TypescriptConve
             ret = new BooleanC3Type()
 
         } else if(stringLiterals.length > 0) {
-
+            // This handles the case of a union of string literals
+            // eg: "first" | "second" | "third"
+            // This is a special case because we want to convert it to an enum
+            // but for now we will just return a string type
             if (primitiveCount > 0 || arrayCount > 0 || enumCount > 0 || converted.length > 0) {
                 throw new Error("You cannot create a Union with string literals and other types: " + value.getText())
             }
-            const enumType = new EnumC3Type()
-            enumType.namespace = conversionContext.state().namespace
-            enumType.name = this.getUnionPropertyName(conversionContext)
-            for (const stringLiteral of stringLiterals) {
-                enumType.addValue(trim(stringLiteral, '"'))
-            }
-            ret = enumType
+            // const enumType = new EnumC3Type()
+            // enumType.namespace = conversionContext.state().namespace
+            // enumType.name = this.getUnionPropertyName(conversionContext)
+            // for (const stringLiteral of stringLiterals) {
+            //     enumType.addValue(trim(stringLiteral, '"'))
+            // }
+            ret = new StringC3Type()
 
         } else if (converted.length === 1) { // In this case it was a single optional object, let myVar?: MyObject
 

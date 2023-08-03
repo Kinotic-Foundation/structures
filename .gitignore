@@ -72,3 +72,5 @@ structures-server/src/main/resources/webroot/
 
 structures-js/structures-cli/.structures/
 structures-js/structures-ui-example/.structures/
+
+structures-js/structures-cli/structures.json

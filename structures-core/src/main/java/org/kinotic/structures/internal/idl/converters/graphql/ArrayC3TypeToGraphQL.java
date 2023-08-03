@@ -22,7 +22,11 @@ public class ArrayC3TypeToGraphQL implements SpecificC3TypeConverter<GraphQLType
 
         GraphQLTypeHolder typeHolder = conversionContext.convert(c3Type.getContains());
 
-        return new GraphQLTypeHolder(GraphQLList.list(typeHolder.getInputType()),
+        // input type can be null in some cases such as a Union type.
+        // This can create a paradigm mismatch between OpenApi and GraphQL, but we cannot do anything about it.
+        // For now, we will not create an input type for these cases.
+
+        return new GraphQLTypeHolder(typeHolder.getInputType() != null ? GraphQLList.list(typeHolder.getInputType()) : null,
                                      GraphQLList.list(typeHolder.getOutputType()));
     }
 
