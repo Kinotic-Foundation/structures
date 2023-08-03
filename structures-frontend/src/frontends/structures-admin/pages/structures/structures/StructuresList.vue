@@ -16,7 +16,7 @@
                                small
                                class="pl-2"
                                title="GraphQL"
-                               :href="'/graphql-ui.html?namespace='+item.namespace"
+                               :href="'/gql-ui.html?namespace='+item.namespace"
                                target="_blank"
                                v-if="item.published">
                             <v-icon small>
