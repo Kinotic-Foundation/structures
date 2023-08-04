@@ -24,12 +24,12 @@ export type Logger = {
  *
  * Created by Navíd Mitchell 🤪 on 4/26/23.
  */
-export interface IConverterStrategy<BASE_TYPE, S> {
+export interface IConverterStrategy<T, R, S> {
 
     /**
      * An array of {@link ITypeConverter}'s that will be used to convert a specific language type.
      */
-    typeConverters(): Array<ITypeConverter<BASE_TYPE, BASE_TYPE, S>>
+    typeConverters(): Array<ITypeConverter<T, R, S>>
 
     /**
      * The object that will be available via the {@link IConversionContext#state()}.
@@ -49,6 +49,6 @@ export interface IConverterStrategy<BASE_TYPE, S> {
      * Prints a value to a string.
      * This is used in error messages to help the user understand what value caused the error.
      */
-    valueToString(value: BASE_TYPE): string
+    valueToString(value: T): string
 
 }

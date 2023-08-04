@@ -1,3 +1,4 @@
+import {C3Type} from '@kinotic/continuum-idl'
 import {Type} from 'ts-morph'
 import {IConverterStrategy, Logger} from '../IConverterStrategy.js'
 import {TypescriptConversionState} from './TypescriptConversionState.js'
@@ -8,7 +9,7 @@ import {UnionToC3Type} from './UnionToC3Type.js'
 import {ArrayToC3Type} from './ArrayToC3Type.js'
 import {EnumToC3Type} from './EnumToC3Type.js'
 
-export class TypescriptConverterStrategy implements IConverterStrategy<Type, TypescriptConversionState>{
+export class TypescriptConverterStrategy implements IConverterStrategy<Type, C3Type, TypescriptConversionState>{
 
     private readonly _initialState: (() => TypescriptConversionState) | TypescriptConversionState
     private readonly _logger: Logger
@@ -34,7 +35,7 @@ export class TypescriptConverterStrategy implements IConverterStrategy<Type, Typ
         return this._logger
     }
 
-    typeConverters(): Array<ITypeConverter<Type, Type, TypescriptConversionState>> {
+    typeConverters(): Array<ITypeConverter<Type, C3Type, TypescriptConversionState>> {
         return this._typeConverters
     }
 

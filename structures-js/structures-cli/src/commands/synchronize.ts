@@ -1,12 +1,20 @@
 import {Args, Command, Flags} from '@oclif/core'
 import path from 'path'
 import {ObjectC3Type} from '@kinotic/continuum-idl'
+import {DataMapper} from '../internal/converter/datamapper/DataMapper.js'
+import {DataMapperConversionState} from '../internal/converter/datamapper/DataMapperConversionState.js'
+import {DataMapperConverterStrategy} from '../internal/converter/datamapper/DataMapperConverterStrategy.js'
+import {createConversionContext} from '../internal/converter/IConversionContext.js'
 import {resolveServer} from '../internal/state/Environment.js'
 import {
     Continuum
 } from '@kinotic/continuum-client'
 import {Structures, IStructureService, Structure} from '@kinotic/structures-api'
-import {isStructuresProject, loadStructuresProject} from '../internal/state/StructuresProject.js'
+import {
+    isStructuresProject,
+    loadStructuresProject,
+    NamespaceConfiguration
+} from '../internal/state/StructuresProject.js'
 import {
     EntityInfo,
     connectAndUpgradeSession,
@@ -98,7 +106,7 @@ export class Synchronize extends Command {
                             dryRun: flags.dryRun,
                             logger: this
                         }
-                        await this.processEntityPath(config, namespaceConfig.generatedPath, flags.publish)
+                        await this.processEntityPath(config, namespaceConfig, flags.publish)
                     }
 
                     for(const [externalEntitiesPath, entityConfigurations] of Object.entries(namespaceConfig.externalEntitiesPaths || {})){
@@ -111,7 +119,7 @@ export class Synchronize extends Command {
                             dryRun: flags.dryRun,
                             logger: this
                         }
-                        await this.processEntityPath(config, namespaceConfig.generatedPath, flags.publish)
+                        await this.processEntityPath(config, namespaceConfig, flags.publish)
                     }
 
                 } catch (e) {
@@ -132,7 +140,10 @@ export class Synchronize extends Command {
         return
     }
 
-    private async processEntityPath(config: ConversionConfiguration, generatedPath: string, publish: boolean){
+    private async processEntityPath(config: ConversionConfiguration,
+                                    namespaceConfig: NamespaceConfiguration,
+                                    publish: boolean){
+
         if (!fs.existsSync(config.entitiesPath)) {
             throw new Error(`Entities path does not exist: ${config.entitiesPath}`)
         }
@@ -145,14 +156,14 @@ export class Synchronize extends Command {
 
                 this.logVerbose(`Generated Structure Mapping for ${entityInfo.entity.namespace}.${entityInfo.entity.name}`, config.verbose)
                 if(config.verbose){
-                   await writeEntityJsonToFilesystem(generatedPath, entityInfo.entity, this)
+                   await writeEntityJsonToFilesystem(namespaceConfig.generatedPath, entityInfo.entity, this)
                 }
 
                 if(!config.dryRun) {
                     await this.synchronizeEntity(entityInfo.entity, publish, config.verbose)
-
-                    await this.generateEntityService(entityInfo, generatedPath)
                 }
+
+                await this.generateEntityService(entityInfo, namespaceConfig)
             }
 
             this.logVerbose(`Synchronization Complete For namespace: ${config.namespace} and Entities Path: ${config.entitiesPath}`, config.verbose)
@@ -210,26 +221,52 @@ export class Synchronize extends Command {
         }
     }
 
-    private async generateEntityService(entityInfo: EntityInfo, generatedPath: string): Promise<void> {
-        const entityServicePath = path.resolve(generatedPath, entityInfo.entity.name + 'EntityService.ts')
+    private async generateEntityService(entityInfo: EntityInfo, namespaceConfig: NamespaceConfiguration): Promise<void> {
+
+        const generatedPath = namespaceConfig.generatedPath
+        const baseEntityServicePath = path.resolve(generatedPath, 'generated', `Base${entityInfo.entity.name}EntityService.ts`)
+        const entityServicePath = path.resolve(generatedPath, `${entityInfo.entity.name}EntityService.ts`)
+
+
+        const entityName = entityInfo.entity.name
+        const entityNamespace = entityInfo.entity.namespace
+        const defaultExport = entityInfo.defaultExport
+        const exportName = entityInfo.exportedAs
+        const validate = namespaceConfig.validate
+        const importPath = this.getRelativeImportPath(entityServicePath, entityInfo.exportedFromFile)
+        const validationLogic = this.createValidationString(entityInfo).toStatementString()
+
+        //  We always generate the base entity service. This way if our internal logic changes we can update it
+        fs.mkdirSync(path.dirname(baseEntityServicePath), {recursive: true})
+        const baseReadStream= await engine.renderFileToNodeStream('BaseEntityService',
+            {
+                entityName,
+                entityNamespace,
+                defaultExport,
+                exportName,
+                importPath,
+                validationLogic
+            })
+        let baseWriteStream = fs.createWriteStream(baseEntityServicePath)
+        baseReadStream.pipe(baseWriteStream)
+
         //  we only generate if the file does not exist
         if (!fs.existsSync(entityServicePath)) {
-            const entityName = entityInfo.entity.name
-            const entityNamespace = entityInfo.entity.namespace
-            const defaultExport = entityInfo.defaultExport
-            const exportName = entityInfo.exportedAs
-            const importPath = this.getRelativeImportPath(entityServicePath, entityInfo.exportedFromFile)
             const readStream= await engine.renderFileToNodeStream('EntityService',
                 {
                     entityName,
                     entityNamespace,
-                    defaultExport,
-                    exportName,
-                    importPath
+                    validate
                 })
             let writeStream = fs.createWriteStream(entityServicePath)
             readStream.pipe(writeStream)
         }
+    }
+
+    private createValidationString(entityInfo: EntityInfo): DataMapper{
+        const conversionContext =
+                  createConversionContext(new DataMapperConverterStrategy(new DataMapperConversionState('ret', 'entity'), this))
+        return conversionContext.convert(entityInfo.entity)
     }
 
     private getRelativeImportPath(from: string, to: string) {

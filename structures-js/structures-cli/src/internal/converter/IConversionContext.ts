@@ -1,4 +1,3 @@
-import { C3Type } from '@kinotic/continuum-idl'
 import {IConverterStrategy} from './IConverterStrategy.js'
 import {DefaultConversionContext} from './DefaultConversionContext.js'
 
@@ -12,13 +11,20 @@ import {DefaultConversionContext} from './DefaultConversionContext.js'
  *s
  * Created by Navíd Mitchell 🤪 on 4/26/23.
  */
-export interface IConversionContext<BASE_TYPE, S> {
+export interface IConversionContext<T, R, S> {
 
     /**
      * The current json path being processed.
-     * This is only updated if {@link beginProcessingProperty} and {@link endProcessingProperty} are called appropriately.
+     * This is only updated if beginProcessingProperty and endProcessingProperty are called appropriately.
+     * You should not update this manually unless you know what you are doing.
      */
     currentJsonPath: string
+
+    /**
+     * The property stack. This is only updated if beginProcessingProperty and endProcessingProperty are called appropriately.
+     * You should not update this manually unless you know what you are doing.
+     */
+    propertyStack: string[]
 
     /**
      * Should be called before processing a property.
@@ -33,12 +39,12 @@ export interface IConversionContext<BASE_TYPE, S> {
     endProcessingProperty(): void
 
     /**
-     * Converts the given type to a {@link C3Type} by resolving the proper {@link ITypeConverter}.
+     * Converts the given type to a {@link R} by resolving the proper {@link ITypeConverter}.
      *
      * @param value to convert
      * @return the converted value
      */
-    convert(value: BASE_TYPE): C3Type
+    convert(value: T): R
 
     /**
      * @return the state of this {@link IConversionContext}
@@ -53,6 +59,6 @@ export interface IConversionContext<BASE_TYPE, S> {
  * If state needs to be reset a new {@link IConversionContext} should be created.
  * @param strategy
  */
-export function createConversionContext<BASE_TYPE, S>(strategy: IConverterStrategy<BASE_TYPE, S>): IConversionContext<BASE_TYPE, S>{
+export function createConversionContext<T, R, S>(strategy: IConverterStrategy<T, R, S>): IConversionContext<T, R, S>{
     return new DefaultConversionContext(strategy)
 }

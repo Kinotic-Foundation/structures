@@ -7,9 +7,9 @@ import {ITypeConverter} from '../ITypeConverter.js'
 /**
  * Converts a typescript enum to a C3 Enum
  */
-export class EnumToC3Type implements ITypeConverter<Type, Type, TypescriptConversionState> {
+export class EnumToC3Type implements ITypeConverter<Type, C3Type, TypescriptConversionState> {
 
-    convert(value: Type, conversionContext: IConversionContext<Type, TypescriptConversionState>): C3Type {
+    convert(value: Type, conversionContext: IConversionContext<Type, C3Type, TypescriptConversionState>): C3Type {
         const ret: EnumC3Type = new EnumC3Type()
 
         ret.name = value.getSymbolOrThrow("No Symbol could be found for object: "+value.getText()).getName()

@@ -9,9 +9,9 @@ import {pascal, trim} from 'radash'
  * Converts a typescript union type to a C3Type
  * TODO: Refactor this, it is starting to seem kinda brittle
  */
-export class UnionToC3Type implements ITypeConverter<Type, Type, TypescriptConversionState> {
+export class UnionToC3Type implements ITypeConverter<Type, C3Type, TypescriptConversionState> {
 
-    convert(value: Type, conversionContext: IConversionContext<Type, TypescriptConversionState>): C3Type {
+    convert(value: Type, conversionContext: IConversionContext<Type, C3Type, TypescriptConversionState>): C3Type {
         let ret: C3Type
 
         const converted: C3Type[] = []
@@ -174,7 +174,7 @@ export class UnionToC3Type implements ITypeConverter<Type, Type, TypescriptConve
             || (type.isLiteral() && this.isPrimitive(type.getApparentType()))
     }
 
-    private getUnionPropertyName(conversionContext: IConversionContext<Type, TypescriptConversionState>): string {
+    private getUnionPropertyName(conversionContext: IConversionContext<Type, C3Type, TypescriptConversionState>): string {
         if (conversionContext.state().unionPropertyNameStack.length > 0) {
             return this.capitalizeFirstLetter(conversionContext.state().unionPropertyNameStack[conversionContext.state().unionPropertyNameStack.length - 1])
         } else {

@@ -1,4 +1,3 @@
-import {C3Type} from '@kinotic/continuum-idl'
 import {IConversionContext} from './IConversionContext.js'
 import {IConverterStrategy, Logger} from './IConverterStrategy.js'
 import {ITypeConverter} from './ITypeConverter.js'
@@ -6,17 +5,17 @@ import {ITypeConverter} from './ITypeConverter.js'
 /**
  * Created by Navíd Mitchell 🤪 on 4/26/23.
  */
-export class DefaultConversionContext<BASE_TYPE, S> implements IConversionContext<BASE_TYPE, S> {
+export class DefaultConversionContext<T, R, S> implements IConversionContext<T, R, S> {
 
-    private readonly strategy: IConverterStrategy<BASE_TYPE, S>
-    private readonly conversionDepthStack: Array<BASE_TYPE> = []
-    private readonly errorStack: Array<BASE_TYPE> = []
+    private readonly strategy: IConverterStrategy<T, R, S>
+    private readonly conversionDepthStack: Array<T> = []
+    private readonly errorStack: Array<T> = []
     private readonly _state: S
     private readonly logger: Logger
-    private _propertyStack: string[] = []
+    public propertyStack: string[] = []
     public currentJsonPath: string = ''
 
-    constructor(strategy: IConverterStrategy<BASE_TYPE, S>) {
+    constructor(strategy: IConverterStrategy<T, R, S>) {
         this.strategy = strategy
         let state = strategy.initialState()
         if(state instanceof Function){
@@ -33,16 +32,16 @@ export class DefaultConversionContext<BASE_TYPE, S> implements IConversionContex
     }
 
     public beginProcessingProperty(name: string): void {
-        this.currentJsonPath = (this._propertyStack.length > 0  ? this._propertyStack[this._propertyStack.length - 1] + '.' : '') + name
-        this._propertyStack.push(this.currentJsonPath)
+        this.currentJsonPath = (this.propertyStack.length > 0  ? this.propertyStack[this.propertyStack.length - 1] + '.' : '') + name
+        this.propertyStack.push(this.currentJsonPath)
     }
 
     public endProcessingProperty(): void {
-        this._propertyStack.pop()
-        this.currentJsonPath = this._propertyStack.length > 0 ? this._propertyStack[this._propertyStack.length - 1] : ''
+        this.propertyStack.pop()
+        this.currentJsonPath = this.propertyStack.length > 0 ? this.propertyStack[this.propertyStack.length - 1] : ''
     }
 
-    public convert(value: BASE_TYPE): C3Type {
+    public convert(value: T): R {
         try {
 
             this.conversionDepthStack.unshift(value)
@@ -69,8 +68,8 @@ export class DefaultConversionContext<BASE_TYPE, S> implements IConversionContex
         return this._state
     }
 
-    private selectConverter(value: BASE_TYPE): ITypeConverter<BASE_TYPE, any, S> | null{
-        let ret: ITypeConverter<BASE_TYPE, any, S> | null = null
+    private selectConverter(value: T): ITypeConverter<T, R, S> | null{
+        let ret: ITypeConverter<T, R, S> | null = null
         for (let converter of this.strategy.typeConverters()) {
             if(converter.supports(value, this.state())){
                 ret = converter

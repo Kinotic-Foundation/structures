@@ -101,20 +101,32 @@ export class EntityService<T> implements IEntityService<T>{
         this.entitiesService = new EntitiesService()
     }
 
-    public save(entity: T): Promise<T>{
-        return this.entitiesService.save(this.structuresId, entity)
+    protected async beforeSaveOrUpdate(entity: T): Promise<T>{
+        return Promise.resolve(entity)
     }
 
-    public bulkSave(entities: T[]): Promise<void>{
-        return this.entitiesService.bulkSave(this.structuresId, entities)
+    protected async beforeBulkSaveOrUpdate(entities: T[]): Promise<T[]>{
+        return Promise.resolve(entities)
     }
 
-    public update(entity: T): Promise<T>{
-        return this.entitiesService.update(this.structuresId, entity)
+    public async save(entity: T): Promise<T>{
+        const entityToSave = await this.beforeSaveOrUpdate(entity)
+        return this.entitiesService.save(this.structuresId, entityToSave)
     }
 
-    public bulkUpdate(entities: T[]): Promise<void>{
-        return this.entitiesService.bulkUpdate(this.structuresId, entities)
+    public async bulkSave(entities: T[]): Promise<void>{
+        const entitiesToSave = await this.beforeBulkSaveOrUpdate(entities)
+        return this.entitiesService.bulkSave(this.structuresId, entitiesToSave)
+    }
+
+    public async update(entity: T): Promise<T>{
+        const entityToSave = await this.beforeSaveOrUpdate(entity)
+        return this.entitiesService.update(this.structuresId, entityToSave)
+    }
+
+    public async bulkUpdate(entities: T[]): Promise<void>{
+        const entitiesToSave = await this.beforeBulkSaveOrUpdate(entities)
+        return this.entitiesService.bulkUpdate(this.structuresId, entitiesToSave)
     }
 
     public findById(id: string): Promise<T>{

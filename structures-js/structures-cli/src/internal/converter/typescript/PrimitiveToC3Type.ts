@@ -7,10 +7,10 @@ import {BooleanC3Type, C3Type, StringC3Type, IntC3Type, DateC3Type} from '@kinot
 /**
  * Converts typescript primitive types to C3Types
  */
-export class PrimitiveToC3Type extends SpecificTypesConverter<Type, TypescriptConversionState, string>{
+export class PrimitiveToC3Type extends SpecificTypesConverter<Type, C3Type, TypescriptConversionState, string>{
 
     constructor() {
-        const map: Map<string, (type: Type, context: IConversionContext<Type, TypescriptConversionState>) => C3Type> = new Map()
+        const map: Map<string, (type: Type, context: IConversionContext<Type, C3Type, TypescriptConversionState>) => C3Type> = new Map()
         map.set('string', () => {
             return new StringC3Type()
         })

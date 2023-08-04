@@ -1,20 +1,22 @@
 import {ITypeConverter} from './ITypeConverter.js'
 import {IConversionContext} from './IConversionContext.js'
-import {C3Type} from '@kinotic/continuum-idl'
 
-export class SpecificTypesConverter<BASE_TYPE, S, MATCH_VALUE> implements ITypeConverter<BASE_TYPE, BASE_TYPE, S> {
+/**
+ * {@link ITypeConverter} are the base interface for converting a specific type to another specific type.
+ */
+export class SpecificTypesConverter<T, R, S, MATCH_VALUE> implements ITypeConverter<T, R, S> {
 
-    private readonly matchValueExtractor: (arg: BASE_TYPE) => MATCH_VALUE
-    private typeConverterFunctions: Map<MATCH_VALUE, ((type: BASE_TYPE, context: IConversionContext<BASE_TYPE, S>) => C3Type)>
+    private readonly matchValueExtractor: (arg: T) => MATCH_VALUE
+    private typeConverterFunctions: Map<MATCH_VALUE, ((type: T, context: IConversionContext<T, R, S>) => R)>
 
 
-    constructor(matchValueExtractor: (arg: BASE_TYPE) => MATCH_VALUE,
-                typeConverterFunctions: Map<MATCH_VALUE, ((type: BASE_TYPE, context: IConversionContext<BASE_TYPE, S>) => C3Type)>) {
+    constructor(matchValueExtractor: (arg: T) => MATCH_VALUE,
+                typeConverterFunctions: Map<MATCH_VALUE, ((type: T, context: IConversionContext<T, R, S>) => R)>) {
         this.matchValueExtractor = matchValueExtractor
         this.typeConverterFunctions = typeConverterFunctions
     }
 
-    convert(value: BASE_TYPE, conversionContext: IConversionContext<BASE_TYPE, S>): C3Type {
+    convert(value: T, conversionContext: IConversionContext<T, R, S>): R {
         const matchValue: MATCH_VALUE = this.matchValueExtractor(value)
         const converterFunction = this.typeConverterFunctions.get(matchValue)
         if(!converterFunction){
@@ -24,7 +26,7 @@ export class SpecificTypesConverter<BASE_TYPE, S, MATCH_VALUE> implements ITypeC
         return converterFunction(value, conversionContext)
     }
 
-    supports(value: BASE_TYPE): boolean {
+    supports(value: T): boolean {
         const matchValue: MATCH_VALUE = this.matchValueExtractor(value)
         return this.typeConverterFunctions.has(matchValue)
     }

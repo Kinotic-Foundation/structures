@@ -8,9 +8,9 @@ import {tsDecoratorToC3Decorator, convertPrecisionToC3Type} from './ConverterUti
 /**
  * Converts a typescript Class, Interface, or Type to a C3Type
  */
-export class ObjectLikeToC3Type implements ITypeConverter<Type, Type, TypescriptConversionState>{
+export class ObjectLikeToC3Type implements ITypeConverter<Type, C3Type, TypescriptConversionState>{
 
-    convert(value: Type, conversionContext: IConversionContext<Type, TypescriptConversionState>): C3Type {
+    convert(value: Type, conversionContext: IConversionContext<Type, C3Type, TypescriptConversionState>): C3Type {
         const ret: ObjectC3Type = new ObjectC3Type()
 
         ret.name = value.getSymbolOrThrow("No Symbol could be found for object: "+value.getText()).getName()
@@ -45,7 +45,7 @@ export class ObjectLikeToC3Type implements ITypeConverter<Type, Type, Typescript
         return ret
     }
 
-    private convertProperty(property: Symbol, propertyName: string, conversionContext: IConversionContext<Type, TypescriptConversionState>): C3Type {
+    private convertProperty(property: Symbol, propertyName: string, conversionContext: IConversionContext<Type, C3Type, TypescriptConversionState>): C3Type {
         const valueDeclaration = property.getValueDeclarationOrThrow("No value declaration could be found for property " + propertyName)
 
         let converted: C3Type
