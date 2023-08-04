@@ -48,8 +48,8 @@ export default class Init extends Command {
         structuresProject.defaultNamespaceName = namespace
         let namespaceConfig =  new NamespaceConfiguration()
         namespaceConfig.namespaceName = namespace
-        namespaceConfig.entitiesPaths = [entitiesPath]
-        namespaceConfig.generatedPath = generatedPath
+        namespaceConfig.entitiesPaths = [flags.entities]
+        namespaceConfig.generatedPath = flags.generated
         namespaceConfig.validate = true
         structuresProject.namespaces.push(namespaceConfig)
 
