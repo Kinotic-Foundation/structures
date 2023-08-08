@@ -15,7 +15,11 @@ export class MultiDataMapper implements DataMapper{
     }
 
     add(mapper: DataMapper): MultiDataMapper {
-        this._mappers.push(new IndentingDataMapper(this._state.indent, mapper))
+        if(mapper instanceof MultiDataMapper){
+            this._mappers.push(mapper)
+        }else{
+            this._mappers.push(new IndentingDataMapper(this._state.indent, mapper))
+        }
         return this
     }
 
@@ -42,16 +46,10 @@ export class IndentingDataMapper implements DataMapper {
     }
 
     toStatementString(): string {
-        return this.createIndent() + this._mapper.toStatementString()
+        const out = this._mapper.toStatementString()
+        return ' '.repeat(this._indent) + out
     }
 
-    private createIndent(): string {
-        let ret = ''
-        for (let i= 0; i < this._indent; i++) {
-            ret += ' '
-        }
-        return ret
-    }
 }
 
 export class AssignmentDataMapper implements DataMapper {
