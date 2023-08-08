@@ -1,7 +1,7 @@
 import {C3Type} from '@kinotic/continuum-idl'
 import {FunctionDeclaration} from 'ts-morph'
 import {EntityConfiguration, OverrideConfiguration, TransformConfiguration} from '../../state/StructuresProject.js'
-import {TransformerFunctionLocator} from '../../TransformerFunctionLocator.js'
+import {UtilFunctionLocator} from '../../UtilFunctionLocator'
 
 /**
  * The state of the Typescript to C3Type conversion process.
@@ -9,7 +9,7 @@ import {TransformerFunctionLocator} from '../../TransformerFunctionLocator.js'
 export class TypescriptConversionState {
 
     private readonly _namespace: string
-    private readonly transformerFunctionLocator: TransformerFunctionLocator
+    private readonly utilFunctionLocator: UtilFunctionLocator
     private _entityConfiguration: EntityConfiguration | undefined = undefined
     private _exclusionMap: Map<string, void> | null = null
     private _overridesMap: Map<string, OverrideConfiguration> | null = null
@@ -17,9 +17,9 @@ export class TypescriptConversionState {
 
     public unionPropertyNameStack: string[] = []
 
-    constructor(namespace: string, transformerFunctionLocator: TransformerFunctionLocator) {
+    constructor(namespace: string, utilFunctionLocator: UtilFunctionLocator) {
         this._namespace = namespace
-        this.transformerFunctionLocator = transformerFunctionLocator
+        this.utilFunctionLocator = utilFunctionLocator
     }
 
     get namespace(): string {
@@ -82,7 +82,7 @@ export class TypescriptConversionState {
         if(this._transformsMap){
             const transform = this._transformsMap.get(jsonPath)
             if(transform){
-                ret = this.transformerFunctionLocator.getTransformerFunction(transform.transformerFunctionName)
+                ret = this.utilFunctionLocator.getTransformerFunction(transform.transformerFunctionName)
                 if(!ret){
                     throw new Error(`No transformer function could be found with name ${transform.transformerFunctionName}`)
                 }

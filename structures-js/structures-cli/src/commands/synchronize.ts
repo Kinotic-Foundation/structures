@@ -1,9 +1,9 @@
 import {Args, Command, Flags} from '@oclif/core'
 import path from 'path'
 import {ObjectC3Type} from '@kinotic/continuum-idl'
-import {DataMapper} from '../internal/converter/datamapper/DataMapper.js'
-import {DataMapperConversionState} from '../internal/converter/datamapper/DataMapperConversionState.js'
-import {DataMapperConverterStrategy} from '../internal/converter/datamapper/DataMapperConverterStrategy.js'
+import {StatementMapper} from '../internal/converter/datamapper/StatementMapper'
+import {StatementMapperConversionState} from '../internal/converter/datamapper/StatementMapperConversionState'
+import {StatementMapperConverterStrategy} from '../internal/converter/datamapper/StatementMapperConverterStrategy'
 import {createConversionContext} from '../internal/converter/IConversionContext.js'
 import {resolveServer} from '../internal/state/Environment.js'
 import {
@@ -22,7 +22,7 @@ import {
     ConversionConfiguration,
     writeEntityJsonToFilesystem
 } from '../internal/Utils.js'
-import {TransformerFunctionLocator} from '../internal/TransformerFunctionLocator.js'
+import {UtilFunctionLocator} from '../internal/UtilFunctionLocator'
 import inquirer from 'inquirer'
 import chalk from 'chalk'
 import { Liquid } from 'liquidjs'
@@ -95,7 +95,7 @@ export class Synchronize extends Command {
                         await Structures.getNamespaceService().createNamespaceIfNotExist(namespaceConfig.namespaceName, '')
                     }
 
-                    const transformerFunctionLocator = new TransformerFunctionLocator(namespaceConfig.transformerFunctionsPaths || [], flags.verbose)
+                    const transformerFunctionLocator = new UtilFunctionLocator(namespaceConfig.transformerFunctionsPaths || [], flags.verbose)
 
                     for(const entitiesPath of namespaceConfig.entitiesPaths) {
                         const config: ConversionConfiguration = {
@@ -263,9 +263,9 @@ export class Synchronize extends Command {
         }
     }
 
-    private createValidationString(entityInfo: EntityInfo): DataMapper{
+    private createValidationString(entityInfo: EntityInfo): StatementMapper{
         const conversionContext =
-                  createConversionContext(new DataMapperConverterStrategy(new DataMapperConversionState('ret', 'entity'), this))
+                  createConversionContext(new StatementMapperConverterStrategy(new StatementMapperConversionState('ret', 'entity'), this))
         return conversionContext.convert(entityInfo.entity)
     }
 

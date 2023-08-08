@@ -9,20 +9,20 @@ import {
 } from '@kinotic/continuum-idl'
 import {IConversionContext} from '../IConversionContext.js'
 import {ITypeConverter} from '../ITypeConverter.js'
-import {AssignmentDataMapper, DataMapper} from './DataMapper.js'
-import {DataMapperConversionState} from './DataMapperConversionState.js'
+import {AssignmentStatementMapper, StatementMapper} from './StatementMapper'
+import {StatementMapperConversionState} from './StatementMapperConversionState'
 
-export class PrimitiveC3TypeToDataMapper implements ITypeConverter<C3Type, DataMapper, DataMapperConversionState> {
+export class PrimitiveC3TypeToStatementMapper implements ITypeConverter<C3Type, StatementMapper, StatementMapperConversionState> {
 
-    convert(value: C3Type, conversionContext: IConversionContext<C3Type, DataMapper, DataMapperConversionState>): DataMapper {
+    convert(value: C3Type, conversionContext: IConversionContext<C3Type, StatementMapper, StatementMapperConversionState>): StatementMapper {
         const targetName = conversionContext.state().targetName
         const sourceName = conversionContext.state().sourceName
         const lhs = targetName + (conversionContext.currentJsonPath.length > 0 ? '.' + conversionContext.currentJsonPath : '')
         const rhs = sourceName + (conversionContext.currentJsonPath.length > 0 ? '.' + conversionContext.currentJsonPath : '')
-        return new AssignmentDataMapper(lhs, rhs)
+        return new AssignmentStatementMapper(lhs, rhs)
     }
 
-    supports(value: C3Type, conversionState: DataMapperConversionState): boolean {
+    supports(value: C3Type, conversionState: StatementMapperConversionState): boolean {
         return value instanceof BooleanC3Type
             || value instanceof ByteC3Type
             || value instanceof CharC3Type

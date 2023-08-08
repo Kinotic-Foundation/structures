@@ -5,22 +5,6 @@ import { createStateManager } from './IStateManager.js'
 const STRUCTURES_KEY = 'structures'
 
 /**
- * The configuration for a function that will transform a value before it is sent to the server.
- * The function must be exported from a file that is specified in {@link StructuresProject.transformerFunctionsPaths}
- * The function return argument will be the resulting {@link C3Type} that will be configured for the Entity
- */
-export class TransformConfiguration {
-    /**
-     * The json path to the property that should be transformed.
-     */
-    jsonPath!: string
-    /**
-     * The name of the function that will be used to transform the value.
-     */
-    transformerFunctionName!: string
-}
-
-/**
  * The configuration for a property that should be overridden.
  * This allows you to specify a {@link C3Type} for a property that you cannot add a {@link C3Decorator} to.
  */
@@ -33,6 +17,35 @@ export class OverrideConfiguration {
      * The {@link C3Type} that should be used for the property.
      */
     c3Type!: C3Type
+}
+
+/**
+ * The configuration for a function that will transform a value before it is sent to the server.
+ * The function must be exported from a file that is specified in {@link StructuresProject.utilFunctionsPaths}
+ * The function return argument will be the resulting {@link C3Type} that will be configured for the Entity
+ */
+export class TransformConfiguration {
+    /**
+     * The json path to the property that should be transformed.
+     */
+    jsonPath!: string
+
+    /**
+     * The name of the function that will be used to transform the value.
+     */
+    transformerFunctionName!: string
+}
+
+export class CalculatedPropertyConfiguration {
+    /**
+     * The json path to the property that should be calculated.
+     */
+    jsonPath!: string
+
+    /**
+     * The name of the function that will be used to calculate the value for the property.
+     */
+    calculatedPropertyFunctionName!: string
 }
 
 /**
@@ -55,12 +68,12 @@ export class EntityConfiguration {
     excludeJsonPaths?: string[]
     /**
      * Array of {@link OverrideConfiguration} that should be applied to the Entity.
-     * These have a higher priority than {@link TransformConfiguration}
+     * These have a higher priority than {@link TransformConfiguration}s
      */
     overrides?: OverrideConfiguration[]
     /**
      * Array of {@link TransformConfiguration} that should be applied to the Entity.
-     * These have the lowest priority.
+     * These have a lower priority than {@link OverrideConfiguration}s.
      */
     transforms?: TransformConfiguration[]
 }
@@ -89,9 +102,9 @@ export class NamespaceConfiguration {
     }
 
     /**
-     * The path to look for files that export functions that can be used by a {@link TransformConfiguration}.
+     * The path to look for files that export functions that can be used by a {@link TransformConfiguration} or {@link CalculatedPropertyConfiguration}.
      */
-    transformerFunctionsPaths?: string[]
+    utilFunctionsPaths?: string[]
 
     /**
      * If true the generated EntityService classes will validate all data before sending to the server.

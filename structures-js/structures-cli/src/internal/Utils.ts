@@ -23,7 +23,7 @@ import {tsDecoratorToC3Decorator} from './converter/typescript/ConverterUtils.js
 import {TypescriptConversionState} from './converter/typescript/TypescriptConversionState.js'
 import {TypescriptConverterStrategy} from './converter/typescript/TypescriptConverterStrategy.js'
 import {EntityConfiguration} from './state/StructuresProject.js'
-import {TransformerFunctionLocator} from './TransformerFunctionLocator.js'
+import {UtilFunctionLocator} from './UtilFunctionLocator'
 
 function isEmpty(value: any): boolean {
     if (value === null || value === undefined) {
@@ -175,7 +175,7 @@ export type EntityInfo = {
 export type ConversionConfiguration = {
     namespace: string,
     entitiesPath: string,
-    transformerFunctionLocator: TransformerFunctionLocator,
+    transformerFunctionLocator: UtilFunctionLocator,
     entityConfigurations?: EntityConfiguration[],
     verbose: boolean,
     dryRun: boolean,

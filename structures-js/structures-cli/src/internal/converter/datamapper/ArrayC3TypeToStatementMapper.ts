@@ -2,17 +2,18 @@ import {ArrayC3Type, C3Type} from '@kinotic/continuum-idl'
 import {ITypeConverter} from '../ITypeConverter.js'
 import {IConversionContext} from '../IConversionContext.js'
 import {
-    DataMapper,
-    MultiDataMapper,
-} from './DataMapper.js'
-import {DataMapperConversionState} from './DataMapperConversionState.js'
+    StatementMapper,
+    MultiStatementMapper,
+} from './StatementMapper'
+import {StatementMapperConversionState} from './StatementMapperConversionState'
+import { camel } from 'radash'
 
-export class ArrayC3TypeToDataMapper  implements ITypeConverter<C3Type, DataMapper, DataMapperConversionState> {
+export class ArrayC3TypeToStatementMapper implements ITypeConverter<C3Type, StatementMapper, StatementMapperConversionState> {
 
-    convert(value: C3Type, conversionContext: IConversionContext<C3Type, DataMapper, DataMapperConversionState>): DataMapper {
+    convert(value: C3Type, conversionContext: IConversionContext<C3Type, StatementMapper, StatementMapperConversionState>): StatementMapper {
         const arrayC3Type = value as ArrayC3Type
 
-        const ret: MultiDataMapper = new MultiDataMapper(conversionContext.state())
+        const ret: MultiStatementMapper = new MultiStatementMapper(conversionContext.state())
         const currentJsonPath = conversionContext.currentJsonPath
         const currentPropertyStack = conversionContext.propertyStack
         const targetName = conversionContext.state().targetName
@@ -20,8 +21,8 @@ export class ArrayC3TypeToDataMapper  implements ITypeConverter<C3Type, DataMapp
         const sourceName = conversionContext.state().sourceName
         const sourceJsonPath = sourceName + (currentJsonPath.length > 0 ? '.' + currentJsonPath : '')
 
-        const itemName = sourceJsonPath.replaceAll('.', '') + 'Item'
-        const internalLhsName = lhs.replaceAll('.', '') + 'Value'
+        const itemName = camel(sourceJsonPath.replaceAll('.', ' ') + ' Item')
+        const internalLhsName = camel(lhs.replaceAll('.', ' ') + ' Value')
 
         ret.addLiteral(`if (${sourceJsonPath}) {`);
         conversionContext.state().indentMore()
@@ -56,7 +57,7 @@ export class ArrayC3TypeToDataMapper  implements ITypeConverter<C3Type, DataMapp
         return ret
     }
 
-    supports(value: C3Type, conversionState: DataMapperConversionState): boolean {
+    supports(value: C3Type, conversionState: StatementMapperConversionState): boolean {
         return value instanceof ArrayC3Type
     }
 }

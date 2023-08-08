@@ -1,14 +1,14 @@
 import {C3Type, ObjectC3Type} from '@kinotic/continuum-idl'
 import {ITypeConverter} from '../ITypeConverter.js'
 import {IConversionContext} from '../IConversionContext.js'
-import {DataMapper, MultiDataMapper, AssignmentDataMapper} from './DataMapper.js'
-import {DataMapperConversionState} from './DataMapperConversionState.js'
+import {StatementMapper, MultiStatementMapper, AssignmentStatementMapper} from './StatementMapper'
+import {StatementMapperConversionState} from './StatementMapperConversionState'
 
-export class ObjectC3TypeToDataMapper  implements ITypeConverter<C3Type, DataMapper, DataMapperConversionState> {
+export class ObjectC3TypeToStatementMapper implements ITypeConverter<C3Type, StatementMapper, StatementMapperConversionState> {
 
-    convert(value: C3Type, conversionContext: IConversionContext<C3Type, DataMapper, DataMapperConversionState>): DataMapper {
+    convert(value: C3Type, conversionContext: IConversionContext<C3Type, StatementMapper, StatementMapperConversionState>): StatementMapper {
         const objectC3Type = value as ObjectC3Type
-        const ret: MultiDataMapper = new MultiDataMapper(conversionContext.state())
+        const ret: MultiStatementMapper = new MultiStatementMapper(conversionContext.state())
         const targetName = conversionContext.state().targetName
         const sourceName = conversionContext.state().sourceName
         const lhs = targetName + (conversionContext.currentJsonPath.length > 0 ? '.' + conversionContext.currentJsonPath : '')
@@ -16,7 +16,7 @@ export class ObjectC3TypeToDataMapper  implements ITypeConverter<C3Type, DataMap
 
         ret.addLiteral('if ('+condition+') {')
         conversionContext.state().indentMore()
-        ret.add(new AssignmentDataMapper(lhs, '{}'))
+        ret.add(new AssignmentStatementMapper(lhs, '{}'))
 
         const properties = objectC3Type.properties
         for(const propertyName in properties){
@@ -34,7 +34,7 @@ export class ObjectC3TypeToDataMapper  implements ITypeConverter<C3Type, DataMap
         return ret
     }
 
-    supports(value: C3Type, conversionState: DataMapperConversionState): boolean {
+    supports(value: C3Type, conversionState: StatementMapperConversionState): boolean {
         return value instanceof ObjectC3Type
     }
 }

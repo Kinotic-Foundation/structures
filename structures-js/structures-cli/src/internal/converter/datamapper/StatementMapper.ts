@@ -1,30 +1,30 @@
-import {DataMapperConversionState} from './DataMapperConversionState.js'
+import {StatementMapperConversionState} from './StatementMapperConversionState'
 
-export interface DataMapper {
+export interface StatementMapper {
     toStatementString(): string
 }
 
-export class MultiDataMapper implements DataMapper{
+export class MultiStatementMapper implements StatementMapper{
 
-    private readonly _state: DataMapperConversionState
-    private readonly _mappers: Array<DataMapper>
+    private readonly _state: StatementMapperConversionState
+    private readonly _mappers: Array<StatementMapper>
 
-    constructor(state: DataMapperConversionState, mappers?: Array<DataMapper>) {
+    constructor(state: StatementMapperConversionState, mappers?: Array<StatementMapper>) {
         this._state = state
         this._mappers = mappers || []
     }
 
-    add(mapper: DataMapper): MultiDataMapper {
-        if(mapper instanceof MultiDataMapper){
+    add(mapper: StatementMapper): MultiStatementMapper {
+        if(mapper instanceof MultiStatementMapper){
             this._mappers.push(mapper)
         }else{
-            this._mappers.push(new IndentingDataMapper(this._state.indent, mapper))
+            this._mappers.push(new IndentingStatementMapper(this._state.indent, mapper))
         }
         return this
     }
 
-    addLiteral(stringLiteral: string): MultiDataMapper {
-        this.add(new StringLiteralDataMapper(stringLiteral))
+    addLiteral(stringLiteral: string): MultiStatementMapper {
+        this.add(new StringLiteralStatementMapper(stringLiteral))
         return this
     }
 
@@ -36,11 +36,11 @@ export class MultiDataMapper implements DataMapper{
 
 }
 
-export class IndentingDataMapper implements DataMapper {
+export class IndentingStatementMapper implements StatementMapper {
     private readonly _indent: number
-    private readonly _mapper: DataMapper
+    private readonly _mapper: StatementMapper
 
-    constructor(indent: number, mapper: DataMapper) {
+    constructor(indent: number, mapper: StatementMapper) {
         this._indent = indent
         this._mapper = mapper
     }
@@ -52,7 +52,7 @@ export class IndentingDataMapper implements DataMapper {
 
 }
 
-export class AssignmentDataMapper implements DataMapper {
+export class AssignmentStatementMapper implements StatementMapper {
 
     private readonly _target: string
     private readonly _value: string
@@ -67,7 +67,7 @@ export class AssignmentDataMapper implements DataMapper {
     }
 }
 
-export class StringLiteralDataMapper implements DataMapper {
+export class StringLiteralStatementMapper implements StatementMapper {
 
     private readonly _value: string
 

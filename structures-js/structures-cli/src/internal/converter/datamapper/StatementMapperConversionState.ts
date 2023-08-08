@@ -1,4 +1,4 @@
-export class DataMapperConversionState {
+export class StatementMapperConversionState {
 
     public sourceName: string
 
@@ -11,12 +11,12 @@ export class DataMapperConversionState {
         this.sourceName = sourceName
     }
 
-    public indentMore(): DataMapperConversionState {
+    public indentMore(): StatementMapperConversionState {
         this.indent += 2
         return this
     }
 
-    public indentLess(): DataMapperConversionState {
+    public indentLess(): StatementMapperConversionState {
         this.indent -= 2
         return this
     }
