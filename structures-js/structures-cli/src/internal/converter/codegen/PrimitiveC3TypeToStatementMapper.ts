@@ -9,8 +9,8 @@ import {
 } from '@kinotic/continuum-idl'
 import {IConversionContext} from '../IConversionContext.js'
 import {ITypeConverter} from '../ITypeConverter.js'
-import {AssignmentStatementMapper, StatementMapper} from './StatementMapper'
-import {StatementMapperConversionState} from './StatementMapperConversionState'
+import {LiteralStatementMapper, StatementMapper} from './StatementMapper.js'
+import {StatementMapperConversionState} from './StatementMapperConversionState.js'
 
 export class PrimitiveC3TypeToStatementMapper implements ITypeConverter<C3Type, StatementMapper, StatementMapperConversionState> {
 
@@ -19,7 +19,7 @@ export class PrimitiveC3TypeToStatementMapper implements ITypeConverter<C3Type, 
         const sourceName = conversionContext.state().sourceName
         const lhs = targetName + (conversionContext.currentJsonPath.length > 0 ? '.' + conversionContext.currentJsonPath : '')
         const rhs = sourceName + (conversionContext.currentJsonPath.length > 0 ? '.' + conversionContext.currentJsonPath : '')
-        return new AssignmentStatementMapper(lhs, rhs)
+        return new LiteralStatementMapper(`${lhs} = ${rhs}`)
     }
 
     supports(value: C3Type, conversionState: StatementMapperConversionState): boolean {

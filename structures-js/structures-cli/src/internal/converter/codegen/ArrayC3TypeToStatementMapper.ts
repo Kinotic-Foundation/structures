@@ -4,8 +4,8 @@ import {IConversionContext} from '../IConversionContext.js'
 import {
     StatementMapper,
     MultiStatementMapper,
-} from './StatementMapper'
-import {StatementMapperConversionState} from './StatementMapperConversionState'
+} from './StatementMapper.js'
+import {StatementMapperConversionState} from './StatementMapperConversionState.js'
 import { camel } from 'radash'
 
 export class ArrayC3TypeToStatementMapper implements ITypeConverter<C3Type, StatementMapper, StatementMapperConversionState> {
@@ -29,7 +29,7 @@ export class ArrayC3TypeToStatementMapper implements ITypeConverter<C3Type, Stat
         ret.addLiteral(`${lhs} = []`);
         ret.addLiteral(`for (let ${itemName} of ${sourceJsonPath}) {`);
         conversionContext.state().indentMore()
-        ret.addLiteral(`let ${internalLhsName}`)
+        ret.addLiteral(`let ${internalLhsName}: any`)
 
         if(arrayC3Type.contains) {
             conversionContext.state().sourceName = itemName

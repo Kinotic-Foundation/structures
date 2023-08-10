@@ -1,5 +1,6 @@
 import {Type, Symbol, DecoratableNode} from 'ts-morph'
 import {C3Decorator, C3Type, ObjectC3Type} from '@kinotic/continuum-idl'
+import {ConverterConstants} from '../ConverterConstants.js'
 import {TypescriptConversionState} from './TypescriptConversionState.js'
 import {IConversionContext} from '../IConversionContext.js'
 import {ITypeConverter} from '../ITypeConverter.js'
@@ -16,6 +17,16 @@ export class ObjectLikeToC3Type implements ITypeConverter<Type, C3Type, Typescri
         ret.name = value.getSymbolOrThrow("No Symbol could be found for object: "+value.getText()).getName()
         ret.namespace = conversionContext.state().namespace
 
+        // We store the original source path so it can be used later
+        const declarations = value.getSymbol()?.getDeclarations()
+        if(declarations && declarations.length > 0){
+            if(!ret.metadata){
+                ret.metadata = {}
+            }
+            ret.metadata[ConverterConstants.SOURCE_FILE_PATH] = declarations[0].getSourceFile().getFilePath()
+        }
+
+        // Translate all the typescript properties
         const properties = value.getProperties()
         for(const property of properties){
             const propertyName = property.getName()
@@ -42,6 +53,24 @@ export class ObjectLikeToC3Type implements ITypeConverter<Type, C3Type, Typescri
 
             conversionContext.endProcessingProperty()
         }
+
+        // Now add any calculated properties, we do this, so wee can override any of the default properties
+        const calculatedProperties = conversionContext.state().getCalculatedProperties(conversionContext.currentJsonPath)
+        if(calculatedProperties){
+            for(const calcProp of calculatedProperties){
+                const functionName = calcProp.calculatedPropertyFunctionName
+                const calcFunction = conversionContext.state().getUtilFunctionByName(functionName)
+                if(!calcFunction){
+                    throw new Error(`Could not find util function: ${functionName} for calculated property ${calcProp.entityJsonPath}.${calcProp.propertyName}`)
+                }
+                const converted = conversionContext.convert(calcFunction.getReturnType())
+                if(calcProp.decorators){
+                    converted.decorators = calcProp.decorators
+                }
+                ret.properties[calcProp.propertyName] = converted
+            }
+        }
+
         return ret
     }
 

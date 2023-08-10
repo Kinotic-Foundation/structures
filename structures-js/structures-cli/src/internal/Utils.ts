@@ -17,13 +17,14 @@ import pTimeout from 'p-timeout'
 import {C3Type, ObjectC3Type} from '@kinotic/continuum-idl'
 import path from 'path'
 import fsPromises from 'fs/promises'
+import {ConverterConstants} from './converter/ConverterConstants.js'
 import {createConversionContext} from './converter/IConversionContext.js'
 import {Logger} from './converter/IConverterStrategy.js'
 import {tsDecoratorToC3Decorator} from './converter/typescript/ConverterUtils.js'
 import {TypescriptConversionState} from './converter/typescript/TypescriptConversionState.js'
 import {TypescriptConverterStrategy} from './converter/typescript/TypescriptConverterStrategy.js'
 import {EntityConfiguration} from './state/StructuresProject.js'
-import {UtilFunctionLocator} from './UtilFunctionLocator'
+import {UtilFunctionLocator} from './UtilFunctionLocator.js'
 
 function isEmpty(value: any): boolean {
     if (value === null || value === undefined) {
@@ -166,7 +167,6 @@ function receiveSessionId(scope: string): Promise<string> {
 
 export type EntityInfo = {
     exportedFromFile: string,
-    exportedAs?: string,
     defaultExport: boolean,
     entity: ObjectC3Type
     entityConfiguration?: EntityConfiguration
@@ -175,7 +175,7 @@ export type EntityInfo = {
 export type ConversionConfiguration = {
     namespace: string,
     entitiesPath: string,
-    transformerFunctionLocator: UtilFunctionLocator,
+    utilFunctionLocator: UtilFunctionLocator,
     entityConfigurations?: EntityConfiguration[],
     verbose: boolean,
     dryRun: boolean,
@@ -221,7 +221,7 @@ export function convertAllEntities(config: ConversionConfiguration): EntityInfo[
 
         const conversionContext =
                   createConversionContext(new TypescriptConverterStrategy(new TypescriptConversionState(config.namespace,
-                      config.transformerFunctionLocator),
+                      config.utilFunctionLocator),
                       config.logger))
 
         const exportedDeclarations = sourceFile.getExportedDeclarations()
@@ -229,7 +229,8 @@ export function convertAllEntities(config: ConversionConfiguration): EntityInfo[
             exportedDeclarationEntries.forEach((exportedDeclaration) => {
                 if (Node.isClassDeclaration(exportedDeclaration) || Node.isInterfaceDeclaration(exportedDeclaration)){
                     const declaration = exportedDeclaration
-                    // We only convert entities
+
+                    // If the Entity is decorated with @Entity or has an EntityConfiguration we convert it
                     const decorator = getEntityDecoratorIfExists(exportedDeclaration)
                     const declarationName = declaration.getName()
                     const entityConfig = (declarationName ? entityConfigMap.get(declarationName) : undefined)
@@ -254,11 +255,11 @@ export function convertAllEntities(config: ConversionConfiguration): EntityInfo[
                             if (c3Type instanceof ObjectC3Type) {
                                 entities.push({
                                     exportedFromFile: declaration.getSourceFile().getFilePath(),
-                                    exportedAs: declaration.getName(),
                                     defaultExport: declaration.isDefaultExport(),
                                     entity: c3Type,
                                     entityConfiguration: entityConfig
                                 })
+
                             }else{
                                 throw new Error(`Could not convert ${name} to a C3Type`)
                             }
@@ -271,6 +272,20 @@ export function convertAllEntities(config: ConversionConfiguration): EntityInfo[
         })
     }
     return entities
+}
+
+export function getRelativeImportPath(from: string, to: string) {
+    const fromDir = path.dirname(from);
+    let relativePath = path.relative(fromDir, to)
+
+    // Make sure path starts with './' or '../'
+    if (!relativePath.startsWith('../') && !relativePath.startsWith('./')) {
+        relativePath = `./${relativePath}`
+    }
+
+    // Remove '.ts' extension
+    relativePath = relativePath.replace(/\.ts$/, '')
+    return relativePath;
 }
 
 /**

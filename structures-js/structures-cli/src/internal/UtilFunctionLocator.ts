@@ -1,6 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import {FunctionDeclaration, Project} from 'ts-morph'
+import {NamespaceConfiguration} from './state/StructuresProject.js'
 import {pathToTsGlobPath} from './Utils.js'
 
 export class UtilFunctionLocator {
@@ -8,7 +9,7 @@ export class UtilFunctionLocator {
     private project: Project
     private functionCache = new Map<string, FunctionDeclaration>()
 
-    constructor(utilFunctionsPaths: string[], verbose: boolean) {
+    constructor(namespaceConfig: NamespaceConfiguration, verbose: boolean) {
         const tsConfigFilePath = path.resolve('tsconfig.json')
         if(!fs.existsSync(tsConfigFilePath)){
             throw new Error(`No tsconfig.json found in working directory: ${process.cwd()}`)
@@ -21,12 +22,15 @@ export class UtilFunctionLocator {
             this.project.enableLogging(true)
         }
 
-        for(const utilFunctionsPath of utilFunctionsPaths){
-            this.project.addSourceFilesAtPaths(pathToTsGlobPath(utilFunctionsPath))
+        if(namespaceConfig.utilFunctionsPaths) {
+            for (const utilFunctionsPath of namespaceConfig.utilFunctionsPaths) {
+                this.project.addSourceFilesAtPaths(pathToTsGlobPath(utilFunctionsPath))
+            }
         }
     }
 
-    public getTransformerFunction(name: string): FunctionDeclaration | null {
+    public resolveFunction(name: string): FunctionDeclaration | null {
+        // We use a secondary cache in case a function is used multiple times.
         let ret: FunctionDeclaration | null = null
         if(this.functionCache.has(name)){
             ret = this.functionCache.get(name) as FunctionDeclaration

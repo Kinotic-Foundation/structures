@@ -3,18 +3,16 @@ import {Type} from 'ts-morph'
 import {TypescriptConversionState} from './TypescriptConversionState.js'
 import {ITypeConverter} from '../ITypeConverter.js'
 import {IConversionContext} from '../IConversionContext.js'
-import {pascal, trim} from 'radash'
 
 /**
  * Converts a typescript union type to a C3Type
- * TODO: Refactor this, it is starting to seem kinda brittle
  */
 export class UnionToC3Type implements ITypeConverter<Type, C3Type, TypescriptConversionState> {
 
     convert(value: Type, conversionContext: IConversionContext<Type, C3Type, TypescriptConversionState>): C3Type {
         let ret: C3Type
 
-        const converted: C3Type[] = []
+        const convertedList: C3Type[] = []
         let primitiveCount = 0
         let arrayCount = 0
         let enumCount = 0
@@ -41,7 +39,7 @@ export class UnionToC3Type implements ITypeConverter<Type, C3Type, TypescriptCon
                 // Array has to be checked before object because arrays are objects
                 if (unionType.isArray()) {
 
-                    converted.push(conversionContext.convert(unionType))
+                    convertedList.push(conversionContext.convert(unionType))
                     arrayCount++
 
                 } else if (unionType.isStringLiteral()) { // This must be before is primitive because string literals are primitives
@@ -55,15 +53,15 @@ export class UnionToC3Type implements ITypeConverter<Type, C3Type, TypescriptCon
                 } else if (this.isPrimitive(unionType)) {
 
                     if(unionType.isLiteral()){
-                        converted.push(conversionContext.convert(unionType.getApparentType()))
+                        convertedList.push(conversionContext.convert(unionType.getApparentType()))
                     }else{
-                        converted.push(conversionContext.convert(unionType))
+                        convertedList.push(conversionContext.convert(unionType))
                     }
                     primitiveCount++
 
                 } else if (unionType.isObject()) { // This must be after is primitive because dates are objects
 
-                    converted.push(conversionContext.convert(unionType))
+                    convertedList.push(conversionContext.convert(unionType))
 
                 } else if (unionType.isEnumLiteral()) {
 
@@ -71,7 +69,7 @@ export class UnionToC3Type implements ITypeConverter<Type, C3Type, TypescriptCon
                     if (enumCount === 0) {
                         const toConvert = unionType.getSymbol()?.getValueDeclaration()?.getParent()?.getType()
                         if (toConvert) {
-                            converted.push(conversionContext.convert(toConvert))
+                            convertedList.push(conversionContext.convert(toConvert))
                         } else {
                             throw new Error("Could not find the parent type of the enum literal: " + unionType.getText())
                         }
@@ -96,24 +94,24 @@ export class UnionToC3Type implements ITypeConverter<Type, C3Type, TypescriptCon
         // Since structures does not support unions of primitives, arrays, or enums
         if (primitiveCount === 1) {
 
-            if (converted.length === 1) {
-                ret = converted[0]
+            if (convertedList.length === 1) {
+                ret = convertedList[0]
             } else {
                 throw new Error("You cannot create a Union with a primitive type and other types: " + value.getText())
             }
 
         } else if (arrayCount === 1) {
 
-            if (converted.length === 1) {
-                ret = converted[0]
+            if (convertedList.length === 1) {
+                ret = convertedList[0]
             } else {
                 throw new Error("You cannot create a Union with an array type and other types: " + value.getText())
             }
 
         } else if (enumCount >= 1) {
 
-            if (converted.length === 1) {
-                ret = converted[0]
+            if (convertedList.length === 1) {
+                ret = convertedList[0]
                 if ((ret as EnumC3Type).values.length !== enumCount) {
                     throw new Error("There were more enums found in the union than were converted: " + value.getText() + "\n(Sorry if this error is kind of confusing, it is a bit of a edge case)")
                 }
@@ -123,7 +121,7 @@ export class UnionToC3Type implements ITypeConverter<Type, C3Type, TypescriptCon
 
         } else if (booleanLiteral) {
 
-            if(primitiveCount > 0 || arrayCount > 0 || enumCount > 0 || converted.length > 0){
+            if(primitiveCount > 0 || arrayCount > 0 || enumCount > 0 || convertedList.length > 0){
                 throw new Error("You cannot create a Union with boolean and other types: " + value.getText())
             }
             ret = new BooleanC3Type()
@@ -133,7 +131,7 @@ export class UnionToC3Type implements ITypeConverter<Type, C3Type, TypescriptCon
             // eg: "first" | "second" | "third"
             // This is a special case because we want to convert it to an enum
             // but for now we will just return a string type
-            if (primitiveCount > 0 || arrayCount > 0 || enumCount > 0 || converted.length > 0) {
+            if (primitiveCount > 0 || arrayCount > 0 || enumCount > 0 || convertedList.length > 0) {
                 throw new Error("You cannot create a Union with string literals and other types: " + value.getText())
             }
             // const enumType = new EnumC3Type()
@@ -144,16 +142,16 @@ export class UnionToC3Type implements ITypeConverter<Type, C3Type, TypescriptCon
             // }
             ret = new StringC3Type()
 
-        } else if (converted.length === 1) { // In this case it was a single optional object, let myVar?: MyObject
+        } else if (convertedList.length === 1) { // In this case it was a single optional object, let myVar?: MyObject
 
-            ret = converted[0]
+            ret = convertedList[0]
 
         } else {
 
             const unionType = new UnionC3Type()
             unionType.namespace = conversionContext.state().namespace
             unionType.name = this.getUnionPropertyName(conversionContext)
-            unionType.types = converted as ObjectC3Type[]
+            unionType.types = convertedList as ObjectC3Type[]
             ret = unionType
 
         }
