@@ -17,23 +17,23 @@ export class ArrayC3TypeToStatementMapper implements ITypeConverter<C3Type, Stat
         const currentJsonPath = conversionContext.currentJsonPath
         const currentPropertyStack = conversionContext.propertyStack
         const targetName = conversionContext.state().targetName
-        const lhs = targetName + (currentJsonPath.length > 0 ? '.' + currentJsonPath : '')
         const sourceName = conversionContext.state().sourceName
+        const targetJsonPath = targetName + (currentJsonPath.length > 0 ? '.' + currentJsonPath : '')
         const sourceJsonPath = sourceName + (currentJsonPath.length > 0 ? '.' + currentJsonPath : '')
 
         const itemName = camel(sourceJsonPath.replaceAll('.', ' ') + ' Item')
-        const internalLhsName = camel(lhs.replaceAll('.', ' ') + ' Value')
+        const internalTargetName = camel(targetJsonPath.replaceAll('.', ' ') + ' Value')
 
         ret.addLiteral(`if (${sourceJsonPath}) {`);
         conversionContext.state().indentMore()
-        ret.addLiteral(`${lhs} = []`);
+        ret.addLiteral(`${targetJsonPath} = []`);
         ret.addLiteral(`for (let ${itemName} of ${sourceJsonPath}) {`);
         conversionContext.state().indentMore()
-        ret.addLiteral(`let ${internalLhsName}: any`)
+        ret.addLiteral(`let ${internalTargetName}: any`)
 
         if(arrayC3Type.contains) {
+            conversionContext.state().targetName = internalTargetName
             conversionContext.state().sourceName = itemName
-            conversionContext.state().targetName = internalLhsName
             conversionContext.currentJsonPath = ''
             conversionContext.propertyStack = []
 
@@ -41,12 +41,12 @@ export class ArrayC3TypeToStatementMapper implements ITypeConverter<C3Type, Stat
 
             conversionContext.currentJsonPath = currentJsonPath
             conversionContext.propertyStack = currentPropertyStack
-            conversionContext.state().sourceName = sourceName
             conversionContext.state().targetName = targetName
+            conversionContext.state().sourceName = sourceName
         }else{
             throw new Error('ArrayC3Type.contains is undefined')
         }
-        ret.addLiteral(`${lhs}.push(${internalLhsName})`)
+        ret.addLiteral(`${targetJsonPath}.push(${internalTargetName})`)
 
         conversionContext.state().indentLess()
         ret.addLiteral('}')

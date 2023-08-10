@@ -23,7 +23,7 @@ export class ObjectC3TypeToStatementMapper implements ITypeConverter<C3Type, Sta
 
         ret.addLiteral('if ('+condition+') {')
         state.indentMore()
-        ret.add(new LiteralStatementMapper(`${lhs} = {}`))
+        ret.add(new LiteralStatementMapper(`${lhs} = (${lhs} ? ${lhs} : {})`))
 
         const properties = objectC3Type.properties
         for(const propertyName in properties){
@@ -80,13 +80,7 @@ export class ObjectC3TypeToStatementMapper implements ITypeConverter<C3Type, Sta
         const functionName = functionDeclaration.getNameOrThrow('Could not find function name')
         let ret: LiteralStatementMapper = new LiteralStatementMapper(`${lhs} = ${functionName}(${rhs})`)
         let importPath = getRelativeImportPath(conversionContext.state().generatedServicePath, functionDeclaration.getSourceFile().getFilePath())
-        let importStatement: string
-        if(functionDeclaration.isDefaultExport()){
-            importStatement = `import ${functionName} from './${importPath}'`
-        }else{
-            importStatement = `import { ${functionName} } from './${importPath}'`
-        }
-        ret.importString = importStatement
+        ret.neededImports.push({importName: functionName, importPath: importPath, defaultExport: functionDeclaration.isDefaultExport()})
         return ret
     }
 

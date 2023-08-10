@@ -1,7 +1,7 @@
 import {Args, Command, Flags} from '@oclif/core'
 import path from 'path'
 import {ObjectC3Type} from '@kinotic/continuum-idl'
-import {StatementMapper} from '../internal/converter/codegen/StatementMapper.js'
+import {StatementMapper, createImportString} from '../internal/converter/codegen/StatementMapper.js'
 import {StatementMapperConversionState} from '../internal/converter/codegen/StatementMapperConversionState.js'
 import {StatementMapperConverterStrategy} from '../internal/converter/codegen/StatementMapperConverterStrategy.js'
 import {createConversionContext} from '../internal/converter/IConversionContext.js'
@@ -240,7 +240,7 @@ export class Synchronize extends Command {
                                                                    entityInfo,
                                                                    utilFunctionLocator)
         const validationLogic = statement.toStatementString()
-        const importStatements = statement.toImportString() || ''
+        const importStatements = createImportString(statement) || ''
 
         //  We always generate the base entity service. This way if our internal logic changes we can update it
         fs.mkdirSync(path.dirname(baseEntityServicePath), {recursive: true})

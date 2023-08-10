@@ -1,11 +1,15 @@
 import {C3Type, ObjectC3Type, UnionC3Type} from '@kinotic/continuum-idl'
+import {getRelativeImportPath} from '../../Utils.js'
+import {ConverterConstants} from '../ConverterConstants.js'
 import {ITypeConverter} from '../ITypeConverter.js'
 import {IConversionContext} from '../IConversionContext.js'
 import {
     StatementMapper,
     MultiStatementMapper,
+    LiteralStatementMapper
 } from './StatementMapper.js'
 import {StatementMapperConversionState} from './StatementMapperConversionState.js'
+import { camel } from 'radash'
 
 export class UnionC3TypeToStatementMapper implements ITypeConverter<C3Type, StatementMapper, StatementMapperConversionState> {
 
@@ -13,20 +17,48 @@ export class UnionC3TypeToStatementMapper implements ITypeConverter<C3Type, Stat
         const unionC3Type = value as UnionC3Type
         const ret: MultiStatementMapper = new MultiStatementMapper(conversionContext.state())
 
+        const state = conversionContext.state()
+        const originalJsonPath = conversionContext.currentJsonPath
+        const originalPropertyStack = conversionContext.propertyStack
+        const originalTargetName = state.targetName
+        const originalSourceName = state.sourceName
+
+        const targetJsonPath = originalTargetName + (originalJsonPath.length > 0 ? '.' + originalJsonPath : '')
+        const sourceJsonPath = originalSourceName + (originalJsonPath.length > 0 ? '.' + originalJsonPath : '')
+
+        conversionContext.currentJsonPath = ''
+        conversionContext.propertyStack = []
+
         // to map the union type we merge all the properties into a single object
-        let tempObject = new ObjectC3Type()
+        let counter = 1
         for(let objectC3Type of unionC3Type.types){
-            const properties = objectC3Type.properties
-            for(const propertyName in properties) {
-                const property = properties[propertyName]
-                // We only add the property if it doesn't already exist, since this is a union type there will be duplicates
-                if(!tempObject.properties[propertyName]){
-                    tempObject.addProperty(propertyName, property)
-                }
+            const targetVariableName = camel(targetJsonPath.replaceAll('.', ' ') + `O${counter}`)
+            const sourceVariableName = camel(sourceJsonPath.replaceAll('.', ' ') + ` I${counter}`)
+
+            const castStatement
+                      = new LiteralStatementMapper(`let ${sourceVariableName} = ${sourceJsonPath} as ${objectC3Type.name}`)
+
+            if(objectC3Type.metadata){
+                const sourcePathPath = objectC3Type.metadata[ConverterConstants.SOURCE_FILE_PATH]
+                let importPath = getRelativeImportPath(conversionContext.state().generatedServicePath, sourcePathPath)
+                castStatement.neededImports.push({importPath: importPath, importName: objectC3Type.name})
             }
+
+            ret.add(castStatement)
+            ret.add(new LiteralStatementMapper(`let ${targetVariableName} = ${targetJsonPath}`))
+
+            state.targetName = targetVariableName
+            state.sourceName = sourceVariableName
+
+            ret.add(conversionContext.convert(objectC3Type))
+
+            counter++
         }
 
-        ret.add(conversionContext.convert(tempObject))
+        conversionContext.currentJsonPath = originalJsonPath
+        conversionContext.propertyStack = originalPropertyStack
+        state.targetName = originalTargetName
+        state.sourceName = originalSourceName
 
         return ret
     }
