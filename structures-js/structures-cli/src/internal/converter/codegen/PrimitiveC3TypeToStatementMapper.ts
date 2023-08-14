@@ -23,16 +23,16 @@ export class PrimitiveC3TypeToStatementMapper implements ITypeConverter<C3Type, 
     }
 
     supports(value: C3Type, conversionState: StatementMapperConversionState): boolean {
-        return value instanceof BooleanC3Type
-            || value instanceof ByteC3Type
-            || value instanceof CharC3Type
-            || value instanceof DateC3Type
-            || value instanceof DoubleC3Type
-            || value instanceof EnumC3Type
-            || value instanceof FloatC3Type
-            || value instanceof IntC3Type
-            || value instanceof LongC3Type
-            || value instanceof ShortC3Type
-            || value instanceof StringC3Type
+        return (value instanceof BooleanC3Type || value.type === 'boolean')
+            || (value instanceof ByteC3Type || value.type === 'byte')
+            || (value instanceof CharC3Type || value.type === 'char')
+            || (value instanceof DateC3Type || value.type === 'date')
+            || (value instanceof DoubleC3Type || value.type === 'double')
+            || (value instanceof EnumC3Type || value.type === 'enum')
+            || (value instanceof FloatC3Type || value.type === 'float')
+            || (value instanceof IntC3Type || value.type === 'int')
+            || (value instanceof LongC3Type || value.type === 'long')
+            || (value instanceof ShortC3Type || value.type === 'short')
+            || (value instanceof StringC3Type || value.type === 'string')
     }
 }

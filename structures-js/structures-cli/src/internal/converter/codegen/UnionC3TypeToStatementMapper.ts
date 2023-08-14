@@ -64,6 +64,6 @@ export class UnionC3TypeToStatementMapper implements ITypeConverter<C3Type, Stat
     }
 
     supports(value: C3Type, conversionState: StatementMapperConversionState): boolean {
-        return value instanceof UnionC3Type
+        return value instanceof UnionC3Type || value.type === 'union'
     }
 }

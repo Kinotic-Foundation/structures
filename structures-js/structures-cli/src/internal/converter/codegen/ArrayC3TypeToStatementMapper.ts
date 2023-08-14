@@ -58,6 +58,6 @@ export class ArrayC3TypeToStatementMapper implements ITypeConverter<C3Type, Stat
     }
 
     supports(value: C3Type, conversionState: StatementMapperConversionState): boolean {
-        return value instanceof ArrayC3Type
+        return value instanceof ArrayC3Type || value.type === 'array'
     }
 }

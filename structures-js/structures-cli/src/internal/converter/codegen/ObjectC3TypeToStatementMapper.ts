@@ -85,6 +85,6 @@ export class ObjectC3TypeToStatementMapper implements ITypeConverter<C3Type, Sta
     }
 
     supports(value: C3Type, conversionState: StatementMapperConversionState): boolean {
-        return value instanceof ObjectC3Type
+        return value instanceof ObjectC3Type || value.type === 'object'
     }
 }
