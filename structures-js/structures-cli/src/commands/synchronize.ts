@@ -157,11 +157,11 @@ export class Synchronize extends Command {
 
                 this.logVerbose(`Generated Structure Mapping for ${entityInfo.entity.namespace}.${entityInfo.entity.name}`, config.verbose)
 
-                if(config.verbose){
-                   await writeEntityJsonToFilesystem(namespaceConfig.generatedPath, entityInfo.entity, this)
-                }
-
                 await this.generateEntityService(entityInfo, namespaceConfig, config.utilFunctionLocator)
+
+                if(config.verbose){
+                    await writeEntityJsonToFilesystem(namespaceConfig.generatedPath, entityInfo.entity, this)
+                }
 
                 if(!config.dryRun) {
                     await this.synchronizeEntity(entityInfo.entity, publish, config.verbose)
@@ -273,8 +273,6 @@ export class Synchronize extends Command {
                                   entityInfo: EntityInfo,
                                   utilFunctionLocator: UtilFunctionLocator): StatementMapper{
         const state = new StatementMapperConversionState(generatedServicePath,
-                                                         'ret',
-                                                         'entity',
                                                          utilFunctionLocator)
         state.entityConfiguration = entityInfo.entityConfiguration
 

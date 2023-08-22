@@ -16,6 +16,13 @@ export interface IConversionContext<T, R, S> {
     /**
      * The current json path being processed.
      * This is only updated if beginProcessingProperty and endProcessingProperty are called appropriately.
+     * This cannot be updated manually
+     */
+    actualJsonPath: string
+
+    /**
+     * The current json path being processed.
+     * This is only updated if beginProcessingProperty and endProcessingProperty are called appropriately.
      * You should not update this manually unless you know what you are doing.
      */
     currentJsonPath: string

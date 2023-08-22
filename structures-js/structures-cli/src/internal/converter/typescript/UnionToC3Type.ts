@@ -150,7 +150,7 @@ export class UnionToC3Type implements ITypeConverter<Type, C3Type, TypescriptCon
 
             const unionType = new UnionC3Type()
             unionType.namespace = conversionContext.state().namespace
-            unionType.name = this.getUnionPropertyName(conversionContext)
+            unionType.name = this.getUnionPropertyName(value, conversionContext)
             unionType.types = convertedList as ObjectC3Type[]
             ret = unionType
 
@@ -172,12 +172,28 @@ export class UnionToC3Type implements ITypeConverter<Type, C3Type, TypescriptCon
             || (type.isLiteral() && this.isPrimitive(type.getApparentType()))
     }
 
-    private getUnionPropertyName(conversionContext: IConversionContext<Type, C3Type, TypescriptConversionState>): string {
-        if (conversionContext.state().unionPropertyNameStack.length > 0) {
-            return this.capitalizeFirstLetter(conversionContext.state().unionPropertyNameStack[conversionContext.state().unionPropertyNameStack.length - 1])
-        } else {
-            throw new Error("The current property name is not set in the conversion state")
+    private getUnionPropertyName(value: Type, conversionContext: IConversionContext<Type, C3Type, TypescriptConversionState>): string {
+        let ret: string | null = null
+        // first try to get name from type.
+        const parts = value.getText(undefined, 0).split('|')
+        if(parts.length == 2){
+            // if 2 this can be something like UnionType | undefined, or like SomeType | AnotherType
+            // Make sure one of the strings is undefined, if not this is something like SomeType | AnotherType
+            if(parts[0].trim() === 'undefined'){
+                ret = parts[1].trim()
+            }else if(parts[1].trim() === 'undefined'){
+                ret = parts[0].trim()
+            }
         }
+
+        if(!ret) {
+            if (conversionContext.state().unionPropertyNameStack.length > 0) {
+                ret = this.capitalizeFirstLetter(conversionContext.state().unionPropertyNameStack[conversionContext.state().unionPropertyNameStack.length - 1])
+            } else {
+                throw new Error("The current property name is not set in the conversion state")
+            }
+        }
+        return ret
     }
 
     private capitalizeFirstLetter(s: string): string {

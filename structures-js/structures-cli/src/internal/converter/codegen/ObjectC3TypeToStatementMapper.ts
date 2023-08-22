@@ -44,6 +44,10 @@ export class ObjectC3TypeToStatementMapper implements ITypeConverter<C3Type, Sta
         state.indentLess()
         ret.addLiteral('}')
 
+        if(value.metadata && value.metadata?.sourceFilePath){
+            delete value.metadata.sourceFilePath
+        }
+
         return ret
     }
 
@@ -51,10 +55,10 @@ export class ObjectC3TypeToStatementMapper implements ITypeConverter<C3Type, Sta
         const state = conversionContext.state()
         let ret: LiteralStatementMapper | null = null
 
-        const calculatedProperties = state.getCalculatedProperties(conversionContext.currentJsonPath)
+        const calculatedProperties = state.getCalculatedProperties(conversionContext.actualJsonPath)
         if(calculatedProperties){
             if(calculatedProperties.length > 1){
-                throw new Error(`Only one calculated property is allowed per property. Found ${calculatedProperties.length} for ${conversionContext.currentJsonPath}`)
+                throw new Error(`Only one calculated property is allowed per property. Found ${calculatedProperties.length} for ${conversionContext.actualJsonPath}`)
             }
             const functionDeclaration = state.getUtilFunctionByName(calculatedProperties[0].calculatedPropertyFunctionName)
             if(!functionDeclaration){
@@ -64,7 +68,7 @@ export class ObjectC3TypeToStatementMapper implements ITypeConverter<C3Type, Sta
         }
 
         if(!ret){
-            const transformerFunction = state.getTransformFunction(conversionContext.currentJsonPath)
+            const transformerFunction = state.getTransformFunction(conversionContext.actualJsonPath)
             if(transformerFunction) {
                 ret = this.createStatementForFunction(transformerFunction, conversionContext)
             }
@@ -76,9 +80,8 @@ export class ObjectC3TypeToStatementMapper implements ITypeConverter<C3Type, Sta
                                        conversionContext: IConversionContext<C3Type, StatementMapper, StatementMapperConversionState>): LiteralStatementMapper{
         const targetName = conversionContext.state().targetName
         const lhs = targetName + (conversionContext.currentJsonPath.length > 0 ? '.' + conversionContext.currentJsonPath : '')
-        const rhs = conversionContext.state().sourceName
         const functionName = functionDeclaration.getNameOrThrow('Could not find function name')
-        let ret: LiteralStatementMapper = new LiteralStatementMapper(`${lhs} = ${functionName}(${rhs})`)
+        let ret: LiteralStatementMapper = new LiteralStatementMapper(`${lhs} = ${functionName}(entity)`)
         let importPath = getRelativeImportPath(conversionContext.state().generatedServicePath, functionDeclaration.getSourceFile().getFilePath())
         ret.neededImports.push({importName: functionName, importPath: importPath, defaultExport: functionDeclaration.isDefaultExport()})
         return ret

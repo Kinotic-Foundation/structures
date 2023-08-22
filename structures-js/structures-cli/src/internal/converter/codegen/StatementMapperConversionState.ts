@@ -5,20 +5,16 @@ export class StatementMapperConversionState extends BaseConversionState{
 
     public generatedServicePath: string
 
-    public sourceName: string
+    public sourceName: string = 'entity'
 
-    public targetName: string
+    public targetName: string = 'ret'
 
     public indent: number = 4
 
     constructor(generatedServicePath: string,
-                targetName: string,
-                sourceName: string,
                 utilFunctionLocator: UtilFunctionLocator) {
         super(utilFunctionLocator, true)
         this.generatedServicePath = generatedServicePath
-        this.targetName = targetName
-        this.sourceName = sourceName
     }
 
     public indentMore(): StatementMapperConversionState {
