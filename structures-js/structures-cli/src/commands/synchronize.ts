@@ -218,8 +218,9 @@ export class Synchronize extends Command {
 
                 await structureService.publish(structure.id)
             }
-        } catch (e) {
-            this.log(chalk.red('Error') + ` Synchronizing Structure: ${namespace}.${name}`, e)
+        } catch (e: any) {
+            const message = e?.message || e
+            this.log(chalk.red('Error') + ` Synchronizing Structure: ${namespace}.${name} Exception: ${message}`)
         }
     }
 
