@@ -297,7 +297,7 @@ export function getRelativeImportPath(from: string, to: string) {
 export async function writeEntityJsonToFilesystem(savePath: string, entity: ObjectC3Type, logger?: Logger): Promise<void> {
     const json = JSON.stringify(entity, jsonStringifyReplacer, 2)
     if (json && json.length > 0) {
-        const outputPath = path.resolve(savePath, 'entity-definitions', `${entity.namespace}.${entity.name}.json`)
+        const outputPath = path.resolve(savePath, 'generated', 'entity-definitions', `${entity.namespace}.${entity.name}.json`)
         await fsPromises.mkdir(path.dirname(outputPath), {recursive: true})
         await fsPromises.writeFile(outputPath, json)
         if (logger) {

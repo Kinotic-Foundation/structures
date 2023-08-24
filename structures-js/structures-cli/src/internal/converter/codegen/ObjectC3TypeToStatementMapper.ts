@@ -1,4 +1,4 @@
-import {C3Type, ObjectC3Type} from '@kinotic/continuum-idl'
+import {C3Type, ObjectC3Type, UnionC3Type} from '@kinotic/continuum-idl'
 import {FunctionDeclaration} from 'ts-morph'
 import {getRelativeImportPath} from '../../Utils.js'
 import {ITypeConverter} from '../ITypeConverter.js'
@@ -30,10 +30,12 @@ export class ObjectC3TypeToStatementMapper implements ITypeConverter<C3Type, Sta
             const property = properties[propertyName]
             conversionContext.beginProcessingProperty(propertyName)
 
-            const functionStatement = this.handleCalculatedPropsIfNeeded(conversionContext);
+            const functionStatement = this.handleDynamicPropsIfNeeded(conversionContext);
 
             if(functionStatement){
                 ret.add(functionStatement)
+                // Since this won't be handled by the normal property conversion we need to remove the source file path
+                this.removeSourceFilePath(value)
             }else{
                 ret.add(conversionContext.convert(property))
             }
@@ -44,14 +46,14 @@ export class ObjectC3TypeToStatementMapper implements ITypeConverter<C3Type, Sta
         state.indentLess()
         ret.addLiteral('}')
 
-        if(value.metadata && value.metadata?.sourceFilePath){
+        if(value?.metadata?.sourceFilePath){
             delete value.metadata.sourceFilePath
         }
 
         return ret
     }
 
-    private handleCalculatedPropsIfNeeded(conversionContext: IConversionContext<C3Type, StatementMapper, StatementMapperConversionState>): LiteralStatementMapper | null{
+    private handleDynamicPropsIfNeeded(conversionContext: IConversionContext<C3Type, StatementMapper, StatementMapperConversionState>): LiteralStatementMapper | null{
         const state = conversionContext.state()
         let ret: LiteralStatementMapper | null = null
 
@@ -85,6 +87,33 @@ export class ObjectC3TypeToStatementMapper implements ITypeConverter<C3Type, Sta
         let importPath = getRelativeImportPath(conversionContext.state().generatedServicePath, functionDeclaration.getSourceFile().getFilePath())
         ret.neededImports.push({importName: functionName, importPath: importPath, defaultExport: functionDeclaration.isDefaultExport()})
         return ret
+    }
+
+    private removeSourceFilePath(value: C3Type): void{
+        if(value instanceof ObjectC3Type){
+            this.removeSourceFilePathFromObject(value)
+        }else if(value instanceof UnionC3Type){
+            this.removeSourceFilePathFromUnion(value)
+        }
+    }
+
+    private removeSourceFilePathFromObject(value: C3Type): void{
+        const objectC3Type = value as ObjectC3Type
+        if(objectC3Type?.metadata?.sourceFilePath){
+            delete objectC3Type.metadata.sourceFilePath
+        }
+        const properties = objectC3Type.properties
+        for(const propertyName in properties){
+            const property = properties[propertyName]
+            this.removeSourceFilePath(property)
+        }
+    }
+
+    private removeSourceFilePathFromUnion(value: C3Type): void{
+        const unionC3Type = value as UnionC3Type
+        for(const type of unionC3Type.types){
+            this.removeSourceFilePath(type)
+        }
     }
 
     supports(value: C3Type, conversionState: StatementMapperConversionState): boolean {

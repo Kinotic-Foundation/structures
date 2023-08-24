@@ -13,6 +13,7 @@ export class DefaultConversionContext<T, R, S> implements IConversionContext<T, 
     private readonly _state: S
     private readonly logger: Logger
     private _actualJsonPath: string = ''
+    private _actualPropertyStack: string[] = []
     public propertyStack: string[] = []
     public currentJsonPath: string = ''
 
@@ -34,18 +35,26 @@ export class DefaultConversionContext<T, R, S> implements IConversionContext<T, 
 
     public beginProcessingProperty(name: string): void {
         this.currentJsonPath = (this.propertyStack.length > 0  ? this.propertyStack[this.propertyStack.length - 1] + '.' : '') + name
-        this._actualJsonPath = this.currentJsonPath
         this.propertyStack.push(this.currentJsonPath)
+
+        this._actualJsonPath = (this._actualPropertyStack.length > 0  ? this._actualPropertyStack[this._actualPropertyStack.length - 1] + '.' : '') + name
+        this._actualPropertyStack.push(this._actualJsonPath)
     }
 
     public endProcessingProperty(): void {
         this.propertyStack.pop()
         this.currentJsonPath = this.propertyStack.length > 0 ? this.propertyStack[this.propertyStack.length - 1] : ''
-        this._actualJsonPath = this.currentJsonPath
+
+        this._actualPropertyStack.pop()
+        this._actualJsonPath = this._actualPropertyStack.length > 0 ? this._actualPropertyStack[this._actualPropertyStack.length - 1] : ''
     }
 
     public get actualJsonPath(): string {
         return this._actualJsonPath
+    }
+
+    public get actualPropertyStack(): string[] {
+        return this._actualPropertyStack
     }
 
     public convert(value: T): R {

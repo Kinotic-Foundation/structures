@@ -52,9 +52,9 @@ export class UnionToC3Type implements ITypeConverter<Type, C3Type, TypescriptCon
 
                 } else if (this.isPrimitive(unionType)) {
 
-                    if(unionType.isLiteral()){
+                    if (unionType.isLiteral()) {
                         convertedList.push(conversionContext.convert(unionType.getApparentType()))
-                    }else{
+                    } else {
                         convertedList.push(conversionContext.convert(unionType))
                     }
                     primitiveCount++
@@ -116,17 +116,18 @@ export class UnionToC3Type implements ITypeConverter<Type, C3Type, TypescriptCon
                     throw new Error("There were more enums found in the union than were converted: " + value.getText() + "\n(Sorry if this error is kind of confusing, it is a bit of a edge case)")
                 }
             } else {
-                throw new Error("You cannot create a Union with an enum type and other types, or more than one enum type: " + value.getText())
+                throw new Error(
+                    "You cannot create a Union with an enum type and other types, or more than one enum type: " + value.getText())
             }
 
         } else if (booleanLiteral) {
 
-            if(primitiveCount > 0 || arrayCount > 0 || enumCount > 0 || convertedList.length > 0){
+            if (primitiveCount > 0 || arrayCount > 0 || enumCount > 0 || convertedList.length > 0) {
                 throw new Error("You cannot create a Union with boolean and other types: " + value.getText())
             }
             ret = new BooleanC3Type()
 
-        } else if(stringLiterals.length > 0) {
+        } else if (stringLiterals.length > 0) {
             // This handles the case of a union of string literals
             // eg: "first" | "second" | "third"
             // This is a special case because we want to convert it to an enum
@@ -176,17 +177,20 @@ export class UnionToC3Type implements ITypeConverter<Type, C3Type, TypescriptCon
         let ret: string | null = null
         // first try to get name from type.
         const parts = value.getText(undefined, 0).split('|')
-        if(parts.length == 2){
+        if (parts.length == 1) {
+            // This is a single type, so we can use the name of the type
+            ret = parts[0].trim()
+        } else if (parts.length == 2) {
             // if 2 this can be something like UnionType | undefined, or like SomeType | AnotherType
             // Make sure one of the strings is undefined, if not this is something like SomeType | AnotherType
-            if(parts[0].trim() === 'undefined'){
+            if (parts[0].trim() === 'undefined') {
                 ret = parts[1].trim()
-            }else if(parts[1].trim() === 'undefined'){
+            } else if (parts[1].trim() === 'undefined') {
                 ret = parts[0].trim()
             }
         }
 
-        if(!ret) {
+        if (!ret) {
             if (conversionContext.state().unionPropertyNameStack.length > 0) {
                 ret = this.capitalizeFirstLetter(conversionContext.state().unionPropertyNameStack[conversionContext.state().unionPropertyNameStack.length - 1])
             } else {

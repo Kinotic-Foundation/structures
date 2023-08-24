@@ -21,6 +21,12 @@ export interface IConversionContext<T, R, S> {
     actualJsonPath: string
 
     /**
+     * The property stack. This is only updated if beginProcessingProperty and endProcessingProperty are called appropriately.
+     * This cannot be updated manually
+     */
+    actualPropertyStack: string[]
+
+    /**
      * The current json path being processed.
      * This is only updated if beginProcessingProperty and endProcessingProperty are called appropriately.
      * You should not update this manually unless you know what you are doing.
