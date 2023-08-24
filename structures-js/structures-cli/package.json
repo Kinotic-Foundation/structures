@@ -19,7 +19,7 @@
     ],
     "dependencies": {
         "@kinotic/continuum-client": "^2.5.1",
-        "@kinotic/continuum-idl": "^1.1.0",
+        "@kinotic/continuum-idl": "^1.2.0",
         "@kinotic/structures-api": "^1.6.0",
         "@oclif/core": "^2.9.4",
         "@oclif/plugin-autocomplete": "^2.3.3",

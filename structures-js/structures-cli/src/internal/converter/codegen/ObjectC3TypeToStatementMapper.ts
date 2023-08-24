@@ -1,4 +1,4 @@
-import {C3Type, ObjectC3Type, UnionC3Type} from '@kinotic/continuum-idl'
+import {ArrayC3Type, C3Type, ObjectC3Type, UnionC3Type} from '@kinotic/continuum-idl'
 import {FunctionDeclaration} from 'ts-morph'
 import {getRelativeImportPath} from '../../Utils.js'
 import {ITypeConverter} from '../ITypeConverter.js'
@@ -94,6 +94,8 @@ export class ObjectC3TypeToStatementMapper implements ITypeConverter<C3Type, Sta
             this.removeSourceFilePathFromObject(value)
         }else if(value instanceof UnionC3Type){
             this.removeSourceFilePathFromUnion(value)
+        } else if(value instanceof ArrayC3Type){
+            this.removeSourceFilePath((value as ArrayC3Type).contains)
         }
     }
 

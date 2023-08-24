@@ -220,7 +220,7 @@ export class Synchronize extends Command {
             }
         } catch (e: any) {
             const message = e?.message || e
-            this.log(chalk.red('Error') + ` Synchronizing Structure: ${namespace}.${name} Exception: ${message}`)
+            this.log(chalk.red('Error') + ` Synchronizing Structure: ${namespace}.${name}, Exception: ${message}`)
         }
     }
 

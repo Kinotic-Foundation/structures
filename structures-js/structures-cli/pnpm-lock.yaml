@@ -9,11 +9,11 @@ dependencies:
     specifier: ^2.5.1
     version: 2.5.1
   '@kinotic/continuum-idl':
-    specifier: ^1.1.0
-    version: 1.1.0
+    specifier: ^1.2.0
+    version: 1.2.0
   '@kinotic/structures-api':
     specifier: ^1.6.0
-    version: 1.6.0(@kinotic/continuum-client@2.5.1)(@kinotic/continuum-idl@1.1.0)
+    version: 1.6.0(@kinotic/continuum-client@2.5.1)(@kinotic/continuum-idl@1.2.0)
   '@oclif/core':
     specifier: ^2.9.4
     version: 2.9.4(@types/node@20.4.2)(typescript@5.1.6)
@@ -468,18 +468,18 @@ packages:
       uuid: 9.0.0
     dev: false
 
-  /@kinotic/continuum-idl@1.1.0:
-    resolution: {integrity: sha512-//84coeJdtFRyprrjP+ZvWOk4TRz2o5GysdzEcKY3A0/JKg4PeRMe+Soa6VfnpSjyTw64OCJVN49MtBu2lvU+A==}
+  /@kinotic/continuum-idl@1.2.0:
+    resolution: {integrity: sha512-asQir06v9XwLQTbIf85y4kI7LVf95svaGyIaatBevUT8whYFXXY65T69QRLQ/FqaDw/KIBRn49TEpoK0EuOibg==}
     dev: false
 
-  /@kinotic/structures-api@1.6.0(@kinotic/continuum-client@2.5.1)(@kinotic/continuum-idl@1.1.0):
+  /@kinotic/structures-api@1.6.0(@kinotic/continuum-client@2.5.1)(@kinotic/continuum-idl@1.2.0):
     resolution: {integrity: sha512-nLfmqYes3MPaDpbUFIlQnpsqWK94NE6UgEgh49XParGxrGu3PrxZcSVH3XDosnrEtLPa8Wfl3G2hCIgbTqEMoQ==}
     peerDependencies:
       '@kinotic/continuum-client': ^2.5.1
       '@kinotic/continuum-idl': ^1.0.0
     dependencies:
       '@kinotic/continuum-client': 2.5.1
-      '@kinotic/continuum-idl': 1.1.0
+      '@kinotic/continuum-idl': 1.2.0
     dev: false
 
   /@nicolo-ribaudo/eslint-scope-5-internals@5.1.1-v1:
