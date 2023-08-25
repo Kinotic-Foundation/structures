@@ -21,7 +21,7 @@ import {
     convertAllEntities,
     ConversionConfiguration,
     writeEntityJsonToFilesystem,
-    getRelativeImportPath
+    getRelativeImportPath, tryGetNodeModuleName
 } from '../internal/Utils.js'
 import {UtilFunctionLocator} from '../internal/UtilFunctionLocator.js'
 import inquirer from 'inquirer'
@@ -107,10 +107,10 @@ export class Synchronize extends Command {
                             dryRun: flags.dryRun,
                             logger: this
                         }
-                        await this.processEntities(config, namespaceConfig, flags.publish)
+                        await this.processEntities(config, namespaceConfig, structuresProject.fileExtensionForImports, flags.publish)
                     }
 
-                    for(const [externalEntitiesPath, entityConfigurations] of Object.entries(namespaceConfig.externalEntitiesPaths || {})){
+                    for(const [externalEntitiesPath, entityConfigurations] of Object.entries(namespaceConfig.externalEntities || {})){
                         const config: ConversionConfiguration = {
                             namespace: namespaceConfig.namespaceName,
                             entitiesPath: externalEntitiesPath,
@@ -120,7 +120,7 @@ export class Synchronize extends Command {
                             dryRun: flags.dryRun,
                             logger: this
                         }
-                        await this.processEntities(config, namespaceConfig, flags.publish)
+                        await this.processEntities(config, namespaceConfig, structuresProject.fileExtensionForImports, flags.publish)
                     }
 
                 } catch (e) {
@@ -143,6 +143,7 @@ export class Synchronize extends Command {
 
     private async processEntities(config: ConversionConfiguration,
                                   namespaceConfig: NamespaceConfiguration,
+                                  fileExtensionForImports: string,
                                   publish: boolean){
 
         if (!fs.existsSync(config.entitiesPath)) {
@@ -157,7 +158,7 @@ export class Synchronize extends Command {
 
                 this.logVerbose(`Generated Structure Mapping for ${entityInfo.entity.namespace}.${entityInfo.entity.name}`, config.verbose)
 
-                await this.generateEntityService(entityInfo, namespaceConfig, config.utilFunctionLocator)
+                await this.generateEntityService(entityInfo, namespaceConfig, config.utilFunctionLocator, fileExtensionForImports)
 
                 if(config.verbose){
                     await writeEntityJsonToFilesystem(namespaceConfig.generatedPath, entityInfo.entity, this)
@@ -174,7 +175,9 @@ export class Synchronize extends Command {
         }
     }
 
-    private async synchronizeEntity(entity:  ObjectC3Type, publish: boolean, verbose: boolean): Promise<void> {
+    private async synchronizeEntity(entity:  ObjectC3Type,
+                                    publish: boolean,
+                                    verbose: boolean): Promise<void> {
         const structureService: IStructureService = Structures.getStructureService()
         const namespace = entity.namespace
         const name = entity.name
@@ -226,7 +229,8 @@ export class Synchronize extends Command {
 
     private async generateEntityService(entityInfo: EntityInfo,
                                         namespaceConfig: NamespaceConfiguration,
-                                        utilFunctionLocator: UtilFunctionLocator): Promise<void> {
+                                        utilFunctionLocator: UtilFunctionLocator,
+                                        fileExtensionForImports: string): Promise<void> {
 
         const generatedPath = namespaceConfig.generatedPath
         const baseEntityServicePath = path.resolve(generatedPath, 'generated', `Base${entityInfo.entity.name}EntityService.ts`)
@@ -236,12 +240,17 @@ export class Synchronize extends Command {
         const entityNamespace = entityInfo.entity.namespace
         const defaultExport = entityInfo.defaultExport
         const validate = namespaceConfig.validate
-        const importPath = getRelativeImportPath(entityServicePath, entityInfo.exportedFromFile)
+
+        let entityImportPath = tryGetNodeModuleName(entityInfo.exportedFromFile)
+        if(!entityImportPath){
+            entityImportPath = getRelativeImportPath(baseEntityServicePath, entityInfo.exportedFromFile, fileExtensionForImports)
+        }
+
         const statement = this.createStatementMapper(baseEntityServicePath,
                                                                    entityInfo,
                                                                    utilFunctionLocator)
         const validationLogic = statement.toStatementString()
-        const importStatements = createImportString(statement) || ''
+        const importStatements = createImportString(statement, baseEntityServicePath, fileExtensionForImports) || ''
 
         //  We always generate the base entity service. This way if our internal logic changes we can update it
         fs.mkdirSync(path.dirname(baseEntityServicePath), {recursive: true})
@@ -250,7 +259,7 @@ export class Synchronize extends Command {
                 entityName,
                 entityNamespace,
                 defaultExport,
-                importPath,
+                entityImportPath,
                 validationLogic,
                 importStatements
             })
@@ -273,8 +282,7 @@ export class Synchronize extends Command {
     private createStatementMapper(generatedServicePath: string,
                                   entityInfo: EntityInfo,
                                   utilFunctionLocator: UtilFunctionLocator): StatementMapper{
-        const state = new StatementMapperConversionState(generatedServicePath,
-                                                         utilFunctionLocator)
+        const state = new StatementMapperConversionState(utilFunctionLocator)
         state.entityConfiguration = entityInfo.entityConfiguration
 
         const conversionContext =

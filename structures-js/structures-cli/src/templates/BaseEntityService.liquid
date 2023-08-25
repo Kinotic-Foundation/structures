@@ -1,8 +1,8 @@
 import { EntityService } from '@kinotic/structures-api'
 {%- if defaultExport == true %}
-import {{ entityName }} from '../{{ importPath }}'
+import {{ entityName }} from '{{ entityImportPath }}'
 {%- else %}
-import { {{ entityName }} } from '../{{ importPath }}'
+import { {{ entityName }} } from '{{ entityImportPath }}'
 {%- endif %}
 {{ importStatements }}
 

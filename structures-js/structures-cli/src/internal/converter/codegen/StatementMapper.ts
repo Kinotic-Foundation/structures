@@ -1,9 +1,10 @@
+import {getRelativeImportPath, tryGetNodeModuleName} from '../../Utils.js'
 import {StatementMapperConversionState} from './StatementMapperConversionState.js'
 
 export interface NeededImport {
     importName: string
-    importPath: string
     defaultExport?: boolean
+    sourcePath: string
 }
 
 export interface StatementMapper {
@@ -99,20 +100,34 @@ export class LiteralStatementMapper implements StatementMapper {
     }
 }
 
-export function createImportString(statementMapper: StatementMapper): string | null{
+/**
+ * Creates a string that can be used to import all the needed imports for a file.
+ * @param statementMapper The statement mapper that contains the needed imports.
+ * @param targetFilePath The path to the file that will be generated.
+ * @param fileExtensionForImports The file extension to use for imports.
+ */
+export function createImportString(statementMapper: StatementMapper,
+                                   targetFilePath: string,
+                                   fileExtensionForImports: string): string | null{
     const importsWithoutDuplicates = removeDuplicateImports(statementMapper.getNeededImports())
     // Now make sure all imports for the same paths are grouped together in the import string
     const importMap: { [key: string]: NeededImport[] } = {}
     for (const imp of importsWithoutDuplicates) {
-        if (importMap[imp.importPath]) {
-            importMap[imp.importPath].push(imp)
+        if (importMap[imp.sourcePath]) {
+            importMap[imp.sourcePath].push(imp)
         } else {
-            importMap[imp.importPath] = [imp]
+            importMap[imp.sourcePath] = [imp]
         }
     }
     let importString = ''
-    for (const importPath of Object.keys(importMap)) {
+    for (let importPath of Object.keys(importMap)) {
         const imports = importMap[importPath]
+        // modify the source path to be correct for the target file
+        let newImportPath = tryGetNodeModuleName(importPath)
+        if(!newImportPath){
+            newImportPath = getRelativeImportPath(targetFilePath, importPath, fileExtensionForImports)
+        }
+        importPath = newImportPath
         const defaultImports = imports.filter(imp => imp.defaultExport)
         const namedImports = imports.filter(imp => !imp.defaultExport)
         if (defaultImports.length > 0) {
@@ -134,8 +149,8 @@ function removeDuplicateImports(imports: NeededImport[]): NeededImport[] {
     for (const imp of imports) {
         if (importMap[imp.importName]) {
             const existing = importMap[imp.importName]
-            if (existing.importPath !== imp.importPath) {
-                throw new Error(`Import name ${imp.importName} is used for multiple imports: ${existing.importPath} and ${imp.importPath}`)
+            if (existing.sourcePath !== imp.sourcePath) {
+                throw new Error(`Import name ${imp.importName} is used for multiple imports with different paths: ${existing.sourcePath} and ${imp.sourcePath}`)
             }
             if (imp.defaultExport) {
                 importMap[imp.importName].defaultExport = true

@@ -1,5 +1,4 @@
-import {C3Type, ObjectC3Type, UnionC3Type} from '@kinotic/continuum-idl'
-import {getRelativeImportPath} from '../../Utils.js'
+import {C3Type, UnionC3Type} from '@kinotic/continuum-idl'
 import {ConverterConstants} from '../ConverterConstants.js'
 import {ITypeConverter} from '../ITypeConverter.js'
 import {IConversionContext} from '../IConversionContext.js'
@@ -39,9 +38,8 @@ export class UnionC3TypeToStatementMapper implements ITypeConverter<C3Type, Stat
                       = new LiteralStatementMapper(`let ${sourceVariableName} = ${sourceJsonPath} as ${objectC3Type.name}`)
 
             if(objectC3Type.metadata){
-                const sourcePathPath = objectC3Type.metadata[ConverterConstants.SOURCE_FILE_PATH]
-                let importPath = getRelativeImportPath(conversionContext.state().generatedServicePath, sourcePathPath)
-                castStatement.neededImports.push({importPath: importPath, importName: objectC3Type.name})
+                const sourcePath = objectC3Type.metadata[ConverterConstants.SOURCE_FILE_PATH]
+                castStatement.neededImports.push({sourcePath: sourcePath, importName: objectC3Type.name})
             }
 
             ret.add(castStatement)

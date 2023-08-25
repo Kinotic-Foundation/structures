@@ -17,7 +17,6 @@ import pTimeout from 'p-timeout'
 import {C3Type, ObjectC3Type} from '@kinotic/continuum-idl'
 import path from 'path'
 import fsPromises from 'fs/promises'
-import {ConverterConstants} from './converter/ConverterConstants.js'
 import {createConversionContext} from './converter/IConversionContext.js'
 import {Logger} from './converter/IConverterStrategy.js'
 import {tsDecoratorToC3Decorator} from './converter/typescript/ConverterUtils.js'
@@ -259,7 +258,6 @@ export function convertAllEntities(config: ConversionConfiguration): EntityInfo[
                                     entity: c3Type,
                                     entityConfiguration: entityConfig
                                 })
-
                             }else{
                                 throw new Error(`Could not convert ${name} to a C3Type`)
                             }
@@ -274,7 +272,19 @@ export function convertAllEntities(config: ConversionConfiguration): EntityInfo[
     return entities
 }
 
-export function getRelativeImportPath(from: string, to: string) {
+/**
+ * Will return the relative path from the 'from' path to the 'to' path
+ * @param from path to start from
+ * @param to path to end at
+ * @param fileExtensionForImports this is the file extension to append to the end of the relative path
+ */
+export function getRelativeImportPath(from: string, to: string, fileExtensionForImports: string = '') {
+    if(!from){
+        throw new Error('from path is required')
+    }
+    if(!to){
+        throw new Error('to path is required')
+    }
     const fromDir = path.dirname(from);
     let relativePath = path.relative(fromDir, to)
 
@@ -285,7 +295,33 @@ export function getRelativeImportPath(from: string, to: string) {
 
     // Remove '.ts' extension
     relativePath = relativePath.replace(/\.ts$/, '')
-    return relativePath;
+    return relativePath + fileExtensionForImports;
+}
+
+/**
+ * Will return the name of the node module if the path is within a node module or null if not
+ * @param nodeModulePath to check
+ */
+export function tryGetNodeModuleName(nodeModulePath: string): string | null {
+    let ret: string | null = null
+    if(nodeModulePath.includes('node_modules')) {
+        const nodeModuleIdx = nodeModulePath.indexOf('node_modules/')
+        const partBeforeNodeModules = nodeModulePath.slice(0, nodeModuleIdx+13)
+        const partAfterNodeModules = nodeModulePath.slice(nodeModuleIdx+13)
+        const parts = partAfterNodeModules.split('/')
+        let previousPartPath = ''
+        for (let part of parts) {
+            const packagePath = path.resolve(partBeforeNodeModules, previousPartPath, part, 'package.json')
+            if(fs.existsSync(packagePath)){
+                const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'))
+                ret = packageJson.name
+                break
+            }else{
+                previousPartPath = part + '/'
+            }
+        }
+    }
+    return ret
 }
 
 /**

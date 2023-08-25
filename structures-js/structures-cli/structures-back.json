@@ -7,7 +7,7 @@
             ],
             "generatedPath": "/Users/navid/Desktop/temp/azure-test/src/services",
             "validate": true,
-            "externalEntitiesPaths": {
+            "externalEntities": {
                 "/Users/navid/Desktop/temp/azure-test/node_modules/@azure/arm-recoveryservicesbackup/types/arm-recoveryservicesbackup.d.ts": [
                     {
                         "entityName": "ProtectionPolicyResource",

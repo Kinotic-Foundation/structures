@@ -1,6 +1,5 @@
 import {ArrayC3Type, C3Type, ObjectC3Type, UnionC3Type} from '@kinotic/continuum-idl'
 import {FunctionDeclaration} from 'ts-morph'
-import {getRelativeImportPath} from '../../Utils.js'
 import {ITypeConverter} from '../ITypeConverter.js'
 import {IConversionContext} from '../IConversionContext.js'
 import {
@@ -84,8 +83,9 @@ export class ObjectC3TypeToStatementMapper implements ITypeConverter<C3Type, Sta
         const lhs = targetName + (conversionContext.currentJsonPath.length > 0 ? '.' + conversionContext.currentJsonPath : '')
         const functionName = functionDeclaration.getNameOrThrow('Could not find function name')
         let ret: LiteralStatementMapper = new LiteralStatementMapper(`${lhs} = ${functionName}(entity)`)
-        let importPath = getRelativeImportPath(conversionContext.state().generatedServicePath, functionDeclaration.getSourceFile().getFilePath())
-        ret.neededImports.push({importName: functionName, importPath: importPath, defaultExport: functionDeclaration.isDefaultExport()})
+        ret.neededImports.push({importName: functionName,
+                                sourcePath: functionDeclaration.getSourceFile().getFilePath(),
+                                defaultExport: functionDeclaration.isDefaultExport()})
         return ret
     }
 

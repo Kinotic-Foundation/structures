@@ -3,18 +3,14 @@ import {BaseConversionState} from '../common/BaseConversionState.js'
 
 export class StatementMapperConversionState extends BaseConversionState{
 
-    public generatedServicePath: string
-
     public sourceName: string = 'entity'
 
     public targetName: string = 'ret'
 
     public indent: number = 4
 
-    constructor(generatedServicePath: string,
-                utilFunctionLocator: UtilFunctionLocator) {
+    constructor(utilFunctionLocator: UtilFunctionLocator) {
         super(utilFunctionLocator, true)
-        this.generatedServicePath = generatedServicePath
     }
 
     public indentMore(): StatementMapperConversionState {

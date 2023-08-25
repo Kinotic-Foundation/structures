@@ -123,9 +123,9 @@ export class NamespaceConfiguration {
     generatedPath!: string
 
     /**
-     * The path to Entities that are part of an external codebase and that you cannot add @Entity decorators to.
+     * External EntityConfigurations that are part of an external codebase and that you cannot add @Entity decorators to.
      */
-    externalEntitiesPaths?: {
+    externalEntities?: {
         [pathPattern: string] : EntityConfiguration[]
     }
 
@@ -152,6 +152,11 @@ export class StructuresProject {
      * This is the namespace that will be used if no namespace is specified.
      */
     defaultNamespaceName!: string
+
+    /**
+     * The file extension to use for imports in generated files.
+     */
+    fileExtensionForImports: string = '.js'
 
     hasNamespaceConfig(name: string): boolean {
         return this.findNamespaceConfig(name) !== null
