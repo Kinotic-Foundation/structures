@@ -272,7 +272,8 @@ export class Synchronize extends Command {
                 {
                     entityName,
                     entityNamespace,
-                    validate
+                    validate,
+                    fileExtensionForImports
                 })
             let writeStream = fs.createWriteStream(entityServicePath)
             readStream.pipe(writeStream)
