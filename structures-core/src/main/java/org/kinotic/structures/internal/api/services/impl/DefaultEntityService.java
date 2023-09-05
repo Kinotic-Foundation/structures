@@ -7,6 +7,7 @@ import co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType;
 import co.elastic.clients.elasticsearch.core.BulkRequest;
 import co.elastic.clients.elasticsearch.core.UpdateRequest;
 import co.elastic.clients.elasticsearch.core.bulk.BulkOperation;
+import co.elastic.clients.elasticsearch.core.bulk.BulkResponseItem;
 import co.elastic.clients.util.BinaryData;
 import co.elastic.clients.util.ContentType;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -196,7 +197,15 @@ public class DefaultEntityService implements EntityService {
 
                             return esAsyncClient.bulk(br.build()).thenCompose(bulkResponse -> {
                                 if(bulkResponse.errors()){
-                                    return CompletableFuture.failedFuture(new IllegalArgumentException("Bulk save failed with errors"));
+                                    StringBuilder builder = new StringBuilder();
+                                    for(BulkResponseItem item : bulkResponse.items()){
+                                        if(item.error() != null){
+                                            if(builder.indexOf(item.error().reason()) == -1){
+                                                builder.append(item.error().reason()).append("\n");
+                                            }
+                                        }
+                                    }
+                                    return CompletableFuture.failedFuture(new IllegalArgumentException("Bulk save failed with errors:\n"+builder));
                                 }else{
                                     return CompletableFuture.completedFuture(bulkResponse);
                                 }
