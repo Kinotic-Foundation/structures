@@ -12,7 +12,7 @@ import org.kinotic.continuum.idl.api.schema.UnionC3Type;
 import java.util.Set;
 
 /**
- * {@link UnionC3TypeToOpenApi} is a {@link SpecificC3TypeConverter} that converts a {@link UnionC3Type} to a {@link Schema<?>}.
+ * {@link UnionC3TypeToOpenApi} is a {@link SpecificC3TypeConverter} that converts a {@link UnionC3Type} to a {@link Schema<>}.
  * Created by Navíd Mitchell 🤪 on 5/27/23.
  */
 public class UnionC3TypeToOpenApi implements SpecificC3TypeConverter<Schema<?>, UnionC3Type, OpenApiConversionState>, Cacheable {

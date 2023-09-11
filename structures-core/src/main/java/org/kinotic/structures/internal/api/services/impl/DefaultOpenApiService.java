@@ -50,7 +50,7 @@ public class DefaultOpenApiService implements OpenApiService {
         return structureService
                 .findAllPublishedForNamespace(namespace, Pageable.ofSize(100))
                 .thenComposeAsync(structures -> {
-                    OpenAPI openAPI = new OpenAPI();
+                    OpenAPI openAPI = new OpenAPI(SpecVersion.V30);
 
                     Info info = new Info()
                             .title(namespace + " Structures API")
@@ -116,7 +116,6 @@ public class DefaultOpenApiService implements OpenApiService {
                                                      "get"+structureName+"ById",
                                                      structure,
                                                      1);
-
 
 
         getByIdOperation.addParametersItem(new Parameter().name("id")

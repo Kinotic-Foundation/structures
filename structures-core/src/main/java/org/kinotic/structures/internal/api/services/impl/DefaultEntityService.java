@@ -300,7 +300,7 @@ public class DefaultEntityService implements EntityService {
                     }
                     return (Page<T>) new PageImpl<>(result, page.getPageable(), page.getTotalElements());
                 }else{
-                    throw new NotImplementedException("Pojo upsert is not implemented yet");
+                    throw new NotImplementedException("Pojo Multi tenancy check is not implemented yet");
                 }
             }else{
                 return page;
