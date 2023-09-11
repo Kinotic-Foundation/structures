@@ -7,6 +7,8 @@ export interface IUserState {
 
     connectedInfo: ConnectedInfo | null
 
+    isAccessDenied(): boolean
+
     isAuthenticated(): boolean
 
     authenticate(login: string, passcode: string): Promise<void>
@@ -23,6 +25,8 @@ export class UserState implements IUserState {
 
     private authenticated: boolean = false
 
+    private accessDenied: boolean = false
+
     public async authenticate(login: string, passcode: string): Promise<void> {
         const connectionInfo: ConnectionInfo =  this.createConnectionInfo()
         connectionInfo.connectHeaders = {
@@ -32,7 +36,9 @@ export class UserState implements IUserState {
         try {
             this.connectedInfo = await Continuum.connect(connectionInfo)
             this.authenticated = true
+            this.accessDenied = false
         } catch(reason: any) {
+            this.accessDenied = true
             if(reason) {
                 throw new Error(reason)
             } else {
@@ -45,13 +51,18 @@ export class UserState implements IUserState {
         this.keycloak = keycloak
         if(process.env.VUE_APP_KEYCLOAK_ROLE !== 'none') {
             if(!this.keycloak.hasRealmRole(process.env.VUE_APP_KEYCLOAK_ROLE)) {
-                return CONTINUUM_UI.navigate('/access-denied').then()
+                this.accessDenied = true
+                CONTINUUM_UI.navigate('/access-denied').then()
             } else {
                 await this.authenticate(this.keycloak.tokenParsed?.email as string, this.keycloak.token as string)
             }
         } else {
             await this.authenticate(this.keycloak.tokenParsed?.email as string, this.keycloak.token as string)
         }
+    }
+
+    public isAccessDenied(): boolean  {
+        return this.accessDenied
     }
 
     public isAuthenticated(): boolean {

@@ -1,5 +1,5 @@
 <template>
-    <div v-if="!useKeycloak || (useKeycloak && USER_STATE().isAuthenticated())">
+    <div v-if="!useKeycloak || (useKeycloak && (USER_STATE().isAuthenticated() || USER_STATE().isAccessDenied()))">
         <router-view />
     </div>
     <div v-else >
