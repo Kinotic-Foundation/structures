@@ -1,10 +1,12 @@
 package org.kinotic.structures.api.config;
 
 
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import lombok.experimental.Accessors;
+import java.time.Duration;
+import java.util.List;
+
+import javax.annotation.PostConstruct;
+import javax.validation.constraints.NotNull;
+
 import org.apache.commons.lang3.Validate;
 import org.kinotic.structures.internal.config.ElasticConnectionInfo;
 import org.kinotic.structures.internal.config.OpenApiSecurityType;
@@ -12,10 +14,10 @@ import org.kinotic.structures.internal.utils.StructuresUtil;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.PostConstruct;
-import javax.validation.constraints.NotNull;
-import java.time.Duration;
-import java.util.List;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.experimental.Accessors;
 
 @Getter
 @Setter
@@ -62,6 +64,11 @@ public class StructuresProperties {
     private OpenApiSecurityType openApiSecurityType = OpenApiSecurityType.NONE;
 
     private int openApiPort = 8080;
+
+    // See 
+    //  https://github.com/Kinotic-Foundation/continuum-framework/blob/develop/continuum-core-vertx/src/main/java/org/kinotic/continuum/internal/config/DefaultContinuumProperties.java
+    // private int maxEventPayloadSize = 1024 * 1024 * 10; // 10MB
+    private int maxWebSocketFrameSize = 1024 * 1024 * 10; // 10MB
 
     private String openApiPath = "/api/";
 
