@@ -83,9 +83,11 @@ export class ObjectLikeToC3Type implements ITypeConverter<Type, C3Type, Typescri
             conversionContext.state().unionPropertyNameStack.push(propertyName)
         }
 
-        if(valueDeclaration instanceof DecoratableNode){
-            // Typescript cannot detect that this can be a DecoratableNode, so we have to cast it
-            const decoratableNode = valueDeclaration as unknown as DecoratableNode
+        // Typescript cannot detect that this can be a DecoratableNode, so we have to cast it twice
+        const decoratableNode = valueDeclaration as unknown as DecoratableNode
+
+        if(decoratableNode && decoratableNode.getDecorator) { // ensure we have a DecoratableNode
+
             const precisionDecorator = decoratableNode?.getDecorator('Precision')
             if (precisionDecorator) {
                 // TODO: Verify this is a number type. This could also be a union type that has a number in the case of something like
@@ -97,8 +99,7 @@ export class ObjectLikeToC3Type implements ITypeConverter<Type, C3Type, Typescri
             }
 
             if (decoratableNode?.getDecorators()) {
-                const nodeWithDecorators = valueDeclaration as unknown as DecoratableNode
-                for (const decorator of nodeWithDecorators.getDecorators()) {
+                for (const decorator of decoratableNode.getDecorators()) {
                     // We have already handled Precision above
                     if (decorator.getName() !== 'Precision') {
                         const c3Decorator: C3Decorator = tsDecoratorToC3Decorator(decorator)
@@ -108,6 +109,7 @@ export class ObjectLikeToC3Type implements ITypeConverter<Type, C3Type, Typescri
                     }
                 }
             }
+
         }else{
             converted = conversionContext.convert(valueDeclaration.getType())
         }
