@@ -12,7 +12,7 @@ $ npm install -g @kinotic/structures-cli
 $ structures COMMAND
 running command...
 $ structures (--version)
-@kinotic/structures-cli/0.4.0 darwin-x64 node-v18.17.0
+@kinotic/structures-cli/1.0.1 darwin-x64 node-v18.15.0
 $ structures --help [COMMAND]
 USAGE
   $ structures COMMAND
@@ -23,6 +23,7 @@ USAGE
 <!-- commands -->
 * [`structures autocomplete [SHELL]`](#structures-autocomplete-shell)
 * [`structures help [COMMAND]`](#structures-help-command)
+* [`structures init`](#structures-init)
 * [`structures plugins`](#structures-plugins)
 * [`structures plugins:install PLUGIN...`](#structures-pluginsinstall-plugin)
 * [`structures plugins:inspect PLUGIN...`](#structures-pluginsinspect-plugin)
@@ -32,7 +33,7 @@ USAGE
 * [`structures plugins:uninstall PLUGIN...`](#structures-pluginsuninstall-plugin-1)
 * [`structures plugins:uninstall PLUGIN...`](#structures-pluginsuninstall-plugin-2)
 * [`structures plugins update`](#structures-plugins-update)
-* [`structures synchronize NAMESPACE`](#structures-synchronize-namespace)
+* [`structures synchronize [NAMESPACE]`](#structures-synchronize-namespace)
 * [`structures update [CHANNEL]`](#structures-update-channel)
 
 ## `structures autocomplete [SHELL]`
@@ -86,6 +87,30 @@ DESCRIPTION
 ```
 
 _See code: [@oclif/plugin-help](https://github.com/oclif/plugin-help/blob/v5.0.0/src/commands/help.ts)_
+
+## `structures init`
+
+This will initialize a new Structures Project for use with the Structures CLI.
+
+```
+USAGE
+  $ structures init -n <value> -e <value> -g <value>
+
+FLAGS
+  -e, --entities=<value>   (required) Path to the directory containing the Entity definitions
+  -g, --generated=<value>  (required) Path to the directory to write generated Services
+  -n, --namespace=<value>  (required) The name of the namespace you want to use
+
+DESCRIPTION
+  This will initialize a new Structures Project for use with the Structures CLI.
+
+EXAMPLES
+  $ structures init --namespace my.namespace --entities path/to/entities --generated path/to/services
+
+  $ structures init -n my.namespace -e path/to/entities -g path/to/services
+```
+
+_See code: [dist/commands/init.ts](https://github.com/Kinotic-Foundation/structures/blob/v1.0.1/dist/commands/init.ts)_
 
 ## `structures plugins`
 
@@ -323,34 +348,35 @@ DESCRIPTION
   Update installed plugins.
 ```
 
-## `structures synchronize NAMESPACE`
+## `structures synchronize [NAMESPACE]`
 
 Synchronize the local Entity definitions with the Structures Server
 
 ```
 USAGE
-  $ structures synchronize NAMESPACE -e <value> -g <value> [-s <value>] [-p] [-v]
+  $ structures synchronize [NAMESPACE] [-s <value>] [-p] [-v] [--dryRun]
 
 ARGUMENTS
   NAMESPACE  The namespace the Entities belong to
 
 FLAGS
-  -e, --entities=<value>   (required) Path to the directory containing the Entity definitions
-  -g, --generated=<value>  (required) Path to the directory to write generated Services
-  -p, --publish            Publish each Entity after save/update
-  -s, --server=<value>     The structures server to connect to
-  -v, --verbose            Enable verbose logging
+  -p, --publish         Publish each Entity after save/update
+  -s, --server=<value>  The structures server to connect to
+  -v, --verbose         Enable verbose logging
+  --dryRun              Dry run enables verbose logging and does not save any changes to the server
 
 DESCRIPTION
   Synchronize the local Entity definitions with the Structures Server
 
 EXAMPLES
-  $ structures synchronize my.namespace --entities path/to/entities --generated path/to/services --server http://localhost:9090 --publish --verbose
+  $ structures synchronize my.namespace --server http://localhost:9090 --publish --verbose
 
-  $ structures synchronize my.namespace -e path/to/entities -g path/to/services --publish
+  $ structures synchronize my.namespace -p
+
+  $ structures synchronize
 ```
 
-_See code: [dist/commands/synchronize.ts](https://github.com/Kinotic-Foundation/structures/blob/v0.4.0/dist/commands/synchronize.ts)_
+_See code: [dist/commands/synchronize.ts](https://github.com/Kinotic-Foundation/structures/blob/v1.0.1/dist/commands/synchronize.ts)_
 
 ## `structures update [CHANNEL]`
 

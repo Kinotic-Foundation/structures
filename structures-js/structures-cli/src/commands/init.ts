@@ -50,7 +50,7 @@ export default class Init extends Command {
         namespaceConfig.namespaceName = namespace
         namespaceConfig.entitiesPaths = [flags.entities]
         namespaceConfig.generatedPath = flags.generated
-        namespaceConfig.validate = true
+        namespaceConfig.validate = false
         structuresProject.namespaces.push(namespaceConfig)
 
         await saveStructuresProject(structuresProject)
