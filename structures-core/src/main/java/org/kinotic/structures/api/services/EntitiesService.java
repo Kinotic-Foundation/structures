@@ -17,7 +17,7 @@ public interface EntitiesService {
      * Saves a given entity. This will override all data if there is an existing entity with the same id.
      * Use the returned instance for further operations as the save operation might have changed the entity instance.
      *
-     * @param structureId the id of the structure to save the entity for
+     * @param structureId the id of the structure to save the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
      * @param entity      must not be {@literal null}
      * @param context     the context for this operation
      * @return {@link CompletableFuture} emitting the saved entity
@@ -27,7 +27,7 @@ public interface EntitiesService {
 
     /**
      * Saves all given entities.
-     * @param structureId the id of the structure to save the entity for
+     * @param structureId the id of the structure to save the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
      * @param entities all the entities to save
      * @param context the context for this operation
      * @return {@link CompletableFuture} that will complete when all entities have been saved
@@ -40,7 +40,7 @@ public interface EntitiesService {
      * If any fields are not present in the given entity data they will not be changed.
      * If the entity does not exist it will be created.
      *
-     * @param structureId the id of the structure to save the entity for
+     * @param structureId the id of the structure to save the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
      * @param entity      must not be {@literal null}
      * @param context     the context for this operation
      * @return {@link CompletableFuture} emitting the saved entity
@@ -50,7 +50,7 @@ public interface EntitiesService {
 
     /**
      * Updates all given entities.
-     * @param structureId the id of the structure to save the entity for
+     * @param structureId the id of the structure to save the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
      * @param entities all the entities to save
      * @param context the context for this operation
      * @return {@link CompletableFuture} that will complete when all entities have been saved
@@ -61,7 +61,7 @@ public interface EntitiesService {
     /**
      * Retrieves an entity by its id.
      *
-     * @param structureId the id of the structure to save the entity for
+     * @param structureId the id of the structure to save the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
      * @param id          must not be {@literal null}
      * @param type        the type of the entity
      * @param context     the context for this operation
@@ -72,7 +72,7 @@ public interface EntitiesService {
 
     /**
      * Returns the number of entities available.
-     * @param structureId the id of the structure to count
+     * @param structureId the id of the structure to count. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
      * @param context     the context for this operation
      * @return {@link CompletableFuture} emitting the number of entities.
      */
@@ -81,7 +81,7 @@ public interface EntitiesService {
     /**
      * Deletes the entity with the given id.
      *
-     * @param structureId the id of the structure to save the entity for
+     * @param structureId the id of the structure to save the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
      * @param id          must not be {@literal null}
      * @param context     the context for this operation
      * @return {@link CompletableFuture} emitting when delete is complete
@@ -92,7 +92,7 @@ public interface EntitiesService {
     /**
      * Returns a {@link Page} of entities meeting the paging restriction provided in the {@code Pageable} object.
      *
-     * @param structureId the id of the structure to save the entity for
+     * @param structureId the id of the structure to save the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
      * @param pageable    the page settings to be used
      * @param type        the type of the entity
      * @param context     the context for this operation
@@ -105,7 +105,7 @@ public interface EntitiesService {
      * <p>
      * You can find more information about the search syntax <a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html#query-string-syntax">here</a>
      *
-     * @param structureId the id of the structure to save the entity for
+     * @param structureId the id of the structure to save the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
      * @param searchText  the text to search for entities for
      * @param pageable    the page settings to be used
      * @param type        the type of the entity

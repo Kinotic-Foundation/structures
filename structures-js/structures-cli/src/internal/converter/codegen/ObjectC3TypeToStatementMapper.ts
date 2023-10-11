@@ -17,8 +17,9 @@ export class ObjectC3TypeToStatementMapper implements ITypeConverter<C3Type, Sta
         const ret: MultiStatementMapper = new MultiStatementMapper(state)
         const targetName = state.targetName
         const sourceName = state.sourceName
-        const lhs = targetName + (conversionContext.currentJsonPath.length > 0 ? '.' + conversionContext.currentJsonPath : '')
-        const condition = sourceName + (conversionContext.currentJsonPath.length > 0 ? '.' + conversionContext.currentJsonPath : '')
+        const jsonPath = (conversionContext.currentJsonPath.length > 0 ? '.' + conversionContext.currentJsonPath : '')
+        const lhs = targetName + jsonPath
+        const condition = sourceName + jsonPath
 
         ret.addLiteral('if ('+condition+') {')
         state.indentMore()

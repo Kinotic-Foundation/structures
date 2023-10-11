@@ -50,6 +50,9 @@ export class UnionC3TypeToStatementMapper implements ITypeConverter<C3Type, Stat
 
             ret.add(conversionContext.convert(objectC3Type))
 
+            // assign back in case convert had side effects that were lost
+            ret.add(new LiteralStatementMapper(`${targetJsonPath} = ${targetVariableName}`))
+
             counter++
         }
 
