@@ -8,6 +8,16 @@ import {EntitiesService, IEntitiesService} from '@/api/IEntitiesService.js'
 export interface IEntityService<T> {
 
     /**
+     * The namespace of the structure this service is for
+     */
+    structureNamespace: string
+
+    /**
+     * The name of the structure this service is for
+     */
+    structureName: string
+
+    /**
      * Saves a given entity. This will override all data if there is an existing entity with the same id.
      * Use the returned instance for further operations as the save operation might have changed the entity instance.
      *
@@ -93,10 +103,15 @@ export interface IEntityService<T> {
  */
 export class EntityService<T> implements IEntityService<T>{
 
+    public structureNamespace: string
+    public structureName: string
+
     private entitiesService: IEntitiesService
     private readonly structuresId: string
 
     public constructor(structureNamespace: string, structureName: string) {
+        this.structureNamespace = structureNamespace
+        this.structureName = structureName
         this.structuresId = (structureNamespace + '.' + structureName).toLowerCase()
         this.entitiesService = new EntitiesService()
     }
