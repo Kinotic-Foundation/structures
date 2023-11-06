@@ -212,62 +212,73 @@ export function convertAllEntities(config: ConversionConfiguration): EntityInfo[
     if(config.verbose) {
         project.enableLogging(true)
     }
+    let absEntitiesPath = path.resolve(config.entitiesPath)
+    if(!absEntitiesPath.endsWith(path.sep)){
+        absEntitiesPath = absEntitiesPath + path.sep
+    }
 
     project.addSourceFilesAtPaths(pathToTsGlobPath(config.entitiesPath))
 
     const sourceFiles = project.getSourceFiles()
     for (const sourceFile of sourceFiles) {
 
-        const conversionContext =
-                  createConversionContext(new TypescriptConverterStrategy(new TypescriptConversionState(config.namespace,
-                      config.utilFunctionLocator),
-                      config.logger))
+        const absSourcePath = path.resolve(sourceFile.getFilePath())
 
-        const exportedDeclarations = sourceFile.getExportedDeclarations()
-        exportedDeclarations.forEach((exportedDeclarationEntries, name) => {
-            exportedDeclarationEntries.forEach((exportedDeclaration) => {
-                if (Node.isClassDeclaration(exportedDeclaration) || Node.isInterfaceDeclaration(exportedDeclaration)){
-                    const declaration = exportedDeclaration
+        // make sure this file is in our configured paths and not just introduced by the ts-config
+        if(absSourcePath.startsWith(absEntitiesPath)) {
 
-                    // If the Entity is decorated with @Entity or has an EntityConfiguration we convert it
-                    const decorator = getEntityDecoratorIfExists(exportedDeclaration)
-                    const declarationName = declaration.getName()
-                    const entityConfig = (declarationName ? entityConfigMap.get(declarationName) : undefined)
-                    if(decorator || entityConfig) {
+            const conversionContext =
+                      createConversionContext(new TypescriptConverterStrategy(new TypescriptConversionState(config.namespace,
+                                                                                                            config.utilFunctionLocator),
+                                                                              config.logger))
 
-                        let c3Type: C3Type | null = null
-                        try {
-                            conversionContext.state().entityConfiguration = entityConfig
-                            c3Type = conversionContext.convert(declaration.getType())
-                        } catch (e) {} // We ignore this error since the converter will print any errors
+            const exportedDeclarations = sourceFile.getExportedDeclarations()
+            exportedDeclarations.forEach((exportedDeclarationEntries, name) => {
+                exportedDeclarationEntries.forEach((exportedDeclaration) => {
+                    if (Node.isClassDeclaration(exportedDeclaration) || Node.isInterfaceDeclaration(exportedDeclaration)) {
+                        const declaration = exportedDeclaration
 
-                        if (c3Type != null) {
+                        // If the Entity is decorated with @Entity or has an EntityConfiguration we convert it
+                        const decorator = getEntityDecoratorIfExists(exportedDeclaration)
+                        const declarationName = declaration.getName()
+                        const entityConfig = (declarationName ? entityConfigMap.get(declarationName) : undefined)
+                        if (decorator || entityConfig) {
 
-                            if(decorator) {
-                                c3Type.addDecorator(tsDecoratorToC3Decorator(decorator))
-                            }else if(entityConfig){
-                                const entityDecorator= new EntityDecorator()
-                                entityDecorator.multiTenancyType = entityConfig.multiTenancyType
-                                c3Type.addDecorator(entityDecorator)
-                            }
+                            let c3Type: C3Type | null = null
+                            try {
+                                conversionContext.state().entityConfiguration = entityConfig
+                                c3Type = conversionContext.convert(declaration.getType())
+                            } catch (e) {
+                            } // We ignore this error since the converter will print any errors
 
-                            if (c3Type instanceof ObjectC3Type) {
-                                entities.push({
-                                    exportedFromFile: declaration.getSourceFile().getFilePath(),
-                                    defaultExport: declaration.isDefaultExport(),
-                                    entity: c3Type,
-                                    entityConfiguration: entityConfig
-                                })
-                            }else{
+                            if (c3Type != null) {
+
+                                if (decorator) {
+                                    c3Type.addDecorator(tsDecoratorToC3Decorator(decorator))
+                                } else if (entityConfig) {
+                                    const entityDecorator = new EntityDecorator()
+                                    entityDecorator.multiTenancyType = entityConfig.multiTenancyType
+                                    c3Type.addDecorator(entityDecorator)
+                                }
+
+                                if (c3Type instanceof ObjectC3Type) {
+                                    entities.push({
+                                                      exportedFromFile: declaration.getSourceFile().getFilePath(),
+                                                      defaultExport: declaration.isDefaultExport(),
+                                                      entity: c3Type,
+                                                      entityConfiguration: entityConfig
+                                                  })
+                                } else {
+                                    throw new Error(`Could not convert ${name} to a C3Type`)
+                                }
+                            } else {
                                 throw new Error(`Could not convert ${name} to a C3Type`)
                             }
-                        }else{
-                            throw new Error(`Could not convert ${name} to a C3Type`)
                         }
                     }
-                }
+                })
             })
-        })
+        }
     }
     return entities
 }
