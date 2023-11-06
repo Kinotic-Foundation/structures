@@ -3,6 +3,7 @@ package org.kinotic.structures.internal.api.services.impl;
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import co.elastic.clients.elasticsearch._types.ErrorResponse;
 import co.elastic.clients.elasticsearch._types.FieldSort;
+import co.elastic.clients.elasticsearch._types.FieldValue;
 import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch.core.*;
 import co.elastic.clients.elasticsearch.core.get.GetResult;
@@ -14,15 +15,14 @@ import co.elastic.clients.json.JsonpDeserializer;
 import co.elastic.clients.json.JsonpMapperBase;
 import co.elastic.clients.transport.JsonEndpoint;
 import co.elastic.clients.transport.endpoints.EndpointWithResponseMapperAttr;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.type.TypeFactory;
+import org.kinotic.continuum.core.api.crud.*;
 import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.internal.serializer.RawJsonJsonpDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -41,11 +41,12 @@ public class CrudServiceTemplate {
 
     private final ElasticsearchAsyncClient esAsyncClient;
     private final RawJsonJsonpDeserializer rawJsonJsonpDeserializer;
-
+    private final ObjectMapper objectMapper;
 
     public CrudServiceTemplate(ElasticsearchAsyncClient esAsyncClient,
                                ObjectMapper objectMapper) {
         this.esAsyncClient = esAsyncClient;
+        this.objectMapper = objectMapper;
         rawJsonJsonpDeserializer = new RawJsonJsonpDeserializer(objectMapper);
     }
 
@@ -132,14 +133,33 @@ public class CrudServiceTemplate {
 
         return search(indexName, pageable, getDeserializer(type), builderConsumer)
                 .thenApply(response -> {
+
                     HitsMetadata<T> hitsMetadata = response.hits();
                     List<T> content = new ArrayList<>(hitsMetadata.hits().size());
+                    List<FieldValue> lastSort = null;
+
                     for (Hit<T> hit : hitsMetadata.hits()) {
                         content.add(hit.source());
+                        lastSort = hit.sort();
                     }
-                    return new PageImpl<>(content, pageable,
+
+                    if(pageable instanceof CursorPageable){
+                        try {
+                            String cursor = objectMapper.writeValueAsString(lastSort);
+                            return new CursorPage<>(content.size(),
+                                                    Objects.requireNonNull(hitsMetadata.total(),
+                                                                           "System Error total hits not available").value(),
+                                                    content,
+                                                    cursor);
+                        } catch (JsonProcessingException e) {
+                            throw new IllegalStateException("Sort Array could not be serialized to JSON", e);
+                        }
+                    }else{
+                        return new Page<>(content.size(),
                                           Objects.requireNonNull(hitsMetadata.total(),
-                                                                 "System Error total hits not available").value());
+                                                                 "System Error total hits not available").value(),
+                                          content);
+                    }
                 });
     }
 
@@ -167,25 +187,46 @@ public class CrudServiceTemplate {
         SearchRequest.Builder builder = new SearchRequest.Builder();
 
         builder.index(indexName)
-               .trackTotalHits(t -> t.enabled(true))
-               .from(pageable.getPageNumber() * pageable.getPageSize())
+               .trackTotalHits(t -> t.enabled(true)) // TODO: how should we handle this given that this value can hurt performance.
                .size(pageable.getPageSize());
 
-        for (Sort.Order order : pageable.getSort()) {
-            builder.sort(s -> s.field(f -> {
-                String property = order.getProperty();
-                FieldSort.Builder fieldSortBuilder
-                        = f.field(property)
-                           .order(order.isAscending() ? SortOrder.Asc : SortOrder.Desc);
+        if(pageable instanceof OffsetPageable){
 
-                // This is a nested sort, so we must set an additional field
-                if(property.contains(".")){
-                    String baseField = property.substring(0, property.lastIndexOf("."));
-                    fieldSortBuilder.nested(n -> n.path(baseField));
-                }
+            builder.from(((OffsetPageable)pageable).getPageNumber() * pageable.getPageSize());
 
-                return fieldSortBuilder;
-            }));
+        } else if (pageable instanceof CursorPageable){
+
+            try {
+                CursorPageable cursorPageable = (CursorPageable) pageable;
+                TypeFactory typeFactory = objectMapper.getTypeFactory();
+                List<FieldValue> searchAfter = objectMapper.readValue(cursorPageable.getCursor(),
+                                                                      typeFactory.constructCollectionType(List.class, FieldValue.class));
+                builder.searchAfter(searchAfter);
+            } catch (JsonProcessingException e) {
+                throw new IllegalStateException("Cursor could not be deserialized", e);
+            }
+
+        } else {
+            throw new IllegalArgumentException("Unsupported Pageable type: "+pageable.getClass().getName());
+        }
+
+        if(pageable.getSort() != null) {
+            for (Order order : pageable.getSort()) {
+                builder.sort(s -> s.field(f -> {
+                    String property = order.getProperty();
+                    FieldSort.Builder fieldSortBuilder
+                            = f.field(property)
+                               .order(order.isAscending() ? SortOrder.Asc : SortOrder.Desc);
+
+                    // This is a nested sort, so we must set an additional field
+                    if (property.contains(".")) {
+                        String baseField = property.substring(0, property.lastIndexOf("."));
+                        fieldSortBuilder.nested(n -> n.path(baseField));
+                    }
+
+                    return fieldSortBuilder;
+                }));
+            }
         }
 
         if (builderConsumer != null) {

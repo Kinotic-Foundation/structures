@@ -3,7 +3,6 @@ package org.kinotic.structures.internal.api.services.impl;
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import co.elastic.clients.elasticsearch._types.Refresh;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
-import co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType;
 import co.elastic.clients.elasticsearch.core.BulkRequest;
 import co.elastic.clients.elasticsearch.core.UpdateRequest;
 import co.elastic.clients.elasticsearch.core.bulk.BulkOperation;
@@ -12,7 +11,9 @@ import co.elastic.clients.util.BinaryData;
 import co.elastic.clients.util.ContentType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.NotImplementedException;
-import org.assertj.core.condition.Not;
+import org.kinotic.continuum.core.api.crud.CursorPage;
+import org.kinotic.continuum.core.api.crud.Page;
+import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.decorators.MultiTenancyType;
 import org.kinotic.structures.api.domain.EntityContext;
@@ -21,13 +22,9 @@ import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.internal.api.decorators.DelegatingReadPreProcessor;
 import org.kinotic.structures.internal.api.decorators.DelegatingUpsertPreProcessor;
 import org.kinotic.structures.internal.api.decorators.EntityHolder;
-import org.kinotic.structures.internal.api.decorators.MapUpsertPreProcessor;
 import org.kinotic.structures.internal.api.services.EntityService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -272,8 +269,8 @@ public class DefaultEntityService implements EntityService {
         return page -> {
             // This is a temporary bit of code to make sure multi tenancy is working properly
             if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
+                List<Object> result = new ArrayList<>(page.getContent().size());
                 if(RawJson.class.isAssignableFrom(type)){
-                    List<RawJson> result = new ArrayList<>(page.getContent().size());
                     for(RawJson rawJson : (List<RawJson>)page.getContent()){
                         try {
                             Map converted = objectMapper.readValue(rawJson.data(), Map.class);
@@ -291,11 +288,8 @@ public class DefaultEntityService implements EntityService {
                             throw new IllegalStateException("RawJson could not be deserialized for sanity check",e);
                         }
                     }
-                    return (Page<T>) new PageImpl<>(result, page.getPageable(), page.getTotalElements());
-
                 }else if(Map.class.isAssignableFrom(type)){
                     List<Map> content = (List<Map>)page.getContent();
-                    List<Map> result = new ArrayList<>(content.size());
                     for(Map map : content){
                         String tenant = (String) map.get(structuresProperties.getTenantIdFieldName());
                         if(tenant != null && tenant.equals(context.getParticipant().getTenantId())){
@@ -307,10 +301,16 @@ public class DefaultEntityService implements EntityService {
                                       map);
                         }
                     }
-                    return (Page<T>) new PageImpl<>(result, page.getPageable(), page.getTotalElements());
                 }else{
                     throw new NotImplementedException("Pojo Multi tenancy check is not implemented yet");
                 }
+
+                if(page instanceof CursorPage){
+                    return (Page<T>) new CursorPage<>(page.getSize(), page.getTotalElements(), result, ((CursorPage) page).getCursor());
+                }else{
+                    return (Page<T>) new Page<>(page.getSize(), page.getTotalElements(), result);
+                }
+
             }else{
                 return page;
             }

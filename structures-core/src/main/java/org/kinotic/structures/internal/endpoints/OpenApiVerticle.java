@@ -16,6 +16,7 @@ import io.vertx.ext.web.handler.CorsHandler;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.continuum.api.security.SecurityService;
+import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.continuum.gateway.api.security.AuthenticationHandler;
 import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.domain.RawJson;
@@ -26,7 +27,6 @@ import org.kinotic.structures.internal.utils.VertxWebUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 import java.util.Set;

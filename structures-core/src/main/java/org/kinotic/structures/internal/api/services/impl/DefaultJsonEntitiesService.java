@@ -4,8 +4,8 @@ import org.kinotic.continuum.api.security.Participant;
 import org.kinotic.structures.api.domain.DefaultEntityContext;
 import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.services.JsonEntitiesService;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import org.kinotic.continuum.core.api.crud.Page;
+import org.kinotic.continuum.core.api.crud.Pageable;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.CompletableFuture;

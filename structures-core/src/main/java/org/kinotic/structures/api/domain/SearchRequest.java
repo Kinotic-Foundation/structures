@@ -4,7 +4,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.springframework.data.domain.Pageable;
+import org.kinotic.continuum.core.api.crud.Pageable;
 
 /**
  * Created by Navíd Mitchell 🤪 on 5/29/23.

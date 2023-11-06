@@ -1,5 +1,6 @@
 package org.kinotic.structures.internal.config;
 
+import co.elastic.clients.elasticsearch._types.FieldValue;
 import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
@@ -8,6 +9,8 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.kinotic.continuum.idl.api.schema.decorators.C3Decorator;
 import org.kinotic.continuum.internal.utils.MetaUtil;
 import org.kinotic.structures.api.domain.RawJson;
+import org.kinotic.structures.internal.serializer.FieldValueDeserializer;
+import org.kinotic.structures.internal.serializer.FieldValueSerializer;
 import org.kinotic.structures.internal.serializer.RawJsonDeserializer;
 import org.kinotic.structures.internal.serializer.RawJsonSerializer;
 import org.slf4j.Logger;
@@ -51,6 +54,9 @@ public class StructuresJacksonConfig {
         // register internal serializer deserializers
         ret.addDeserializer(RawJson.class, new RawJsonDeserializer(new ObjectMapper()));
         ret.addSerializer(RawJson.class, new RawJsonSerializer());
+
+        ret.addDeserializer(FieldValue.class, new FieldValueDeserializer());
+        ret.addSerializer(FieldValue.class, new FieldValueSerializer());
 
         return ret;
     }

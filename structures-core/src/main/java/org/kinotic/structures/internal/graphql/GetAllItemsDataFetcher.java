@@ -5,8 +5,8 @@ import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import org.kinotic.structures.api.services.EntitiesService;
 import org.kinotic.structures.internal.endpoints.RoutingContextToEntityContextAdapter;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import org.kinotic.continuum.core.api.crud.Page;
+import org.kinotic.continuum.core.api.crud.Pageable;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;

@@ -5,6 +5,7 @@ import com.github.benmanes.caffeine.cache.AsyncCacheLoader;
 import graphql.GraphQL;
 import graphql.schema.*;
 import org.apache.commons.text.WordUtils;
+import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.structures.api.decorators.runtime.mapping.GraphQLTypeHolder;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.EntitiesService;
@@ -13,7 +14,6 @@ import org.kinotic.structures.internal.api.services.StructureDAO;
 import org.kinotic.structures.internal.graphql.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;

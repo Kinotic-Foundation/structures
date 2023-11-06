@@ -6,7 +6,7 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.RoutingContext;
 import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.internal.utils.VertxWebUtil;
-import org.springframework.data.domain.Page;
+import org.kinotic.continuum.core.api.crud.Page;
 
 import java.util.function.BiFunction;
 

@@ -5,8 +5,8 @@ import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.domain.Namespace;
 import org.kinotic.structures.api.services.NamespaceService;
 import org.kinotic.structures.api.services.StructureService;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import org.kinotic.continuum.core.api.crud.Page;
+import org.kinotic.continuum.core.api.crud.Pageable;
 import org.springframework.data.elasticsearch.core.ReactiveElasticsearchOperations;
 import org.springframework.stereotype.Component;
 
