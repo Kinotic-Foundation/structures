@@ -172,11 +172,7 @@ export default class CrudIdentifiableAssociationDialog extends Vue {
         }
 
         try {
-            const pageable: Pageable = {
-                pageNumber: 0,
-                pageSize: 50, // TODO: add infinite scroll paging support https://peachscript.github.io/vue-infinite-loading/
-                sort: { orders: [new Order('id', Direction.ASC)] }
-            }
+            const pageable = Pageable.create(0, 50, { orders: [new Order('id', Direction.ASC)] })
 
             const page: Page<Identifiable<string>> = await this.crudServiceProxy.findByIdNotIn(ids, pageable)
             this.availableAssociatedIdentifiables = page.content

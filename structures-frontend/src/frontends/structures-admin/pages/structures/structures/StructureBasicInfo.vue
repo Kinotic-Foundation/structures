@@ -58,11 +58,8 @@ export default class StructureStandardUi extends Vue {
     }
 
     public mounted() {
-        const pageable: Pageable = {
-            pageNumber: 0,
-            pageSize: 100,
-            sort: null
-        }
+
+        const pageable = Pageable.create(0, 200, null)
 
         this.namespaceService.findAll(pageable)
             .then((response) => {

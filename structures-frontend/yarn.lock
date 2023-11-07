@@ -1069,10 +1069,10 @@
     "@jridgewell/resolve-uri" "3.1.0"
     "@jridgewell/sourcemap-codec" "1.4.14"
 
-"@kinotic/continuum-client@^2.5.2":
-  version "2.5.2"
-  resolved "https://registry.yarnpkg.com/@kinotic/continuum-client/-/continuum-client-2.5.2.tgz#c39bd3e408e89751d1c90cce7830063ebc2b51a2"
-  integrity sha512-oY0ZXR9PgJ0MKwuLWDLzYIMrR0k+ODdrwZrqElSOn6xniftynvxypG6xxWMf1gvGP0Bi7MqN+PbpClh5rKZBOw==
+"@kinotic/continuum-client@^2.8.1":
+  version "2.8.1"
+  resolved "https://registry.yarnpkg.com/@kinotic/continuum-client/-/continuum-client-2.8.1.tgz#493764f6e51db9098e6f8e3bf118d075f013b78b"
+  integrity sha512-URiqQFK2MrMQWdnA8VVIjsqyKSM/IUajkUFEq06q6zJxEq6bsZmtsPmH/y6Cz27rrYvy1xjaOlBHXZ0XNnjikg==
   dependencies:
     "@stomp/rx-stomp" "^2.0.0"
     "@stomp/stompjs" "^7.0.0"
@@ -1081,15 +1081,15 @@
     typescript-optional "3.0.0-alpha.3"
     uuid "^9.0.0"
 
-"@kinotic/continuum-idl@^1.0.0":
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/@kinotic/continuum-idl/-/continuum-idl-1.0.0.tgz#343b2b794bb46f3e456be86dbaa17ca658fe2e4d"
-  integrity sha512-CRm2XbrxjSR2J15Ua8tEFfAoZ5BUPGUaMYR+VySURWi8igo4ZbFCCpJ9L5AJ6rqTH4HDIYqZDk47f9iTaF5f+A==
+"@kinotic/continuum-idl@^1.2.0":
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/@kinotic/continuum-idl/-/continuum-idl-1.2.0.tgz#aff875b829b4c4fe777317e424da6b44cd981c63"
+  integrity sha512-asQir06v9XwLQTbIf85y4kI7LVf95svaGyIaatBevUT8whYFXXY65T69QRLQ/FqaDw/KIBRn49TEpoK0EuOibg==
 
-"@kinotic/structures-api@^1.4.0":
-  version "1.4.0"
-  resolved "https://registry.yarnpkg.com/@kinotic/structures-api/-/structures-api-1.4.0.tgz#c2932d73463d55ca0463968b61266fd73b56e67c"
-  integrity sha512-R/7BJ9KVp7MVxMllYIx68TsqqiHSkBFPXNCtgSs+CspNOturAZQu4/nJAKyNEgRBVG0gTWJiGiJmgwuDd8PoBA==
+"@kinotic/structures-api@^1.9.0":
+  version "1.9.0"
+  resolved "https://registry.yarnpkg.com/@kinotic/structures-api/-/structures-api-1.9.0.tgz#e44cbbc22d4c3147795997037b9f0a6b396d6e36"
+  integrity sha512-+hntNZytEg5Xp7a0Kly+Nqy9TsR1WnliP1qGbiITw5s0soBAYWWIHo3oclknfS+rqVS2uyJLi0KKX0mYdVzGOQ==
 
 "@mdi/js@^5.6.55":
   version "5.9.55"

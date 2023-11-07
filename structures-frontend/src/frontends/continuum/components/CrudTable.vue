@@ -266,11 +266,9 @@ export default class CrudTable extends Vue {
                 orders.push(new Order(value, direction))
             }
 
-            const pageable: Pageable = {
-                pageNumber: this.options.page - 1,
-                pageSize: this.options.itemsPerPage,
-                sort: {orders}
-            }
+            const pageable = Pageable.create(this.options.page - 1,
+                                             this.options.itemsPerPage,
+                                             {orders})
 
             let queryPromise!: Promise<Page<any>>
 
@@ -282,7 +280,7 @@ export default class CrudTable extends Vue {
 
             queryPromise.then((page: Page<any>) => {
                 this.loading = false
-                this.totalItems = page.totalElements
+                this.totalItems = page.content.length
                 this.items = page.content
 
                 if (!this.finishedInitialLoad) {

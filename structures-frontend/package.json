@@ -1,6 +1,6 @@
 {
   "name": "structures-frontend",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "author": {
     "name": "Kinotic",
@@ -13,9 +13,9 @@
   },
   "main": "main.ts",
   "dependencies": {
-    "@kinotic/continuum-client": "^2.5.2",
-    "@kinotic/continuum-idl": "^1.0.0",
-    "@kinotic/structures-api": "^1.4.0",
+    "@kinotic/continuum-client": "^2.8.1",
+    "@kinotic/continuum-idl": "^1.2.0",
+    "@kinotic/structures-api": "^1.9.0",
     "aws-sdk": "^2.771.0",
     "bcryptjs": "^2.4.3",
     "epic-spinners": "^1.1.0",
