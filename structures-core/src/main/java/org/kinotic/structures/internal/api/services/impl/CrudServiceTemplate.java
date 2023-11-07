@@ -143,22 +143,23 @@ public class CrudServiceTemplate {
                         lastSort = hit.sort();
                     }
 
-                    if(pageable instanceof CursorPageable){
-                        try {
-                            String cursor = objectMapper.writeValueAsString(lastSort);
-                            return new CursorPage<>(content.size(),
-                                                    Objects.requireNonNull(hitsMetadata.total(),
-                                                                           "System Error total hits not available").value(),
-                                                    content,
-                                                    cursor);
-                        } catch (JsonProcessingException e) {
-                            throw new IllegalStateException("Sort Array could not be serialized to JSON", e);
+                    if(pageable instanceof CursorPageable) {
+                        String cursor = null;
+                        if (lastSort != null) {
+                            try {
+                                cursor = objectMapper.writeValueAsString(lastSort);
+                            } catch(JsonProcessingException e){
+                                throw new IllegalStateException("Sort Array could not be serialized to JSON", e);
+                            }
                         }
+                        return new CursorPage<>(content,
+                                                cursor,
+                                                null);
                     }else{
-                        return new Page<>(content.size(),
+                        return new Page<>(content,
                                           Objects.requireNonNull(hitsMetadata.total(),
-                                                                 "System Error total hits not available").value(),
-                                          content);
+                                                                 "System Error total hits not available")
+                                                 .value());
                     }
                 });
     }
@@ -187,21 +188,30 @@ public class CrudServiceTemplate {
         SearchRequest.Builder builder = new SearchRequest.Builder();
 
         builder.index(indexName)
-               .trackTotalHits(t -> t.enabled(true)) // TODO: how should we handle this given that this value can hurt performance.
                .size(pageable.getPageSize());
 
         if(pageable instanceof OffsetPageable){
 
-            builder.from(((OffsetPageable)pageable).getPageNumber() * pageable.getPageSize());
+            builder.from(((OffsetPageable)pageable).getPageNumber() * pageable.getPageSize())
+                   .trackTotalHits(t -> t.enabled(true));
 
         } else if (pageable instanceof CursorPageable){
 
             try {
                 CursorPageable cursorPageable = (CursorPageable) pageable;
-                TypeFactory typeFactory = objectMapper.getTypeFactory();
-                List<FieldValue> searchAfter = objectMapper.readValue(cursorPageable.getCursor(),
-                                                                      typeFactory.constructCollectionType(List.class, FieldValue.class));
-                builder.searchAfter(searchAfter);
+                if(pageable.getSort() == null || pageable.getSort().isUnsorted()){
+                    throw new IllegalArgumentException("When using Cursor based paging you MUST provide a Sort value.");
+                }
+
+                String cursorJson = cursorPageable.getCursor();
+                // this can be null or empty to indicate the first page
+                if(cursorJson != null && !cursorJson.isEmpty()) {
+                    TypeFactory typeFactory = objectMapper.getTypeFactory();
+                    List<FieldValue> searchAfter = objectMapper.readValue(cursorJson,
+                                                                          typeFactory.constructCollectionType(List.class,
+                                                                                                              FieldValue.class));
+                    builder.searchAfter(searchAfter);
+                }
             } catch (JsonProcessingException e) {
                 throw new IllegalStateException("Cursor could not be deserialized", e);
             }
@@ -235,7 +245,9 @@ public class CrudServiceTemplate {
 
         SearchRequest request = builder.build();
 
-        log.trace("Query: \n "+request.toString());
+        if(log.isTraceEnabled()) {
+            log.trace("Query: \n {}", request.toString());
+        }
 
         //noinspection resource
         return esAsyncClient._transport()

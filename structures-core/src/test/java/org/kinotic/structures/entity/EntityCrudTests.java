@@ -22,6 +22,10 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.kinotic.continuum.core.api.crud.CursorPage;
+import org.kinotic.continuum.core.api.crud.Page;
+import org.kinotic.continuum.core.api.crud.Pageable;
+import org.kinotic.continuum.core.api.crud.Sort;
 import org.kinotic.structures.ElasticsearchTestBase;
 import org.kinotic.structures.api.domain.DefaultEntityContext;
 import org.kinotic.structures.api.domain.EntityContext;
@@ -38,8 +42,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.kinotic.continuum.core.api.crud.Page;
-import org.kinotic.continuum.core.api.crud.Pageable;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
@@ -49,6 +51,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReference;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest
@@ -181,7 +184,6 @@ public class EntityCrudTests extends ElasticsearchTestBase {
                                                                     RawJson.class,
                                                                     context1)))
                     .expectNextMatches(rawJsons -> rawJsons.getTotalElements() == 10
-                            && rawJsons.getTotalPages() == 1
                             && rawJsons.getContent().size() == 10)
                     .as("Verifying Tenant 1 has 10 entities")
                     .verifyComplete();
@@ -191,9 +193,168 @@ public class EntityCrudTests extends ElasticsearchTestBase {
                                                                     RawJson.class,
                                                                     context2)))
                     .expectNextMatches(rawJsons -> rawJsons.getTotalElements() == 20
-                            && rawJsons.getTotalPages() == 1
                             && rawJsons.getContent().size() == 20)
                     .as("Verifying Tenant 2 has 20 entities")
+                    .verifyComplete();
+    }
+
+    @Test
+    public void testFindAllWithCursor(){
+
+        EntityContext context1 = new DefaultEntityContext(new DummyParticipant("tenant1", "user1"));
+        EntityContext context2 = new DefaultEntityContext(new DummyParticipant("tenant2", "user2"));
+
+        StructureAndPersonHolder holder1 = createAndVerify(40, true, context1, "-testAllWCursor");
+
+        Assertions.assertNotNull(holder1);
+
+        StructureAndPersonHolder holder2 = createAndVerify(30, true, context2, "-testAllWCursor");
+
+        Assertions.assertNotNull(holder2);
+
+        // TODO: verify all data items as well, not just sizes
+        Sort sort = Sort.by("firstName");
+        AtomicReference<String> cursorRef = new AtomicReference<>();
+
+        StepVerifier.create(Mono.fromFuture(entitiesService.findAll(holder1.getStructure().getId(),
+                                                                    Pageable.create("",
+                                                                                    20,
+                                                                                    Sort.by("firstName")),
+                                                                    RawJson.class,
+                                                                    context1)))
+                    .expectNextMatches(page -> {
+                        String cursor = null;
+                        if(page instanceof CursorPage){
+                            cursor = ((CursorPage<?>)page).getCursor();
+                            cursorRef.set(cursor);
+                        }
+                        return cursor != null
+                                && page.getTotalElements() == null
+                                && page.getContent().size() == 20;
+                    })
+                    .as("Verifying First page for Tenant 1")
+                    .verifyComplete();
+
+        Assertions.assertNotNull(cursorRef.get(), "Cursor is null");
+
+        StepVerifier.create(Mono.fromFuture(entitiesService.findAll(holder1.getStructure().getId(),
+                                                                    Pageable.create(cursorRef.get(), 20, sort),
+                                                                    RawJson.class,
+                                                                    context1)))
+                    .expectNextMatches(page -> {
+                        String cursor = null;
+                        cursorRef.set(null);
+                        if(page instanceof CursorPage){
+                            cursor = ((CursorPage<?>)page).getCursor();
+                            cursorRef.set(cursor);
+                        }
+                        return cursor != null
+                                && page.getTotalElements() ==  null
+                                && page.getContent().size() == 20;
+                    })
+                    .as("Verifying Second page for Tenant 1")
+                    .verifyComplete();
+
+        Assertions.assertNotNull(cursorRef.get(), "Cursor is null");
+
+        StepVerifier.create(Mono.fromFuture(entitiesService.findAll(holder1.getStructure().getId(),
+                                                                    Pageable.create(cursorRef.get(), 20, sort),
+                                                                    RawJson.class,
+                                                                    context1)))
+                    .expectNextMatches(page -> {
+                        String cursor = null;
+                        cursorRef.set(null);
+                        if(page instanceof CursorPage){
+                            cursor = ((CursorPage<?>)page).getCursor();
+                            cursorRef.set(cursor);
+                        }
+                        return cursor == null
+                                && page.getTotalElements() == null
+                                && page.getContent().isEmpty();
+                    })
+                    .as("Verifying Third page is empty for Tenant 1")
+                    .verifyComplete();
+
+        // Second tenant
+
+        Assertions.assertNull(cursorRef.get(), "Cursor is not null");
+
+        StepVerifier.create(Mono.fromFuture(entitiesService.findAll(holder2.getStructure().getId(),
+                                                                    Pageable.create("", 10, sort),
+                                                                    RawJson.class,
+                                                                    context2)))
+                    .expectNextMatches(page -> {
+                        String cursor = null;
+                        if(page instanceof CursorPage){
+                            cursor = ((CursorPage<?>)page).getCursor();
+                            cursorRef.set(cursor);
+                        }
+                        return cursor != null
+                                && page.getTotalElements() == null
+                                && page.getContent().size() == 10;
+                    })
+                    .as("Verifying First page for Tenant 2")
+                    .verifyComplete();
+
+        Assertions.assertNotNull(cursorRef.get(), "Cursor is null");
+
+        StepVerifier.create(Mono.fromFuture(entitiesService.findAll(holder2.getStructure().getId(),
+                                                                    Pageable.create(cursorRef.get(), 10, sort),
+                                                                    RawJson.class,
+                                                                    context2)))
+                    .expectNextMatches(page -> {
+                        String cursor = null;
+                        cursorRef.set(null);
+                        if(page instanceof CursorPage){
+                            cursor = ((CursorPage<?>)page).getCursor();
+                            cursorRef.set(cursor);
+                        }
+                        return cursor != null
+                                && page.getTotalElements() == null
+                                && page.getContent().size() == 10;
+                    })
+                    .as("Verifying Second page for Tenant 2")
+                    .verifyComplete();
+
+        Assertions.assertNotNull(cursorRef.get(), "Cursor is null");
+
+        StepVerifier.create(Mono.fromFuture(entitiesService.findAll(holder2.getStructure().getId(),
+                                                                    Pageable.create(cursorRef.get(), 10, sort),
+                                                                    RawJson.class,
+                                                                    context2)))
+                    .expectNextMatches(page -> {
+                        String cursor = null;
+                        cursorRef.set(null);
+                        if(page instanceof CursorPage){
+                            cursor = ((CursorPage<?>)page).getCursor();
+                            cursorRef.set(cursor);
+                        }
+                        return cursor != null
+                                && page.getTotalElements() == null
+                                && page.getContent().size() == 10;
+                    })
+                    .as("Verifying Third page for Tenant 2")
+                    .verifyComplete();
+
+        Assertions.assertNotNull(cursorRef.get(), "Cursor is null");
+
+
+        StepVerifier.create(Mono.fromFuture(entitiesService.findAll(holder2.getStructure().getId(),
+                                                                    Pageable.create(cursorRef.get(), 10, sort),
+                                                                    RawJson.class,
+                                                                    context2)))
+                    .expectNextMatches(page -> {
+                        String cursor = null;
+                        cursorRef.set(null);
+                        if(page instanceof CursorPage){
+                            cursor = ((CursorPage<?>)page).getCursor();
+                            cursorRef.set(cursor);
+                        }
+                        return cursor == null
+                                && page.getTotalElements() == null
+                                && page.getContent().isEmpty();
+                    })
+                    .as("Verifying Fourth page is empty for Tenant 2")
                     .verifyComplete();
     }
 
@@ -218,7 +379,6 @@ public class EntityCrudTests extends ElasticsearchTestBase {
                                                                    context1)))
                     .expectNextMatches(rawJsons -> {
                         boolean b = rawJsons.getTotalElements() == 2
-                                && rawJsons.getTotalPages() == 1
                                 && rawJsons.getContent().size() == 2;
                         if(!b){
                             log.error("Wrong Data, Wat! Raw:\n"+rawJsons.getContent());
@@ -235,7 +395,6 @@ public class EntityCrudTests extends ElasticsearchTestBase {
                                                                    context2)))
                     .expectNextMatches(rawJsons -> {
                         boolean b = rawJsons.getTotalElements() == 2
-                                && rawJsons.getTotalPages() == 1
                                 && rawJsons.getContent().size() == 2;
                         if(!b){
                             log.error("Wrong Data, Wat! Raw:\n"+rawJsons.getContent());

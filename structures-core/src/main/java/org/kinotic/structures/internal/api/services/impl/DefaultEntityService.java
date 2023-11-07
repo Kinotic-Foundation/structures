@@ -306,9 +306,9 @@ public class DefaultEntityService implements EntityService {
                 }
 
                 if(page instanceof CursorPage){
-                    return (Page<T>) new CursorPage<>(page.getSize(), page.getTotalElements(), result, ((CursorPage) page).getCursor());
+                    return (Page<T>) new CursorPage<>(result, ((CursorPage) page).getCursor(), page.getTotalElements());
                 }else{
-                    return (Page<T>) new Page<>(page.getSize(), page.getTotalElements(), result);
+                    return (Page<T>) new Page<>(result, page.getTotalElements());
                 }
 
             }else{

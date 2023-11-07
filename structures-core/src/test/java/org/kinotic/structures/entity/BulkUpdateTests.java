@@ -88,7 +88,6 @@ public class BulkUpdateTests extends ElasticsearchTestBase {
                                                                     RawJson.class,
                                                                     context1)))
                     .expectNextMatches(rawJsons -> rawJsons.getTotalElements() == numberOfPeopleToCreate
-                            && rawJsons.getTotalPages() == 1
                             && rawJsons.getContent().size() == numberOfPeopleToCreate)
                     .as("Verifying Tenant 1 has "+numberOfPeopleToCreate+" entities")
                     .verifyComplete();
@@ -98,7 +97,6 @@ public class BulkUpdateTests extends ElasticsearchTestBase {
                                                                     RawJson.class,
                                                                     context2)))
                     .expectNextMatches(rawJsons -> rawJsons.getTotalElements() == numberOfPeopleToCreate
-                            && rawJsons.getTotalPages() == 1
                             && rawJsons.getContent().size() == numberOfPeopleToCreate)
                     .as("Verifying Tenant 2 has "+numberOfPeopleToCreate+" entities")
                     .verifyComplete();
@@ -138,8 +136,6 @@ public class BulkUpdateTests extends ElasticsearchTestBase {
 
         Page<RawJson> page = entitiesService.findAll(structure.getId(), Pageable.ofSize(10), RawJson.class, entityContext).join();
 
-        Assertions.assertEquals(5, page.getTotalPages(), "Wrong number of pages");
-
         Assertions.assertEquals(50, page.getTotalElements(), "Wrong number of entities");
     }
 
@@ -176,8 +172,6 @@ public class BulkUpdateTests extends ElasticsearchTestBase {
         Thread.sleep(5000);
 
         Page<RawJson> page = entitiesService.findAll(structure.getId(), Pageable.ofSize(10), RawJson.class, entityContext).join();
-
-        Assertions.assertEquals(5, page.getTotalPages(), "Wrong number of pages");
 
         Assertions.assertEquals(50, page.getTotalElements(), "Wrong number of entities");
     }
