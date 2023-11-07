@@ -11,7 +11,7 @@ import {
     logFailure
 } from './TestHelpers.js'
 import {Person} from './domain/Person.js'
-import {Page, Pageable} from '@kinotic/continuum-client'
+import {Page, Pageable, Order, Direction} from '@kinotic/continuum-client'
 import {IEntityService, Structures, Structure} from '../src'
 import delay from 'delay'
 
@@ -77,6 +77,39 @@ describe('EntityServiceTest', () => {
             // Delete the person
             await expect(entityService.deleteById(savedPerson.id)).resolves.toBeNull()
         }
+    )
+
+    it<LocalTestContext>('Test Cursor Based Paging',
+         async ({entityService}) => {
+             // Create people
+             const people: Person[] = createTestPeople(100)
+             await expect(entityService.bulkSave(people)).resolves.toBeNull()
+
+             await delay(2000)
+
+             // Count the people
+             await expect(entityService.count()).resolves.toBe(100)
+
+             // Find all the people
+             let cursor: string | null = null
+             let done = false
+             let elementsFound = 0
+             while(!done) {
+                 const pageable = Pageable.createWithCursor(cursor,
+                                                            10,
+                                                            { orders: [new Order('firstName', Direction.ASC)] })
+                 const page: Page<Person> = await entityService.findAll(pageable)
+                 expect(page).toBeDefined()
+                 if(page.cursor) {
+                     cursor = page.cursor
+                     expect(page.content.length).toBe(10)
+                     elementsFound += page.content.length
+                 }else{
+                     done = true
+                 }
+             }
+             expect(elementsFound, 'Should have found 100 Entities').toBe(100)
+         }
     )
 
     it<LocalTestContext>('Test Bulk CRUD',

@@ -41,6 +41,6 @@
   },
   "peerDependencies": {
     "@kinotic/continuum-client": "^2.8.1",
-    "@kinotic/continuum-idl": "^1.0.0"
+    "@kinotic/continuum-idl": "^1.2.0"
   }
 }
