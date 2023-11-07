@@ -91,7 +91,7 @@ describe('EntityServiceTest', () => {
             await expect(entityService.count()).resolves.toBe(100)
 
             // Find all the people
-            const page: Page<Person> = await entityService.findAll(new Pageable(0, 10))
+            const page: Page<Person> = await entityService.findAll(Pageable.create(0, 10))
             expect(page).toBeDefined()
             expect(page.totalElements).toBe(100)
             expect(page.content.length).toBe(10)
@@ -109,7 +109,7 @@ describe('EntityServiceTest', () => {
             await delay(2000)
 
             // Search for all the people
-            const searchPage: Page<Person> = await entityService.search('firstName:Walter',new Pageable(0, 10))
+            const searchPage: Page<Person> = await entityService.search('firstName:Walter',Pageable.create(0, 10))
             expect(searchPage).toBeDefined()
             expect(searchPage.totalElements).toBe(10)
             expect(searchPage.content.length).toBe(10)
