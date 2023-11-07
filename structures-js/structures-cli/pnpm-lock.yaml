@@ -6,14 +6,14 @@ settings:
 
 dependencies:
   '@kinotic/continuum-client':
-    specifier: ^2.5.1
-    version: 2.5.1
+    specifier: ^2.8.1
+    version: 2.8.1
   '@kinotic/continuum-idl':
     specifier: ^1.2.0
     version: 1.2.0
   '@kinotic/structures-api':
-    specifier: ^1.6.0
-    version: 1.6.0(@kinotic/continuum-client@2.5.1)(@kinotic/continuum-idl@1.2.0)
+    specifier: ^1.9.0
+    version: 1.9.0(@kinotic/continuum-client@2.8.1)(@kinotic/continuum-idl@1.2.0)
   '@oclif/core':
     specifier: ^2.9.4
     version: 2.9.4(@types/node@20.4.2)(typescript@5.1.6)
@@ -457,8 +457,8 @@ packages:
       '@jridgewell/resolve-uri': 3.1.1
       '@jridgewell/sourcemap-codec': 1.4.15
 
-  /@kinotic/continuum-client@2.5.1:
-    resolution: {integrity: sha512-8E443zdz+wpAl++FlUzs1uoqNHVtpRlUBV2YrvnypYVDxfTsgGEwDOd3M6EDK+0r6/KYMXKA2QLgq6xgpwwwwg==}
+  /@kinotic/continuum-client@2.8.1:
+    resolution: {integrity: sha512-URiqQFK2MrMQWdnA8VVIjsqyKSM/IUajkUFEq06q6zJxEq6bsZmtsPmH/y6Cz27rrYvy1xjaOlBHXZ0XNnjikg==}
     dependencies:
       '@stomp/rx-stomp': 2.0.0(@stomp/stompjs@7.0.0)(rxjs@7.8.1)(uuid@9.0.0)
       '@stomp/stompjs': 7.0.0
@@ -472,13 +472,13 @@ packages:
     resolution: {integrity: sha512-asQir06v9XwLQTbIf85y4kI7LVf95svaGyIaatBevUT8whYFXXY65T69QRLQ/FqaDw/KIBRn49TEpoK0EuOibg==}
     dev: false
 
-  /@kinotic/structures-api@1.6.0(@kinotic/continuum-client@2.5.1)(@kinotic/continuum-idl@1.2.0):
-    resolution: {integrity: sha512-nLfmqYes3MPaDpbUFIlQnpsqWK94NE6UgEgh49XParGxrGu3PrxZcSVH3XDosnrEtLPa8Wfl3G2hCIgbTqEMoQ==}
+  /@kinotic/structures-api@1.9.0(@kinotic/continuum-client@2.8.1)(@kinotic/continuum-idl@1.2.0):
+    resolution: {integrity: sha512-+hntNZytEg5Xp7a0Kly+Nqy9TsR1WnliP1qGbiITw5s0soBAYWWIHo3oclknfS+rqVS2uyJLi0KKX0mYdVzGOQ==}
     peerDependencies:
-      '@kinotic/continuum-client': ^2.5.1
+      '@kinotic/continuum-client': ^2.8.1
       '@kinotic/continuum-idl': ^1.0.0
     dependencies:
-      '@kinotic/continuum-client': 2.5.1
+      '@kinotic/continuum-client': 2.8.1
       '@kinotic/continuum-idl': 1.2.0
     dev: false
 

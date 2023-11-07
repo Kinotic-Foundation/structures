@@ -64,7 +64,7 @@ export class UtilFunctionLocator {
             for (const utilFunctionsPath of this.namespaceConfig.utilFunctionsPaths) {
 
                 let absFuncPath = path.resolve(utilFunctionsPath)
-                if(!absFuncPath.endsWith(path.sep)){
+                if(!absFuncPath.endsWith('.ts') && !absFuncPath.endsWith(path.sep)){
                     absFuncPath = absFuncPath + path.sep
                 }
 
