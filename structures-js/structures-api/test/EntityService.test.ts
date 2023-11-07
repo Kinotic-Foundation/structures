@@ -97,7 +97,10 @@ describe('EntityServiceTest', () => {
              while(!done) {
                  const pageable = Pageable.createWithCursor(cursor,
                                                             10,
-                                                            { orders: [new Order('firstName', Direction.ASC)] })
+                                                            { orders: [
+                                                                new Order('firstName', Direction.ASC),
+                                                                new Order('id', Direction.ASC)
+                                                                ] })
                  const page: Page<Person> = await entityService.findAll(pageable)
                  expect(page).toBeDefined()
                  if(page.cursor) {
@@ -112,6 +115,7 @@ describe('EntityServiceTest', () => {
          }
     )
 
+    // FIXME: This does not persist the bulkUpdate to elastic search. I am uncertain why when other bulk updates are working.
     it<LocalTestContext>('Test Bulk CRUD',
         async ({entityService}) => {
             // Create people
