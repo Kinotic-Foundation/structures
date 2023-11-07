@@ -194,7 +194,7 @@ export class Synchronize extends Command {
                     const answers = await inquirer.prompt({
                         type: 'input',
                         name: 'input',
-                        message: `Type ${chalk.blue(name)} to Up-Publish or Press Enter to Skip.`,
+                        message: `Type ${chalk.blue(name)} to Un-Publish or Press Enter to Skip.`,
                     })
                     if (answers.input === name) {
                         this.logVerbose(`Un-Publishing Structure: ${namespace}.${name}`, verbose)

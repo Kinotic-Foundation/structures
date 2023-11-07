@@ -213,7 +213,7 @@ export function convertAllEntities(config: ConversionConfiguration): EntityInfo[
         project.enableLogging(true)
     }
     let absEntitiesPath = path.resolve(config.entitiesPath)
-    if(!absEntitiesPath.endsWith(path.sep)){
+    if(!absEntitiesPath.endsWith('.ts') && !absEntitiesPath.endsWith(path.sep)){
         absEntitiesPath = absEntitiesPath + path.sep
     }
 
