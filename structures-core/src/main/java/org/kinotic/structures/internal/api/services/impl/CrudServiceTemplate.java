@@ -89,7 +89,7 @@ public class CrudServiceTemplate {
                                                         .create(builder -> {
                                                             builder.index(indexName);
                                                             builder.settings(s -> s
-                                                                    .numberOfShards("5")
+                                                                    .numberOfShards("3")
                                                                     .numberOfReplicas("2")
                                                                     .refreshInterval(t -> t.time("1s"))
                                                                     .store(st -> st.type(StorageType.Fs))
