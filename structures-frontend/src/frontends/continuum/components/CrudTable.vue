@@ -280,7 +280,7 @@ export default class CrudTable extends Vue {
 
             queryPromise.then((page: Page<any>) => {
                 this.loading = false
-                this.totalItems = page.content.length
+                this.totalItems = page.totalElements as number
                 this.items = page.content
 
                 if (!this.finishedInitialLoad) {
