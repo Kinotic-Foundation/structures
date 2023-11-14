@@ -50,7 +50,7 @@ public class MapUpsertPreProcessor implements UpsertPreProcessor<Map<Object, Obj
 
     @Override
     public CompletableFuture<EntityHolder> process(Map<Object, Object> entity,
-                                                                        EntityContext context) {
+                                                   EntityContext context) {
         try {
             // ids are not allowed to be nested
             if(idFieldPreProcessor != null && !idFieldPreProcessor.getLeft().contains(".")){
@@ -90,7 +90,7 @@ public class MapUpsertPreProcessor implements UpsertPreProcessor<Map<Object, Obj
 
     @Override
     public CompletableFuture<List<EntityHolder>> processArray(List<Map<Object, Object>> entities,
-                                                                                   EntityContext context) {
+                                                              EntityContext context) {
         try {
             // ids are not allowed to be nested
             if(idFieldPreProcessor != null && !idFieldPreProcessor.getLeft().contains(".")){

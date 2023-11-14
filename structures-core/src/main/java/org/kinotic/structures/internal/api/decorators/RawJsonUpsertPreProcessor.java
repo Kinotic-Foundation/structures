@@ -62,6 +62,7 @@ public class RawJsonUpsertPreProcessor implements UpsertPreProcessor<RawJson, Ra
             feeder.endOfInput();
 
             String currentId = null;
+            String currentTenantId = null;
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             JsonGenerator jsonGenerator = objectMapper.getFactory().createGenerator(outputStream, JsonEncoding.UTF8);
 
@@ -83,6 +84,7 @@ public class RawJsonUpsertPreProcessor implements UpsertPreProcessor<RawJson, Ra
 
                     DecoratorLogic preProcessorLogic = fieldPreProcessors.get(currentJsonPath);
 
+                    // Apply preProcessor if any exist
                     if(preProcessorLogic != null){
 
                         jsonParser.nextToken(); // move to value token
@@ -118,25 +120,41 @@ public class RawJsonUpsertPreProcessor implements UpsertPreProcessor<RawJson, Ra
                                     : (String) value;
                         }
                     }else{
-                        jsonGenerator.copyCurrentEvent(jsonParser);
+                        // Check if this is the tenant id if MultiTenancyType.SHARED is enabled
+                        if(structure.getMultiTenancyType() == MultiTenancyType.SHARED
+                            && currentJsonPath.equals(structuresProperties.getTenantIdFieldName())){
+
+                            // since the tenant id field is already present check its value to make sure it is null
+                            // or matches the logged in tenant
+                            jsonParser.nextToken(); // move to value token
+                            currentTenantId = objectMapper.readValue(jsonParser, String.class);
+                            if(currentTenantId != null && !currentTenantId.equals(context.getParticipant().getTenantId())){
+                                throw new IllegalArgumentException("Tenant Id invalid for logged in participant");
+                            }
+
+                            jsonGenerator.writeFieldName(fieldName);
+                            jsonGenerator.writeObject(currentTenantId);
+
+                        }else{
+                            // not tenant so just copy raw data
+                            jsonGenerator.copyCurrentEvent(jsonParser);
+                        }
                     }
 
                 }else{
 
-                    // if this is a multi tenant structure the first thing to do is add the tenant id
-                    // beginning new object we can add tenant id here
-                    if(structure.getMultiTenancyType() == MultiTenancyType.SHARED
-                            && token == JsonToken.START_OBJECT
-                            && objectDepth == 0) {
-
-                        jsonGenerator.writeStartObject();
-                        jsonGenerator.writeFieldName(structuresProperties.getTenantIdFieldName());
-                        jsonGenerator.writeString(context.getParticipant().getTenantId());
-
-                    }else if(token == JsonToken.END_OBJECT && objectDepth == 1){
+                    // End of root level object
+                    if(token == JsonToken.END_OBJECT && objectDepth == 1){
 
                         if(currentId == null){
                             throw new IllegalArgumentException("Could not find id for entity");
+                        }
+
+                        // if this is a multi tenant structure add the tenant if necessary
+                        if(structure.getMultiTenancyType() == MultiTenancyType.SHARED
+                           && currentTenantId == null){
+                            jsonGenerator.writeFieldName(structuresProperties.getTenantIdFieldName());
+                            jsonGenerator.writeString(context.getParticipant().getTenantId());
                         }
 
                         // This is the end of the object, so we store the object
@@ -145,6 +163,7 @@ public class RawJsonUpsertPreProcessor implements UpsertPreProcessor<RawJson, Ra
                         ret.add(new EntityHolder(currentId, new RawJson(outputStream.toByteArray())));
                         outputStream.reset();
                         currentId = null;
+                        currentTenantId = null;
                     }else{
                         if(!shouldSkipToken(token, jsonParser.getCurrentValue(), arrayDepth, processArray)){
                             jsonGenerator.copyCurrentEvent(jsonParser);
