@@ -66,6 +66,9 @@ export default class CliSessionUpgrade extends Vue {
 
                     const decodedId = decodeURIComponent(this.id)
 
+                    // The sends the current logged-in user's session id to the cli which is listening at
+                    // continuum.cli.SessionUpgradeService.upgradeSession scoped to the decodedId
+                    // The cli will then take over this session and be logged in as the user
                     await this.sessionUpgradeService.upgradeSession(decodedId, this.userState.connectedInfo.sessionId)
 
                     // we abandon connection so session can be used by CLI

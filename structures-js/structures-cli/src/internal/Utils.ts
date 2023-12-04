@@ -87,7 +87,7 @@ export async function connectAndUpgradeSession(server: string, logger: Logger): 
         })
 
         if (connectedInfo) {
-
+            // This works because any client can subscribe to an destination that is scoped to the connectedInfo.replyToId
             const scope = connectedInfo.replyToId + ':' + uuidv4()
             const url = server + (server.endsWith('/') ? '' : '/') + '#/sessionUpgrade/' + encodeURIComponent(scope)
             logger.log('Authenticate your account at:')

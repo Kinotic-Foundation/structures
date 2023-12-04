@@ -1,5 +1,4 @@
 import { RouteConfig } from 'vue-router'
-import {ServiceIdentifierConstants} from "@/frontends/iam/Constants";
 
 const adminRoutes: RouteConfig[] = [
     {
