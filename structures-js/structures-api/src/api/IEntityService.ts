@@ -1,5 +1,5 @@
-import {Page, Pageable} from '@kinotic/continuum-client'
-import {EntitiesService, IEntitiesService} from '@/api/IEntitiesService.js'
+import {Page, Pageable, IterablePage} from '@kinotic/continuum-client'
+import {EntitiesServiceSingleton, IEntitiesService} from '@/api/IEntitiesService.js'
 
 /**
  * This is the base interface for all entity services.
@@ -84,7 +84,7 @@ export interface IEntityService<T> {
      * @param pageable the page settings to be used
      * @return a page of entities
      */
-    findAll(pageable: Pageable): Promise<Page<T>>;
+    findAll(pageable: Pageable): Promise<IterablePage<T>>;
 
     /**
      * Returns a {@link Page} of entities matching the search text and paging restriction provided in the {@link Pageable} object.
@@ -93,7 +93,7 @@ export interface IEntityService<T> {
      * @param pageable   the page settings to be used
      * @return a page of entities
      */
-    search(searchText: string, pageable: Pageable): Promise<Page<T>>;
+    search(searchText: string, pageable: Pageable): Promise<IterablePage<T>>;
 
 }
 
@@ -113,7 +113,7 @@ export class EntityService<T> implements IEntityService<T>{
         this.structureNamespace = structureNamespace
         this.structureName = structureName
         this.structuresId = (structureNamespace + '.' + structureName).toLowerCase()
-        this.entitiesService = new EntitiesService()
+        this.entitiesService = EntitiesServiceSingleton
     }
 
     protected async beforeSaveOrUpdate(entity: T): Promise<T>{
@@ -156,11 +156,11 @@ export class EntityService<T> implements IEntityService<T>{
         return this.entitiesService.deleteById(this.structuresId, id)
     }
 
-    public findAll(pageable: Pageable): Promise<Page<T>>{
+    public findAll(pageable: Pageable): Promise<IterablePage<T>>{
         return this.entitiesService.findAll(this.structuresId, pageable)
     }
 
-    public search(searchText: string, pageable: Pageable): Promise<Page<T>>{
+    public search(searchText: string, pageable: Pageable): Promise<IterablePage<T>>{
         return this.entitiesService.search(this.structuresId, searchText, pageable)
     }
 }

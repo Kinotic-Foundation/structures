@@ -2,13 +2,14 @@ import {describe, it, expect, beforeAll, afterAll, beforeEach, afterEach} from '
 import { WebSocket } from 'ws'
 import {
     createPersonStructureIfNotExist,
-    createTestPeople,
+    findAndVerifyPeopleWithCursorPaging,
+    createTestPeopleAndVerify,
     createTestPerson,
     deleteStructure,
     generateRandomString,
     initStructuresServer,
     shutdownStructuresServer,
-    logFailure
+    logFailure, findAndVerifyPeopleWithOffsetPaging
 } from './TestHelpers.js'
 import {Person} from './domain/Person.js'
 import {Page, Pageable, Order, Direction} from '@kinotic/continuum-client'
@@ -81,14 +82,7 @@ describe('EntityServiceTest', () => {
 
     it<LocalTestContext>('Test Cursor Based Paging',
          async ({entityService}) => {
-             // Create people
-             const people: Person[] = createTestPeople(100)
-             await expect(entityService.bulkSave(people)).resolves.toBeNull()
-
-             await delay(2000)
-
-             // Count the people
-             await expect(entityService.count()).resolves.toBe(100)
+             await createTestPeopleAndVerify(entityService, 100, 2000)
 
              // Find all the people
              let cursor: string | null = null
@@ -115,17 +109,84 @@ describe('EntityServiceTest', () => {
          }
     )
 
-    // FIXME: This does not persist the bulkUpdate to elastic search. I am uncertain why when other bulk updates are working.
+    it<LocalTestContext>('Test Cursor Based Paging With Iterator',
+         async ({entityService}) => {
+             // Create people
+             await createTestPeopleAndVerify(entityService, 100, 2000)
+
+             // Find all the people
+             await findAndVerifyPeopleWithCursorPaging(entityService, 100)
+         }
+    )
+
+    it<LocalTestContext>('Test Cursor Based Paging With Iterator Uneven Pages',
+         async ({entityService}) => {
+             // Create people
+             await createTestPeopleAndVerify(entityService, 29, 2000)
+
+             // Find all the people
+             await findAndVerifyPeopleWithCursorPaging(entityService, 29)
+         }
+    )
+
+    it<LocalTestContext>('Test Cursor Based Paging With Iterator Single Page',
+         async ({entityService}) => {
+             // Create people
+             await createTestPeopleAndVerify(entityService, 9, 2000)
+
+             // Find all the people
+             await findAndVerifyPeopleWithCursorPaging(entityService, 9)
+         }
+    )
+
+    it<LocalTestContext>('Test Cursor Based Paging With Iterator No Data',
+         async ({entityService}) => {
+             // Find all the people
+             await findAndVerifyPeopleWithCursorPaging(entityService, 0)
+         }
+    )
+
+    it<LocalTestContext>('Test Offset Based Paging With Iterator',
+         async ({entityService}) => {
+             // Create people
+             await createTestPeopleAndVerify(entityService, 100, 2000)
+
+             // Find all the people
+             await findAndVerifyPeopleWithOffsetPaging(entityService, 100)
+         }
+    )
+
+    it<LocalTestContext>('Test Offset Based Paging With Iterator Uneven Pages',
+         async ({entityService}) => {
+             // Create people
+             await createTestPeopleAndVerify(entityService, 29, 2000)
+
+             // Find all the people
+             await findAndVerifyPeopleWithOffsetPaging(entityService, 29)
+         }
+    )
+
+    it<LocalTestContext>('Test Offset Based Paging With Iterator Single Page',
+         async ({entityService}) => {
+             // Create people
+             await createTestPeopleAndVerify(entityService, 9, 2000)
+
+             // Find all the people
+             await findAndVerifyPeopleWithOffsetPaging(entityService, 9)
+         }
+    )
+
+    it<LocalTestContext>('Test Offset Based Paging With Iterator No Data',
+         async ({entityService}) => {
+             // Find all the people
+             await findAndVerifyPeopleWithOffsetPaging(entityService, 0)
+         }
+    )
+
     it<LocalTestContext>('Test Bulk CRUD',
         async ({entityService}) => {
             // Create people
-            const people: Person[] = createTestPeople(100)
-            await expect(entityService.bulkSave(people)).resolves.toBeNull()
-
-            await delay(2000)
-
-            // Count the people
-            await expect(entityService.count()).resolves.toBe(100)
+            await createTestPeopleAndVerify(entityService, 100, 2000)
 
             // Find all the people
             const page: Page<Person> = await entityService.findAll(Pageable.create(0, 10))
@@ -138,7 +199,7 @@ describe('EntityServiceTest', () => {
                 person.firstName = 'Walter'
                 person.lastName = 'White'
                 // We do this to ensure the update performs a partial update properly
-               // delete person.address
+                delete person.address
             }
 
             await expect(entityService.bulkUpdate(page.content)).resolves.toBeNull()

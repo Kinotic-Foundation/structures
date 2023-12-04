@@ -1,4 +1,6 @@
-import {Continuum, IServiceProxy, Page, Pageable} from '@kinotic/continuum-client'
+import {FindAllIterablePage} from '@/internal/api/domain/FindAllIterablePage'
+import {SearchIterablePage} from '@/internal/api/domain/SearchIterablePage'
+import {Continuum, IServiceProxy, Page, Pageable, IterablePage} from '@kinotic/continuum-client'
 
 export interface IEntitiesService {
 
@@ -76,7 +78,7 @@ export interface IEntitiesService {
      * @param pageable    the page settings to be used
      * @return a page of entities
      */
-    findAll<T>(structureId: string, pageable: Pageable): Promise<Page<T>>
+    findAll<T>(structureId: string, pageable: Pageable): Promise<IterablePage<T>>
 
     /**
      * Returns a {@link Page} of entities matching the search text and paging restriction provided in the {@code Pageable} object.
@@ -88,7 +90,7 @@ export interface IEntitiesService {
      * @param pageable    the page settings to be used
      * @return a page of entities
      */
-    search<T>(structureId: string, searchText: string, pageable: Pageable): Promise<Page<T>>
+    search<T>(structureId: string, searchText: string, pageable: Pageable): Promise<IterablePage<T>>
 
 }
 
@@ -128,12 +130,23 @@ export class EntitiesService implements IEntitiesService {
         return this.serviceProxy.invoke('deleteById', [structureId, id])
     }
 
-    public findAll<T>(structureId: string, pageable: Pageable): Promise<Page<T>> {
+    public async findAll<T>(structureId: string, pageable: Pageable): Promise<IterablePage<T>> {
+        const page: Page<T> = await this.findAllSinglePage(structureId, pageable)
+        return new FindAllIterablePage(pageable, page, structureId)
+    }
+
+    public async findAllSinglePage<T>(structureId: string, pageable: Pageable): Promise<IterablePage<T>> {
         return this.serviceProxy.invoke('findAll', [structureId, pageable])
     }
 
-    public search<T>(structureId: string, searchText: string, pageable: Pageable): Promise<Page<T>> {
+    public async search<T>(structureId: string, searchText: string, pageable: Pageable): Promise<IterablePage<T>> {
+        const page: Page<T> = await this.searchSinglePage(structureId, searchText, pageable)
+        return new SearchIterablePage(pageable, page, searchText, structureId)
+    }
+
+    public async searchSinglePage<T>(structureId: string, searchText: string, pageable: Pageable): Promise<Page<T>> {
         return this.serviceProxy.invoke('search', [structureId, searchText, pageable])
     }
 }
 
+export const EntitiesServiceSingleton: IEntitiesService = new EntitiesService()

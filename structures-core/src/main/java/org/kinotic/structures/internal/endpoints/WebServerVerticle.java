@@ -22,7 +22,7 @@ import java.util.Set;
 @Component
 public class WebServerVerticle extends AbstractVerticle{
 
-    private static final Logger log = LoggerFactory.getLogger(GraphQLVerticle.class);
+    private static final Logger log = LoggerFactory.getLogger(WebServerVerticle.class);
 
     private final StructuresProperties properties;
     private final HealthChecks healthChecks;
