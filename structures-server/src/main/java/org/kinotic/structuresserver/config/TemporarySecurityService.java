@@ -39,8 +39,8 @@ public class TemporarySecurityService implements SecurityService {
             return CompletableFuture.completedFuture(participant);
         }else if (authenticationInfo.containsKey("authorization")){
             String authorizationHeader = authenticationInfo.get("authorization");
-            // Header looks something like
-            // "Authorization: Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ=="
+            // Must be to authenticate
+            // "Authorization: Basic YWRtaW46c3RydWN0dXJlcw=="
             String[] parts = authorizationHeader.split(" ");
             if (parts.length == 2 && "Basic".equalsIgnoreCase(parts[0])) {
                 String credentials = new String(Base64.getDecoder().decode(parts[1]), StandardCharsets.UTF_8);
@@ -51,13 +51,19 @@ public class TemporarySecurityService implements SecurityService {
                             log.debug("Successfully authenticated user: {}", participant.getId());
                         }
                         return CompletableFuture.completedFuture(participant);
+                    }else{
+                        if(log.isDebugEnabled()){
+                            log.debug("Failed to authenticate user: {}", authenticationInfo.get("login"));
+                        }
                     }
+                }
+            }else{
+                if(log.isDebugEnabled()){
+                    log.debug("Only Basic Auth is supported. Received {}", authorizationHeader);
                 }
             }
         }
-        if(log.isDebugEnabled()){
-            log.debug("Failed to authenticate user: {}", authenticationInfo.get("login"));
-        }
+
         return CompletableFuture.failedFuture(new AuthenticationException("username/password pair provided was not correct."));
     }
 }

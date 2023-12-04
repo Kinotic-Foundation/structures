@@ -1,5 +1,6 @@
 package org.kinotic.structures.internal.api.services.impl;
 
+import com.apollographql.federation.graphqljava.Federation;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.benmanes.caffeine.cache.AsyncCacheLoader;
 import graphql.GraphQL;
@@ -182,6 +183,8 @@ public class GraphQLCacheLoader implements AsyncCacheLoader<String, GraphQL> {
                     log.debug("Finished creating GraphQL Schema for namespace: {} in {}ms",
                               namespace,
                               System.currentTimeMillis() - start);
+
+                    graphQLSchema = Federation.transform(graphQLSchema).build();
 
                     return CompletableFuture.completedFuture(graphQLSchema);
                 }, executor);

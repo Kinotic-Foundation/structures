@@ -4,7 +4,6 @@ continuum:
   debug: true
 
 continuum-gateway:
-  disableIam: true
   dataDir: /tmp/work
 
 logging:
