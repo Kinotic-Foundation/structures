@@ -32,10 +32,10 @@ public class ObjectC3TypeToGraphQL implements SpecificC3TypeConverter<GraphQLTyp
                                      C3ConversionContext<GraphQLTypeHolder, GraphQLConversionState> conversionContext) {
 
         GraphQLObjectType.Builder outputBuilder = newObject().name(objectC3Type.getName());
-        GraphQLInputObjectType.Builder inputBuilder = newInputObject().name(objectC3Type.getName()+"Input");
+        GraphQLInputObjectType.Builder inputBuilder = newInputObject().name(objectC3Type.getName() + "Input");
         boolean nullInputTypeFound = false;
 
-        for(Map.Entry<String, C3Type> entry : objectC3Type.getProperties().entrySet()){
+        for (Map.Entry<String, C3Type> entry : objectC3Type.getProperties().entrySet()) {
 
             String fieldName = entry.getKey();
 
@@ -43,9 +43,9 @@ public class ObjectC3TypeToGraphQL implements SpecificC3TypeConverter<GraphQLTyp
 
             GraphQLTypeHolder fieldValue = conversionContext.convert(entry.getValue());
 
-            if(isNotNull(entry.getValue())){
+            if (isNotNull(entry.getValue())) {
                 fieldValue = new GraphQLTypeHolder(GraphQLNonNull.nonNull(fieldValue.getInputType()),
-                                                   GraphQLNonNull.nonNull(fieldValue.getOutputType()));;
+                                                   GraphQLNonNull.nonNull(fieldValue.getOutputType()));
             }
 
             conversionContext.state().endProcessingField();
@@ -57,24 +57,24 @@ public class ObjectC3TypeToGraphQL implements SpecificC3TypeConverter<GraphQLTyp
             // input type can be null in some cases such as a Union type.
             // This can create a paradigm mismatch between OpenApi and GraphQL, but we cannot do anything about it.
             // For now, we will not create an input type for these cases.
-            if(fieldValue.getInputType() != null) {
+            if (fieldValue.getInputType() != null) {
                 if (isTypeRequiredForInput(entry.getValue())) {
                     inputBuilder.field(newInputObjectField()
                                                .name(fieldName)
                                                .type(fieldValue.getInputType()));
                 }
-            }else{
+            } else {
                 nullInputTypeFound = true;
             }
         }
         return new GraphQLTypeHolder(!nullInputTypeFound ? inputBuilder.build() : null, outputBuilder.build());
     }
 
-    private boolean isTypeRequiredForInput(C3Type c3Type){
+    private boolean isTypeRequiredForInput(C3Type c3Type) {
         return !c3Type.containsDecorator(ReadOnlyDecorator.class);
     }
 
-    private boolean isNotNull(C3Type c3Type){
+    private boolean isNotNull(C3Type c3Type) {
         return c3Type.containsDecorator(NotNullC3Decorator.class);
     }
 

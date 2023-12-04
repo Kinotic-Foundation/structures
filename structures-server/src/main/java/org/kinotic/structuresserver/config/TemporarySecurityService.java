@@ -39,8 +39,8 @@ public class TemporarySecurityService implements SecurityService {
             return CompletableFuture.completedFuture(participant);
         }else if (authenticationInfo.containsKey("authorization")){
             String authorizationHeader = authenticationInfo.get("authorization");
-            // Must be to authenticate
-            // "Authorization: Basic YWRtaW46c3RydWN0dXJlcw=="
+            // Header looks something like
+            // "Authorization: Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ=="
             String[] parts = authorizationHeader.split(" ");
             if (parts.length == 2 && "Basic".equalsIgnoreCase(parts[0])) {
                 String credentials = new String(Base64.getDecoder().decode(parts[1]), StandardCharsets.UTF_8);
