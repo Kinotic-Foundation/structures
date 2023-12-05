@@ -78,8 +78,8 @@ public interface JsonEntitiesService {
      * @param structureId the id of the structure to save the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
      * @param ids         must not be {@literal null}
      * @param participant the participant of the logged-in user
-     * @return {@link CompletableFuture} with the list of matched entities with the given ids or {@link CompletableFuture} emitting null if none found
-     * @throws IllegalArgumentException in case the given {@literal id} is {@literal null}
+     * @return {@link CompletableFuture} with the list of matched entities with the given ids or {@link CompletableFuture} emitting an empty list if none found
+     * @throws IllegalArgumentException in case the given {@literal ids} is {@literal null}
      */
     CompletableFuture<List<RawJson>> findByIds(String structureId, List<String> ids, Participant participant);
 

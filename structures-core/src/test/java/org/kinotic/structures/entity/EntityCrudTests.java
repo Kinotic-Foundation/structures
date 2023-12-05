@@ -215,6 +215,32 @@ public class EntityCrudTests extends ElasticsearchTestBase {
     }
 
     @Test
+    public void testFindByIdsNoneFound(){
+        EntityContext context = new DefaultEntityContext(new DummyParticipant("tenant", "user"));
+
+        StructureAndPersonHolder holder = createAndVerify(10, true, context, "-testFindByIdsNoneFound");
+
+        Assertions.assertNotNull(holder);
+
+        ArrayList<String> ids = new ArrayList<>();
+        for(int i = 0; i < holder.getPersons().size(); i++){
+            Person p = holder.getPersons().get(i);
+            if(i % 2 == 0){
+                ids.add("aaaaa"+p.getId()+"aaaaa");
+            }
+        }
+
+        StepVerifier.create(Mono.fromFuture(entitiesService.findByIds(holder.getStructure().getId(),
+                        ids,
+                        RawJson.class,
+                        context)))
+                .expectNextMatches(List::isEmpty)
+                .as("Verifying Tenant ids query to be empty as none of ids matches")
+                .verifyComplete();
+
+    }
+
+    @Test
     public void testCount(){
         EntityContext context1 = new DefaultEntityContext(new DummyParticipant("tenant1", "user1"));
         EntityContext context2 = new DefaultEntityContext(new DummyParticipant("tenant2", "user2"));

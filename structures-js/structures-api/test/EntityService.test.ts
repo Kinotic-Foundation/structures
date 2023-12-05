@@ -86,38 +86,62 @@ describe('EntityServiceTest', () => {
             await createTestPeopleAndVerify(entityService, 100, 2000)
 
             // Find all the people
-            let cursor: string | null = null
-            let done = false
             let elementsFound = 0
-            let peopleMap: Map<string, Person> = new Map<string, Person>()
             let peopleIds: string[] = []
-            while(!done) {
-                const pageable = Pageable.createWithCursor(cursor,
-                    10,
-                    { orders: [
-                            new Order('firstName', Direction.ASC),
-                            new Order('id', Direction.ASC)
-                        ] })
-                const page: Page<Person> = await entityService.findAll(pageable)
+            const pageable = Pageable.createWithCursor(cursor,
+                10,
+                { orders: [
+                        new Order('firstName', Direction.ASC),
+                        new Order('id', Direction.ASC)
+                    ] })
+            const pageOne = await entityService.findAll(pageable)
+            for await(const page of pageOne){
                 expect(page).toBeDefined()
-                if(page.cursor) {
-                    cursor = page.cursor
-                    expect(page.content.length).toBe(10)
-                    for(const person of page.content){
-                        peopleMap.set(person.id, person)
-                        elementsFound++
-                        if(elementsFound % 2 === 0){
-                            peopleIds.push(person.id)
-                        }
+                expect(page.content.length).toBe(10)
+                for(const person of page.content){
+                    elementsFound++
+                    if(elementsFound % 2 === 0){
+                        peopleIds.push('aaaaa'+person.id+'aaaaa')
                     }
-                }else{
-                    done = true
                 }
             }
             expect(elementsFound, 'Should have found 100 Entities').toBe(100)
 
             const peopleByIds = await entityService.findByIds(peopleIds)
             expect(peopleByIds.length, 'Should have 50 Entities when using findByIds').toBe(50)
+
+        }
+    )
+
+    it<LocalTestContext>('Test FindByIds and None Found ',
+        async ({entityService}) => {
+            await createTestPeopleAndVerify(entityService, 50, 2000)
+
+            // Find all the people
+            let elementsFound = 0
+            let peopleIds: string[] = []
+            const pageable = Pageable.createWithCursor(cursor,
+                10,
+                { orders: [
+                        new Order('firstName', Direction.ASC),
+                        new Order('id', Direction.ASC)
+                    ] })
+            const pageOne = await entityService.findAll(pageable)
+            for await(const page of pageOne){
+                expect(page).toBeDefined()
+                expect(page.content.length).toBe(10)
+                for(const person of page.content){
+                    elementsFound++
+                    if(elementsFound % 2 === 0){
+                        peopleIds.push('aaaaa'+person.id+'aaaaa')
+                    }
+                }
+            }
+            expect(elementsFound, 'Should have found 50 Entities').toBe(50)
+
+            const peopleByIds = await entityService.findByIds(peopleIds)
+            expect(peopleByIds).toBeDefined()
+            expect(peopleByIds.length, 'Should have 0 Entities (empty array) when using findByIds and none match').toBe(0)
 
         }
     )

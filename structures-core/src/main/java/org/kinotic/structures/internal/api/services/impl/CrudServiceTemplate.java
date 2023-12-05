@@ -283,7 +283,7 @@ public class CrudServiceTemplate {
      * @param ids             of the documents to return
      * @param type            of the document to return
      * @param builderConsumer to customize the {@link GetRequest}, or null if no customization is needed
-     * @return a {@link CompletableFuture} that will complete with the document
+     * @return a {@link CompletableFuture} that will complete with the documents requested
      */
     public <T> CompletableFuture<List<T>> findByIds(String indexName,
                                                     List<String> ids,
@@ -293,10 +293,12 @@ public class CrudServiceTemplate {
                 .thenApply(response -> {
 
                     List<MultiGetResponseItem<T>> recordsResponse = response.docs();
-                    ArrayList<T> content = new ArrayList<>(recordsResponse.size());
+                    ArrayList<T> content = new ArrayList<>();
 
                     for (MultiGetResponseItem<T> hit : recordsResponse) {
-                        content.add(hit.result().source());
+                        if(hit.isResult() && hit.result().found()){
+                            content.add(hit.result().source());
+                        }
                     }
 
                     return content;
