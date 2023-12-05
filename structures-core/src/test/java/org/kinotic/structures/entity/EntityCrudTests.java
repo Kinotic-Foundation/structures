@@ -47,11 +47,13 @@ import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest
@@ -113,6 +115,34 @@ public class EntityCrudTests extends ElasticsearchTestBase {
     }
 
     @Test
+    public void testCreateAndDeleteByQuery() throws InterruptedException {
+        EntityContext context = new DefaultEntityContext(new DummyParticipant("tenant", "user"));
+
+        StructureAndPersonHolder holder = createAndVerify(20, false, context, "-testFindByIds");
+
+        Assertions.assertNotNull(holder);
+
+        StepVerifier.create(Mono.fromFuture(entitiesService.count(holder.getStructure().getId(), context)))
+                .expectNext(20L)
+                .as("Verifying Tenant 1 has 20 entities")
+                .verifyComplete();
+
+        StepVerifier.create(Mono.fromFuture(entitiesService.deleteByQuery(holder.getStructure().getId(),
+                        "lastName: A*",
+                        context)))
+                .verifyComplete();
+
+        Thread.sleep(3000);
+
+        StepVerifier.create(Mono.fromFuture(entitiesService.count(holder.getStructure().getId(), context)))
+                .expectNext(18L)
+                .as("Verifying Tenant 1 has 18 entities after delete by query")
+                .verifyComplete();
+
+    }
+
+
+    @Test
     public void testFindById(){
         StructureAndPersonHolder holder = createAndVerify();
 
@@ -141,6 +171,50 @@ public class EntityCrudTests extends ElasticsearchTestBase {
     }
 
     @Test
+    public void testFindByIds(){
+        EntityContext context = new DefaultEntityContext(new DummyParticipant("tenant", "user"));
+
+        StructureAndPersonHolder holder = createAndVerify(10, true, context, "-testFindByIds");
+
+        Assertions.assertNotNull(holder);
+
+        HashMap<String, Person> personMap = new HashMap<>();
+        ArrayList<String> ids = new ArrayList<>();
+        for(int i = 0; i < holder.getPersons().size(); i++){
+            Person p = holder.getPersons().get(i);
+            personMap.put(p.getId(), p);
+            if(i % 2 == 0){
+                ids.add(p.getId());
+            }
+        }
+
+        StepVerifier.create(Mono.fromFuture(entitiesService.findByIds(holder.getStructure().getId(),
+                        ids,
+                        RawJson.class,
+                        context)))
+                .expectNextMatches(responseList -> {
+                    boolean ret = false;
+                    try {
+                        Assertions.assertEquals(ids.size(), responseList.size(), "id list size does not match response list");
+                        for(RawJson json : responseList){
+                            Person savedPerson = objectMapper.readValue(json.data(),
+                                    Person.class);
+                            Assertions.assertNotNull(savedPerson);
+                            ret = savedPerson.equals(personMap.get(savedPerson.getId()));
+                            if(!ret){
+                                break;
+                            }
+                        }
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                    return ret;
+                })
+                .verifyComplete();
+
+    }
+
+    @Test
     public void testCount(){
         EntityContext context1 = new DefaultEntityContext(new DummyParticipant("tenant1", "user1"));
         EntityContext context2 = new DefaultEntityContext(new DummyParticipant("tenant2", "user2"));
@@ -163,6 +237,38 @@ public class EntityCrudTests extends ElasticsearchTestBase {
                     .as("Verifying Tenant 2 has 20 entities")
                     .verifyComplete();
     }
+
+
+    @Test
+    public void testCountByQuery(){
+        EntityContext context1 = new DefaultEntityContext(new DummyParticipant("tenant1", "user1"));
+        EntityContext context2 = new DefaultEntityContext(new DummyParticipant("tenant2", "user2"));
+
+        StructureAndPersonHolder holder1 = createAndVerify(10, false, context1, "-testCount");
+
+        Assertions.assertNotNull(holder1);
+
+        StructureAndPersonHolder holder2 = createAndVerify(20, false, context2, "-testCount");
+
+        Assertions.assertNotNull(holder2);
+
+        StepVerifier.create(Mono.fromFuture(entitiesService.countByQuery(holder1.getStructure().getId(), "lastName: Z*", context1)))
+                .expectNext(2L)
+                .as("Verifying Tenant 1 has 2 entities by search")
+                .verifyComplete();
+
+        StepVerifier.create(Mono.fromFuture(entitiesService.countByQuery(holder2.getStructure().getId(), "lastName: A*", context2)))
+                .expectNext(2L)
+                .as("Verifying Tenant 2 has 2 entities by search")
+                .verifyComplete();
+
+        StepVerifier.create(Mono.fromFuture(entitiesService.countByQuery(holder2.getStructure().getId(), "lastName: a*", context2)))
+                .expectNext(0L)
+                .as("Verifying Tenant 0 has 2 entities by search")
+                .verifyComplete();
+
+    }
+
 
     @Test
     public void testFindAll(){

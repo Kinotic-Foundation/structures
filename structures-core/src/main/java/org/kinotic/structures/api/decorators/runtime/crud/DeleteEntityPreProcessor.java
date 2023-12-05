@@ -1,5 +1,6 @@
 package org.kinotic.structures.api.decorators.runtime.crud;
 
+import co.elastic.clients.elasticsearch.core.DeleteByQueryRequest;
 import co.elastic.clients.elasticsearch.core.DeleteRequest;
 import org.kinotic.continuum.idl.api.schema.decorators.C3Decorator;
 import org.kinotic.structures.api.decorators.runtime.C3DecoratorInstance;
@@ -16,4 +17,10 @@ public interface DeleteEntityPreProcessor <D extends C3Decorator> extends C3Deco
                       D decorator,
                       DeleteRequest.Builder builder,
                       EntityContext context);
+
+    void beforeDeleteByQuery(Structure structure,
+                             String jsonPath,
+                             D decorator,
+                             DeleteByQueryRequest.Builder builder,
+                             EntityContext context);
 }

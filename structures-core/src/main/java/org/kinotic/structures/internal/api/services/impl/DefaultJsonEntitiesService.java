@@ -8,6 +8,7 @@ import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -48,13 +49,28 @@ public class DefaultJsonEntitiesService implements JsonEntitiesService {
     }
 
     @Override
+    public CompletableFuture<List<RawJson>> findByIds(String structureId, List<String> ids, Participant participant) {
+        return defaultEntitiesService.findByIds(structureId, ids, RawJson.class, new DefaultEntityContext(participant));
+    }
+
+    @Override
     public CompletableFuture<Long> count(String structureId, Participant participant) {
         return defaultEntitiesService.count(structureId, new DefaultEntityContext(participant));
     }
 
     @Override
+    public CompletableFuture<Long> countByQuery(String structureId, String query, Participant participant) {
+        return defaultEntitiesService.countByQuery(structureId, query, new DefaultEntityContext(participant));
+    }
+
+    @Override
     public CompletableFuture<Void> deleteById(String structureId, String id, Participant participant) {
         return defaultEntitiesService.deleteById(structureId, id, new DefaultEntityContext(participant));
+    }
+
+    @Override
+    public CompletableFuture<Void> deleteByQuery(String structureId, String query, Participant participant) {
+        return defaultEntitiesService.deleteByQuery(structureId, query, new DefaultEntityContext(participant));
     }
 
     @Override

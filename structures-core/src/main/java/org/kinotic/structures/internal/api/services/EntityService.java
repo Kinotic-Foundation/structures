@@ -5,6 +5,7 @@ import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.Structure;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -69,12 +70,31 @@ public interface EntityService {
     <T> CompletableFuture<T> findById(String id, Class<T> type, EntityContext context);
 
     /**
+     * Retrieves a list of entities by their id.
+     *
+     * @param ids         must not be {@literal null}
+     * @param type        the type of the entity
+     * @param context     the context for this operation
+     * @return {@link CompletableFuture} with the list of matched entities with the given ids or {@link CompletableFuture} emitting null if none found
+     * @throws IllegalArgumentException in case the given {@literal id} is {@literal null}
+     */
+    <T> CompletableFuture<List<T>> findByIds(List<String> ids, Class<T> type, EntityContext context);
+
+    /**
      * Returns the number of entities available.
      *
      * @param context the context for this operation
      * @return {@link CompletableFuture} emitting the number of entities
      */
     CompletableFuture<Long> count(EntityContext context);
+
+    /**
+     * Returns the number of entities available for the given query.
+     * @param query       the query used to limit result
+     * @param context     the context for this operation
+     * @return {@link CompletableFuture} emitting the number of entities.
+     */
+    CompletableFuture<Long> countByQuery(String query, EntityContext context);
 
     /**
      * Deletes the entity with the given id.
@@ -85,6 +105,16 @@ public interface EntityService {
      * @throws IllegalArgumentException in case the given {@literal id} is {@literal null}
      */
     CompletableFuture<Void> deleteById(String id, EntityContext context);
+
+    /**
+     * Deletes any entities that match the given query.
+     *
+     * @param query       the query used to filter records to delete, must not be {@literal null}
+     * @param context     the context for this operation
+     * @return {@link CompletableFuture} emitting when delete is complete
+     * @throws IllegalArgumentException in case the given {@literal id} is {@literal null}
+     */
+    CompletableFuture<Void> deleteByQuery(String query, EntityContext context);
 
     /**
      * Returns a {@link Page} of entities meeting the paging restriction provided in the {@link Pageable} object.

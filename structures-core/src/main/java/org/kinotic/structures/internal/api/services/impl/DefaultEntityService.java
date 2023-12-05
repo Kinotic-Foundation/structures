@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Created by Navíd Mitchell 🤪 on 5/2/23.
@@ -221,11 +222,27 @@ public class DefaultEntityService implements EntityService {
     }
 
     @Override
+    public <T> CompletableFuture<List<T>> findByIds(List<String> ids, Class<T> type, EntityContext context) {
+        return validateTenantAndComposeIds(ids, context)
+                .thenCompose(composedIds -> crudServiceTemplate
+                        .findByIds(structure.getItemIndex(), composedIds, type,
+                                builder -> delegatingReadPreProcessor.beforeFindByIds(structure, builder, context)));
+    }
+
+    @Override
     public CompletableFuture<Long> count(EntityContext context) {
         return validateTenant(context)
                 .thenCompose(unused -> crudServiceTemplate
                         .count(structure.getItemIndex(),
-                               builder -> delegatingReadPreProcessor.beforeCount(structure, builder, context)));
+                               builder -> delegatingReadPreProcessor.beforeCount(structure, null, builder, context)));
+    }
+
+    @Override
+    public CompletableFuture<Long> countByQuery(String query, EntityContext context) {
+        return validateTenant(context)
+                .thenCompose(unused -> crudServiceTemplate
+                        .count(structure.getItemIndex(),
+                                builder -> delegatingReadPreProcessor.beforeCount(structure, query, builder, context)));
     }
 
     @Override
@@ -234,6 +251,15 @@ public class DefaultEntityService implements EntityService {
                 .thenCompose(composedId -> crudServiceTemplate
                         .deleteById(structure.getItemIndex(), composedId,
                                     builder -> delegatingReadPreProcessor.beforeDelete(structure, builder, context))
+                        .thenApply(deleteResponse -> null));
+    }
+
+    @Override
+    public CompletableFuture<Void> deleteByQuery(String query, EntityContext context) {
+        return validateTenant(context)
+                .thenCompose(unused -> crudServiceTemplate
+                        .deleteByQuery(structure.getItemIndex(),
+                                builder -> delegatingReadPreProcessor.beforeDeleteByQuery(structure, query, builder, context))
                         .thenApply(deleteResponse -> null));
     }
 
@@ -326,6 +352,20 @@ public class DefaultEntityService implements EntityService {
                         ret = tenantId + "-" + id;
                     }else{
                         ret = id;
+                    }
+                    return ret;
+                });
+    }
+
+    private CompletableFuture<List<String>> validateTenantAndComposeIds(final List<String> ids, final EntityContext context){
+        return validateTenant(context)
+                .thenApply(unused -> {
+                    List<String> ret;
+                    if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
+                        String tenantId = context.getParticipant().getTenantId();
+                        ret = ids.stream().map(id -> tenantId + "-" + id).collect(Collectors.toList());
+                    }else{
+                        ret = ids;
                     }
                     return ret;
                 });

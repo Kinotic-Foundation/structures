@@ -5,6 +5,8 @@ import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.Structure;
 
+import java.lang.reflect.Array;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -71,12 +73,33 @@ public interface EntitiesService {
     <T> CompletableFuture<T> findById(String structureId, String id, Class<T> type, EntityContext context);
 
     /**
+     * Retrieves a list of entities by their id.
+     *
+     * @param structureId the id of the structure to save the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * @param ids         must not be {@literal null}
+     * @param type        the type of the entity
+     * @param context     the context for this operation
+     * @return {@link CompletableFuture} with the list of matched entities with the given ids or {@link CompletableFuture} emitting null if none found
+     * @throws IllegalArgumentException in case the given {@literal id} is {@literal null}
+     */
+    <T> CompletableFuture<List<T>> findByIds(String structureId, List<String> ids, Class<T> type, EntityContext context);
+
+    /**
      * Returns the number of entities available.
      * @param structureId the id of the structure to count. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
      * @param context     the context for this operation
      * @return {@link CompletableFuture} emitting the number of entities.
      */
     CompletableFuture<Long> count(String structureId, EntityContext context);
+
+    /**
+     * Returns the number of entities available for the given query.
+     * @param structureId the id of the structure to count. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * @param query       the query used to limit result
+     * @param context     the context for this operation
+     * @return {@link CompletableFuture} emitting the number of entities.
+     */
+    CompletableFuture<Long> countByQuery(String structureId, String query, EntityContext context);
 
     /**
      * Deletes the entity with the given id.
@@ -88,6 +111,17 @@ public interface EntitiesService {
      * @throws IllegalArgumentException in case the given {@literal id} is {@literal null}
      */
     CompletableFuture<Void> deleteById(String structureId, String id, EntityContext context);
+
+    /**
+     * Deletes any entities that match the given query.
+     *
+     * @param structureId the id of the structure to save the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * @param query       the query used to filter records to delete, must not be {@literal null}
+     * @param context     the context for this operation
+     * @return {@link CompletableFuture} emitting when delete is complete
+     * @throws IllegalArgumentException in case the given {@literal id} is {@literal null}
+     */
+    CompletableFuture<Void> deleteByQuery(String structureId, String query, EntityContext context);
 
     /**
      * Returns a {@link Page} of entities meeting the paging restriction provided in the {@code Pageable} object.

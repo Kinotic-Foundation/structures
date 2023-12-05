@@ -4,8 +4,11 @@ import org.kinotic.continuum.api.annotations.Publish;
 import org.kinotic.continuum.api.security.Participant;
 import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
+import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.RawJson;
+import org.kinotic.structures.api.domain.Structure;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -70,12 +73,32 @@ public interface JsonEntitiesService {
     CompletableFuture<RawJson> findById(String structureId, String id, Participant participant);
 
     /**
+     * Retrieves a list of entities by their id.
+     *
+     * @param structureId the id of the structure to save the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * @param ids         must not be {@literal null}
+     * @param participant the participant of the logged-in user
+     * @return {@link CompletableFuture} with the list of matched entities with the given ids or {@link CompletableFuture} emitting null if none found
+     * @throws IllegalArgumentException in case the given {@literal id} is {@literal null}
+     */
+    CompletableFuture<List<RawJson>> findByIds(String structureId, List<String> ids, Participant participant);
+
+    /**
      * Returns the number of entities available.
      * @param structureId the id of the structure to count
      * @param participant the participant of the logged-in user
      * @return {@link CompletableFuture} emitting the number of entities.
      */
     CompletableFuture<Long> count(String structureId, Participant participant);
+
+    /**
+     * Returns the number of entities available for the given query.
+     * @param structureId the id of the structure to count. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * @param query       the query used to limit result
+     * @param participant the participant of the logged-in user
+     * @return {@link CompletableFuture} emitting the number of entities.
+     */
+    CompletableFuture<Long> countByQuery(String structureId, String query, Participant participant);
 
     /**
      * Deletes the entity with the given id.
@@ -87,6 +110,17 @@ public interface JsonEntitiesService {
      * @throws IllegalArgumentException in case the given {@literal id} is {@literal null}
      */
     CompletableFuture<Void> deleteById(String structureId, String id, Participant participant);
+
+    /**
+     * Deletes any entities that match the given query.
+     *
+     * @param structureId the id of the structure to save the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * @param query       the query used to filter records to delete, must not be {@literal null}
+     * @param participant the participant of the logged-in user
+     * @return {@link CompletableFuture} emitting when delete is complete
+     * @throws IllegalArgumentException in case the given {@literal id} is {@literal null}
+     */
+    CompletableFuture<Void> deleteByQuery(String structureId, String query, Participant participant);
 
     /**
      * Returns a {@link Page} of entities meeting the paging restriction provided in the {@code Pageable} object.

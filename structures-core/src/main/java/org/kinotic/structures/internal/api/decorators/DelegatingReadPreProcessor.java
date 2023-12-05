@@ -1,10 +1,7 @@
 package org.kinotic.structures.internal.api.decorators;
 
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
-import co.elastic.clients.elasticsearch.core.CountRequest;
-import co.elastic.clients.elasticsearch.core.DeleteRequest;
-import co.elastic.clients.elasticsearch.core.GetRequest;
-import co.elastic.clients.elasticsearch.core.SearchRequest;
+import co.elastic.clients.elasticsearch.core.*;
 import org.apache.commons.lang3.tuple.Triple;
 import org.kinotic.continuum.idl.api.schema.decorators.C3Decorator;
 import org.kinotic.structures.api.config.StructuresProperties;
@@ -43,10 +40,11 @@ public class DelegatingReadPreProcessor {
     }
 
     public void beforeCount(Structure structure,
+                            String query,
                             CountRequest.Builder builder,
                             EntityContext context) {
 
-        Query.Builder queryBuilder = createQueryWithTenantLogic(structure, context, builder::routing);
+        Query.Builder queryBuilder = createQueryWithTenantLogicAndSearch(structure, query, context, builder::routing);
 
         if(countPreProcessors != null && !countPreProcessors.isEmpty()){
             if(queryBuilder == null){
@@ -75,6 +73,24 @@ public class DelegatingReadPreProcessor {
             for(Triple<String, C3Decorator, DeleteEntityPreProcessor<C3Decorator>> tuple : deletePreProcessors){
                 tuple.getRight().beforeDelete(structure, tuple.getLeft(), tuple.getMiddle(), builder, context);
             }
+        }
+    }
+
+    public void beforeDeleteByQuery(Structure structure,
+                                    String query,
+                                    DeleteByQueryRequest.Builder builder,
+                                    EntityContext context) {
+
+        Query.Builder queryBuilder = createQueryWithTenantLogicAndSearch(structure, query, context, builder::routing);
+
+        if(deletePreProcessors != null && !deletePreProcessors.isEmpty()){
+            for(Triple<String, C3Decorator, DeleteEntityPreProcessor<C3Decorator>> tuple : deletePreProcessors){
+                tuple.getRight().beforeDeleteByQuery(structure, tuple.getLeft(), tuple.getMiddle(), builder, context);
+            }
+        }
+
+        if(queryBuilder != null){
+            builder.query(queryBuilder.build());
         }
     }
 
@@ -109,6 +125,17 @@ public class DelegatingReadPreProcessor {
         }
     }
 
+    public void beforeFindByIds(Structure structure,
+                               MgetRequest.Builder builder,
+                               EntityContext context){
+
+        // add multi tenancy filters if needed
+        if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
+            builder.routing(context.getParticipant().getTenantId());
+            builder.sourceExcludes(structuresProperties.getTenantIdFieldName());
+        }
+    }
+
     public void beforeSearch(Structure structure,
                              String searchText,
                              SearchRequest.Builder builder,
@@ -131,6 +158,25 @@ public class DelegatingReadPreProcessor {
                 tuple.getRight().beforeSearch(structure, tuple.getLeft(), tuple.getMiddle(), queryBuilder, context);
             }
         }
+    }
+
+    private Query.Builder createQueryWithTenantLogicAndSearch(Structure structure, String query, EntityContext context, Consumer<String> routingConsumer) {
+        Query.Builder queryBuilder;
+        if(query != null){
+            queryBuilder = new Query.Builder();
+            if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
+                routingConsumer.accept(context.getParticipant().getTenantId());
+                queryBuilder
+                        .bool(b -> b.must(must -> must.queryString(qs -> qs.query(query).analyzeWildcard(true)))
+                                .filter(qb -> qb.term(tq -> tq.field(structuresProperties.getTenantIdFieldName())
+                                        .value(context.getParticipant().getTenantId()))));
+            }else{
+                queryBuilder.queryString(qs -> qs.query(query).analyzeWildcard(true));
+            }
+        }else{
+            queryBuilder = createQueryWithTenantLogic(structure, context, routingConsumer);
+        }
+        return queryBuilder;
     }
 
     private Query.Builder createQueryWithTenantLogic(Structure structure, EntityContext context, Consumer<String> routingConsumer) {

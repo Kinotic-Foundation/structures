@@ -7,6 +7,7 @@ import co.elastic.clients.elasticsearch._types.FieldValue;
 import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch.core.*;
 import co.elastic.clients.elasticsearch.core.get.GetResult;
+import co.elastic.clients.elasticsearch.core.mget.MultiGetResponseItem;
 import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.elasticsearch.core.search.HitsMetadata;
 import co.elastic.clients.elasticsearch.indices.CreateIndexRequest;
@@ -275,6 +276,35 @@ public class CrudServiceTemplate {
 
 
     /**
+     * Finds a list document by their id. Also allows for customization of the {@link GetRequest}.
+     *
+     * @param <T>             type of the document to return
+     * @param indexName       name of the index to search
+     * @param ids             of the documents to return
+     * @param type            of the document to return
+     * @param builderConsumer to customize the {@link GetRequest}, or null if no customization is needed
+     * @return a {@link CompletableFuture} that will complete with the document
+     */
+    public <T> CompletableFuture<List<T>> findByIds(String indexName,
+                                                    List<String> ids,
+                                                    Class<T> type,
+                                                    Consumer<MgetRequest.Builder> builderConsumer) {
+        return this.findByIds(indexName, ids, getDeserializer(type), builderConsumer)
+                .thenApply(response -> {
+
+                    List<MultiGetResponseItem<T>> recordsResponse = response.docs();
+                    ArrayList<T> content = new ArrayList<>(recordsResponse.size());
+
+                    for (MultiGetResponseItem<T> hit : recordsResponse) {
+                        content.add(hit.result().source());
+                    }
+
+                    return content;
+                });
+    }
+
+
+    /**
      * Finds a document by id. Also allows for customization of the {@link GetRequest}.
      *
      * @param indexName       name of the index to search
@@ -310,6 +340,41 @@ public class CrudServiceTemplate {
 
 
     /**
+     * Finds a list of document by their ids. Also allows for customization of the {@link GetRequest}.
+     *
+     * @param indexName       name of the index to search
+     * @param ids             ids of the documents to return
+     * @param deserializer    to use to deserialize the document
+     * @param builderConsumer to customize the {@link GetRequest}, or null if no customization is needed
+     * @param <T>             type of the document to return
+     * @return a {@link CompletableFuture} that will complete with the document
+     */
+    public <T> CompletableFuture<MgetResponse<T>> findByIds(String indexName,
+                                                           List<String> ids,
+                                                           JsonpDeserializer<T> deserializer,
+                                                           Consumer<MgetRequest.Builder> builderConsumer) {
+        //noinspection unchecked
+        JsonEndpoint<MgetRequest, MgetResponse<T>, ErrorResponse> endpoint =
+                (JsonEndpoint<MgetRequest, MgetResponse<T>, ErrorResponse>) MgetRequest._ENDPOINT;
+
+        endpoint = new EndpointWithResponseMapperAttr<>(endpoint,
+                "co.elastic.clients:Deserializer:_global.mget.TDocument",
+                deserializer);
+
+        MgetRequest.Builder builder = new MgetRequest.Builder();
+
+        builder.index(indexName).ids(ids);
+        if (builderConsumer != null) {
+            builderConsumer.accept(builder);
+        }
+
+        //noinspection resource
+        return esAsyncClient._transport()
+                .performRequestAsync(builder.build(), endpoint, esAsyncClient._transportOptions());
+    }
+
+
+    /**
      * Deletes a document by id. Also allows for customization of the {@link DeleteRequest}.
      *
      * @param indexName       name of the index to delete from
@@ -322,6 +387,25 @@ public class CrudServiceTemplate {
                                                         Consumer<DeleteRequest.Builder> builderConsumer) {
         return esAsyncClient.delete(builder -> {
             builder.index(indexName).id(id);
+            if (builderConsumer != null) {
+                builderConsumer.accept(builder);
+            }
+            return builder;
+        });
+    }
+
+
+    /**
+     * Deletes a list of documents by provided query. Also allows for customization of the {@link DeleteRequest}.
+     *
+     * @param indexName       name of the index to delete from
+     * @param builderConsumer to customize the {@link DeleteRequest}, or null if no customization is needed
+     * @return a {@link CompletableFuture} that will complete with the {@link DeleteResponse}
+     */
+    public CompletableFuture<DeleteByQueryResponse> deleteByQuery(String indexName,
+                                                                  Consumer<DeleteByQueryRequest.Builder> builderConsumer) {
+        return esAsyncClient.deleteByQuery(builder -> {
+            builder.index(indexName);
             if (builderConsumer != null) {
                 builderConsumer.accept(builder);
             }

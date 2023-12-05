@@ -13,6 +13,7 @@ import org.kinotic.structures.internal.api.services.EntityServiceFactory;
 import org.kinotic.structures.internal.api.services.StructureDAO;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -67,15 +68,33 @@ public class DefaultEntitiesService implements EntitiesService {
     }
 
     @Override
+    public <T> CompletableFuture<List<T>> findByIds(String structureId, List<String> ids, Class<T> type, EntityContext context) {
+        return cache.get(structureId)
+                .thenCompose(entityService -> entityService.findByIds(ids, type, context));
+    }
+
+    @Override
     public CompletableFuture<Long> count(String structureId, EntityContext context) {
         return cache.get(structureId)
                     .thenCompose(entityService -> entityService.count(context));
     }
 
     @Override
+    public CompletableFuture<Long> countByQuery(String structureId, String query, EntityContext context) {
+        return cache.get(structureId)
+                .thenCompose(entityService -> entityService.countByQuery(query, context));
+    }
+
+    @Override
     public CompletableFuture<Void> deleteById(String structureId, String id, EntityContext context) {
         return cache.get(structureId)
                     .thenCompose(entityService -> entityService.deleteById(id, context));
+    }
+
+    @Override
+    public CompletableFuture<Void> deleteByQuery(String structureId, String query, EntityContext context) {
+        return cache.get(structureId)
+                .thenCompose(entityService -> entityService.deleteByQuery(query, context));
     }
 
     @Override
