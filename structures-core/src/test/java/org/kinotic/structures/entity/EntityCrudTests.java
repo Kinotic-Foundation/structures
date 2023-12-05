@@ -244,11 +244,11 @@ public class EntityCrudTests extends ElasticsearchTestBase {
         EntityContext context1 = new DefaultEntityContext(new DummyParticipant("tenant1", "user1"));
         EntityContext context2 = new DefaultEntityContext(new DummyParticipant("tenant2", "user2"));
 
-        StructureAndPersonHolder holder1 = createAndVerify(10, false, context1, "-testCount");
+        StructureAndPersonHolder holder1 = createAndVerify(10, false, context1, "-testCountByQuery");
 
         Assertions.assertNotNull(holder1);
 
-        StructureAndPersonHolder holder2 = createAndVerify(20, false, context2, "-testCount");
+        StructureAndPersonHolder holder2 = createAndVerify(20, false, context2, "-testCountByQuery");
 
         Assertions.assertNotNull(holder2);
 
