@@ -88,7 +88,7 @@ describe('EntityServiceTest', () => {
             // Find all the people
             let elementsFound = 0
             let peopleIds: string[] = []
-            const pageable = Pageable.createWithCursor(cursor,
+            const pageable = Pageable.createWithCursor(null,
                 10,
                 { orders: [
                         new Order('firstName', Direction.ASC),
@@ -101,7 +101,7 @@ describe('EntityServiceTest', () => {
                 for(const person of page.content){
                     elementsFound++
                     if(elementsFound % 2 === 0){
-                        peopleIds.push('aaaaa'+person.id+'aaaaa')
+                        peopleIds.push(person.id)
                     }
                 }
             }
@@ -120,7 +120,7 @@ describe('EntityServiceTest', () => {
             // Find all the people
             let elementsFound = 0
             let peopleIds: string[] = []
-            const pageable = Pageable.createWithCursor(cursor,
+            const pageable = Pageable.createWithCursor(null,
                 10,
                 { orders: [
                         new Order('firstName', Direction.ASC),
