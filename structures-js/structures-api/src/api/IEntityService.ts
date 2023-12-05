@@ -63,11 +63,28 @@ export interface IEntityService<T> {
     findById(id: string): Promise<T>;
 
     /**
+     * Retrieves a list of entities by their id.
+     *
+     * @param ids      must not be {@literal null}
+     * @return Promise emitting the entities with the given ids or Promise emitting null if none found
+     * @throws Error in case the given {@literal ids} is {@literal null}
+     */
+    findByIds(ids: string[]): Promise<T[]>;
+
+    /**
      * Returns the number of entities available.
      *
      * @return Promise emitting the number of entities
      */
     count(): Promise<number>;
+
+    /**
+     * Returns the number of entities available for the given query.
+     *
+     * @param query       the query used to limit result
+     * @return Promise    emitting the number of entities
+     */
+    countByQuery(query: string): Promise<number>;
 
     /**
      * Deletes the entity with the given id.
@@ -77,6 +94,15 @@ export interface IEntityService<T> {
      * @throws Error in case the given {@literal id} is {@literal null}
      */
     deleteById(id: string): Promise<void>;
+
+    /**
+     * Deletes the entity with the given id.
+     *
+     * @param query      the query used to filter records to delete, must not be {@literal null}
+     * @return Promise signaling when operation has completed
+     * @throws Error in case the given {@literal query} is {@literal null}
+     */
+    deleteByQuery(query: string): Promise<void>;
 
     /**
      * Returns a {@link Page} of entities meeting the paging restriction provided in the {@link Pageable} object.
@@ -148,12 +174,24 @@ export class EntityService<T> implements IEntityService<T>{
         return this.entitiesService.findById(this.structuresId, id)
     }
 
+    public findByIds(ids: string[]): Promise<T[]>{
+        return this.entitiesService.findByIds(this.structuresId, ids)
+    }
+
     public count(): Promise<number>{
         return this.entitiesService.count(this.structuresId)
     }
 
+    public countByQuery(query: string): Promise<number>{
+        return this.entitiesService.countByQuery(this.structuresId, query)
+    }
+
     public deleteById(id: string): Promise<void>{
         return this.entitiesService.deleteById(this.structuresId, id)
+    }
+
+    public deleteByQuery(query: string): Promise<void>{
+        return this.entitiesService.deleteByQuery(this.structuresId, query)
     }
 
     public findAll(pageable: Pageable): Promise<IterablePage<T>>{

@@ -55,11 +55,30 @@ export interface IEntitiesService {
     findById<T>(structureId: string, id: string): Promise<T>
 
     /**
+     * Retrieves a list of entities by their id.
+     *
+     * @param structureId the id of the structure to save the entity for
+     * @param ids      must not be {@literal null}
+     * @return Promise emitting the entities with the given ids or Promise emitting null if none found
+     * @throws Error in case the given {@literal ids} is {@literal null}
+     */
+    findByIds<T>(structureId: string, ids: string[]): Promise<T[]>
+
+    /**
      * Returns the number of entities available.
      * @param structureId the id of the structure to count
      * @return {@link Promise} emitting the number of entities.
      */
     count(structureId: string): Promise<number>
+
+    /**
+     * Returns the number of entities available for the given query.
+     *
+     * @param structureId the id of the structure to save the entity for
+     * @param query       the query used to limit result
+     * @return Promise    emitting the number of entities
+     */
+    countByQuery(structureId: string, query: string): Promise<number>
 
     /**
      * Deletes the entity with the given id.
@@ -70,6 +89,16 @@ export interface IEntitiesService {
      * @throws IllegalArgumentException in case the given {@literal id} is {@literal null}
      */
     deleteById(structureId: string, id: string): Promise<void>
+
+    /**
+     * Deletes the entity with the given id.
+     *
+     * @param structureId the id of the structure to save the entity for
+     * @param query      the query used to filter records to delete, must not be {@literal null}
+     * @return Promise signaling when operation has completed
+     * @throws Error in case the given {@literal query} is {@literal null}
+     */
+    deleteByQuery(structureId: string, query: string): Promise<void>
 
     /**
      * Returns a {@link Page} of entities meeting the paging restriction provided in the {@code Pageable} object.
@@ -122,12 +151,24 @@ export class EntitiesService implements IEntitiesService {
         return this.serviceProxy.invoke('findById', [structureId, id])
     }
 
+    public findByIds<T>(structureId: string, ids: string[]): Promise<T[]> {
+        return this.serviceProxy.invoke('findByIds', [structureId, ids])
+    }
+
     public count(structureId: string): Promise<number> {
         return this.serviceProxy.invoke('count', [structureId])
     }
 
+    public countByQuery(structureId: string, query: string): Promise<number> {
+        return this.serviceProxy.invoke('countByQuery', [structureId, query])
+    }
+
     public deleteById(structureId: string, id: string): Promise<void> {
         return this.serviceProxy.invoke('deleteById', [structureId, id])
+    }
+
+    public deleteByQuery(structureId: string, query: string): Promise<void> {
+        return this.serviceProxy.invoke('deleteByQuery', [structureId, query])
     }
 
     public async findAll<T>(structureId: string, pageable: Pageable): Promise<IterablePage<T>> {
