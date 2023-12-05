@@ -132,7 +132,7 @@ public class EntityCrudTests extends ElasticsearchTestBase {
                         context)))
                 .verifyComplete();
 
-        Thread.sleep(3000);
+        Thread.sleep(5000);
 
         StepVerifier.create(Mono.fromFuture(entitiesService.count(holder.getStructure().getId(), context)))
                 .expectNext(18L)
