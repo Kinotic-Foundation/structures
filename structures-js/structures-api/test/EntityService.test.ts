@@ -81,55 +81,69 @@ describe('EntityServiceTest', () => {
         }
     )
 
-    // it<LocalTestContext>('Test FindByIds and CountByQuery and DeleteByQuery',
-    //     async ({entityService}) => {
-    //         await createTestPeopleAndVerify(entityService, 100, 2000)
-    //
-    //         // Find all the people
-    //         let cursor: string | null = null
-    //         let done = false
-    //         let elementsFound = 0
-    //         let peopleMap: Map<string, Person> = new Map<string, Person>()
-    //         let peopleIds: string[] = []
-    //         while(!done) {
-    //             const pageable = Pageable.createWithCursor(cursor,
-    //                 10,
-    //                 { orders: [
-    //                         new Order('firstName', Direction.ASC),
-    //                         new Order('id', Direction.ASC)
-    //                     ] })
-    //             const page: Page<Person> = await entityService.findAll(pageable)
-    //             expect(page).toBeDefined()
-    //             if(page.cursor) {
-    //                 cursor = page.cursor
-    //                 expect(page.content.length).toBe(10)
-    //                 for(const person of page.content){
-    //                     peopleMap.set(person.id, person)
-    //                     elementsFound++
-    //                     if(elementsFound % 2 === 0){
-    //                         peopleIds.push(person.id)
-    //                     }
-    //                 }
-    //             }else{
-    //                 done = true
-    //             }
-    //         }
-    //         expect(elementsFound, 'Should have found 100 Entities').toBe(100)
-    //
-    //         const peopleByIds = await entityService.findByIds(peopleIds)
-    //         expect(peopleByIds.length, 'Should have 50 Entities when using findByIds').toBe(50)
-    //
-    //         let countByQuery = await entityService.countByQuery("lastName: Doe")
-    //         expect(countByQuery, 'Should have 50 Entities when using countByQuery').toBe(50)
-    //
-    //         await entityService.deleteByQuery("lastName: Doe")
-    //         await delay(5000)
-    //
-    //         let countByQueryAfterDelete = await entityService.countByQuery("lastName: Doe")
-    //         expect(countByQueryAfterDelete, 'Should have 0 Entities when using countByQuery after deleteByQuery').toBe(0)
-    //
-    //     }
-    // )
+    it<LocalTestContext>('Test FindByIds ',
+        async ({entityService}) => {
+            await createTestPeopleAndVerify(entityService, 100, 2000)
+
+            // Find all the people
+            let cursor: string | null = null
+            let done = false
+            let elementsFound = 0
+            let peopleMap: Map<string, Person> = new Map<string, Person>()
+            let peopleIds: string[] = []
+            while(!done) {
+                const pageable = Pageable.createWithCursor(cursor,
+                    10,
+                    { orders: [
+                            new Order('firstName', Direction.ASC),
+                            new Order('id', Direction.ASC)
+                        ] })
+                const page: Page<Person> = await entityService.findAll(pageable)
+                expect(page).toBeDefined()
+                if(page.cursor) {
+                    cursor = page.cursor
+                    expect(page.content.length).toBe(10)
+                    for(const person of page.content){
+                        peopleMap.set(person.id, person)
+                        elementsFound++
+                        if(elementsFound % 2 === 0){
+                            peopleIds.push(person.id)
+                        }
+                    }
+                }else{
+                    done = true
+                }
+            }
+            expect(elementsFound, 'Should have found 100 Entities').toBe(100)
+
+            const peopleByIds = await entityService.findByIds(peopleIds)
+            expect(peopleByIds.length, 'Should have 50 Entities when using findByIds').toBe(50)
+
+        }
+    )
+
+    it<LocalTestContext>('Test CountByQuery',
+        async ({entityService}) => {
+            await createTestPeopleAndVerify(entityService, 100, 2000)
+
+            let countByQuery = await entityService.countByQuery("lastName: Doe")
+            expect(countByQuery, 'Should have 50 Entities when using countByQuery').toBe(50)
+
+        }
+    )
+
+    it<LocalTestContext>('Test CountByQuery and DeleteByQuery',
+        async ({entityService}) => {
+            await createTestPeopleAndVerify(entityService, 100, 2000)
+
+            await entityService.deleteByQuery("lastName: Doe")
+            await delay(2000)
+
+            let countByQueryAfterDelete = await entityService.countByQuery("lastName: Doe")
+            expect(countByQueryAfterDelete, 'Should have 0 Entities when using countByQuery after deleteByQuery').toBe(0)
+
+        }
+    )
 
     it<LocalTestContext>('Test Cursor Based Paging',
          async ({entityService}) => {
