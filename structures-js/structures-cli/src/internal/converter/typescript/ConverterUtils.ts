@@ -12,7 +12,7 @@ import {
     EntityDecorator,
     FlattenedDecorator,
     IdDecorator,
-    MultiTenancyType,
+    MultiTenancyType, NestedDecorator,
     TextDecorator,
 } from '@kinotic/structures-api'
 import {Decorator} from 'ts-morph'
@@ -40,7 +40,7 @@ export function tsDecoratorToC3Decorator(decorator: Decorator): C3Decorator{
     }else if(decorator.getName() === "Flattened") {
         ret = new FlattenedDecorator()
     }else if(decorator.getName() === "Nested") {
-        ret = new FlattenedDecorator()
+        ret = new NestedDecorator()
     }else if(decorator.getName() === "Text") {
         ret = new TextDecorator()
     }else if(decorator.getName() === "NotNull") {

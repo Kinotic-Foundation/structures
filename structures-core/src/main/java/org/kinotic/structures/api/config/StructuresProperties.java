@@ -99,7 +99,7 @@ public class StructuresProperties {
     }
 
     public boolean hasElasticUsernameAndPassword(){
-        return elasticUsername != null && !elasticUsername.isBlank() &&  elasticPassword != null && !elasticPassword.isBlank();
+        return elasticUsername != null && !elasticUsername.isBlank() && elasticPassword != null && !elasticPassword.isBlank();
     }
 
     public StructuresProperties setOpenApiPath(String path){
