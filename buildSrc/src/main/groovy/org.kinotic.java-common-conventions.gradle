@@ -6,7 +6,7 @@ plugins {
 }
 
 group 'org.kinotic'
-version '1.10.4-SNAPSHOT'
+version '1.10.5-SNAPSHOT'
 sourceCompatibility = '11'
 
 repositories {
@@ -27,6 +27,7 @@ dependencyManagement {
         dependency "org.elasticsearch:elasticsearch:${elasticClientVersion}"
         dependency "org.elasticsearch.client:elasticsearch-rest-client:${elasticClientVersion}"
         dependency "org.elasticsearch.client:elasticsearch-rest-high-level-client:${elasticClientVersion}"
+        dependency "org.apache.kafka:kafka-clients:${kafkaVersion}"
         dependency "org.apache.lucene:lucene-analyzers-common:${luceneVersion}"
         dependency "org.apache.lucene:lucene-backwards-codecs:${luceneVersion}"
         dependency "org.apache.lucene:lucene-core:${luceneVersion}"
