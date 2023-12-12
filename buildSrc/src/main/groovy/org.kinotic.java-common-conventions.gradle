@@ -23,6 +23,7 @@ dependencyManagement {
     }
     dependencies {
         dependency "co.elastic.clients:elasticsearch-java:${elasticClientVersion}"
+        dependency "org.apache.commons:commons-compress:${commonsCompressVersion}"
         dependency "org.elasticsearch:elasticsearch:${elasticClientVersion}"
         dependency "org.elasticsearch.client:elasticsearch-rest-client:${elasticClientVersion}"
         dependency "org.elasticsearch.client:elasticsearch-rest-high-level-client:${elasticClientVersion}"
