@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.endpoints;
+package org.kinotic.structures.internal.endpoints.graphql;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
@@ -9,7 +9,6 @@ import io.vertx.ext.web.handler.CorsHandler;
 import org.kinotic.continuum.api.security.SecurityService;
 import org.kinotic.continuum.gateway.api.security.AuthenticationHandler;
 import org.kinotic.structures.api.config.StructuresProperties;
-import org.kinotic.structures.internal.api.services.GraphQLProviderService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,19 +22,21 @@ import java.util.Set;
 @Component
 public class GraphQLVerticle extends AbstractVerticle {
 
+    public static final String NAMESPACE_PATH_PARAMETER = "structureNamespace";
+
     private static final Logger log = LoggerFactory.getLogger(GraphQLVerticle.class);
 
     private final StructuresProperties properties;
-    private final GraphQLProviderService graphQLProviderService;
+    private final GraphQLOperationService graphQLOperationService;
     private final SecurityService securityService;
 
     private HttpServer server;
 
     public GraphQLVerticle(StructuresProperties properties,
-                           GraphQLProviderService graphQLProviderService,
+                           GraphQLOperationService graphQLOperationService,
                            @Autowired(required = false) SecurityService securityService) {
         this.properties = properties;
-        this.graphQLProviderService = graphQLProviderService;
+        this.graphQLOperationService = graphQLOperationService;
         this.securityService = securityService;
     }
 
@@ -51,11 +52,11 @@ public class GraphQLVerticle extends AbstractVerticle {
             router.route().handler(new AuthenticationHandler(securityService, vertx));
         }
 
-        router.post(properties.getGraphqlPath()+":structureNamespace")
+        router.post(properties.getGraphqlPath()+":"+NAMESPACE_PATH_PARAMETER)
               .consumes("application/json")
-              .produces("application/json")
+              .produces("application/graphql-response+json")
               .handler(BodyHandler.create(false))
-              .handler(new GraphQLHandler(graphQLProviderService, "structureNamespace"));
+              .handler(new GraphQLHandler(graphQLOperationService));
 
         // Begin listening for requests
         server.requestHandler(router).listen(properties.getGraphqlPort(), ar -> {

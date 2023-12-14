@@ -7,6 +7,8 @@ import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.kinotic.continuum.api.security.Participant;
 
+import java.util.List;
+
 /**
  * Created by Navíd Mitchell 🤪 on 6/8/23.
  */
@@ -19,5 +21,14 @@ public class DefaultEntityContext implements EntityContext {
 
     private Participant participant;
 
+    private List<String> includedFieldsFilter = null;
 
+    public DefaultEntityContext(Participant participant) {
+        this.participant = participant;
+    }
+
+    @Override
+    public boolean hasIncludedFieldsFilter() {
+        return includedFieldsFilter != null && !includedFieldsFilter.isEmpty();
+    }
 }

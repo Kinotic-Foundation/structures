@@ -1,20 +1,17 @@
-package org.kinotic.structures.internal.endpoints;
+package org.kinotic.structures.internal.endpoints.graphql;
 
-import graphql.ExecutionInput;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.impl.NoStackTraceThrowable;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.spi.json.JsonCodec;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.graphql.impl.GraphQLBatch;
 import io.vertx.ext.web.handler.graphql.impl.GraphQLInput;
 import io.vertx.ext.web.handler.graphql.impl.GraphQLQuery;
-import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
-import org.kinotic.structures.internal.api.services.GraphQLProviderService;
+import org.kinotic.structures.internal.endpoints.graphql.GraphQLOperationService;
 
 import java.util.List;
 import java.util.Map;
@@ -29,13 +26,10 @@ import static java.util.stream.Collectors.toList;
  */
 public class GraphQLHandler implements Handler<RoutingContext> {
 
-    private final GraphQLProviderService graphQLProviderService;
-    private final String namespacePathParameter;
+    private final GraphQLOperationService graphQLOperationService;
 
-    public GraphQLHandler(GraphQLProviderService graphQLProviderService,
-                          String namespacePathParameter) {
-        this.graphQLProviderService = graphQLProviderService;
-        this.namespacePathParameter = namespacePathParameter;
+    public GraphQLHandler(GraphQLOperationService graphQLOperationService) {
+        this.graphQLOperationService = graphQLOperationService;
     }
 
     @Override
@@ -135,17 +129,22 @@ public class GraphQLHandler implements Handler<RoutingContext> {
     }
 
     private void executeBatch(RoutingContext rc, GraphQLBatch batch) {
-        List<CompletableFuture<JsonObject>> results = batch.stream()
-                                                           .map(q -> execute(rc, q))
+        List<CompletableFuture<Buffer>> results = batch.stream()
+                                                           .map(q -> graphQLOperationService.execute(rc, q))
                                                            .collect(toList());
-        CompletableFuture.allOf(results.toArray(new CompletableFuture<?>[0]))
-                         .thenApply(v -> {
-                             JsonArray jsonArray = results.stream()
-                                                          .map(CompletableFuture::join)
-                                                          .collect(JsonArray::new, JsonArray::add, JsonArray::addAll);
-                             return jsonArray.toBuffer();
-                         })
-                         .whenComplete((buffer, throwable) -> sendResponse(rc, buffer, throwable));
+
+        // FIXME: send ressult as response
+
+//        CompletableFuture.allOf(results.toArray(new CompletableFuture<?>[0]))
+//                         .thenApply(v -> {
+//                             JsonArray jsonArray = results.stream()
+//                                                          .map(CompletableFuture::join)
+//                                                          .collect(JsonArray::new, JsonArray::add, JsonArray::addAll);
+//                             return jsonArray.toBuffer();
+//                         })
+//                         .whenComplete((buffer, throwable) -> {
+//                             sendResponse(rc, buffer, throwable);
+//                         });
     }
 
     private void handlePostQuery(RoutingContext rc, GraphQLQuery query, String operationName, Map<String, Object> variables) {
@@ -163,32 +162,8 @@ public class GraphQLHandler implements Handler<RoutingContext> {
     }
 
     private void executeOne(RoutingContext rc, GraphQLQuery query) {
-        execute(rc, query)
-                .thenApply(JsonObject::toBuffer)
-                .whenComplete((buffer, throwable) -> sendResponse(rc, buffer, throwable));
-    }
-
-    private CompletableFuture<JsonObject> execute(RoutingContext rc, GraphQLQuery query) {
-        ExecutionInput.Builder builder = ExecutionInput.newExecutionInput();
-
-        builder.query(query.getQuery());
-        String operationName = query.getOperationName();
-        if (operationName != null) {
-            builder.operationName(operationName);
-        }
-        Map<String, Object> variables = query.getVariables();
-        if (variables != null) {
-            builder.variables(variables);
-        }
-
-        builder.context(rc);
-
-        String namespace = rc.pathParam(namespacePathParameter);
-
-        return VertxCompletableFuture.from(rc.vertx(), graphQLProviderService
-                .getOrCreateGraphQL(namespace)
-                .thenCompose(graphQL -> graphQL.executeAsync(builder.build())
-                                               .thenApply(executionResult -> new JsonObject(executionResult.toSpecification()))));
+        graphQLOperationService.execute(rc, query)
+                               .whenComplete((buffer, throwable) -> sendResponse(rc, buffer, throwable));
     }
 
     private String getContentType(RoutingContext rc) {

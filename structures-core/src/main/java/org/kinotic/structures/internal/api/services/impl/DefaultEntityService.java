@@ -2,7 +2,6 @@ package org.kinotic.structures.internal.api.services.impl;
 
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import co.elastic.clients.elasticsearch._types.Refresh;
-import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import co.elastic.clients.elasticsearch.core.BulkRequest;
 import co.elastic.clients.elasticsearch.core.UpdateRequest;
 import co.elastic.clients.elasticsearch.core.bulk.BulkOperation;
@@ -249,7 +248,8 @@ public class DefaultEntityService implements EntityService {
     public CompletableFuture<Void> deleteById(String id, EntityContext context) {
         return validateTenantAndComposeId(id, context)
                 .thenCompose(composedId -> crudServiceTemplate
-                        .deleteById(structure.getItemIndex(), composedId,
+                        .deleteById(structure.getItemIndex(),
+                                    composedId,
                                     builder -> delegatingReadPreProcessor.beforeDelete(structure, builder, context))
                         .thenApply(deleteResponse -> null));
     }
@@ -267,7 +267,9 @@ public class DefaultEntityService implements EntityService {
     public <T> CompletableFuture<Page<T>> findAll(Pageable pageable, Class<T> type, EntityContext context) {
         return validateTenant(context)
                 .thenCompose(unused -> crudServiceTemplate
-                        .search(structure.getItemIndex(), pageable, type,
+                        .search(structure.getItemIndex(),
+                                pageable,
+                                type,
                                 builder -> delegatingReadPreProcessor.beforeFindAll(structure, builder, context))
                         .thenApply(createParanoidCheck(type, context, "Find All")));
     }
@@ -279,14 +281,7 @@ public class DefaultEntityService implements EntityService {
                         .search(structure.getItemIndex(),
                                 pageable,
                                 type,
-                                builder -> {
-
-                                    Query.Builder queryBuilder = new Query.Builder();
-
-                                    delegatingReadPreProcessor.beforeSearch(structure, searchText, builder, queryBuilder, context);
-
-                                    builder.query(queryBuilder.build());
-                                })
+                                builder -> delegatingReadPreProcessor.beforeSearch(structure, searchText, builder, context))
                         .thenApply(createParanoidCheck(type, context, "Search")));
     }
 
