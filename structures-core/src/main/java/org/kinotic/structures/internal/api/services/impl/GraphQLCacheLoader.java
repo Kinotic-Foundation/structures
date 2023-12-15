@@ -108,7 +108,7 @@ public class GraphQLCacheLoader implements AsyncCacheLoader<String, GraphQL> {
                         String structureName = WordUtils.capitalize(outputType.getName());
 
                         queryBuilder.field(newFieldDefinition()
-                                                   .name("get" + structureName + "ById")
+                                                   .name("findById" + structureName)
                                                    .type(outputType)
                                                    .argument(newArgument().name("id")
                                                                           .type(GraphQLNonNull.nonNull(GraphQLID)))
@@ -129,7 +129,7 @@ public class GraphQLCacheLoader implements AsyncCacheLoader<String, GraphQL> {
                                                                                            objectMapper)));
 
                         queryBuilder.field(newFieldDefinition()
-                                                   .name("search" + outputType.getName())
+                                                   .name("search" + structureName)
                                                    .type(listResponse)
                                                    .argument(newArgument().name("searchText")
                                                                           .type(GraphQLNonNull.nonNull(GraphQLString)))

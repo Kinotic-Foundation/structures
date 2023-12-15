@@ -247,6 +247,7 @@ public class CrudServiceTemplate {
         SearchRequest request = builder.build();
 
         if(log.isTraceEnabled()) {
+            // wrapped, so toString() will not be called if trace is not enabled
             log.trace("Query: \n {}", request.toString());
         }
 

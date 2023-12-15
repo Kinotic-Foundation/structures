@@ -130,18 +130,7 @@ public class DelegatingReadPreProcessor {
 
         Query.Builder queryBuilder = createQueryWithTenantLogic(structure, context, builder::routing);
 
-        // Set source fields filters
-        builder.source(b -> b.filter(sf -> {
-            // If MultiTenancyType.SHARED exclude tenant id
-            if(structure.getMultiTenancyType() == MultiTenancyType.SHARED) {
-                sf.excludes(structuresProperties.getTenantIdFieldName());
-            }
-            // Add source fields filter
-            if(context.hasIncludedFieldsFilter()){
-                sf.includes(context.getIncludedFieldsFilter());
-            }
-            return sf;
-        }));
+        addSourceFilter(structure, builder, context);
 
         if(findAllPreProcessors != null && !findAllPreProcessors.isEmpty()){
             if(queryBuilder == null){
@@ -157,6 +146,27 @@ public class DelegatingReadPreProcessor {
         }
     }
 
+    private void addSourceFilter(Structure structure, SearchRequest.Builder builder, EntityContext context) {
+        // Set source fields filters
+        builder.source(b -> b.filter(sf -> {
+            // TODO: Put this back when no longer applicable
+            // If MultiTenancyType.SHARED exclude tenant id
+//            if(structure.getMultiTenancyType() == MultiTenancyType.SHARED) {
+//                // Currently this must not be done to support our multi tenancy paranoid check
+//                sf.excludes(structuresProperties.getTenantIdFieldName());
+//            }
+            // Add source fields filter
+            if(context.hasIncludedFieldsFilter()){
+                sf.includes(context.getIncludedFieldsFilter());
+                // TODO: remove this when above is put back
+                if(structure.getMultiTenancyType() == MultiTenancyType.SHARED) {
+                    sf.includes(structuresProperties.getTenantIdFieldName());
+                }
+            }
+            return sf;
+        }));
+    }
+
     public void beforeSearch(Structure structure,
                              String searchText,
                              SearchRequest.Builder builder,
@@ -164,18 +174,7 @@ public class DelegatingReadPreProcessor {
 
         Query.Builder queryBuilder = createQueryWithTenantLogicAndSearch(structure, searchText, context, builder::routing);
 
-        // Set source fields filters
-        builder.source(b -> b.filter(sf -> {
-            // If MultiTenancyType.SHARED exclude tenant id
-            if(structure.getMultiTenancyType() == MultiTenancyType.SHARED) {
-                sf.excludes(structuresProperties.getTenantIdFieldName());
-            }
-            // Add source fields filter
-            if(context.hasIncludedFieldsFilter()){
-                sf.includes(context.getIncludedFieldsFilter());
-            }
-            return sf;
-        }));
+        addSourceFilter(structure, builder, context);
 
         if(searchPreProcessors != null && !searchPreProcessors.isEmpty()){
             for(Triple<String, C3Decorator, SearchPreProcessor<C3Decorator>> tuple : searchPreProcessors){
