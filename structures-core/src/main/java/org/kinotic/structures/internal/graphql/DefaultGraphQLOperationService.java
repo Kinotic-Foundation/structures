@@ -21,9 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
@@ -108,7 +106,7 @@ public class DefaultGraphQLOperationService implements GraphQLOperationService {
                 } catch (Exception e) {
                     ret = CompletableFuture.completedFuture(convertToResult(e));
                 }
-            }else{
+            } else {
                 ret = CompletableFuture.completedFuture(new ExecutionResultImpl(documentEntry.getErrors()));
             }
             return ret;
@@ -116,9 +114,9 @@ public class DefaultGraphQLOperationService implements GraphQLOperationService {
     }
 
     private CompletableFuture<ExecutionResult> executeDocument(String namespace,
-                                                                         Participant participant,
-                                                                         Document document,
-                                                                         ExecutionInput executionInput) {
+                                                               Participant participant,
+                                                               Document document,
+                                                               ExecutionInput executionInput) {
         if (document.getDefinitions().size() != 1) {
             throw new IllegalArgumentException("Invalid number of definitions in GraphQL document");
         }
@@ -133,51 +131,74 @@ public class DefaultGraphQLOperationService implements GraphQLOperationService {
             String operationName = selection.getName();
 
             GraphQLOperationDefinition definition = graphQLOperationProviderService.findOperationName(operationName);
-            if(definition != null) {
+            if (definition != null) {
                 String structureId = getStructureId(namespace, operationName, definition.getOperationNamePrefix());
                 Function<GraphQLOperationArguments, CompletableFuture<ExecutionResult>> function = definition.getOperationExecutionFunction();
                 return function.apply(new GraphQLOperationArguments(structureId,
                                                                     participant,
-                                                                    normalizeVariables(executionInput.getVariables(),
-                                                                                       selection.getArguments()),
+                                                                    parseArguments(selection.getArguments(),
+                                                                                   executionInput.getVariables()),
                                                                     parsedFields));
-            }else{
+            } else {
                 return CompletableFuture
                         .completedFuture(convertToResult(new IllegalArgumentException("Unsupported operation name: " + operationName)));
             }
 
-        }else{
-            throw new IllegalArgumentException("Unsupported definition type: " + document.getDefinitions().get(0).getClass());
+        } else {
+            throw new IllegalArgumentException("Unsupported definition type: " + document.getDefinitions()
+                                                                                         .get(0)
+                                                                                         .getClass());
         }
     }
 
-    private Map<String, Object> normalizeVariables(Map<String, Object> variables,
-                                                   List<Argument> arguments) {
-        Map<String, Object> ret = new HashMap<>(variables.size(), 1);
-        for(Argument argument : arguments){
+    private Map<String, Object> parseArguments(List<Argument> arguments,
+                                               Map<String, Object> rawVariables) {
+        Map<String, Object> ret = new HashMap<>(rawVariables.size(), 1);
+        for (Argument argument : arguments) {
             Value<?> value = argument.getValue();
-            if(value instanceof VariableReference) {
-                String variableName = ((VariableReference) value).getName();
-                if (variables.containsKey(variableName)) {
-                    ret.put(argument.getName(), variables.get(variableName));
-                } else {
-                    throw new IllegalArgumentException("Variable: " + variableName + " not supplied. But a VariableReference was found.");
-                }
-            } else if(value instanceof IntValue) {
-                ret.put(argument.getName(), ((IntValue) value).getValue());
-            } else if(value instanceof FloatValue) {
-                ret.put(argument.getName(), ((FloatValue) value).getValue());
-            } else if(value instanceof StringValue) {
-                ret.put(argument.getName(), ((StringValue) value).getValue());
-            } else if(value instanceof BooleanValue) {
-                ret.put(argument.getName(), ((BooleanValue) value).isValue());
-            } else if(value instanceof EnumValue) {
-                ret.put(argument.getName(), ((EnumValue) value).getName());
-            } else if(value instanceof ArrayValue) {
-                ret.put(argument.getName(), ((ArrayValue) value).getValues());
+            Object parsedValue = parseLiteral(value, rawVariables);
+            ret.put(argument.getName(), parsedValue);
+        }
+        return ret;
+    }
+
+    private Object parseLiteral(Value<?> value, Map<String, Object> variables) {
+        Object ret;
+        if (value instanceof VariableReference) {
+            String variableName = ((VariableReference) value).getName();
+            if (variables.containsKey(variableName)) {
+                ret = variables.get(variableName);
             } else {
-                log.warn("Unknown argument {} value type: {}", argument.getName(), value.getClass());
+                throw new IllegalArgumentException("Variable: " + variableName + " not supplied. But a VariableReference was found.");
             }
+        } else if (value instanceof IntValue) {
+            ret = ((IntValue) value).getValue();
+        } else if (value instanceof FloatValue) {
+            ret = ((FloatValue) value).getValue();
+        } else if (value instanceof StringValue) {
+            ret = ((StringValue) value).getValue();
+        } else if (value instanceof BooleanValue) {
+            ret = ((BooleanValue) value).isValue();
+        } else if (value instanceof EnumValue) {
+            ret = ((EnumValue) value).getName();
+        } else if (value instanceof ArrayValue) {
+            ArrayValue arrayValue = (ArrayValue) value;
+            List<Object> list = new ArrayList<>(arrayValue.getValues().size());
+            for (Value<?> arrayElement : arrayValue.getValues()) {
+                list.add(parseLiteral(arrayElement, variables));
+            }
+            ret = list;
+        } else if (value instanceof ObjectValue) {
+            Map<String, Object> obj = new LinkedHashMap<>();
+            ObjectValue input = (ObjectValue) value;
+            for (ObjectField field : input.getObjectFields()) {
+                obj.put(field.getName(), parseLiteral(field.getValue(), variables));
+            }
+            ret = obj;
+        } else if (value instanceof NullValue) {
+            ret = null;
+        } else {
+            throw new IllegalArgumentException("Unknown argument value type: " + value.getClass());
         }
         return ret;
     }
@@ -185,30 +206,31 @@ public class DefaultGraphQLOperationService implements GraphQLOperationService {
     /**
      * Recursively parses a selection set and returns a list of fields
      * All fields beginning with "content" are considered content fields and will be stored in the ParsedFields.contentFields list
+     *
      * @param selectionSet the selection set to parse
-     * @param rootField the root field of the selection set, or null if this is the root
+     * @param rootField    the root field of the selection set, or null if this is the root
      * @return a ParsedFields object containing the parsed fields
      */
-    private ParsedFields getFieldsFromSelectionSet(SelectionSet selectionSet, String rootField){
+    private ParsedFields getFieldsFromSelectionSet(SelectionSet selectionSet, String rootField) {
         ParsedFields ret = new ParsedFields();
-        for(Selection<?> selection : selectionSet.getSelections()){
-            if(selection instanceof Field){
+        for (Selection<?> selection : selectionSet.getSelections()) {
+            if (selection instanceof Field) {
                 Field field = (Field) selection;
                 String jsonPath = (rootField != null) ? rootField + "." + field.getName() : field.getName();
-                if(field.getSelectionSet() != null){
-                    if(rootField != null && rootField.equals("content")){
+                if (field.getSelectionSet() != null) {
+                    if (rootField != null && rootField.equals("content")) {
                         ParsedFields parsedFields = getFieldsFromSelectionSet(field.getSelectionSet(), field.getName());
                         ret.getContentFields().addAll(parsedFields.getContentFields());
                         ret.getContentFields().addAll(parsedFields.getNonContentFields());
-                    }else {
+                    } else {
                         ParsedFields parsedFields = getFieldsFromSelectionSet(field.getSelectionSet(), jsonPath);
                         ret.getContentFields().addAll(parsedFields.getContentFields());
                         ret.getNonContentFields().addAll(parsedFields.getNonContentFields());
                     }
-                }else{
-                    if(rootField != null && rootField.equals("content")){
+                } else {
+                    if (rootField != null && rootField.equals("content")) {
                         ret.getContentFields().add(field.getName());
-                    }else{
+                    } else {
                         ret.getNonContentFields().add(jsonPath);
                     }
                 }
