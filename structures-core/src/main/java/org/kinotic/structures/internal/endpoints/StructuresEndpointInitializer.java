@@ -6,7 +6,6 @@ import io.vertx.ext.healthchecks.HealthChecks;
 import io.vertx.ext.healthchecks.Status;
 import lombok.RequiredArgsConstructor;
 import org.kinotic.structures.api.config.StructuresProperties;
-import org.kinotic.structures.internal.endpoints.graphql.GraphQLVerticle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;

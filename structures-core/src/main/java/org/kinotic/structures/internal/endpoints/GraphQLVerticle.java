@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.endpoints.graphql;
+package org.kinotic.structures.internal.endpoints;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
@@ -9,6 +9,8 @@ import io.vertx.ext.web.handler.CorsHandler;
 import org.kinotic.continuum.api.security.SecurityService;
 import org.kinotic.continuum.gateway.api.security.AuthenticationHandler;
 import org.kinotic.structures.api.config.StructuresProperties;
+import org.kinotic.structures.internal.graphql.GraphQLHandler;
+import org.kinotic.structures.internal.graphql.GraphQLOperationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

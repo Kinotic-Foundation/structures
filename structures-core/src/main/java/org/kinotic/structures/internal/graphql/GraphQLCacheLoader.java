@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.api.services.impl;
+package org.kinotic.structures.internal.graphql;
 
 import com.apollographql.federation.graphqljava.Federation;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -12,7 +12,6 @@ import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.EntitiesService;
 import org.kinotic.structures.internal.api.services.StructureConversionService;
 import org.kinotic.structures.internal.api.services.StructureDAO;
-import org.kinotic.structures.internal.graphql.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -111,9 +110,7 @@ public class GraphQLCacheLoader implements AsyncCacheLoader<String, GraphQL> {
                                                    .name("findById" + structureName)
                                                    .type(outputType)
                                                    .argument(newArgument().name("id")
-                                                                          .type(GraphQLNonNull.nonNull(GraphQLID)))
-                                                   .dataFetcher(new GetItemDataFetcher(entry.getKey(),
-                                                                                       entitiesService)));
+                                                                          .type(GraphQLNonNull.nonNull(GraphQLID))));
 
                         GraphQLTypeReference graphQLTypeReference = new GraphQLTypeReference(outputType.getName());
                         GraphQLNamedOutputType listResponse = wrapForItemListResponse(graphQLTypeReference);
@@ -123,10 +120,7 @@ public class GraphQLCacheLoader implements AsyncCacheLoader<String, GraphQL> {
                                                    .type(listResponse)
                                                    .argument(newArgument().name("pageable")
                                                                           .type(GraphQLNonNull.nonNull(
-                                                                                  pageableReference)))
-                                                   .dataFetcher(new GetAllItemsDataFetcher(entry.getKey(),
-                                                                                           entitiesService,
-                                                                                           objectMapper)));
+                                                                                  pageableReference))));
 
                         queryBuilder.field(newFieldDefinition()
                                                    .name("search" + structureName)
@@ -135,10 +129,7 @@ public class GraphQLCacheLoader implements AsyncCacheLoader<String, GraphQL> {
                                                                           .type(GraphQLNonNull.nonNull(GraphQLString)))
                                                    .argument(newArgument().name("pageable")
                                                                           .type(GraphQLNonNull.nonNull(
-                                                                                  pageableReference)))
-                                                   .dataFetcher(new SearchItemDataFetcher(entry.getKey(),
-                                                                                          entitiesService,
-                                                                                          objectMapper)));
+                                                                                  pageableReference))));
 
                         // Add Mutations if an input type was provided
                         if (inputType != null) {
@@ -147,9 +138,7 @@ public class GraphQLCacheLoader implements AsyncCacheLoader<String, GraphQL> {
                                                           .type(outputType)
                                                           .argument(newArgument().name("input")
                                                                                  .type(GraphQLNonNull.nonNull(
-                                                                                         inputType)))
-                                                          .dataFetcher(new SaveDataFetcher(entry.getKey(),
-                                                                                           entitiesService)));
+                                                                                         inputType))));
 
                             mutationBuilder.field(newFieldDefinition()
                                                           .name("bulkSave" + structureName)
@@ -158,18 +147,14 @@ public class GraphQLCacheLoader implements AsyncCacheLoader<String, GraphQL> {
                                                                                  .type(GraphQLNonNull.nonNull(
                                                                                          GraphQLList.list(
                                                                                                  GraphQLNonNull.nonNull(
-                                                                                                         inputType)))))
-                                                          .dataFetcher(new BulkSaveDataFetcher(entry.getKey(),
-                                                                                               entitiesService)));
+                                                                                                         inputType))))));
 
                             mutationBuilder.field(newFieldDefinition()
                                                           .name("delete" + structureName)
                                                           .type(GraphQLID)
                                                           .argument(newArgument().name("id")
                                                                                  .type(GraphQLNonNull.nonNull(
-                                                                                         GraphQLID)))
-                                                          .dataFetcher(new DeleteDataFetcher(entry.getKey(),
-                                                                                             entitiesService)));
+                                                                                         GraphQLID))));
                         }
 
                     }

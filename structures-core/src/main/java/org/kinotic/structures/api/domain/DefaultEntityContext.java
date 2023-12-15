@@ -29,6 +29,6 @@ public class DefaultEntityContext implements EntityContext {
 
     @Override
     public boolean hasIncludedFieldsFilter() {
-        return includedFieldsFilter != null && !includedFieldsFilter.isEmpty();
+        return includedFieldsFilter != null;
     }
 }

@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.api.services;
+package org.kinotic.structures.internal.graphql;
 
 import graphql.GraphQL;
 import org.kinotic.structures.api.domain.Structure;

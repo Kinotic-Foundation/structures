@@ -1,11 +1,10 @@
-package org.kinotic.structures.internal.api.services.impl;
+package org.kinotic.structures.internal.graphql;
 
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import graphql.GraphQL;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.structures.api.domain.Structure;
-import org.kinotic.structures.internal.api.services.GraphQLProviderService;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.CompletableFuture;

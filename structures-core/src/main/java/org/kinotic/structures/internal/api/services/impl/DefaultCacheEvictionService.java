@@ -3,7 +3,7 @@ package org.kinotic.structures.internal.api.services.impl;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.EntitiesService;
 import org.kinotic.structures.internal.api.services.CacheEvictionService;
-import org.kinotic.structures.internal.api.services.GraphQLProviderService;
+import org.kinotic.structures.internal.graphql.GraphQLProviderService;
 import org.springframework.stereotype.Component;
 
 /**

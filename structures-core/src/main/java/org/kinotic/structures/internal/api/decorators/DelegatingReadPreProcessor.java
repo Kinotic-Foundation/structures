@@ -157,7 +157,12 @@ public class DelegatingReadPreProcessor {
 //            }
             // Add source fields filter
             if(context.hasIncludedFieldsFilter()){
-                sf.includes(context.getIncludedFieldsFilter());
+                // If this is an empty field we exclude all fields from the source
+                if(context.getIncludedFieldsFilter().isEmpty()) {
+                    sf.excludes("*");
+                }else {
+                    sf.includes(context.getIncludedFieldsFilter());
+                }
                 // TODO: remove this when above is put back
                 if(structure.getMultiTenancyType() == MultiTenancyType.SHARED) {
                     sf.includes(structuresProperties.getTenantIdFieldName());

@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.endpoints.graphql;
+package org.kinotic.structures.internal.graphql;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -21,7 +21,7 @@ import org.kinotic.continuum.core.api.event.EventConstants;
 import org.kinotic.structures.api.domain.DefaultEntityContext;
 import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.services.EntitiesService;
-import org.kinotic.structures.internal.api.services.GraphQLProviderService;
+import org.kinotic.structures.internal.endpoints.GraphQLVerticle;
 import org.kinotic.structures.internal.utils.StructuresUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,6 +55,7 @@ public class DefaultGraphQLOperationService implements GraphQLOperationService {
 
         String namespace = routingContext.pathParam(GraphQLVerticle.NAMESPACE_PATH_PARAMETER);
 
+        // TODO: push this up to the GraphQLHandler, and create directly from JSON vs the GraphQLQuery intermediate object
         ExecutionInput.Builder executionInputBuilder = ExecutionInput.newExecutionInput();
 
         executionInputBuilder.query(query.getQuery());
