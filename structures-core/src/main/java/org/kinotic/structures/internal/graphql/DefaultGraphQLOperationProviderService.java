@@ -126,10 +126,10 @@ public class DefaultGraphQLOperationProviderService implements GraphQLOperationP
                                                                          .type(nonNull(args.getInputType())))
                                                   .build())
                                           .operationExecutionFunction(args -> {
-                                              RawJson rawJson = (RawJson) args.getVariables().get("input");
+                                              Map<?,?> map = (Map<?,?>) args.getVariables().get("input");
                                               EntityContext context = createContext(args, null);
                                               return entitiesService.save(args.getStructureId(),
-                                                                          rawJson,
+                                                                          map,
                                                                           context)
                                                                     .thenApply(savedEntity -> convertToResult(context.get(
                                                                             EntityContextConstants.ENTITY_ID_KEY)));
@@ -147,7 +147,7 @@ public class DefaultGraphQLOperationProviderService implements GraphQLOperationP
                                                   .build())
                                           .operationExecutionFunction(args -> {
                                               @SuppressWarnings("unchecked")
-                                              List<RawJson> input = (List<RawJson>) args.getVariables().get("input");
+                                              List<Map<?,?>> input = (List<Map<?,?>>) args.getVariables().get("input");
                                               EntityContext context = createContext(args, null);
                                               return entitiesService.bulkSave(args.getStructureId(),
                                                                               input,

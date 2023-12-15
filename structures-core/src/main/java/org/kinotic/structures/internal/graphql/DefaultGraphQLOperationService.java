@@ -130,22 +130,6 @@ public class DefaultGraphQLOperationService implements GraphQLOperationService {
 
             ParsedFields parsedFields = getFieldsFromSelectionSet(selection.getSelectionSet(), null);
 
-            // now we normalize the variable names
-            Map<String, Object> variables = new HashMap<>(executionInput.getVariables().size(), 1);
-            for(Argument argument : selection.getArguments()){
-                Value<?> value = argument.getValue();
-                if(value instanceof VariableReference) {
-                    String variableName = ((VariableReference) value).getName();
-                    if (executionInput.getVariables().containsKey(variableName)) {
-                        variables.put(argument.getName(), executionInput.getVariables().get(variableName));
-                    } else {
-                        throw new IllegalArgumentException("Variable: " + variableName + " not supplied");
-                    }
-                }else{
-                    log.warn("Unknown argument value type: {}", value.getClass());
-                    variables.put(argument.getName(), value);
-                }
-            }
             String operationName = selection.getName();
 
             GraphQLOperationDefinition definition = graphQLOperationProviderService.findOperationName(operationName);
@@ -154,7 +138,8 @@ public class DefaultGraphQLOperationService implements GraphQLOperationService {
                 Function<GraphQLOperationArguments, CompletableFuture<ExecutionResult>> function = definition.getOperationExecutionFunction();
                 return function.apply(new GraphQLOperationArguments(structureId,
                                                                     participant,
-                                                                    variables,
+                                                                    normalizeVariables(executionInput.getVariables(),
+                                                                                       selection.getArguments()),
                                                                     parsedFields));
             }else{
                 return CompletableFuture
@@ -164,6 +149,37 @@ public class DefaultGraphQLOperationService implements GraphQLOperationService {
         }else{
             throw new IllegalArgumentException("Unsupported definition type: " + document.getDefinitions().get(0).getClass());
         }
+    }
+
+    private Map<String, Object> normalizeVariables(Map<String, Object> variables,
+                                                   List<Argument> arguments) {
+        Map<String, Object> ret = new HashMap<>(variables.size(), 1);
+        for(Argument argument : arguments){
+            Value<?> value = argument.getValue();
+            if(value instanceof VariableReference) {
+                String variableName = ((VariableReference) value).getName();
+                if (variables.containsKey(variableName)) {
+                    ret.put(argument.getName(), variables.get(variableName));
+                } else {
+                    throw new IllegalArgumentException("Variable: " + variableName + " not supplied. But a VariableReference was found.");
+                }
+            } else if(value instanceof IntValue) {
+                ret.put(argument.getName(), ((IntValue) value).getValue());
+            } else if(value instanceof FloatValue) {
+                ret.put(argument.getName(), ((FloatValue) value).getValue());
+            } else if(value instanceof StringValue) {
+                ret.put(argument.getName(), ((StringValue) value).getValue());
+            } else if(value instanceof BooleanValue) {
+                ret.put(argument.getName(), ((BooleanValue) value).isValue());
+            } else if(value instanceof EnumValue) {
+                ret.put(argument.getName(), ((EnumValue) value).getName());
+            } else if(value instanceof ArrayValue) {
+                ret.put(argument.getName(), ((ArrayValue) value).getValues());
+            } else {
+                log.warn("Unknown argument {} value type: {}", argument.getName(), value.getClass());
+            }
+        }
+        return ret;
     }
 
     /**

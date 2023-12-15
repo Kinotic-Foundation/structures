@@ -83,7 +83,7 @@ public class DefaultEntityService implements EntityService {
                 return esAsyncClient.index(i -> i
                                             .routing(routing)
                                             .index(structure.getItemIndex())
-                                            .id(entityHolder.getId())
+                                            .id(entityHolder.getDocumentId())
                                             .document(binaryData)
                                             .refresh(Refresh.True))
                                     .thenApply(indexResponse -> {
@@ -94,7 +94,7 @@ public class DefaultEntityService implements EntityService {
                 return esAsyncClient.index(i -> i
                                             .routing(routing)
                                             .index(structure.getItemIndex())
-                                            .id(entityHolder.getId())
+                                            .id(entityHolder.getDocumentId())
                                             .document(entityHolder.getEntity())
                                             .refresh(Refresh.True))
                                     .thenApply(indexResponse -> {
@@ -111,7 +111,7 @@ public class DefaultEntityService implements EntityService {
                              context,
                              entityHolder -> BulkOperation.of(b -> b
                                      .index(idx -> idx.index(structure.getItemIndex())
-                                                      .id(entityHolder.getId())
+                                                      .id(entityHolder.getDocumentId())
                                                       .document(entityHolder.getEntity())
                                      )));
     }
@@ -128,7 +128,7 @@ public class DefaultEntityService implements EntityService {
             return esAsyncClient.update(UpdateRequest.of(u -> u
                                         .routing(routing)
                                         .index(structure.getItemIndex())
-                                        .id(entityHolder.getId())
+                                        .id(entityHolder.getDocumentId())
                                         .doc(entityHolder.getEntity())
                                         .docAsUpsert(true)
                                         .refresh(Refresh.True)), entityHolder.getEntity().getClass())
@@ -146,7 +146,7 @@ public class DefaultEntityService implements EntityService {
                              entityHolder -> BulkOperation.of(b -> b
                                      .update(u -> u
                                              .index(structure.getItemIndex())
-                                             .id(entityHolder.getId())
+                                             .id(entityHolder.getDocumentId())
                                              .action(upB -> upB.doc(entityHolder.getEntity())
                                                                .docAsUpsert(true)
                                                                .detectNoop(true))
@@ -307,8 +307,9 @@ public class DefaultEntityService implements EntityService {
                             Map converted = objectMapper.readValue(rawJson.data(), Map.class);
                             String tenant = (String) converted.get(structuresProperties.getTenantIdFieldName());
                             if(tenant != null && tenant.equals(context.getParticipant().getTenantId())){
+                                // We have to make sure tenant id is not in output, this is a bit of a hack, as long as we need the paranoid check
                                 converted.remove(structuresProperties.getTenantIdFieldName());
-                                result.add(converted);
+                                result.add(RawJson.from(objectMapper.writeValueAsBytes(converted)));
                             }else{
                                 log.error("{} Multi tenancy is not working properly for structure: {} and tenant: {}\nData:\n{}",
                                           what,
@@ -325,6 +326,7 @@ public class DefaultEntityService implements EntityService {
                     for(Map map : content){
                         String tenant = (String) map.get(structuresProperties.getTenantIdFieldName());
                         if(tenant != null && tenant.equals(context.getParticipant().getTenantId())){
+                            // We have to make sure tenant id is not in output, this is a bit of a hack, as long as we need the paranoid check
                             map.remove(structuresProperties.getTenantIdFieldName());
                             result.add(map);
                         }else{

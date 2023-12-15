@@ -115,9 +115,7 @@ public class RawJsonUpsertPreProcessor implements UpsertPreProcessor<RawJson, Ra
                             }
 
                             // if this is the id we add the special _id field for elasticsearch to use
-                            currentId = (structure.getMultiTenancyType() == MultiTenancyType.SHARED)
-                                    ? context.getParticipant().getTenantId() + "-" + value
-                                    : (String) value;
+                            currentId = (String) value;
                         }
                     }else{
                         // Check if this is the tenant id if MultiTenancyType.SHARED is enabled
@@ -160,7 +158,10 @@ public class RawJsonUpsertPreProcessor implements UpsertPreProcessor<RawJson, Ra
                         // This is the end of the object, so we store the object
                         jsonGenerator.writeEndObject();
                         jsonGenerator.flush();
-                        ret.add(new EntityHolder(currentId, new RawJson(outputStream.toByteArray())));
+                        ret.add(new EntityHolder(currentId,
+                                                 context.getParticipant().getTenantId(),
+                                                 structure.getMultiTenancyType(),
+                                                 new RawJson(outputStream.toByteArray())));
                         outputStream.reset();
                         currentId = null;
                         currentTenantId = null;

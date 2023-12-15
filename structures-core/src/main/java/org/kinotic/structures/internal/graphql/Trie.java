@@ -59,19 +59,21 @@ public class Trie<T> {
         }
         return null; // No match found
     }
-}
 
-class TrieNode<T> {
-    @SuppressWarnings("unchecked")
-    TrieNode<T>[] children = new TrieNode[26];
-    boolean isEndOfWord;
-    T value; // Stores additional data
+    static class TrieNode<T> {
+        @SuppressWarnings("unchecked")
+        TrieNode<T>[] children = new TrieNode[26];
+        boolean isEndOfWord;
+        T value; // Stores additional data
 
-    TrieNode() {
-        isEndOfWord = false;
-        value = null;
-        for (int i = 0; i < 26; i++) {
-            children[i] = null;
+        TrieNode() {
+            isEndOfWord = false;
+            value = null;
+            for (int i = 0; i < 26; i++) {
+                children[i] = null;
+            }
         }
     }
 }
+
+
