@@ -7,7 +7,9 @@ import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.kinotic.continuum.api.security.Participant;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by Navíd Mitchell 🤪 on 6/8/23.
@@ -15,13 +17,21 @@ import java.util.List;
 @Getter
 @Setter
 @Accessors(chain = true)
-@NoArgsConstructor
 @AllArgsConstructor
+@NoArgsConstructor
 public class DefaultEntityContext implements EntityContext {
 
     private Participant participant;
 
     private List<String> includedFieldsFilter = null;
+
+    private Map<String, Object> data;
+
+    public DefaultEntityContext(Participant participant,
+                                List<String> includedFieldsFilter) {
+        this.participant = participant;
+        this.includedFieldsFilter = includedFieldsFilter;
+    }
 
     public DefaultEntityContext(Participant participant) {
         this.participant = participant;
@@ -31,4 +41,37 @@ public class DefaultEntityContext implements EntityContext {
     public boolean hasIncludedFieldsFilter() {
         return includedFieldsFilter != null;
     }
+
+    @Override
+    public EntityContext put(String key, Object obj) {
+        getData().put(key, obj);
+        return this;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T> T get(String key) {
+        Object obj = getData().get(key);
+        return (T)obj;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T> T remove(String key) {
+        Object obj = getData().remove(key);
+        return (T)obj;
+    }
+
+    @Override
+    public Map<String, Object> data() {
+        return getData();
+    }
+
+    private Map<String, Object> getData() {
+        if (data == null) {
+            data = new HashMap<>();
+        }
+        return data;
+    }
+
 }

@@ -9,7 +9,6 @@ import io.vertx.ext.web.handler.CorsHandler;
 import org.kinotic.continuum.api.security.SecurityService;
 import org.kinotic.continuum.gateway.api.security.AuthenticationHandler;
 import org.kinotic.structures.api.config.StructuresProperties;
-import org.kinotic.structures.internal.graphql.GraphQLHandler;
 import org.kinotic.structures.internal.graphql.GraphQLOperationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

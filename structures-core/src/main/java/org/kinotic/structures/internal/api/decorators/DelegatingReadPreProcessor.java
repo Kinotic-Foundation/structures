@@ -195,19 +195,15 @@ public class DelegatingReadPreProcessor {
                                                               EntityContext context,
                                                               Consumer<String> routingConsumer) {
         Query.Builder queryBuilder;
-        // TODO: add multi tenancy search with a null searchText to see if this logic breaks since no tenant filter is set?
         if(searchText != null){
             queryBuilder = new Query.Builder();
-
             // add multi tenancy filters if needed
             if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
                 routingConsumer.accept(context.getParticipant().getTenantId());
                 queryBuilder
-                        .bool(b -> {
-                            return b.must(must -> must.queryString(qs -> qs.query(searchText).analyzeWildcard(true)))
+                        .bool(b -> b.must(must -> must.queryString(qs -> qs.query(searchText).analyzeWildcard(true)))
                                     .filter(qb -> qb.term(tq -> tq.field(structuresProperties.getTenantIdFieldName())
-                                                                      .value(context.getParticipant().getTenantId())));
-                        });
+                                                                  .value(context.getParticipant().getTenantId()))));
             }else{
                 queryBuilder.queryString(qs -> qs.query(searchText).analyzeWildcard(true));
             }

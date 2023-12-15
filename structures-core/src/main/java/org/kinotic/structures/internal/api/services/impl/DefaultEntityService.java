@@ -21,6 +21,7 @@ import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.internal.api.decorators.DelegatingReadPreProcessor;
 import org.kinotic.structures.internal.api.decorators.DelegatingUpsertPreProcessor;
 import org.kinotic.structures.internal.api.decorators.EntityHolder;
+import org.kinotic.structures.internal.api.services.EntityContextConstants;
 import org.kinotic.structures.internal.api.services.EntityService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -85,7 +86,10 @@ public class DefaultEntityService implements EntityService {
                                             .id(entityHolder.getId())
                                             .document(binaryData)
                                             .refresh(Refresh.True))
-                                    .thenApply(indexResponse -> (T) rawEntity);
+                                    .thenApply(indexResponse -> {
+                                        context.put(EntityContextConstants.ENTITY_ID_KEY, entityHolder.getId());
+                                        return (T) rawEntity;
+                                    });
             }else{
                 return esAsyncClient.index(i -> i
                                             .routing(routing)
@@ -93,7 +97,10 @@ public class DefaultEntityService implements EntityService {
                                             .id(entityHolder.getId())
                                             .document(entityHolder.getEntity())
                                             .refresh(Refresh.True))
-                                    .thenApply(indexResponse -> (T) entityHolder.getEntity());
+                                    .thenApply(indexResponse -> {
+                                        context.put(EntityContextConstants.ENTITY_ID_KEY, entityHolder.getId());
+                                        return (T) entityHolder.getEntity();
+                                    });
             }
         });
     }
@@ -125,7 +132,10 @@ public class DefaultEntityService implements EntityService {
                                         .doc(entityHolder.getEntity())
                                         .docAsUpsert(true)
                                         .refresh(Refresh.True)), entityHolder.getEntity().getClass())
-                                .thenApply(updateResponse -> (T) entityHolder.getEntity());
+                                .thenApply(updateResponse -> {
+                                    context.put(EntityContextConstants.ENTITY_ID_KEY, entityHolder.getId());
+                                    return (T) entityHolder.getEntity();
+                                });
         });
     }
 
@@ -297,7 +307,8 @@ public class DefaultEntityService implements EntityService {
                             Map converted = objectMapper.readValue(rawJson.data(), Map.class);
                             String tenant = (String) converted.get(structuresProperties.getTenantIdFieldName());
                             if(tenant != null && tenant.equals(context.getParticipant().getTenantId())){
-                                result.add(rawJson);
+                                converted.remove(structuresProperties.getTenantIdFieldName());
+                                result.add(converted);
                             }else{
                                 log.error("{} Multi tenancy is not working properly for structure: {} and tenant: {}\nData:\n{}",
                                           what,
@@ -314,6 +325,7 @@ public class DefaultEntityService implements EntityService {
                     for(Map map : content){
                         String tenant = (String) map.get(structuresProperties.getTenantIdFieldName());
                         if(tenant != null && tenant.equals(context.getParticipant().getTenantId())){
+                            map.remove(structuresProperties.getTenantIdFieldName());
                             result.add(map);
                         }else{
                             log.error("Multi tenancy is not working properly for structure: {} and tenant: {}\nData:\n{}",

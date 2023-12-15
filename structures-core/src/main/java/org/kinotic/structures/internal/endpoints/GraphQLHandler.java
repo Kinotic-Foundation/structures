@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.graphql;
+package org.kinotic.structures.internal.endpoints;
 
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
@@ -11,6 +11,7 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.graphql.impl.GraphQLBatch;
 import io.vertx.ext.web.handler.graphql.impl.GraphQLInput;
 import io.vertx.ext.web.handler.graphql.impl.GraphQLQuery;
+import org.kinotic.structures.internal.graphql.GraphQLOperationService;
 
 import java.util.List;
 import java.util.Map;

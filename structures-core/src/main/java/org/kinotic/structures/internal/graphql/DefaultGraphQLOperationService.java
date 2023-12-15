@@ -11,30 +11,22 @@ import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.graphql.impl.GraphQLQuery;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.kinotic.continuum.api.security.Participant;
-import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.continuum.core.api.event.EventConstants;
-import org.kinotic.structures.api.domain.DefaultEntityContext;
-import org.kinotic.structures.api.domain.RawJson;
-import org.kinotic.structures.api.services.EntitiesService;
 import org.kinotic.structures.internal.endpoints.GraphQLVerticle;
 import org.kinotic.structures.internal.utils.StructuresUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 /**
  * Created by Navíd Mitchell 🤪 on 12/13/23.
@@ -46,7 +38,7 @@ public class DefaultGraphQLOperationService implements GraphQLOperationService {
     private static final Logger log = LoggerFactory.getLogger(DefaultGraphQLOperationService.class);
 
     private final GraphQLProviderService graphQLProviderService;
-    private final EntitiesService entitiesService;
+    private final GraphQLOperationProviderService graphQLOperationProviderService;
     private final Vertx vertx;
     private final ObjectMapper objectMapper;
 
@@ -107,13 +99,11 @@ public class DefaultGraphQLOperationService implements GraphQLOperationService {
             CompletableFuture<ExecutionResult> ret;
             if (!documentEntry.hasErrors()) {
                 try {
-                    Supplier<CompletableFuture<ExecutionResult>> resultSupplier
-                            = executeDocument(namespace,
-                                              participant,
-                                              documentEntry.getDocument(),
-                                              executionInput);
 
-                    ret = resultSupplier.get();
+                    ret = executeDocument(namespace,
+                                          participant,
+                                          documentEntry.getDocument(),
+                                          executionInput);
 
                 } catch (Exception e) {
                     ret = CompletableFuture.completedFuture(convertToResult(e));
@@ -125,7 +115,7 @@ public class DefaultGraphQLOperationService implements GraphQLOperationService {
         });
     }
 
-    private Supplier<CompletableFuture<ExecutionResult>> executeDocument(String namespace,
+    private CompletableFuture<ExecutionResult> executeDocument(String namespace,
                                                                          Participant participant,
                                                                          Document document,
                                                                          ExecutionInput executionInput) {
@@ -156,12 +146,20 @@ public class DefaultGraphQLOperationService implements GraphQLOperationService {
                     variables.put(argument.getName(), value);
                 }
             }
+            String operationName = selection.getName();
 
-            return createExecutionSupplier(namespace,
-                                           participant,
-                                           selection.getName(),
-                                           variables,
-                                           parsedFields);
+            GraphQLOperationDefinition definition = graphQLOperationProviderService.findOperationName(operationName);
+            if(definition != null) {
+                String structureId = getStructureId(namespace, operationName, definition.getOperationNamePrefix());
+                Function<GraphQLOperationArguments, CompletableFuture<ExecutionResult>> function = definition.getOperationExecutionFunction();
+                return function.apply(new GraphQLOperationArguments(structureId,
+                                                                    participant,
+                                                                    variables,
+                                                                    parsedFields));
+            }else{
+                return CompletableFuture
+                        .completedFuture(convertToResult(new IllegalArgumentException("Unsupported operation name: " + operationName)));
+            }
 
         }else{
             throw new IllegalArgumentException("Unsupported definition type: " + document.getDefinitions().get(0).getClass());
@@ -203,89 +201,6 @@ public class DefaultGraphQLOperationService implements GraphQLOperationService {
             }
         }
         return ret;
-    }
-
-    private Supplier<CompletableFuture<ExecutionResult>> createExecutionSupplier(String namespace,
-                                                                         Participant participant,
-                                                                         String operationName,
-                                                                         Map<String, Object> variables,
-                                                                         ParsedFields parsedFields){
-        Supplier<CompletableFuture<ExecutionResult>> ret;
-        if(operationName.startsWith("findById")){
-            String structureId = getStructureId(namespace, operationName, "findById");
-            ret = () -> entitiesService.findById(structureId,
-                                             (String) variables.get("id"),
-                                             RawJson.class,
-                                             new DefaultEntityContext(participant, parsedFields.getNonContentFields()))
-                                   .thenApply(rawJson -> ExecutionResultImpl.newExecutionResult()
-                                                         .data(rawJson)
-                                                         .build());
-        } else if (operationName.startsWith("findAll")){
-            ret = () -> {
-                String structureId = getStructureId(namespace, operationName, "findAll");
-                Pageable pageable = parseVariable(variables,"pageable", Pageable.class);
-                return entitiesService.findAll(structureId,
-                                               pageable,
-                                               RawJson.class,
-                                               new DefaultEntityContext(participant, parsedFields.getContentFields()))
-                        .thenApply(page -> ExecutionResultImpl.newExecutionResult()
-                                                             .data(page)
-                                                             .build());
-            };
-        } else if (operationName.startsWith("search")) {
-            ret = () -> {
-                String structureId = getStructureId(namespace, operationName, "search");
-                Pageable pageable = parseVariable(variables,"pageable", Pageable.class);
-                String searchText = (String) variables.get("searchText");
-                return entitiesService.search(structureId,
-                                              searchText,
-                                              pageable,
-                                              RawJson.class,
-                                              new DefaultEntityContext(participant, parsedFields.getContentFields()))
-                                      .thenApply(page -> ExecutionResultImpl.newExecutionResult()
-                                                                            .data(page)
-                                                                            .build());
-            };
-        } else if (operationName.startsWith("save")) {
-            ret = () -> {
-                String structureId = getStructureId(namespace, operationName, "save");
-                RawJson rawJson = (RawJson) variables.get("input");
-                return entitiesService.save(structureId,
-                                            rawJson,
-                                            new DefaultEntityContext(participant, parsedFields.getContentFields()))
-                                      .thenApply(savedEntity -> ExecutionResultImpl.newExecutionResult()
-                                                                         .data(savedEntity)
-                                                                         .build());
-            };
-        } else if (operationName.startsWith("deleteById")){
-            ret = () -> {
-                String structureId = getStructureId(namespace, operationName, "deleteById");
-                String entityId = (String) variables.get("id");
-                return entitiesService.deleteById(structureId,
-                                                  entityId,
-                                                  new DefaultEntityContext(participant, parsedFields.getContentFields()))
-                        .thenApply(v -> ExecutionResultImpl.newExecutionResult()
-                                                           .data(entityId)
-                                                           .build());
-            };
-        } else {
-            ret = () -> {
-                log.warn("Unsupported operation name: {}", operationName);
-                return CompletableFuture
-                        .completedFuture(convertToResult(new IllegalArgumentException("Unsupported operation name: " + operationName)));
-            };
-        }
-
-        return ret;
-    }
-
-    private <T> T parseVariable(Map<String, Object> variables, String variableName, Class<T> clazz){
-        Object value = variables.get(variableName);
-        if(value != null){
-            return objectMapper.convertValue(value, clazz);
-        }else {
-            throw new IllegalArgumentException("Variable: " + variableName + " not supplied");
-        }
     }
 
     private String getStructureId(String namespace, String operationName, String operationPrefix) {
@@ -373,13 +288,6 @@ public class DefaultGraphQLOperationService implements GraphQLOperationService {
         return ExecutionResultImpl.newExecutionResult()
                                   .addError(error)
                                   .build();
-    }
-
-    @NoArgsConstructor
-    @Getter
-    private static class ParsedFields {
-        private final List<String> contentFields = new ArrayList<>();
-        private final List<String> nonContentFields = new ArrayList<>();
     }
 
 }

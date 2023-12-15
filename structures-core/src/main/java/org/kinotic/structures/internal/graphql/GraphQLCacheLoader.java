@@ -1,15 +1,15 @@
 package org.kinotic.structures.internal.graphql;
 
 import com.apollographql.federation.graphqljava.Federation;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.benmanes.caffeine.cache.AsyncCacheLoader;
 import graphql.GraphQL;
+import graphql.language.OperationDefinition;
 import graphql.schema.*;
+import lombok.RequiredArgsConstructor;
 import org.apache.commons.text.WordUtils;
 import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.structures.api.decorators.runtime.mapping.GraphQLTypeHolder;
 import org.kinotic.structures.api.domain.Structure;
-import org.kinotic.structures.api.services.EntitiesService;
 import org.kinotic.structures.internal.api.services.StructureConversionService;
 import org.kinotic.structures.internal.api.services.StructureDAO;
 import org.slf4j.Logger;
@@ -20,9 +20,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.function.Function;
 
-import static graphql.Scalars.*;
-import static graphql.schema.GraphQLArgument.newArgument;
+import static graphql.Scalars.GraphQLInt;
+import static graphql.Scalars.GraphQLString;
 import static graphql.schema.GraphQLEnumType.newEnum;
 import static graphql.schema.GraphQLFieldDefinition.newFieldDefinition;
 import static graphql.schema.GraphQLInputObjectField.newInputObjectField;
@@ -33,24 +34,15 @@ import static graphql.schema.GraphQLObjectType.newObject;
  * Created by Navíd Mitchell 🤪on 6/25/23.
  */
 @Component
+@RequiredArgsConstructor
 public class GraphQLCacheLoader implements AsyncCacheLoader<String, GraphQL> {
 
     private static final Logger log = LoggerFactory.getLogger(GraphQLCacheLoader.class);
 
     private final StructureDAO structureDAO;
-    private final EntitiesService entitiesService;
     private final StructureConversionService structureConversionService;
-    private final ObjectMapper objectMapper;
+    private final GraphQLOperationProviderService graphQLOperationProviderService;
 
-    public GraphQLCacheLoader(StructureDAO structureDAO,
-                              EntitiesService entitiesService,
-                              StructureConversionService structureConversionService,
-                              ObjectMapper objectMapper) {
-        this.structureDAO = structureDAO;
-        this.entitiesService = entitiesService;
-        this.structureConversionService = structureConversionService;
-        this.objectMapper = objectMapper;
-    }
 
     @Override
     public CompletableFuture<GraphQL> asyncLoad(String key, Executor executor) throws Exception {
@@ -105,58 +97,35 @@ public class GraphQLCacheLoader implements AsyncCacheLoader<String, GraphQL> {
                         }
 
                         String structureName = WordUtils.capitalize(outputType.getName());
-
-                        queryBuilder.field(newFieldDefinition()
-                                                   .name("findById" + structureName)
-                                                   .type(outputType)
-                                                   .argument(newArgument().name("id")
-                                                                          .type(GraphQLNonNull.nonNull(GraphQLID))));
-
                         GraphQLTypeReference graphQLTypeReference = new GraphQLTypeReference(outputType.getName());
-                        GraphQLNamedOutputType listResponse = wrapForItemListResponse(graphQLTypeReference);
+                        GraphQLNamedOutputType pageResponseType = wrapForItemListResponse(graphQLTypeReference);
 
-                        queryBuilder.field(newFieldDefinition()
-                                                   .name("findAll" + structureName)
-                                                   .type(listResponse)
-                                                   .argument(newArgument().name("pageable")
-                                                                          .type(GraphQLNonNull.nonNull(
-                                                                                  pageableReference))));
+                        GraphQLFieldDefinitionData fieldDefinitionData = GraphQLFieldDefinitionData.builder()
+                                .outputType(outputType)
+                                .inputType(inputType)
+                                .structuresName(structureName)
+                                .pageableReference(pageableReference)
+                                .pageResponseType(pageResponseType).build();
 
-                        queryBuilder.field(newFieldDefinition()
-                                                   .name("search" + structureName)
-                                                   .type(listResponse)
-                                                   .argument(newArgument().name("searchText")
-                                                                          .type(GraphQLNonNull.nonNull(GraphQLString)))
-                                                   .argument(newArgument().name("pageable")
-                                                                          .type(GraphQLNonNull.nonNull(
-                                                                                  pageableReference))));
+                        // Add all graphQL operations to the schema
+                        for(GraphQLOperationDefinition definition : graphQLOperationProviderService.getOperationDefinitions()){
 
-                        // Add Mutations if an input type was provided
-                        if (inputType != null) {
-                            mutationBuilder.field(newFieldDefinition()
-                                                          .name("save" + structureName)
-                                                          .type(outputType)
-                                                          .argument(newArgument().name("input")
-                                                                                 .type(GraphQLNonNull.nonNull(
-                                                                                         inputType))));
+                            Function<GraphQLFieldDefinitionData, GraphQLFieldDefinition> function = definition.getFieldDefinitionFunction();
 
-                            mutationBuilder.field(newFieldDefinition()
-                                                          .name("bulkSave" + structureName)
-                                                          .type(GraphQLBoolean)
-                                                          .argument(newArgument().name("input")
-                                                                                 .type(GraphQLNonNull.nonNull(
-                                                                                         GraphQLList.list(
-                                                                                                 GraphQLNonNull.nonNull(
-                                                                                                         inputType))))));
+                            if(definition.getOperationType() == OperationDefinition.Operation.QUERY) {
 
-                            mutationBuilder.field(newFieldDefinition()
-                                                          .name("delete" + structureName)
-                                                          .type(GraphQLID)
-                                                          .argument(newArgument().name("id")
-                                                                                 .type(GraphQLNonNull.nonNull(
-                                                                                         GraphQLID))));
+                                queryBuilder.field(function.apply(fieldDefinitionData));
+
+                            }else if(definition.getOperationType() == OperationDefinition.Operation.MUTATION){
+
+                                if(fieldDefinitionData.getInputType() != null){
+                                    mutationBuilder.field(function.apply(fieldDefinitionData));
+                                }
+
+                            }else{
+                                log.error("Unsupported operation {} type: {}", definition.getOperationNamePrefix(), definition.getOperationType());
+                            }
                         }
-
                     }
 
                     GraphQLSchema graphQLSchema = GraphQLSchema.newSchema()
