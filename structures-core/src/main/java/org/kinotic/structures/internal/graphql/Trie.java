@@ -10,7 +10,11 @@ public class Trie<T> {
         root = new TrieNode<>();
     }
 
-    // Inserts a word and its additional data into the trie
+    /**
+     * Inserts a word and its additional data into the trie
+     * @param key the word to insert, must only be alpha characters
+     * @param value the additional data to store for the word
+     */
     public void insert(String key, T value) {
         key = key.toLowerCase();
         TrieNode<T> p = root;
@@ -20,6 +24,9 @@ public class Trie<T> {
                 p.children[index] = new TrieNode<>();
             }
             p = p.children[index];
+        }
+        if(p.value != null){
+            throw new IllegalArgumentException("Duplicate key: " + key);
         }
         p.isEndOfWord = true;
         p.value = value; // Store the additional data
@@ -35,9 +42,16 @@ public class Trie<T> {
         TrieNode<T> p = root;
         for (int i = 0; i < fullString.length(); i++) {
             int index = fullString.charAt(i) - 'a';
+
+            // Character is not in the trie
+            if(index < 0 || index > 25){
+                return null;
+            }
+
             if (p.children[index] == null) {
                 return null; // No match found
             }
+
             p = p.children[index];
             if (p.isEndOfWord) {
                 return p.value; // Return the additional data

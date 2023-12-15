@@ -20,6 +20,7 @@ public class GraphQLOperationDefinition {
     /**
      * The prefix of the operation name
      * Such as findById, findAll, update, delete, etc...
+     * NOTE: This must be unique for the operation, and only contain alpha characters.
      */
     private final String operationNamePrefix;
 

@@ -189,7 +189,10 @@ public class DefaultGraphQLOperationProviderService implements GraphQLOperationP
 
     @Override
     public GraphQLOperationDefinition findOperationName(String completeOperationName) {
-        return operationTrie.findValue(completeOperationName);
+        long now = System.nanoTime();
+        GraphQLOperationDefinition ret = operationTrie.findValue(completeOperationName);
+        log.debug("Finished Searching Trie for: {} in {}ns", completeOperationName, System.nanoTime() - now);
+        return ret;
     }
 
     private EntityContext createContext(GraphQLOperationArguments args, List<String> includeFieldsFilter) {
