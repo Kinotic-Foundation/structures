@@ -38,7 +38,7 @@
     "typescript-optional": "^2.0.1",
     "unique-push-id": "^1.0.2",
     "uuid": "^8.3.2",
-    "vue": "^2.6.11",
+    "vue": "^3.0.0",
     "vue-class-component": "^7.2.5",
     "vue-editor-ace": "^1.0.0",
     "vue-highlight.js": "^4.0.1-beta",
