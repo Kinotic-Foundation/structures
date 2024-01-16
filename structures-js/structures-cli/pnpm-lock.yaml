@@ -12,8 +12,8 @@ dependencies:
     specifier: ^1.2.0
     version: 1.2.0
   '@kinotic/structures-api':
-    specifier: ^1.10.0
-    version: 1.11.0(@kinotic/continuum-client@2.9.0)(@kinotic/continuum-idl@1.2.0)
+    specifier: ^1.12.1
+    version: 1.12.1(@kinotic/continuum-client@2.9.0)(@kinotic/continuum-idl@1.2.0)
   '@oclif/core':
     specifier: ^2.9.4
     version: 2.9.4(@types/node@20.4.2)(typescript@5.1.6)
@@ -472,8 +472,8 @@ packages:
     resolution: {integrity: sha512-asQir06v9XwLQTbIf85y4kI7LVf95svaGyIaatBevUT8whYFXXY65T69QRLQ/FqaDw/KIBRn49TEpoK0EuOibg==}
     dev: false
 
-  /@kinotic/structures-api@1.11.0(@kinotic/continuum-client@2.9.0)(@kinotic/continuum-idl@1.2.0):
-    resolution: {integrity: sha512-gfCHLVv/jCLUivXG2O/BciwzmkYhNyu69N195Oin9CJndRrnE4jtxd7WK5vVgGE3TIPhlEkKW8crcBHWUHyINg==}
+  /@kinotic/structures-api@1.12.1(@kinotic/continuum-client@2.9.0)(@kinotic/continuum-idl@1.2.0):
+    resolution: {integrity: sha512-ZSWSGNUh0m/zQ56DD3oM4WGvOVOWBO9eF3wXRL62yedP5KdQCFjhvHWaMT/EQf/NfpAcDow3kQGNsa2DZAJMAA==}
     peerDependencies:
       '@kinotic/continuum-client': ^2.9.0
       '@kinotic/continuum-idl': ^1.2.0
