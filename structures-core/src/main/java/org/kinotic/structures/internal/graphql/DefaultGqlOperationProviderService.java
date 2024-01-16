@@ -31,29 +31,29 @@ import static graphql.schema.GraphQLNonNull.nonNull;
  * Created by Navíd Mitchell 🤪 on 12/14/23.
  */
 @Component
-public class DefaultGraphQLOperationProviderService implements GraphQLOperationProviderService {
+public class DefaultGqlOperationProviderService implements GqlOperationProviderService {
 
-    private static final Logger log = LoggerFactory.getLogger(DefaultGraphQLOperationProviderService.class);
+    private static final Logger log = LoggerFactory.getLogger(DefaultGqlOperationProviderService.class);
 
-    private final Trie<GraphQLOperationDefinition> operationTrie = new Trie<>();
-    private final List<GraphQLOperationDefinition> operationDefinitions;
+    private final Trie<GqlOperationDefinition> operationTrie = new Trie<>();
+    private final List<GqlOperationDefinition> operationDefinitions;
     private final ObjectMapper objectMapper;
 
 
-    public DefaultGraphQLOperationProviderService(EntitiesService entitiesService,
-                                                  ObjectMapper objectMapper) {
+    public DefaultGqlOperationProviderService(EntitiesService entitiesService,
+                                              ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
         this.operationDefinitions = List.of(
-                GraphQLOperationDefinition.builder()
-                                          .operationNamePrefix("findById")
-                                          .operationType(OperationDefinition.Operation.QUERY)
-                                          .fieldDefinitionFunction(args -> newFieldDefinition()
+                GqlOperationDefinition.builder()
+                                      .operationNamePrefix("findById")
+                                      .operationType(OperationDefinition.Operation.QUERY)
+                                      .fieldDefinitionFunction(args -> newFieldDefinition()
                                                   .name("findById" + args.getStructuresName())
                                                   .type(args.getOutputType())
                                                   .argument(newArgument().name("id")
                                                                          .type(GraphQLNonNull.nonNull(GraphQLID)))
                                                   .build())
-                                          .operationExecutionFunction(args -> {
+                                      .operationExecutionFunction(args -> {
                                               ParsedFields fields = args.getParsedFields();
                                               return entitiesService.findById(args.getStructureId(),
                                                                               (String) args.getVariables()
@@ -63,18 +63,18 @@ public class DefaultGraphQLOperationProviderService implements GraphQLOperationP
                                                                                             fields.getNonContentFields()))
                                                                     .thenApply(this::convertToResult);
                                           })
-                                          .build(),
+                                      .build(),
 
-                GraphQLOperationDefinition.builder()
-                                          .operationNamePrefix("findAll")
-                                          .operationType(OperationDefinition.Operation.QUERY)
-                                          .fieldDefinitionFunction(args -> newFieldDefinition()
+                GqlOperationDefinition.builder()
+                                      .operationNamePrefix("findAll")
+                                      .operationType(OperationDefinition.Operation.QUERY)
+                                      .fieldDefinitionFunction(args -> newFieldDefinition()
                                                   .name("findAll" + args.getStructuresName())
                                                   .type(args.getPageResponseType())
                                                   .argument(newArgument().name("pageable")
                                                                          .type(nonNull(args.getPageableReference())))
                                                   .build())
-                                          .operationExecutionFunction(args -> {
+                                      .operationExecutionFunction(args -> {
                                               ParsedFields fields = args.getParsedFields();
                                               Pageable pageable = parseVariable(args.getVariables(),
                                                                                 "pageable",
@@ -86,12 +86,12 @@ public class DefaultGraphQLOperationProviderService implements GraphQLOperationP
                                                                     .thenApply(page -> convertToResult(page,
                                                                                                        args.getParsedFields()));
                                           })
-                                          .build(),
+                                      .build(),
 
-                GraphQLOperationDefinition.builder()
-                                          .operationNamePrefix("search")
-                                          .operationType(OperationDefinition.Operation.QUERY)
-                                          .fieldDefinitionFunction(args -> newFieldDefinition()
+                GqlOperationDefinition.builder()
+                                      .operationNamePrefix("search")
+                                      .operationType(OperationDefinition.Operation.QUERY)
+                                      .fieldDefinitionFunction(args -> newFieldDefinition()
                                                   .name("search" + args.getStructuresName())
                                                   .type(args.getPageResponseType())
                                                   .argument(newArgument().name("searchText")
@@ -99,7 +99,7 @@ public class DefaultGraphQLOperationProviderService implements GraphQLOperationP
                                                   .argument(newArgument().name("pageable")
                                                                          .type(nonNull(args.getPageableReference())))
                                                   .build())
-                                          .operationExecutionFunction(args -> {
+                                      .operationExecutionFunction(args -> {
                                               ParsedFields fields = args.getParsedFields();
                                               Pageable pageable = parseVariable(args.getVariables(),
                                                                                 "pageable",
@@ -114,18 +114,18 @@ public class DefaultGraphQLOperationProviderService implements GraphQLOperationP
                                                                     .thenApply(page -> convertToResult(page,
                                                                                                        args.getParsedFields()));
                                           })
-                                          .build(),
+                                      .build(),
 
-                GraphQLOperationDefinition.builder()
-                                          .operationNamePrefix("save")
-                                          .operationType(OperationDefinition.Operation.MUTATION)
-                                          .fieldDefinitionFunction(args -> newFieldDefinition()
+                GqlOperationDefinition.builder()
+                                      .operationNamePrefix("save")
+                                      .operationType(OperationDefinition.Operation.MUTATION)
+                                      .fieldDefinitionFunction(args -> newFieldDefinition()
                                                   .name("save" + args.getStructuresName())
                                                   .type(GraphQLID)
                                                   .argument(newArgument().name("input")
                                                                          .type(nonNull(args.getInputType())))
                                                   .build())
-                                          .operationExecutionFunction(args -> {
+                                      .operationExecutionFunction(args -> {
                                               Map<?,?> map = (Map<?,?>) args.getVariables().get("input");
                                               EntityContext context = createContext(args, null);
                                               return entitiesService.save(args.getStructureId(),
@@ -134,18 +134,18 @@ public class DefaultGraphQLOperationProviderService implements GraphQLOperationP
                                                                     .thenApply(savedEntity -> convertToResult(context.get(
                                                                             EntityContextConstants.ENTITY_ID_KEY)));
                                           })
-                                          .build(),
+                                      .build(),
 
-                GraphQLOperationDefinition.builder()
-                                          .operationNamePrefix("bulkSave")
-                                          .operationType(OperationDefinition.Operation.MUTATION)
-                                          .fieldDefinitionFunction(args -> newFieldDefinition()
+                GqlOperationDefinition.builder()
+                                      .operationNamePrefix("bulkSave")
+                                      .operationType(OperationDefinition.Operation.MUTATION)
+                                      .fieldDefinitionFunction(args -> newFieldDefinition()
                                                   .name("bulkSave" + args.getStructuresName())
                                                   .type(GraphQLBoolean)
                                                   .argument(newArgument().name("input")
                                                                          .type(nonNull(list(nonNull(args.getInputType())))))
                                                   .build())
-                                          .operationExecutionFunction(args -> {
+                                      .operationExecutionFunction(args -> {
                                               @SuppressWarnings("unchecked")
                                               List<Map<?,?>> input = (List<Map<?,?>>) args.getVariables().get("input");
                                               EntityContext context = createContext(args, null);
@@ -154,18 +154,18 @@ public class DefaultGraphQLOperationProviderService implements GraphQLOperationP
                                                                               context)
                                                                     .thenApply(res -> convertToResult(Boolean.TRUE));
                                           })
-                                          .build(),
+                                      .build(),
 
-                GraphQLOperationDefinition.builder()
-                                          .operationNamePrefix("delete")
-                                          .operationType(OperationDefinition.Operation.MUTATION)
-                                          .fieldDefinitionFunction(args -> newFieldDefinition()
+                GqlOperationDefinition.builder()
+                                      .operationNamePrefix("delete")
+                                      .operationType(OperationDefinition.Operation.MUTATION)
+                                      .fieldDefinitionFunction(args -> newFieldDefinition()
                                                   .name("delete" + args.getStructuresName())
                                                   .type(GraphQLID)
                                                   .argument(newArgument().name("id")
                                                                          .type(nonNull(GraphQLID)))
                                                   .build())
-                                          .operationExecutionFunction(args -> {
+                                      .operationExecutionFunction(args -> {
                                               RawJson rawJson = (RawJson) args.getVariables().get("input");
                                               EntityContext context = createContext(args, null);
                                               return entitiesService.save(args.getStructureId(),
@@ -174,28 +174,28 @@ public class DefaultGraphQLOperationProviderService implements GraphQLOperationP
                                                                     .thenApply(savedEntity -> convertToResult(context.get(
                                                                             EntityContextConstants.ENTITY_ID_KEY)));
                                           })
-                                          .build()
+                                      .build()
         );
 
-        for(GraphQLOperationDefinition definition : operationDefinitions){
+        for(GqlOperationDefinition definition : operationDefinitions){
             operationTrie.insert(definition.getOperationNamePrefix(), definition);
         }
     }
 
     @Override
-    public List<GraphQLOperationDefinition> getOperationDefinitions() {
+    public List<GqlOperationDefinition> getOperationDefinitions() {
         return operationDefinitions;
     }
 
     @Override
-    public GraphQLOperationDefinition findOperationName(String completeOperationName) {
+    public GqlOperationDefinition findOperationName(String completeOperationName) {
         long now = System.nanoTime();
-        GraphQLOperationDefinition ret = operationTrie.findValue(completeOperationName);
+        GqlOperationDefinition ret = operationTrie.findValue(completeOperationName);
         log.debug("Finished Searching Trie for: {} in {}ns", completeOperationName, System.nanoTime() - now);
         return ret;
     }
 
-    private EntityContext createContext(GraphQLOperationArguments args, List<String> includeFieldsFilter) {
+    private EntityContext createContext(GqlOperationArguments args, List<String> includeFieldsFilter) {
         return new DefaultEntityContext(args.getParticipant(), includeFieldsFilter);
     }
 

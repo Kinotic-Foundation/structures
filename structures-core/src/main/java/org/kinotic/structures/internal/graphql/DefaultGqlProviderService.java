@@ -14,15 +14,15 @@ import java.util.concurrent.TimeUnit;
  * Created by Navíd Mitchell 🤪on 6/25/23.
  */
 @Component
-public class DefaultGraphQLProviderService implements GraphQLProviderService {
+public class DefaultGqlProviderService implements GqlProviderService {
 
     private final AsyncLoadingCache<String, GraphQL> graphQLCache;
 
-    public DefaultGraphQLProviderService(GraphQLCacheLoader graphQLCacheLoader) {
+    public DefaultGqlProviderService(GqlCacheLoader gqlCacheLoader) {
         graphQLCache = Caffeine.newBuilder()
                                .expireAfterAccess(20, TimeUnit.HOURS)
                                .maximumSize(10_000)
-                               .buildAsync(graphQLCacheLoader);
+                               .buildAsync(gqlCacheLoader);
     }
 
     @Override

@@ -8,7 +8,7 @@ import java.util.concurrent.CompletableFuture;
 /**
  * Created by Navíd Mitchell 🤪on 6/25/23.
  */
-public interface GraphQLProviderService {
+public interface GqlProviderService {
 
     /**
      * Provides a {@link GraphQL} for a given namespace

@@ -31,12 +31,12 @@ import java.util.function.Function;
  */
 @Component
 @RequiredArgsConstructor
-public class DefaultGraphQLOperationService implements GraphQLOperationService {
+public class DefaultGqlOperationService implements GqlOperationService {
 
-    private static final Logger log = LoggerFactory.getLogger(DefaultGraphQLOperationService.class);
+    private static final Logger log = LoggerFactory.getLogger(DefaultGqlOperationService.class);
 
-    private final GraphQLProviderService graphQLProviderService;
-    private final GraphQLOperationProviderService graphQLOperationProviderService;
+    private final GqlProviderService gqlProviderService;
+    private final GqlOperationProviderService gqlOperationProviderService;
     private final Vertx vertx;
     private final ObjectMapper objectMapper;
 
@@ -60,15 +60,15 @@ public class DefaultGraphQLOperationService implements GraphQLOperationService {
 
         if (query.getOperationName() != null && query.getOperationName().equals("IntrospectionQuery")) {
 
-            return VertxCompletableFuture.from(vertx, graphQLProviderService.getOrCreateGraphQL(namespace)
-                                                                            .thenCompose(graphQL -> graphQL.executeAsync(
+            return VertxCompletableFuture.from(vertx, gqlProviderService.getOrCreateGraphQL(namespace)
+                                                                        .thenCompose(graphQL -> graphQL.executeAsync(
                                                                                     executionInputBuilder.build()))
-                                                                            .thenApply(this::convertToBuffer));
+                                                                        .thenApply(this::convertToBuffer));
 
         } else {
 
             Participant participant = routingContext.get(EventConstants.SENDER_HEADER);
-            return VertxCompletableFuture.from(vertx, graphQLProviderService.getOrCreateGraphQL(namespace))
+            return VertxCompletableFuture.from(vertx, gqlProviderService.getOrCreateGraphQL(namespace))
                                          .thenCompose(graphQL -> executeOperation(namespace,
                                                                                   participant,
                                                                                   graphQL,
@@ -130,15 +130,15 @@ public class DefaultGraphQLOperationService implements GraphQLOperationService {
 
             String operationName = selection.getName();
 
-            GraphQLOperationDefinition definition = graphQLOperationProviderService.findOperationName(operationName);
+            GqlOperationDefinition definition = gqlOperationProviderService.findOperationName(operationName);
             if (definition != null) {
                 String structureId = getStructureId(namespace, operationName, definition.getOperationNamePrefix());
-                Function<GraphQLOperationArguments, CompletableFuture<ExecutionResult>> function = definition.getOperationExecutionFunction();
-                return function.apply(new GraphQLOperationArguments(structureId,
-                                                                    participant,
-                                                                    parseArguments(selection.getArguments(),
+                Function<GqlOperationArguments, CompletableFuture<ExecutionResult>> function = definition.getOperationExecutionFunction();
+                return function.apply(new GqlOperationArguments(structureId,
+                                                                participant,
+                                                                parseArguments(selection.getArguments(),
                                                                                    executionInput.getVariables()),
-                                                                    parsedFields));
+                                                                parsedFields));
             } else {
                 return CompletableFuture
                         .completedFuture(convertToResult(new IllegalArgumentException("Unsupported operation name: " + operationName)));

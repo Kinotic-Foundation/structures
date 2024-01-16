@@ -11,7 +11,7 @@ import org.kinotic.continuum.core.api.crud.Page;
  */
 @Builder
 @Getter
-public class GraphQLFieldDefinitionData {
+public class GqlFieldDefinitionData {
 
     /**
      * The name of the structure the {@link GraphQLFieldDefinition} is for

@@ -11,7 +11,7 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.graphql.impl.GraphQLBatch;
 import io.vertx.ext.web.handler.graphql.impl.GraphQLInput;
 import io.vertx.ext.web.handler.graphql.impl.GraphQLQuery;
-import org.kinotic.structures.internal.graphql.GraphQLOperationService;
+import org.kinotic.structures.internal.graphql.GqlOperationService;
 
 import java.util.List;
 import java.util.Map;
@@ -26,10 +26,10 @@ import static java.util.stream.Collectors.toList;
  */
 public class GraphQLHandler implements Handler<RoutingContext> {
 
-    private final GraphQLOperationService graphQLOperationService;
+    private final GqlOperationService gqlOperationService;
 
-    public GraphQLHandler(GraphQLOperationService graphQLOperationService) {
-        this.graphQLOperationService = graphQLOperationService;
+    public GraphQLHandler(GqlOperationService gqlOperationService) {
+        this.gqlOperationService = gqlOperationService;
     }
 
     @Override
@@ -130,7 +130,7 @@ public class GraphQLHandler implements Handler<RoutingContext> {
 
     private void executeBatch(RoutingContext rc, GraphQLBatch batch) {
         List<CompletableFuture<Buffer>> results = batch.stream()
-                                                           .map(q -> graphQLOperationService.execute(rc, q))
+                                                           .map(q -> gqlOperationService.execute(rc, q))
                                                            .collect(toList());
 
         // FIXME: send ressult as response
@@ -162,8 +162,8 @@ public class GraphQLHandler implements Handler<RoutingContext> {
     }
 
     private void executeOne(RoutingContext rc, GraphQLQuery query) {
-        graphQLOperationService.execute(rc, query)
-                               .whenComplete((buffer, throwable) -> sendResponse(rc, buffer, throwable));
+        gqlOperationService.execute(rc, query)
+                           .whenComplete((buffer, throwable) -> sendResponse(rc, buffer, throwable));
     }
 
     private String getContentType(RoutingContext rc) {

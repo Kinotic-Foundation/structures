@@ -9,7 +9,7 @@ import io.vertx.ext.web.handler.CorsHandler;
 import org.kinotic.continuum.api.security.SecurityService;
 import org.kinotic.continuum.gateway.api.security.AuthenticationHandler;
 import org.kinotic.structures.api.config.StructuresProperties;
-import org.kinotic.structures.internal.graphql.GraphQLOperationService;
+import org.kinotic.structures.internal.graphql.GqlOperationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,16 +28,16 @@ public class GraphQLVerticle extends AbstractVerticle {
     private static final Logger log = LoggerFactory.getLogger(GraphQLVerticle.class);
 
     private final StructuresProperties properties;
-    private final GraphQLOperationService graphQLOperationService;
+    private final GqlOperationService gqlOperationService;
     private final SecurityService securityService;
 
     private HttpServer server;
 
     public GraphQLVerticle(StructuresProperties properties,
-                           GraphQLOperationService graphQLOperationService,
+                           GqlOperationService gqlOperationService,
                            @Autowired(required = false) SecurityService securityService) {
         this.properties = properties;
-        this.graphQLOperationService = graphQLOperationService;
+        this.gqlOperationService = gqlOperationService;
         this.securityService = securityService;
     }
 
@@ -57,7 +57,7 @@ public class GraphQLVerticle extends AbstractVerticle {
               .consumes("application/json")
               .produces("application/graphql-response+json")
               .handler(BodyHandler.create(false))
-              .handler(new GraphQLHandler(graphQLOperationService));
+              .handler(new GraphQLHandler(gqlOperationService));
 
         // Begin listening for requests
         server.requestHandler(router).listen(properties.getGraphqlPort(), ar -> {

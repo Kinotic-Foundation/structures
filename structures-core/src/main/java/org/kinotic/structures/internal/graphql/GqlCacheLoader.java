@@ -1,6 +1,7 @@
 package org.kinotic.structures.internal.graphql;
 
 import com.apollographql.federation.graphqljava.Federation;
+import com.apollographql.federation.graphqljava._Entity;
 import com.github.benmanes.caffeine.cache.AsyncCacheLoader;
 import graphql.GraphQL;
 import graphql.language.OperationDefinition;
@@ -17,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
@@ -35,13 +37,13 @@ import static graphql.schema.GraphQLObjectType.newObject;
  */
 @Component
 @RequiredArgsConstructor
-public class GraphQLCacheLoader implements AsyncCacheLoader<String, GraphQL> {
+public class GqlCacheLoader implements AsyncCacheLoader<String, GraphQL> {
 
-    private static final Logger log = LoggerFactory.getLogger(GraphQLCacheLoader.class);
+    private static final Logger log = LoggerFactory.getLogger(GqlCacheLoader.class);
 
     private final StructureDAO structureDAO;
     private final StructureConversionService structureConversionService;
-    private final GraphQLOperationProviderService graphQLOperationProviderService;
+    private final GqlOperationProviderService gqlOperationProviderService;
 
 
     @Override
@@ -100,17 +102,17 @@ public class GraphQLCacheLoader implements AsyncCacheLoader<String, GraphQL> {
                         GraphQLTypeReference graphQLTypeReference = new GraphQLTypeReference(outputType.getName());
                         GraphQLNamedOutputType pageResponseType = wrapForItemListResponse(graphQLTypeReference);
 
-                        GraphQLFieldDefinitionData fieldDefinitionData = GraphQLFieldDefinitionData.builder()
-                                .outputType(outputType)
-                                .inputType(inputType)
-                                .structuresName(structureName)
-                                .pageableReference(pageableReference)
-                                .pageResponseType(pageResponseType).build();
+                        GqlFieldDefinitionData fieldDefinitionData = GqlFieldDefinitionData.builder()
+                                                                                           .outputType(outputType)
+                                                                                           .inputType(inputType)
+                                                                                           .structuresName(structureName)
+                                                                                           .pageableReference(pageableReference)
+                                                                                           .pageResponseType(pageResponseType).build();
 
                         // Add all graphQL operations to the schema
-                        for(GraphQLOperationDefinition definition : graphQLOperationProviderService.getOperationDefinitions()){
+                        for(GqlOperationDefinition definition : gqlOperationProviderService.getOperationDefinitions()){
 
-                            Function<GraphQLFieldDefinitionData, GraphQLFieldDefinition> function = definition.getFieldDefinitionFunction();
+                            Function<GqlFieldDefinitionData, GraphQLFieldDefinition> function = definition.getFieldDefinitionFunction();
 
                             if(definition.getOperationType() == OperationDefinition.Operation.QUERY) {
 
@@ -138,7 +140,22 @@ public class GraphQLCacheLoader implements AsyncCacheLoader<String, GraphQL> {
                               namespace,
                               System.currentTimeMillis() - start);
 
-                    graphQLSchema = Federation.transform(graphQLSchema).build();
+                    DataFetcher<?> entityDataFetcher = env -> {
+                        List<Map<String, Object>> representations = env.getArgument(_Entity.argumentName);
+                        log.warn("Entity data fetcher called with representations: {}", representations);
+                        return null;
+                    };
+                    TypeResolver entityTypeResolver = env -> {
+                        final Object obj = env.getObject();
+                        log.warn("Type resolver called with class: {}", obj.getClass());
+                        return null;
+                    };
+
+                    graphQLSchema = Federation.transform(graphQLSchema)
+                                              .setFederation2(true)
+                                              .fetchEntities(entityDataFetcher)
+                                              .resolveEntityType(entityTypeResolver)
+                                              .build();
 
                     return CompletableFuture.completedFuture(graphQLSchema);
                 }, executor);

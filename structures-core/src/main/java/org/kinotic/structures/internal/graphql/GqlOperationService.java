@@ -10,7 +10,7 @@ import java.util.concurrent.CompletableFuture;
  * Service provides the functionality to process a GraphQL request and return the result.
  * Created by Navíd Mitchell 🤪 on 12/13/23.
  */
-public interface GraphQLOperationService {
+public interface GqlOperationService {
 
     /**
      * Executes the given query and returns the result

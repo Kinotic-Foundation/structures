@@ -1,5 +1,6 @@
 package org.kinotic.structures.internal.idl.converters.graphql;
 
+import graphql.schema.GraphQLAppliedDirective;
 import graphql.schema.GraphQLInputObjectType;
 import graphql.schema.GraphQLNonNull;
 import graphql.schema.GraphQLObjectType;
@@ -67,6 +68,14 @@ public class ObjectC3TypeToGraphQL implements SpecificC3TypeConverter<GraphQLTyp
                 nullInputTypeFound = true;
             }
         }
+
+        // if this is the top level object, add any directives
+        if(conversionContext.state().fieldDepth() == 0){
+            for(GraphQLAppliedDirective directive : conversionContext.state().getOutputTypeDirectives()){
+                outputBuilder.withAppliedDirective(directive);
+            }
+        }
+
         return new GraphQLTypeHolder(!nullInputTypeFound ? inputBuilder.build() : null, outputBuilder.build());
     }
 

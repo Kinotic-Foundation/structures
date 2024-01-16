@@ -11,7 +11,7 @@ import java.util.Map;
  */
 @RequiredArgsConstructor
 @Getter
-public class GraphQLOperationArguments {
+public class GqlOperationArguments {
 
     private final String structureId;
     private final Participant participant;

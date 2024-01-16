@@ -15,7 +15,7 @@ import java.util.function.Function;
  */
 @Builder
 @Getter
-public class GraphQLOperationDefinition {
+public class GqlOperationDefinition {
 
     /**
      * The prefix of the operation name
@@ -32,12 +32,12 @@ public class GraphQLOperationDefinition {
     /**
      * The function that will execute the operation
      */
-    private final Function<GraphQLOperationArguments, CompletableFuture<ExecutionResult>> operationExecutionFunction;
+    private final Function<GqlOperationArguments, CompletableFuture<ExecutionResult>> operationExecutionFunction;
 
     /**
      * The function that will build the {@link GraphQLFieldDefinition} for this operation
-     * This function will be passed a {@link GraphQLFieldDefinitionData} that contains all the needed data to build the {@link GraphQLFieldDefinition
+     * This function will be passed a {@link GqlFieldDefinitionData} that contains all the needed data to build the {@link GraphQLFieldDefinition
      */
-    private final Function<GraphQLFieldDefinitionData, GraphQLFieldDefinition> fieldDefinitionFunction;
+    private final Function<GqlFieldDefinitionData, GraphQLFieldDefinition> fieldDefinitionFunction;
 
 }
