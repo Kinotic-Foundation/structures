@@ -24,8 +24,8 @@ public class OpenApiConverterStrategy extends AbstractIdlConverterStrategy<Schem
         new ObjectC3TypeToOpenApi()
     );
 
+    @SuppressWarnings({"unchecked", "rawtypes"})
     public OpenApiConverterStrategy(List<OpenApiMappingPreProcessor<?>> openApiMappingPreProcessors) {
-        //noinspection unchecked,rawtypes
         super(specificTypeConverters, List.of(new MappingPreProcessorConverter(openApiMappingPreProcessors)));
     }
 
