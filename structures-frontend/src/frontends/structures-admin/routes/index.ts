@@ -21,14 +21,7 @@ const adminRoutes: RouteConfig[] = [
                 children: [
                     {
                         path: '',
-                        component: () => import('@/frontends/continuum/pages/BasicCrudList.vue'),
-                        props: {
-                            crudServiceIdentifier: 'org.kinotic.structures.api.services.NamespaceService',
-                            headers: [
-                                { text: 'Name', value: 'id', width: 300, sortable: true },
-                                { text: 'Description', value: 'description', sortable: false }
-                            ]
-                        }
+                        component: () => import('@/frontends/structures-admin/pages/structures/namespaces/NamespaceList.vue')
                     },
                     {
                         path: 'edit/:id', component: () => import('@/frontends/structures-admin/pages/structures/namespaces/NamespaceAddEdit.vue'), props: true

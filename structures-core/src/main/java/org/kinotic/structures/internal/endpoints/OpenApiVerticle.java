@@ -2,6 +2,7 @@ package org.kinotic.structures.internal.endpoints;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.vertx.core.AbstractVerticle;
@@ -29,6 +30,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
+import java.util.List;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -121,6 +124,56 @@ public class OpenApiVerticle extends AbstractVerticle {
                                         .handle(new SingleEntityHandler(ctx));
               });
 
+
+        // Get Total Count for entity
+        router.get(apiBasePath+":structureNamespace/:structureName/count/all")
+                .produces("application/json")
+                .failureHandler(failureHandler)
+                .handler(ctx -> {
+
+                    String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
+
+                    VertxCompletableFuture.from(vertx, entitiesService.count(structureId,
+                                    new RoutingContextToEntityContextAdapter(ctx)))
+                            .handle((BiFunction<Long, Throwable, Void>) (v, throwable) -> {
+                                if (throwable == null) {
+                                    ctx.response().putHeader("Content-Type", "application/json");
+                                    ctx.response().setStatusCode(200);
+                                    ctx.response().end(Buffer.buffer("{ \"count\": " + v.toString() + '}'));
+                                } else {
+                                    VertxWebUtil.writeException(ctx.response(), throwable);
+                                }
+                                return null;
+                            });
+                });
+
+
+        // Get Count for query against entity
+        router.post(apiBasePath+":structureNamespace/:structureName/count/by-query")
+                .consumes("text/plain")
+                .produces("application/json")
+                .failureHandler(failureHandler)
+                .handler(BodyHandler.create(false))
+                .handler(ctx -> {
+
+                    String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
+                    String query = ctx.getBody().toString();
+
+                    VertxCompletableFuture.from(vertx, entitiesService.countByQuery(structureId,
+                                    query,
+                                    new RoutingContextToEntityContextAdapter(ctx)))
+                            .handle((BiFunction<Long, Throwable, Void>) (v, throwable) -> {
+                                if (throwable == null) {
+                                    ctx.response().putHeader("Content-Type", "application/json");
+                                    ctx.response().setStatusCode(200);
+                                    ctx.response().end(Buffer.buffer("{ \"count\": " + v.toString() + '}'));
+                                } else {
+                                    VertxWebUtil.writeException(ctx.response(), throwable);
+                                }
+                                return null;
+                            });
+                });
+
         // Delete Entity By ID
         router.delete(apiBasePath+":structureNamespace/:structureName/:id")
               .failureHandler(failureHandler)
@@ -143,6 +196,29 @@ public class OpenApiVerticle extends AbstractVerticle {
                                             return null;
                                         });
               });
+
+        // Delete Entity By Query
+        router.post(apiBasePath+":structureNamespace/:structureName/delete/by-query")
+                .consumes("text/plain")
+                .failureHandler(failureHandler)
+                .handler(BodyHandler.create(false))
+                .handler(ctx -> {
+
+                    String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
+                    String query = ctx.getBody().toString();
+
+                    VertxCompletableFuture.from(vertx, entitiesService.deleteByQuery(structureId,
+                                    query,
+                                    new RoutingContextToEntityContextAdapter(ctx)))
+                            .handle((BiFunction<Void, Throwable, Void>) (v, throwable) -> {
+                                if (throwable == null) {
+                                    ctx.response().end();
+                                } else {
+                                    VertxWebUtil.writeException(ctx.response(), throwable);
+                                }
+                                return null;
+                            });
+                });
 
         // Save entity
         router.post(apiBasePath+":structureNamespace/:structureName")
@@ -212,7 +288,6 @@ public class OpenApiVerticle extends AbstractVerticle {
 
               });
 
-
         // Find all entities
         router.get(apiBasePath+":structureNamespace/:structureName")
               .produces("application/json")
@@ -229,6 +304,41 @@ public class OpenApiVerticle extends AbstractVerticle {
                                                                              new RoutingContextToEntityContextAdapter(ctx)))
                                         .handle(new MultiEntityHandler(ctx, objectMapper));
               });
+
+        // Get Entity By IDs
+        router.post(apiBasePath+":structureNamespace/:structureName/find/by-ids")
+                .consumes("application/json")
+                .produces("application/json")
+                .failureHandler(failureHandler)
+                .handler(BodyHandler.create(false))
+                .handler(ctx -> {
+
+                    String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
+
+                    try{
+                        VertxCompletableFuture.from(vertx, entitiesService.findByIds(structureId,
+                                        objectMapper.readValue(ctx.getBody().getBytes(), new TypeReference<>() {}),
+                                        RawJson.class,
+                                        new RoutingContextToEntityContextAdapter(ctx)))
+                                .handle((BiFunction<List<RawJson>, Throwable, Void>) (v, throwable) -> {
+                                    try {
+                                        if (throwable == null) {
+                                            ctx.response().putHeader("Content-Type", "application/json");
+                                            ctx.response().setStatusCode(200);
+                                            byte[] data = objectMapper.writeValueAsBytes(v);
+                                            ctx.response().end(Buffer.buffer(data));
+                                        } else {
+                                            VertxWebUtil.writeException(ctx.response(), throwable);
+                                        }
+                                    }catch (IOException e){
+                                        VertxWebUtil.writeException(ctx.response(), e);
+                                    }
+                                    return null;
+                                });
+                    }catch(IOException e){
+                        VertxWebUtil.writeException(ctx.response(), e);
+                    }
+                });
 
         // Search for entities
         router.post(apiBasePath+":structureNamespace/:structureName/search")

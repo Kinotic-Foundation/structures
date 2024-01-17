@@ -63,7 +63,7 @@ export default class StructureStandardUi extends Vue {
 
         this.namespaceService.findAll(pageable)
             .then((response) => {
-                this.namespaces = response.content
+                this.namespaces = response.content ?? []
             })
             .catch((error) => {
                 console.error('Error setting up to add/edit Structure')

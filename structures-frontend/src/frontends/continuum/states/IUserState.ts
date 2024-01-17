@@ -50,7 +50,7 @@ export class UserState implements IUserState {
     public async authenticateKeycloak(keycloak: Keycloak): Promise<void> {
         this.keycloak = keycloak
         if(process.env.VUE_APP_KEYCLOAK_ROLE !== 'none') {
-            if(!this.keycloak.hasRealmRole(process.env.VUE_APP_KEYCLOAK_ROLE)) {
+            if(!this.keycloak.hasRealmRole(process.env.VUE_APP_KEYCLOAK_ROLE ?? 'none')) {
                 this.accessDenied = true
                 CONTINUUM_UI.navigate('/access-denied').then()
             } else {
