@@ -18,7 +18,7 @@ node {
     // Version of Yarn to use
     // Any Yarn task first installs Yarn in the yarnWorkDir
     // It uses the specified version if defined and the latest version otherwise (by default)
-    yarnVersion = "4.0.2"
+    yarnVersion = "1.22.21"
 
     // Base URL for fetching node distributions
     // Only used if download is true
