@@ -246,7 +246,7 @@ export default class EntityList extends Vue {
             queryPromise.then((page: Page<any>) => {
                 this.loading = false
                 this.totalItems = page.totalElements as number
-                this.items = page.content
+                this.items = page.content ?? []
 
                 if (!this.finishedInitialLoad) {
                     setTimeout(() => {
