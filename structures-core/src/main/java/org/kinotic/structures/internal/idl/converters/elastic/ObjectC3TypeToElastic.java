@@ -55,13 +55,13 @@ public class ObjectC3TypeToElastic implements SpecificC3TypeConverter<Property, 
         for(Map.Entry<String, C3Type> entry : objectC3Type.getProperties().entrySet()){
 
             String fieldName = entry.getKey();
+            C3Type type = entry.getValue();
             StructuresUtil.fieldNameValidation(fieldName);
 
             // This will also store decorators encountered
-            state.beginProcessingField(fieldName, entry.getValue());
+            state.beginProcessingField(fieldName, type);
 
             // We have to apply nested decorators here as well due to the same problem mentioned above on line 35
-            C3Type type = entry.getValue();
             if(type.containsDecorator(NestedDecorator.class)) {
 
                 if(type instanceof ArrayC3Type){
