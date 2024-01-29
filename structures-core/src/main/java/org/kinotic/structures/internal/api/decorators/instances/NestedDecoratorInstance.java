@@ -5,6 +5,7 @@ import co.elastic.clients.elasticsearch._types.mapping.Property;
 import org.kinotic.continuum.idl.api.schema.ArrayC3Type;
 import org.kinotic.continuum.idl.api.schema.C3Type;
 import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
+import org.kinotic.continuum.idl.api.schema.UnionC3Type;
 import org.kinotic.structures.api.decorators.NestedDecorator;
 import org.kinotic.structures.api.decorators.runtime.mapping.ElasticMappingPreProcessor;
 import org.kinotic.structures.api.decorators.runtime.mapping.MappingContext;
@@ -31,6 +32,9 @@ public class NestedDecoratorInstance implements ElasticMappingPreProcessor<Neste
             if(arrayC3Type.getContains() instanceof ObjectC3Type){
                 ret = true;
             }
+        }else if(c3Type instanceof ObjectC3Type
+                 || c3Type instanceof UnionC3Type) {
+            ret = true;
         }
         return ret;
     }
@@ -43,15 +47,25 @@ public class NestedDecoratorInstance implements ElasticMappingPreProcessor<Neste
                             MappingContext<Property, ElasticConversionState> context) {
         return NestedProperty.of(builder -> {
 
-            ArrayC3Type arrayC3Type = (ArrayC3Type) type;
+            if(type instanceof ArrayC3Type){
+                ArrayC3Type arrayC3Type = (ArrayC3Type) type;
 
-            Property property = context.convertInternal(arrayC3Type.getContains());
-            // sanity check
-            if(!property.isObject()){
-                throw new IllegalArgumentException("Nested decorator can only be applied to Arrays of ObjectC3Types");
+                Property property = context.convertInternal(arrayC3Type.getContains());
+                // sanity check
+                if(!property.isObject()){
+                    throw new IllegalArgumentException("Nested decorator can only be applied to Arrays of ObjectC3Types");
+                }
+
+                builder.properties(property.object().properties());
+            }else if(type instanceof ObjectC3Type){
+                ObjectC3Type objectC3Type = (ObjectC3Type) type;
+                Property property = context.convertInternal(objectC3Type);
+                builder.properties(property.object().properties());
+            }else if(type instanceof UnionC3Type){
+                UnionC3Type unionC3Type = (UnionC3Type) type;
+                Property property = context.convertInternal(unionC3Type);
+                builder.properties(property.object().properties());
             }
-
-            builder.properties(property.object().properties());
 
             return builder;
         })._toProperty();

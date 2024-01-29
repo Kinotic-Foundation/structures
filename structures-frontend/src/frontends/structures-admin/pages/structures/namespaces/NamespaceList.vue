@@ -11,11 +11,17 @@
 
                     <template v-slot:item.id="{ item }">
                         <span>{{ item.id }}</span>
+                    </template>
+                    <template v-slot:item.description="{ item }">
+                        {{ item.description }}
+                    </template>
+
+                    <template #additional-actions="{ item }">
                         <v-btn icon
                                small
-                               class="pl-2"
+                               class="mr-2"
                                title="OpenAPI"
-                               :href="'/scalar-ui.html?namespace='+item.id"
+                               :href="'/scalar-ui.html?namespace='+item.item.id"
                                target="_blank">
                             <v-icon small>
                                 {{ icons.api }}
@@ -23,17 +29,14 @@
                         </v-btn>
                         <v-btn icon
                                small
-                               class="pl-2"
+                               class="mr-2"
                                title="GraphQL"
-                               :href="'/gql-ui.html?namespace='+item.id"
+                               :href="'/gql-ui.html?namespace='+item.item.id"
                                target="_blank">
                             <v-icon small>
                                 {{ icons.graph }}
                             </v-icon>
                         </v-btn>
-                    </template>
-                    <template v-slot:item.description="{ item }">
-                        {{ item.description }}
                     </template>
 
                 </CrudTable>
