@@ -11,12 +11,10 @@ import org.kinotic.structures.api.decorators.runtime.mapping.ElasticMappingPrePr
 import org.kinotic.structures.api.decorators.runtime.mapping.MappingContext;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.internal.idl.converters.elastic.ElasticConversionState;
-import org.springframework.stereotype.Component;
 
 /**
  * Created by Navíd Mitchell 🤪on 6/8/23.
  */
-@Component
 public class NestedDecoratorInstance implements ElasticMappingPreProcessor<NestedDecorator> {
 
     @Override
