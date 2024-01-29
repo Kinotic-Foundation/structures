@@ -74,12 +74,12 @@ public class ObjectC3TypeToElastic implements SpecificC3TypeConverter<Property, 
                 }
 
                 builder.properties(entry.getKey(),
-                                   NestedProperty.of(nb -> nb.properties(conversionContext.convert(entry.getValue())
+                                   NestedProperty.of(nb -> nb.properties(conversionContext.convert(type)
                                                                                           .object()
                                                                                           .properties()))
                                                  ._toProperty());
             }else{
-                builder.properties(entry.getKey(), conversionContext.convert(entry.getValue()));
+                builder.properties(entry.getKey(), conversionContext.convert(type));
             }
 
             state.endProcessingField();
