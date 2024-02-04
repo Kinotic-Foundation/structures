@@ -33,7 +33,7 @@ public class ObjectC3TypeToElastic implements SpecificC3TypeConverter<Property, 
 
         // Add multi tenancy support if needed
         // LOOK: if we should move this logic to a ElasticMappingPreProcessor.
-        // The current barrier is that if this is done then when you try to use the convert internal you end up with a recursive loop.
+        // The current barrier is that if this is done then when you try to use the conversionContext.convert you end up with a recursive loop.
         // Since the mapping preprocessor still needs to convert the object. But the way the strategy is defined you end up calling the mapping processor again.
         if(conversionContext.state().fieldDepth() == 0){
             EntityDecorator decorator = objectC3Type.findDecorator(EntityDecorator.class);
