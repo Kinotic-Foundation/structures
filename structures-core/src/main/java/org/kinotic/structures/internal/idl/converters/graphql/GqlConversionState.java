@@ -1,6 +1,7 @@
 package org.kinotic.structures.internal.idl.converters.graphql;
 
 import graphql.schema.GraphQLAppliedDirective;
+import graphql.schema.GraphQLUnionType;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -17,9 +18,11 @@ import java.util.List;
 @Setter
 @Accessors(chain = true)
 @NoArgsConstructor
-public class GraphQLConversionState extends BaseConversionState {
+public class GqlConversionState extends BaseConversionState {
 
     private List<GraphQLAppliedDirective> outputTypeDirectives = new ArrayList<>();
 
     private List<GraphQLAppliedDirective> inputTypeDirectives = new ArrayList<>();
+
+    private List<GraphQLUnionType> unionTypes = new ArrayList<>();
 }

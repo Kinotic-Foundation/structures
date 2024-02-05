@@ -7,7 +7,8 @@ import graphql.schema.*;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.text.WordUtils;
 import org.kinotic.continuum.core.api.crud.Pageable;
-import org.kinotic.structures.api.decorators.runtime.mapping.GraphQLTypeHolder;
+import org.kinotic.structures.internal.api.services.GqlConversionResult;
+import org.kinotic.structures.internal.idl.converters.graphql.GqlTypeHolder;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.internal.api.services.StructureConversionService;
 import org.kinotic.structures.internal.api.services.StructureDAO;
@@ -64,10 +65,10 @@ public class GqlCacheLoader implements AsyncCacheLoader<String, GraphQL> {
                     long start = System.currentTimeMillis();
                     log.debug("Creating GraphQL Schema for namespace: {}", namespace);
 
-                    Map<String, GraphQLTypeHolder> structureTypeMap = new HashMap<>();
+                    Map<String, GqlConversionResult> conversionResultMap = new HashMap<>();
                     for (Structure structure : structures.getContent()) {
-                        structureTypeMap.put(structure.getId(),
-                                             structureConversionService.convertToGraphQLMapping(structure));
+                        conversionResultMap.put(structure.getId(),
+                                             structureConversionService.convertToGqlMapping(structure));
                     }
 
                     GraphQLInputObjectType pageableType = createPageableType();
@@ -75,21 +76,24 @@ public class GqlCacheLoader implements AsyncCacheLoader<String, GraphQL> {
 
                     GraphQLObjectType.Builder queryBuilder = newObject().name("Query");
                     GraphQLObjectType.Builder mutationBuilder = newObject().name("Mutation");
+                    GraphQLCodeRegistry.Builder codeRegistryBuilder = GraphQLCodeRegistry.newCodeRegistry();
+                    boolean mutationsAdded = false;
 
-                    for (Map.Entry<String, GraphQLTypeHolder> entry : structureTypeMap.entrySet()) {
+                    for (Map.Entry<String, GqlConversionResult> entry : conversionResultMap.entrySet()) {
 
+                        GqlTypeHolder structureType = entry.getValue().getStructureType();
                         GraphQLObjectType outputType;
-                        if (entry.getValue().getOutputType() instanceof GraphQLObjectType) {
-                            outputType = (GraphQLObjectType) entry.getValue().getOutputType();
+                        if (structureType.getOutputType() instanceof GraphQLObjectType) {
+                            outputType = (GraphQLObjectType) structureType.getOutputType();
                         } else {
                             throw new IllegalStateException("Output type must be a GraphQLObjectType");
                         }
 
                         GraphQLInputObjectType inputType = null;
                         // Will be null if a UnionC3Type is found anywhere in the object graph
-                        if (entry.getValue().getInputType() != null) {
-                            if (entry.getValue().getInputType() instanceof GraphQLInputObjectType) {
-                                inputType = (GraphQLInputObjectType) entry.getValue().getInputType();
+                        if (structureType.getInputType() != null) {
+                            if (structureType.getInputType() instanceof GraphQLInputObjectType) {
+                                inputType = (GraphQLInputObjectType) structureType.getInputType();
                             } else {
                                 throw new IllegalStateException("Input type must be a GraphQLInputObjectType");
                             }
@@ -119,19 +123,31 @@ public class GqlCacheLoader implements AsyncCacheLoader<String, GraphQL> {
 
                                 if(fieldDefinitionData.getInputType() != null){
                                     mutationBuilder.field(function.apply(fieldDefinitionData));
+                                    mutationsAdded = true;
                                 }
 
                             }else{
                                 log.error("Unsupported operation {} type: {}", definition.getOperationNamePrefix(), definition.getOperationType());
                             }
                         }
+
+                        // Add all type resolvers to the schema
+                        for(GraphQLUnionType unionType : entry.getValue().getUnionTypes()){
+                            // NoOp is used since we do not actually use the GraphQL api to execute operations
+                            codeRegistryBuilder.typeResolver(unionType, new NoOpTypeResolver());
+                        }
                     }
 
-                    GraphQLSchema graphQLSchema = GraphQLSchema.newSchema()
+                    GraphQLSchema.Builder graphQLSchemaBuilder = GraphQLSchema.newSchema()
+                                                               .codeRegistry(codeRegistryBuilder.build())
                                                                .query(queryBuilder.build())
-                                                               .mutation(mutationBuilder.build())
-                                                               .additionalType(pageableType)
-                                                               .build();
+                                                               .additionalType(pageableType);
+
+                    // if all types contain a union type then there will be no mutations
+                    if(mutationsAdded){
+                        graphQLSchemaBuilder.mutation(mutationBuilder.build());
+                    }
+                    GraphQLSchema graphQLSchema = graphQLSchemaBuilder.build();
 
                     log.debug("Finished creating GraphQL Schema for namespace: {} in {}ms",
                               namespace,

@@ -24,11 +24,11 @@ import static java.util.stream.Collectors.toList;
 /**
  * Created by Navíd Mitchell 🤪 on 6/7/23.
  */
-public class GraphQLHandler implements Handler<RoutingContext> {
+public class GqlHandler implements Handler<RoutingContext> {
 
     private final GqlOperationService gqlOperationService;
 
-    public GraphQLHandler(GqlOperationService gqlOperationService) {
+    public GqlHandler(GqlOperationService gqlOperationService) {
         this.gqlOperationService = gqlOperationService;
     }
 

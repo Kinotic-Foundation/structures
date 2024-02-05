@@ -7,15 +7,16 @@ import io.swagger.v3.oas.models.media.Schema;
 import org.kinotic.continuum.idl.api.converter.IdlConverter;
 import org.kinotic.continuum.idl.api.converter.IdlConverterFactory;
 import org.kinotic.structures.api.config.StructuresProperties;
-import org.kinotic.structures.api.decorators.runtime.mapping.GraphQLTypeHolder;
+import org.kinotic.structures.internal.idl.converters.graphql.GqlTypeHolder;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.internal.api.services.ElasticConversionResult;
+import org.kinotic.structures.internal.api.services.GqlConversionResult;
 import org.kinotic.structures.internal.api.services.OpenApiConversionResult;
 import org.kinotic.structures.internal.api.services.StructureConversionService;
 import org.kinotic.structures.internal.idl.converters.elastic.ElasticConversionState;
 import org.kinotic.structures.internal.idl.converters.elastic.ElasticConverterStrategy;
-import org.kinotic.structures.internal.idl.converters.graphql.GraphQLConversionState;
-import org.kinotic.structures.internal.idl.converters.graphql.GraphQLConverterStrategy;
+import org.kinotic.structures.internal.idl.converters.graphql.GqlConversionState;
+import org.kinotic.structures.internal.idl.converters.graphql.GqlConverterStrategy;
 import org.kinotic.structures.internal.idl.converters.openapi.OpenApiConversionState;
 import org.kinotic.structures.internal.idl.converters.openapi.OpenApiConverterStrategy;
 import org.springframework.stereotype.Component;
@@ -29,18 +30,18 @@ public class DefaultStructureConversionService implements StructureConversionSer
     private final StructuresProperties structuresProperties;
     private final IdlConverterFactory idlConverterFactory;
     private final ElasticConverterStrategy elasticConverterStrategy;
-    private final GraphQLConverterStrategy graphQLConverterStrategy;
+    private final GqlConverterStrategy gqlConverterStrategy;
     private final OpenApiConverterStrategy openApiConverterStrategy;
 
     public DefaultStructureConversionService(StructuresProperties structuresProperties,
                                              IdlConverterFactory idlConverterFactory,
                                              ElasticConverterStrategy elasticConverterStrategy,
-                                             GraphQLConverterStrategy graphQLConverterStrategy,
+                                             GqlConverterStrategy gqlConverterStrategy,
                                              OpenApiConverterStrategy openApiConverterStrategy) {
         this.structuresProperties = structuresProperties;
         this.idlConverterFactory = idlConverterFactory;
         this.elasticConverterStrategy = elasticConverterStrategy;
-        this.graphQLConverterStrategy = graphQLConverterStrategy;
+        this.gqlConverterStrategy = gqlConverterStrategy;
         this.openApiConverterStrategy = openApiConverterStrategy;
     }
 
@@ -65,14 +66,17 @@ public class DefaultStructureConversionService implements StructureConversionSer
     }
 
     @Override
-    public GraphQLTypeHolder convertToGraphQLMapping(Structure structure) {
-        IdlConverter<GraphQLTypeHolder, GraphQLConversionState> converter = idlConverterFactory.createConverter(graphQLConverterStrategy);
+    public GqlConversionResult convertToGqlMapping(Structure structure) {
+        IdlConverter<GqlTypeHolder, GqlConversionState> converter = idlConverterFactory.createConverter(
+                gqlConverterStrategy);
 
-        GraphQLConversionState state = converter.getConversionContext().state();
+        GqlConversionState state = converter.getConversionContext().state();
         state.setStructureBeingConverted(structure);
         state.setStructuresProperties(structuresProperties);
 
-        return converter.convert(structure.getEntityDefinition());
+        GqlTypeHolder typeHolder = converter.convert(structure.getEntityDefinition());
+
+        return new GqlConversionResult(typeHolder, state.getUnionTypes());
     }
 
     @Override

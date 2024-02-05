@@ -15,7 +15,7 @@ import lombok.RequiredArgsConstructor;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.kinotic.continuum.api.security.Participant;
 import org.kinotic.continuum.core.api.event.EventConstants;
-import org.kinotic.structures.internal.endpoints.GraphQLVerticle;
+import org.kinotic.structures.internal.endpoints.GqlVerticle;
 import org.kinotic.structures.internal.utils.StructuresUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,7 +43,7 @@ public class DefaultGqlOperationService implements GqlOperationService {
     @Override
     public CompletableFuture<Buffer> execute(RoutingContext routingContext, GraphQLQuery query) {
 
-        String namespace = routingContext.pathParam(GraphQLVerticle.NAMESPACE_PATH_PARAMETER);
+        String namespace = routingContext.pathParam(GqlVerticle.NAMESPACE_PATH_PARAMETER);
 
         // TODO: push this up to the GraphQLHandler, and create directly from JSON vs the GraphQLQuery intermediate object
         ExecutionInput.Builder executionInputBuilder = ExecutionInput.newExecutionInput();
@@ -124,7 +124,7 @@ public class DefaultGqlOperationService implements GqlOperationService {
         if (document.getDefinitions().get(0) instanceof OperationDefinition) {
             OperationDefinition opDefinition = (OperationDefinition) document.getDefinitions().get(0);
 
-            Field selection = validateAndGetSelection(opDefinition, executionInput.getOperationName());
+            Field selection = validateAndGetSelection(opDefinition);
 
             ParsedFields parsedFields = getFieldsFromSelectionSet(selection.getSelectionSet(), null);
 
@@ -246,7 +246,7 @@ public class DefaultGqlOperationService implements GqlOperationService {
         return StructuresUtil.structureNameToId(namespace, structureName);
     }
 
-    private Field validateAndGetSelection(OperationDefinition operationDefinition, String operationName) {
+    private Field validateAndGetSelection(OperationDefinition operationDefinition) {
         if (operationDefinition.getOperation() != OperationDefinition.Operation.QUERY
                 && operationDefinition.getOperation() != OperationDefinition.Operation.MUTATION) {
             throw new IllegalArgumentException("Unsupported operation type: " + operationDefinition.getOperation());
@@ -257,27 +257,15 @@ public class DefaultGqlOperationService implements GqlOperationService {
             throw new IllegalArgumentException("Operation must have a selection set");
         }
 
-        if (selectionSet.getSelections().size() != 1 && operationName == null) {
-
-            throw new IllegalArgumentException("Operation must have only one selection");
-
-        } else if (operationName != null) {
-            for (Selection<?> selection : selectionSet.getSelections()) {
-                if (selection instanceof Field) {
-                    Field field = (Field) selection;
-                    if (field.getName().equals(operationName)) {
-                        return field;
-                    }
-                }
-            }
-            throw new IllegalArgumentException("Operation name: " + operationName + " not found in selection set");
-        } else {
+        if (selectionSet.getSelections().size() == 1) {
             Selection<?> selection = selectionSet.getSelections().get(0);
             if (selection instanceof Field) {
                 return (Field) selection;
             } else {
                 throw new IllegalArgumentException("Operation must have a selection set of type Field");
             }
+        } else {
+            throw new IllegalArgumentException("Multi-operation documents not supported");
         }
     }
 

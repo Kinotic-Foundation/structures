@@ -1,4 +1,4 @@
-package org.kinotic.structures.api.decorators.runtime.mapping;
+package org.kinotic.structures.internal.idl.converters.graphql;
 
 import graphql.schema.GraphQLInputType;
 import graphql.schema.GraphQLOutputType;
@@ -15,7 +15,7 @@ import lombok.experimental.Accessors;
 @Setter
 @Accessors(chain = true)
 @RequiredArgsConstructor
-public class GraphQLTypeHolder {
+public class GqlTypeHolder {
 
     /**
      * The GraphQL input type for the C3 type

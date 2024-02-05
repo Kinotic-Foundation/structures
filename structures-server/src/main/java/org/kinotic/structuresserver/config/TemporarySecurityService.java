@@ -29,6 +29,20 @@ public class TemporarySecurityService implements SecurityService {
                                                                                  ParticipantConstants.PARTICIPANT_TYPE_USER),
                                                                           List.of("ADMIN"));
 
+    /**
+     * Authenticates a user based on the provided authenticationInfo
+     * This currently uses a hard coded username and password for demonstration purposes
+     * Username: admin
+     * Password: structures
+     *
+     * This also supports Basic Auth. The username and password are base64 encoded and sent in the Authorization header
+     * {
+     *   "Authorization":"Basic YWRtaW46c3RydWN0dXJlcw=="
+     * }
+     *
+     * @param authenticationInfo a map of authentication information. The keys and values are specific to the implementation
+     * @return a CompletableFuture that will complete with the authenticated participant or complete exceptionally with an AuthenticationException
+     */
     @Override
     public CompletableFuture<Participant> authenticate(Map<String, String> authenticationInfo) {
         if(authenticationInfo.containsKey("login") && Objects.equals(authenticationInfo.get("login"), "admin")

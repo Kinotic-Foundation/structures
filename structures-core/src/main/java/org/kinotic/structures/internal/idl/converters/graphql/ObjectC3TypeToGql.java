@@ -11,7 +11,6 @@ import org.kinotic.continuum.idl.api.schema.C3Type;
 import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
 import org.kinotic.continuum.idl.api.schema.decorators.NotNullC3Decorator;
 import org.kinotic.structures.api.decorators.ReadOnlyDecorator;
-import org.kinotic.structures.api.decorators.runtime.mapping.GraphQLTypeHolder;
 
 import java.util.Map;
 import java.util.Set;
@@ -24,13 +23,13 @@ import static graphql.schema.GraphQLObjectType.newObject;
 /**
  * Created by Navíd Mitchell 🤪 on 5/2/23.
  */
-public class ObjectC3TypeToGraphQL implements SpecificC3TypeConverter<GraphQLTypeHolder, ObjectC3Type, GraphQLConversionState>, Cacheable {
+public class ObjectC3TypeToGql implements SpecificC3TypeConverter<GqlTypeHolder, ObjectC3Type, GqlConversionState>, Cacheable {
 
     private static final Set<Class<? extends C3Type>> supports = Set.of(ObjectC3Type.class);
 
     @Override
-    public GraphQLTypeHolder convert(ObjectC3Type objectC3Type,
-                                     C3ConversionContext<GraphQLTypeHolder, GraphQLConversionState> conversionContext) {
+    public GqlTypeHolder convert(ObjectC3Type objectC3Type,
+                                 C3ConversionContext<GqlTypeHolder, GqlConversionState> conversionContext) {
 
         GraphQLObjectType.Builder outputBuilder = newObject().name(objectC3Type.getName());
         GraphQLInputObjectType.Builder inputBuilder = newInputObject().name(objectC3Type.getName() + "Input");
@@ -42,11 +41,11 @@ public class ObjectC3TypeToGraphQL implements SpecificC3TypeConverter<GraphQLTyp
 
             conversionContext.state().beginProcessingField(fieldName, entry.getValue());
 
-            GraphQLTypeHolder fieldValue = conversionContext.convert(entry.getValue());
+            GqlTypeHolder fieldValue = conversionContext.convert(entry.getValue());
 
             if (isNotNull(entry.getValue())) {
-                fieldValue = new GraphQLTypeHolder(GraphQLNonNull.nonNull(fieldValue.getInputType()),
-                                                   GraphQLNonNull.nonNull(fieldValue.getOutputType()));
+                fieldValue = new GqlTypeHolder(GraphQLNonNull.nonNull(fieldValue.getInputType()),
+                                               GraphQLNonNull.nonNull(fieldValue.getOutputType()));
             }
 
             conversionContext.state().endProcessingField();
@@ -76,7 +75,7 @@ public class ObjectC3TypeToGraphQL implements SpecificC3TypeConverter<GraphQLTyp
             }
         }
 
-        return new GraphQLTypeHolder(!nullInputTypeFound ? inputBuilder.build() : null, outputBuilder.build());
+        return new GqlTypeHolder(!nullInputTypeFound ? inputBuilder.build() : null, outputBuilder.build());
     }
 
     private boolean isTypeRequiredForInput(C3Type c3Type) {

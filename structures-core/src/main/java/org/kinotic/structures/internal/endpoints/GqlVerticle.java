@@ -21,11 +21,11 @@ import java.util.Set;
  * Created by Navíd Mitchell 🤪 on 6/7/23.
  */
 @Component
-public class GraphQLVerticle extends AbstractVerticle {
+public class GqlVerticle extends AbstractVerticle {
 
     public static final String NAMESPACE_PATH_PARAMETER = "structureNamespace";
 
-    private static final Logger log = LoggerFactory.getLogger(GraphQLVerticle.class);
+    private static final Logger log = LoggerFactory.getLogger(GqlVerticle.class);
 
     private final StructuresProperties properties;
     private final GqlOperationService gqlOperationService;
@@ -33,9 +33,9 @@ public class GraphQLVerticle extends AbstractVerticle {
 
     private HttpServer server;
 
-    public GraphQLVerticle(StructuresProperties properties,
-                           GqlOperationService gqlOperationService,
-                           @Autowired(required = false) SecurityService securityService) {
+    public GqlVerticle(StructuresProperties properties,
+                       GqlOperationService gqlOperationService,
+                       @Autowired(required = false) SecurityService securityService) {
         this.properties = properties;
         this.gqlOperationService = gqlOperationService;
         this.securityService = securityService;
@@ -57,7 +57,7 @@ public class GraphQLVerticle extends AbstractVerticle {
               .consumes("application/json")
               .produces("application/graphql-response+json")
               .handler(BodyHandler.create(false))
-              .handler(new GraphQLHandler(gqlOperationService));
+              .handler(new GqlHandler(gqlOperationService));
 
         // Begin listening for requests
         server.requestHandler(router).listen(properties.getGraphqlPort(), ar -> {
