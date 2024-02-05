@@ -24,7 +24,6 @@ import {
     getRelativeImportPath, tryGetNodeModuleName
 } from '../internal/Utils.js'
 import {UtilFunctionLocator} from '../internal/UtilFunctionLocator.js'
-import inquirer from 'inquirer'
 import chalk from 'chalk'
 import { Liquid } from 'liquidjs'
 import fs from 'fs'
@@ -67,7 +66,6 @@ export class Synchronize extends Command {
 
             if(!(await isStructuresProject())){
                 this.error('The working directory is not a Structures Project')
-                return
             }
 
             const structuresProject= await loadStructuresProject()
@@ -77,7 +75,6 @@ export class Synchronize extends Command {
                 namespaceConfig = structuresProject.findNamespaceConfig(args.namespace)
                 if(namespaceConfig === null){
                     this.error(`No configured namespace found with name ${args.namespace}`)
-                    return
                 }
             }else{
                 namespaceConfig = structuresProject.getDefaultNamespaceConfig()
@@ -189,20 +186,7 @@ export class Synchronize extends Command {
             let structure = await structureService.findById(structureId)
             if (structure) {
                 if (structure.published) {
-                    this.log(chalk.bold(`Structure ${namespace}.${name} is Published.`)+' (You must Un-Publish to save the Structure)')
-                    this.log(chalk.bold.red('CAUTION: This will Delete all of your data.'))
-                    const answers = await inquirer.prompt({
-                        type: 'input',
-                        name: 'input',
-                        message: `Type ${chalk.blue(name)} to Un-Publish or Press Enter to Skip.`,
-                    })
-                    if (answers.input === name) {
-                        this.logVerbose(`Un-Publishing Structure: ${namespace}.${name}`, verbose)
-                        await structureService.unPublish(structureId)
-                    } else {
-                        this.logVerbose(`Skipping Synchronization of Structure: ${namespace}.${name}`, verbose)
-                        return
-                    }
+                    this.log(chalk.bold(`Structure ${chalk.blue(namespace + '.' + name)} is Published. ${chalk.yellow('(Supported Modifications: New Fields. Un-Publish for all other changes.)')}`))
                 }
                 // update existing structure
                 structure.entityDefinition = entity

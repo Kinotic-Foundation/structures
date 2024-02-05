@@ -113,32 +113,46 @@ public class DefaultStructureService implements StructureService {
                         return CompletableFuture.failedFuture(new IllegalArgumentException("Structure cannot be found for id: " + structure.getId()));
                     }
 
-                    if(existingStructure.isPublished()){
-                        return CompletableFuture
-                                .failedFuture(new IllegalStateException("Currently you cannot Save a Published Structure. You must Un-Publish it first."));
-                    }
-
+                    // FIXME: handle namespace/name changes
                     // updating an existing structure, reconcile the differences
                     structure.setUpdated(new Date());
                     structure.setCreated(existingStructure.getCreated());
                     structure.setName(existingStructure.getName());
                     structure.setNamespace(existingStructure.getNamespace());
                     structure.setItemIndex(existingStructure.getItemIndex());
-                    structure.setPublished(false);
+                    structure.setPublished(existingStructure.isPublished());
                     structure.setPublishedTimestamp(null);
                     structure.setDecoratedProperties(null);
 
                     // Try and create ES mapping to make sure IDL is valid
-                    ElasticConversionResult result = structureConversionService.convertToElasticMapping(structure);
+                    ElasticConversionResult conversionResult = structureConversionService.convertToElasticMapping(structure);
 
                     // TODO: how to ensure structures namespace name match the C3Type name
                     // Should we just use the Structures one?
-                    structure.setMultiTenancyType(result.getMultiTenancyType());
+                    structure.setMultiTenancyType(conversionResult.getMultiTenancyType());
 
-                    // FIXME: what to do when the namespace changes on an unpublished structure?  right now you end up with a broken id and index name
-
-                    // FIXME: reconcile structure differences (should be async)
-                    return structureDAO.save(structure);
+                    if(structure.isPublished()) {
+                        // FIXME: how to best handle an operation where the mapping completes but the save fails.
+                        //        Additionally this could have serious race conditions if multiple clients are updating the same structure
+                        //        This could probably be solved by verifying the mapping is still valid before saving
+                        //        (diff the fields and make sure only fields are added and no types are changed)
+                        //        Then this could be moved to save the structure first with optimistic locking, and if that succeeds then update the mapping
+                        return crudServiceTemplate
+                                .updateIndexMapping(structure.getItemIndex(),
+                                                    mappingBuilder -> mappingBuilder.dynamic(DynamicMapping.Strict)
+                                                                                    .properties(conversionResult.getObjectProperty()
+                                                                                                                .properties()))
+                                .thenCompose(v -> {
+                                    structure.setDecoratedProperties(conversionResult.getDecoratedProperties());
+                                    return structureDAO.save(structure)
+                                                       .thenApply(structure1 -> {
+                                                           cacheEvictionService.evictCachesFor(structure);
+                                                           return null;
+                                                       });
+                                });
+                    }else{
+                        return structureDAO.save(structure);
+                    }
                 });
     }
 

@@ -11,6 +11,7 @@ import co.elastic.clients.elasticsearch.core.mget.MultiGetResponseItem;
 import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.elasticsearch.core.search.HitsMetadata;
 import co.elastic.clients.elasticsearch.indices.CreateIndexRequest;
+import co.elastic.clients.elasticsearch.indices.PutMappingRequest;
 import co.elastic.clients.elasticsearch.indices.StorageType;
 import co.elastic.clients.json.JsonpDeserializer;
 import co.elastic.clients.json.JsonpMapperBase;
@@ -110,6 +111,27 @@ public class CrudServiceTemplate {
                                     } else {
                                         return CompletableFuture.completedFuture(null);
                                     }
+                                }
+                            });
+    }
+
+    CompletableFuture<Void> updateIndexMapping(String indexName,
+                                               Consumer<PutMappingRequest.Builder> builderConsumer){
+        return esAsyncClient.indices().exists(builder -> builder.index(indexName))
+                            .thenCompose(exists -> {
+                                if (exists.value()) {
+                                    return esAsyncClient.indices()
+                                                        .putMapping(builder -> {
+                                                            builder.index(indexName);
+                                                            if (builderConsumer != null) {
+                                                                builderConsumer.accept(builder);
+                                                            }
+                                                            return builder;
+                                                        })
+                                                        .thenApply(response -> null);
+                                } else {
+                                    return CompletableFuture.failedFuture(new IllegalArgumentException(
+                                            "Index "+indexName+" does not exist"));
                                 }
                             });
     }
