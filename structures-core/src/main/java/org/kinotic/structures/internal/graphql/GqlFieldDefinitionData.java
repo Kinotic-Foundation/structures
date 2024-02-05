@@ -24,7 +24,7 @@ public class GqlFieldDefinitionData {
     private final GraphQLObjectType outputType;
 
     /**
-     * The {@link GraphQLInputObjectType} that is created from the {@link ObjectC3Type} for the Entity
+     * The {@link GraphQLInputObjectType} that is created from the {@link ObjectC3Type} for the Entity or null if the Entity does not have an input type
      */
     private final GraphQLInputObjectType inputType;
 

@@ -42,9 +42,12 @@ public class ObjectC3TypeToOpenApi implements SpecificC3TypeConverter<Schema<?>,
             }
 
             // if this is an object we create a reference schema
+            // TODO: handle cases where the same object name is used across multiple different types in the same namespace
+            //       To handle this we will need to keep track of all "Models" per namespace and check for conflicts
+            //       Or this could be done by keeping the Conversion State around and converting all Structures for a namespace at once
             if(entry.getValue() instanceof ObjectC3Type){
                 ObjectC3Type objectField = (ObjectC3Type) entry.getValue();
-                conversionContext.state().addReferenceSchema(objectField.getName(), fieldValue);
+                conversionContext.state().addReferencedSchema(objectField.getName(), fieldValue);
                 fieldValue = new Schema<>().$ref("#/components/schemas/"+objectField.getName());
             }
 

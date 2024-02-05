@@ -24,7 +24,7 @@ public class EnumC3TypeToOpenApi implements SpecificC3TypeConverter<Schema<?>, E
         StringSchema stringSchema = new StringSchema();
         stringSchema.setEnum(c3Type.getValues());
 
-        conversionContext.state().addReferenceSchema(c3Type.getName(), stringSchema);
+        conversionContext.state().addReferencedSchema(c3Type.getName(), stringSchema);
 
         return new Schema<>().$ref("#/components/schemas/"+c3Type.getName());
     }

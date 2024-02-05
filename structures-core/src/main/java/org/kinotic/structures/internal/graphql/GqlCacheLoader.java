@@ -18,6 +18,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.function.Function;
@@ -68,7 +69,7 @@ public class GqlCacheLoader implements AsyncCacheLoader<String, GraphQL> {
                     Map<String, GqlConversionResult> conversionResultMap = new HashMap<>();
                     for (Structure structure : structures.getContent()) {
                         conversionResultMap.put(structure.getId(),
-                                             structureConversionService.convertToGqlMapping(structure));
+                                                structureConversionService.convertToGqlMapping(structure));
                     }
 
                     GraphQLInputObjectType pageableType = createPageableType();
@@ -77,7 +78,7 @@ public class GqlCacheLoader implements AsyncCacheLoader<String, GraphQL> {
                     GraphQLObjectType.Builder queryBuilder = newObject().name("Query");
                     GraphQLObjectType.Builder mutationBuilder = newObject().name("Mutation");
                     GraphQLCodeRegistry.Builder codeRegistryBuilder = GraphQLCodeRegistry.newCodeRegistry();
-                    boolean mutationsAdded = false;
+                    Map<String, GraphQLType> additionalTypes = new HashMap<>();
 
                     for (Map.Entry<String, GqlConversionResult> entry : conversionResultMap.entrySet()) {
 
@@ -89,15 +90,7 @@ public class GqlCacheLoader implements AsyncCacheLoader<String, GraphQL> {
                             throw new IllegalStateException("Output type must be a GraphQLObjectType");
                         }
 
-                        GraphQLInputObjectType inputType = null;
-                        // Will be null if a UnionC3Type is found anywhere in the object graph
-                        if (structureType.getInputType() != null) {
-                            if (structureType.getInputType() instanceof GraphQLInputObjectType) {
-                                inputType = (GraphQLInputObjectType) structureType.getInputType();
-                            } else {
-                                throw new IllegalStateException("Input type must be a GraphQLInputObjectType");
-                            }
-                        }
+                        GraphQLInputObjectType inputType = getGraphQLInputObjectType(structureType);
 
                         String structureName = WordUtils.capitalize(outputType.getName());
                         GraphQLTypeReference graphQLTypeReference = new GraphQLTypeReference(outputType.getName());
@@ -107,46 +100,43 @@ public class GqlCacheLoader implements AsyncCacheLoader<String, GraphQL> {
                                                                                            .outputType(outputType)
                                                                                            .inputType(inputType)
                                                                                            .structuresName(structureName)
-                                                                                           .pageableReference(pageableReference)
-                                                                                           .pageResponseType(pageResponseType).build();
+                                                                                           .pageableReference(
+                                                                                                   pageableReference)
+                                                                                           .pageResponseType(
+                                                                                                   pageResponseType)
+                                                                                           .build();
 
                         // Add all graphQL operations to the schema
-                        for(GqlOperationDefinition definition : gqlOperationProviderService.getOperationDefinitions()){
-
-                            Function<GqlFieldDefinitionData, GraphQLFieldDefinition> function = definition.getFieldDefinitionFunction();
-
-                            if(definition.getOperationType() == OperationDefinition.Operation.QUERY) {
-
-                                queryBuilder.field(function.apply(fieldDefinitionData));
-
-                            }else if(definition.getOperationType() == OperationDefinition.Operation.MUTATION){
-
-                                if(fieldDefinitionData.getInputType() != null){
-                                    mutationBuilder.field(function.apply(fieldDefinitionData));
-                                    mutationsAdded = true;
-                                }
-
-                            }else{
-                                log.error("Unsupported operation {} type: {}", definition.getOperationNamePrefix(), definition.getOperationType());
-                            }
-                        }
+                        addOperations(queryBuilder, fieldDefinitionData, mutationBuilder);
 
                         // Add all type resolvers to the schema
-                        for(GraphQLUnionType unionType : entry.getValue().getUnionTypes()){
+                        for (GraphQLUnionType unionType : entry.getValue().getUnionTypes()) {
                             // NoOp is used since we do not actually use the GraphQL api to execute operations
                             codeRegistryBuilder.typeResolver(unionType, new NoOpTypeResolver());
                         }
+
+                        // Add all additional types to the schema
+                        additionalTypes.putAll(entry.getValue().getAdditionalTypes());
                     }
 
                     GraphQLSchema.Builder graphQLSchemaBuilder = GraphQLSchema.newSchema()
-                                                               .codeRegistry(codeRegistryBuilder.build())
-                                                               .query(queryBuilder.build())
-                                                               .additionalType(pageableType);
+                                                                              .codeRegistry(codeRegistryBuilder.build())
+                                                                              .additionalType(pageableType);
 
-                    // if all types contain a union type then there will be no mutations
-                    if(mutationsAdded){
-                        graphQLSchemaBuilder.mutation(mutationBuilder.build());
+                    GraphQLObjectType query = queryBuilder.build();
+                    if (!query.getFieldDefinitions().isEmpty()) {
+                        graphQLSchemaBuilder.query(query);
+                    }else{
+                        // This namespace has no published structures, so we add a dummy query to prevent errors
+                        queryBuilder.field(newFieldDefinition().name("empty").type(GraphQLString));
+                        graphQLSchemaBuilder.query(queryBuilder.build());
                     }
+                    GraphQLObjectType mutation = mutationBuilder.build();
+                    if (!mutation.getFieldDefinitions().isEmpty()) {
+                        graphQLSchemaBuilder.mutation(mutation);
+                    }
+
+                    graphQLSchemaBuilder.additionalTypes(Set.copyOf(additionalTypes.values()));
                     GraphQLSchema graphQLSchema = graphQLSchemaBuilder.build();
 
                     log.debug("Finished creating GraphQL Schema for namespace: {} in {}ms",
@@ -172,6 +162,51 @@ public class GqlCacheLoader implements AsyncCacheLoader<String, GraphQL> {
 
                     return CompletableFuture.completedFuture(graphQLSchema);
                 }, executor);
+    }
+
+    /**
+     * Adds all operations to the query and mutation builders
+     *
+     * @param queryBuilder        the query builder
+     * @param fieldDefinitionData the field definition data
+     * @param mutationBuilder     the mutation builder
+     */
+    private void addOperations(GraphQLObjectType.Builder queryBuilder,
+                               GqlFieldDefinitionData fieldDefinitionData,
+                               GraphQLObjectType.Builder mutationBuilder) {
+        for (GqlOperationDefinition definition : gqlOperationProviderService.getOperationDefinitions()) {
+
+            Function<GqlFieldDefinitionData, GraphQLFieldDefinition> function = definition.getFieldDefinitionFunction();
+
+            if (definition.getOperationType() == OperationDefinition.Operation.QUERY) {
+
+                queryBuilder.field(function.apply(fieldDefinitionData));
+
+            } else if (definition.getOperationType() == OperationDefinition.Operation.MUTATION) {
+
+                if (fieldDefinitionData.getInputType() != null) {
+                    mutationBuilder.field(function.apply(fieldDefinitionData));
+                }
+
+            } else {
+                log.error("Unsupported operation {} type: {}",
+                          definition.getOperationNamePrefix(),
+                          definition.getOperationType());
+            }
+        }
+    }
+
+    private static GraphQLInputObjectType getGraphQLInputObjectType(GqlTypeHolder structureType) {
+        GraphQLInputObjectType inputType = null;
+        // Will be null if a UnionC3Type is found anywhere in the object graph
+        if (structureType.getInputType() != null) {
+            if (structureType.getInputType() instanceof GraphQLInputObjectType) {
+                inputType = (GraphQLInputObjectType) structureType.getInputType();
+            } else {
+                throw new IllegalStateException("Input type must be a GraphQLInputObjectType");
+            }
+        }
+        return inputType;
     }
 
     private GraphQLInputObjectType createOrderType() {

@@ -76,7 +76,7 @@ public class DefaultStructureConversionService implements StructureConversionSer
 
         GqlTypeHolder typeHolder = converter.convert(structure.getEntityDefinition());
 
-        return new GqlConversionResult(typeHolder, state.getUnionTypes());
+        return new GqlConversionResult(typeHolder, state.getUnionTypes(), state.getReferencedTypes());
     }
 
     @Override
@@ -95,6 +95,6 @@ public class DefaultStructureConversionService implements StructureConversionSer
             throw new IllegalStateException("EntityDefinition did not convert to an OpenAPI ObjectSchema");
         }
 
-        return new OpenApiConversionResult(ret, state.getReferenceSchemas());
+        return new OpenApiConversionResult(ret, state.getReferencedSchemas());
     }
 }

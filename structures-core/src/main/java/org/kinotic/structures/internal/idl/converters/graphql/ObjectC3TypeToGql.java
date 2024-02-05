@@ -1,9 +1,6 @@
 package org.kinotic.structures.internal.idl.converters.graphql;
 
-import graphql.schema.GraphQLAppliedDirective;
-import graphql.schema.GraphQLInputObjectType;
-import graphql.schema.GraphQLNonNull;
-import graphql.schema.GraphQLObjectType;
+import graphql.schema.*;
 import org.kinotic.continuum.idl.api.converter.C3ConversionContext;
 import org.kinotic.continuum.idl.api.converter.Cacheable;
 import org.kinotic.continuum.idl.api.converter.SpecificC3TypeConverter;
@@ -19,7 +16,8 @@ import static graphql.schema.GraphQLFieldDefinition.newFieldDefinition;
 import static graphql.schema.GraphQLInputObjectField.newInputObjectField;
 import static graphql.schema.GraphQLInputObjectType.newInputObject;
 import static graphql.schema.GraphQLObjectType.newObject;
-
+import static graphql.schema.GraphQLTypeReference.typeRef;
+import static graphql.schema.GraphQLNonNull.nonNull;
 /**
  * Created by Navíd Mitchell 🤪 on 5/2/23.
  */
@@ -43,9 +41,29 @@ public class ObjectC3TypeToGql implements SpecificC3TypeConverter<GqlTypeHolder,
 
             GqlTypeHolder fieldValue = conversionContext.convert(entry.getValue());
 
+            // If the field is an object type, we need to replace it with a reference to the object type
+            // TODO: handle cases where the same object name is used across multiple different types in the same namespace
+            //       To handle this we will need to keep track of all "Models" per namespace and check for conflicts
+            //       Or this could be done by keeping the Conversion State around and converting all Structures for a namespace at once
+            if(fieldValue.getOutputType() instanceof GraphQLObjectType){
+                GraphQLObjectType objectType = (GraphQLObjectType) fieldValue.getOutputType();
+                String objectTypeName = objectType.getName();
+
+                conversionContext.state().getReferencedTypes().put(objectTypeName, objectType);
+                fieldValue.setOutputType(typeRef(objectTypeName));
+            }
+
+            if(fieldValue.getInputType() instanceof GraphQLInputObjectType){
+                GraphQLInputObjectType inputObjectType = (GraphQLInputObjectType) fieldValue.getInputType();
+                String inputTypeName = inputObjectType.getName();
+
+                conversionContext.state().getReferencedTypes().put(inputTypeName, inputObjectType);
+                fieldValue.setInputType(typeRef(inputTypeName));
+            }
+
             if (isNotNull(entry.getValue())) {
-                fieldValue = new GqlTypeHolder(GraphQLNonNull.nonNull(fieldValue.getInputType()),
-                                               GraphQLNonNull.nonNull(fieldValue.getOutputType()));
+                fieldValue.setOutputType(nonNull(fieldValue.getOutputType()));
+                fieldValue.setInputType(nonNull(fieldValue.getInputType()));
             }
 
             conversionContext.state().endProcessingField();

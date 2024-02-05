@@ -2,8 +2,8 @@ package org.kinotic.structures.internal.idl.converters.graphql;
 
 import graphql.schema.GraphQLInputType;
 import graphql.schema.GraphQLOutputType;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 
@@ -14,17 +14,17 @@ import lombok.experimental.Accessors;
 @Getter
 @Setter
 @Accessors(chain = true)
-@RequiredArgsConstructor
+@AllArgsConstructor
 public class GqlTypeHolder {
 
     /**
      * The GraphQL input type for the C3 type
      */
-    private final GraphQLInputType inputType;
+    private GraphQLInputType inputType;
 
     /**
      * The GraphQL output type for the C3 type
      */
-    private final GraphQLOutputType outputType;
+    private GraphQLOutputType outputType;
 
 }
