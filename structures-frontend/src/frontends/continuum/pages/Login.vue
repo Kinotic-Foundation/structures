@@ -23,6 +23,7 @@
                                         required
                                         v-model="login"
                                         :rules="loginRules"
+                                        autofocus
                                         @focus="hideAlert">
                                     </v-text-field>
                                     <v-text-field

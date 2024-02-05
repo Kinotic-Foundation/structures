@@ -71,15 +71,15 @@ export default class CliSessionUpgrade extends Vue {
                     // The cli will then take over this session and be logged in as the user
                     await this.sessionUpgradeService.upgradeSession(decodedId, this.userState.connectedInfo.sessionId)
 
-                    // we abandon connection so session can be used by CLI
-                    // TODO: add true upgrade session logic and remove this
-                    await Continuum.disconnect(true)
-
                 }catch (e) {
                     this.setStatus('Error connecting CLI to Continuum: ' + e, false, false)
                 } finally {
                     this.setStatus('You can close this tab and return to your command line.', true, false)
                 }
+                // we abandon connection so session can be used by CLI
+                // TODO: add true upgrade session logic and remove this
+                await Continuum.disconnect()
+                this.loading = false
             }else{
                 this.setStatus('Error connecting CLI to Continuum: No session found.', false, false)
             }
