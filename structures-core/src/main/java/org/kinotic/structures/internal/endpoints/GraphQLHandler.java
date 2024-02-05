@@ -133,7 +133,7 @@ public class GraphQLHandler implements Handler<RoutingContext> {
                                                            .map(q -> gqlOperationService.execute(rc, q))
                                                            .collect(toList());
 
-        // FIXME: send ressult as response
+        // FIXME: send result as response
 
 //        CompletableFuture.allOf(results.toArray(new CompletableFuture<?>[0]))
 //                         .thenApply(v -> {

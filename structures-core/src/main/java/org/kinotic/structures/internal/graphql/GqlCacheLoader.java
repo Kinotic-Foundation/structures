@@ -1,7 +1,5 @@
 package org.kinotic.structures.internal.graphql;
 
-import com.apollographql.federation.graphqljava.Federation;
-import com.apollographql.federation.graphqljava._Entity;
 import com.github.benmanes.caffeine.cache.AsyncCacheLoader;
 import graphql.GraphQL;
 import graphql.language.OperationDefinition;
@@ -18,7 +16,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
@@ -140,22 +137,22 @@ public class GqlCacheLoader implements AsyncCacheLoader<String, GraphQL> {
                               namespace,
                               System.currentTimeMillis() - start);
 
-                    DataFetcher<?> entityDataFetcher = env -> {
-                        List<Map<String, Object>> representations = env.getArgument(_Entity.argumentName);
-                        log.warn("Entity data fetcher called with representations: {}", representations);
-                        return null;
-                    };
-                    TypeResolver entityTypeResolver = env -> {
-                        final Object obj = env.getObject();
-                        log.warn("Type resolver called with class: {}", obj.getClass());
-                        return null;
-                    };
+//                    DataFetcher<?> entityDataFetcher = env -> {
+//                        List<Map<String, Object>> representations = env.getArgument(_Entity.argumentName);
+//                        log.warn("Entity data fetcher called with representations: {}", representations);
+//                        return null;
+//                    };
+//                    TypeResolver entityTypeResolver = env -> {
+//                        final Object obj = env.getObject();
+//                        log.warn("Type resolver called with class: {}", obj.getClass());
+//                        return null;
+//                    };
 
-                    graphQLSchema = Federation.transform(graphQLSchema)
-                                              .setFederation2(true)
-                                              .fetchEntities(entityDataFetcher)
-                                              .resolveEntityType(entityTypeResolver)
-                                              .build();
+//                    graphQLSchema = Federation.transform(graphQLSchema)
+//                                              .setFederation2(true)
+//                                              .fetchEntities(entityDataFetcher)
+//                                              .resolveEntityType(entityTypeResolver)
+//                                              .build();
 
                     return CompletableFuture.completedFuture(graphQLSchema);
                 }, executor);
