@@ -19,10 +19,10 @@ import java.util.Map;
 @NoArgsConstructor
 public class OpenApiConversionState extends BaseConversionState {
 
-    private final Map<String, Schema<?>> referenceSchemas = new HashMap<>();
+    private final Map<String, Schema<?>> referencedSchemas = new HashMap<>();
 
-    public OpenApiConversionState addReferenceSchema(String name, Schema<?> schema){
-        referenceSchemas.put(name, schema);
+    public OpenApiConversionState addReferencedSchema(String name, Schema<?> schema){
+        referencedSchemas.put(name, schema);
         return this;
     }
 

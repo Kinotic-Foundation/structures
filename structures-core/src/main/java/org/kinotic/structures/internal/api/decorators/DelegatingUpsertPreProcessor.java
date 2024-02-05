@@ -61,7 +61,7 @@ public class DelegatingUpsertPreProcessor implements UpsertPreProcessor<Object, 
             ret = rawJsonUpsertPreProcessor.processArray((RawJson) entities, context);
         } else if(entities instanceof List) {
             List<?> list = (List<?>) entities;
-            if(list.size() > 0){
+            if(!list.isEmpty()){
                 Object first = list.get(0);
                 if(first instanceof Map){
                     ret = mapUpsertPreProcessor.processArray((List<Map<Object, Object>>) entities, context);

@@ -8,7 +8,6 @@ import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
 import org.springframework.data.elasticsearch.core.ReactiveElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.ReactiveIndexOperations;
-import reactor.core.publisher.Mono;
 
 import javax.annotation.PostConstruct;
 import java.util.concurrent.CompletableFuture;
@@ -41,7 +40,7 @@ public abstract class AbstractCrudService<T extends Identifiable<String>> implem
         // create mapping for class, we don't check if it has a Document annotation for now since all of these calls require an index to exist
         ReactiveIndexOperations indexOperations = esOperations.indexOps(type);
         indexOperations.exists() //
-                       .flatMap(exists -> exists ? Mono.empty() : indexOperations.createWithMapping())
+                       .flatMap(exists -> exists ? indexOperations.putMapping() : indexOperations.createWithMapping())
                        .block();
     }
 

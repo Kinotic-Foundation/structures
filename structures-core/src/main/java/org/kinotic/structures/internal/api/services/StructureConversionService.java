@@ -1,6 +1,5 @@
 package org.kinotic.structures.internal.api.services;
 
-import org.kinotic.structures.api.decorators.runtime.mapping.GraphQLTypeHolder;
 import org.kinotic.structures.api.domain.Structure;
 
 /**
@@ -12,21 +11,21 @@ public interface StructureConversionService {
     /**
      * Converts the given {@link Structure#getEntityDefinition()} to an ElasticSearch ObjectProperty
      * @param structure to convert
-     * @return the converted {@link ElasticConversionResult}
+     * @return the {@link ElasticConversionResult} created for the {@link Structure}
      */
     ElasticConversionResult convertToElasticMapping(Structure structure);
 
     /**
      * Converts the given {@link Structure#getEntityDefinition()} to an OpenAPI Schema
      * @param structure to convert
-     * @return the converted {@link GraphQLTypeHolder}
+     * @return the {@link GqlConversionResult} created for the {@link Structure}
      */
-    GraphQLTypeHolder convertToGraphQLMapping(Structure structure);
+    GqlConversionResult convertToGqlMapping(Structure structure);
 
     /**
      * Converts the given {@link Structure#getEntityDefinition()} to an OpenAPI Schema
      * @param structure to convert
-     * @return the converted {@link OpenApiConversionResult}
+     * @return the {@link OpenApiConversionResult} created for the {@link Structure}
      */
     OpenApiConversionResult convertToOpenApiMapping(Structure structure);
 

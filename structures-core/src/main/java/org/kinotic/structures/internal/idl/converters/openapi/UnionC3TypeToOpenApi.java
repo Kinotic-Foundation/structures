@@ -36,7 +36,7 @@ public class UnionC3TypeToOpenApi implements SpecificC3TypeConverter<Schema<?>, 
 
             Schema<?> objectSchema = conversionContext.convert(objectC3Type);
 
-            conversionContext.state().addReferenceSchema(objectC3Type.getName(), objectSchema);
+            conversionContext.state().addReferencedSchema(objectC3Type.getName(), objectSchema);
 
             String refPath = "#/components/schemas/"+objectC3Type.getName();
 

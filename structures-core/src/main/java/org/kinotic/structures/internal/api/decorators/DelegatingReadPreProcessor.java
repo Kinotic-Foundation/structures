@@ -94,11 +94,43 @@ public class DelegatingReadPreProcessor {
         }
     }
 
+    public void beforeFindById(Structure structure,
+                               GetRequest.Builder builder,
+                               EntityContext context){
+
+        // add multi tenancy filters if needed
+        if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
+            builder.routing(context.getParticipant().getTenantId());
+            builder.sourceExcludes(structuresProperties.getTenantIdFieldName());
+        }
+
+        if(context.hasIncludedFieldsFilter()){
+            builder.sourceIncludes(context.getIncludedFieldsFilter());
+        }
+    }
+
+    public void beforeFindByIds(Structure structure,
+                                MgetRequest.Builder builder,
+                                EntityContext context){
+
+        // add multi tenancy filters if needed
+        if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
+            builder.routing(context.getParticipant().getTenantId());
+            builder.sourceExcludes(structuresProperties.getTenantIdFieldName());
+        }
+
+        if(context.hasIncludedFieldsFilter()){
+            builder.sourceIncludes(context.getIncludedFieldsFilter());
+        }
+    }
+
     public void beforeFindAll(Structure structure,
                               SearchRequest.Builder builder,
                               EntityContext context) {
 
         Query.Builder queryBuilder = createQueryWithTenantLogic(structure, context, builder::routing);
+
+        addSourceFilter(structure, builder, context);
 
         if(findAllPreProcessors != null && !findAllPreProcessors.isEmpty()){
             if(queryBuilder == null){
@@ -114,64 +146,66 @@ public class DelegatingReadPreProcessor {
         }
     }
 
-    public void beforeFindById(Structure structure,
-                               GetRequest.Builder builder,
-                               EntityContext context){
-
-        // add multi tenancy filters if needed
-        if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
-            builder.routing(context.getParticipant().getTenantId());
-            builder.sourceExcludes(structuresProperties.getTenantIdFieldName());
-        }
-    }
-
-    public void beforeFindByIds(Structure structure,
-                               MgetRequest.Builder builder,
-                               EntityContext context){
-
-        // add multi tenancy filters if needed
-        if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
-            builder.routing(context.getParticipant().getTenantId());
-            builder.sourceExcludes(structuresProperties.getTenantIdFieldName());
-        }
+    private void addSourceFilter(Structure structure, SearchRequest.Builder builder, EntityContext context) {
+        // Set source fields filters
+        builder.source(b -> b.filter(sf -> {
+            // TODO: Put this back when no longer applicable
+            // If MultiTenancyType.SHARED exclude tenant id
+//            if(structure.getMultiTenancyType() == MultiTenancyType.SHARED) {
+//                // Currently this must not be done to support our multi tenancy paranoid check
+//                sf.excludes(structuresProperties.getTenantIdFieldName());
+//            }
+            // Add source fields filter
+            if(context.hasIncludedFieldsFilter()){
+                // If this is an empty field we exclude all fields from the source
+                if(context.getIncludedFieldsFilter().isEmpty()) {
+                    sf.excludes("*");
+                }else {
+                    sf.includes(context.getIncludedFieldsFilter());
+                }
+                // TODO: remove this when above is put back
+                if(structure.getMultiTenancyType() == MultiTenancyType.SHARED) {
+                    sf.includes(structuresProperties.getTenantIdFieldName());
+                }
+            }
+            return sf;
+        }));
     }
 
     public void beforeSearch(Structure structure,
                              String searchText,
                              SearchRequest.Builder builder,
-                             Query.Builder queryBuilder,
                              EntityContext context) {
 
-        // add multi tenancy filters if needed
-        if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
-            builder.routing(context.getParticipant().getTenantId());
-            queryBuilder
-                    .bool(b -> b.must(must -> must.queryString(qs -> qs.query(searchText).analyzeWildcard(true)))
-                                .filter(qb -> qb.term(tq -> tq.field(structuresProperties.getTenantIdFieldName())
-                                                              .value(context.getParticipant().getTenantId()))));
-        }else{
-            queryBuilder.queryString(qs -> qs.query(searchText).analyzeWildcard(true));
-        }
+        Query.Builder queryBuilder = createQueryWithTenantLogicAndSearch(structure, searchText, context, builder::routing);
+
+        addSourceFilter(structure, builder, context);
 
         if(searchPreProcessors != null && !searchPreProcessors.isEmpty()){
             for(Triple<String, C3Decorator, SearchPreProcessor<C3Decorator>> tuple : searchPreProcessors){
                 tuple.getRight().beforeSearch(structure, tuple.getLeft(), tuple.getMiddle(), queryBuilder, context);
             }
         }
+
+        builder.query(queryBuilder.build());
     }
 
-    private Query.Builder createQueryWithTenantLogicAndSearch(Structure structure, String query, EntityContext context, Consumer<String> routingConsumer) {
+    private Query.Builder createQueryWithTenantLogicAndSearch(Structure structure,
+                                                              String searchText,
+                                                              EntityContext context,
+                                                              Consumer<String> routingConsumer) {
         Query.Builder queryBuilder;
-        if(query != null){
+        if(searchText != null){
             queryBuilder = new Query.Builder();
+            // add multi tenancy filters if needed
             if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
                 routingConsumer.accept(context.getParticipant().getTenantId());
                 queryBuilder
-                        .bool(b -> b.must(must -> must.queryString(qs -> qs.query(query).analyzeWildcard(true)))
-                                .filter(qb -> qb.term(tq -> tq.field(structuresProperties.getTenantIdFieldName())
-                                        .value(context.getParticipant().getTenantId()))));
+                        .bool(b -> b.must(must -> must.queryString(qs -> qs.query(searchText).analyzeWildcard(true)))
+                                    .filter(qb -> qb.term(tq -> tq.field(structuresProperties.getTenantIdFieldName())
+                                                                  .value(context.getParticipant().getTenantId()))));
             }else{
-                queryBuilder.queryString(qs -> qs.query(query).analyzeWildcard(true));
+                queryBuilder.queryString(qs -> qs.query(searchText).analyzeWildcard(true));
             }
         }else{
             queryBuilder = createQueryWithTenantLogic(structure, context, routingConsumer);

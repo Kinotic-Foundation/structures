@@ -223,7 +223,10 @@ public class DefaultStructureService implements StructureService {
                                 structure.setDecoratedProperties(result.getDecoratedProperties());
 
                                 return structureDAO.save(structure)
-                                                   .thenApply(structure1 -> null);
+                                                   .thenApply(structure1 -> {
+                                                       cacheEvictionService.evictCachesFor(structure);
+                                                       return null;
+                                                   });
                             });
                 });
     }

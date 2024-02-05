@@ -391,9 +391,6 @@ public class DefaultOpenApiService implements OpenApiService {
             pageSchema.addProperty("content", new ArraySchema()
                     .items(new Schema<>().$ref(Components.COMPONENTS_SCHEMAS_REF + structure.getName())));
 
-            pageSchema.addProperty("size", new IntegerSchema()
-                    .description("The number of entities per page."));
-
             pageSchema.addProperty("totalElements", new IntegerSchema()
                     .description("The total number of entities."));
 

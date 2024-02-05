@@ -2,7 +2,6 @@ package org.kinotic.structures.internal.api.services.impl;
 
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import co.elastic.clients.elasticsearch._types.Refresh;
-import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import co.elastic.clients.elasticsearch.core.BulkRequest;
 import co.elastic.clients.elasticsearch.core.UpdateRequest;
 import co.elastic.clients.elasticsearch.core.bulk.BulkOperation;
@@ -22,6 +21,7 @@ import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.internal.api.decorators.DelegatingReadPreProcessor;
 import org.kinotic.structures.internal.api.decorators.DelegatingUpsertPreProcessor;
 import org.kinotic.structures.internal.api.decorators.EntityHolder;
+import org.kinotic.structures.internal.api.services.EntityContextConstants;
 import org.kinotic.structures.internal.api.services.EntityService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -83,18 +83,24 @@ public class DefaultEntityService implements EntityService {
                 return esAsyncClient.index(i -> i
                                             .routing(routing)
                                             .index(structure.getItemIndex())
-                                            .id(entityHolder.getId())
+                                            .id(entityHolder.getDocumentId())
                                             .document(binaryData)
                                             .refresh(Refresh.True))
-                                    .thenApply(indexResponse -> (T) rawEntity);
+                                    .thenApply(indexResponse -> {
+                                        context.put(EntityContextConstants.ENTITY_ID_KEY, entityHolder.getId());
+                                        return (T) rawEntity;
+                                    });
             }else{
                 return esAsyncClient.index(i -> i
                                             .routing(routing)
                                             .index(structure.getItemIndex())
-                                            .id(entityHolder.getId())
+                                            .id(entityHolder.getDocumentId())
                                             .document(entityHolder.getEntity())
                                             .refresh(Refresh.True))
-                                    .thenApply(indexResponse -> (T) entityHolder.getEntity());
+                                    .thenApply(indexResponse -> {
+                                        context.put(EntityContextConstants.ENTITY_ID_KEY, entityHolder.getId());
+                                        return (T) entityHolder.getEntity();
+                                    });
             }
         });
     }
@@ -105,7 +111,7 @@ public class DefaultEntityService implements EntityService {
                              context,
                              entityHolder -> BulkOperation.of(b -> b
                                      .index(idx -> idx.index(structure.getItemIndex())
-                                                      .id(entityHolder.getId())
+                                                      .id(entityHolder.getDocumentId())
                                                       .document(entityHolder.getEntity())
                                      )));
     }
@@ -122,11 +128,14 @@ public class DefaultEntityService implements EntityService {
             return esAsyncClient.update(UpdateRequest.of(u -> u
                                         .routing(routing)
                                         .index(structure.getItemIndex())
-                                        .id(entityHolder.getId())
+                                        .id(entityHolder.getDocumentId())
                                         .doc(entityHolder.getEntity())
                                         .docAsUpsert(true)
                                         .refresh(Refresh.True)), entityHolder.getEntity().getClass())
-                                .thenApply(updateResponse -> (T) entityHolder.getEntity());
+                                .thenApply(updateResponse -> {
+                                    context.put(EntityContextConstants.ENTITY_ID_KEY, entityHolder.getId());
+                                    return (T) entityHolder.getEntity();
+                                });
         });
     }
 
@@ -137,7 +146,7 @@ public class DefaultEntityService implements EntityService {
                              entityHolder -> BulkOperation.of(b -> b
                                      .update(u -> u
                                              .index(structure.getItemIndex())
-                                             .id(entityHolder.getId())
+                                             .id(entityHolder.getDocumentId())
                                              .action(upB -> upB.doc(entityHolder.getEntity())
                                                                .docAsUpsert(true)
                                                                .detectNoop(true))
@@ -249,7 +258,8 @@ public class DefaultEntityService implements EntityService {
     public CompletableFuture<Void> deleteById(String id, EntityContext context) {
         return validateTenantAndComposeId(id, context)
                 .thenCompose(composedId -> crudServiceTemplate
-                        .deleteById(structure.getItemIndex(), composedId,
+                        .deleteById(structure.getItemIndex(),
+                                    composedId,
                                     builder -> delegatingReadPreProcessor.beforeDelete(structure, builder, context))
                         .thenApply(deleteResponse -> null));
     }
@@ -267,7 +277,9 @@ public class DefaultEntityService implements EntityService {
     public <T> CompletableFuture<Page<T>> findAll(Pageable pageable, Class<T> type, EntityContext context) {
         return validateTenant(context)
                 .thenCompose(unused -> crudServiceTemplate
-                        .search(structure.getItemIndex(), pageable, type,
+                        .search(structure.getItemIndex(),
+                                pageable,
+                                type,
                                 builder -> delegatingReadPreProcessor.beforeFindAll(structure, builder, context))
                         .thenApply(createParanoidCheck(type, context, "Find All")));
     }
@@ -279,14 +291,7 @@ public class DefaultEntityService implements EntityService {
                         .search(structure.getItemIndex(),
                                 pageable,
                                 type,
-                                builder -> {
-
-                                    Query.Builder queryBuilder = new Query.Builder();
-
-                                    delegatingReadPreProcessor.beforeSearch(structure, searchText, builder, queryBuilder, context);
-
-                                    builder.query(queryBuilder.build());
-                                })
+                                builder -> delegatingReadPreProcessor.beforeSearch(structure, searchText, builder, context))
                         .thenApply(createParanoidCheck(type, context, "Search")));
     }
 
@@ -302,7 +307,9 @@ public class DefaultEntityService implements EntityService {
                             Map converted = objectMapper.readValue(rawJson.data(), Map.class);
                             String tenant = (String) converted.get(structuresProperties.getTenantIdFieldName());
                             if(tenant != null && tenant.equals(context.getParticipant().getTenantId())){
-                                result.add(rawJson);
+                                // We have to make sure tenant id is not in output, this is a bit of a hack, as long as we need the paranoid check
+                                converted.remove(structuresProperties.getTenantIdFieldName());
+                                result.add(RawJson.from(objectMapper.writeValueAsBytes(converted)));
                             }else{
                                 log.error("{} Multi tenancy is not working properly for structure: {} and tenant: {}\nData:\n{}",
                                           what,
@@ -319,6 +326,8 @@ public class DefaultEntityService implements EntityService {
                     for(Map map : content){
                         String tenant = (String) map.get(structuresProperties.getTenantIdFieldName());
                         if(tenant != null && tenant.equals(context.getParticipant().getTenantId())){
+                            // We have to make sure tenant id is not in output, this is a bit of a hack, as long as we need the paranoid check
+                            map.remove(structuresProperties.getTenantIdFieldName());
                             result.add(map);
                         }else{
                             log.error("Multi tenancy is not working properly for structure: {} and tenant: {}\nData:\n{}",

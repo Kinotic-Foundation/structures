@@ -230,10 +230,11 @@ public class CrudServiceTemplate {
                                .order(order.isAscending() ? SortOrder.Asc : SortOrder.Desc);
 
                     // This is a nested sort, so we must set an additional field
-                    if (property.contains(".")) {
-                        String baseField = property.substring(0, property.lastIndexOf("."));
-                        fieldSortBuilder.nested(n -> n.path(baseField));
-                    }
+                    // TODO: This must only be applied if the property is a nested field, meaning it has the nested annotation.
+//                    if (property.contains(".")) {
+//                        String baseField = property.substring(0, property.lastIndexOf("."));
+//                        fieldSortBuilder.nested(n -> n.path(baseField));
+//                    }
 
                     return fieldSortBuilder;
                 }));
@@ -247,6 +248,7 @@ public class CrudServiceTemplate {
         SearchRequest request = builder.build();
 
         if(log.isTraceEnabled()) {
+            // wrapped, so toString() will not be called if trace is not enabled
             log.trace("Query: \n {}", request.toString());
         }
 

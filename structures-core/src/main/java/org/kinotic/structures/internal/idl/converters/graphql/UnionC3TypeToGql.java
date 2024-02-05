@@ -8,26 +8,25 @@ import org.kinotic.continuum.idl.api.converter.SpecificC3TypeConverter;
 import org.kinotic.continuum.idl.api.schema.C3Type;
 import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
 import org.kinotic.continuum.idl.api.schema.UnionC3Type;
-import org.kinotic.structures.api.decorators.runtime.mapping.GraphQLTypeHolder;
 
 import java.util.Set;
 
 /**
  * Created by Navíd Mitchell 🤪 on 5/27/23.
  */
-public class UnionC3TypeToGraphQL implements SpecificC3TypeConverter<GraphQLTypeHolder, UnionC3Type, GraphQLConversionState>, Cacheable {
+public class UnionC3TypeToGql implements SpecificC3TypeConverter<GqlTypeHolder, UnionC3Type, GqlConversionState>, Cacheable {
 
     private static final Set<Class<? extends C3Type>> supports = Set.of(UnionC3Type.class);
 
     @Override
-    public GraphQLTypeHolder convert(UnionC3Type c3Type,
-                                     C3ConversionContext<GraphQLTypeHolder, GraphQLConversionState> conversionContext) {
+    public GqlTypeHolder convert(UnionC3Type c3Type,
+                                 C3ConversionContext<GqlTypeHolder, GqlConversionState> conversionContext) {
 
         GraphQLUnionType.Builder unionBuilder = GraphQLUnionType.newUnionType();
         unionBuilder.name(c3Type.getName());
 
         for(ObjectC3Type objectC3Type : c3Type.getTypes()){
-            GraphQLTypeHolder typeHolder = conversionContext.convert(objectC3Type);
+            GqlTypeHolder typeHolder = conversionContext.convert(objectC3Type);
             if(typeHolder.getOutputType() instanceof GraphQLObjectType){
                 unionBuilder.possibleType((GraphQLObjectType) typeHolder.getOutputType());
             }else{
@@ -35,7 +34,10 @@ public class UnionC3TypeToGraphQL implements SpecificC3TypeConverter<GraphQLType
             }
         }
 
-        return new GraphQLTypeHolder(null, unionBuilder.build());
+        GraphQLUnionType unionType = unionBuilder.build();
+        conversionContext.state().getUnionTypes().add(unionType);
+
+        return new GqlTypeHolder(null, unionBuilder.build());
     }
 
     @Override

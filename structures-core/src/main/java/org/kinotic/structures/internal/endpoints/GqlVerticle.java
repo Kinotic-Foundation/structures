@@ -9,7 +9,7 @@ import io.vertx.ext.web.handler.CorsHandler;
 import org.kinotic.continuum.api.security.SecurityService;
 import org.kinotic.continuum.gateway.api.security.AuthenticationHandler;
 import org.kinotic.structures.api.config.StructuresProperties;
-import org.kinotic.structures.internal.api.services.GraphQLProviderService;
+import org.kinotic.structures.internal.graphql.GqlOperationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,21 +21,23 @@ import java.util.Set;
  * Created by Navíd Mitchell 🤪 on 6/7/23.
  */
 @Component
-public class GraphQLVerticle extends AbstractVerticle {
+public class GqlVerticle extends AbstractVerticle {
 
-    private static final Logger log = LoggerFactory.getLogger(GraphQLVerticle.class);
+    public static final String NAMESPACE_PATH_PARAMETER = "structureNamespace";
+
+    private static final Logger log = LoggerFactory.getLogger(GqlVerticle.class);
 
     private final StructuresProperties properties;
-    private final GraphQLProviderService graphQLProviderService;
+    private final GqlOperationService gqlOperationService;
     private final SecurityService securityService;
 
     private HttpServer server;
 
-    public GraphQLVerticle(StructuresProperties properties,
-                           GraphQLProviderService graphQLProviderService,
-                           @Autowired(required = false) SecurityService securityService) {
+    public GqlVerticle(StructuresProperties properties,
+                       GqlOperationService gqlOperationService,
+                       @Autowired(required = false) SecurityService securityService) {
         this.properties = properties;
-        this.graphQLProviderService = graphQLProviderService;
+        this.gqlOperationService = gqlOperationService;
         this.securityService = securityService;
     }
 
@@ -51,11 +53,11 @@ public class GraphQLVerticle extends AbstractVerticle {
             router.route().handler(new AuthenticationHandler(securityService, vertx));
         }
 
-        router.post(properties.getGraphqlPath()+":structureNamespace")
+        router.post(properties.getGraphqlPath()+":"+NAMESPACE_PATH_PARAMETER)
               .consumes("application/json")
-              .produces("application/json")
+              .produces("application/graphql-response+json")
               .handler(BodyHandler.create(false))
-              .handler(new GraphQLHandler(graphQLProviderService, "structureNamespace"));
+              .handler(new GqlHandler(gqlOperationService));
 
         // Begin listening for requests
         server.requestHandler(router).listen(properties.getGraphqlPort(), ar -> {

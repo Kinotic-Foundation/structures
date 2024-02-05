@@ -25,7 +25,7 @@ public class StructuresEndpointInitializer {
     private final StructuresProperties properties;
     private final Vertx vertx;
     private final OpenApiVerticle openApiVerticle;
-    private final GraphQLVerticle graphQLVerticle;
+    private final GqlVerticle gqlVerticle;
     private final WebServerVerticle webServerVerticle;
     private final HealthChecks healthChecks;
     private final ElasticsearchAsyncClient esAsyncClient;
@@ -37,7 +37,7 @@ public class StructuresEndpointInitializer {
     @PostConstruct
     public void init(){
         vertx.deployVerticle(openApiVerticle);
-        vertx.deployVerticle(graphQLVerticle);
+        vertx.deployVerticle(gqlVerticle);
         vertx.deployVerticle(webServerVerticle);
 
         healthChecks.register("elasticsearch", future -> {

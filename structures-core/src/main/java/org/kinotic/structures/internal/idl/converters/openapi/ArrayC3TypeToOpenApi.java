@@ -33,7 +33,7 @@ public class ArrayC3TypeToOpenApi implements SpecificC3TypeConverter<Schema<?>, 
 
             if(c3Type.getContains() instanceof ObjectC3Type){
                 ObjectC3Type objectC3Type = (ObjectC3Type) c3Type.getContains();
-                conversionContext.state().addReferenceSchema(objectC3Type.getName(), schema);
+                conversionContext.state().addReferencedSchema(objectC3Type.getName(), schema);
                 schema = new Schema<>().$ref("#/components/schemas/"+objectC3Type.getName());
             }
 
