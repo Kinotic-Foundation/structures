@@ -10,20 +10,7 @@
                            ref="crudTable">
 
                     <template v-slot:item.namespace="{ item }">
-                        <a :href="'/openapi-ui.html?namespace='+item.namespace" target="_blank"
-                           v-if="item.published">{{ item.namespace }}</a>
-                        <v-btn icon
-                               small
-                               class="pl-2"
-                               title="GraphQL"
-                               :href="'/gql-ui.html?namespace='+item.namespace"
-                               target="_blank"
-                               v-if="item.published">
-                            <v-icon small>
-                                {{ icons.graph }}
-                            </v-icon>
-                        </v-btn>
-                        <span v-if="!item.published">{{ item.namespace }}</span>
+                        <span>{{ item.namespace }}</span>
                     </template>
                     <template v-slot:item.created="{ item }">
                         {{ DatetimeUtil.formatDate(item.created) }}

@@ -95,6 +95,10 @@ public class DefaultOpenApiService implements OpenApiService {
                         }
                     }
 
+                    ObjectSchema countSchema = new ObjectSchema();
+                    countSchema.addProperty("count", new IntegerSchema());
+                    components.addSchemas("CountResponse", countSchema);
+
                     openAPI.setPaths(paths);
                     openAPI.components(components);
                     return CompletableFuture.completedFuture(openAPI);
@@ -131,7 +135,7 @@ public class DefaultOpenApiService implements OpenApiService {
                                                     "Deletes " + structureName + " entities",
                                                     "delete"+structureName,
                                                     structure,
-                                                    0);
+                                                    -1);
 
         deleteOperation.addParametersItem(new Parameter().name("id")
                                                          .in("path")
@@ -145,6 +149,40 @@ public class DefaultOpenApiService implements OpenApiService {
         paths.put(basePath + lowercaseNamespace + "/" + lowercaseName + "/{id}", byIdPathItem);
 
 
+        // Operation for delete by query
+        PathItem deleteByQueryPathItem = new PathItem();
+        Operation deleteByQueryOperation = createOperation("Delete "+structureName+" by query",
+                "Delete " + structureName + " entities by query",
+                "delete"+structureName+"ByQuery",
+                structure,
+                -1);
+        RequestBody deleteByQueryRequestBody = new RequestBody()
+                .description("The query filter for delete operation")
+                .content(new Content().addMediaType("text/plain",
+                        new MediaType().schema(new StringSchema())));
+        deleteByQueryOperation.requestBody(deleteByQueryRequestBody);
+        deleteByQueryPathItem.post(deleteByQueryOperation);
+        paths.put(basePath + lowercaseNamespace + "/" + lowercaseName + "/delete/by-query", deleteByQueryPathItem);
+
+
+        // Find by Ids Operation
+        PathItem findByIdsPathItem = new PathItem();
+        Operation findByIdsOperation = createOperation("Find "+structureName +" entities by ids",
+                "Find " + structureName + " entities by their ids.",
+                "find"+structureName+"ByIds",
+                structure,
+                3);
+        ArraySchema findByIdsSchema = new ArraySchema();
+        findByIdsSchema.items(new StringSchema());
+        RequestBody findByIdsRequestBody = new RequestBody()
+                .description("The array if id's")
+                .content(new Content().addMediaType("application/json",
+                        new MediaType().schema(findByIdsSchema)));
+        findByIdsOperation.requestBody(findByIdsRequestBody);
+        findByIdsPathItem.post(findByIdsOperation);
+        paths.put(basePath + lowercaseNamespace + "/" + lowercaseName + "/find/by-ids", findByIdsPathItem);
+
+
         // Create a path item for all the operations with basePath/structureNamespace/structureName/
         PathItem structurePathItem = new PathItem();
 
@@ -155,6 +193,19 @@ public class DefaultOpenApiService implements OpenApiService {
                 .content(new Content().addMediaType("application/json",
                                                     new MediaType().schema(refSchema)));
 
+
+        // Find All Operation
+        Operation getAllOperation = createOperation("Find all "+structureName +" entities",
+                "Finds all " + structureName + " entities. Supports paging and sorting.",
+                "findAll"+structureName,
+                structure,
+                2);
+
+        addPagingAndSortingParameters(getAllOperation);
+
+        structurePathItem.get(getAllOperation);
+
+
         // Save Operation
         Operation createOperation = createOperation("Save "+structureName,
                                                     "Saves " + structureName + " entities.",
@@ -164,17 +215,6 @@ public class DefaultOpenApiService implements OpenApiService {
         createOperation.requestBody(structureRequestBody);
 
         structurePathItem.post(createOperation);
-
-        // Find All Operation
-        Operation getAllOperation = createOperation("Find all "+structureName +" entities",
-                                                    "Finds all " + structureName + " entities. Supports paging and sorting.",
-                                                    "findAll"+structureName,
-                                                    structure,
-                                                    2);
-
-        addPagingAndSortingParameters(getAllOperation);
-
-        structurePathItem.get(getAllOperation);
 
         // add the path item for all paths like basePath/structureNamespace/structureName/
         paths.put(basePath + lowercaseNamespace + "/" + lowercaseName, structurePathItem);
@@ -198,7 +238,7 @@ public class DefaultOpenApiService implements OpenApiService {
                                                       "Saves multiple " + structureName + " entities.",
                                                       "bulkSave"+structureName,
                                                       structure,
-                                                      0);
+                                                      -1);
 
         ArraySchema bulkSaveSchema = new ArraySchema();
         bulkSaveSchema.items(refSchema);
@@ -217,7 +257,7 @@ public class DefaultOpenApiService implements OpenApiService {
                                                       "Updates multiple " + structureName + " entities.",
                                                       "bulkUpdate"+structureName,
                                                       structure,
-                                                      0);
+                                                      -1);
 
         ArraySchema bulkUpdateSchema = new ArraySchema();
         bulkUpdateSchema.items(refSchema);
@@ -230,6 +270,31 @@ public class DefaultOpenApiService implements OpenApiService {
         paths.put(basePath + lowercaseNamespace + "/" + lowercaseName + "/bulk-update", bulkUpdatePathItem);
 
 
+        // total count Operation
+        PathItem countPathItem = new PathItem();
+        Operation countOperation = createOperation("Get count for "+structureName,
+                "Gets total count of " + structureName + " entities.",
+                "count"+structureName,
+                structure,
+                0);
+        countPathItem.get(countOperation);
+        paths.put(basePath + lowercaseNamespace + "/" + lowercaseName + "/count/all", countPathItem);
+
+
+        // total count for query Operation
+        PathItem countByQueryPathItem = new PathItem();
+        Operation countByQueryOperation = createOperation("Get count by query for "+structureName,
+                "Gets total count of "+structureName+" entities, by query",
+                "count"+structureName+"ByQuery",
+                structure,
+                0);
+        RequestBody countByQueryRequestBody = new RequestBody()
+                .description("The query to get counts for")
+                .content(new Content().addMediaType("text/plain",
+                        new MediaType().schema(new StringSchema())));
+        countByQueryOperation.requestBody(countByQueryRequestBody);
+        countByQueryPathItem.post(countByQueryOperation);
+        paths.put(basePath + lowercaseNamespace + "/" + lowercaseName + "/count/by-query", countByQueryPathItem);
 
 
         // Create a path item for all the operations with basePath/structureNamespace/structureName/search
@@ -268,15 +333,19 @@ public class DefaultOpenApiService implements OpenApiService {
                                                                               .maximum(BigDecimal.valueOf(100)))
                                                    .description("The number of items per page. The default is 25."));
 
+        addSortingParameters(operation);
+    }
+
+    private void addSortingParameters(Operation operation){
         operation.addParametersItem(new Parameter().name("sort")
-                                                   .in("query")
-                                                   .required(false)
-                                                   .schema(new StringSchema())
-                                                   .description("The field to apply sorting to."
-                                                                        +  " Multiple sort fields can be applied by separating them with a comma."
-                                                                        +  " The sort order for each sort field will be ascending unless it is prefixed with a minus (“-“), in which case it will be descending.")
-                                                   .examples(Map.of("Single Sort", new Example().value("name"),
-                                                                    "Multiple Sort", new Example().value("name,-age"))));
+                .in("query")
+                .required(false)
+                .schema(new StringSchema())
+                .description("The field to apply sorting to."
+                        +  " Multiple sort fields can be applied by separating them with a comma."
+                        +  " The sort order for each sort field will be ascending unless it is prefixed with a minus (“-“), in which case it will be descending.")
+                .examples(Map.of("Single Sort", new Example().value("name"),
+                        "Multiple Sort", new Example().value("name,-age"))));
     }
 
     private Operation createOperation(String operationSummary,
@@ -303,7 +372,13 @@ public class DefaultOpenApiService implements OpenApiService {
         ApiResponse response = new ApiResponse().description(operationSummary + " OK");
         Content content = new Content();
         MediaType mediaType = new MediaType();
-        if(responseType == 1){
+        if(responseType == 0){
+
+            mediaType.setSchema(new Schema<>().$ref(Components.COMPONENTS_SCHEMAS_REF + "CountResponse"));
+            content.addMediaType("application/json", mediaType);
+            response.setContent(content);
+
+        }else if(responseType == 1){
 
             mediaType.setSchema(new Schema<>().$ref(Components.COMPONENTS_SCHEMAS_REF + structure.getName()));
             content.addMediaType("application/json", mediaType);
@@ -322,6 +397,14 @@ public class DefaultOpenApiService implements OpenApiService {
             mediaType.setSchema(pageSchema);
             content.addMediaType("application/json", mediaType);
             response.setContent(content);
+
+        }else if(responseType == 3){
+
+            mediaType.setSchema(new ArraySchema()
+                    .items(new Schema<>().$ref(Components.COMPONENTS_SCHEMAS_REF + structure.getName())));
+            content.addMediaType("application/json", mediaType);
+            response.setContent(content);
+
         }
 
         defaultResponses.put("200", response);

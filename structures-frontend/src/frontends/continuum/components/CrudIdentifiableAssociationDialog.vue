@@ -175,7 +175,7 @@ export default class CrudIdentifiableAssociationDialog extends Vue {
             const pageable = Pageable.create(0, 50, { orders: [new Order('id', Direction.ASC)] })
 
             const page: Page<Identifiable<string>> = await this.crudServiceProxy.findByIdNotIn(ids, pageable)
-            this.availableAssociatedIdentifiables = page.content
+            this.availableAssociatedIdentifiables = page.content ?? []
 
         } catch (error: any) {
             this.displayAlert(error.message)

@@ -5,9 +5,9 @@
                         :identityRules="namespaceRules"
                         :entity.sync="namespace">
 
-    <template #basic-info="{ entity }" >
-      <v-text-field v-model="entity.description" label="Description"></v-text-field>
-    </template>
+      <template #basic-info="{ entity }" >
+        <v-text-field v-model="entity.description" label="Description"></v-text-field>
+      </template>
 
   </crud-entity-add-edit>
 </template>

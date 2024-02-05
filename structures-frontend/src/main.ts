@@ -23,9 +23,9 @@ import Keycloak, {KeycloakOnLoad} from 'keycloak-js'
 if(process.env.VUE_APP_KEYCLOAK_SUPPORT === 'true') {
 
     const initOptions = {
-        url: process.env.VUE_APP_KEYCLOAK_URL,
-        realm: process.env.VUE_APP_KEYCLOAK_REALM,
-        clientId: process.env.VUE_APP_KEYCLOAK_CLIENT_ID,
+        url: process.env.VUE_APP_KEYCLOAK_URL ?? 'http://127.0.0.1:8081/auth',
+        realm: process.env.VUE_APP_KEYCLOAK_REALM ?? 'kc-realm',
+        clientId: process.env.VUE_APP_KEYCLOAK_CLIENT_ID ?? 'kc-client',
         onLoad: 'login-required' as KeycloakOnLoad
     }
     const keycloak: Keycloak = new Keycloak(initOptions)

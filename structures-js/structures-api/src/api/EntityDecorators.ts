@@ -73,3 +73,12 @@ export function Precision(precisionType: PrecisionType = PrecisionType.INT){
         }
     }
 }
+
+// @ts-ignore
+export function Discriminator(propertyName: string){
+    return function (_: any, context: any) {
+        if(context.kind === "field") {
+
+        }
+    }
+}
