@@ -344,6 +344,13 @@ public class EntityCrudTests extends ElasticsearchTestBase {
 
         Assertions.assertNotNull(holder2);
 
+        // Make sure all data is indexed
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
         // TODO: verify all data items as well, not just sizes
         Sort sort = Sort.by("firstName");
         AtomicReference<String> cursorRef = new AtomicReference<>();

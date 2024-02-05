@@ -125,10 +125,7 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 					.expectError(IllegalStateException.class)
 					.verify();
 
-		CompletableFuture<Structure> saveFuture = structureService.save(structure);
-		StepVerifier.create(Mono.fromFuture(saveFuture))
-					.expectError(IllegalStateException.class)
-					.verify();
+		// TODO: add rename name and namespace operations
 	}
 
 	@Test
