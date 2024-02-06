@@ -200,7 +200,7 @@ export class Synchronize extends Command {
                 structure = await structureService.create(structure)
             }
             // publish if we need to
-            if(publish && structure.id !== null){
+            if(!structure.published && publish && structure?.id){
                 this.logVerbose(`Publishing Structure: ${namespace}.${name}`, verbose)
 
                 await structureService.publish(structure.id)
