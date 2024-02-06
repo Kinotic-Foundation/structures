@@ -82,12 +82,12 @@ export async function connectAndUpgradeSession(server: string, logger: Logger): 
             login: ParticipantConstants.CLI_PARTICIPANT_ID
         }
         const connectedInfo: ConnectedInfo = await pTimeout(Continuum.connect(connectionInfo), {
-            milliseconds: 30000,
+            milliseconds: 60000,
             message: 'Connection timeout trying to connect to the Structures Server'
         })
 
         if (connectedInfo) {
-            // This works because any client can subscribe to an destination that is scoped to the connectedInfo.replyToId
+            // This works because any client can subscribe to a destination that is scoped to the connectedInfo.replyToId
             const scope = connectedInfo.replyToId + ':' + uuidv4()
             const url = server + (server.endsWith('/') ? '' : '/') + '#/sessionUpgrade/' + encodeURIComponent(scope)
             logger.log('Authenticate your account at:')

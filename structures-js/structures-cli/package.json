@@ -18,7 +18,7 @@
         "/oclif.manifest.json"
     ],
     "dependencies": {
-        "@kinotic/continuum-client": "^2.9.0",
+        "@kinotic/continuum-client": "^2.9.2",
         "@kinotic/continuum-idl": "^1.2.0",
         "@kinotic/structures-api": "^1.12.1",
         "@oclif/core": "^2.9.4",
