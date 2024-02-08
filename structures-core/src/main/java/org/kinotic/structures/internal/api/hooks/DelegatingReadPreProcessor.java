@@ -1,16 +1,12 @@
-package org.kinotic.structures.internal.api.decorators;
+package org.kinotic.structures.internal.api.hooks;
 
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import co.elastic.clients.elasticsearch.core.*;
-import org.apache.commons.lang3.tuple.Triple;
-import org.kinotic.continuum.idl.api.schema.decorators.C3Decorator;
 import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.decorators.MultiTenancyType;
-import org.kinotic.structures.api.decorators.runtime.crud.*;
 import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.Structure;
 
-import java.util.List;
 import java.util.function.Consumer;
 
 /**
@@ -21,22 +17,9 @@ import java.util.function.Consumer;
 public class DelegatingReadPreProcessor {
 
     private final StructuresProperties structuresProperties;
-    // Im probably going to remove or refine these pre-processors. Since as it stands I do not think they are very useful.
-    private final List<Triple<String, C3Decorator, CountEntityPreProcessor<C3Decorator>>> countPreProcessors;
-    private final List<Triple<String, C3Decorator, DeleteEntityPreProcessor<C3Decorator>>> deletePreProcessors;
-    private final List<Triple<String, C3Decorator, FindAllPreProcessor<C3Decorator>>>findAllPreProcessors;
-    private final List<Triple<String, C3Decorator, SearchPreProcessor<C3Decorator>>> searchPreProcessors;
 
-    public DelegatingReadPreProcessor(StructuresProperties structuresProperties,
-                                      List<Triple<String, C3Decorator, CountEntityPreProcessor<C3Decorator>>> countPreProcessors,
-                                      List<Triple<String, C3Decorator, DeleteEntityPreProcessor<C3Decorator>>> deletePreProcessors,
-                                      List<Triple<String, C3Decorator, FindAllPreProcessor<C3Decorator>>> findAllPreProcessors,
-                                      List<Triple<String, C3Decorator, SearchPreProcessor<C3Decorator>>> searchPreProcessors) {
+    public DelegatingReadPreProcessor(StructuresProperties structuresProperties) {
         this.structuresProperties = structuresProperties;
-        this.countPreProcessors = countPreProcessors;
-        this.deletePreProcessors = deletePreProcessors;
-        this.findAllPreProcessors = findAllPreProcessors;
-        this.searchPreProcessors = searchPreProcessors;
     }
 
     public void beforeCount(Structure structure,
@@ -45,15 +28,6 @@ public class DelegatingReadPreProcessor {
                             EntityContext context) {
 
         Query.Builder queryBuilder = createQueryWithTenantLogicAndSearch(structure, query, context, builder::routing);
-
-        if(countPreProcessors != null && !countPreProcessors.isEmpty()){
-            if(queryBuilder == null){
-                queryBuilder = new Query.Builder();
-            }
-            for(Triple<String, C3Decorator, CountEntityPreProcessor<C3Decorator>> tuple : countPreProcessors){
-                tuple.getRight().beforeCount(structure, tuple.getLeft(), tuple.getMiddle(), queryBuilder, context);
-            }
-        }
 
         if(queryBuilder != null){
             builder.query(queryBuilder.build());
@@ -68,12 +42,6 @@ public class DelegatingReadPreProcessor {
         if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
             builder.routing(context.getParticipant().getTenantId());
         }
-
-        if(deletePreProcessors != null && !deletePreProcessors.isEmpty()){
-            for(Triple<String, C3Decorator, DeleteEntityPreProcessor<C3Decorator>> tuple : deletePreProcessors){
-                tuple.getRight().beforeDelete(structure, tuple.getLeft(), tuple.getMiddle(), builder, context);
-            }
-        }
     }
 
     public void beforeDeleteByQuery(Structure structure,
@@ -82,12 +50,6 @@ public class DelegatingReadPreProcessor {
                                     EntityContext context) {
 
         Query.Builder queryBuilder = createQueryWithTenantLogicAndSearch(structure, query, context, builder::routing);
-
-        if(deletePreProcessors != null && !deletePreProcessors.isEmpty()){
-            for(Triple<String, C3Decorator, DeleteEntityPreProcessor<C3Decorator>> tuple : deletePreProcessors){
-                tuple.getRight().beforeDeleteByQuery(structure, tuple.getLeft(), tuple.getMiddle(), builder, context);
-            }
-        }
 
         if(queryBuilder != null){
             builder.query(queryBuilder.build());
@@ -132,15 +94,6 @@ public class DelegatingReadPreProcessor {
 
         addSourceFilter(structure, builder, context);
 
-        if(findAllPreProcessors != null && !findAllPreProcessors.isEmpty()){
-            if(queryBuilder == null){
-                queryBuilder = new Query.Builder();
-            }
-            for(Triple<String, C3Decorator, FindAllPreProcessor<C3Decorator>> tuple : findAllPreProcessors){
-                tuple.getRight().beforeFindAll(structure, tuple.getLeft(), tuple.getMiddle(), queryBuilder, context);
-            }
-        }
-
         if(queryBuilder != null){
             builder.query(queryBuilder.build());
         }
@@ -180,12 +133,6 @@ public class DelegatingReadPreProcessor {
         Query.Builder queryBuilder = createQueryWithTenantLogicAndSearch(structure, searchText, context, builder::routing);
 
         addSourceFilter(structure, builder, context);
-
-        if(searchPreProcessors != null && !searchPreProcessors.isEmpty()){
-            for(Triple<String, C3Decorator, SearchPreProcessor<C3Decorator>> tuple : searchPreProcessors){
-                tuple.getRight().beforeSearch(structure, tuple.getLeft(), tuple.getMiddle(), queryBuilder, context);
-            }
-        }
 
         builder.query(queryBuilder.build());
     }

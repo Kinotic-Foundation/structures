@@ -1,7 +1,6 @@
-package org.kinotic.structures.api.decorators.runtime.crud;
+package org.kinotic.structures.internal.api.hooks;
 
 import org.kinotic.continuum.idl.api.schema.decorators.C3Decorator;
-import org.kinotic.structures.api.decorators.runtime.C3DecoratorInstance;
 import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.Structure;
 
@@ -14,7 +13,7 @@ import org.kinotic.structures.api.domain.Structure;
  *            <p>
  *            Created by Navíd Mitchell 🤪 on 5/10/23.
  */
-public interface UpsertFieldPreProcessor<D extends C3Decorator, R, T> extends C3DecoratorInstance<D> {
+public interface UpsertFieldPreProcessor<D extends C3Decorator, R, T> {
 
     /**
      * The type of the field that this processor can process.
@@ -23,6 +22,11 @@ public interface UpsertFieldPreProcessor<D extends C3Decorator, R, T> extends C3
      * @return the class of the field that this processor can process
      */
     Class<T> supportsFieldType();
+
+    /**
+     * @return the {@link C3Decorator} class that will trigger this {@link UpsertFieldPreProcessor} to be used
+     */
+    Class<D> implementsDecorator();
 
     /**
      * Process the value of a field before it is upserted into the database.

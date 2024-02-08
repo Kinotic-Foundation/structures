@@ -2,8 +2,8 @@ package org.kinotic.structures.internal.idl.converters.graphql;
 
 import org.kinotic.continuum.idl.api.converter.SpecificC3TypeConverter;
 import org.kinotic.continuum.idl.internal.api.converter.AbstractIdlConverterStrategy;
-import org.kinotic.structures.api.decorators.runtime.mapping.GqlMappingPreProcessor;
-import org.kinotic.structures.internal.idl.converters.common.MappingPreProcessorConverter;
+import org.kinotic.structures.internal.idl.converters.common.DecoratorPreProcessorConverter;
+import org.kinotic.structures.internal.idl.converters.graphql.decorators.GqlDecoratorMappingProcessor;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -22,9 +22,9 @@ public class GqlConverterStrategy extends AbstractIdlConverterStrategy<GqlTypeHo
             new EnumC3TypeToGql(),
             new ObjectC3TypeToGql());
 
-    public GqlConverterStrategy(List<GqlMappingPreProcessor<?>> gqlMappingPreProcessors) {
+    public GqlConverterStrategy(List<GqlDecoratorMappingProcessor<?>> gqlMappingPreProcessors) {
         //noinspection unchecked,rawtypes
-        super(specificTypeConverters, List.of(new MappingPreProcessorConverter(gqlMappingPreProcessors)));
+        super(specificTypeConverters, List.of(new DecoratorPreProcessorConverter(gqlMappingPreProcessors)));
     }
 
     @Override

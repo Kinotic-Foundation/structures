@@ -1,6 +1,7 @@
-package org.kinotic.structures.internal.api.decorators;
+package org.kinotic.structures.internal.api.hooks;
 
 import org.kinotic.structures.api.domain.EntityContext;
+import org.kinotic.structures.internal.api.services.EntityHolder;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;

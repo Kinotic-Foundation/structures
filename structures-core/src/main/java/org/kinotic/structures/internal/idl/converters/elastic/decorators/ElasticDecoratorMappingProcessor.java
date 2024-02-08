@@ -1,16 +1,18 @@
-package org.kinotic.structures.api.decorators.runtime.mapping;
+package org.kinotic.structures.internal.idl.converters.elastic.decorators;
 
 import co.elastic.clients.elasticsearch._types.mapping.Property;
 import org.kinotic.continuum.idl.api.schema.C3Type;
 import org.kinotic.continuum.idl.api.schema.decorators.C3Decorator;
 import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.internal.idl.converters.common.DecoratorMappingProcessor;
+import org.kinotic.structures.internal.idl.converters.common.MappingContext;
 import org.kinotic.structures.internal.idl.converters.elastic.ElasticConversionState;
 
 /**
- * {@link ElasticMappingPreProcessor} is used to create an ElasticSearch mapping based on data available in the {@link C3Decorator}
+ * {@link ElasticDecoratorMappingProcessor} is used to create an ElasticSearch mapping based on data available in the {@link C3Decorator}
  * Created by Navíd Mitchell 🤪 on 5/12/23.
  */
-public interface ElasticMappingPreProcessor<D extends C3Decorator> extends MappingPreProcessor<D, Property, ElasticConversionState> {
+public interface ElasticDecoratorMappingProcessor<D extends C3Decorator> extends DecoratorMappingProcessor<D, Property, ElasticConversionState> {
 
     /**
      * Process the given {@link Structure} and {@link C3Decorator} to create or modify an ElasticSearch mapping
@@ -18,7 +20,7 @@ public interface ElasticMappingPreProcessor<D extends C3Decorator> extends Mappi
      * @param fieldName the name of the field that is being processed or null if this is a root level mapping
      * @param decorator the {@link C3Decorator} that is being processed
      * @param type the {@link C3Type} that is being processed
-     * @param context the {@link MappingContext} for use by this {@link ElasticMappingPreProcessor}
+     * @param context the {@link MappingContext} for use by this {@link ElasticDecoratorMappingProcessor}
      * @return the {@link Property} that was created or modified
      */
     @Override

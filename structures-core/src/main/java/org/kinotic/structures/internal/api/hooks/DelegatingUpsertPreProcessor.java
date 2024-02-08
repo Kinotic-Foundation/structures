@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.api.decorators;
+package org.kinotic.structures.internal.api.hooks;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.Validate;
@@ -6,6 +6,10 @@ import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.internal.api.hooks.impl.MapUpsertPreProcessor;
+import org.kinotic.structures.internal.api.hooks.impl.PojoUpsertPreProcessor;
+import org.kinotic.structures.internal.api.hooks.impl.RawJsonUpsertPreProcessor;
+import org.kinotic.structures.internal.api.services.EntityHolder;
 
 import java.util.ArrayList;
 import java.util.List;

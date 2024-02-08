@@ -1,7 +1,6 @@
-package org.kinotic.structures.internal.api.decorators;
+package org.kinotic.structures.internal.api.hooks;
 
 import org.kinotic.continuum.idl.api.schema.decorators.C3Decorator;
-import org.kinotic.structures.api.decorators.runtime.crud.UpsertFieldPreProcessor;
 
 /**
  * {@link DecoratorLogic} holds a {@link C3Decorator} and its {@link UpsertFieldPreProcessor}

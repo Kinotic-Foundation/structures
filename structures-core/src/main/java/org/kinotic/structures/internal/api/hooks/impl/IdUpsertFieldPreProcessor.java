@@ -1,7 +1,7 @@
-package org.kinotic.structures.internal.api.decorators.instances;
+package org.kinotic.structures.internal.api.hooks.impl;
 
 import org.kinotic.structures.api.decorators.IdDecorator;
-import org.kinotic.structures.api.decorators.runtime.crud.UpsertFieldPreProcessor;
+import org.kinotic.structures.internal.api.hooks.UpsertFieldPreProcessor;
 import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.Structure;
 import org.springframework.stereotype.Component;
@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
  * Created by Navíd Mitchell 🤪 on 5/9/23.
  */
 @Component
-public class IdDecoratorInstance implements UpsertFieldPreProcessor<IdDecorator, String, String> {
+public class IdUpsertFieldPreProcessor implements UpsertFieldPreProcessor<IdDecorator, String, String> {
 
     @Override
     public Class<IdDecorator> implementsDecorator() {

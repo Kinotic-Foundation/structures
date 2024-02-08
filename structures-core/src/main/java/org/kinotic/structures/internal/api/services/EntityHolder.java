@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.api.decorators;
+package org.kinotic.structures.internal.api.services;
 
 import lombok.Getter;
 import lombok.Setter;

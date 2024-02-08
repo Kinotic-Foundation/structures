@@ -3,8 +3,8 @@ package org.kinotic.structures.internal.idl.converters.openapi;
 import io.swagger.v3.oas.models.media.Schema;
 import org.kinotic.continuum.idl.api.converter.SpecificC3TypeConverter;
 import org.kinotic.continuum.idl.internal.api.converter.AbstractIdlConverterStrategy;
-import org.kinotic.structures.api.decorators.runtime.mapping.OpenApiMappingPreProcessor;
-import org.kinotic.structures.internal.idl.converters.common.MappingPreProcessorConverter;
+import org.kinotic.structures.internal.idl.converters.common.DecoratorPreProcessorConverter;
+import org.kinotic.structures.internal.idl.converters.openapi.decorators.OpenApiDecoratorMappingProcessor;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -25,8 +25,8 @@ public class OpenApiConverterStrategy extends AbstractIdlConverterStrategy<Schem
     );
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    public OpenApiConverterStrategy(List<OpenApiMappingPreProcessor<?>> openApiMappingPreProcessors) {
-        super(specificTypeConverters, List.of(new MappingPreProcessorConverter(openApiMappingPreProcessors)));
+    public OpenApiConverterStrategy(List<OpenApiDecoratorMappingProcessor<?>> openApiMappingPreProcessors) {
+        super(specificTypeConverters, List.of(new DecoratorPreProcessorConverter(openApiMappingPreProcessors)));
     }
 
     @Override

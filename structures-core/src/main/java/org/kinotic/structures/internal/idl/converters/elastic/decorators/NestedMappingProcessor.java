@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.api.decorators.instances;
+package org.kinotic.structures.internal.idl.converters.elastic.decorators;
 
 import co.elastic.clients.elasticsearch._types.mapping.NestedProperty;
 import co.elastic.clients.elasticsearch._types.mapping.Property;
@@ -7,15 +7,14 @@ import org.kinotic.continuum.idl.api.schema.C3Type;
 import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
 import org.kinotic.continuum.idl.api.schema.UnionC3Type;
 import org.kinotic.structures.api.decorators.NestedDecorator;
-import org.kinotic.structures.api.decorators.runtime.mapping.ElasticMappingPreProcessor;
-import org.kinotic.structures.api.decorators.runtime.mapping.MappingContext;
 import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.internal.idl.converters.common.MappingContext;
 import org.kinotic.structures.internal.idl.converters.elastic.ElasticConversionState;
 
 /**
  * Created by Navíd Mitchell 🤪on 6/8/23.
  */
-public class NestedDecoratorInstance implements ElasticMappingPreProcessor<NestedDecorator> {
+public class NestedMappingProcessor implements ElasticDecoratorMappingProcessor<NestedDecorator> {
 
     @Override
     public Class<NestedDecorator> implementsDecorator() {

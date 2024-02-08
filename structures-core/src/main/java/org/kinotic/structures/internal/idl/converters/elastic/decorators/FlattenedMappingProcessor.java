@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.api.decorators.instances;
+package org.kinotic.structures.internal.idl.converters.elastic.decorators;
 
 import co.elastic.clients.elasticsearch._types.mapping.FlattenedProperty;
 import co.elastic.clients.elasticsearch._types.mapping.Property;
@@ -6,9 +6,8 @@ import org.kinotic.continuum.idl.api.schema.C3Type;
 import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
 import org.kinotic.continuum.idl.api.schema.UnionC3Type;
 import org.kinotic.structures.api.decorators.FlattenedDecorator;
-import org.kinotic.structures.api.decorators.runtime.mapping.ElasticMappingPreProcessor;
-import org.kinotic.structures.api.decorators.runtime.mapping.MappingContext;
 import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.internal.idl.converters.common.MappingContext;
 import org.kinotic.structures.internal.idl.converters.elastic.ElasticConversionState;
 import org.springframework.stereotype.Component;
 
@@ -16,7 +15,7 @@ import org.springframework.stereotype.Component;
  * Created by Navíd Mitchell 🤪 on 5/26/23.
  */
 @Component
-public class FlattenedDecoratorInstance implements ElasticMappingPreProcessor<FlattenedDecorator> {
+public class FlattenedMappingProcessor implements ElasticDecoratorMappingProcessor<FlattenedDecorator> {
 
     @Override
     public Class<FlattenedDecorator> implementsDecorator() {
