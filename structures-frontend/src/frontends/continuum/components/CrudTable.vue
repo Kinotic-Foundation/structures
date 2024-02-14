@@ -8,7 +8,9 @@
             :server-items-length="totalItems"
             :options.sync="options"
             :loading="loading"
-            item-key="identity"
+            :single-expand="singleExpand"
+            :show-expand="singleExpand"
+            item-key="id"
             loading-text="Loading... Please wait"
             class="elevation-1"
             @page-count="pageCount = $event"
@@ -61,9 +63,11 @@
                 </v-icon>
                 <v-icon title="Delete"
                         small
+                        class="mr-2"
                         @click="deleteItem(item)">
                     {{icons.deleteIcon}}
                 </v-icon>
+                <slot name="additional-actions" :item="{ item }"></slot>
             </template>
 
         </v-data-table>
@@ -95,7 +99,7 @@ import {
   IDataSource,
   IEditableDataSource,
   DataSourceUtils
-} from '@kinotic-foundation/continuum-js'
+} from '@kinotic/continuum-client'
 import Confirm from './Confirm.vue'
 
 // noinspection TypeScriptValidateTypes
@@ -121,6 +125,9 @@ export default class CrudTable extends Vue {
 
     @Prop({ type: Boolean, required: false, default: true })
     public mustSort!: boolean
+
+    @Prop({ type: Boolean, required: false, default: false })
+    public singleExpand!: boolean
 
     /**
      * Icons
@@ -214,19 +221,21 @@ export default class CrudTable extends Vue {
 
     public async deleteItem(item: Identifiable<string>) {
         this.hideAlert()
-        const index = this.items.indexOf(item)
 
-        if (await (this.$refs.confirm as Confirm).open('Delete Item', 'Are you sure you want to do this?', { color: 'error' })) {
-          (this.dataSource as IEditableDataSource<any>).deleteByIdentity(item.identity).then(() => {
-                this.items.splice(index, 1)
-                this.totalItems--
-                if ((this.totalItems / this.options.itemsPerPage) < this.options.page && this.options.page > 1) {
-                    this.options.page--
-                    this.find()
-                }
-            }).catch((error: any) => {
-                this.displayAlert(error.message)
-            })
+        if(item.id !== null){
+            const index = this.items.indexOf(item)
+            if (await (this.$refs.confirm as Confirm).open('Delete Item', 'Are you sure you want to do this?', { color: 'error' })) {
+                (this.dataSource as IEditableDataSource<any>).deleteById(item.id).then(() => {
+                    this.items.splice(index, 1)
+                    this.totalItems--
+                    if ((this.totalItems / this.options.itemsPerPage) < this.options.page && this.options.page > 1) {
+                        this.options.page--
+                        this.find()
+                    }
+                }).catch((error: any) => {
+                    this.displayAlert(error.message)
+                })
+            }
         }
     }
 
@@ -257,11 +266,9 @@ export default class CrudTable extends Vue {
                 orders.push(new Order(value, direction))
             }
 
-            const pageable: Pageable = {
-                pageNumber: this.options.page - 1,
-                pageSize: this.options.itemsPerPage,
-                sort: {orders}
-            }
+            const pageable = Pageable.create(this.options.page - 1,
+                                             this.options.itemsPerPage,
+                                             {orders})
 
             let queryPromise!: Promise<Page<any>>
 
@@ -273,8 +280,8 @@ export default class CrudTable extends Vue {
 
             queryPromise.then((page: Page<any>) => {
                 this.loading = false
-                this.totalItems = page.totalElements
-                this.items = page.content
+                this.totalItems = page.totalElements as number
+                this.items = page.content ?? []
 
                 if (!this.finishedInitialLoad) {
                     setTimeout(() => {
@@ -298,7 +305,7 @@ export default class CrudTable extends Vue {
         (this.$notify as any as { close: (value: string) => void }).close('crudTableAlert')
     }
 
-    private displayAlert(text: string) {
+    public displayAlert(text: string) {
         this.$notify({ group: 'alert', type: 'crudTableAlert', text})
     }
 

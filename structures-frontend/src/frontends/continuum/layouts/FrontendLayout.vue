@@ -105,7 +105,6 @@
 
 <script lang="ts">
 import { Component, Vue } from 'vue-property-decorator'
-import { inject } from 'inversify-props'
 import { IFrontendState } from '../states'
 import { RouteConfig, RouteRecord } from 'vue-router'
 import {
@@ -113,6 +112,7 @@ import {
     mdiDockWindow
 } from '@mdi/js'
 import FrontendLauncher from '../components/FrontendLauncher.vue'
+import {StructuresStates} from "@/frontends/states";
 
 /**
  * Layout used to provide a place to put all CRUD views within the {@link FrontendLayout}
@@ -123,9 +123,7 @@ import FrontendLauncher from '../components/FrontendLauncher.vue'
 })
 export default class FrontendLayout extends Vue {
 
-  @inject()
-  private frontendState!: IFrontendState
-
+  private frontendState: IFrontendState = StructuresStates.getFrontendState()
   private icons = {
     toggleTheme: mdiThemeLightDark,
     window: mdiDockWindow

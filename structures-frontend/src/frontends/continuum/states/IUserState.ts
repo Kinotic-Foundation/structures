@@ -1,75 +1,98 @@
-import {container, inject, injectable} from 'inversify-props'
-import {IEventBus} from '@kinotic-foundation/continuum-js'
-import Keycloak from "keycloak-js"
+import {ConnectedInfo, ConnectionInfo, Continuum} from '@kinotic/continuum-client'
+import Keycloak from 'keycloak-js'
+import {reactive} from 'vue'
+import {CONTINUUM_UI} from '@/frontends/continuum'
 
 export interface IUserState {
 
+    connectedInfo: ConnectedInfo | null
+
+    isAccessDenied(): boolean
+
     isAuthenticated(): boolean
 
-    authenticate(url: string, accessKey: string, secretToken: string): Promise<void>
+    authenticate(login: string, passcode: string): Promise<void>
 
-    authenticateKeycloak(url: string, keycloak: Keycloak): Promise<void>
+    authenticateKeycloak(keycloak: Keycloak): Promise<void>
 
-    getUri(): string
 }
 
-@injectable()
-export class UserState implements IUserState{
+export class UserState implements IUserState {
 
-    @inject()
-    private eventBus!: IEventBus
+    public connectedInfo: ConnectedInfo | null = null
 
     private keycloak!: Keycloak
 
     private authenticated: boolean = false
 
-    constructor() {
+    private accessDenied: boolean = false
 
-    }
-
-    authenticate(url: string, accessKey: string, secretToken: string): Promise<void> {
-        return new Promise((resolve, reject) => {
-            this.eventBus.connect(url, accessKey, secretToken)
-                .then(value => {
-                    this.authenticated = true
-                    resolve()
-                }).catch(reason => {
-                    if(reason){
-                        reject(new Error(reason));
-                    }else{
-                        reject(new Error("Credentials invalid"));
-                    }
-            })
-        })
-    }
-
-    authenticateKeycloak(url: string, keycloak: Keycloak): Promise<void> {
-        this.keycloak = keycloak
-        return this.authenticate(url, this.keycloak.tokenParsed?.email as string, this.keycloak.token as string)
-    }
-
-    isAuthenticated(): boolean {
-        return this.authenticated || (this.keycloak !== undefined && this.keycloak.authenticated === true);
-    }
-
-    getUri(): string {
-        let uri: string = 'ws://127.0.0.1:58503/v1'
-        if(window.location.hostname !== "127.0.0.1"
-            && window.location.hostname !== "localhost"){
-            let prefix: string = 'ws'
-            if(window.location.protocol.startsWith('https')){
-                prefix = 'wss'
-            }
-            let port: string = ''
-            if(window.location.port !== ''){
-                // non standard prod deployment, use our specific port
-                port = ':58503'
-            }
-            uri = `${prefix}://${window.location.hostname}${port}/v1`
+    public async authenticate(login: string, passcode: string): Promise<void> {
+        const connectionInfo: ConnectionInfo =  this.createConnectionInfo()
+        connectionInfo.connectHeaders = {
+            login,
+            passcode
         }
-        return uri
+        try {
+            this.connectedInfo = await Continuum.connect(connectionInfo)
+            this.authenticated = true
+            this.accessDenied = false
+        } catch(reason: any) {
+            this.accessDenied = true
+            if(reason) {
+                throw new Error(reason)
+            } else {
+                throw new Error('Credentials invalid')
+            }
+        }
+    }
+
+    public async authenticateKeycloak(keycloak: Keycloak): Promise<void> {
+        this.keycloak = keycloak
+        if(process.env.VUE_APP_KEYCLOAK_ROLE !== 'none') {
+            if(!this.keycloak.hasRealmRole(process.env.VUE_APP_KEYCLOAK_ROLE ?? 'none')) {
+                this.accessDenied = true
+                CONTINUUM_UI.navigate('/access-denied').then()
+            } else {
+                await this.authenticate(this.keycloak.tokenParsed?.email as string, this.keycloak.token as string)
+            }
+        } else {
+            await this.authenticate(this.keycloak.tokenParsed?.email as string, this.keycloak.token as string)
+        }
+    }
+
+    public isAccessDenied(): boolean  {
+        return this.accessDenied
+    }
+
+    public isAuthenticated(): boolean {
+        if(process.env.VUE_APP_KEYCLOAK_SUPPORT === 'true') {
+            return this.authenticated && (this.keycloak !== undefined && this.keycloak.authenticated === true)
+        } else {
+            return this.authenticated
+        }
+    }
+
+    public createConnectionInfo(): ConnectionInfo {
+        const connectionInfo: ConnectionInfo = {
+            host: '127.0.0.1',
+            port: 58503
+        }
+        if(window.location.hostname !== '127.0.0.1'
+            && window.location.hostname !== 'localhost') {
+            if(window.location.protocol.startsWith('https')) {
+                connectionInfo.useSSL = true
+            }
+            if(window.location.port !== '') {
+                connectionInfo.port = 58503
+            } else {
+                connectionInfo.port = null
+            }
+            connectionInfo.host = window.location.hostname
+        }
+        return connectionInfo
     }
 
 }
 
-container.addSingleton<IUserState>(UserState)
+export const USER_STATE: IUserState = reactive(new UserState())

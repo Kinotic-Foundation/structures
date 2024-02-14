@@ -25,3 +25,9 @@ yarn-error.log*
 
 ### MAC SPECIFIC ###
 *.DS_Store
+
+## yalc ##
+.yalc
+yalc.lock
+
+.yarn/

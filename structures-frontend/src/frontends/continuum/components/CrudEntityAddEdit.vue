@@ -10,28 +10,31 @@
                     <v-toolbar-title>{{title}}</v-toolbar-title>
                     <v-spacer></v-spacer>
                     <v-toolbar-items>
+
                         <v-btn @click="save"
                                :disabled="!valid"
                                dark
                                text>
                             Save
                         </v-btn>
+
                     </v-toolbar-items>
                 </v-toolbar>
             </div>
             <v-list>
-                <v-subheader>Basic Information</v-subheader>
+                <v-subheader v-if="showBasicInfoSubheader" >Basic Information</v-subheader>
                 <v-list-item>
                     <v-list-item-content>
                         <v-form ref="form"
                                 v-model="valid"
                                 lazy-validation>
 
-                            <v-text-field v-model="syncedEntity.identity"
+                            <v-text-field v-model="syncedEntity.id"
                                           :disabled="editing"
-                                          :rules="identityRules"
+                                          :rules="rulesForIdentity"
                                           :label="identityLabel"
-                                          required>
+                                          :required="identityEditable"
+                                          v-if="identityEditable" >
                             </v-text-field>
 
                             <slot name="basic-info" :entity="syncedEntity">
@@ -55,8 +58,7 @@
 <script lang="ts">
 import { PropType } from 'vue'
 import { Component, Prop, Vue, PropSync, Emit } from 'vue-property-decorator'
-import { inject } from 'inversify-props'
-import { ICrudServiceProxy, ICrudServiceProxyFactory, Identifiable } from '@kinotic-foundation/continuum-js'
+import {Continuum, ICrudServiceProxy, Identifiable} from '@kinotic/continuum-client'
 import { mdiClose } from '@mdi/js'
 
 // Function that takes an input value as an argument and return either true / false or a string with an error message
@@ -79,14 +81,21 @@ export default class CrudEntityAddEdit extends Vue {
     @Prop({type: String, required: false, default: 'Name*'})
     public identityLabel!: string
 
-    @PropSync('entity', {type: Object as PropType<Identifiable<string>>, required: false, default: { identity: '' }})
+    @Prop({type: Array, required: false, default: () => []})
+    public identityRules!: RuleValidator[]
+
+    @Prop({type: Boolean, required: false, default: true})
+    public identityEditable!: boolean
+
+    @Prop({type: Boolean, required: false, default: true})
+    public showBasicInfoSubheader!: boolean
+
+    @PropSync('entity', {type: Object as PropType<Identifiable<string>>, required: false, default: { id: '' }})
     public syncedEntity!: Identifiable<string>
 
     /**
      * Services
      */
-    @inject()
-    private crudServiceProxyFactory!: ICrudServiceProxyFactory
     private crudServiceProxy!: ICrudServiceProxy<any>
 
     /**
@@ -101,8 +110,7 @@ export default class CrudEntityAddEdit extends Vue {
     private dialog: boolean = false
     private valid: boolean = true
     private loading: boolean = false
-    private identityRules: RuleValidator[] = []
-
+    private rulesForIdentity: RuleValidator[] = []
 
     constructor() {
         super()
@@ -110,17 +118,21 @@ export default class CrudEntityAddEdit extends Vue {
 
     // Lifecycle hooks
     public mounted() {
-        this.identityRules = [
-            ( v ) => !!v || this.identityLabel + ' is required'
-        ]
+        if(this.identityRules.length === 0){
+            this.rulesForIdentity = [
+                ( v ) => !!v || this.identityLabel + ' is required'
+            ]
+        }else{
+            this.rulesForIdentity = this.identityRules
+        }
 
-        this.crudServiceProxy = this.crudServiceProxyFactory.crudServiceProxy(this.crudServiceIdentifier)
+        this.crudServiceProxy = Continuum.crudServiceProxy(this.crudServiceIdentifier)
 
         if (this.identity !== null) {
             this.editing = true
             this.loading = true
 
-            this.crudServiceProxy.findByIdentity(this.identity).then((item: Identifiable<string>) => {
+            this.crudServiceProxy.findById(this.identity).then((item: Identifiable<string>) => {
                 this.syncedEntity = item
 
                 this.afterLoad(item)
@@ -145,6 +157,7 @@ export default class CrudEntityAddEdit extends Vue {
 
     public async save() {
         this.hideAlert()
+
         if ((this.$refs.form as Vue & { validate: () => boolean }).validate()) {
             this.loading = true
 

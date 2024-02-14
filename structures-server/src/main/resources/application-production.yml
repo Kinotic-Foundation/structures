@@ -4,17 +4,11 @@ continuum:
   debug: true
 
 continuum-gateway:
-  disableIam: true
   dataDir: /tmp/work
-
-structures:
-  openApiSecurityType: BASIC
 
 logging:
   level:
     org:
-      springframework:
-        web: INFO
       kinotic: TRACE
     io:
       vertx: INFO

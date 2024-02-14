@@ -12,36 +12,51 @@ const adminRoutes: RouteConfig[] = [
         },
         children: [
             {
-                path: '/structures-admin-namespaces', component: () => import('@/frontends/structures-admin/pages/structures/namespaces/Namespaces.vue'),
+                path: '/namespaces', component: () => import('@/frontends/continuum/layouts/NestedLayout.vue'),
                 meta: {
                     authenticationRequired: true,
                     icon: 'fa-sitemap',
                     title: 'Namespaces'
-                }
+                },
+                children: [
+                    {
+                        path: '',
+                        component: () => import('@/frontends/structures-admin/pages/structures/namespaces/NamespaceList.vue')
+                    },
+                    {
+                        path: 'edit/:id', component: () => import('@/frontends/structures-admin/pages/structures/namespaces/NamespaceAddEdit.vue'), props: true
+                    },
+                    {
+                        path: 'add', component: () => import('@/frontends/structures-admin/pages/structures/namespaces/NamespaceAddEdit.vue')
+                    }
+                ]
             },
             {
-                path: '/structures-admin', component: () => import('@/frontends/structures-admin/pages/structures/structures/Structures.vue'),
+                path: '/structures', component: () => import('@/frontends/continuum/layouts/NestedLayout.vue'),
                 meta: {
                     authenticationRequired: true,
                     icon: 'fa-toolbox',
                     title: 'Structures'
-                }
-            },
-            {
-                path: '/structures-admin-traits', component: () => import('@/frontends/structures-admin/pages/structures/traits/Traits.vue'),
-                meta: {
-                    authenticationRequired: true,
-                    icon: 'fa-tools',
-                    title: 'Traits'
-                }
-            },
-            {
-                path: '/structure-items/:structureId', component: () => import('@/frontends/structures-admin/pages/structures/items/GenericItem.vue'), props: true,
-                meta: {
-                    authenticationRequired: true,
-                    noShow: true,
-                    title: 'Items'
-                }
+                },
+                children: [
+                    {
+                        path: '',
+                        component: () => import('@/frontends/structures-admin/pages/structures/structures/StructuresList.vue')
+                    },
+                    {
+                        path: 'edit/:id', component: () => import('@/frontends/structures-admin/pages/structures/structures/StructureAddEdit.vue'), props: true
+                    },
+                    {
+                        path: 'add', component: () => import('@/frontends/structures-admin/pages/structures/structures/StructureAddEdit.vue')
+                    },
+                    {
+                        path: '/entity/:structureId', component: () => import('@/frontends/structures-admin/pages/structures/entity/EntityList.vue'), props: true,
+                        meta: {
+                            noShow: true,
+                            title: 'Entities'
+                        }
+                    }
+                ]
             }
         ]
     }

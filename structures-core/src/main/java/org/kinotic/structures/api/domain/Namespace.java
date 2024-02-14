@@ -1,34 +1,38 @@
 package org.kinotic.structures.api.domain;
 
-import java.io.Serializable;
+import lombok.*;
+import lombok.experimental.Accessors;
+import org.kinotic.continuum.api.Identifiable;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.elasticsearch.annotations.Document;
+import org.springframework.data.elasticsearch.annotations.Field;
+import org.springframework.data.elasticsearch.annotations.FieldType;
+import org.springframework.data.elasticsearch.annotations.Setting;
 
-public class Namespace implements Serializable {
+import java.util.Date;
 
-    private String name = null;
-    private String description = null;
-    private long updated = 0;
+@Getter
+@Setter
+@Accessors(chain = true)
+@NoArgsConstructor
+@RequiredArgsConstructor
+@Document(indexName = "namespace")
+@Setting(shards = 2, replicas = 2)
+public class Namespace implements Identifiable<String> {
 
-    public String getName() {
-        return name;
-    }
+    @Id
+    @Field(type = FieldType.Keyword)
+    @NonNull
+    private String id;
 
-    public void setName(String name) {
-        this.name = name;
-    }
+    @Field(type = FieldType.Text)
+    @NonNull
+    private String description;
 
-    public String getDescription() {
-        return description;
-    }
+    @Field(type=FieldType.Date)
+    private Date updated = null;
 
-    public void setDescription(String description) {
-        this.description = description;
-    }
+    @Field(type = FieldType.Boolean)
+    private boolean federatedGraphQl = false;
 
-    public long getUpdated() {
-        return updated;
-    }
-
-    public void setUpdated(long updated) {
-        this.updated = updated;
-    }
 }

@@ -1,8 +1,8 @@
-import { IServiceProxy, IServiceRegistry } from '@kinotic-foundation/continuum-js'
-import { container, inject, injectable } from 'inversify-props'
-import { Observable } from 'rxjs'
-import { Result } from '../domain/grind/Result'
+import {Continuum, IServiceProxy} from '@kinotic/continuum-client'
 import { JobDefinition } from '../domain/grind/JobDefinition'
+import {reactive} from 'vue'
+import {Observable} from 'rxjs'
+
 
 /**
  * Grind Service
@@ -11,7 +11,7 @@ export interface IGrindServiceProxy {
 
     describeJob(methodIdentifier: string, args?: any[] | undefined): Promise<JobDefinition>
 
-    executeJob(methodIdentifier: string, args?: any[] | undefined): Observable<Result>
+    executeJob(methodIdentifier: string, args?: any[] | undefined): Observable<any>
 
 }
 
@@ -27,8 +27,8 @@ class GrindServiceProxy implements IGrindServiceProxy {
         return this.serviceProxy.invoke(methodIdentifier, args) as Promise<JobDefinition>
     }
 
-    executeJob(methodIdentifier: string, args?: any[] | undefined): Observable<Result> {
-        return this.serviceProxy.invokeStream(methodIdentifier, args) as Observable<Result>
+    executeJob(methodIdentifier: string, args?: any[] | undefined): Observable<any> {
+        return this.serviceProxy.invokeStream(methodIdentifier, args) as Observable<any>
     }
 
 
@@ -45,19 +45,17 @@ export interface IGrindServiceFactory {
 
 }
 
-@injectable()
+
 export class GrindServiceFactory implements IGrindServiceFactory {
 
-    private serviceRegistry: IServiceRegistry
 
-    constructor(@inject() serviceRegistry: IServiceRegistry) {
-        this.serviceRegistry = serviceRegistry
+    constructor() {
     }
 
     grindServiceProxy(serviceIdentifier: string): IGrindServiceProxy {
-        return new GrindServiceProxy(this.serviceRegistry.serviceProxy(serviceIdentifier));
+        return new GrindServiceProxy(Continuum.serviceProxy(serviceIdentifier))
     }
 
 }
 
-container.addSingleton<IGrindServiceFactory>(GrindServiceFactory)
+export const GRIND_SERVICE_FACTORY: IGrindServiceFactory = reactive(new GrindServiceFactory())

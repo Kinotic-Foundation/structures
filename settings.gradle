@@ -1,7 +1,12 @@
 rootProject.name = 'structures'
 
+//includeBuild('../continuum-framework')
+
 rootDir.listFiles().each {
     if (it.directory && new File(it, 'settings.gradle').exists()) {
         include ":${it.name}"
     }
 }
+
+//include 'structures-js:structures-data'
+//include 'structures-js:structures-cli'

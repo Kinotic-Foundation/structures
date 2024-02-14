@@ -25,7 +25,7 @@ properties.each { key, val -> project.ext."$key" = val }
 dependencies {
     implementation "org.springframework.boot:org.springframework.boot.gradle.plugin:${springBootVersion}"
 
-    // see https://docs.spring.io/dependency-management-plugin/docs/current-SNAPSHOT/reference/html5/
+    // see https://docs.spring.io/dependency-management-plugin/docs/current-SNAPSHOT/reference/html/
     implementation "io.spring.gradle:dependency-management-plugin:${springDependencyManagementVersion}"
 
     // lombok

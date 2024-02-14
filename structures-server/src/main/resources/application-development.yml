@@ -3,19 +3,14 @@ continuum:
   discovery: sharedfs
   debug: true
 
-continuum-gateway:
-  disableIam: true
-
 logging:
   level:
     org:
-      springframework:
-        web: DEBUG
       kinotic: TRACE
     io:
       vertx: DEBUG
 
 structures:
-  elastic-use-ssl: false
-#  elastic-username: elastic
+  initializeWithSampleData: true
+#  elastic-username: structures
 #  elastic-password: pass79

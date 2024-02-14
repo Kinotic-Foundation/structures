@@ -1,8 +1,10 @@
+![CI](https://github.com/kinotic-foundation/structures/actions/workflows/gradle-build.yml/badge.svg?branch=develop)
+
 # Structures
 Structures is an open-source framework for data storage and retrieval, supporting schema evolution, data management, and providing a user-friendly GUI and OpenAPI interface for data management.
 
 ## Docs
-* [Home](https://kinotic-foundation.github.io/structures/)
+* [https://kinotic-foundation.github.io/structures/](https://kinotic-foundation.github.io/structures/)
 
 ### Projects
 * structures-core
@@ -31,8 +33,8 @@ Structures is an open-source framework for data storage and retrieval, supportin
     ```
 6. Run Docker Compose.
    1. `docker-compose up -d` (You should see the application listed under containers in docker desktop)
-7. You can now view the application by going [here](http://localhost:8989/) in a browser. (This may not be available for at least a minute while the backend services finish starting.)
-   1. [http://localhost:8989/](http://localhost:8989/)
+7. You can now view the application by going [here](http://localhost:9090/) in a browser. (This may not be available for at least a minute while the backend services finish starting.)
+   1. [http://localhost:9090/](http://localhost:9090/)
 
 ### Environment Variables 
 These variables are available for custom configuration, presented are the defaults.

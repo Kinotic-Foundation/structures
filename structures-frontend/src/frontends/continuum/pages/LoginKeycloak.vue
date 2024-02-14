@@ -5,39 +5,33 @@
 
             </v-container>
         </v-main>
-
     </v-app>
 </template>
 
 <script lang="ts">
 
-    import {Component, Vue} from "vue-property-decorator"
-    import {inject} from "inversify-props"
-    import {IContinuumUI} from "@/frontends/continuum"
+import {Component, Prop, Vue} from "vue-property-decorator"
+import {CONTINUUM_UI} from "@/frontends/continuum"
 
 
-    @Component({
-        components: { }
-    })
-    export default class LoginKeycloak extends Vue {
+@Component({
+    components: { }
+})
+export default class LoginKeycloak extends Vue {
 
-        @inject()
-        private continuumUI!: IContinuumUI
+    @Prop({type: String, required: false, default: null})
+    public referer!: string | null
 
-        public async created() {
-          // only could have reached here if we have properly been authenticated
+    public async created() {
+        // only could have reached here if we have properly been authenticated
 
-          await this.continuumUI.navigate('/')
-
+        if(this.referer) {
+            await CONTINUUM_UI.navigate(this.referer)
+        }else{
+            await CONTINUUM_UI.navigate('/')
         }
-
     }
+}
 
 </script>
 
-<style scoped>
-    /*.login {*/
-    /*    background: url("../assets/loginBackground_w_3840.jpg") no-repeat;*/
-    /*    background-size: cover;*/
-    /*}*/
-</style>

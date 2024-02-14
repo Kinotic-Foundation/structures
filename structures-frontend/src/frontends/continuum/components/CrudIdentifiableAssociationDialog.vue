@@ -25,7 +25,7 @@
                     <tr v-for="(item, index) in syncedAssociatedIdentifiables"
                         :key="index">
                         <td>
-                            {{ item.identity }}
+                            {{ item.id }}
                         </td>
                         <td>
                             {{ item.description }}
@@ -71,7 +71,7 @@
                                 <v-checkbox dense v-model="selectedAssociatedIdentifiables" :value="item"></v-checkbox>
                             </td>
                             <td>
-                                {{ item.identity }}
+                                {{ item.id }}
                             </td>
                             <td>
                                 {{ item.description }}
@@ -100,16 +100,16 @@
 
 <script lang="ts">
 import { Component, Prop, Vue, PropSync } from 'vue-property-decorator'
-import { inject } from 'inversify-props'
 import {
-    Direction,
-    ICrudServiceProxy,
-    ICrudServiceProxyFactory,
-    Identifiable,
-    Order,
-    Page,
-    Pageable
-} from '@kinotic-foundation/continuum-js'
+  Continuum,
+  Direction,
+  ICrudServiceProxy,
+  ICrudServiceProxyFactory,
+  Identifiable,
+  Order,
+  Page,
+  Pageable
+} from '@kinotic/continuum-client'
 import { mdiDelete, mdiPlus } from '@mdi/js'
 
 @Component({
@@ -126,14 +126,12 @@ export default class CrudIdentifiableAssociationDialog extends Vue {
     @Prop({type: String, required: true})
     public title!: string
 
-    @PropSync('associatedIdentifiables', {type: Array, required: false, default: { identity: '' }})
+    @PropSync('associatedIdentifiables', {type: Array, required: false, default: { id: '' }})
     public syncedAssociatedIdentifiables!: Array<Identifiable<string>>
 
     /**
      * Services
      */
-    @inject()
-    private crudServiceProxyFactory!: ICrudServiceProxyFactory
     private crudServiceProxy!: ICrudServiceProxy<any>
 
     /**
@@ -156,7 +154,7 @@ export default class CrudIdentifiableAssociationDialog extends Vue {
     }
 
     public mounted() {
-        this.crudServiceProxy = this.crudServiceProxyFactory.crudServiceProxy(this.crudServiceIdentifier)
+        this.crudServiceProxy = Continuum.crudServiceProxy(this.crudServiceIdentifier)
     }
 
     public async openAddAssociatedIdentifiablesDialog() {
@@ -168,18 +166,16 @@ export default class CrudIdentifiableAssociationDialog extends Vue {
 
         const ids: string[] = []
         for (const policy of this.syncedAssociatedIdentifiables) {
-            ids.push(policy.identity)
+            if(policy.id !== null){
+                ids.push(policy.id)
+            }
         }
 
         try {
-            const pageable: Pageable = {
-                pageNumber: 0,
-                pageSize: 50, // TODO: add infinite scroll paging support https://peachscript.github.io/vue-infinite-loading/
-                sort: { orders: [new Order('identity', Direction.ASC)] }
-            }
+            const pageable = Pageable.create(0, 50, { orders: [new Order('id', Direction.ASC)] })
 
             const page: Page<Identifiable<string>> = await this.crudServiceProxy.findByIdNotIn(ids, pageable)
-            this.availableAssociatedIdentifiables = page.content
+            this.availableAssociatedIdentifiables = page.content ?? []
 
         } catch (error: any) {
             this.displayAlert(error.message)

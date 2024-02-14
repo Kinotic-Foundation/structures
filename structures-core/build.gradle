@@ -9,38 +9,41 @@ ext {
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
-	implementation 'org.springframework.boot:spring-boot-starter-security'
-	implementation 'org.springframework.boot:spring-boot-starter-webflux'
-	implementation 'org.springframework.boot:spring-boot-starter-graphql'
-
-	implementation "com.apollographql.federation:federation-graphql-java-support:${federationJvmVersion}"
-	implementation "com.graphql-java:graphql-java-extended-scalars:${graphQlJavaVersion}"
-
-	// Used for conditionally wiring beans
+	implementation 'org.springframework.boot:spring-boot-starter-json'
 	implementation 'org.springframework.boot:spring-boot-autoconfigure'
-
-	//Misc
-	implementation "net.logstash.logback:logstash-logback-encoder:4.11"
-
-	// reactive https://github.com/reactive-streams/reactive-streams-jvm
-	// these should be the only reactive interfaces exposed by the Core API!
+	implementation 'org.springframework.boot:spring-boot-starter-webflux'
 	implementation 'org.reactivestreams:reactive-streams'
 	implementation 'io.projectreactor:reactor-core'
 
-	// Additional Continuum Dependencies
+	implementation "io.vertx:vertx-web:${vertxVersion}"
+	implementation "io.vertx:vertx-web-graphql:${vertxVersion}"
+	implementation "io.vertx:vertx-health-check:${vertxVersion}"
+	implementation "com.github.rworsnop:vertx-beans:${vertxBeansVersion}"
+	implementation "me.escoffier.vertx:vertx-completable-future:${vertxCompletableFutureVersion}"
+
 	implementation "org.kinotic:continuum-core:${continuumVersion}"
 	implementation "org.kinotic:continuum-core-vertx:${continuumVersion}"
+	implementation "org.kinotic:continuum-gateway:${continuumVersion}"
+	implementation "org.kinotic:continuum-idl:${continuumVersion}"
+
+	implementation 'com.fasterxml.jackson.core:jackson-annotations'
+	implementation 'com.fasterxml.jackson.core:jackson-core'
+	implementation 'com.fasterxml.jackson.core:jackson-databind'
+
+	implementation "com.github.ben-manes.caffeine:caffeine:${caffeineVersion}"
+
+	implementation "com.graphql-java:graphql-java"
+	implementation "com.apollographql.federation:federation-graphql-java-support:${federationJvmVersion}"
+	implementation "com.graphql-java:graphql-java-extended-scalars:${graphQlJavaExtendedScalarsVersion}"
 
 	implementation "io.swagger.core.v3:swagger-models:${swaggerCoreVersion}"
 	implementation "io.swagger.core.v3:swagger-core:${swaggerCoreVersion}"
 
-	implementation "com.github.ben-manes.caffeine:caffeine:${caffeineVersion}"
-
 	annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
-	testImplementation 'org.testcontainers:testcontainers:1.17.6'
-	testImplementation 'org.testcontainers:elasticsearch:1.17.6'
-	testImplementation 'junit:junit:4.13.1'
+	testImplementation "org.testcontainers:testcontainers:${testContainersVersion}"
+	testImplementation "org.testcontainers:elasticsearch:${testContainersVersion}"
+	testImplementation 'io.projectreactor:reactor-test'
 }
 
 test {

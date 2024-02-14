@@ -1,4 +1,4 @@
-const TerserPlugin = require('terser-webpack-plugin')
+const path = require('path');
 
 module.exports = {
     devServer: {
@@ -15,19 +15,24 @@ module.exports = {
             nodeIntegration: true
         }
     },
-    // chainWebpack: config => {
-    //     config.module
-    //         .rule('comlink')
-    //         .test(/\.worker\.(js|ts)$/i)
-    //         .use('comlink-loader')
-    //         .loader('comlink-loader')
-    //         .tap(options => {
-    //             return {
-    //                 singleton: true
-    //             }
-    //         })
-    //         .end()
-    // },
+
+    chainWebpack: config => {
+        config.module
+            .rule('supportChaining')
+            .test(/\.js$/)
+            .include
+            .add(path.resolve('node_modules/@stomp'))
+            .end()
+            .use('babel-loader')
+            .loader('babel-loader')
+            .tap(options => ({ ...options,
+                plugins : [
+                    '@babel/plugin-proposal-optional-chaining',
+                    '@babel/plugin-proposal-nullish-coalescing-operator'
+                ]
+            }))
+            .end()
+    },
 
     // added this, so we can easily access source files from the browser
     configureWebpack: (config) => {

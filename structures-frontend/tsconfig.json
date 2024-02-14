@@ -2,13 +2,14 @@
   "compilerOptions": {
     "allowJs": true,
     "checkJs": true,
-    "target": "esnext",
-    "module": "esnext",
+    "target": "ES2019",
+    "module": "ES2020",
     "strict": true,
+    "resolveJsonModule": true,
     "jsx": "preserve",
     "declaration": true,
     "importHelpers": true,
-    "moduleResolution": "node",
+    "moduleResolution": "Node",
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "esModuleInterop": true,
@@ -26,10 +27,10 @@
       ]
     },
     "lib": [
-      "esnext",
-      "dom",
-      "dom.iterable",
-      "scripthost"
+      "ESNext",
+      "DOM",
+      "DOM.Iterable",
+      "ScriptHost"
     ]
   },
   "include": [
@@ -41,5 +42,8 @@
   ],
   "exclude": [
     "node_modules"
-  ]
+  ],
+  "vueCompilerOptions": {
+    "experimentalUseElementAccessInTemplate": true
+  }
 }

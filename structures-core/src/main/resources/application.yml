@@ -1,16 +1,8 @@
 spring:
   main:
     allow-circular-references: true
-  elasticsearch:
-    uris: ${STRUCTURES_ELASTIC_URIS:127.0.0.1:9200} # needed for actuator health health checks
 
 logging:
   level:
     org:
       kinotic: INFO
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info

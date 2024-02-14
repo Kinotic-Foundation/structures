@@ -56,10 +56,6 @@ out/
 
 *.zip
 
-structures-server/src/main/resources/webroot/
-
-structures-server/src/main/resources/public/
-
 .idea/jpa-buddy.xml
 
 website/node_modules
@@ -68,5 +64,13 @@ website/.vitepress/cache
 
 website/.vitepress/dist/
 
-structures-ui/.env.development
-structures-ui/.env.production
+structures-frontend/.env.development
+structures-frontend/.env.production
+structures-frontend/node_modules
+
+structures-server/src/main/resources/webroot/
+
+structures-js/structures-cli/.structures/
+structures-js/structures-ui-example/.structures/
+
+structures-js/structures-cli/structures.json
