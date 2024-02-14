@@ -6,7 +6,7 @@ plugins {
 }
 
 group 'org.kinotic'
-version '1.13.2-SNAPSHOT'
+version '1.13.2'
 sourceCompatibility = '11'
 
 repositories {
