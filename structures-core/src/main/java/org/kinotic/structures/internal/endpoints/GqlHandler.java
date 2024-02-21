@@ -129,9 +129,12 @@ public class GqlHandler implements Handler<RoutingContext> {
     }
 
     private void executeBatch(RoutingContext rc, GraphQLBatch batch) {
-        List<CompletableFuture<Buffer>> results = batch.stream()
-                                                           .map(q -> gqlOperationService.execute(rc, q))
-                                                           .collect(toList());
+
+        rc.fail(500, new NoStackTraceThrowable("Batch execution not supported"));
+
+//        List<CompletableFuture<Buffer>> results = batch.stream()
+//                                                           .map(q -> gqlOperationService.execute(rc, q))
+//                                                           .collect(toList());
 
         // FIXME: send result as response
 

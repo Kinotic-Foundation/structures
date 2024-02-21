@@ -55,7 +55,8 @@ public class GqlVerticle extends AbstractVerticle {
 
         router.post(properties.getGraphqlPath()+":"+NAMESPACE_PATH_PARAMETER)
               .consumes("application/json")
-              .produces("application/graphql-response+json")
+              .consumes("application/graphql")
+              .produces("application/json")
               .handler(BodyHandler.create(false))
               .handler(new GqlHandler(gqlOperationService));
 

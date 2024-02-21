@@ -213,29 +213,31 @@ public class DefaultGqlOperationService implements GqlOperationService {
      */
     private ParsedFields getFieldsFromSelectionSet(SelectionSet selectionSet, String rootField) {
         ParsedFields ret = new ParsedFields();
-        for (Selection<?> selection : selectionSet.getSelections()) {
-            if (selection instanceof Field) {
-                Field field = (Field) selection;
-                String jsonPath = (rootField != null) ? rootField + "." + field.getName() : field.getName();
-                if (field.getSelectionSet() != null) {
-                    if (rootField != null && rootField.equals("content")) {
-                        ParsedFields parsedFields = getFieldsFromSelectionSet(field.getSelectionSet(), field.getName());
-                        ret.getContentFields().addAll(parsedFields.getContentFields());
-                        ret.getContentFields().addAll(parsedFields.getNonContentFields());
+        if(selectionSet != null) {
+            for (Selection<?> selection : selectionSet.getSelections()) {
+                if (selection instanceof Field) {
+                    Field field = (Field) selection;
+                    String jsonPath = (rootField != null) ? rootField + "." + field.getName() : field.getName();
+                    if (field.getSelectionSet() != null) {
+                        if (rootField != null && rootField.equals("content")) {
+                            ParsedFields parsedFields = getFieldsFromSelectionSet(field.getSelectionSet(), field.getName());
+                            ret.getContentFields().addAll(parsedFields.getContentFields());
+                            ret.getContentFields().addAll(parsedFields.getNonContentFields());
+                        } else {
+                            ParsedFields parsedFields = getFieldsFromSelectionSet(field.getSelectionSet(), jsonPath);
+                            ret.getContentFields().addAll(parsedFields.getContentFields());
+                            ret.getNonContentFields().addAll(parsedFields.getNonContentFields());
+                        }
                     } else {
-                        ParsedFields parsedFields = getFieldsFromSelectionSet(field.getSelectionSet(), jsonPath);
-                        ret.getContentFields().addAll(parsedFields.getContentFields());
-                        ret.getNonContentFields().addAll(parsedFields.getNonContentFields());
+                        if (rootField != null && rootField.equals("content")) {
+                            ret.getContentFields().add(field.getName());
+                        } else {
+                            ret.getNonContentFields().add(jsonPath);
+                        }
                     }
                 } else {
-                    if (rootField != null && rootField.equals("content")) {
-                        ret.getContentFields().add(field.getName());
-                    } else {
-                        ret.getNonContentFields().add(jsonPath);
-                    }
+                    throw new IllegalArgumentException("Unsupported selection type: " + selection.getClass());
                 }
-            } else {
-                throw new IllegalArgumentException("Unsupported selection type: " + selection.getClass());
             }
         }
         return ret;
