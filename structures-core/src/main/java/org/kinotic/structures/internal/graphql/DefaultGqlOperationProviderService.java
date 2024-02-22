@@ -188,7 +188,7 @@ public class DefaultGqlOperationProviderService implements GqlOperationProviderS
     }
 
     @Override
-    public GqlOperationDefinition findOperationName(String completeOperationName) {
+    public GqlOperationDefinition findOperationDefinition(String completeOperationName) {
         long now = System.nanoTime();
         GqlOperationDefinition ret = operationTrie.findValue(completeOperationName);
         log.debug("Finished Searching Trie for: {} in {}ns", completeOperationName, System.nanoTime() - now);

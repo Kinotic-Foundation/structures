@@ -40,6 +40,13 @@ public class DefaultGqlOperationService implements GqlOperationService {
     private final Vertx vertx;
     private final ObjectMapper objectMapper;
 
+    /**
+     * Executes the GQL request.
+     * All logic tries to conform to the <a href="https://graphql.org/learn/serving-over-http/">GQL spec</a>
+     * @param routingContext the {@link RoutingContext} for the request
+     * @param query the {@link GraphQLQuery} to execute
+     * @return the result as a {@link Buffer} ready to send back over the wire
+     */
     @Override
     public CompletableFuture<Buffer> execute(RoutingContext routingContext, GraphQLQuery query) {
 
@@ -59,14 +66,14 @@ public class DefaultGqlOperationService implements GqlOperationService {
         }
 
         if (query.getOperationName() != null && query.getOperationName().equals("IntrospectionQuery")) {
-
+            // We execute Introspection Queries using the java graphql library
             return VertxCompletableFuture.from(vertx, gqlProviderService.getOrCreateGraphQL(namespace)
                                                                         .thenCompose(graphQL -> graphQL.executeAsync(
                                                                                     executionInputBuilder.build()))
                                                                         .thenApply(this::convertToBuffer));
 
         } else {
-
+            // We execute all others using our own logic path optimized for elasticsearch
             Participant participant = routingContext.get(EventConstants.SENDER_HEADER);
             return VertxCompletableFuture.from(vertx, gqlProviderService.getOrCreateGraphQL(namespace))
                                          .thenCompose(graphQL -> executeOperation(namespace,
@@ -130,14 +137,14 @@ public class DefaultGqlOperationService implements GqlOperationService {
 
             String operationName = selection.getName();
 
-            GqlOperationDefinition definition = gqlOperationProviderService.findOperationName(operationName);
+            GqlOperationDefinition definition = gqlOperationProviderService.findOperationDefinition(operationName);
             if (definition != null) {
                 String structureId = getStructureId(namespace, operationName, definition.getOperationNamePrefix());
                 Function<GqlOperationArguments, CompletableFuture<ExecutionResult>> function = definition.getOperationExecutionFunction();
                 return function.apply(new GqlOperationArguments(structureId,
                                                                 participant,
                                                                 parseArguments(selection.getArguments(),
-                                                                                   executionInput.getVariables()),
+                                                                               executionInput.getVariables()),
                                                                 parsedFields));
             } else {
                 return CompletableFuture

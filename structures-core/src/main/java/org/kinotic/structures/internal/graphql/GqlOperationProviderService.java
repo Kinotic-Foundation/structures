@@ -21,6 +21,6 @@ public interface GqlOperationProviderService {
      * @param completeOperationName to find the {@link GqlOperationDefinition} for
      * @return the {@link GqlOperationDefinition} or null if not found
      */
-    GqlOperationDefinition findOperationName(String completeOperationName);
+    GqlOperationDefinition findOperationDefinition(String completeOperationName);
 
 }
