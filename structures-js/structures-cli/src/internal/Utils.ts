@@ -74,6 +74,8 @@ export async function connectAndUpgradeSession(server: string, logger: Logger): 
                 connectionInfo.useSSL = true
             }
             if(serverURL.port){
+                connectionInfo.port = Number(serverURL.port)
+            }else{
                 connectionInfo.port = 58503
             }
         }
