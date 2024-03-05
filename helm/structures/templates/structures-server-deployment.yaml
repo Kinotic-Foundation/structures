@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "structures-server.fullname" . }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "structures-server.name" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "structures-server.name" . }}
+    spec:
+      containers:
+        - name: structures-server
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 9090
+            initialDelaySeconds: 10
+            failureThreshold: 15
+            periodSeconds: 10
+            timeoutSeconds: 7
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 9090
+            initialDelaySeconds: 30
+            failureThreshold: 15
+            periodSeconds: 10
+            timeoutSeconds: 7
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 9090
+            initialDelaySeconds: 30
+            failureThreshold: 30
+            periodSeconds: 30
+            timeoutSeconds: 7
+          ports:
+            - containerPort: 9090 # UI PORT
+            - containerPort: 4000 # GraphQL Port
+            - containerPort: 8080 # OpenAPI Port
+            - containerPort: 58503 # Continuum Stomp Port
+            - containerPort: 58504 # Continuum REST Port
+          envFrom:
+            - configMapRef:
+                name: {{ include "structures-server.fullname" . }}
+          volumeMounts:
+            - name: tmp-work
+              mountPath: /workspace/ignite/work
+      restartPolicy: Always
+      volumes:
+        - name: tmp-work
+          emptyDir:
+            sizeLimit: 1Gi

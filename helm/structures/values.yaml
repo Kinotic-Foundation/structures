@@ -1,0 +1,17 @@
+replicaCount: 1
+nameOverride: ""
+
+image:
+  repository: kinotic/structures-server
+  pullPolicy: IfNotPresent
+  tag: "1.14.0-SNAPSHOT"
+
+env:
+  STRUCTURES_INDEX_PREFIX: "struct_"
+  STRUCTURES_ELASTIC_SCHEME: "https"
+  STRUCTURES_ELASTIC_HOST: "test-minds-elasticsearch.es.centralus.azure.elastic-cloud.com"
+  STRUCTURES_ELASTIC_PORT: "443"
+  STRUCTURES_ELASTIC_CONNECTION_TIMEOUT: "1M"
+  STRUCTURES_ELASTIC_SOCKET_TIMEOUT: "1M"
+  STRUCTURES_ELASTIC_USERNAME: "structures"
+  STRUCTURES_ELASTIC_PASSWORD: "asdfsda898u7fsad8sfa@sdfa"

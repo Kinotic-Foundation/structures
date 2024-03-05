@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "structures-server.fullname" . }}
+data:
+  JAVA_TOOL_OPTIONS: " -Xlog:gc=debug::pid,time,uptime --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED --add-opens=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED"
+  SPRING_PROFILES_ACTIVE: "production"
+  STRUCTURES_CORS_ALLOWED_ORIGIN_PATTERN: "*"
+  STRUCTURES_INDEX_PREFIX: "{{ .Values.env.STRUCTURES_INDEX_PREFIX }}"
+  STRUCTURES_ELASTICCONNECTIONS_0_SCHEME: "{{ .Values.env.STRUCTURES_ELASTIC_SCHEME }}"
+  STRUCTURES_ELASTICCONNECTIONS_0_HOST: "{{ .Values.env.STRUCTURES_ELASTIC_HOST }}"
+  STRUCTURES_ELASTICCONNECTIONS_0_PORT: "{{ .Values.env.STRUCTURES_ELASTIC_PORT }}"
+  STRUCTURES_ELASTIC_CONNECTION_TIMEOUT: "{{ .Values.env.STRUCTURES_ELASTIC_CONNECTION_TIMEOUT }}"
+  STRUCTURES_ELASTIC_SOCKET_TIMEOUT: "{{ .Values.env.STRUCTURES_ELASTIC_SOCKET_TIMEOUT }}"
+  STRUCTURES_ELASTIC_USERNAME: "{{ .Values.env.STRUCTURES_ELASTIC_USERNAME }}"
+  STRUCTURES_ELASTIC_PASSWORD: "{{ .Values.env.STRUCTURES_ELASTIC_PASSWORD }}"
