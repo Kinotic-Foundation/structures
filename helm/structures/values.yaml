@@ -9,7 +9,7 @@ image:
 env:
   STRUCTURES_INDEX_PREFIX: "struct_"
   STRUCTURES_ELASTIC_SCHEME: "https"
-  STRUCTURES_ELASTIC_HOST: "test-minds-elasticsearch.es.centralus.azure.elastic-cloud.com"
+  STRUCTURES_ELASTIC_HOST: "minds-test-elasticsearch.es.centralus.azure.elastic-cloud.com"
   STRUCTURES_ELASTIC_PORT: "443"
   STRUCTURES_ELASTIC_CONNECTION_TIMEOUT: "1M"
   STRUCTURES_ELASTIC_SOCKET_TIMEOUT: "1M"
