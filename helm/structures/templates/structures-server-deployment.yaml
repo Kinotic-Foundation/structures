@@ -53,6 +53,7 @@ spec:
             - name: tmp-work
               mountPath: /workspace/ignite/work
       restartPolicy: Always
+      nodeSelector: {{ toYaml .Values.nodeSelector | nindent 8 }}
       volumes:
         - name: tmp-work
           emptyDir:

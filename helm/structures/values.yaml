@@ -15,3 +15,6 @@ env:
   STRUCTURES_ELASTIC_SOCKET_TIMEOUT: "1M"
   STRUCTURES_ELASTIC_USERNAME: "structures"
   STRUCTURES_ELASTIC_PASSWORD: "asdfsda898u7fsad8sfa@sdfa"
+
+nodeSelector:
+  env: structures
