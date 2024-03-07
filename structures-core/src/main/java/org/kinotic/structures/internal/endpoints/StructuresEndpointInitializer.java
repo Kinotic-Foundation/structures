@@ -1,9 +1,7 @@
 package org.kinotic.structures.internal.endpoints;
 
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
-import io.vertx.core.AsyncResult;
 import io.vertx.core.DeploymentOptions;
-import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.ext.healthchecks.HealthChecks;
 import io.vertx.ext.healthchecks.Status;
@@ -14,11 +12,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
-import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
-import java.util.Date;
 
 /**
  * This class is responsible for initializing the structures endpoints.
@@ -36,7 +32,6 @@ public class StructuresEndpointInitializer {
     private final StructuresVerticleFactory verticleFactory;
     private final HealthChecks healthChecks;
     private final ElasticsearchAsyncClient esAsyncClient;
-    private final Environment environment;
 
     private boolean lastEsStatus = true;
     private Throwable lastEsError = null;

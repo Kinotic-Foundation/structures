@@ -9,6 +9,7 @@ spring:
 continuum:
   discovery: sharedfs
   debug: true
+  maxNumberOfCoresToUse: 4
 
 logging:
   level:

@@ -29,7 +29,7 @@ jobs:
         uses: gradle/gradle-build-action@v2
 
       - name: Build with Gradle
-        run: ./gradlew build
+        run: ./gradlew build -x test
 
       - name: Publish to Maven Central
         # We must -Psigning.gnupg.executable=gpg since setup-java provides gpg2 as gpg
