@@ -6,6 +6,7 @@ import io.vertx.core.http.HttpServer;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.CorsHandler;
+import lombok.RequiredArgsConstructor;
 import org.kinotic.continuum.api.security.SecurityService;
 import org.kinotic.continuum.gateway.api.security.AuthenticationHandler;
 import org.kinotic.structures.api.config.StructuresProperties;
@@ -20,7 +21,7 @@ import java.util.Set;
 /**
  * Created by Navíd Mitchell 🤪 on 6/7/23.
  */
-@Component
+@RequiredArgsConstructor
 public class GqlVerticle extends AbstractVerticle {
 
     public static final String NAMESPACE_PATH_PARAMETER = "structureNamespace";
@@ -30,16 +31,8 @@ public class GqlVerticle extends AbstractVerticle {
     private final StructuresProperties properties;
     private final GqlOperationService gqlOperationService;
     private final SecurityService securityService;
-
     private HttpServer server;
 
-    public GqlVerticle(StructuresProperties properties,
-                       GqlOperationService gqlOperationService,
-                       @Autowired(required = false) SecurityService securityService) {
-        this.properties = properties;
-        this.gqlOperationService = gqlOperationService;
-        this.securityService = securityService;
-    }
 
     @Override
     public void start(Promise<Void> startPromise) {
@@ -63,8 +56,7 @@ public class GqlVerticle extends AbstractVerticle {
         // Begin listening for requests
         server.requestHandler(router).listen(properties.getGraphqlPort(), ar -> {
             if (ar.succeeded()) {
-                log.debug("GraphQL listening on port " + properties.getGraphqlPort());
-                log.debug("GraphQL available at http://localhost:" + properties.getGraphqlPort() + properties.getGraphqlPath()+"[STRUCTURE NAMESPACE]/");
+                log.info("GraphQL Started Listener on Thread "+Thread.currentThread().getName());
                 startPromise.complete();
             } else {
                 startPromise.fail(ar.cause());
