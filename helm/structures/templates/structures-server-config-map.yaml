@@ -3,9 +3,9 @@ kind: ConfigMap
 metadata:
   name: {{ include "structures-server.fullname" . }}
 data:
-  JAVA_TOOL_OPTIONS: "-XX:MaxDirectMemorySize=1024M"
-  BPL_JAVA_NMT_ENABLED: "false"
-  BPL_JMX_ENABLED: "true"
+  JAVA_TOOL_OPTIONS: "{{ .Values.env.JAVA_TOOL_OPTIONS }}"
+  BPL_JAVA_NMT_ENABLED: "{{ .Values.env.ENABLE_NMT }}"
+  BPL_JMX_ENABLED: "{{ .Values.env.ENABLE_JMX }}"
   SPRING_PROFILES_ACTIVE: "production"
   STRUCTURES_CORS_ALLOWED_ORIGIN_PATTERN: "*"
   STRUCTURES_INDEX_PREFIX: "{{ .Values.env.STRUCTURES_INDEX_PREFIX }}"

@@ -7,6 +7,10 @@ image:
   tag: "1.14.0-SNAPSHOT"
 
 env:
+  ENABLE_JMX: "true"
+  ENABLE_NMT: "true"
+#  JAVA_TOOL_OPTIONS: "-XX:MaxDirectMemorySize=1024M -javaagent:/workspace/bin/elastic-apm-agent.jar -Delastic.apm.service_name=structures -Delastic.apm.server_urls=https://506858167386480c97844870a815ed13.apm.centralus.azure.elastic-cloud.com:443 -Delastic.apm.secret_token=iwWOfv0uaECcDXMtX4 -Delastic.apm.environment=production -Delastic.apm.application_packages=org.kinotic.structures"
+  JAVA_TOOL_OPTIONS: "-XX:MaxDirectMemorySize=1024M"
   STRUCTURES_INDEX_PREFIX: "struct_"
   STRUCTURES_ELASTIC_SCHEME: "https"
   STRUCTURES_ELASTIC_HOST: "minds-test-elasticsearch.es.centralus.azure.elastic-cloud.com"
@@ -15,6 +19,5 @@ env:
   STRUCTURES_ELASTIC_SOCKET_TIMEOUT: "1M"
   STRUCTURES_ELASTIC_USERNAME: "structures"
   STRUCTURES_ELASTIC_PASSWORD: "asdfsda898u7fsad8sfa@sdfa"
-
 nodeSelector:
   env: structures
