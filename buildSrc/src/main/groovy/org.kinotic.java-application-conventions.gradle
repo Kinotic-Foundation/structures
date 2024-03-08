@@ -40,7 +40,7 @@ bootBuildImage {
 	]
 	environment = [
 			"BPE_DELIM_JAVA_TOOL_OPTIONS" : " ",
-			"BPE_APPEND_JAVA_TOOL_OPTIONS" : "-XX:+UseG1GC -XX:+ScavengeBeforeFullGC -XX:+DisableExplicitGC"
+			"BPE_APPEND_JAVA_TOOL_OPTIONS" : "-XX:+UseG1GC -XX:+ScavengeBeforeFullGC -XX:+DisableExplicitGC",
 			"BP_INCLUDE_FILES" : "bin/*"
 	]
 	docker {
