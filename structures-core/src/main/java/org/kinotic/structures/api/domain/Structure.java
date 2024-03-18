@@ -43,7 +43,6 @@ import java.util.List;
 public class Structure implements Identifiable<String> {
 
     @Id
-    @Field(type = FieldType.Keyword)
     private String id = null; // do not ever set, system managed
 
     @Field(type = FieldType.Keyword)
@@ -98,6 +97,8 @@ public class Structure implements Identifiable<String> {
     public String toString() {
         return new ToStringBuilder(this)
                 .append("id", id)
+                .append("name", name)
+                .append("namespace", namespace)
                 .append("description", description)
                 .append("multiTenancyType", multiTenancyType)
                 .toString();

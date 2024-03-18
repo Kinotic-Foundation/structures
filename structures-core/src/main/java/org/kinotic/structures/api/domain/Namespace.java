@@ -21,12 +21,9 @@ import java.util.Date;
 public class Namespace implements Identifiable<String> {
 
     @Id
-    @Field(type = FieldType.Keyword)
-    @NonNull
     private String id;
 
     @Field(type = FieldType.Text)
-    @NonNull
     private String description;
 
     @Field(type=FieldType.Date)
