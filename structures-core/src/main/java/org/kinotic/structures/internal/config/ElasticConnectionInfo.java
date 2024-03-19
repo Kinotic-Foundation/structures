@@ -13,11 +13,11 @@ import lombok.experimental.Accessors;
 @AllArgsConstructor
 public class ElasticConnectionInfo {
 
-    private String scheme = "http";
-
     private String host = "localhost";
 
     private int port = 9200;
+
+    private String scheme = "http";
 
     public String toHostAndPort(){
         return host + ":" + port;

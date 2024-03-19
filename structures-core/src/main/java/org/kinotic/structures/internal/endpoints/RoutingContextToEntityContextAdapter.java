@@ -20,13 +20,23 @@ public class RoutingContextToEntityContextAdapter implements EntityContext {
     }
 
     @Override
-    public Participant getParticipant() {
-        return routingContext.get(EventConstants.SENDER_HEADER);
+    public Map<String, Object> data() {
+        return routingContext.data();
+    }
+
+    @Override
+    public <T> T get(String key) {
+        return routingContext.get(key);
     }
 
     @Override
     public List<String> getIncludedFieldsFilter() {
         return null;
+    }
+
+    @Override
+    public Participant getParticipant() {
+        return routingContext.get(EventConstants.SENDER_HEADER);
     }
 
     @Override
@@ -41,17 +51,7 @@ public class RoutingContextToEntityContextAdapter implements EntityContext {
     }
 
     @Override
-    public <T> T get(String key) {
-        return routingContext.get(key);
-    }
-
-    @Override
     public <T> T remove(String key) {
         return routingContext.remove(key);
-    }
-
-    @Override
-    public Map<String, Object> data() {
-        return routingContext.data();
     }
 }

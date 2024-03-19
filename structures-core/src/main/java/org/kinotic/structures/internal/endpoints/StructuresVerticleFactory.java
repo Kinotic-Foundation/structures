@@ -377,7 +377,7 @@ public class StructuresVerticleFactory {
     }
 
     public GqlVerticle createGqlVerticle(){
-        return new GqlVerticle(properties, gqlOperationService, securityService);
+        return new GqlVerticle(gqlOperationService, properties, securityService);
     }
 
     public OpenApiVerticle createOpenApiVerticle(){

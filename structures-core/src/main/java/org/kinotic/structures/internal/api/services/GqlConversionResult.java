@@ -18,18 +18,16 @@ import java.util.Map;
 public class GqlConversionResult {
 
     /**
+     * A map of all additional types that were created during the conversion process, keyed by the name of the type
+     */
+    private final Map<String, GraphQLType> additionalTypes;
+    /**
      * This class holds the input and output types created for a given {@link Structure}
      */
     private final GqlTypeHolder structureType;
-
     /**
      * A list of all {@link GraphQLUnionType} that were created during the conversion process
      */
     private final List<GraphQLUnionType> unionTypes;
-
-    /**
-     * A map of all additional types that were created during the conversion process, keyed by the name of the type
-     */
-    private final Map<String, GraphQLType> additionalTypes;
 
 }

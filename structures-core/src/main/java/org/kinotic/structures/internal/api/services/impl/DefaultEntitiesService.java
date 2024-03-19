@@ -5,6 +5,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
+import org.kinotic.continuum.core.api.event.CRI;
 import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.EntitiesService;
@@ -42,39 +43,15 @@ public class DefaultEntitiesService implements EntitiesService {
     }
 
     @Override
-    public <T> CompletableFuture<T> save(String structureId, T entity, EntityContext context) {
-        return cache.get(structureId)
-                    .thenCompose(entityService -> entityService.save(entity, context));
-    }
-
-    @Override
     public <T> CompletableFuture<Void> bulkSave(String structureId, T entities, EntityContext context) {
         return cache.get(structureId)
                     .thenCompose(entityService -> entityService.bulkSave(entities, context));
     }
 
     @Override
-    public <T> CompletableFuture<T> update(String structureId, T entity, EntityContext context) {
-        return cache.get(structureId)
-                    .thenCompose(entityService -> entityService.update(entity, context));
-    }
-
-    @Override
     public <T> CompletableFuture<Void> bulkUpdate(String structureId, T entities, EntityContext context) {
         return cache.get(structureId)
                     .thenCompose(entityService -> entityService.bulkUpdate(entities, context));
-    }
-
-    @Override
-    public <T> CompletableFuture<T> findById(String structureId, String id, Class<T> type, EntityContext context) {
-        return cache.get(structureId)
-                    .thenCompose(entityService -> entityService.findById(id, type, context));
-    }
-
-    @Override
-    public <T> CompletableFuture<List<T>> findByIds(String structureId, List<String> ids, Class<T> type, EntityContext context) {
-        return cache.get(structureId)
-                .thenCompose(entityService -> entityService.findByIds(ids, type, context));
     }
 
     @Override
@@ -102,12 +79,56 @@ public class DefaultEntitiesService implements EntitiesService {
     }
 
     @Override
+    public void evictCachesFor(Structure structure) {
+        Validate.notNull(structure, "structure must not be null");
+        cache.asMap().remove(structure.getId());
+    }
+
+    @Override
     public <T> CompletableFuture<Page<T>> findAll(String structureId,
                                                   Pageable pageable,
                                                   Class<T> type,
                                                   EntityContext context) {
         return cache.get(structureId)
                     .thenCompose(entityService -> entityService.findAll(pageable, type, context));
+    }
+
+    @Override
+    public <T> CompletableFuture<T> findById(String structureId, String id, Class<T> type, EntityContext context) {
+        return cache.get(structureId)
+                    .thenCompose(entityService -> entityService.findById(id, type, context));
+    }
+
+    @Override
+    public <T> CompletableFuture<List<T>> findByIds(String structureId, List<String> ids, Class<T> type, EntityContext context) {
+        return cache.get(structureId)
+                .thenCompose(entityService -> entityService.findByIds(ids, type, context));
+    }
+
+    @Override
+    public <T> CompletableFuture<T> namedQuery(String structureId,
+                                               String serviceName,
+                                               String queryName,
+                                               Class<T> type,
+                                               EntityContext context,
+                                               Object... args) {
+        return null;
+    }
+
+    @Override
+    public <T> CompletableFuture<Page<T>> namedQueryByPage(String structureId,
+                                                           CRI queryCri,
+                                                           Pageable pageable,
+                                                           Class<T> type,
+                                                           EntityContext context,
+                                                           Object... args) {
+        return null;
+    }
+
+    @Override
+    public <T> CompletableFuture<T> save(String structureId, T entity, EntityContext context) {
+        return cache.get(structureId)
+                    .thenCompose(entityService -> entityService.save(entity, context));
     }
 
     @Override
@@ -121,8 +142,8 @@ public class DefaultEntitiesService implements EntitiesService {
     }
 
     @Override
-    public void evictCachesFor(Structure structure) {
-        Validate.notNull(structure, "structure must not be null");
-        cache.asMap().remove(structure.getId());
+    public <T> CompletableFuture<T> update(String structureId, T entity, EntityContext context) {
+        return cache.get(structureId)
+                    .thenCompose(entityService -> entityService.update(entity, context));
     }
 }

@@ -30,6 +30,16 @@ public class DefaultStructureDAO extends AbstractCrudService<Structure> implemen
     }
 
     @Override
+    public CompletableFuture<Long> countForNamespace(String namespace) {
+        return crudServiceTemplate.count(indexName, builder -> builder
+                .query(q -> q
+                        .bool(b -> b
+                                .filter(TermQuery.of(tq -> tq.field("namespace").value(namespace))._toQuery()
+                                )
+                        )));
+    }
+
+    @Override
     public CompletableFuture<Page<Structure>> findAllPublishedForNamespace(String namespace, Pageable pageable) {
         return crudServiceTemplate.search(indexName, pageable, type, builder -> builder
                 .query(q -> q
@@ -38,16 +48,6 @@ public class DefaultStructureDAO extends AbstractCrudService<Structure> implemen
                                         TermQuery.of(tq -> tq.field("published").value(true))._toQuery())
                         )
                 ));
-    }
-
-    @Override
-    public CompletableFuture<Long> countForNamespace(String namespace) {
-        return crudServiceTemplate.count(indexName, builder -> builder
-                .query(q -> q
-                        .bool(b -> b
-                                .filter(TermQuery.of(tq -> tq.field("namespace").value(namespace))._toQuery()
-                                )
-                        )));
     }
 
     @Override

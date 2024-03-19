@@ -2,10 +2,10 @@ package org.kinotic.structures.api.services;
 
 import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
+import org.kinotic.continuum.core.api.event.CRI;
 import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.Structure;
 
-import java.lang.reflect.Array;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -14,18 +14,6 @@ import java.util.concurrent.CompletableFuture;
  * Created by Navíd Mitchell 🤪on 5/10/23.
  */
 public interface EntitiesService {
-
-    /**
-     * Saves a given entity. This will override all data if there is an existing entity with the same id.
-     * Use the returned instance for further operations as the save operation might have changed the entity instance.
-     *
-     * @param structureId the id of the structure to save the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
-     * @param entity      must not be {@literal null}
-     * @param context     the context for this operation
-     * @return {@link CompletableFuture} emitting the saved entity
-     * @throws IllegalArgumentException in case the given {@literal entity} is {@literal null}
-     */
-    <T> CompletableFuture<T> save(String structureId, T entity, EntityContext context);
 
     /**
      * Saves all given entities.
@@ -38,19 +26,6 @@ public interface EntitiesService {
     <T> CompletableFuture<Void> bulkSave(String structureId, T entities, EntityContext context);
 
     /**
-     * Updates a given entity. This will only override the fields that are present in the given entity.
-     * If any fields are not present in the given entity data they will not be changed.
-     * If the entity does not exist it will be created.
-     *
-     * @param structureId the id of the structure to save the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
-     * @param entity      must not be {@literal null}
-     * @param context     the context for this operation
-     * @return {@link CompletableFuture} emitting the saved entity
-     * @throws IllegalArgumentException in case the given {@literal entity} is {@literal null}
-     */
-    <T> CompletableFuture<T> update(String structureId, T entity, EntityContext context);
-
-    /**
      * Updates all given entities.
      * @param structureId the id of the structure to save the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
      * @param entities all the entities to save
@@ -59,30 +34,6 @@ public interface EntitiesService {
      * @param <T> the type of the entities
      */
     <T> CompletableFuture<Void> bulkUpdate(String structureId, T entities, EntityContext context);
-
-    /**
-     * Retrieves an entity by its id.
-     *
-     * @param structureId the id of the structure to save the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
-     * @param id          must not be {@literal null}
-     * @param type        the type of the entity
-     * @param context     the context for this operation
-     * @return {@link CompletableFuture} with the entity with the given id or {@link CompletableFuture} emitting null if none found
-     * @throws IllegalArgumentException in case the given {@literal id} is {@literal null}
-     */
-    <T> CompletableFuture<T> findById(String structureId, String id, Class<T> type, EntityContext context);
-
-    /**
-     * Retrieves a list of entities by their id.
-     *
-     * @param structureId the id of the structure to save the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
-     * @param ids         must not be {@literal null}
-     * @param type        the type of the entity
-     * @param context     the context for this operation
-     * @return {@link CompletableFuture} with the list of matched entities with the given ids or {@link CompletableFuture} emitting an empty list if none found
-     * @throws IllegalArgumentException in case the given {@literal ids} is {@literal null}
-     */
-    <T> CompletableFuture<List<T>> findByIds(String structureId, List<String> ids, Class<T> type, EntityContext context);
 
     /**
      * Returns the number of entities available.
@@ -108,7 +59,6 @@ public interface EntitiesService {
      * @param id          must not be {@literal null}
      * @param context     the context for this operation
      * @return {@link CompletableFuture} emitting when delete is complete
-     * @throws IllegalArgumentException in case the given {@literal id} is {@literal null}
      */
     CompletableFuture<Void> deleteById(String structureId, String id, EntityContext context);
 
@@ -119,9 +69,14 @@ public interface EntitiesService {
      * @param query       the query used to filter records to delete, must not be {@literal null}
      * @param context     the context for this operation
      * @return {@link CompletableFuture} emitting when delete is complete
-     * @throws IllegalArgumentException in case the given {@literal id} is {@literal null}
      */
     CompletableFuture<Void> deleteByQuery(String structureId, String query, EntityContext context);
+
+    /**
+     * Evicts the cache for a given structure
+     * @param structure to evict the cache for
+     */
+    void evictCachesFor(Structure structure);
 
     /**
      * Returns a {@link Page} of entities meeting the paging restriction provided in the {@code Pageable} object.
@@ -133,6 +88,62 @@ public interface EntitiesService {
      * @return a page of entities
      */
     <T> CompletableFuture<Page<T>> findAll(String structureId, Pageable pageable, Class<T> type, EntityContext context);
+
+    /**
+     * Retrieves an entity by its id.
+     *
+     * @param structureId the id of the structure to save the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * @param id          must not be {@literal null}
+     * @param type        the type of the entity
+     * @param context     the context for this operation
+     * @return {@link CompletableFuture} with the entity with the given id or {@link CompletableFuture} emitting null if none found
+     */
+    <T> CompletableFuture<T> findById(String structureId, String id, Class<T> type, EntityContext context);
+
+    /**
+     * Retrieves a list of entities by their id.
+     *
+     * @param structureId the id of the structure to save the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * @param ids         must not be {@literal null}
+     * @param type        the type of the entity
+     * @param context     the context for this operation
+     * @return {@link CompletableFuture} with the list of matched entities with the given ids or {@link CompletableFuture} emitting an empty list if none found
+     */
+    <T> CompletableFuture<List<T>> findByIds(String structureId, List<String> ids, Class<T> type, EntityContext context);
+
+    /**
+     * Executes a named query. Named Queries are predefined with a {@link org.kinotic.structures.api.domain.Service}
+     * @param structureId the id of the structure to save the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * @param queryServiceName the name of t
+     * @param type the type of the entity
+     * @param context the context for this operation
+     * @param args any arguments to pass to the query
+     * @return {@link CompletableFuture} with the result of the query
+     */
+    <T> CompletableFuture<T> namedQuery(String structureId, String serviceName, String queryName, Class<T> type, EntityContext context, Object ...args);
+
+    /**
+     * Executes a named query and returns a {@link Page} of results. Named Queries are predefined with a {@link org.kinotic.structures.api.domain.Service}
+     * @param structureId the id of the structure to save the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * @param queryCri the CRI for the query to execute
+     * @param pageable the page settings to be used
+     * @param type the type of the entity
+     * @param context the context for this operation
+     * @param args any arguments to pass to the query
+     * @return {@link CompletableFuture} with the result of the query
+     */
+    <T> CompletableFuture<Page<T>> namedQueryByPage(String structureId, CRI queryCri, Pageable pageable, Class<T> type, EntityContext context, Object ...args);
+
+    /**
+     * Saves a given entity. This will override all data if there is an existing entity with the same id.
+     * Use the returned instance for further operations as the save operation might have changed the entity instance.
+     *
+     * @param structureId the id of the structure to save the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * @param entity      must not be {@literal null}
+     * @param context     the context for this operation
+     * @return {@link CompletableFuture} emitting the saved entity
+     */
+    <T> CompletableFuture<T> save(String structureId, T entity, EntityContext context);
 
     /**
      * Returns a {@link Page} of entities matching the search text and paging restriction provided in the {@code Pageable} object.
@@ -149,9 +160,15 @@ public interface EntitiesService {
     <T> CompletableFuture<Page<T>> search(String structureId, String searchText, Pageable pageable, Class<T> type, EntityContext context);
 
     /**
-     * Evicts the cache for a given structure
-     * @param structure to evict the cache for
+     * Updates a given entity. This will only override the fields that are present in the given entity.
+     * If any fields are not present in the given entity data they will not be changed.
+     * If the entity does not exist it will be created.
+     *
+     * @param structureId the id of the structure to save the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * @param entity      must not be {@literal null}
+     * @param context     the context for this operation
+     * @return {@link CompletableFuture} emitting the saved entity
      */
-    void evictCachesFor(Structure structure);
+    <T> CompletableFuture<T> update(String structureId, T entity, EntityContext context);
 
 }

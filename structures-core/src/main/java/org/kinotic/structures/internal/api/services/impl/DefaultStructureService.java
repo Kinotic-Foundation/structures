@@ -21,12 +21,12 @@ import java.util.concurrent.CompletableFuture;
 @Component
 public class DefaultStructureService implements StructureService {
 
-    private final StructuresProperties structuresProperties;
-    private final StructureConversionService structureConversionService;
     private final CacheEvictionService cacheEvictionService;
-    private final StructureDAO structureDAO;
-    private final ElasticsearchAsyncClient esAsyncClient;
     private final CrudServiceTemplate crudServiceTemplate;
+    private final ElasticsearchAsyncClient esAsyncClient;
+    private final StructureConversionService structureConversionService;
+    private final StructureDAO structureDAO;
+    private final StructuresProperties structuresProperties;
 
     public DefaultStructureService(StructuresProperties structuresProperties,
                                    StructureConversionService structureConversionService,
@@ -40,6 +40,11 @@ public class DefaultStructureService implements StructureService {
         this.structureDAO = structureDAO;
         this.esAsyncClient = esAsyncClient;
         this.crudServiceTemplate = crudServiceTemplate;
+    }
+
+    @Override
+    public CompletableFuture<Long> count() {
+        return structureDAO.count();
     }
 
     @Override
@@ -91,6 +96,78 @@ public class DefaultStructureService implements StructureService {
                     structure.setMultiTenancyType(result.getMultiTenancyType());
 
                     return  structureDAO.save(structure);
+                });
+    }
+
+    @Override
+    public CompletableFuture<Void> deleteById(String structureId) {
+        return findById(structureId)
+                .thenCompose(structure -> {
+
+                    if(structure == null){
+                        return CompletableFuture.failedFuture(new IllegalArgumentException("Structure cannot be found for id: " + structureId));
+                    }
+
+                    if(structure.isPublished()){
+                        return CompletableFuture
+                                .failedFuture(new IllegalStateException("Structure must be Un-Published before Deleting"));
+                    }
+
+                    return structureDAO.deleteById(structureId);
+                });
+    }
+
+    @Override
+    public CompletableFuture<Page<Structure>> findAll(Pageable pageable) {
+        return structureDAO.findAll(pageable);
+    }
+
+    @Override
+    public CompletableFuture<Page<Structure>> findAllPublishedForNamespace(String namespace, Pageable pageable) {
+        return structureDAO.findAllPublishedForNamespace(namespace, pageable);
+    }
+
+    @Override
+    public CompletableFuture<Structure> findById(String id) {
+        return structureDAO.findById(id);
+    }
+
+    @Override
+    public CompletableFuture<Void> publish(String structureId) {
+        return findById(structureId)
+                .thenCompose(structure -> {
+
+                    if(structure == null){
+                        return CompletableFuture.failedFuture(new IllegalArgumentException("Structure cannot be found for id: " + structureId));
+                    }
+
+                    if(structure.isPublished()){
+                        return CompletableFuture
+                                .failedFuture(new IllegalStateException("Structure is already published"));
+                    }
+
+                    ElasticConversionResult result = structureConversionService.convertToElasticMapping(structure);
+
+                    return crudServiceTemplate
+                            .createIndex(structure.getItemIndex(), true, indexBuilder -> {
+
+                                indexBuilder.mappings(m -> m.dynamic(DynamicMapping.Strict)
+                                                            .properties(result.getObjectProperty().properties()));
+
+                            })
+                            .thenCompose(createIndexResponse -> {
+                                // update tracking fields
+                                structure.setPublished(true);
+                                structure.setPublishedTimestamp(new Date());
+                                structure.setUpdated(structure.getPublishedTimestamp());
+                                structure.setDecoratedProperties(result.getDecoratedProperties());
+
+                                return structureDAO.save(structure)
+                                                   .thenApply(structure1 -> {
+                                                       cacheEvictionService.evictCachesFor(structure);
+                                                       return null;
+                                                   });
+                            });
                 });
     }
 
@@ -156,93 +233,9 @@ public class DefaultStructureService implements StructureService {
                 });
     }
 
-    private void validateStructure(Structure structure){
-        if (structure.getName() == null || structure.getName().isBlank() || structure.getName().contains(".")) {
-            throw new IllegalArgumentException("Structure Name Invalid");
-        }
-        if (structure.getNamespace() == null || structure.getNamespace().isBlank()) {
-            throw new IllegalArgumentException("Structure Namespace Invalid");
-        }
-        if (structure.getEntityDefinition() == null) {
-            throw new IllegalArgumentException("Structure entityDefinition must not be null");
-        }
-    }
-
     @Override
-    public CompletableFuture<Structure> findById(String id) {
-        return structureDAO.findById(id);
-    }
-
-    @Override
-    public CompletableFuture<Long> count() {
-        return structureDAO.count();
-    }
-
-    @Override
-    public CompletableFuture<Void> deleteById(String structureId) {
-        return findById(structureId)
-                .thenCompose(structure -> {
-
-                    if(structure == null){
-                        return CompletableFuture.failedFuture(new IllegalArgumentException("Structure cannot be found for id: " + structureId));
-                    }
-
-                    if(structure.isPublished()){
-                        return CompletableFuture
-                                .failedFuture(new IllegalStateException("Structure must be Un-Published before Deleting"));
-                    }
-
-                    return structureDAO.deleteById(structureId);
-                });
-    }
-
-    @Override
-    public CompletableFuture<Page<Structure>> findAll(Pageable pageable) {
-        return structureDAO.findAll(pageable);
-    }
-
-    @Override
-    public CompletableFuture<Page<Structure>> findAllPublishedForNamespace(String namespace, Pageable pageable) {
-        return structureDAO.findAllPublishedForNamespace(namespace, pageable);
-    }
-
-    @Override
-    public CompletableFuture<Void> publish(String structureId) {
-        return findById(structureId)
-                .thenCompose(structure -> {
-
-                    if(structure == null){
-                        return CompletableFuture.failedFuture(new IllegalArgumentException("Structure cannot be found for id: " + structureId));
-                    }
-
-                    if(structure.isPublished()){
-                        return CompletableFuture
-                                .failedFuture(new IllegalStateException("Structure is already published"));
-                    }
-
-                    ElasticConversionResult result = structureConversionService.convertToElasticMapping(structure);
-
-                    return crudServiceTemplate
-                            .createIndex(structure.getItemIndex(), true, indexBuilder -> {
-
-                                indexBuilder.mappings(m -> m.dynamic(DynamicMapping.Strict)
-                                                            .properties(result.getObjectProperty().properties()));
-
-                            })
-                            .thenCompose(createIndexResponse -> {
-                                // update tracking fields
-                                structure.setPublished(true);
-                                structure.setPublishedTimestamp(new Date());
-                                structure.setUpdated(structure.getPublishedTimestamp());
-                                structure.setDecoratedProperties(result.getDecoratedProperties());
-
-                                return structureDAO.save(structure)
-                                                   .thenApply(structure1 -> {
-                                                       cacheEvictionService.evictCachesFor(structure);
-                                                       return null;
-                                                   });
-                            });
-                });
+    public CompletableFuture<Page<Structure>> search(String searchText, Pageable pageable) {
+        return structureDAO.search(searchText, pageable);
     }
 
     @Override
@@ -274,9 +267,16 @@ public class DefaultStructureService implements StructureService {
                 });
     }
 
-    @Override
-    public CompletableFuture<Page<Structure>> search(String searchText, Pageable pageable) {
-        return structureDAO.search(searchText, pageable);
+    private void validateStructure(Structure structure){
+        if (structure.getName() == null || structure.getName().isBlank() || structure.getName().contains(".")) {
+            throw new IllegalArgumentException("Structure Name Invalid");
+        }
+        if (structure.getNamespace() == null || structure.getNamespace().isBlank()) {
+            throw new IllegalArgumentException("Structure Namespace Invalid");
+        }
+        if (structure.getEntityDefinition() == null) {
+            throw new IllegalArgumentException("Structure entityDefinition must not be null");
+        }
     }
 
 }

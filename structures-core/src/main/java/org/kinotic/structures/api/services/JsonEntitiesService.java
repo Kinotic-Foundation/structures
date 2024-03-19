@@ -4,7 +4,6 @@ import org.kinotic.continuum.api.annotations.Publish;
 import org.kinotic.continuum.api.security.Participant;
 import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
-import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.domain.Structure;
 
@@ -19,18 +18,6 @@ import java.util.concurrent.CompletableFuture;
 public interface JsonEntitiesService {
 
     /**
-     * Saves a given entity. Use the returned instance for further operations as the save operation might have changed the
-     * entity instance completely.
-     *
-     * @param structureId the id of the structure to save the entity for
-     * @param entity      must not be {@literal null}
-     * @param participant the participant of the logged-in user
-     * @return {@link CompletableFuture} emitting the saved entity
-     * @throws IllegalArgumentException in case the given {@literal entity} is {@literal null}
-     */
-    CompletableFuture<RawJson> save(String structureId, RawJson entity, Participant participant);
-
-    /**
      * Updates all given entities, this gives an opportunity to perform partial updates of the data structure.
      * @param structureId the id of the structure to save the entity for
      * @param entities all the entities to save
@@ -40,19 +27,6 @@ public interface JsonEntitiesService {
     CompletableFuture<Void> bulkSave(String structureId, RawJson entities, Participant participant);
 
     /**
-     * Updates a given entity. This will only override the fields that are present in the given entity.
-     * If any fields are not present in the given entity data they will not be changed.
-     * If the entity does not exist it will be created.
-     *
-     * @param structureId the id of the structure to save the entity for
-     * @param entity      must not be {@literal null}
-     * @param participant the participant of the logged-in user
-     * @return {@link CompletableFuture} emitting the saved entity
-     * @throws IllegalArgumentException in case the given {@literal entity} is {@literal null}
-     */
-    CompletableFuture<RawJson> update(String structureId, RawJson entity, Participant participant);
-
-    /**
      * Saves all given entities.
      * @param structureId the id of the structure to save the entity for
      * @param entities all the entities to save
@@ -60,28 +34,6 @@ public interface JsonEntitiesService {
      * @return {@link CompletableFuture} that will complete when all entities have been saved
      */
     CompletableFuture<Void> bulkUpdate(String structureId, RawJson entities, Participant participant);
-
-    /**
-     * Retrieves an entity by its id.
-     *
-     * @param structureId the id of the structure to save the entity for
-     * @param id          must not be {@literal null}
-     * @param participant the participant of the logged-in user
-     * @return {@link CompletableFuture} with the entity with the given id or {@link CompletableFuture} emitting null if none found
-     * @throws IllegalArgumentException in case the given {@literal id} is {@literal null}
-     */
-    CompletableFuture<RawJson> findById(String structureId, String id, Participant participant);
-
-    /**
-     * Retrieves a list of entities by their id.
-     *
-     * @param structureId the id of the structure to save the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
-     * @param ids         must not be {@literal null}
-     * @param participant the participant of the logged-in user
-     * @return {@link CompletableFuture} with the list of matched entities with the given ids or {@link CompletableFuture} emitting an empty list if none found
-     * @throws IllegalArgumentException in case the given {@literal ids} is {@literal null}
-     */
-    CompletableFuture<List<RawJson>> findByIds(String structureId, List<String> ids, Participant participant);
 
     /**
      * Returns the number of entities available.
@@ -133,6 +85,40 @@ public interface JsonEntitiesService {
     CompletableFuture<Page<RawJson>> findAll(String structureId, Pageable pageable, Participant participant);
 
     /**
+     * Retrieves an entity by its id.
+     *
+     * @param structureId the id of the structure to save the entity for
+     * @param id          must not be {@literal null}
+     * @param participant the participant of the logged-in user
+     * @return {@link CompletableFuture} with the entity with the given id or {@link CompletableFuture} emitting null if none found
+     * @throws IllegalArgumentException in case the given {@literal id} is {@literal null}
+     */
+    CompletableFuture<RawJson> findById(String structureId, String id, Participant participant);
+
+    /**
+     * Retrieves a list of entities by their id.
+     *
+     * @param structureId the id of the structure to save the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * @param ids         must not be {@literal null}
+     * @param participant the participant of the logged-in user
+     * @return {@link CompletableFuture} with the list of matched entities with the given ids or {@link CompletableFuture} emitting an empty list if none found
+     * @throws IllegalArgumentException in case the given {@literal ids} is {@literal null}
+     */
+    CompletableFuture<List<RawJson>> findByIds(String structureId, List<String> ids, Participant participant);
+
+    /**
+     * Saves a given entity. Use the returned instance for further operations as the save operation might have changed the
+     * entity instance completely.
+     *
+     * @param structureId the id of the structure to save the entity for
+     * @param entity      must not be {@literal null}
+     * @param participant the participant of the logged-in user
+     * @return {@link CompletableFuture} emitting the saved entity
+     * @throws IllegalArgumentException in case the given {@literal entity} is {@literal null}
+     */
+    CompletableFuture<RawJson> save(String structureId, RawJson entity, Participant participant);
+
+    /**
      * Returns a {@link Page} of entities matching the search text and paging restriction provided in the {@code Pageable} object.
      * <p>
      * You can find more information about the search syntax <a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html#query-string-syntax">here</a>
@@ -144,5 +130,18 @@ public interface JsonEntitiesService {
      * @return a page of entities
      */
     CompletableFuture<Page<RawJson>> search(String structureId, String searchText, Pageable pageable, Participant participant);
+
+    /**
+     * Updates a given entity. This will only override the fields that are present in the given entity.
+     * If any fields are not present in the given entity data they will not be changed.
+     * If the entity does not exist it will be created.
+     *
+     * @param structureId the id of the structure to save the entity for
+     * @param entity      must not be {@literal null}
+     * @param participant the participant of the logged-in user
+     * @return {@link CompletableFuture} emitting the saved entity
+     * @throws IllegalArgumentException in case the given {@literal entity} is {@literal null}
+     */
+    CompletableFuture<RawJson> update(String structureId, RawJson entity, Participant participant);
 
 }

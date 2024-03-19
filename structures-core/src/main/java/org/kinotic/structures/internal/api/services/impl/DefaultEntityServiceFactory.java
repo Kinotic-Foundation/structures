@@ -27,10 +27,10 @@ import java.util.concurrent.CompletableFuture;
 @Component
 public class DefaultEntityServiceFactory implements EntityServiceFactory {
 
-    private final StructuresProperties structuresProperties;
-    private final ObjectMapper objectMapper;
-    private final ElasticsearchAsyncClient esAsyncClient;
     private final CrudServiceTemplate crudServiceTemplate;
+    private final ElasticsearchAsyncClient esAsyncClient;
+    private final ObjectMapper objectMapper;
+    private final StructuresProperties structuresProperties;
     private final Map<String, UpsertFieldPreProcessor<?, ?, ?>> upsertFieldPreProcessors;
 
     public DefaultEntityServiceFactory(StructuresProperties structuresProperties,
@@ -53,7 +53,7 @@ public class DefaultEntityServiceFactory implements EntityServiceFactory {
     public CompletableFuture<EntityService> createEntityService(Structure structure) {
 
         if(structure == null){
-           return CompletableFuture.failedFuture(new IllegalArgumentException("Structure must not be null"));
+            return CompletableFuture.failedFuture(new IllegalArgumentException("Structure must not be null"));
         } else if (!structure.isPublished()) {
             return CompletableFuture.failedFuture(new IllegalArgumentException("Structure must be published"));
         }

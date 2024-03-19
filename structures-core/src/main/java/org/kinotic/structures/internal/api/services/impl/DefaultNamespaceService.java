@@ -32,9 +32,15 @@ public class DefaultNamespaceService extends AbstractCrudService<Namespace> impl
     }
 
     @Override
-    public CompletableFuture<Namespace> save(Namespace entity) {
-        entity.setUpdated(new Date());
-        return super.save(entity);
+    public CompletableFuture<Namespace> createNamespaceIfNotExist(String id, String description) {
+        return findById(id)
+                .thenCompose(structure -> {
+                    if(structure != null){
+                        return CompletableFuture.completedFuture(structure);
+                    }else{
+                        return save(new Namespace(id, description));
+                    }
+                });
     }
 
     @Override
@@ -47,22 +53,16 @@ public class DefaultNamespaceService extends AbstractCrudService<Namespace> impl
     }
 
     @Override
+    public CompletableFuture<Namespace> save(Namespace entity) {
+        entity.setUpdated(new Date());
+        return super.save(entity);
+    }
+
+    @Override
     public CompletableFuture<Page<Namespace>> search(String searchText, Pageable pageable) {
         return crudServiceTemplate.search(indexName,
                                           pageable,
                                           Namespace.class,
                                           builder -> builder.q(searchText));
-    }
-
-    @Override
-    public CompletableFuture<Namespace> createNamespaceIfNotExist(String id, String description) {
-        return findById(id)
-                .thenCompose(structure -> {
-                    if(structure != null){
-                        return CompletableFuture.completedFuture(structure);
-                    }else{
-                        return save(new Namespace(id, description));
-                    }
-                });
     }
 }

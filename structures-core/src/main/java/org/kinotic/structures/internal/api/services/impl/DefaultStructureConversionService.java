@@ -27,11 +27,11 @@ import org.springframework.stereotype.Component;
 @Component
 public class DefaultStructureConversionService implements StructureConversionService {
 
-    private final StructuresProperties structuresProperties;
-    private final IdlConverterFactory idlConverterFactory;
     private final ElasticConverterStrategy elasticConverterStrategy;
     private final GqlConverterStrategy gqlConverterStrategy;
+    private final IdlConverterFactory idlConverterFactory;
     private final OpenApiConverterStrategy openApiConverterStrategy;
+    private final StructuresProperties structuresProperties;
 
     public DefaultStructureConversionService(StructuresProperties structuresProperties,
                                              IdlConverterFactory idlConverterFactory,
