@@ -27,6 +27,7 @@ import java.util.Date;
 @Document(indexName = "service")
 @Setting(shards = 2, replicas = 2)
 public class QueryService {
+
     @Id
     private String id = null; // do not ever set, system managed
 

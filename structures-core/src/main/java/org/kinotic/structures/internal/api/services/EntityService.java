@@ -2,7 +2,10 @@ package org.kinotic.structures.internal.api.services;
 
 import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
+import org.kinotic.continuum.idl.api.schema.FunctionDefinition;
+import org.kinotic.continuum.idl.api.schema.ServiceDefinition;
 import org.kinotic.structures.api.domain.EntityContext;
+import org.kinotic.structures.api.domain.QueryService;
 import org.kinotic.structures.api.domain.Structure;
 
 import java.util.List;
@@ -101,6 +104,30 @@ public interface EntityService {
      * @throws IllegalArgumentException in case the given {@literal id} is {@literal null}
      */
     <T> CompletableFuture<List<T>> findByIds(List<String> ids, Class<T> type, EntityContext context);
+
+    /**
+     * Executes a named query. Named Queries are defined with a {@link ServiceDefinition} and stored in a {@link QueryService}
+     * @param serviceName the name of the {@link ServiceDefinition} that defines the query
+     * @param queryName the name of {@link FunctionDefinition} that defines the query
+     * @param type the type of the entity
+     * @param context the context for this operation
+     * @param args any arguments to pass to the query
+     * @return {@link CompletableFuture} with the result of the query
+     */
+    <T> CompletableFuture<T> namedQuery(String serviceName, String queryName, Class<T> type, EntityContext context, Object ...args);
+
+    /**
+     * Executes a named query and returns a {@link Page} of results. Named Queries are defined with a {@link ServiceDefinition} and stored in a {@link QueryService}
+     * @param serviceName the name of the {@link ServiceDefinition} that defines the query
+     * @param queryName the name of {@link FunctionDefinition} that defines the query
+     * @param pageable the page settings to be used
+     * @param type the type of the entity
+     * @param context the context for this operation
+     * @param args any arguments to pass to the query
+     * @return {@link CompletableFuture} with the result of the query
+     */
+    <T> CompletableFuture<Page<T>> namedQueryByPage(String serviceName, String queryName, Pageable pageable, Class<T> type, EntityContext context, Object ...args);
+
 
     /**
      * Saves a given entity. This will override all data if there is an existing entity with the same id.

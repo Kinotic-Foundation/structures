@@ -31,11 +31,11 @@ public class DefaultEntitiesService implements EntitiesService {
                         .expireAfterAccess(20, TimeUnit.HOURS)
                         .maximumSize(10_000)
                         .buildAsync((key, executor) -> structureDAO.findById(key)
-                                                                   .thenApply(object -> {
-                                                                       if(object == null){
+                                                                   .thenApply(structure -> {
+                                                                       if(structure == null){
                                                                            throw new IllegalArgumentException("No structure found for id: " + key);
                                                                        }
-                                                                       return object;
+                                                                       return structure;
                                                                    })
                                                                    .thenComposeAsync(entityServiceFactory::createEntityService,
                                                                                      executor));
@@ -111,7 +111,8 @@ public class DefaultEntitiesService implements EntitiesService {
                                                Class<T> type,
                                                EntityContext context,
                                                Object... args) {
-        return null;
+        return cache.get(structureId)
+                    .thenCompose(entityService -> entityService.namedQuery(serviceName, queryName, type, context, args));
     }
 
     @Override
@@ -122,7 +123,8 @@ public class DefaultEntitiesService implements EntitiesService {
                                                            Class<T> type,
                                                            EntityContext context,
                                                            Object... args) {
-        return null;
+        return cache.get(structureId)
+                    .thenCompose(entityService -> entityService.namedQueryByPage(serviceName, queryName, pageable, type, context, args));
     }
 
     @Override

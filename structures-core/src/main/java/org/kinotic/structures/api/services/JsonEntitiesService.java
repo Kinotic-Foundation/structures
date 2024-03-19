@@ -4,6 +4,9 @@ import org.kinotic.continuum.api.annotations.Publish;
 import org.kinotic.continuum.api.security.Participant;
 import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
+import org.kinotic.continuum.idl.api.schema.FunctionDefinition;
+import org.kinotic.continuum.idl.api.schema.ServiceDefinition;
+import org.kinotic.structures.api.domain.QueryService;
 import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.domain.Structure;
 
@@ -94,6 +97,30 @@ public interface JsonEntitiesService {
      * @throws IllegalArgumentException in case the given {@literal id} is {@literal null}
      */
     CompletableFuture<RawJson> findById(String structureId, String id, Participant participant);
+
+    /**
+     * Executes a named query. Named Queries are defined with a {@link ServiceDefinition} and stored in a {@link QueryService}
+     * @param structureId the id of the structure to save the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * @param serviceName the name of the {@link ServiceDefinition} that defines the query
+     * @param queryName the name of {@link FunctionDefinition} that defines the query
+     * @param participant the participant of the logged-in user
+     * @param args any arguments to pass to the query
+     * @return {@link CompletableFuture} with the result of the query
+     */
+    CompletableFuture<RawJson> namedQuery(String structureId, String serviceName, String queryName, Participant participant, Object ...args);
+
+    /**
+     * Executes a named query and returns a {@link Page} of results. Named Queries are defined with a {@link ServiceDefinition} and stored in a {@link QueryService}
+     * @param structureId the id of the structure to save the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * @param serviceName the name of the {@link ServiceDefinition} that defines the query
+     * @param queryName the name of {@link FunctionDefinition} that defines the query
+     * @param pageable the page settings to be used
+     * @param participant the participant of the logged-in user
+     * @param args any arguments to pass to the query
+     * @return {@link CompletableFuture} with the result of the query
+     */
+    CompletableFuture<Page<RawJson>> namedQueryByPage(String structureId, String serviceName, String queryName, Pageable pageable, Participant participant, Object ...args);
+
 
     /**
      * Retrieves a list of entities by their id.

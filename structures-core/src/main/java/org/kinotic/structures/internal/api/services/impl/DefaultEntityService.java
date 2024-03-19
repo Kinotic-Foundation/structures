@@ -152,6 +152,25 @@ public class DefaultEntityService implements EntityService {
                                 builder -> delegatingReadPreProcessor.beforeFindByIds(structure, builder, context)));
     }
 
+    @Override
+    public <T> CompletableFuture<T> namedQuery(String serviceName,
+                                               String queryName,
+                                               Class<T> type,
+                                               EntityContext context,
+                                               Object... args) {
+        return null;
+    }
+
+    @Override
+    public <T> CompletableFuture<Page<T>> namedQueryByPage(String serviceName,
+                                                           String queryName,
+                                                           Pageable pageable,
+                                                           Class<T> type,
+                                                           EntityContext context,
+                                                           Object... args) {
+        return null;
+    }
+
     @SuppressWarnings("unchecked")
     @Override
     public <T> CompletableFuture<T> save(T entity, EntityContext context) {
