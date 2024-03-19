@@ -4,16 +4,12 @@ import co.elastic.clients.elasticsearch._types.mapping.*;
 import org.kinotic.continuum.idl.api.converter.C3ConversionContext;
 import org.kinotic.continuum.idl.api.converter.Cacheable;
 import org.kinotic.continuum.idl.api.converter.SpecificC3TypeConverter;
-import org.kinotic.continuum.idl.api.schema.ArrayC3Type;
-import org.kinotic.continuum.idl.api.schema.C3Type;
-import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
-import org.kinotic.continuum.idl.api.schema.UnionC3Type;
+import org.kinotic.continuum.idl.api.schema.*;
 import org.kinotic.structures.api.decorators.EntityDecorator;
 import org.kinotic.structures.api.decorators.MultiTenancyType;
 import org.kinotic.structures.api.decorators.NestedDecorator;
 import org.kinotic.structures.internal.utils.StructuresUtil;
 
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -52,17 +48,17 @@ public class ObjectC3TypeToElastic implements SpecificC3TypeConverter<Property, 
         }
 
         // now convert the rest of the properties
-        for(Map.Entry<String, C3Type> entry : objectC3Type.getProperties().entrySet()){
+        for(PropertyDefinition property : objectC3Type.getProperties()){
 
-            String fieldName = entry.getKey();
-            C3Type type = entry.getValue();
+            String fieldName = property.getName();
+            C3Type type = property.getType();
             StructuresUtil.fieldNameValidation(fieldName);
 
             // This will also store decorators encountered
             state.beginProcessingField(fieldName, type);
 
             // We have to apply nested decorators here as well due to the same problem mentioned above on line 35
-            if(type.containsDecorator(NestedDecorator.class)) {
+            if(property.containsDecorator(NestedDecorator.class)) {
 
                 if(type instanceof ArrayC3Type){
                     ArrayC3Type arrayC3Type = (ArrayC3Type) type;
@@ -73,13 +69,13 @@ public class ObjectC3TypeToElastic implements SpecificC3TypeConverter<Property, 
                     throw new IllegalArgumentException("Nested decorator can only be applied to Objects, Arrays of Objects, or Unions");
                 }
 
-                builder.properties(entry.getKey(),
+                builder.properties(fieldName,
                                    NestedProperty.of(nb -> nb.properties(conversionContext.convert(type)
                                                                                           .object()
                                                                                           .properties()))
                                                  ._toProperty());
             }else{
-                builder.properties(entry.getKey(), conversionContext.convert(type));
+                builder.properties(fieldName, conversionContext.convert(type));
             }
 
             state.endProcessingField();

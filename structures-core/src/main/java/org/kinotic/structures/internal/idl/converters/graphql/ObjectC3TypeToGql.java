@@ -1,23 +1,25 @@
 package org.kinotic.structures.internal.idl.converters.graphql;
 
-import graphql.schema.*;
+import graphql.schema.GraphQLAppliedDirective;
+import graphql.schema.GraphQLInputObjectType;
+import graphql.schema.GraphQLObjectType;
 import org.kinotic.continuum.idl.api.converter.C3ConversionContext;
 import org.kinotic.continuum.idl.api.converter.Cacheable;
 import org.kinotic.continuum.idl.api.converter.SpecificC3TypeConverter;
 import org.kinotic.continuum.idl.api.schema.C3Type;
 import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
+import org.kinotic.continuum.idl.api.schema.PropertyDefinition;
 import org.kinotic.continuum.idl.api.schema.decorators.NotNullC3Decorator;
 import org.kinotic.structures.api.decorators.ReadOnlyDecorator;
 
-import java.util.Map;
 import java.util.Set;
 
 import static graphql.schema.GraphQLFieldDefinition.newFieldDefinition;
 import static graphql.schema.GraphQLInputObjectField.newInputObjectField;
 import static graphql.schema.GraphQLInputObjectType.newInputObject;
+import static graphql.schema.GraphQLNonNull.nonNull;
 import static graphql.schema.GraphQLObjectType.newObject;
 import static graphql.schema.GraphQLTypeReference.typeRef;
-import static graphql.schema.GraphQLNonNull.nonNull;
 /**
  * Created by Navíd Mitchell 🤪 on 5/2/23.
  */
@@ -33,13 +35,14 @@ public class ObjectC3TypeToGql implements SpecificC3TypeConverter<GqlTypeHolder,
         GraphQLInputObjectType.Builder inputBuilder = newInputObject().name(objectC3Type.getName() + "Input");
         boolean nullInputTypeFound = false;
 
-        for (Map.Entry<String, C3Type> entry : objectC3Type.getProperties().entrySet()) {
+        for (PropertyDefinition property : objectC3Type.getProperties()) {
 
-            String fieldName = entry.getKey();
+            String fieldName = property.getName();
+            C3Type type = property.getType();
 
-            conversionContext.state().beginProcessingField(fieldName, entry.getValue());
+            conversionContext.state().beginProcessingField(fieldName, type);
 
-            GqlTypeHolder fieldValue = conversionContext.convert(entry.getValue());
+            GqlTypeHolder fieldValue = conversionContext.convert(type);
 
             // If the field is an object type, we need to replace it with a reference to the object type
             // TODO: handle cases where the same object name is used across multiple different types in the same namespace
@@ -61,7 +64,7 @@ public class ObjectC3TypeToGql implements SpecificC3TypeConverter<GqlTypeHolder,
                 fieldValue.setInputType(typeRef(inputTypeName));
             }
 
-            if (isNotNull(entry.getValue())) {
+            if (isNotNull(type)) {
                 fieldValue.setOutputType(nonNull(fieldValue.getOutputType()));
                 fieldValue.setInputType(nonNull(fieldValue.getInputType()));
             }
@@ -76,7 +79,7 @@ public class ObjectC3TypeToGql implements SpecificC3TypeConverter<GqlTypeHolder,
             // This can create a paradigm mismatch between OpenApi and GraphQL, but we cannot do anything about it.
             // For now, we will not create an input type for these cases.
             if (fieldValue.getInputType() != null) {
-                if (isTypeRequiredForInput(entry.getValue())) {
+                if (isTypeRequiredForInput(type)) {
                     inputBuilder.field(newInputObjectField()
                                                .name(fieldName)
                                                .type(fieldValue.getInputType()));

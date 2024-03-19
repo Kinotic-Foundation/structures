@@ -6,8 +6,10 @@ import org.kinotic.continuum.idl.api.converter.Cacheable;
 import org.kinotic.continuum.idl.api.converter.SpecificC3TypeConverter;
 import org.kinotic.continuum.idl.api.schema.C3Type;
 import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
+import org.kinotic.continuum.idl.api.schema.PropertyDefinition;
 import org.kinotic.continuum.idl.api.schema.UnionC3Type;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -28,20 +30,27 @@ public class UnionC3TypeToElastic implements SpecificC3TypeConverter<Property, U
         merged.setName(unionType.getName());
         merged.setNamespace(unionType.getNamespace());
 
-        for (ObjectC3Type c3Type : unionType.getTypes()) {
-            for(Map.Entry<String, C3Type> field : c3Type.getProperties().entrySet()) {
+        // We also keep the data in a map so, we can check for duplicate fields
+        Map<String, PropertyDefinition> mergedFields = new HashMap<>();
 
-                C3Type prop = merged.getProperties().get(field.getKey());
-                if(prop != null){
-                    if(!prop.equals(field.getValue())){
-                        throw new IllegalArgumentException("Field '" + field.getKey() + "' is defined in multiple types in the union '" + unionType.getName() + "' with different types");
+        for (ObjectC3Type c3Type : unionType.getTypes()) {
+            for(PropertyDefinition property: c3Type.getProperties()) {
+
+                String fieldName = property.getName();
+                C3Type type = property.getType();
+
+                PropertyDefinition existingProperty = mergedFields.get(fieldName);
+                if(existingProperty != null){
+                    // TODO: what to do about decorators, make sure match merge them ? or throw an error (Ask Nick)
+                    if(!existingProperty.getType().equals(type)){
+                        throw new IllegalArgumentException("Field '" + fieldName + "' is defined in multiple types in the union '" + unionType.getName() + "' with different types");
                     }
                 }else {
-                    merged.addProperty(field.getKey(), field.getValue());
+                    merged.addProperty(property);
+                    mergedFields.put(property.getName(), property);
                 }
             }
         }
-
         return conversionContext.convert(merged);
     }
 
