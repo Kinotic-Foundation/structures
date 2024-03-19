@@ -26,7 +26,7 @@ import java.util.Date;
 @NoArgsConstructor
 @Document(indexName = "service")
 @Setting(shards = 2, replicas = 2)
-public class Service {
+public class QueryService {
     @Id
     private String id = null; // do not ever set, system managed
 
@@ -51,9 +51,9 @@ public class Service {
 
         if (o == null || getClass() != o.getClass()) return false;
 
-        Service service = (Service) o;
+        QueryService queryService = (QueryService) o;
 
-        return new EqualsBuilder().append(id, service.id).isEquals();
+        return new EqualsBuilder().append(id, queryService.id).isEquals();
     }
 
     @Override

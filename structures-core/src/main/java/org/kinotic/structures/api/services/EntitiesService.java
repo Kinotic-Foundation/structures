@@ -2,8 +2,10 @@ package org.kinotic.structures.api.services;
 
 import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
-import org.kinotic.continuum.core.api.event.CRI;
+import org.kinotic.continuum.idl.api.schema.FunctionDefinition;
+import org.kinotic.continuum.idl.api.schema.ServiceDefinition;
 import org.kinotic.structures.api.domain.EntityContext;
+import org.kinotic.structures.api.domain.QueryService;
 import org.kinotic.structures.api.domain.Structure;
 
 import java.util.List;
@@ -112,9 +114,10 @@ public interface EntitiesService {
     <T> CompletableFuture<List<T>> findByIds(String structureId, List<String> ids, Class<T> type, EntityContext context);
 
     /**
-     * Executes a named query. Named Queries are predefined with a {@link org.kinotic.structures.api.domain.Service}
+     * Executes a named query. Named Queries are defined with a {@link ServiceDefinition} and stored in a {@link QueryService}
      * @param structureId the id of the structure to save the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
-     * @param queryServiceName the name of t
+     * @param serviceName the name of the {@link ServiceDefinition} that defines the query
+     * @param queryName the name of {@link FunctionDefinition} that defines the query
      * @param type the type of the entity
      * @param context the context for this operation
      * @param args any arguments to pass to the query
@@ -123,16 +126,17 @@ public interface EntitiesService {
     <T> CompletableFuture<T> namedQuery(String structureId, String serviceName, String queryName, Class<T> type, EntityContext context, Object ...args);
 
     /**
-     * Executes a named query and returns a {@link Page} of results. Named Queries are predefined with a {@link org.kinotic.structures.api.domain.Service}
+     * Executes a named query and returns a {@link Page} of results. Named Queries are defined with a {@link ServiceDefinition} and stored in a {@link QueryService}
      * @param structureId the id of the structure to save the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
-     * @param queryCri the CRI for the query to execute
+     * @param serviceName the name of the {@link ServiceDefinition} that defines the query
+     * @param queryName the name of {@link FunctionDefinition} that defines the query
      * @param pageable the page settings to be used
      * @param type the type of the entity
      * @param context the context for this operation
      * @param args any arguments to pass to the query
      * @return {@link CompletableFuture} with the result of the query
      */
-    <T> CompletableFuture<Page<T>> namedQueryByPage(String structureId, CRI queryCri, Pageable pageable, Class<T> type, EntityContext context, Object ...args);
+    <T> CompletableFuture<Page<T>> namedQueryByPage(String structureId, String serviceName, String queryName, Pageable pageable, Class<T> type, EntityContext context, Object ...args);
 
     /**
      * Saves a given entity. This will override all data if there is an existing entity with the same id.

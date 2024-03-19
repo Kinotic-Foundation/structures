@@ -5,7 +5,6 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
-import org.kinotic.continuum.core.api.event.CRI;
 import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.EntitiesService;
@@ -117,7 +116,8 @@ public class DefaultEntitiesService implements EntitiesService {
 
     @Override
     public <T> CompletableFuture<Page<T>> namedQueryByPage(String structureId,
-                                                           CRI queryCri,
+                                                           String serviceName,
+                                                           String queryName,
                                                            Pageable pageable,
                                                            Class<T> type,
                                                            EntityContext context,
