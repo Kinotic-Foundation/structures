@@ -26,10 +26,10 @@ import java.util.Date;
 @NoArgsConstructor
 @Document(indexName = "service")
 @Setting(shards = 2, replicas = 2)
-public class QueryService {
+public class NamedQueryServiceDefinition {
 
     @Id
-    private String id = null; // do not ever set, system managed
+    private String id = null;
 
     @Field(type = FieldType.Keyword)
     private String name = null;
@@ -52,9 +52,9 @@ public class QueryService {
 
         if (o == null || getClass() != o.getClass()) return false;
 
-        QueryService queryService = (QueryService) o;
+        NamedQueryServiceDefinition namedQueryServiceDefinition = (NamedQueryServiceDefinition) o;
 
-        return new EqualsBuilder().append(id, queryService.id).isEquals();
+        return new EqualsBuilder().append(id, namedQueryServiceDefinition.id).isEquals();
     }
 
     @Override

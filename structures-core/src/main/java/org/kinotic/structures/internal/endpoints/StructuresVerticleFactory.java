@@ -385,7 +385,7 @@ public class StructuresVerticleFactory {
     }
 
     public WebServerVerticle createWebServerVerticle(){
-        return new WebServerVerticle(properties, healthChecks);
+        return new WebServerVerticle(healthChecks, properties);
     }
 
 }

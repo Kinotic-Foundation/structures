@@ -5,7 +5,7 @@ import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.continuum.idl.api.schema.FunctionDefinition;
 import org.kinotic.continuum.idl.api.schema.ServiceDefinition;
 import org.kinotic.structures.api.domain.EntityContext;
-import org.kinotic.structures.api.domain.QueryService;
+import org.kinotic.structures.api.domain.NamedQueryServiceDefinition;
 import org.kinotic.structures.api.domain.Structure;
 
 import java.util.List;
@@ -19,7 +19,7 @@ public interface EntitiesService {
 
     /**
      * Saves all given entities.
-     * @param structureId the id of the structure to save the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * @param structureId the id of the structure to save the entities for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
      * @param entities all the entities to save
      * @param context the context for this operation
      * @return {@link CompletableFuture} that will complete when all entities have been saved
@@ -29,7 +29,7 @@ public interface EntitiesService {
 
     /**
      * Updates all given entities.
-     * @param structureId the id of the structure to save the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * @param structureId the id of the structure to update the entities for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
      * @param entities all the entities to save
      * @param context the context for this operation
      * @return {@link CompletableFuture} that will complete when all entities have been saved
@@ -57,7 +57,7 @@ public interface EntitiesService {
     /**
      * Deletes the entity with the given id.
      *
-     * @param structureId the id of the structure to save the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * @param structureId the id of the structure to delete the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
      * @param id          must not be {@literal null}
      * @param context     the context for this operation
      * @return {@link CompletableFuture} emitting when delete is complete
@@ -67,7 +67,7 @@ public interface EntitiesService {
     /**
      * Deletes any entities that match the given query.
      *
-     * @param structureId the id of the structure to save the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * @param structureId the id of the structure to delete the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
      * @param query       the query used to filter records to delete, must not be {@literal null}
      * @param context     the context for this operation
      * @return {@link CompletableFuture} emitting when delete is complete
@@ -83,7 +83,7 @@ public interface EntitiesService {
     /**
      * Returns a {@link Page} of entities meeting the paging restriction provided in the {@code Pageable} object.
      *
-     * @param structureId the id of the structure to save the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * @param structureId the id of the structure to find the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
      * @param pageable    the page settings to be used
      * @param type        the type of the entity
      * @param context     the context for this operation
@@ -94,7 +94,7 @@ public interface EntitiesService {
     /**
      * Retrieves an entity by its id.
      *
-     * @param structureId the id of the structure to save the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * @param structureId the id of the structure to find the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
      * @param id          must not be {@literal null}
      * @param type        the type of the entity
      * @param context     the context for this operation
@@ -105,7 +105,7 @@ public interface EntitiesService {
     /**
      * Retrieves a list of entities by their id.
      *
-     * @param structureId the id of the structure to save the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * @param structureId the id of the structure to find the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
      * @param ids         must not be {@literal null}
      * @param type        the type of the entity
      * @param context     the context for this operation
@@ -114,8 +114,8 @@ public interface EntitiesService {
     <T> CompletableFuture<List<T>> findByIds(String structureId, List<String> ids, Class<T> type, EntityContext context);
 
     /**
-     * Executes a named query. Named Queries are defined with a {@link ServiceDefinition} and stored in a {@link QueryService}
-     * @param structureId the id of the structure to save the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * Executes a named query. Named Queries are defined with a {@link ServiceDefinition} and stored in a {@link NamedQueryServiceDefinition}
+     * @param namespace the namespace that this named query is defined in.
      * @param serviceName the name of the {@link ServiceDefinition} that defines the query
      * @param queryName the name of {@link FunctionDefinition} that defines the query
      * @param type the type of the entity
@@ -123,11 +123,11 @@ public interface EntitiesService {
      * @param args any arguments to pass to the query
      * @return {@link CompletableFuture} with the result of the query
      */
-    <T> CompletableFuture<T> namedQuery(String structureId, String serviceName, String queryName, Class<T> type, EntityContext context, Object ...args);
+    <T> CompletableFuture<T> namedQuery(String namespace, String serviceName, String queryName, Class<T> type, EntityContext context, Object ...args);
 
     /**
-     * Executes a named query and returns a {@link Page} of results. Named Queries are defined with a {@link ServiceDefinition} and stored in a {@link QueryService}
-     * @param structureId the id of the structure to save the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * Executes a named query and returns a {@link Page} of results. Named Queries are defined with a {@link ServiceDefinition} and stored in a {@link NamedQueryServiceDefinition}
+     * @param namespace the namespace that this named query is defined in.
      * @param serviceName the name of the {@link ServiceDefinition} that defines the query
      * @param queryName the name of {@link FunctionDefinition} that defines the query
      * @param pageable the page settings to be used
@@ -136,7 +136,7 @@ public interface EntitiesService {
      * @param args any arguments to pass to the query
      * @return {@link CompletableFuture} with the result of the query
      */
-    <T> CompletableFuture<Page<T>> namedQueryByPage(String structureId, String serviceName, String queryName, Pageable pageable, Class<T> type, EntityContext context, Object ...args);
+    <T> CompletableFuture<Page<T>> namedQueryByPage(String namespace, String serviceName, String queryName, Pageable pageable, Class<T> type, EntityContext context, Object ...args);
 
     /**
      * Saves a given entity. This will override all data if there is an existing entity with the same id.
@@ -154,8 +154,8 @@ public interface EntitiesService {
      * <p>
      * You can find more information about the search syntax <a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html#query-string-syntax">here</a>
      *
-     * @param structureId the id of the structure to save the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
-     * @param searchText  the text to search for entities for
+     * @param structureId the id of the structure to search. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * @param searchText  the text to search for entities
      * @param pageable    the page settings to be used
      * @param type        the type of the entity
      * @param context     the context for this operation
@@ -168,7 +168,7 @@ public interface EntitiesService {
      * If any fields are not present in the given entity data they will not be changed.
      * If the entity does not exist it will be created.
      *
-     * @param structureId the id of the structure to save the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * @param structureId the id of the structure to update the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
      * @param entity      must not be {@literal null}
      * @param context     the context for this operation
      * @return {@link CompletableFuture} emitting the saved entity

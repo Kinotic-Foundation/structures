@@ -71,12 +71,12 @@ public class DefaultJsonEntitiesService implements JsonEntitiesService {
     }
 
     @Override
-    public CompletableFuture<RawJson> namedQuery(String structureId,
+    public CompletableFuture<RawJson> namedQuery(String namespace,
                                                String serviceName,
                                                String queryName,
                                                Participant participant,
                                                Object... args) {
-        return defaultEntitiesService.namedQuery(structureId,
+        return defaultEntitiesService.namedQuery(namespace,
                                                  serviceName,
                                                  queryName,
                                                  RawJson.class,
@@ -84,13 +84,13 @@ public class DefaultJsonEntitiesService implements JsonEntitiesService {
     }
 
     @Override
-    public CompletableFuture<Page<RawJson>> namedQueryByPage(String structureId,
+    public CompletableFuture<Page<RawJson>> namedQueryByPage(String namespace,
                                                            String serviceName,
                                                            String queryName,
                                                            Pageable pageable,
                                                            Participant participant,
                                                            Object... args) {
-        return defaultEntitiesService.namedQueryByPage(structureId,
+        return defaultEntitiesService.namedQueryByPage(namespace,
                                                        serviceName,
                                                        queryName,
                                                        pageable,

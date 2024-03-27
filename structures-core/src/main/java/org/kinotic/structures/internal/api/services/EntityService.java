@@ -5,7 +5,8 @@ import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.continuum.idl.api.schema.FunctionDefinition;
 import org.kinotic.continuum.idl.api.schema.ServiceDefinition;
 import org.kinotic.structures.api.domain.EntityContext;
-import org.kinotic.structures.api.domain.QueryService;
+import org.kinotic.structures.api.domain.NamedQueryServiceDefinition;
+import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.domain.Structure;
 
 import java.util.List;
@@ -22,8 +23,7 @@ public interface EntityService {
      * @param entities all the entities to save
      * @param context the context for this operation
      * @return {@link CompletableFuture} that will complete when all entities have been saved
-     * @param <T> the type of the entities
-     * TODO: this contract is a little wierd because as it stands it needs to be a list or a RawJson object for entities
+     * @param <T> the type of the entities, this can be a {@link List} or {@link RawJson}
      */
     <T> CompletableFuture<Void> bulkSave(T entities, EntityContext context);
 
@@ -32,8 +32,7 @@ public interface EntityService {
      * @param entities all the entities to save
      * @param context the context for this operation
      * @return {@link CompletableFuture} that will complete when all entities have been saved
-     * @param <T> the type of the entities
-     * TODO: this contract is a little wierd because as it stands it needs to be a list or a RawJson object for entities
+     * @param <T> the type of the entities, this can be a {@link List} or {@link RawJson}
      */
     <T> CompletableFuture<Void> bulkUpdate(T entities, EntityContext context);
 
@@ -59,7 +58,6 @@ public interface EntityService {
      * @param id      must not be {@literal null}
      * @param context the context for this operation
      * @return {@link CompletableFuture} signaling when operation has completed
-     * @throws IllegalArgumentException in case the given {@literal id} is {@literal null}
      */
     CompletableFuture<Void> deleteById(String id, EntityContext context);
 
@@ -69,7 +67,6 @@ public interface EntityService {
      * @param query       the query used to filter records to delete, must not be {@literal null}
      * @param context     the context for this operation
      * @return {@link CompletableFuture} emitting when delete is complete
-     * @throws IllegalArgumentException in case the given {@literal id} is {@literal null}
      */
     CompletableFuture<Void> deleteByQuery(String query, EntityContext context);
 
@@ -90,7 +87,6 @@ public interface EntityService {
      * @param type    the type of the entity
      * @param context the context for this operation
      * @return {@link CompletableFuture} emitting the entity with the given id or {@link CompletableFuture} emitting null if none found
-     * @throws IllegalArgumentException in case the given {@literal id} is {@literal null}
      */
     <T> CompletableFuture<T> findById(String id, Class<T> type, EntityContext context);
 
@@ -101,12 +97,11 @@ public interface EntityService {
      * @param type        the type of the entity
      * @param context     the context for this operation
      * @return {@link CompletableFuture} with the list of matched entities with the given ids or {@link CompletableFuture} emitting null if none found
-     * @throws IllegalArgumentException in case the given {@literal id} is {@literal null}
      */
     <T> CompletableFuture<List<T>> findByIds(List<String> ids, Class<T> type, EntityContext context);
 
     /**
-     * Executes a named query. Named Queries are defined with a {@link ServiceDefinition} and stored in a {@link QueryService}
+     * Executes a named query. Named Queries are defined with a {@link ServiceDefinition} and stored in a {@link NamedQueryServiceDefinition}
      * @param serviceName the name of the {@link ServiceDefinition} that defines the query
      * @param queryName the name of {@link FunctionDefinition} that defines the query
      * @param type the type of the entity
@@ -117,7 +112,7 @@ public interface EntityService {
     <T> CompletableFuture<T> namedQuery(String serviceName, String queryName, Class<T> type, EntityContext context, Object ...args);
 
     /**
-     * Executes a named query and returns a {@link Page} of results. Named Queries are defined with a {@link ServiceDefinition} and stored in a {@link QueryService}
+     * Executes a named query and returns a {@link Page} of results. Named Queries are defined with a {@link ServiceDefinition} and stored in a {@link NamedQueryServiceDefinition}
      * @param serviceName the name of the {@link ServiceDefinition} that defines the query
      * @param queryName the name of {@link FunctionDefinition} that defines the query
      * @param pageable the page settings to be used
@@ -136,7 +131,6 @@ public interface EntityService {
      * @param entity  must not be {@literal null}
      * @param context the context for this operation
      * @return {@link CompletableFuture} emitting the saved entity
-     * @throws IllegalArgumentException in case the given {@literal entity} is {@literal null}
      */
     <T> CompletableFuture<T> save(T entity, EntityContext context);
 
@@ -160,7 +154,6 @@ public interface EntityService {
      * @param entity      must not be {@literal null}
      * @param context     the context for this operation
      * @return {@link CompletableFuture} emitting the saved entity
-     * @throws IllegalArgumentException in case the given {@literal entity} is {@literal null}
      */
     <T> CompletableFuture<T> update(T entity, EntityContext context);
 

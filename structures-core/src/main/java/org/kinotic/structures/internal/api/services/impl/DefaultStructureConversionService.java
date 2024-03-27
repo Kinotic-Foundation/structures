@@ -62,7 +62,7 @@ public class DefaultStructureConversionService implements StructureConversionSer
             throw new IllegalStateException("EntityDefinition must be an object");
         }
 
-        return new ElasticConversionResult(ret, state.getDecoratedProperties(), state.getMultiTenancyType());
+        return new ElasticConversionResult(state.getDecoratedProperties(), state.getMultiTenancyType(), ret);
     }
 
     @Override
@@ -76,7 +76,7 @@ public class DefaultStructureConversionService implements StructureConversionSer
 
         GqlTypeHolder typeHolder = converter.convert(structure.getEntityDefinition());
 
-        return new GqlConversionResult(typeHolder, state.getUnionTypes(), state.getReferencedTypes());
+        return new GqlConversionResult(state.getReferencedTypes(), typeHolder, state.getUnionTypes());
     }
 
     @Override
