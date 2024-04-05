@@ -1,4 +1,4 @@
-import { EntityService } from '@kinotic/structures-api'
+import { EntityService, IEntitiesService } from '@kinotic/structures-api'
 {%- if defaultExport == true %}
 import {{ entityName }} from '{{ entityImportPath }}'
 {%- else %}
@@ -14,8 +14,8 @@ export class Base{{ entityName }}EntityService extends EntityService<{{ entityNa
 
   private readonly shouldValidate: boolean
 
-  constructor(shouldValidate: boolean = true) {
-    super('{{ entityNamespace }}', '{{ entityName }}')
+  constructor(shouldValidate: boolean = true, entitiesService?: IEntitiesService) {
+    super('{{ entityNamespace }}', '{{ entityName }}', entitiesService)
     this.shouldValidate = shouldValidate
   }
 

@@ -135,11 +135,11 @@ export class EntityService<T> implements IEntityService<T>{
     private entitiesService: IEntitiesService
     private readonly structuresId: string
 
-    public constructor(structureNamespace: string, structureName: string) {
+    public constructor(structureNamespace: string, structureName: string, entitiesService?: IEntitiesService) {
         this.structureNamespace = structureNamespace
         this.structureName = structureName
         this.structuresId = (structureNamespace + '.' + structureName).toLowerCase()
-        this.entitiesService = EntitiesServiceSingleton
+        this.entitiesService = entitiesService || EntitiesServiceSingleton
     }
 
     protected async beforeSaveOrUpdate(entity: T): Promise<T>{
