@@ -102,9 +102,11 @@ export class ObjectLikeToC3Type implements ITypeConverter<Type, C3Type, Typescri
                 for (const decorator of decoratableNode.getDecorators()) {
                     // We have already handled Precision above
                     if (decorator.getName() !== 'Precision') {
-                        const c3Decorator: C3Decorator = tsDecoratorToC3Decorator(decorator)
-                        if (!converted.containsDecorator(c3Decorator)) {
-                            converted.addDecorator(c3Decorator)
+                        const c3Decorator = tsDecoratorToC3Decorator(decorator)
+                        if(c3Decorator) {
+                            if (!converted.containsDecorator(c3Decorator)) {
+                                converted.addDecorator(c3Decorator)
+                            }
                         }
                     }
                 }

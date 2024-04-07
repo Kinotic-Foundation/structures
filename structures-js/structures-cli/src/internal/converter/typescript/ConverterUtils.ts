@@ -18,8 +18,8 @@ import {
 } from '@kinotic/structures-api'
 import {Decorator} from 'ts-morph'
 
-export function tsDecoratorToC3Decorator(decorator: Decorator): C3Decorator{
-    let ret: C3Decorator
+export function tsDecoratorToC3Decorator(decorator: Decorator): C3Decorator | null{
+    let ret: C3Decorator | null = null
 
     if(decorator.getName() === 'Entity'){
         const entityDecorator = new EntityDecorator()
@@ -57,8 +57,6 @@ export function tsDecoratorToC3Decorator(decorator: Decorator): C3Decorator{
             }
         }
         ret = discriminatorDecorator
-    }else{
-        throw new Error(`Unsupported decorator ${decorator.getName()}`)
     }
 
     return ret
