@@ -1,5 +1,9 @@
 lockfileVersion: '6.0'
 
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
 dependencies:
   '@kinotic/continuum-client':
     specifier: ^2.9.0
@@ -7,6 +11,9 @@ dependencies:
   '@kinotic/continuum-idl':
     specifier: ^1.2.0
     version: 1.2.0
+  reflect-metadata:
+    specifier: ^0.2.2
+    version: 0.2.2
 
 devDependencies:
   '@types/node':
@@ -24,9 +31,6 @@ devDependencies:
   docker-compose:
     specifier: ^0.24.1
     version: 0.24.1
-  reflect-metadata:
-    specifier: ^0.1.13
-    version: 0.1.13
   testcontainers:
     specifier: ^9.9.1
     version: 9.9.1
@@ -1743,9 +1747,9 @@ packages:
       minimatch: 5.1.6
     dev: true
 
-  /reflect-metadata@0.1.13:
-    resolution: {integrity: sha512-Ts1Y/anZELhSsjMcU605fU9RE4Oi3p5ORujwbIKXfWa+0Zxs510Qrmrce5/Jowq3cHSZSJqBjypxmHarc+vEWg==}
-    dev: true
+  /reflect-metadata@0.2.2:
+    resolution: {integrity: sha512-urBwgfrvVP/eAyXx4hluJivBKzuEbSQs9rKWCrCkbSxNv8mxPcUZKeuoF3Uy4mJl3Lwprp6yy5/39VWigZ4K6Q==}
+    dev: false
 
   /require-directory@2.1.1:
     resolution: {integrity: sha512-fGxEI7+wsG9xrvdjsrlmL22OMTTiHRwAMroiEeMgq8gzoLC/PQr7RsRDSTLUg/bZAZtF+TVIkHc6/4RIKrui+Q==}
@@ -2450,7 +2454,3 @@ packages:
       compress-commons: 4.1.1
       readable-stream: 3.6.2
     dev: true
-
-settings:
-  autoInstallPeers: true
-  excludeLinksFromLockfile: false

@@ -1,6 +1,6 @@
 {
   "name": "@kinotic/structures-api",
-  "version": "1.12.1",
+  "version": "1.13.0",
   "author": "Kinotic Foundation <develop@kinotic.org>",
   "license": "MIT",
   "homepage": "https://kinotic-foundation.github.io/structures/",
@@ -23,13 +23,15 @@
     "build": "tsc && vite build",
     "test": "vitest run --coverage"
   },
+  "dependencies": {
+    "reflect-metadata": "^0.2.2"
+  },
   "devDependencies": {
     "@types/node": "^20.3.3",
     "@types/ws": "^8.5.5",
     "@vitest/coverage-c8": "^0.33.0",
     "delay": "^6.0.0",
     "docker-compose": "^0.24.1",
-    "reflect-metadata": "^0.1.13",
     "testcontainers": "^9.9.1",
     "ts-morph": "^18.0.0",
     "ts-node": "^10.9.1",
