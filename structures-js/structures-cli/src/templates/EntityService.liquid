@@ -6,8 +6,8 @@ import { Base{{ entityName }}EntityService } from './generated/Base{{ entityName
  */
 export class {{ entityName }}EntityService extends Base{{ entityName }}EntityService {
 
-  constructor() {
-    super({{ validate }})
+  constructor(entitiesService?: IEntitiesService) {
+    super({{ validate }}, entitiesService)
   }
 
 }
