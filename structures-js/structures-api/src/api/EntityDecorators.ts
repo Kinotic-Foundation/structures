@@ -13,7 +13,7 @@ export enum StructuresDecorator {
     Discriminator = "__structures-discriminator__"
 }
 
-export class EntityMeta {
+export class EntityConfig {
     public multiTenancyType: MultiTenancyType
 
     constructor(multiTenancyType: MultiTenancyType) {
@@ -24,7 +24,7 @@ export class EntityMeta {
 export function Entity(multiTenancyType: MultiTenancyType = MultiTenancyType.NONE) {
     return function (constructor: Function) {
         constructor.prototype._multiTenancyType = multiTenancyType
-        Reflect.defineMetadata(StructuresDecorator.Entity, new EntityMeta(multiTenancyType), constructor)
+        Reflect.defineMetadata(StructuresDecorator.Entity, new EntityConfig(multiTenancyType), constructor)
     }
 }
 
@@ -76,7 +76,7 @@ export enum PrecisionType {
     SHORT
 }
 
-export class PrecisionMeta {
+export class PrecisionConfig {
     public precisionType: PrecisionType
 
     constructor(precisionType: PrecisionType) {
@@ -86,11 +86,11 @@ export class PrecisionMeta {
 
 export function Precision(precisionType: PrecisionType = PrecisionType.INT){
     return function(target: any, propertyKey: string) {
-        Reflect.defineMetadata(StructuresDecorator.Precision, new PrecisionMeta(precisionType), target, propertyKey)
+        Reflect.defineMetadata(StructuresDecorator.Precision, new PrecisionConfig(precisionType), target, propertyKey)
     }
 }
 
-export class DiscriminatorMeta {
+export class DiscriminatorConfig {
     public propertyName: string
 
     constructor(propertyName: string) {
@@ -100,6 +100,6 @@ export class DiscriminatorMeta {
 
 export function Discriminator(propertyName: string){
     return function(target: any, propertyKey: string) {
-        Reflect.defineMetadata(StructuresDecorator.Discriminator, new DiscriminatorMeta(propertyName), target, propertyKey)
+        Reflect.defineMetadata(StructuresDecorator.Discriminator, new DiscriminatorConfig(propertyName), target, propertyKey)
     }
 }
