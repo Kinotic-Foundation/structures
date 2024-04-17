@@ -3,16 +3,18 @@ kind: ConfigMap
 metadata:
   name: {{ include "structures-server.fullname" . }}
 data:
-  JAVA_TOOL_OPTIONS: "{{ .Values.env.JAVA_TOOL_OPTIONS }}"
-  BPL_JAVA_NMT_ENABLED: "{{ .Values.env.ENABLE_NMT }}"
-  BPL_JMX_ENABLED: "{{ .Values.env.ENABLE_JMX }}"
-  SPRING_PROFILES_ACTIVE: "production"
-  STRUCTURES_CORS_ALLOWED_ORIGIN_PATTERN: "*"
-  STRUCTURES_INDEX_PREFIX: "{{ .Values.env.STRUCTURES_INDEX_PREFIX }}"
-  STRUCTURES_ELASTICCONNECTIONS_0_SCHEME: "{{ .Values.env.STRUCTURES_ELASTIC_SCHEME }}"
-  STRUCTURES_ELASTICCONNECTIONS_0_HOST: "{{ .Values.env.STRUCTURES_ELASTIC_HOST }}"
-  STRUCTURES_ELASTICCONNECTIONS_0_PORT: "{{ .Values.env.STRUCTURES_ELASTIC_PORT }}"
-  STRUCTURES_ELASTIC_CONNECTION_TIMEOUT: "{{ .Values.env.STRUCTURES_ELASTIC_CONNECTION_TIMEOUT }}"
-  STRUCTURES_ELASTIC_SOCKET_TIMEOUT: "{{ .Values.env.STRUCTURES_ELASTIC_SOCKET_TIMEOUT }}"
-  STRUCTURES_ELASTIC_USERNAME: "{{ .Values.env.STRUCTURES_ELASTIC_USERNAME }}"
-  STRUCTURES_ELASTIC_PASSWORD: "{{ .Values.env.STRUCTURES_ELASTIC_PASSWORD }}"
+  JAVA_TOOL_OPTIONS: "{{ .Values.properties.javaToolOptions }}"
+  BPL_JAVA_NMT_ENABLED: "{{ .Values.properties.enableNmt }}"
+  BPL_JMX_ENABLED: "{{ .Values.properties.enableJmx }}"
+  SPRING_PROFILES_ACTIVE: "{{ .Values.properties.springActiveProfiles }}"
+  STRUCTURES_CORS_ALLOWED_ORIGIN_PATTERN: "{{ .Values.properties.corsAllowedOriginPattern }}"
+  STRUCTURES_INDEX_PREFIX: "{{ .Values.properties.structures.indexPrefix }}"
+  {{ range $index,$value:= .Values.properties.structures.elastic.connections }}
+  STRUCTURES_ELASTICCONNECTIONS_{{ $index }}_SCHEME: "{{ $value.scheme }}"
+  STRUCTURES_ELASTICCONNECTIONS_{{ $index }}_HOST: "{{ $value.host }}"
+  STRUCTURES_ELASTICCONNECTIONS_{{ $index }}_PORT: "{{ $value.port }}"
+  {{ end }}
+  STRUCTURES_ELASTIC_CONNECTION_TIMEOUT: "{{ .Values.properties.structures.elastic.connectionTimeout }}"
+  STRUCTURES_ELASTIC_SOCKET_TIMEOUT: "{{ .Values.properties.structures.elastic.socketTimeout }}"
+  STRUCTURES_ELASTIC_USERNAME: "{{ .Values.properties.structures.elastic.username }}"
+  STRUCTURES_ELASTIC_PASSWORD: "{{ .Values.properties.structures.elastic.password }}"

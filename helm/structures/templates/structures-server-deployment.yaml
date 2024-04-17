@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: structures-server
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          image: {{ if .Values.image.sha }}"{{ .Values.image.repository }}@{{ .Values.image.sha }}"{{ else }}"{{ .Values.image.repository }}:{{ .Values.image.tag }}"{{ end }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           readinessProbe:
             httpGet:

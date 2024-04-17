@@ -5,19 +5,25 @@ image:
   repository: kinotic/structures-server
   pullPolicy: Always
   tag: "1.14.0-SNAPSHOT"
+  sha: ""
 
-env:
-  ENABLE_JMX: "true"
-  ENABLE_NMT: "true"
-  JAVA_TOOL_OPTIONS: "-XX:MaxDirectMemorySize=1024M -javaagent:/workspace/BOOT-INF/classes/elastic-apm-agent.jar -Delastic.apm.service_name=structures -Delastic.apm.server_urls=https://506858167386480c97844870a815ed13.apm.centralus.azure.elastic-cloud.com:443 -Delastic.apm.secret_token=iwWOfv0uaECcDXMtX4 -Delastic.apm.environment=production -Delastic.apm.application_packages=org.kinotic"
-#  JAVA_TOOL_OPTIONS: "-XX:MaxDirectMemorySize=1024M"
-  STRUCTURES_INDEX_PREFIX: "struct_"
-  STRUCTURES_ELASTIC_SCHEME: "https"
-  STRUCTURES_ELASTIC_HOST: "minds-test-elasticsearch.es.centralus.azure.elastic-cloud.com"
-  STRUCTURES_ELASTIC_PORT: "443"
-  STRUCTURES_ELASTIC_CONNECTION_TIMEOUT: "1M"
-  STRUCTURES_ELASTIC_SOCKET_TIMEOUT: "1M"
-  STRUCTURES_ELASTIC_USERNAME: "structures"
-  STRUCTURES_ELASTIC_PASSWORD: "asdfsda898u7fsad8sfa@sdfa"
+properties:
+  springActiveProfiles: "production"
+  corsAllowedOriginPattern: "*"
+  enableJmx: true
+  enableNmt: true
+  javaToolOptions: "-XX:MaxDirectMemorySize=1024M -javaagent:/workspace/BOOT-INF/classes/elastic-apm-agent.jar -Delastic.apm.service_name=structures -Delastic.apm.server_urls=https://506858167386480c97844870a815ed13.apm.centralus.azure.elastic-cloud.com:443 -Delastic.apm.secret_token=iwWOfv0uaECcDXMtX4 -Delastic.apm.environment=production -Delastic.apm.application_packages=org.kinotic"
+  structures:
+    indexPrefix: "struct_"
+    elastic:
+      connections:
+        - host: "minds-test-elasticsearch.es.centralus.azure.elastic-cloud.com"
+          port: 443
+          scheme: "https"
+      connectionTimeout: "1M"
+      socketTimeout: "1M"
+      username: "structures"
+      password: "asdfsda898u7fsad8sfa@sdfa"
+
 nodeSelector:
   env: structures
