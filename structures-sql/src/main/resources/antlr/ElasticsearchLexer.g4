@@ -5,12 +5,6 @@ channels {
 	ERRORCHANNEL
 }
 
-@members {
-	protected abstract boolean isType(String name);
-
-	protected abstract boolean slashIsRegex();
-}
-
 //SKIP
 SPACE: [ \t\r\n]+ -> channel(HIDDEN);
 SPEC_ESSQL_COMMENT: '/*!' .+? '*/' -> channel(ESQLCOMMENT);
@@ -76,8 +70,6 @@ GROUP: G R O U P;
 AGGREGATE: A G G R E G A T E | A G G S;
 ROUTING: R O U T I N G;
 PARENT_ID: P A R E N T I D;
-HAS_PARENT: H A S UNDERLINE P A R E N T;
-HAS_CHILD: H A S UNDERLINE C H I L D;
 QUERY: Q U E R Y;
 NESTED: N E S T E D;
 HIGHLIGHTER: H BOOLNOT;
@@ -87,7 +79,6 @@ WHERE: W H E R E;
 FROM: F R O M;
 HAVING: H A V I N G;
 REMOTE: R E M O T E;
-
 
 //FULL TEXT
 DIS_MAX: D I S UNDERLINE M A X;
@@ -219,8 +210,6 @@ INTEGER: ( '0' | [1-9] [0-9]*) [lLfFdD]?;
 DECIMAL: ('0' | [1-9] [0-9]*) (DOT [0-9]+)? ([eE] [+\-]? [0-9]+)? [fFdD]?;
 
 STRING: DQUOTA_STRING | SQUOTA_STRING | BQUOTA_STRING;
-REGEX:
-	'/' ('\\' ~'\n' | ~('/' | '\n'))+? '/' [cilmsUux]* { slashIsRegex() }?;
 
 fragment HEX_DIGIT: [0-9A-Fa-f];
 fragment DEC_DIGIT: [0-9];

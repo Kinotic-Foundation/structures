@@ -2,7 +2,6 @@ plugins {
     // Apply the java Plugin to add support for Java.
     id 'java'
     id 'io.spring.dependency-management'
-    id 'io.freefair.lombok'
 }
 
 group 'org.kinotic'

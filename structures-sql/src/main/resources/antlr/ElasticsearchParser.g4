@@ -71,8 +71,6 @@ expression:
 	| inClause																			# in
 	| nameClause																				# nameExpr
 	| identity																			# primitive
-	| hasChildClause																	# join
-	| hasParentClause																	# join
 	| isClause																			# binary
 	| nestedClause																		# nested
 	| likeClause																		# binary
@@ -93,7 +91,7 @@ collection: LPAREN identity? ( COMMA identity)* RPAREN;
 
 identityList: LBRACKET identity (COMMA identity)* RBRACKET;
 
-likeClause: field = nameClause not = NOT? funName=(FUZZY|PREFIX|REGEXP|WILDCARD)* LIKE pattern = STRING;
+likeClause: field = nameClause not = NOT? funName=(FUZZY|PREFIX|WILDCARD)* LIKE pattern = STRING;
 
 notClause:
     NOT expression
@@ -126,12 +124,6 @@ queryStringClause: QUERY BY STRING;
 multiMatchClause:
 	LPAREN nameClause (COMMA nameClause)*  RPAREN AEQ value = STRING
 ;
-
-hasParentClause:
-	HAS_PARENT LPAREN type = nameClause COMMA query = expression RPAREN;
-
-hasChildClause:
-	HAS_CHILD LPAREN type = nameClause COMMA query = expression RPAREN;
 
 nestedClause:
 	LBRACKET nestedPath = ID COMMA query = expression RBRACKET;
