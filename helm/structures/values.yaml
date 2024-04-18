@@ -23,7 +23,7 @@ properties:
     graphqlPort: 4000
     graphqlPath: "/graphql/"
     webServerPort: 9090
-    healthCheckPath: "/health/"
+    healthCheckPath: "/health"
     enableStaticFileServer: true
     initializeWithSampleData: false
     elastic:

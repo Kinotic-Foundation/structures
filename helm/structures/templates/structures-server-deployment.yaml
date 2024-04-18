@@ -18,32 +18,32 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           readinessProbe:
             httpGet:
-              path: /health
-              port: 9090
+              path: "{{ .Values.properties.structures.healthCheckPath }}"
+              port: {{ .Values.properties.structures.webServerPort }}
             initialDelaySeconds: 10
             failureThreshold: 15
             periodSeconds: 10
             timeoutSeconds: 7
           startupProbe:
             httpGet:
-              path: /health
-              port: 9090
+              path: "{{ .Values.properties.structures.healthCheckPath }}"
+              port: {{ .Values.properties.structures.webServerPort }}
             initialDelaySeconds: 30
             failureThreshold: 15
             periodSeconds: 10
             timeoutSeconds: 7
           livenessProbe:
             httpGet:
-              path: /health
-              port: 9090
+              path: "{{ .Values.properties.structures.healthCheckPath }}"
+              port: {{ .Values.properties.structures.webServerPort }}
             initialDelaySeconds: 30
             failureThreshold: 30
             periodSeconds: 30
             timeoutSeconds: 7
           ports:
-            - containerPort: 9090 # UI PORT
-            - containerPort: 4000 # GraphQL Port
-            - containerPort: 8080 # OpenAPI Port
+            - containerPort: {{ .Values.properties.structures.webServerPort }} # UI PORT
+            - containerPort: {{ .Values.properties.structures.graphqlPort }} # GraphQL Port
+            - containerPort: {{ .Values.properties.structures.openApiPort }} # OpenAPI Port
             - containerPort: 58503 # Continuum Stomp Port
             - containerPort: 58504 # Continuum REST Port
           envFrom:
