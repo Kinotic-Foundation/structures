@@ -1,6 +1,13 @@
 import {FindAllIterablePage} from '@/internal/api/domain/FindAllIterablePage'
 import {SearchIterablePage} from '@/internal/api/domain/SearchIterablePage'
-import {Continuum, IServiceProxy, Page, Pageable, IterablePage} from '@kinotic/continuum-client'
+import {
+    Continuum,
+    IServiceProxy,
+    Page,
+    Pageable,
+    IterablePage,
+    IServiceRegistry
+} from '@kinotic/continuum-client'
 
 export interface IEntitiesService {
 
@@ -127,8 +134,9 @@ export class EntitiesService implements IEntitiesService {
 
     protected serviceProxy: IServiceProxy
 
-     constructor() {
-        this.serviceProxy = Continuum.serviceProxy('org.kinotic.structures.api.services.JsonEntitiesService')
+     constructor(serviceRegistry?: IServiceRegistry) {
+        const service = 'org.kinotic.structures.api.services.JsonEntitiesService'
+        this.serviceProxy = serviceRegistry?.serviceProxy(service) || Continuum.serviceProxy(service)
     }
 
     public save<T>(structureId: string, entity: T): Promise<T> {

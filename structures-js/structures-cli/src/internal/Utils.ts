@@ -256,7 +256,7 @@ export function convertAllEntities(config: ConversionConfiguration): EntityInfo[
                             if (c3Type != null) {
 
                                 if (decorator) {
-                                    c3Type.addDecorator(tsDecoratorToC3Decorator(decorator))
+                                    c3Type.addDecorator(tsDecoratorToC3Decorator(decorator)!)
                                 } else if (entityConfig) {
                                     const entityDecorator = new EntityDecorator()
                                     entityDecorator.multiTenancyType = entityConfig.multiTenancyType

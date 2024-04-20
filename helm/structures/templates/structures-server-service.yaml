@@ -7,16 +7,16 @@ spec:
   ports:
     - name: "ui"
       protocol: TCP
-      port:  9090 # UI PORTs
-      targetPort: 9090
+      port:  {{ .Values.properties.structures.webServerPort }} # UI PORTs
+      targetPort: {{ .Values.properties.structures.webServerPort }}
     - name: "graph-ql"
       protocol: TCP
-      port: 4000 # GraphQL Port
-      targetPort: 4000
+      port: {{ .Values.properties.structures.graphqlPort }} # GraphQL Port
+      targetPort: {{ .Values.properties.structures.graphqlPort }}
     - name: "open-api"
       protocol: TCP
-      port: 8080 # OpenAPI Port
-      targetPort: 8080
+      port: {{ .Values.properties.structures.openApiPort }} # OpenAPI Port
+      targetPort: {{ .Values.properties.structures.openApiPort }}
     - name: "stomp"
       protocol: TCP
       port: 58503 # Continuum Stomp Port
