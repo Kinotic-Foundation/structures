@@ -56,6 +56,7 @@ public class TestDataService {
     public ObjectC3Type createCarSchema(MultiTenancyType multiTenancyType){
         ObjectC3Type ret = new ObjectC3Type()
                 .setName("Car")
+                .setNamespace("org.kinotic.sample")
                 .addProperty("id", new StringC3Type(), List.of(new IdDecorator()))
                 .addProperty("make", new StringC3Type())
                 .addProperty("model", new StringC3Type())
@@ -127,7 +128,7 @@ public class TestDataService {
         StringC3Type idType = new StringC3Type();
         ObjectC3Type ret =  new ObjectC3Type()
                 .setName("Person")
-                .se
+                .setNamespace("org.kinotic.sample")
                 .addProperty("id", idType, createAsEntity ? List.of(new IdDecorator()) : null)
                 .addProperty("firstName", new StringC3Type())
                 .addProperty("lastName", new StringC3Type())

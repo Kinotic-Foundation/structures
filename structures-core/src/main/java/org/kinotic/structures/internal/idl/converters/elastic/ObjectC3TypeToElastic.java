@@ -87,6 +87,11 @@ public class ObjectC3TypeToElastic implements C3TypeConverter<Property, ObjectC3
                     builder.properties(fieldName, FlattenedProperty.of(f -> f.depthLimit(decorator.getDepthLimit())
                                                                              .index(decorator.isIndex()))
                                                                    ._toProperty());
+                } else {
+
+                    // No decorators that we care about so, just convert the type
+                    builder.properties(fieldName, conversionContext.convert(type));
+
                 }
             }else{
 
