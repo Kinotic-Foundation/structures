@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.kinotic.continuum.idl.api.schema.C3Type;
+import org.kinotic.continuum.idl.api.schema.PropertyDefinition;
 import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.domain.Structure;
 
@@ -38,19 +39,20 @@ public class BaseConversionState {
     /**
      * Must be called before processing a field.
      * This ensures the current field name and json path are set correctly
-     * @param fieldName being processed
-     * @param value being processed
+     * @param propertyDefinition the property definition to begin processing
      */
-    public void beginProcessingField(String fieldName, C3Type value){
-        currentFieldName = fieldName;
+    public void beginProcessingField(PropertyDefinition propertyDefinition){
+        currentFieldName = propertyDefinition.getName();
         // Store decorators for use later with their corresponding json path and type
-        currentJsonPath = !propertyStack.isEmpty() ? propertyStack.peekFirst() + "." + fieldName : fieldName;
+        currentJsonPath = !propertyStack.isEmpty()
+                ? propertyStack.peekFirst() + "." + propertyDefinition.getName() : propertyDefinition.getName();
         propertyStack.addFirst(currentJsonPath);
 
-        if(value.hasDecorators()){
+        C3Type value = propertyDefinition.getType();
+        if(propertyDefinition.hasDecorators()){
             decoratedProperties.add(new DecoratedProperty(currentJsonPath,
                                                           value.getClass(),
-                                                          value.getDecorators()));
+                                                          propertyDefinition.getDecorators()));
         }
     }
 

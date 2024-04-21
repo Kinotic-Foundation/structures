@@ -20,10 +20,12 @@ public class ElasticConversionResult {
      * A list of all {@link DecoratedProperty} that were found during the conversion process
      */
     private final List<DecoratedProperty> decoratedProperties;
+
     /**
      * The {@link MultiTenancyType} of the converted structure
      */
     private final MultiTenancyType multiTenancyType;
+
     /**
      * The root object property that represents the converted C3Type
      */

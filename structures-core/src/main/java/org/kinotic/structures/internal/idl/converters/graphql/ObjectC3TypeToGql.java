@@ -4,15 +4,13 @@ import graphql.schema.GraphQLAppliedDirective;
 import graphql.schema.GraphQLInputObjectType;
 import graphql.schema.GraphQLObjectType;
 import org.kinotic.continuum.idl.api.converter.C3ConversionContext;
+import org.kinotic.continuum.idl.api.converter.C3TypeConverter;
 import org.kinotic.continuum.idl.api.converter.Cacheable;
-import org.kinotic.continuum.idl.api.converter.SpecificC3TypeConverter;
 import org.kinotic.continuum.idl.api.schema.C3Type;
 import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
 import org.kinotic.continuum.idl.api.schema.PropertyDefinition;
 import org.kinotic.continuum.idl.api.schema.decorators.NotNullC3Decorator;
 import org.kinotic.structures.api.decorators.ReadOnlyDecorator;
-
-import java.util.Set;
 
 import static graphql.schema.GraphQLFieldDefinition.newFieldDefinition;
 import static graphql.schema.GraphQLInputObjectField.newInputObjectField;
@@ -23,9 +21,7 @@ import static graphql.schema.GraphQLTypeReference.typeRef;
 /**
  * Created by Navíd Mitchell 🤪 on 5/2/23.
  */
-public class ObjectC3TypeToGql implements SpecificC3TypeConverter<GqlTypeHolder, ObjectC3Type, GqlConversionState>, Cacheable {
-
-    private static final Set<Class<? extends C3Type>> supports = Set.of(ObjectC3Type.class);
+public class ObjectC3TypeToGql implements C3TypeConverter<GqlTypeHolder, ObjectC3Type, GqlConversionState>, Cacheable {
 
     @Override
     public GqlTypeHolder convert(ObjectC3Type objectC3Type,
@@ -40,7 +36,7 @@ public class ObjectC3TypeToGql implements SpecificC3TypeConverter<GqlTypeHolder,
             String fieldName = property.getName();
             C3Type type = property.getType();
 
-            conversionContext.state().beginProcessingField(fieldName, type);
+            conversionContext.state().beginProcessingField(property);
 
             GqlTypeHolder fieldValue = conversionContext.convert(type);
 
@@ -64,7 +60,7 @@ public class ObjectC3TypeToGql implements SpecificC3TypeConverter<GqlTypeHolder,
                 fieldValue.setInputType(typeRef(inputTypeName));
             }
 
-            if (isNotNull(type)) {
+            if (isNotNull(property)) {
                 fieldValue.setOutputType(nonNull(fieldValue.getOutputType()));
                 fieldValue.setInputType(nonNull(fieldValue.getInputType()));
             }
@@ -79,7 +75,7 @@ public class ObjectC3TypeToGql implements SpecificC3TypeConverter<GqlTypeHolder,
             // This can create a paradigm mismatch between OpenApi and GraphQL, but we cannot do anything about it.
             // For now, we will not create an input type for these cases.
             if (fieldValue.getInputType() != null) {
-                if (isTypeRequiredForInput(type)) {
+                if (isTypeRequiredForInput(property)) {
                     inputBuilder.field(newInputObjectField()
                                                .name(fieldName)
                                                .type(fieldValue.getInputType()));
@@ -99,16 +95,16 @@ public class ObjectC3TypeToGql implements SpecificC3TypeConverter<GqlTypeHolder,
         return new GqlTypeHolder(!nullInputTypeFound ? inputBuilder.build() : null, outputBuilder.build());
     }
 
-    private boolean isTypeRequiredForInput(C3Type c3Type) {
-        return !c3Type.containsDecorator(ReadOnlyDecorator.class);
-    }
-
-    private boolean isNotNull(C3Type c3Type) {
-        return c3Type.containsDecorator(NotNullC3Decorator.class);
-    }
-
     @Override
-    public Set<Class<? extends C3Type>> supports() {
-        return supports;
+    public boolean supports(C3Type c3Type) {
+        return c3Type instanceof ObjectC3Type;
+    }
+
+    private boolean isNotNull(PropertyDefinition propertyDefinition) {
+        return propertyDefinition.containsDecorator(NotNullC3Decorator.class);
+    }
+
+    private boolean isTypeRequiredForInput(PropertyDefinition propertyDefinition) {
+        return !propertyDefinition.containsDecorator(ReadOnlyDecorator.class);
     }
 }
