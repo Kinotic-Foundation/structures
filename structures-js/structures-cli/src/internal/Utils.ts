@@ -14,7 +14,7 @@ import { v4 as uuidv4 } from 'uuid'
 import inquirer from 'inquirer'
 import open from 'open'
 import pTimeout from 'p-timeout'
-import {C3Type, ObjectC3Type} from '@kinotic/continuum-idl'
+import {C3Type, ComplexC3Type, ObjectC3Type} from '@kinotic/continuum-idl'
 import path from 'path'
 import fsPromises from 'fs/promises'
 import {createConversionContext} from './converter/IConversionContext.js'
@@ -255,12 +255,14 @@ export function convertAllEntities(config: ConversionConfiguration): EntityInfo[
 
                             if (c3Type != null) {
 
-                                if (decorator) {
-                                    c3Type.addDecorator(tsDecoratorToC3Decorator(decorator)!)
-                                } else if (entityConfig) {
-                                    const entityDecorator = new EntityDecorator()
-                                    entityDecorator.multiTenancyType = entityConfig.multiTenancyType
-                                    c3Type.addDecorator(entityDecorator)
+                                if(c3Type instanceof ComplexC3Type) {
+                                    if (decorator) {
+                                        c3Type.addDecorator(tsDecoratorToC3Decorator(decorator)!)
+                                    } else if (entityConfig) {
+                                        const entityDecorator = new EntityDecorator()
+                                        entityDecorator.multiTenancyType = entityConfig.multiTenancyType
+                                        c3Type.addDecorator(entityDecorator)
+                                    }
                                 }
 
                                 if (c3Type instanceof ObjectC3Type) {

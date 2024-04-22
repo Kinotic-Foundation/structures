@@ -1,5 +1,5 @@
 import {Type, Symbol, DecoratableNode} from 'ts-morph'
-import {C3Decorator, C3Type, ObjectC3Type} from '@kinotic/continuum-idl'
+import {C3Decorator, C3Type, ObjectC3Type, PropertyDefinition} from '@kinotic/continuum-idl'
 import {ConverterConstants} from '../ConverterConstants.js'
 import {TypescriptConversionState} from './TypescriptConversionState.js'
 import {IConversionContext} from '../IConversionContext.js'
@@ -12,12 +12,13 @@ import {tsDecoratorToC3Decorator, convertPrecisionToC3Type} from './ConverterUti
 export class ObjectLikeToC3Type implements ITypeConverter<Type, C3Type, TypescriptConversionState>{
 
     convert(value: Type, conversionContext: IConversionContext<Type, C3Type, TypescriptConversionState>): C3Type {
-        const ret: ObjectC3Type = new ObjectC3Type()
+        let ret: ObjectC3Type
 
-        ret.name = value.getSymbolOrThrow("No Symbol could be found for object: "+value.getText()).getName()
-        ret.namespace = conversionContext.state().namespace
+        const name = value.getSymbolOrThrow("No Symbol could be found for object: "+value.getText()).getName()
+        const namespace = conversionContext.state().namespace
+        ret = new ObjectC3Type(name, namespace)
 
-        // We store the original source path so it can be used later
+        // We store the original source path so, it can be used later
         const declarations = value.getSymbol()?.getDeclarations()
         if(declarations && declarations.length > 0){
             if(!ret.metadata){
@@ -34,27 +35,27 @@ export class ObjectLikeToC3Type implements ITypeConverter<Type, C3Type, Typescri
             conversionContext.beginProcessingProperty(propertyName)
 
             if(!conversionContext.state().shouldExclude(conversionContext.currentJsonPath)) {
+                let propertyDefinition: PropertyDefinition | null = null
 
-                let converted: C3Type | null = null
                 const override = conversionContext.state().getOverrideType(conversionContext.currentJsonPath)
                 if(override){
-                    converted = override
+                    propertyDefinition = new PropertyDefinition(propertyName, override)
                 }else{
                     const transform = conversionContext.state().getTransformFunction(conversionContext.currentJsonPath)
                     if(transform){
-                        converted = conversionContext.convert(transform.getReturnType())
+                        const converted = conversionContext.convert(transform.getReturnType())
+                        propertyDefinition = new PropertyDefinition(propertyName, converted)
                     }else{
-                        converted = this.convertProperty(property, propertyName, conversionContext)
+                        propertyDefinition = this.convertProperty(property, propertyName, conversionContext)
                     }
                 }
-
-                ret.addProperty(propertyName, converted);
+                ret.addPropertyDefinition(propertyDefinition);
             }
 
             conversionContext.endProcessingProperty()
         }
 
-        // Now add any calculated properties, we do this, so wee can override any of the default properties
+        // Now add any calculated properties, we do this, so we can override any of the default properties
         const calculatedProperties = conversionContext.state().getCalculatedProperties(conversionContext.currentJsonPath)
         if(calculatedProperties){
             for(const calcProp of calculatedProperties){
@@ -64,20 +65,19 @@ export class ObjectLikeToC3Type implements ITypeConverter<Type, C3Type, Typescri
                     throw new Error(`Could not find util function: ${functionName} for calculated property ${calcProp.entityJsonPath}.${calcProp.propertyName}`)
                 }
                 const converted = conversionContext.convert(calcFunction.getReturnType())
-                if(calcProp.decorators){
-                    converted.decorators = calcProp.decorators
-                }
-                ret.properties[calcProp.propertyName] = converted
+                ret.properties.push(new PropertyDefinition(calcProp.propertyName, converted, calcProp.decorators))
             }
         }
 
         return ret
     }
 
-    private convertProperty(property: Symbol, propertyName: string, conversionContext: IConversionContext<Type, C3Type, TypescriptConversionState>): C3Type {
+    private convertProperty(property: Symbol,
+                            propertyName: string,
+                            conversionContext: IConversionContext<Type, C3Type, TypescriptConversionState>): PropertyDefinition {
         const valueDeclaration = property.getValueDeclarationOrThrow("No value declaration could be found for property " + propertyName)
 
-        let converted: C3Type
+        let propertyDefinition: PropertyDefinition
 
         if(valueDeclaration.getType().isUnion()){
             conversionContext.state().unionPropertyNameStack.push(propertyName)
@@ -93,9 +93,12 @@ export class ObjectLikeToC3Type implements ITypeConverter<Type, C3Type, Typescri
                 // TODO: Verify this is a number type. This could also be a union type that has a number in the case of something like
                 // public myNumber: number | null
                 // or public myNumber?: number
-                converted = convertPrecisionToC3Type(precisionDecorator)
+                // Additionally, this should be moved to the standard decorator pattern
+                const converted = convertPrecisionToC3Type(precisionDecorator)
+                propertyDefinition = new PropertyDefinition(propertyName, converted)
             } else {
-                converted = conversionContext.convert(valueDeclaration.getType())
+                const converted = conversionContext.convert(valueDeclaration.getType())
+                propertyDefinition = new PropertyDefinition(propertyName, converted)
             }
 
             if (decoratableNode?.getDecorators()) {
@@ -104,8 +107,8 @@ export class ObjectLikeToC3Type implements ITypeConverter<Type, C3Type, Typescri
                     if (decorator.getName() !== 'Precision') {
                         const c3Decorator = tsDecoratorToC3Decorator(decorator)
                         if(c3Decorator) {
-                            if (!converted.containsDecorator(c3Decorator)) {
-                                converted.addDecorator(c3Decorator)
+                            if (!propertyDefinition.containsDecorator(c3Decorator)) {
+                                propertyDefinition.addDecorator(c3Decorator)
                             }
                         }
                     }
@@ -113,14 +116,15 @@ export class ObjectLikeToC3Type implements ITypeConverter<Type, C3Type, Typescri
             }
 
         }else{
-            converted = conversionContext.convert(valueDeclaration.getType())
+            const converted = conversionContext.convert(valueDeclaration.getType())
+            propertyDefinition = new PropertyDefinition(propertyName, converted)
         }
 
         if(valueDeclaration.getType().isUnion()){
             conversionContext.state().unionPropertyNameStack.pop()
         }
 
-        return converted
+        return propertyDefinition
     }
 
     supports(value: Type): boolean {

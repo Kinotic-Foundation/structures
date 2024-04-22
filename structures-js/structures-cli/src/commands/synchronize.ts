@@ -231,8 +231,8 @@ export class Synchronize extends Command {
         }
 
         const statement = this.createStatementMapper(baseEntityServicePath,
-                                                                   entityInfo,
-                                                                   utilFunctionLocator)
+                                                                      entityInfo,
+                                                                      utilFunctionLocator)
         const validationLogic = statement.toStatementString()
         const importStatements = createImportString(statement, baseEntityServicePath, fileExtensionForImports) || ''
 

@@ -7,11 +7,11 @@ import {ITypeConverter} from '../ITypeConverter.js'
 export class ArrayToC3Type implements ITypeConverter<Type, C3Type, TypescriptConversionState> {
 
     convert(value: Type, conversionContext: IConversionContext<Type, C3Type, TypescriptConversionState>): C3Type {
-        const ret: ArrayC3Type = new ArrayC3Type()
+        let ret: ArrayC3Type
 
         const arrayElementType = value?.getArrayElementType()
         if(arrayElementType) {
-            ret.contains = conversionContext.convert(arrayElementType)
+            ret = new ArrayC3Type(conversionContext.convert(arrayElementType))
         }else{
             throw new Error("Type could not be found for array type "+value.getText())
         }

@@ -148,13 +148,12 @@ export class UnionToC3Type implements ITypeConverter<Type, C3Type, TypescriptCon
             ret = convertedList[0]
 
         } else {
+            const namespace = conversionContext.state().namespace
+            const name = this.getUnionPropertyName(value, conversionContext)
+            const unionType = new UnionC3Type(name, namespace)
 
-            const unionType = new UnionC3Type()
-            unionType.namespace = conversionContext.state().namespace
-            unionType.name = this.getUnionPropertyName(value, conversionContext)
             unionType.types = convertedList as ObjectC3Type[]
             ret = unionType
-
         }
 
         return ret

@@ -10,10 +10,11 @@ import {ITypeConverter} from '../ITypeConverter.js'
 export class EnumToC3Type implements ITypeConverter<Type, C3Type, TypescriptConversionState> {
 
     convert(value: Type, conversionContext: IConversionContext<Type, C3Type, TypescriptConversionState>): C3Type {
-        const ret: EnumC3Type = new EnumC3Type()
+        let ret: EnumC3Type
 
-        ret.name = value.getSymbolOrThrow("No Symbol could be found for object: "+value.getText()).getName()
-        ret.namespace = conversionContext.state().namespace
+        const name = value.getSymbolOrThrow("No Symbol could be found for object: "+value.getText()).getName()
+        const namespace = conversionContext.state().namespace
+        ret = new EnumC3Type(name, namespace)
 
         // this is a little strange, but it is the easiest way to get the name of the enum
         value.getUnionTypes().forEach((unionType: Type) => {
