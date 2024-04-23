@@ -6,14 +6,14 @@ settings:
 
 dependencies:
   '@kinotic/continuum-client':
-    specifier: ^2.10.0
-    version: 2.10.0
+    specifier: ^2.10.2
+    version: 2.10.2
   '@kinotic/continuum-idl':
     specifier: ^1.2.0
     version: 1.2.0
   '@kinotic/structures-api':
-    specifier: ^1.13.0
-    version: 1.13.0(@kinotic/continuum-client@2.10.0)(@kinotic/continuum-idl@1.2.0)
+    specifier: ^1.13.4
+    version: 1.13.4(@kinotic/continuum-client@2.10.2)(@kinotic/continuum-idl@1.2.0)
   '@oclif/core':
     specifier: ^2.9.4
     version: 2.9.4(@types/node@20.4.2)(typescript@5.1.6)
@@ -457,8 +457,8 @@ packages:
       '@jridgewell/resolve-uri': 3.1.1
       '@jridgewell/sourcemap-codec': 1.4.15
 
-  /@kinotic/continuum-client@2.10.0:
-    resolution: {integrity: sha512-GssmIMpZKtG7gIiWGUBbG72c2VxgnPX8Ud4ddqoT4lxy5ndBYp2wemsRTsLgTdpe7T0mCOh85OXJYYhfPRtgcg==}
+  /@kinotic/continuum-client@2.10.2:
+    resolution: {integrity: sha512-4fukwDgyRwqtFMhqxvwFmv6pTq0Wj8pEoAZ23ONElFjrxCH3dvSvMb85wHhsfi/qPGWpGWWxdVUncbeB9RdHoQ==}
     dependencies:
       '@stomp/rx-stomp': 2.0.0(@stomp/stompjs@7.0.0)(rxjs@7.8.1)(uuid@9.0.0)
       '@stomp/stompjs': 7.0.0
@@ -472,14 +472,15 @@ packages:
     resolution: {integrity: sha512-asQir06v9XwLQTbIf85y4kI7LVf95svaGyIaatBevUT8whYFXXY65T69QRLQ/FqaDw/KIBRn49TEpoK0EuOibg==}
     dev: false
 
-  /@kinotic/structures-api@1.13.0(@kinotic/continuum-client@2.10.0)(@kinotic/continuum-idl@1.2.0):
-    resolution: {integrity: sha512-6oDe//wEsncmFFI1w3SpaIsBk/mz5GhK7zhZnwBgft7ycc4ZvrlQETYAY7fmAMWwJ1Q2+SGn4Be6C7rg+wiGFQ==}
+  /@kinotic/structures-api@1.13.4(@kinotic/continuum-client@2.10.2)(@kinotic/continuum-idl@1.2.0):
+    resolution: {integrity: sha512-LuSI0aXAncOR7bet3pnGGCistEmX4ENjfSs5sda1rat5bZonrxMGoC0lD8vrY2M0WCkjPjvUylU8IYWGtQCe4w==}
     peerDependencies:
-      '@kinotic/continuum-client': ^2.10.0
+      '@kinotic/continuum-client': ^2.10.2
       '@kinotic/continuum-idl': ^1.2.0
     dependencies:
-      '@kinotic/continuum-client': 2.10.0
+      '@kinotic/continuum-client': 2.10.2
       '@kinotic/continuum-idl': 1.2.0
+      reflect-metadata: 0.2.2
     dev: false
 
   /@nicolo-ribaudo/eslint-scope-5-internals@5.1.1-v1:
@@ -5253,6 +5254,10 @@ packages:
     resolution: {integrity: sha512-FNpGGo1DycYAdnrKFxCMmKYgo/mILAqtRYbkdQD8Ep/Hk2PQ5+aEAEx+IU713RTDmuBaH0c8P5ZozurNu5ObRQ==}
     dependencies:
       esprima: 4.0.1
+
+  /reflect-metadata@0.2.2:
+    resolution: {integrity: sha512-urBwgfrvVP/eAyXx4hluJivBKzuEbSQs9rKWCrCkbSxNv8mxPcUZKeuoF3Uy4mJl3Lwprp6yy5/39VWigZ4K6Q==}
+    dev: false
 
   /regenerator-runtime@0.13.11:
     resolution: {integrity: sha512-kY1AZVr2Ra+t+piVaJ4gxaFaReZVH40AKNo7UCX6W+dEwBo/2oZJzqfuN1qLq1oL45o56cPaTXELwrTh8Fpggg==}
