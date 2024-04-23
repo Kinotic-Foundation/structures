@@ -158,6 +158,7 @@ public class DefaultEntityService implements EntityService {
                                                Class<T> type,
                                                EntityContext context,
                                                Object... args) {
+        esAsyncClient.sql()
         return null;
     }
 

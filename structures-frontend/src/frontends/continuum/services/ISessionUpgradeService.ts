@@ -14,8 +14,8 @@ export class SessionUpgradeService implements ISessionUpgradeService {
         this.serviceProxy = Continuum.serviceProxy('continuum.cli.SessionUpgradeService')
     }
 
-    upgradeSession(upgradeId: string, sessionId: string): Promise<void> {
-        return this.serviceProxy.invoke('upgradeSession', [sessionId], upgradeId)
+    public async upgradeSession(upgradeId: string, sessionId: string): Promise<void> {
+        await this.serviceProxy.invoke('upgradeSession', [sessionId], upgradeId)
     }
 }
 

@@ -138,6 +138,80 @@ export class Synchronize extends Command {
         return
     }
 
+    private createStatementMapper(generatedServicePath: string,
+                                  entityInfo: EntityInfo,
+                                  utilFunctionLocator: UtilFunctionLocator): StatementMapper{
+        const state = new StatementMapperConversionState(utilFunctionLocator)
+        state.entityConfiguration = entityInfo.entityConfiguration
+
+        const conversionContext =
+                  createConversionContext(new StatementMapperConverterStrategy(state, this))
+        return conversionContext.convert(entityInfo.entity)
+    }
+
+    private async generateEntityService(entityInfo: EntityInfo,
+                                        namespaceConfig: NamespaceConfiguration,
+                                        utilFunctionLocator: UtilFunctionLocator,
+                                        fileExtensionForImports: string): Promise<void> {
+
+        const generatedPath = namespaceConfig.generatedPath
+        const baseEntityServicePath = path.resolve(generatedPath, 'generated', `Base${entityInfo.entity.name}EntityService.ts`)
+        const entityServicePath = path.resolve(generatedPath, `${entityInfo.entity.name}EntityService.ts`)
+
+        const entityName = entityInfo.entity.name
+        const entityNamespace = entityInfo.entity.namespace
+        const defaultExport = entityInfo.defaultExport
+        const validate = namespaceConfig.validate
+
+        let entityImportPath = tryGetNodeModuleName(entityInfo.exportedFromFile)
+        if(!entityImportPath){
+            entityImportPath = getRelativeImportPath(baseEntityServicePath, entityInfo.exportedFromFile, fileExtensionForImports)
+        }
+
+        const statement = this.createStatementMapper(baseEntityServicePath,
+                                                                      entityInfo,
+                                                                      utilFunctionLocator)
+        const validationLogic = statement.toStatementString()
+        const importStatements = createImportString(statement, baseEntityServicePath, fileExtensionForImports) || ''
+
+        //  We always generate the base entity service. This way if our internal logic changes we can update it
+        fs.mkdirSync(path.dirname(baseEntityServicePath), {recursive: true})
+        const baseReadStream= await engine.renderFileToNodeStream('BaseEntityService',
+            {
+                entityName,
+                entityNamespace,
+                defaultExport,
+                entityImportPath,
+                validationLogic,
+                importStatements
+            })
+        let baseWriteStream = fs.createWriteStream(baseEntityServicePath)
+        baseReadStream.pipe(baseWriteStream)
+
+        //  we only generate if the file does not exist
+        if (!fs.existsSync(entityServicePath)) {
+            const readStream= await engine.renderFileToNodeStream('EntityService',
+                {
+                    entityName,
+                    entityNamespace,
+                    validate,
+                    fileExtensionForImports
+                })
+            let writeStream = fs.createWriteStream(entityServicePath)
+            readStream.pipe(writeStream)
+        }
+    }
+
+    private logVerbose(message: string | ( () => string ), verbose: boolean): void {
+        if (verbose) {
+            if (typeof message === 'function') {
+                this.log(message())
+            }else{
+                this.log(message)
+            }
+        }
+    }
+
     private async processEntities(config: ConversionConfiguration,
                                   namespaceConfig: NamespaceConfiguration,
                                   fileExtensionForImports: string,
@@ -208,80 +282,6 @@ export class Synchronize extends Command {
         } catch (e: any) {
             const message = e?.message || e
             this.log(chalk.red('Error') + ` Synchronizing Structure: ${namespace}.${name}, Exception: ${message}`)
-        }
-    }
-
-    private async generateEntityService(entityInfo: EntityInfo,
-                                        namespaceConfig: NamespaceConfiguration,
-                                        utilFunctionLocator: UtilFunctionLocator,
-                                        fileExtensionForImports: string): Promise<void> {
-
-        const generatedPath = namespaceConfig.generatedPath
-        const baseEntityServicePath = path.resolve(generatedPath, 'generated', `Base${entityInfo.entity.name}EntityService.ts`)
-        const entityServicePath = path.resolve(generatedPath, `${entityInfo.entity.name}EntityService.ts`)
-
-        const entityName = entityInfo.entity.name
-        const entityNamespace = entityInfo.entity.namespace
-        const defaultExport = entityInfo.defaultExport
-        const validate = namespaceConfig.validate
-
-        let entityImportPath = tryGetNodeModuleName(entityInfo.exportedFromFile)
-        if(!entityImportPath){
-            entityImportPath = getRelativeImportPath(baseEntityServicePath, entityInfo.exportedFromFile, fileExtensionForImports)
-        }
-
-        const statement = this.createStatementMapper(baseEntityServicePath,
-                                                                      entityInfo,
-                                                                      utilFunctionLocator)
-        const validationLogic = statement.toStatementString()
-        const importStatements = createImportString(statement, baseEntityServicePath, fileExtensionForImports) || ''
-
-        //  We always generate the base entity service. This way if our internal logic changes we can update it
-        fs.mkdirSync(path.dirname(baseEntityServicePath), {recursive: true})
-        const baseReadStream= await engine.renderFileToNodeStream('BaseEntityService',
-            {
-                entityName,
-                entityNamespace,
-                defaultExport,
-                entityImportPath,
-                validationLogic,
-                importStatements
-            })
-        let baseWriteStream = fs.createWriteStream(baseEntityServicePath)
-        baseReadStream.pipe(baseWriteStream)
-
-        //  we only generate if the file does not exist
-        if (!fs.existsSync(entityServicePath)) {
-            const readStream= await engine.renderFileToNodeStream('EntityService',
-                {
-                    entityName,
-                    entityNamespace,
-                    validate,
-                    fileExtensionForImports
-                })
-            let writeStream = fs.createWriteStream(entityServicePath)
-            readStream.pipe(writeStream)
-        }
-    }
-
-    private createStatementMapper(generatedServicePath: string,
-                                  entityInfo: EntityInfo,
-                                  utilFunctionLocator: UtilFunctionLocator): StatementMapper{
-        const state = new StatementMapperConversionState(utilFunctionLocator)
-        state.entityConfiguration = entityInfo.entityConfiguration
-
-        const conversionContext =
-                  createConversionContext(new StatementMapperConverterStrategy(state, this))
-        return conversionContext.convert(entityInfo.entity)
-    }
-
-    private logVerbose(message: string | ( () => string ), verbose: boolean): void {
-        if (verbose) {
-            if (typeof message === 'function') {
-                this.log(message())
-            }else{
-                this.log(message)
-            }
         }
     }
 }

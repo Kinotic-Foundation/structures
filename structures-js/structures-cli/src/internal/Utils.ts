@@ -255,6 +255,7 @@ export function convertAllEntities(config: ConversionConfiguration): EntityInfo[
 
                             if (c3Type != null) {
 
+                                // TODO; this seems like it is only needed if we are going to add this to the entities array
                                 if(c3Type instanceof ComplexC3Type) {
                                     if (decorator) {
                                         c3Type.addDecorator(tsDecoratorToC3Decorator(decorator)!)

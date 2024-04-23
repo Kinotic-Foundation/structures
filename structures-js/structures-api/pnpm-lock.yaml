@@ -376,12 +376,12 @@ packages:
   /@kinotic/continuum-client@2.10.2:
     resolution: {integrity: sha512-4fukwDgyRwqtFMhqxvwFmv6pTq0Wj8pEoAZ23ONElFjrxCH3dvSvMb85wHhsfi/qPGWpGWWxdVUncbeB9RdHoQ==}
     dependencies:
-      '@stomp/rx-stomp': 2.0.0(@stomp/stompjs@7.0.0)(rxjs@7.8.1)(uuid@9.0.0)
+      '@stomp/rx-stomp': 2.0.0(@stomp/stompjs@7.0.0)(rxjs@7.8.1)(uuid@9.0.1)
       '@stomp/stompjs': 7.0.0
-      elliptic: 6.5.4
+      elliptic: 6.5.5
       rxjs: 7.8.1
       typescript-optional: 3.0.0-alpha.3
-      uuid: 9.0.0
+      uuid: 9.0.1
     dev: false
 
   /@kinotic/continuum-idl@1.3.0:
@@ -618,7 +618,7 @@ packages:
     resolution: {integrity: sha512-+Fj43pSMwJs4KRrH/938Uf+uAELIgVBmQzg/q1YG10djyfA3TnrU8N8XzqCh/okZdszqBQTZf96idMfE5lnwTA==}
     dev: true
 
-  /@stomp/rx-stomp@2.0.0(@stomp/stompjs@7.0.0)(rxjs@7.8.1)(uuid@9.0.0):
+  /@stomp/rx-stomp@2.0.0(@stomp/stompjs@7.0.0)(rxjs@7.8.1)(uuid@9.0.1):
     resolution: {integrity: sha512-3UxTxAA3NWGnwFfIvN8AigJ7BxGXG0u5IK8K12mQ9cCMuaT/MM7xlyZnuV8sDbHiqqLlbwA1wk1fDfUyOTIeug==}
     peerDependencies:
       '@stomp/stompjs': ^7.0.0
@@ -627,7 +627,7 @@ packages:
     dependencies:
       '@stomp/stompjs': 7.0.0
       rxjs: 7.8.1
-      uuid: 9.0.0
+      uuid: 9.0.1
     dev: false
 
   /@stomp/stompjs@7.0.0:
@@ -1129,8 +1129,8 @@ packages:
       - supports-color
     dev: true
 
-  /elliptic@6.5.4:
-    resolution: {integrity: sha512-iLhC6ULemrljPZb+QutR5TQGB+pdW6KGD5RSegS+8sorOZT+rdQFbsQFJgvN3eRqNALqJer4oQ16YvJHlU8hzQ==}
+  /elliptic@6.5.5:
+    resolution: {integrity: sha512-7EjbcmUm17NQFu4Pmgmq2olYMj8nwMnpcddByChSUjArp8F5DQWcIcpriwO4ZToLNAJig0yiyjswfyGNje/ixw==}
     dependencies:
       bn.js: 4.12.0
       brorand: 1.1.0
@@ -2084,8 +2084,8 @@ packages:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
     dev: true
 
-  /uuid@9.0.0:
-    resolution: {integrity: sha512-MXcSTerfPa4uqyzStbRoTgt5XIe3x5+42+q1sDuy3R5MDk66URdLMOZe5aPX/SQd+kuYAh0FdP/pO28IkQyTeg==}
+  /uuid@9.0.1:
+    resolution: {integrity: sha512-b+1eJOlsR9K8HJpow9Ok3fiWOWSIcIzXodvv0rQjVoOVNpWMpxf1wZNpt4y9h10odCNrqnYp1OBzRktckBe3sA==}
     hasBin: true
     dev: false
 

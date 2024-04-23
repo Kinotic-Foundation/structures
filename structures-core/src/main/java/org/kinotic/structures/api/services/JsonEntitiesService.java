@@ -118,7 +118,6 @@ public interface JsonEntitiesService {
      */
     CompletableFuture<Page<RawJson>> namedQueryByPage(String namespace, String serviceName, String queryName, Pageable pageable, Participant participant, Object ...args);
 
-
     /**
      * Retrieves a list of entities by their id.
      *
