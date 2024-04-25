@@ -9,7 +9,7 @@ import {
 } from '@kinotic/continuum-client'
 import {EntityDecorator} from '@kinotic/structures-api'
 import fs from 'fs'
-import {Node, Project} from 'ts-morph'
+import {ModuleKind, ModuleResolutionKind, Node, Project, ScriptTarget} from 'ts-morph'
 import { v4 as uuidv4 } from 'uuid'
 import inquirer from 'inquirer'
 import open from 'open'
@@ -18,10 +18,10 @@ import {C3Type, ComplexC3Type, ObjectC3Type} from '@kinotic/continuum-idl'
 import path from 'path'
 import fsPromises from 'fs/promises'
 import {createConversionContext} from './converter/IConversionContext.js'
-import {Logger} from './converter/IConverterStrategy.js'
 import {tsDecoratorToC3Decorator} from './converter/typescript/ConverterUtils.js'
 import {TypescriptConversionState} from './converter/typescript/TypescriptConversionState.js'
 import {TypescriptConverterStrategy} from './converter/typescript/TypescriptConverterStrategy.js'
+import {Logger} from './Logger.js'
 import {EntityConfiguration} from './state/StructuresProject.js'
 import {UtilFunctionLocator} from './UtilFunctionLocator.js'
 
@@ -193,13 +193,33 @@ export function pathToTsGlobPath(path: string): string{
     return path.endsWith('.ts') ? path : (path.endsWith('/') ? path + '*.ts' : path + '/*.ts')
 }
 
-export function convertAllEntities(config: ConversionConfiguration): EntityInfo[]{
-    const entities: EntityInfo[] = []
+export function createTsMorphProject(): Project {
     const tsConfigFilePath = path.resolve('tsconfig.json')
     if(!fs.existsSync(tsConfigFilePath)){
         throw new Error(`No tsconfig.json found in working directory: ${process.cwd()}`)
     }
+    return new Project({
+       tsConfigFilePath: tsConfigFilePath,
+       // compilerOptions: {
+       //     target: ScriptTarget.ES2020,
+       //     useDefineForClassFields: true,
+       //     module: ModuleKind.ES2020,
+       //     lib: ["ES2020"],
+       //     skipLibCheck: true,
+       //     downlevelIteration: true,
+       //     emitDecoratorMetadata: true,
+       //     experimentalDecorators: true,
+       //     esModuleInterop: true,
+       //     moduleResolution: ModuleResolutionKind.NodeNext,
+       //     resolveJsonModule: true,
+       //     isolatedModules: true,
+       //     noEmit: true,
+       // }
+    })
+}
 
+export function convertAllEntities(config: ConversionConfiguration): EntityInfo[]{
+    const entities: EntityInfo[] = []
     const entityConfigMap = new Map<string, EntityConfiguration>()
     if(config.entityConfigurations) {
         for (const entityConfiguration of config.entityConfigurations) {
@@ -207,9 +227,7 @@ export function convertAllEntities(config: ConversionConfiguration): EntityInfo[
         }
     }
 
-    const project = new Project({
-        tsConfigFilePath: tsConfigFilePath
-    })
+    const project = createTsMorphProject()
 
     if(config.verbose) {
         project.enableLogging(true)

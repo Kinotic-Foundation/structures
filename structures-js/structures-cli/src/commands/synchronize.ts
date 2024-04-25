@@ -1,10 +1,7 @@
 import {Args, Command, Flags} from '@oclif/core'
 import path from 'path'
-import {ObjectC3Type} from '@kinotic/continuum-idl'
-import {StatementMapper, createImportString} from '../internal/converter/codegen/StatementMapper.js'
-import {StatementMapperConversionState} from '../internal/converter/codegen/StatementMapperConversionState.js'
-import {StatementMapperConverterStrategy} from '../internal/converter/codegen/StatementMapperConverterStrategy.js'
-import {createConversionContext} from '../internal/converter/IConversionContext.js'
+import {ObjectC3Type, ServiceDefinition} from '@kinotic/continuum-idl'
+import {CodeGenerationService} from '../internal/CodeGenerationService.js'
 import {resolveServer} from '../internal/state/Environment.js'
 import {
     Continuum
@@ -20,8 +17,7 @@ import {
     connectAndUpgradeSession,
     convertAllEntities,
     ConversionConfiguration,
-    writeEntityJsonToFilesystem,
-    getRelativeImportPath, tryGetNodeModuleName
+    writeEntityJsonToFilesystem, createTsMorphProject,
 } from '../internal/Utils.js'
 import {UtilFunctionLocator} from '../internal/UtilFunctionLocator.js'
 import chalk from 'chalk'
@@ -138,70 +134,6 @@ export class Synchronize extends Command {
         return
     }
 
-    private createStatementMapper(generatedServicePath: string,
-                                  entityInfo: EntityInfo,
-                                  utilFunctionLocator: UtilFunctionLocator): StatementMapper{
-        const state = new StatementMapperConversionState(utilFunctionLocator)
-        state.entityConfiguration = entityInfo.entityConfiguration
-
-        const conversionContext =
-                  createConversionContext(new StatementMapperConverterStrategy(state, this))
-        return conversionContext.convert(entityInfo.entity)
-    }
-
-    private async generateEntityService(entityInfo: EntityInfo,
-                                        namespaceConfig: NamespaceConfiguration,
-                                        utilFunctionLocator: UtilFunctionLocator,
-                                        fileExtensionForImports: string): Promise<void> {
-
-        const generatedPath = namespaceConfig.generatedPath
-        const baseEntityServicePath = path.resolve(generatedPath, 'generated', `Base${entityInfo.entity.name}EntityService.ts`)
-        const entityServicePath = path.resolve(generatedPath, `${entityInfo.entity.name}EntityService.ts`)
-
-        const entityName = entityInfo.entity.name
-        const entityNamespace = entityInfo.entity.namespace
-        const defaultExport = entityInfo.defaultExport
-        const validate = namespaceConfig.validate
-
-        let entityImportPath = tryGetNodeModuleName(entityInfo.exportedFromFile)
-        if(!entityImportPath){
-            entityImportPath = getRelativeImportPath(baseEntityServicePath, entityInfo.exportedFromFile, fileExtensionForImports)
-        }
-
-        const statement = this.createStatementMapper(baseEntityServicePath,
-                                                                      entityInfo,
-                                                                      utilFunctionLocator)
-        const validationLogic = statement.toStatementString()
-        const importStatements = createImportString(statement, baseEntityServicePath, fileExtensionForImports) || ''
-
-        //  We always generate the base entity service. This way if our internal logic changes we can update it
-        fs.mkdirSync(path.dirname(baseEntityServicePath), {recursive: true})
-        const baseReadStream= await engine.renderFileToNodeStream('BaseEntityService',
-            {
-                entityName,
-                entityNamespace,
-                defaultExport,
-                entityImportPath,
-                validationLogic,
-                importStatements
-            })
-        let baseWriteStream = fs.createWriteStream(baseEntityServicePath)
-        baseReadStream.pipe(baseWriteStream)
-
-        //  we only generate if the file does not exist
-        if (!fs.existsSync(entityServicePath)) {
-            const readStream= await engine.renderFileToNodeStream('EntityService',
-                {
-                    entityName,
-                    entityNamespace,
-                    validate,
-                    fileExtensionForImports
-                })
-            let writeStream = fs.createWriteStream(entityServicePath)
-            readStream.pipe(writeStream)
-        }
-    }
-
     private logVerbose(message: string | ( () => string ), verbose: boolean): void {
         if (verbose) {
             if (typeof message === 'function') {
@@ -222,6 +154,8 @@ export class Synchronize extends Command {
         }
 
         const convertedEntities: EntityInfo[] = convertAllEntities(config)
+        const codeGenerationService = new CodeGenerationService(namespaceConfig.namespaceName,
+                                                                                     this)
 
         if (convertedEntities.length > 0) {
 
@@ -229,7 +163,11 @@ export class Synchronize extends Command {
 
                 this.logVerbose(`Generated Structure Mapping for ${entityInfo.entity.namespace}.${entityInfo.entity.name}`, config.verbose)
 
-                await this.generateEntityService(entityInfo, namespaceConfig, config.utilFunctionLocator, fileExtensionForImports)
+                const generatedServiceInfo
+                          = await codeGenerationService.generateEntityService(entityInfo,
+                                                                              namespaceConfig,
+                                                                              config.utilFunctionLocator,
+                                                                              fileExtensionForImports)
 
                 if(config.verbose){
                     await writeEntityJsonToFilesystem(namespaceConfig.generatedPath, entityInfo.entity, this)
@@ -238,6 +176,11 @@ export class Synchronize extends Command {
                 if(!config.dryRun) {
                     await this.synchronizeEntity(entityInfo.entity, publish, config.verbose)
                 }
+
+                // If named queries were found save them
+                // if(generatedServiceInfo.namedQueries?.length > 0){
+                //
+                // }
             }
 
             this.logVerbose(`Synchronization Complete For namespace: ${config.namespace} and Entities Path: ${config.entitiesPath}`, config.verbose)

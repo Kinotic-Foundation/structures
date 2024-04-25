@@ -2,6 +2,7 @@ package org.kinotic.structures.internal.api.services.impl;
 
 import org.kinotic.continuum.api.security.Participant;
 import org.kinotic.structures.api.domain.DefaultEntityContext;
+import org.kinotic.structures.api.domain.QueryParameter;
 import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.services.JsonEntitiesService;
 import org.kinotic.continuum.core.api.crud.Page;
@@ -71,31 +72,23 @@ public class DefaultJsonEntitiesService implements JsonEntitiesService {
     }
 
     @Override
-    public CompletableFuture<RawJson> namedQuery(String namespace,
-                                               String serviceName,
-                                               String queryName,
-                                               Participant participant,
-                                               Object... args) {
-        return defaultEntitiesService.namedQuery(namespace,
-                                                 serviceName,
-                                                 queryName,
-                                                 RawJson.class,
-                                                 new DefaultEntityContext(participant), args);
+    public CompletableFuture<RawJson> namedQuery(String structureId,
+                                                 String queryName,
+                                                 List<QueryParameter> parameters, Participant participant) {
+        return defaultEntitiesService.namedQuery(structureId,
+                                                 queryName, ,
+                                                 RawJson.class, new DefaultEntityContext(participant));
     }
 
     @Override
-    public CompletableFuture<Page<RawJson>> namedQueryByPage(String namespace,
-                                                           String serviceName,
+    public CompletableFuture<Page<RawJson>> namedQueryPage(String structureId,
                                                            String queryName,
-                                                           Pageable pageable,
-                                                           Participant participant,
-                                                           Object... args) {
-        return defaultEntitiesService.namedQueryByPage(namespace,
-                                                       serviceName,
-                                                       queryName,
-                                                       pageable,
-                                                       RawJson.class,
-                                                       new DefaultEntityContext(participant), args);
+                                                           List<QueryParameter> parameters, Pageable pageable,
+                                                           Participant participant) {
+        return defaultEntitiesService.namedQueryPage(structureId,
+                                                     queryName, ,
+                                                     pageable,
+                                                     RawJson.class, new DefaultEntityContext(participant));
     }
 
     @Override

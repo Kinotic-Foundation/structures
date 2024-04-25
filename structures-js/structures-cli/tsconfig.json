@@ -2,14 +2,23 @@
     "compilerOptions": {
         "allowSyntheticDefaultImports": true,
         "declaration": true,
+        "emitDecoratorMetadata": true,
+        "experimentalDecorators": true,
         "esModuleInterop": true,
         "importHelpers": true,
         "module": "ES2020",
         "moduleResolution": "node",
         "outDir": "dist",
         "rootDir": "src",
+        "skipLibCheck": true,
         "strict": true,
         "target": "esnext",
+        "baseUrl": ".",
+        "paths": {
+            "@/*": [
+                "src/*"
+            ]
+        }
     },
     "lib": [
         "esnext"

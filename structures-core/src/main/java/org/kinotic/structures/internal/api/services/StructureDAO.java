@@ -28,13 +28,4 @@ public interface StructureDAO extends IdentifiableCrudService<Structure, String>
      */
     CompletableFuture<Page<Structure>> findAllPublishedForNamespace(String namespace, Pageable pageable);
 
-    /**
-     * Retrieves an entity by its id.
-     *
-     * @param id must not be {@literal null}
-     * @return {@link CompletableFuture} emitting the entity with the given id or {@link CompletableFuture} emitting null if none found
-     * @throws IllegalArgumentException in case the given {@literal id} is {@literal null}
-     */
-    CompletableFuture<Structure> findById(String id);
-
 }

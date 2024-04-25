@@ -25,7 +25,6 @@ export class EntityConfig {
 
 export function Entity(multiTenancyType: MultiTenancyType = MultiTenancyType.NONE) {
     return function (constructor: Function) {
-        constructor.prototype._multiTenancyType = multiTenancyType
         Reflect.defineMetadata(StructuresDecorator.Entity, new EntityConfig(multiTenancyType), constructor)
     }
 }
@@ -55,19 +54,29 @@ export function NotNull(target: any, propertyKey: string) {
     Reflect.defineMetadata(StructuresDecorator.NotNull, {}, target, propertyKey)
 }
 
-// @ts-ignore
-// export function Query(statements: string[]) {
-//     return function (target: any, key: string, descriptor: PropertyDescriptor) {
-//         const originalMethod = descriptor.value
-//         descriptor.value = function (...args: any[]) {
-//
-//             const result = originalMethod.apply(this, args)
-//
-//             return originalMethod.apply(this, args)
-//         }
-//         return descriptor
-//     }
-// }
+export function Query(statements: string) {
+    return function (target: any, key: string, descriptor: PropertyDescriptor) {
+
+        Reflect.defineMetadata(StructuresDecorator.Query, statements, target, key)
+
+        const originalMethod = descriptor.value;
+
+        // Access the super class and its method
+        const superClass = Object.getPrototypeOf(target.constructor.prototype);
+        const superMethod = superClass[key];
+
+        descriptor.value = function (...args: any[]) {
+            // Check if the super method exists
+            if (typeof superMethod === 'function') {
+                return superMethod.apply(this, args);
+            } else {
+                return originalMethod.apply(this, args);
+            }
+        };
+
+        return descriptor;
+    }
+}
 
 export class PrecisionConfig {
     public precisionType: PrecisionType

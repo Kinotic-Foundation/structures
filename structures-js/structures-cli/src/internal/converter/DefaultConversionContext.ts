@@ -1,5 +1,6 @@
 import {IConversionContext} from './IConversionContext.js'
-import {IConverterStrategy, Logger} from './IConverterStrategy.js'
+import {IConverterStrategy} from './IConverterStrategy.js'
+import {Logger} from '../Logger.js'
 import {ITypeConverter} from './ITypeConverter.js'
 
 /**

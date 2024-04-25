@@ -16,12 +16,13 @@ import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.decorators.MultiTenancyType;
 import org.kinotic.structures.api.domain.EntityContext;
+import org.kinotic.structures.api.domain.QueryParameter;
 import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.internal.api.hooks.DelegatingReadPreProcessor;
 import org.kinotic.structures.internal.api.hooks.DelegatingUpsertPreProcessor;
-import org.kinotic.structures.internal.api.services.EntityHolder;
 import org.kinotic.structures.internal.api.services.EntityContextConstants;
+import org.kinotic.structures.internal.api.services.EntityHolder;
 import org.kinotic.structures.internal.api.services.EntityService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -153,22 +154,28 @@ public class DefaultEntityService implements EntityService {
     }
 
     @Override
-    public <T> CompletableFuture<T> namedQuery(String serviceName,
-                                               String queryName,
+    public <T> CompletableFuture<T> namedQuery(String queryName,
+                                               List<QueryParameter> parameters,
                                                Class<T> type,
-                                               EntityContext context,
-                                               Object... args) {
-        esAsyncClient.sql()
+                                               EntityContext context) {
+
+//        esAsyncClient.sql().query(new Function<QueryRequest.Buislder, ObjectBuilder<QueryRequest>>() {
+//            @Override
+//            public ObjectBuilder<QueryRequest> apply(QueryRequest.Builder builder) {
+//                builder.query('blah')
+//                        .params()
+//                return null;
+//            }
+//        });
         return null;
     }
 
     @Override
-    public <T> CompletableFuture<Page<T>> namedQueryByPage(String serviceName,
-                                                           String queryName,
-                                                           Pageable pageable,
-                                                           Class<T> type,
-                                                           EntityContext context,
-                                                           Object... args) {
+    public <T> CompletableFuture<Page<T>> namedQueryPage(String queryName,
+                                                         List<QueryParameter> parameters,
+                                                         Pageable pageable,
+                                                         Class<T> type,
+                                                         EntityContext context) {
         return null;
     }
 

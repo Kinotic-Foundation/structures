@@ -6,6 +6,7 @@ import org.apache.commons.lang3.Validate;
 import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.structures.api.domain.EntityContext;
+import org.kinotic.structures.api.domain.QueryParameter;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.EntitiesService;
 import org.kinotic.structures.internal.api.services.EntityService;
@@ -105,26 +106,24 @@ public class DefaultEntitiesService implements EntitiesService {
     }
 
     @Override
-    public <T> CompletableFuture<T> namedQuery(String namespace,
-                                               String serviceName,
+    public <T> CompletableFuture<T> namedQuery(String structureId,
                                                String queryName,
+                                               List<QueryParameter> parameters,
                                                Class<T> type,
-                                               EntityContext context,
-                                               Object... args) {
-        return cache.get(namespace)
-                    .thenCompose(entityService -> entityService.namedQuery(serviceName, queryName, type, context, args));
+                                               EntityContext context) {
+        return cache.get(structureId)
+                    .thenCompose(entityService -> entityService.namedQuery(queryName, parameters, type, context));
     }
 
     @Override
-    public <T> CompletableFuture<Page<T>> namedQueryByPage(String namespace,
-                                                           String serviceName,
-                                                           String queryName,
-                                                           Pageable pageable,
-                                                           Class<T> type,
-                                                           EntityContext context,
-                                                           Object... args) {
-        return cache.get(namespace)
-                    .thenCompose(entityService -> entityService.namedQueryByPage(serviceName, queryName, pageable, type, context, args));
+    public <T> CompletableFuture<Page<T>> namedQueryPage(String structureId,
+                                                         String queryName,
+                                                         List<QueryParameter> parameters,
+                                                         Pageable pageable,
+                                                         Class<T> type,
+                                                         EntityContext context) {
+        return cache.get(structureId)
+                    .thenCompose(entityService -> entityService.namedQueryPage(queryName, parameters, pageable, type, context));
     }
 
     @Override

@@ -3,9 +3,8 @@ package org.kinotic.structures.internal.api.services;
 import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.continuum.idl.api.schema.FunctionDefinition;
-import org.kinotic.continuum.idl.api.schema.ServiceDefinition;
 import org.kinotic.structures.api.domain.EntityContext;
-import org.kinotic.structures.api.domain.NamedQueryServiceDefinition;
+import org.kinotic.structures.api.domain.QueryParameter;
 import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.domain.Structure;
 
@@ -101,28 +100,27 @@ public interface EntityService {
     <T> CompletableFuture<List<T>> findByIds(List<String> ids, Class<T> type, EntityContext context);
 
     /**
-     * Executes a named query. Named Queries are defined with a {@link ServiceDefinition} and stored in a {@link NamedQueryServiceDefinition}
-     * @param serviceName the name of the {@link ServiceDefinition} that defines the query
-     * @param queryName the name of {@link FunctionDefinition} that defines the query
-     * @param type the type of the entity
-     * @param context the context for this operation
-     * @param args any arguments to pass to the query
+     * Executes a named query.
+     *
+     * @param queryName  the name of {@link FunctionDefinition} that defines the query
+     * @param parameters the parameters to pass to the query
+     * @param type       the type of the entity
+     * @param context    the context for this operation
      * @return {@link CompletableFuture} with the result of the query
      */
-    <T> CompletableFuture<T> namedQuery(String serviceName, String queryName, Class<T> type, EntityContext context, Object ...args);
+    <T> CompletableFuture<T> namedQuery(String queryName, List<QueryParameter> parameters, Class<T> type, EntityContext context);
 
     /**
-     * Executes a named query and returns a {@link Page} of results. Named Queries are defined with a {@link ServiceDefinition} and stored in a {@link NamedQueryServiceDefinition}
-     * @param serviceName the name of the {@link ServiceDefinition} that defines the query
-     * @param queryName the name of {@link FunctionDefinition} that defines the query
-     * @param pageable the page settings to be used
-     * @param type the type of the entity
-     * @param context the context for this operation
-     * @param args any arguments to pass to the query
+     * Executes a named query and returns a {@link Page} of results.
+     *
+     * @param queryName  the name of {@link FunctionDefinition} that defines the query
+     * @param parameters the parameters to pass to the query
+     * @param pageable   the page settings to be used
+     * @param type       the type of the entity
+     * @param context    the context for this operation
      * @return {@link CompletableFuture} with the result of the query
      */
-    <T> CompletableFuture<Page<T>> namedQueryByPage(String serviceName, String queryName, Pageable pageable, Class<T> type, EntityContext context, Object ...args);
-
+    <T> CompletableFuture<Page<T>> namedQueryPage(String queryName, List<QueryParameter> parameters, Pageable pageable, Class<T> type, EntityContext context);
 
     /**
      * Saves a given entity. This will override all data if there is an existing entity with the same id.

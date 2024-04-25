@@ -7,6 +7,7 @@ import lombok.experimental.Accessors;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.kinotic.continuum.api.Identifiable;
 import org.kinotic.continuum.idl.api.schema.ServiceDefinition;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.Document;
@@ -14,37 +15,30 @@ import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
 import org.springframework.data.elasticsearch.annotations.Setting;
 
-import java.util.Date;
-
 /**
- * Provides Metadata that represents Named Queries for a namespace
+ * Provides Metadata that represents Named Queries for a Namespace
  * Created by Navíd Mitchell 🤪 on 3/18/24.
  */
 @Getter
 @Setter
 @Accessors(chain = true)
 @NoArgsConstructor
-@Document(indexName = "service")
+@Document(indexName = "namedQueryServiceDefinition")
 @Setting(shards = 2, replicas = 2)
-public class NamedQueryServiceDefinition {
+public class NamedQueryServiceDefinition implements Identifiable<String> {
 
     @Id
     private String id = null;
 
     @Field(type = FieldType.Keyword)
-    private String name = null;
-
-    @Field(type = FieldType.Keyword)
     private String namespace = null;
 
-    @Field(type = FieldType.Text)
-    private String description = null;
+    @Field(type = FieldType.Keyword)
+    private String serviceName = null;
 
     @Field(type = FieldType.Flattened)
     private ServiceDefinition serviceDefinition = null;
 
-    @Field(type=FieldType.Date)
-    private Date updated = null; // do not ever set, system managed
 
     @Override
     public boolean equals(Object o) {
@@ -66,9 +60,8 @@ public class NamedQueryServiceDefinition {
     public String toString() {
         return new ToStringBuilder(this)
                 .append("id", id)
-                .append("name", name)
                 .append("namespace", namespace)
-                .append("description", description)
+                .append("serviceName", serviceName)
                 .toString();
     }
 }

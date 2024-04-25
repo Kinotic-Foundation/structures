@@ -10,7 +10,7 @@ export class TypescriptConversionState extends BaseConversionState{
 
     public unionPropertyNameStack: string[] = []
 
-    constructor(namespace: string, utilFunctionLocator: UtilFunctionLocator) {
+    constructor(namespace: string, utilFunctionLocator: UtilFunctionLocator | null) {
         super(utilFunctionLocator)
         this._namespace = namespace
     }

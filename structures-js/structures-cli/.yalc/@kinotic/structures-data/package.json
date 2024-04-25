@@ -1,0 +1,29 @@
+{
+  "name": "@kinotic/structures-data",
+  "version": "0.1.0",
+  "author": "Kinotic Foundation <develop@kinotic.org>",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/structures-data.cjs",
+  "module": "./dist/structures-data.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/structures-data.js",
+      "require": "./dist/structures-data.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "test": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@kinotic/continuum": "^2.2.1",
+    "@kinotic/continuum-idl": "^0.2.0"
+  },
+  "yalcSig": "25c7412dd59ede4b4a316c8e08423c48"
+}

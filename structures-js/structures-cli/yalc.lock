@@ -1,0 +1,13 @@
+{
+  "version": "v1",
+  "packages": {
+    "@kinotic/structures-api": {
+      "signature": "9f53d3ed20950bb328ee768e9cc65620",
+      "file": true,
+      "replaced": "^1.14.0"
+    },
+    "@kinotic/structures-data": {
+      "signature": "25c7412dd59ede4b4a316c8e08423c48"
+    }
+  }
+}
