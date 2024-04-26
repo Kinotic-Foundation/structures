@@ -1,4 +1,4 @@
-export * from './api/domain/NamedQueryServiceDefinition'
+export * from './api/domain/NamedQueriesDefinition.js'
 export * from './api/domain/Namespace'
 export * from './api/domain/QueryParameter'
 export * from './api/domain/Structure'

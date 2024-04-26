@@ -205,7 +205,7 @@ export class EntitiesService implements IEntitiesService {
 
     public async findAll<T>(structureId: string, pageable: Pageable): Promise<IterablePage<T>> {
         const page: Page<T> = await this.findAllSinglePage(structureId, pageable)
-        return new FindAllIterablePage(pageable, page, structureId)
+        return new FindAllIterablePage(this, pageable, page, structureId)
     }
 
     public async findAllSinglePage<T>(structureId: string, pageable: Pageable): Promise<Page<T>> {
@@ -226,7 +226,7 @@ export class EntitiesService implements IEntitiesService {
 
     public async namedQueryPage<T>(structureId: string, queryName: string, parameters: QueryParameter[], pageable: Pageable): Promise<IterablePage<T>> {
         const page: Page<T> = await this.namedQuerySinglePage(structureId, queryName, parameters, pageable)
-        return new NamedQueryIterablePage(pageable, page, parameters, queryName, structureId)
+        return new NamedQueryIterablePage(this, pageable, page, parameters, queryName, structureId)
     }
 
     public namedQuerySinglePage<T>(structureId: string, queryName: string, parameters: QueryParameter[], pageable: Pageable): Promise<Page<T>> {
@@ -239,7 +239,7 @@ export class EntitiesService implements IEntitiesService {
 
     public async search<T>(structureId: string, searchText: string, pageable: Pageable): Promise<IterablePage<T>> {
         const page: Page<T> = await this.searchSinglePage(structureId, searchText, pageable)
-        return new SearchIterablePage(pageable, page, searchText, structureId)
+        return new SearchIterablePage(this, pageable, page, searchText, structureId)
     }
 
     public async searchSinglePage<T>(structureId: string, searchText: string, pageable: Pageable): Promise<Page<T>> {

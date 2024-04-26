@@ -8,12 +8,14 @@ import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.kinotic.continuum.api.Identifiable;
-import org.kinotic.continuum.idl.api.schema.ServiceDefinition;
+import org.kinotic.continuum.idl.api.schema.FunctionDefinition;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
 import org.springframework.data.elasticsearch.annotations.Setting;
+
+import java.util.List;
 
 /**
  * Provides Metadata that represents Named Queries for a Namespace
@@ -23,9 +25,9 @@ import org.springframework.data.elasticsearch.annotations.Setting;
 @Setter
 @Accessors(chain = true)
 @NoArgsConstructor
-@Document(indexName = "namedQueryServiceDefinition")
+@Document(indexName = "namedQueriesDefinition")
 @Setting(shards = 2, replicas = 2)
-public class NamedQueryServiceDefinition implements Identifiable<String> {
+public class NamedQueriesDefinition implements Identifiable<String> {
 
     @Id
     private String id = null;
@@ -34,10 +36,10 @@ public class NamedQueryServiceDefinition implements Identifiable<String> {
     private String namespace = null;
 
     @Field(type = FieldType.Keyword)
-    private String serviceName = null;
+    private String structure = null;
 
     @Field(type = FieldType.Flattened)
-    private ServiceDefinition serviceDefinition = null;
+    private List<FunctionDefinition> namedQueries = null;
 
 
     @Override
@@ -46,9 +48,9 @@ public class NamedQueryServiceDefinition implements Identifiable<String> {
 
         if (o == null || getClass() != o.getClass()) return false;
 
-        NamedQueryServiceDefinition namedQueryServiceDefinition = (NamedQueryServiceDefinition) o;
+        NamedQueriesDefinition namedQueriesDefinition = (NamedQueriesDefinition) o;
 
-        return new EqualsBuilder().append(id, namedQueryServiceDefinition.id).isEquals();
+        return new EqualsBuilder().append(id, namedQueriesDefinition.id).isEquals();
     }
 
     @Override
@@ -61,7 +63,7 @@ public class NamedQueryServiceDefinition implements Identifiable<String> {
         return new ToStringBuilder(this)
                 .append("id", id)
                 .append("namespace", namespace)
-                .append("serviceName", serviceName)
+                .append("structure", structure)
                 .toString();
     }
 }

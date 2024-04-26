@@ -1,12 +1,18 @@
 import {Args, Command, Flags} from '@oclif/core'
 import path from 'path'
-import {ObjectC3Type, ServiceDefinition} from '@kinotic/continuum-idl'
+import {FunctionDefinition, ObjectC3Type, ServiceDefinition} from '@kinotic/continuum-idl'
 import {CodeGenerationService} from '../internal/CodeGenerationService.js'
 import {resolveServer} from '../internal/state/Environment.js'
 import {
     Continuum
 } from '@kinotic/continuum-client'
-import {Structures, IStructureService, Structure} from '@kinotic/structures-api'
+import {
+    Structures,
+    IStructureService,
+    Structure,
+    INamedQueriesService,
+    NamedQueriesDefinition
+} from '@kinotic/structures-api'
 import {
     isStructuresProject,
     loadStructuresProject,
@@ -31,9 +37,9 @@ Object.assign(global, { WebSocket})
 
 const filename = fileURLToPath(import.meta.url)
 const engine = new Liquid({
-    root: path.resolve(path.dirname(filename), '../templates/'),  // root for templates lookup
-    extname: '.liquid'
-});
+                              root: path.resolve(path.dirname(filename), '../templates/'),  // root for templates lookup
+                              extname: '.liquid'
+                          });
 
 export class Synchronize extends Command {
     static description = 'Synchronize the local Entity definitions with the Structures Server'
@@ -155,7 +161,7 @@ export class Synchronize extends Command {
 
         const convertedEntities: EntityInfo[] = convertAllEntities(config)
         const codeGenerationService = new CodeGenerationService(namespaceConfig.namespaceName,
-                                                                                     this)
+                                                                this)
 
         if (convertedEntities.length > 0) {
 
@@ -178,9 +184,9 @@ export class Synchronize extends Command {
                 }
 
                 // If named queries were found save them
-                // if(generatedServiceInfo.namedQueries?.length > 0){
-                //
-                // }
+                if(generatedServiceInfo.namedQueries.length > 0){
+                    await this.synchronizeNamedQueries(entityInfo.entity, generatedServiceInfo.namedQueries)
+                }
             }
 
             this.logVerbose(`Synchronization Complete For namespace: ${config.namespace} and Entities Path: ${config.entitiesPath}`, config.verbose)
@@ -224,7 +230,28 @@ export class Synchronize extends Command {
             }
         } catch (e: any) {
             const message = e?.message || e
-            this.log(chalk.red('Error') + ` Synchronizing Structure: ${namespace}.${name}, Exception: ${message}`)
+            this.log(chalk.red('Error') + ` Synchronizing Structure: ${structureId}, Exception: ${message}`)
+        }
+    }
+
+    private async synchronizeNamedQueries(entity:       ObjectC3Type,
+                                          namedQueries: FunctionDefinition[]): Promise<void> {
+        const namedQueriesService: INamedQueriesService = Structures.getNamedQueriesService()
+        const namespace = entity.namespace
+        const structure = entity.name
+        const id = (namespace + '.' + structure).toLowerCase()
+
+        this.log(`Synchronizing Named Queries for Structure: ${namespace}.${structure}`)
+
+        try {
+            const namedQueriesDefinition = new NamedQueriesDefinition(id,
+                                                                      namespace,
+                                                                      structure,
+                                                                      namedQueries)
+            await namedQueriesService.save(namedQueriesDefinition)
+        } catch (e: any) {
+            const message = e?.message || e
+            this.log(chalk.red('Error') + ` Synchronizing Named Queries for Structure: ${id}, Exception: ${message}`)
         }
     }
 }

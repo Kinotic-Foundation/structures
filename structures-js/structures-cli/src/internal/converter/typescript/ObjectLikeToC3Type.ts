@@ -86,7 +86,7 @@ export class ObjectLikeToC3Type implements ITypeConverter<Type, C3Type, Typescri
         // Typescript cannot detect that this can be a DecoratableNode, so we have to cast it twice
         const decoratableNode = valueDeclaration as unknown as DecoratableNode
 
-        if(decoratableNode && decoratableNode.getDecorators().length) { // ensure we have a DecoratableNode
+        if(decoratableNode && decoratableNode.getDecorators) { // decoratableNode.getDecorators checks for existence of function, which will only be present if it is a DecoratableNode
 
             const precisionDecorator = decoratableNode?.getDecorator('Precision')
             if (precisionDecorator) {

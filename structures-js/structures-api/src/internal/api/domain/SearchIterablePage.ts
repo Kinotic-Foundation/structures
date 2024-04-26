@@ -1,4 +1,4 @@
-import {EntitiesService, EntitiesServiceSingleton} from '@/api/IEntitiesService'
+import {EntitiesService} from '@/api/IEntitiesService'
 import {AbstractIterablePage, Page, Pageable, IterablePage} from '@kinotic/continuum-client'
 
 /**
@@ -10,14 +10,14 @@ export class SearchIterablePage<T> extends AbstractIterablePage<T> {
     private readonly structureId: string
     private readonly entitiesService: EntitiesService
 
-    constructor(pageable: Pageable,
+    constructor(entitiesService: EntitiesService, pageable: Pageable,
                 page: Page<T>,
                 searchText: string,
                 structureId: string) {
         super(pageable, page)
+        this.entitiesService = entitiesService
         this.searchText = searchText
         this.structureId = structureId
-        this.entitiesService = EntitiesServiceSingleton as EntitiesService
     }
 
     protected findNext(pageable: Pageable): Promise<Page<T>> {

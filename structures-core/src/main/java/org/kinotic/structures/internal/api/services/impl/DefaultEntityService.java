@@ -6,8 +6,10 @@ import co.elastic.clients.elasticsearch.core.BulkRequest;
 import co.elastic.clients.elasticsearch.core.UpdateRequest;
 import co.elastic.clients.elasticsearch.core.bulk.BulkOperation;
 import co.elastic.clients.elasticsearch.core.bulk.BulkResponseItem;
+import co.elastic.clients.elasticsearch.sql.QueryRequest;
 import co.elastic.clients.util.BinaryData;
 import co.elastic.clients.util.ContentType;
+import co.elastic.clients.util.ObjectBuilder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.NotImplementedException;
 import org.kinotic.continuum.core.api.crud.CursorPage;
@@ -159,14 +161,13 @@ public class DefaultEntityService implements EntityService {
                                                Class<T> type,
                                                EntityContext context) {
 
-//        esAsyncClient.sql().query(new Function<QueryRequest.Buislder, ObjectBuilder<QueryRequest>>() {
-//            @Override
-//            public ObjectBuilder<QueryRequest> apply(QueryRequest.Builder builder) {
-//                builder.query('blah')
-//                        .params()
-//                return null;
-//            }
-//        });
+        esAsyncClient.sql().query(new Function<QueryRequest.Builder, ObjectBuilder<QueryRequest>>() {
+            @Override
+            public ObjectBuilder<QueryRequest> apply(QueryRequest.Builder builder) {
+
+                return null;
+            }
+        });
         return null;
     }
 

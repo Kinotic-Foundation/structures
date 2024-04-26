@@ -124,7 +124,7 @@ public interface JsonEntitiesService {
      * @param structureId the id of the structure that this named query is defined for
      * @param queryName   the name of {@link FunctionDefinition} that defines the query
      * @param parameters  the parameters to pass to the query
-     * @param pageable    the page settings to be useds
+     * @param pageable    the page settings to be used
      * @param participant the participant of the logged-in user
      * @return {@link CompletableFuture} with the result of the query
      */

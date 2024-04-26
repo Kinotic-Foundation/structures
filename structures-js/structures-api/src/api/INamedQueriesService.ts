@@ -1,11 +1,11 @@
-import {NamedQueryServiceDefinition} from '@/api/domain/NamedQueryServiceDefinition'
+import {NamedQueriesDefinition} from '@/api/domain/NamedQueriesDefinition.js'
 import {Continuum, CrudServiceProxy, ICrudServiceProxy,} from '@kinotic/continuum-client'
 
-export interface INamedQueriesService extends ICrudServiceProxy<NamedQueryServiceDefinition> {
+export interface INamedQueriesService extends ICrudServiceProxy<NamedQueriesDefinition> {
 
 }
 
-export class NamedQueriesService extends CrudServiceProxy<NamedQueryServiceDefinition> implements INamedQueriesService{
+export class NamedQueriesService extends CrudServiceProxy<NamedQueriesDefinition> implements INamedQueriesService{
 
     constructor() {
         super(Continuum.serviceProxy('org.kinotic.structures.api.services.NamedQueriesService'))

@@ -2,21 +2,21 @@ import {
     ConnectedInfo,
     ConnectionInfo,
     Continuum,
+    Event,
     EventConstants,
     IEvent,
-    Event,
     ParticipantConstants
 } from '@kinotic/continuum-client'
+import {C3Type, ComplexC3Type, ObjectC3Type} from '@kinotic/continuum-idl'
 import {EntityDecorator} from '@kinotic/structures-api'
 import fs from 'fs'
-import {ModuleKind, ModuleResolutionKind, Node, Project, ScriptTarget} from 'ts-morph'
-import { v4 as uuidv4 } from 'uuid'
+import fsPromises from 'fs/promises'
 import inquirer from 'inquirer'
 import open from 'open'
 import pTimeout from 'p-timeout'
-import {C3Type, ComplexC3Type, ObjectC3Type} from '@kinotic/continuum-idl'
 import path from 'path'
-import fsPromises from 'fs/promises'
+import {IndentationText, Node, Project} from 'ts-morph'
+import {v4 as uuidv4} from 'uuid'
 import {createConversionContext} from './converter/IConversionContext.js'
 import {tsDecoratorToC3Decorator} from './converter/typescript/ConverterUtils.js'
 import {TypescriptConversionState} from './converter/typescript/TypescriptConversionState.js'
@@ -200,6 +200,10 @@ export function createTsMorphProject(): Project {
     }
     return new Project({
        tsConfigFilePath: tsConfigFilePath,
+       manipulationSettings: {
+           indentationText: IndentationText.TwoSpaces
+       }
+
        // compilerOptions: {
        //     target: ScriptTarget.ES2020,
        //     useDefineForClassFields: true,

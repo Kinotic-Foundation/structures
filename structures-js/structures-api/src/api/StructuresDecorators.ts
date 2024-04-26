@@ -59,20 +59,21 @@ export function Query(statements: string) {
 
         Reflect.defineMetadata(StructuresDecorator.Query, statements, target, key)
 
-        const originalMethod = descriptor.value;
-
-        // Access the super class and its method
-        const superClass = Object.getPrototypeOf(target.constructor.prototype);
-        const superMethod = superClass[key];
-
-        descriptor.value = function (...args: any[]) {
-            // Check if the super method exists
-            if (typeof superMethod === 'function') {
-                return superMethod.apply(this, args);
-            } else {
-                return originalMethod.apply(this, args);
-            }
-        };
+        /** Code below will be needed if we want the auto generated invocation logic to live in the base service class for the entity service **/
+        // const originalMethod = descriptor.value;
+        //
+        // // Access the super class and its method
+        // const superClass = Object.getPrototypeOf(target.constructor.prototype);
+        // const superMethod = superClass[key];
+        //
+        // descriptor.value = function (...args: any[]) {
+        //     // Check if the super method exists
+        //     if (typeof superMethod === 'function') {
+        //         return superMethod.apply(this, args);
+        //     } else {
+        //         return originalMethod.apply(this, args);
+        //     }
+        // };
 
         return descriptor;
     }

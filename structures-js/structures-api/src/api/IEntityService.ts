@@ -97,7 +97,7 @@ export interface IEntityService<T> {
      * @param parameters to pass to the query
      * @returns Promise with the result of the query
      */
-    namedQuery<T>(queryName: string, parameters: QueryParameter[]): Promise<T>
+    namedQuery<U>(queryName: string, parameters: QueryParameter[]): Promise<U>
 
     /**
      * Executes a named query and returns a Page of results.
@@ -106,7 +106,7 @@ export interface IEntityService<T> {
      * @param pageable the page settings to be used
      * @returns Promise with the result of the query
      */
-    namedQueryPage<T>(queryName: string, parameters: QueryParameter[], pageable: Pageable): Promise<IterablePage<T>>
+    namedQueryPage<U>(queryName: string, parameters: QueryParameter[], pageable: Pageable): Promise<IterablePage<U>>
 
     /**
      * Saves a given entity. This will override all data if there is an existing entity with the same id.
@@ -153,7 +153,9 @@ export class EntityService<T> implements IEntityService<T>{
     private entitiesService: IEntitiesService
     private readonly structuresId: string
 
-    public constructor(structureNamespace: string, structureName: string, entitiesService?: IEntitiesService) {
+    public constructor(structureNamespace: string,
+                       structureName: string,
+                       entitiesService?: IEntitiesService) {
         this.structureNamespace = structureNamespace
         this.structureName = structureName
         this.structuresId = (structureNamespace + '.' + structureName).toLowerCase()
@@ -198,11 +200,11 @@ export class EntityService<T> implements IEntityService<T>{
         return this.entitiesService.findByIds(this.structuresId, ids)
     }
 
-    public namedQuery<T>(queryName: string, parameters: QueryParameter[]): Promise<T> {
+    public namedQuery<U>(queryName: string, parameters: QueryParameter[]): Promise<U> {
         return this.entitiesService.namedQuery(this.structuresId, queryName, parameters)
     }
 
-    public namedQueryPage<T>(queryName: string, parameters: QueryParameter[], pageable: Pageable): Promise<IterablePage<T>> {
+    public namedQueryPage<U>(queryName: string, parameters: QueryParameter[], pageable: Pageable): Promise<IterablePage<U>> {
         return this.entitiesService.namedQueryPage(this.structuresId, queryName, parameters, pageable)
     }
 

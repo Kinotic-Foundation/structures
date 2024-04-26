@@ -8,5 +8,6 @@
 /package-lock.json
 /tmp
 node_modules
+/.yalc
 oclif.manifest.json
 structures.json
