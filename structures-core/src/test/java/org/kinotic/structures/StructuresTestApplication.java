@@ -18,6 +18,7 @@
 package org.kinotic.structures;
 
 import io.vertxbeans.VertxBeans;
+import org.kinotic.continuum.api.annotations.EnableContinuum;
 import org.kinotic.structures.api.annotations.EnableStructures;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -34,6 +35,7 @@ import org.springframework.context.annotation.Import;
                                   GraphQlWebFluxAutoConfiguration.class,
                                   ReactiveElasticsearchRestClientAutoConfiguration.class})
 @Import(VertxBeans.class)
+@EnableContinuum
 @EnableStructures
 public class StructuresTestApplication {
     public static void main(String[] args) {

@@ -113,10 +113,10 @@ public interface JsonEntitiesService {
      * @param participant the participant of the logged-in user
      * @return {@link CompletableFuture} with the result of the query
      */
-    CompletableFuture<RawJson> namedQuery(String structureId,
-                                          String queryName,
-                                          List<QueryParameter> parameters,
-                                          Participant participant);
+    CompletableFuture<List<RawJson>> namedQuery(String structureId,
+                                                String queryName,
+                                                List<QueryParameter> parameters,
+                                                Participant participant);
 
     /**
      * Executes a named query and returns a {@link Page} of results.

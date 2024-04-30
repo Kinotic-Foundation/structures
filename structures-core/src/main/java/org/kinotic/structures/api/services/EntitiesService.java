@@ -122,11 +122,11 @@ public interface EntitiesService {
      * @param context     the context for this operation
      * @return {@link CompletableFuture} with the result of the query
      */
-    <T> CompletableFuture<T> namedQuery(String structureId,
-                                        String queryName,
-                                        List<QueryParameter> parameters,
-                                        Class<T> type,
-                                        EntityContext context);
+    <T> CompletableFuture<List<T>> namedQuery(String structureId,
+                                              String queryName,
+                                              List<QueryParameter> parameters,
+                                              Class<T> type,
+                                              EntityContext context);
 
     /**
      * Executes a named query and returns a {@link Page} of results.

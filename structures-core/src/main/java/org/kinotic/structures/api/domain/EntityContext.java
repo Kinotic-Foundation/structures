@@ -18,7 +18,7 @@ public interface EntityContext {
 
     /**
      * If defined this will restrict the response to only include the fields listed here.
-     * @return a list of included fields, or an empty {@link List} or null if all fields should be included
+     * @return a list of included fields, if {@link List} is empty no fields will be included, if null all fields will be included.
      */
     List<String> getIncludedFieldsFilter();
 

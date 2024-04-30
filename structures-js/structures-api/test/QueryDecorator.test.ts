@@ -28,7 +28,7 @@ describe('QueryDecorator', () => {
     it<LocalTestContext>('Test Query Decorator calls parent',
         async () => {
             let beepBop = new ChildClass()
-            expect(beepBop.beHappy()).toEqual(42)
+            expect(beepBop.beHappy()).toEqual(7)
         }
     )
 

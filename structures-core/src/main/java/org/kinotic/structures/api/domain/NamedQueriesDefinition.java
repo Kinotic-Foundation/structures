@@ -25,7 +25,7 @@ import java.util.List;
 @Setter
 @Accessors(chain = true)
 @NoArgsConstructor
-@Document(indexName = "namedQueriesDefinition")
+@Document(indexName = "named_query_service_definition")
 @Setting(shards = 2, replicas = 2)
 public class NamedQueriesDefinition implements Identifiable<String> {
 

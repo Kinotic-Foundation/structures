@@ -45,7 +45,7 @@ public class StructuresEndpointInitializer {
 
         vertx.deployVerticle(verticleFactory::createGqlVerticle, options);
 
-       vertx.deployVerticle(verticleFactory::createWebServerVerticle, new DeploymentOptions()); // only 1 web server verticle
+        vertx.deployVerticle(verticleFactory::createWebServerVerticle, new DeploymentOptions()); // only 1 web server verticle
 
         healthChecks.register("elasticsearch", future -> {
             if(lastEsStatus){

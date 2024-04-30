@@ -6,11 +6,12 @@ import org.kinotic.continuum.idl.api.schema.decorators.C3Decorator;
 import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.internal.api.hooks.DecoratorLogic;
-import org.kinotic.structures.internal.api.hooks.DelegatingReadPreProcessor;
+import org.kinotic.structures.internal.api.hooks.ReadPreProcessor;
 import org.kinotic.structures.internal.api.hooks.DelegatingUpsertPreProcessor;
 import org.kinotic.structures.internal.api.hooks.UpsertFieldPreProcessor;
 import org.kinotic.structures.internal.api.services.EntityService;
 import org.kinotic.structures.internal.api.services.EntityServiceFactory;
+import org.kinotic.structures.internal.api.services.sql.QueryExecutorFactory;
 import org.kinotic.structures.internal.idl.converters.common.DecoratedProperty;
 import org.kinotic.structures.internal.utils.StructuresUtil;
 import org.springframework.stereotype.Component;
@@ -29,20 +30,26 @@ public class DefaultEntityServiceFactory implements EntityServiceFactory {
 
     private final CrudServiceTemplate crudServiceTemplate;
     private final ElasticsearchAsyncClient esAsyncClient;
+    private final ReadPreProcessor readPreProcessor;
     private final ObjectMapper objectMapper;
+    private final QueryExecutorFactory queryExecutorFactory;
     private final StructuresProperties structuresProperties;
     private final Map<String, UpsertFieldPreProcessor<?, ?, ?>> upsertFieldPreProcessors;
 
-    public DefaultEntityServiceFactory(StructuresProperties structuresProperties,
-                                       ObjectMapper objectMapper,
+    public DefaultEntityServiceFactory(CrudServiceTemplate crudServiceTemplate,
                                        ElasticsearchAsyncClient esAsyncClient,
-                                       CrudServiceTemplate crudServiceTemplate,
+                                       ReadPreProcessor readPreProcessor,
+                                       ObjectMapper objectMapper,
+                                       QueryExecutorFactory queryExecutorFactory,
+                                       StructuresProperties structuresProperties,
                                        List<UpsertFieldPreProcessor<?, ?, ?>> upsertFieldPreProcessors) {
 
-        this.structuresProperties = structuresProperties;
-        this.objectMapper = objectMapper;
-        this.esAsyncClient = esAsyncClient;
         this.crudServiceTemplate = crudServiceTemplate;
+        this.esAsyncClient = esAsyncClient;
+        this.readPreProcessor = readPreProcessor;
+        this.objectMapper = objectMapper;
+        this.queryExecutorFactory = queryExecutorFactory;
+        this.structuresProperties = structuresProperties;
 
         this.upsertFieldPreProcessors = StructuresUtil.listToMap(upsertFieldPreProcessors,
                                                                  p -> p.implementsDecorator().getName());
@@ -74,16 +81,18 @@ public class DefaultEntityServiceFactory implements EntityServiceFactory {
             }
         }
 
-        return CompletableFuture.completedFuture(new DefaultEntityService(structure,
-                                                                          structuresProperties,
-                                                                          objectMapper,
-                                                                          esAsyncClient,
-                                                                          crudServiceTemplate,
+        return CompletableFuture.completedFuture(new DefaultEntityService(crudServiceTemplate,
+                                                                          readPreProcessor,
                                                                           new DelegatingUpsertPreProcessor(structuresProperties,
                                                                                                            objectMapper,
                                                                                                            structure,
                                                                                                            fieldPreProcessors),
-                                                                          new DelegatingReadPreProcessor(structuresProperties)));
+                                                                          esAsyncClient,
+                                                                          objectMapper,
+                                                                          queryExecutorFactory,
+                                                                          structure,
+                                                                          structuresProperties)
+        );
     }
 
 }

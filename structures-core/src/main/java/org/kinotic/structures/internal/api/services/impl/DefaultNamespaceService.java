@@ -1,12 +1,11 @@
 package org.kinotic.structures.internal.api.services.impl;
 
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
-import org.kinotic.structures.api.config.StructuresProperties;
+import org.kinotic.continuum.core.api.crud.Page;
+import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.structures.api.domain.Namespace;
 import org.kinotic.structures.api.services.NamespaceService;
 import org.kinotic.structures.api.services.StructureService;
-import org.kinotic.continuum.core.api.crud.Page;
-import org.kinotic.continuum.core.api.crud.Pageable;
 import org.springframework.data.elasticsearch.core.ReactiveElasticsearchOperations;
 import org.springframework.stereotype.Component;
 
@@ -20,7 +19,6 @@ public class DefaultNamespaceService extends AbstractCrudService<Namespace> impl
 
     public DefaultNamespaceService(ElasticsearchAsyncClient esAsyncClient,
                                    ReactiveElasticsearchOperations esOperations,
-                                   StructuresProperties structuresProperties,
                                    StructureService structureService,
                                    CrudServiceTemplate crudServiceTemplate) {
         super("namespace",

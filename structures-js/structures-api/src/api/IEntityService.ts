@@ -19,6 +19,12 @@ export interface IEntityService<T> {
     structureName: string
 
     /**
+     * The id of the structure this service is for
+     * Which is the namespace + '.' + name
+     */
+    structureId: string
+
+    /**
      * Saves all given entities.
      * @param entities all the entities to save
      * @return Promise that will complete when all entities have been saved
@@ -149,77 +155,77 @@ export class EntityService<T> implements IEntityService<T>{
 
     public structureNamespace: string
     public structureName: string
+    public structureId: string
 
     private entitiesService: IEntitiesService
-    private readonly structuresId: string
 
     public constructor(structureNamespace: string,
                        structureName: string,
                        entitiesService?: IEntitiesService) {
         this.structureNamespace = structureNamespace
         this.structureName = structureName
-        this.structuresId = (structureNamespace + '.' + structureName).toLowerCase()
+        this.structureId = (structureNamespace + '.' + structureName).toLowerCase()
         this.entitiesService = entitiesService || EntitiesServiceSingleton
     }
 
     public async bulkSave(entities: T[]): Promise<void>{
         const entitiesToSave = await this.beforeBulkSaveOrUpdate(entities)
-        return this.entitiesService.bulkSave(this.structuresId, entitiesToSave)
+        return this.entitiesService.bulkSave(this.structureId, entitiesToSave)
     }
 
     public async bulkUpdate(entities: T[]): Promise<void>{
         const entitiesToSave = await this.beforeBulkSaveOrUpdate(entities)
-        return this.entitiesService.bulkUpdate(this.structuresId, entitiesToSave)
+        return this.entitiesService.bulkUpdate(this.structureId, entitiesToSave)
     }
 
     public count(): Promise<number>{
-        return this.entitiesService.count(this.structuresId)
+        return this.entitiesService.count(this.structureId)
     }
 
     public countByQuery(query: string): Promise<number>{
-        return this.entitiesService.countByQuery(this.structuresId, query)
+        return this.entitiesService.countByQuery(this.structureId, query)
     }
 
     public deleteById(id: string): Promise<void>{
-        return this.entitiesService.deleteById(this.structuresId, id)
+        return this.entitiesService.deleteById(this.structureId, id)
     }
 
     public deleteByQuery(query: string): Promise<void>{
-        return this.entitiesService.deleteByQuery(this.structuresId, query)
+        return this.entitiesService.deleteByQuery(this.structureId, query)
     }
 
     public findAll(pageable: Pageable): Promise<IterablePage<T>>{
-        return this.entitiesService.findAll(this.structuresId, pageable)
+        return this.entitiesService.findAll(this.structureId, pageable)
     }
 
     public findById(id: string): Promise<T>{
-        return this.entitiesService.findById(this.structuresId, id)
+        return this.entitiesService.findById(this.structureId, id)
     }
 
     public findByIds(ids: string[]): Promise<T[]>{
-        return this.entitiesService.findByIds(this.structuresId, ids)
+        return this.entitiesService.findByIds(this.structureId, ids)
     }
 
     public namedQuery<U>(queryName: string, parameters: QueryParameter[]): Promise<U> {
-        return this.entitiesService.namedQuery(this.structuresId, queryName, parameters)
+        return this.entitiesService.namedQuery(this.structureId, queryName, parameters)
     }
 
     public namedQueryPage<U>(queryName: string, parameters: QueryParameter[], pageable: Pageable): Promise<IterablePage<U>> {
-        return this.entitiesService.namedQueryPage(this.structuresId, queryName, parameters, pageable)
+        return this.entitiesService.namedQueryPage(this.structureId, queryName, parameters, pageable)
     }
 
     public async save(entity: T): Promise<T>{
         const entityToSave = await this.beforeSaveOrUpdate(entity)
-        return this.entitiesService.save(this.structuresId, entityToSave)
+        return this.entitiesService.save(this.structureId, entityToSave)
     }
 
     public search(searchText: string, pageable: Pageable): Promise<IterablePage<T>>{
-        return this.entitiesService.search(this.structuresId, searchText, pageable)
+        return this.entitiesService.search(this.structureId, searchText, pageable)
     }
 
     public async update(entity: T): Promise<T>{
         const entityToSave = await this.beforeSaveOrUpdate(entity)
-        return this.entitiesService.update(this.structuresId, entityToSave)
+        return this.entitiesService.update(this.structureId, entityToSave)
     }
 
     protected async beforeBulkSaveOrUpdate(entities: T[]): Promise<T[]>{

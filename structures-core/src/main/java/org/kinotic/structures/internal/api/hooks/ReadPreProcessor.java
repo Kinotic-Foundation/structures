@@ -6,6 +6,7 @@ import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.decorators.MultiTenancyType;
 import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.Structure;
+import org.springframework.stereotype.Component;
 
 import java.util.function.Consumer;
 
@@ -14,11 +15,12 @@ import java.util.function.Consumer;
  * This allows for the logic path to only call the pre-processors that are needed for a given operation and structure.
  * Created by Navíd Mitchell 🤪on 6/13/23.
  */
-public class DelegatingReadPreProcessor {
+@Component
+public class ReadPreProcessor {
 
     private final StructuresProperties structuresProperties;
 
-    public DelegatingReadPreProcessor(StructuresProperties structuresProperties) {
+    public ReadPreProcessor(StructuresProperties structuresProperties) {
         this.structuresProperties = structuresProperties;
     }
 
@@ -110,7 +112,7 @@ public class DelegatingReadPreProcessor {
 //            }
             // Add source fields filter
             if(context.hasIncludedFieldsFilter()){
-                // If this is an empty field we exclude all fields from the source
+                // If fields filter is empty  we exclude all fields from the source
                 if(context.getIncludedFieldsFilter().isEmpty()) {
                     sf.excludes("*");
                 }else {
@@ -137,7 +139,7 @@ public class DelegatingReadPreProcessor {
         builder.query(queryBuilder.build());
     }
 
-    private Query.Builder createQueryWithTenantLogicAndSearch(Structure structure,
+    public Query.Builder createQueryWithTenantLogicAndSearch(Structure structure,
                                                               String searchText,
                                                               EntityContext context,
                                                               Consumer<String> routingConsumer) {
@@ -160,7 +162,7 @@ public class DelegatingReadPreProcessor {
         return queryBuilder;
     }
 
-    private Query.Builder createQueryWithTenantLogic(Structure structure, EntityContext context, Consumer<String> routingConsumer) {
+    public Query.Builder createQueryWithTenantLogic(Structure structure, EntityContext context, Consumer<String> routingConsumer) {
         Query.Builder queryBuilder = null;
         // add multi tenancy filters if needed
         if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){

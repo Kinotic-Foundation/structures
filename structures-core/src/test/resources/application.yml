@@ -1,6 +1,6 @@
 spring:
   profiles:
-    active: test
+    active: development
   main:
     allow-circular-references: true
     web-application-type: none

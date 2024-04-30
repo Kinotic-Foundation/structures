@@ -206,7 +206,7 @@ public class CrudServiceTemplate {
     }
 
     /**
-     * Finds a list document by their id. Also allows for customization of the {@link GetRequest}.
+     * Finds a list document by their id. Also allows for customization of the {@link MgetRequest}.
      *
      * @param <T>             type of the document to return
      * @param indexName       name of the index to search
@@ -236,7 +236,7 @@ public class CrudServiceTemplate {
     }
 
     /**
-     * Finds a list of document by their ids. Also allows for customization of the {@link GetRequest}.
+     * Finds a list of document by their ids. Also allows for customization of the {@link MgetRequest}.
      *
      * @param indexName       name of the index to search
      * @param ids             ids of the documents to return
@@ -246,9 +246,9 @@ public class CrudServiceTemplate {
      * @return a {@link CompletableFuture} that will complete with the document
      */
     public <T> CompletableFuture<MgetResponse<T>> findByIds(String indexName,
-                                                           List<String> ids,
-                                                           JsonpDeserializer<T> deserializer,
-                                                           Consumer<MgetRequest.Builder> builderConsumer) {
+                                                            List<String> ids,
+                                                            JsonpDeserializer<T> deserializer,
+                                                            Consumer<MgetRequest.Builder> builderConsumer) {
         //noinspection unchecked
         JsonEndpoint<MgetRequest, MgetResponse<T>, ErrorResponse> endpoint =
                 (JsonEndpoint<MgetRequest, MgetResponse<T>, ErrorResponse>) MgetRequest._ENDPOINT;

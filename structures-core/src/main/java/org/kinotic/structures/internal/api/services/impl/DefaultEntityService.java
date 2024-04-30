@@ -6,11 +6,10 @@ import co.elastic.clients.elasticsearch.core.BulkRequest;
 import co.elastic.clients.elasticsearch.core.UpdateRequest;
 import co.elastic.clients.elasticsearch.core.bulk.BulkOperation;
 import co.elastic.clients.elasticsearch.core.bulk.BulkResponseItem;
-import co.elastic.clients.elasticsearch.sql.QueryRequest;
 import co.elastic.clients.util.BinaryData;
 import co.elastic.clients.util.ContentType;
-import co.elastic.clients.util.ObjectBuilder;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.NotImplementedException;
 import org.kinotic.continuum.core.api.crud.CursorPage;
 import org.kinotic.continuum.core.api.crud.Page;
@@ -21,11 +20,12 @@ import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.QueryParameter;
 import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.domain.Structure;
-import org.kinotic.structures.internal.api.hooks.DelegatingReadPreProcessor;
+import org.kinotic.structures.internal.api.hooks.ReadPreProcessor;
 import org.kinotic.structures.internal.api.hooks.DelegatingUpsertPreProcessor;
 import org.kinotic.structures.internal.api.services.EntityContextConstants;
 import org.kinotic.structures.internal.api.services.EntityHolder;
 import org.kinotic.structures.internal.api.services.EntityService;
+import org.kinotic.structures.internal.api.services.sql.QueryExecutorFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,33 +40,19 @@ import java.util.stream.Collectors;
 /**
  * Created by Navíd Mitchell 🤪 on 5/2/23.
  */
+@RequiredArgsConstructor
 public class DefaultEntityService implements EntityService {
 
     private static final Logger log = LoggerFactory.getLogger(DefaultEntityService.class);
     private final CrudServiceTemplate crudServiceTemplate;
-    private final DelegatingReadPreProcessor delegatingReadPreProcessor;
+    private final ReadPreProcessor readPreProcessor;
     private final DelegatingUpsertPreProcessor delegatingUpsertPreProcessor;
     private final ElasticsearchAsyncClient esAsyncClient;
     private final ObjectMapper objectMapper;
+    private final QueryExecutorFactory queryExecutorFactory;
     private final Structure structure;
     private final StructuresProperties structuresProperties;
 
-
-    public DefaultEntityService(Structure structure,
-                                StructuresProperties structuresProperties,
-                                ObjectMapper objectMapper,
-                                ElasticsearchAsyncClient esAsyncClient,
-                                CrudServiceTemplate crudServiceTemplate,
-                                DelegatingUpsertPreProcessor delegatingUpsertPreProcessor,
-                                DelegatingReadPreProcessor delegatingReadPreProcessor) {
-        this.structure = structure;
-        this.structuresProperties = structuresProperties;
-        this.objectMapper = objectMapper;
-        this.esAsyncClient = esAsyncClient;
-        this.crudServiceTemplate = crudServiceTemplate;
-        this.delegatingUpsertPreProcessor = delegatingUpsertPreProcessor;
-        this.delegatingReadPreProcessor = delegatingReadPreProcessor;
-    }
 
     @Override
     public <T> CompletableFuture<Void> bulkSave(T entities, EntityContext context) {
@@ -98,7 +84,7 @@ public class DefaultEntityService implements EntityService {
         return validateTenant(context)
                 .thenCompose(unused -> crudServiceTemplate
                         .count(structure.getItemIndex(),
-                               builder -> delegatingReadPreProcessor.beforeCount(structure, null, builder, context)));
+                               builder -> readPreProcessor.beforeCount(structure, null, builder, context)));
     }
 
     @Override
@@ -106,7 +92,7 @@ public class DefaultEntityService implements EntityService {
         return validateTenant(context)
                 .thenCompose(unused -> crudServiceTemplate
                         .count(structure.getItemIndex(),
-                                builder -> delegatingReadPreProcessor.beforeCount(structure, query, builder, context)));
+                                builder -> readPreProcessor.beforeCount(structure, query, builder, context)));
     }
 
     @Override
@@ -115,7 +101,7 @@ public class DefaultEntityService implements EntityService {
                 .thenCompose(composedId -> crudServiceTemplate
                         .deleteById(structure.getItemIndex(),
                                     composedId,
-                                    builder -> delegatingReadPreProcessor.beforeDelete(structure, builder, context))
+                                    builder -> readPreProcessor.beforeDelete(structure, builder, context))
                         .thenApply(deleteResponse -> null));
     }
 
@@ -124,7 +110,7 @@ public class DefaultEntityService implements EntityService {
         return validateTenant(context)
                 .thenCompose(unused -> crudServiceTemplate
                         .deleteByQuery(structure.getItemIndex(),
-                                builder -> delegatingReadPreProcessor.beforeDeleteByQuery(structure, query, builder, context))
+                                builder -> readPreProcessor.beforeDeleteByQuery(structure, query, builder, context))
                         .thenApply(deleteResponse -> null));
     }
 
@@ -135,7 +121,7 @@ public class DefaultEntityService implements EntityService {
                         .search(structure.getItemIndex(),
                                 pageable,
                                 type,
-                                builder -> delegatingReadPreProcessor.beforeFindAll(structure, builder, context))
+                                builder -> readPreProcessor.beforeFindAll(structure, builder, context))
                         .thenApply(createParanoidCheck(type, context, "Find All")));
     }
 
@@ -144,7 +130,7 @@ public class DefaultEntityService implements EntityService {
         return validateTenantAndComposeId(id, context)
                 .thenCompose(composedId -> crudServiceTemplate
                         .findById(structure.getItemIndex(), composedId, type,
-                                  builder -> delegatingReadPreProcessor.beforeFindById(structure, builder, context)));
+                                  builder -> readPreProcessor.beforeFindById(structure, builder, context)));
     }
 
     @Override
@@ -152,23 +138,18 @@ public class DefaultEntityService implements EntityService {
         return validateTenantAndComposeIds(ids, context)
                 .thenCompose(composedIds -> crudServiceTemplate
                         .findByIds(structure.getItemIndex(), composedIds, type,
-                                builder -> delegatingReadPreProcessor.beforeFindByIds(structure, builder, context)));
+                                builder -> readPreProcessor.beforeFindByIds(structure, builder, context)));
     }
 
     @Override
-    public <T> CompletableFuture<T> namedQuery(String queryName,
-                                               List<QueryParameter> parameters,
-                                               Class<T> type,
-                                               EntityContext context) {
+    public <T> CompletableFuture<List<T>> namedQuery(String queryName,
+                                                     List<QueryParameter> parameters,
+                                                     Class<T> type,
+                                                     EntityContext context) {
 
-        esAsyncClient.sql().query(new Function<QueryRequest.Builder, ObjectBuilder<QueryRequest>>() {
-            @Override
-            public ObjectBuilder<QueryRequest> apply(QueryRequest.Builder builder) {
+        return queryExecutorFactory.createQueryExecutor(queryName, structure)
+                                   .thenCompose(executor -> executor.execute(parameters, type, context));
 
-                return null;
-            }
-        });
-        return null;
     }
 
     @Override
@@ -177,7 +158,7 @@ public class DefaultEntityService implements EntityService {
                                                          Pageable pageable,
                                                          Class<T> type,
                                                          EntityContext context) {
-        return null;
+        return CompletableFuture.failedFuture(new NotImplementedException("Named queries are not implemented yet"));
     }
 
     @SuppressWarnings("unchecked")
@@ -226,7 +207,7 @@ public class DefaultEntityService implements EntityService {
                         .search(structure.getItemIndex(),
                                 pageable,
                                 type,
-                                builder -> delegatingReadPreProcessor.beforeSearch(structure, searchText, builder, context))
+                                builder -> readPreProcessor.beforeSearch(structure, searchText, builder, context))
                         .thenApply(createParanoidCheck(type, context, "Search")));
     }
 
