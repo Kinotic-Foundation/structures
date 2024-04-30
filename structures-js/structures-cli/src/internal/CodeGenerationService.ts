@@ -14,13 +14,15 @@ import {TypescriptConverterStrategy} from './converter/typescript/TypescriptConv
 import {Logger} from './Logger.js'
 import {NamespaceConfiguration} from './state/StructuresProject.js'
 import {UtilFunctionLocator} from './UtilFunctionLocator.js'
-import {createTsMorphProject, EntityInfo, getRelativeImportPath, tryGetNodeModuleName} from './Utils.js'
+import {
+    createTsMorphProject,
+    EntityInfo,
+    GeneratedServiceInfo,
+    getRelativeImportPath,
+    tryGetNodeModuleName
+} from './Utils.js'
 
 
-export type GeneratedServiceInfo = {
-    entityServiceName: string
-    namedQueries: FunctionDefinition[]
-}
 
 /**
  * Helper service for generating code.
@@ -146,7 +148,17 @@ export class CodeGenerationService {
                         const methodName = method.getName()
                         const functionDefinition = new FunctionDefinition(methodName,
                                                                           [tsDecoratorToC3Decorator(queryDecorator)!])
-                        functionDefinition.returnType = this.conversionContext.convert(method.getReturnType())
+                        // we assume this is a promise for now
+                        if(method.getReturnType().getText().startsWith('Promise')){
+                            const typeArguments = method.getReturnType().getTypeArguments()
+                            if(typeArguments?.length !== 1){
+                                throw new Error('Promise must have exactly one type argument')
+                            }
+                            const returnType = typeArguments[0]
+                            functionDefinition.returnType = this.conversionContext.convert(returnType)
+                        }else{
+                            throw new Error('Only methods that return a Promise are supported for named queries')
+                        }
 
                         // Find page parameter if any and store all parameter names for later
                         const argNames: string[] = []

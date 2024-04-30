@@ -7,6 +7,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import org.apache.commons.lang3.tuple.Pair;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.kinotic.continuum.idl.api.schema.ArrayC3Type;
+import org.kinotic.continuum.idl.api.schema.IntC3Type;
 import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
 import org.kinotic.continuum.idl.api.schema.StringC3Type;
 import org.kinotic.continuum.internal.utils.ContinuumUtil;
@@ -60,7 +61,7 @@ public class TestDataService {
                 .addProperty("id", new StringC3Type(), List.of(new IdDecorator()))
                 .addProperty("make", new StringC3Type())
                 .addProperty("model", new StringC3Type())
-                .addProperty("year", new StringC3Type())
+                .addProperty("year", new IntC3Type())
                 .addProperty("owner", createPersonSchema(multiTenancyType, false, false));
 
         ret.addDecorator(new EntityDecorator().setMultiTenancyType(multiTenancyType));

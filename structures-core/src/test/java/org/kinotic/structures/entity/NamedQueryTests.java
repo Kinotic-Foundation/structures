@@ -20,13 +20,10 @@ package org.kinotic.structures.entity;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.kinotic.continuum.idl.api.schema.ArrayC3Type;
-import org.kinotic.continuum.idl.api.schema.FunctionDefinition;
+import org.kinotic.continuum.idl.api.schema.*;
 import org.kinotic.structures.api.decorators.QueryDecorator;
-import org.kinotic.structures.api.domain.DefaultEntityContext;
-import org.kinotic.structures.api.domain.EntityContext;
-import org.kinotic.structures.api.domain.NamedQueriesDefinition;
-import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.api.domain.*;
+import org.kinotic.structures.api.services.EntitiesService;
 import org.kinotic.structures.api.services.NamedQueriesService;
 import org.kinotic.structures.internal.sample.DummyParticipant;
 import org.kinotic.structures.support.StructureAndPersonHolder;
@@ -38,6 +35,8 @@ import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Predicate;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest
@@ -45,6 +44,8 @@ public class NamedQueryTests {
 
     @Autowired
     private NamedQueriesService namedQueriesService;
+    @Autowired
+    private EntitiesService entitiesService;
     @Autowired
     private TestHelper testHelper;
 
@@ -86,11 +87,11 @@ public class NamedQueryTests {
         EntityContext context1 = new DefaultEntityContext(new DummyParticipant("tenant1", "user1"));
         EntityContext context2 = new DefaultEntityContext(new DummyParticipant("kinotic", "user2"));
 
-        StructureAndPersonHolder holder1 = createAndVerify(50, true, context1, "-testAll");
+        StructureAndPersonHolder holder1 = createAndVerify(50, true, context1, "");
 
         Assertions.assertNotNull(holder1);
 
-        StructureAndPersonHolder holder2 = createAndVerify(100, true, context2, "-testAll");
+        StructureAndPersonHolder holder2 = createAndVerify(100, true, context2, "");
 
         Assertions.assertNotNull(holder2);
 
@@ -99,21 +100,40 @@ public class NamedQueryTests {
                     .expectNextCount(1)
                     .verifyComplete();
 
+        CompletableFuture<List<RawJson>> future = entitiesService.namedQuery("org.kinotic.sample.person",
+                                                                             "countPeopleByLastName",
+                                                                             null,
+                                                                             RawJson.class,
+                                                                             context2);
+
+        StepVerifier.create(Mono.fromFuture(() -> future))
+                    .expectNextMatches(new Predicate<List<RawJson>>() {
+                        @Override
+                        public boolean test(List<RawJson> maps) {
+                            return true;
+                        }
+                    })
+                    .verifyComplete();
+
 
     }
 
     private NamedQueriesDefinition createPeopleNamedQueries(Structure structure){
+
+        ObjectC3Type resultType = new ObjectC3Type().setName("CountByLastName")
+                                                    .setNamespace(structure.getNamespace())
+                                                    .addProperty("count", new LongC3Type())
+                                                    .addProperty("lastName", new StringC3Type());
+
         QueryDecorator queryDecorator = new QueryDecorator()
-                .setStatements("SELECT COUNT(*) as count FROM \""+structure.getItemIndex()+"\" GROUP BY lastName");
+                .setStatements("SELECT COUNT(*) as count, lastName FROM \""+structure.getItemIndex()+"\" GROUP BY lastName");
         FunctionDefinition findAllPeopleDefinition = new FunctionDefinition().setName("countPeopleByLastName");
         findAllPeopleDefinition.setDecorators(List.of(queryDecorator));
-        findAllPeopleDefinition.setReturnType(new ArrayC3Type().setContains(structure.getEntityDefinition()));
+        findAllPeopleDefinition.setReturnType(new ArrayC3Type().setContains(resultType));
 
         return new NamedQueriesDefinition().setNamespace(structure.getNamespace())
                                            .setStructure(structure.getName())
                                            .setId((structure.getNamespace() + "." + structure.getName()).toLowerCase())
                                            .setNamedQueries(List.of(findAllPeopleDefinition));
     }
-
-
 }

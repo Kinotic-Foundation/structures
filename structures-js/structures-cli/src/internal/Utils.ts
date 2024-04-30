@@ -7,7 +7,7 @@ import {
     IEvent,
     ParticipantConstants
 } from '@kinotic/continuum-client'
-import {C3Type, ComplexC3Type, ObjectC3Type} from '@kinotic/continuum-idl'
+import {C3Type, ComplexC3Type, FunctionDefinition, ObjectC3Type} from '@kinotic/continuum-idl'
 import {EntityDecorator} from '@kinotic/structures-api'
 import fs from 'fs'
 import fsPromises from 'fs/promises'
@@ -24,6 +24,11 @@ import {TypescriptConverterStrategy} from './converter/typescript/TypescriptConv
 import {Logger} from './Logger.js'
 import {EntityConfiguration} from './state/StructuresProject.js'
 import {UtilFunctionLocator} from './UtilFunctionLocator.js'
+
+export type GeneratedServiceInfo = {
+    entityServiceName: string
+    namedQueries: FunctionDefinition[]
+}
 
 function isEmpty(value: any): boolean {
     if (value === null || value === undefined) {
@@ -363,7 +368,7 @@ export function tryGetNodeModuleName(nodeModulePath: string): string | null {
 }
 
 /**
- * Will save the C3Type to the local filesystem
+ * Saves the C3Type to the local filesystem
  * @param savePath to save the entities to
  * @param entity to save
  * @param logger to log to if desired, if null nothing will be logged
@@ -381,7 +386,7 @@ export async function writeEntityJsonToFilesystem(savePath: string, entity: Obje
 }
 
 /**
- * Will save the C3Type(s) to the local filesystem
+ * Savee the C3Type(s) to the local filesystem
  * @param savePath to save the entities to
  * @param entities to save
  * @param logger to log to if desired, if null nothing will be logged
@@ -389,5 +394,17 @@ export async function writeEntityJsonToFilesystem(savePath: string, entity: Obje
 export async function writeEntitiesJsonToFilesystem(savePath: string, entities: ObjectC3Type[], logger?: Logger): Promise<void> {
     for(const entity of entities){
         await writeEntityJsonToFilesystem(savePath, entity, logger)
+    }
+}
+
+export async function writeGeneratedServiceInfoToFilesystem(savePath: string, info: GeneratedServiceInfo, logger?: Logger): Promise<void> {
+    const json = JSON.stringify(info, jsonStringifyReplacer, 2)
+    if (json && json.length > 0) {
+        const outputPath = path.resolve(savePath, 'generated', 'query-definitions', `${info.entityServiceName}.json`)
+        await fsPromises.mkdir(path.dirname(outputPath), {recursive: true})
+        await fsPromises.writeFile(outputPath, json)
+        if (logger) {
+            logger.log(`Wrote ${info.entityServiceName} named queries to ${outputPath}`)
+        }
     }
 }

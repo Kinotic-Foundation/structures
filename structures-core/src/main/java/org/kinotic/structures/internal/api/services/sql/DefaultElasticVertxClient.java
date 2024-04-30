@@ -3,6 +3,7 @@ package org.kinotic.structures.internal.api.services.sql;
 import co.elastic.clients.elasticsearch.sql.TranslateResponse;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.WebClient;
@@ -14,6 +15,7 @@ import org.kinotic.structures.internal.config.ElasticConnectionInfo;
 import org.springframework.stereotype.Component;
 
 import java.io.ByteArrayInputStream;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -57,11 +59,15 @@ public class DefaultElasticVertxClient implements ElasticVertxClient {
 
     @Override
     public CompletableFuture<TranslateResponse> translateSql(String statement,
-                                                             Object[] params){
+                                                             List<?> params){
         VertxCompletableFuture<TranslateResponse> responseFuture = new VertxCompletableFuture<>(vertx);
         JsonObject json = new JsonObject().put("query", statement);
         if(params != null) {
-            json.put("params", params);
+            JsonArray paramsJson = new JsonArray();
+            for(Object param : params){
+                paramsJson.add(param);
+            }
+            json.put("params", paramsJson);
         }
         sqlTranslateRequest.sendJsonObject(json, ar -> {
             if(ar.succeeded()){
@@ -81,11 +87,21 @@ public class DefaultElasticVertxClient implements ElasticVertxClient {
 
     @Override
     public CompletableFuture<Buffer> querySql(String statement,
-                                              Object[] params){
+                                              List<?> params,
+                                              JsonObject filter){
         VertxCompletableFuture<Buffer> responseFuture = new VertxCompletableFuture<>(vertx);
-        JsonObject json = new JsonObject().put("query", statement);
+        JsonObject json = new JsonObject()
+                .put("query", statement)
+                .put("page_timeout", "2m");
         if(params != null) {
-            json.put("params", params);
+            JsonArray paramsJson = new JsonArray();
+            for(Object param : params){
+                paramsJson.add(param);
+            }
+            json.put("params", paramsJson);
+        }
+        if(filter != null){
+            json.put("filter", filter);
         }
         sqlQueryRequest.sendJsonObject(json, ar -> {
             if(ar.succeeded()){

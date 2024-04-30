@@ -53,7 +53,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest
@@ -611,7 +610,7 @@ public class EntityCrudTests extends ElasticsearchTestBase {
         car.setId(UUID.randomUUID().toString());
         car.setMake("Honda");
         car.setModel("Civic");
-        car.setYear("2019");
+        car.setYear(2019);
 
         Car result = testHelper.saveCarAsRawJson(car, structure, entityContext).join();
 

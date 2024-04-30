@@ -1,5 +1,6 @@
 package org.kinotic.structures.internal.api.services.sql;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.NotImplementedException;
 import org.kinotic.continuum.idl.api.schema.FunctionDefinition;
@@ -11,7 +12,8 @@ import org.kinotic.structures.internal.api.services.sql.executors.AggregateQuery
 import org.kinotic.structures.internal.api.services.sql.executors.QueryExecutor;
 import org.springframework.stereotype.Component;
 
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -23,6 +25,7 @@ public class DefaultQueryExecutorFactory implements QueryExecutorFactory {
 
     private final ElasticVertxClient elasticVertxClient;
     private final NamedQueriesService namedQueriesService;
+    private final ObjectMapper objectMapper;
 
 
     @Override
@@ -66,16 +69,24 @@ public class DefaultQueryExecutorFactory implements QueryExecutorFactory {
                                                                              Structure structure){
         // naive approach to how we handle these queries, this will be improved as we do more R&D on advanced approaches
         if(statement.toLowerCase().startsWith("select")) {
-            String[] arguments = null;
+
+            // Add dummy values for arguments since this is required by elastic
+            List<String> arguments = null;
             if(namedQuery.getArguments() != null){
-                arguments = new String[namedQuery.getArguments().size()];
-                Arrays.fill(arguments, "test");
+                arguments = new ArrayList<>(namedQuery.getArguments().size());
+                for(int i = 0; i < namedQuery.getArguments().size(); i++){
+                    arguments.add("test");
+                }
             }
+
             return elasticVertxClient.translateSql(statement, arguments)
                                      .thenApply(translateResponse -> {
                                          if(translateResponse.aggregations() != null
                                                  && !translateResponse.aggregations().isEmpty()){
-                                             return new AggregateQueryExecutor(structure, elasticVertxClient, statement);
+                                             return new AggregateQueryExecutor(structure,
+                                                                               elasticVertxClient,
+                                                                               objectMapper,
+                                                                               statement);
                                          }else{
                                              throw (new NotImplementedException("Select without aggregate not supported yet"));
                                          }

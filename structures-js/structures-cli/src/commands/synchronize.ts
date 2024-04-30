@@ -23,7 +23,7 @@ import {
     connectAndUpgradeSession,
     convertAllEntities,
     ConversionConfiguration,
-    writeEntityJsonToFilesystem, createTsMorphProject,
+    writeEntityJsonToFilesystem, createTsMorphProject, writeGeneratedServiceInfoToFilesystem,
 } from '../internal/Utils.js'
 import {UtilFunctionLocator} from '../internal/UtilFunctionLocator.js'
 import chalk from 'chalk'
@@ -160,8 +160,7 @@ export class Synchronize extends Command {
         }
 
         const convertedEntities: EntityInfo[] = convertAllEntities(config)
-        const codeGenerationService = new CodeGenerationService(namespaceConfig.namespaceName,
-                                                                this)
+        const codeGenerationService = new CodeGenerationService(namespaceConfig.namespaceName, this)
 
         if (convertedEntities.length > 0) {
 
@@ -177,6 +176,11 @@ export class Synchronize extends Command {
 
                 if(config.verbose){
                     await writeEntityJsonToFilesystem(namespaceConfig.generatedPath, entityInfo.entity, this)
+                    if(generatedServiceInfo.namedQueries.length > 0) {
+                        await writeGeneratedServiceInfoToFilesystem(namespaceConfig.generatedPath,
+                                                                    generatedServiceInfo,
+                                                                    this)
+                    }
                 }
 
                 if(!config.dryRun) {
@@ -184,7 +188,7 @@ export class Synchronize extends Command {
                 }
 
                 // If named queries were found save them
-                if(generatedServiceInfo.namedQueries.length > 0){
+                if(!config.dryRun && generatedServiceInfo.namedQueries.length > 0){
                     await this.synchronizeNamedQueries(entityInfo.entity, generatedServiceInfo.namedQueries)
                 }
             }
