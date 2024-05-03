@@ -72,29 +72,15 @@ public class DefaultJsonEntitiesService implements JsonEntitiesService {
     }
 
     @Override
-    public CompletableFuture<List<RawJson>> namedQuery(String structureId,
-                                                       String queryName,
-                                                       List<QueryParameter> parameters,
-                                                       Participant participant) {
+    public CompletableFuture<?> namedQuery(String structureId,
+                                           String queryName,
+                                           List<QueryParameter> parameters,
+                                           Participant participant) {
         return defaultEntitiesService.namedQuery(structureId,
                                                  queryName,
                                                  parameters,
                                                  RawJson.class,
                                                  new DefaultEntityContext(participant));
-    }
-
-    @Override
-    public CompletableFuture<Page<RawJson>> namedQueryPage(String structureId,
-                                                           String queryName,
-                                                           List<QueryParameter> parameters,
-                                                           Pageable pageable,
-                                                           Participant participant) {
-        return defaultEntitiesService.namedQueryPage(structureId,
-                                                     queryName,
-                                                     parameters,
-                                                     pageable,
-                                                     RawJson.class,
-                                                     new DefaultEntityContext(participant));
     }
 
     @Override

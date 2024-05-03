@@ -142,23 +142,13 @@ public class DefaultEntityService implements EntityService {
     }
 
     @Override
-    public <T> CompletableFuture<List<T>> namedQuery(String queryName,
-                                                     List<QueryParameter> parameters,
-                                                     Class<T> type,
-                                                     EntityContext context) {
+    public <T> CompletableFuture<T> namedQuery(String queryName,
+                                               List<QueryParameter> parameters,
+                                               Class<?> type,
+                                               EntityContext context) {
 
         return queryExecutorFactory.createQueryExecutor(queryName, structure)
                                    .thenCompose(executor -> executor.execute(parameters, type, context));
-
-    }
-
-    @Override
-    public <T> CompletableFuture<Page<T>> namedQueryPage(String queryName,
-                                                         List<QueryParameter> parameters,
-                                                         Pageable pageable,
-                                                         Class<T> type,
-                                                         EntityContext context) {
-        return CompletableFuture.failedFuture(new NotImplementedException("Named queries are not implemented yet"));
     }
 
     @SuppressWarnings("unchecked")

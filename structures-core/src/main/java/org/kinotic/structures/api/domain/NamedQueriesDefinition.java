@@ -41,7 +41,6 @@ public class NamedQueriesDefinition implements Identifiable<String> {
     @Field(type = FieldType.Flattened)
     private List<FunctionDefinition> namedQueries = null;
 
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

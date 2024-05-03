@@ -12,6 +12,6 @@ import java.util.concurrent.CompletableFuture;
  */
 public interface QueryExecutor {
 
-    <T> CompletableFuture<List<T>> execute(List<QueryParameter> parameters, Class<T> type, EntityContext context);
+    <T> CompletableFuture<T> execute(List<QueryParameter> parameters, Class<?> type, EntityContext context);
 
 }

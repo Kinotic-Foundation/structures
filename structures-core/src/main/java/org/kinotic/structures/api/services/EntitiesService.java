@@ -118,33 +118,15 @@ public interface EntitiesService {
      * @param structureId the id of the structure that this named query is defined for
      * @param queryName   the name of {@link FunctionDefinition} that defines the query
      * @param parameters  the parameters to pass to the query
-     * @param type        the type of the entity
+     * @param type        the type of the entity, the returned type will always be a {@link Page} or {@link List} this is the type of the elements
      * @param context     the context for this operation
      * @return {@link CompletableFuture} with the result of the query
      */
-    <T> CompletableFuture<List<T>> namedQuery(String structureId,
-                                              String queryName,
-                                              List<QueryParameter> parameters,
-                                              Class<T> type,
-                                              EntityContext context);
-
-    /**
-     * Executes a named query and returns a {@link Page} of results.
-     *
-     * @param structureId the id of the structure that this named query is defined for
-     * @param queryName   the name of {@link FunctionDefinition} that defines the query
-     * @param parameters  the parameters to pass to the query
-     * @param pageable    the page settings to be used
-     * @param type        the type of the entity
-     * @param context     the context for this operation
-     * @return {@link CompletableFuture} with the result of the query
-     */
-    <T> CompletableFuture<Page<T>> namedQueryPage(String structureId,
-                                                  String queryName,
-                                                  List<QueryParameter> parameters,
-                                                  Pageable pageable,
-                                                  Class<T> type,
-                                                  EntityContext context);
+    <T> CompletableFuture<T> namedQuery(String structureId,
+                                        String queryName,
+                                        List<QueryParameter> parameters,
+                                        Class<?> type,
+                                        EntityContext context);
 
     /**
      * Saves a given entity. This will override all data if there is an existing entity with the same id.

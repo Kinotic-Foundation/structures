@@ -2,7 +2,7 @@
   "version": "v1",
   "packages": {
     "@kinotic/structures-api": {
-      "signature": "c52419eec4b8d2b33ec698e5f7cb13ab",
+      "signature": "9dc3f8c8275993290ea62d4ca6d749ed",
       "file": true,
       "replaced": "^1.14.0"
     },

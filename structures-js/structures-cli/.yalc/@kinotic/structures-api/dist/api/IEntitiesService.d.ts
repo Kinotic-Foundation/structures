@@ -89,15 +89,6 @@ export interface IEntitiesService {
      */
     namedQuery<T>(structureId: string, queryName: string, parameters: QueryParameter[]): Promise<T>;
     /**
-     * Executes a named query and returns a Page of results.
-     * @param structureId the id of the structure that this named query is defined for
-     * @param queryName the name of the function that defines the query
-     * @param parameters to pass to the query
-     * @param pageable the page settings to be used
-     * @returns Promise with the result of the query
-     */
-    namedQueryPage<T>(structureId: string, queryName: string, parameters: QueryParameter[], pageable: Pageable): Promise<IterablePage<T>>;
-    /**
      * Saves a given entity. Use the returned instance for further operations as the save operation might have changed the
      * entity instance completely.
      *
@@ -156,8 +147,6 @@ export declare class EntitiesService implements IEntitiesService {
     findById<T>(structureId: string, id: string): Promise<T>;
     findByIds<T>(structureId: string, ids: string[]): Promise<T[]>;
     namedQuery<T>(structureId: string, queryName: string, parameters: QueryParameter[]): Promise<T>;
-    namedQueryPage<T>(structureId: string, queryName: string, parameters: QueryParameter[], pageable: Pageable): Promise<IterablePage<T>>;
-    namedQuerySinglePage<T>(structureId: string, queryName: string, parameters: QueryParameter[], pageable: Pageable): Promise<Page<T>>;
     save<T>(structureId: string, entity: T): Promise<T>;
     search<T>(structureId: string, searchText: string, pageable: Pageable): Promise<IterablePage<T>>;
     searchSinglePage<T>(structureId: string, searchText: string, pageable: Pageable): Promise<Page<T>>;

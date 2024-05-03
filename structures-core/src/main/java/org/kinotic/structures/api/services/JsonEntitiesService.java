@@ -113,26 +113,10 @@ public interface JsonEntitiesService {
      * @param participant the participant of the logged-in user
      * @return {@link CompletableFuture} with the result of the query
      */
-    CompletableFuture<List<RawJson>> namedQuery(String structureId,
-                                                String queryName,
-                                                List<QueryParameter> parameters,
-                                                Participant participant);
-
-    /**
-     * Executes a named query and returns a {@link Page} of results.
-     *
-     * @param structureId the id of the structure that this named query is defined for
-     * @param queryName   the name of {@link FunctionDefinition} that defines the query
-     * @param parameters  the parameters to pass to the query
-     * @param pageable    the page settings to be used
-     * @param participant the participant of the logged-in user
-     * @return {@link CompletableFuture} with the result of the query
-     */
-    CompletableFuture<Page<RawJson>> namedQueryPage(String structureId,
-                                                    String queryName,
-                                                    List<QueryParameter> parameters,
-                                                    Pageable pageable,
-                                                    Participant participant);
+    CompletableFuture<?> namedQuery(String structureId,
+                                    String queryName,
+                                    List<QueryParameter> parameters,
+                                    Participant participant);
 
     /**
      * Saves a given entity. Use the returned instance for further operations as the save operation might have changed the

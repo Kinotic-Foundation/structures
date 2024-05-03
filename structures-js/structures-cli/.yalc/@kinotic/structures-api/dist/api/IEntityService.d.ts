@@ -16,6 +16,11 @@ export interface IEntityService<T> {
      */
     structureName: string;
     /**
+     * The id of the structure this service is for
+     * Which is the namespace + '.' + name
+     */
+    structureId: string;
+    /**
      * Saves all given entities.
      * @param entities all the entities to save
      * @return Promise that will complete when all entities have been saved
@@ -87,14 +92,6 @@ export interface IEntityService<T> {
      */
     namedQuery<U>(queryName: string, parameters: QueryParameter[]): Promise<U>;
     /**
-     * Executes a named query and returns a Page of results.
-     * @param queryName the name of the function that defines the query
-     * @param parameters to pass to the query
-     * @param pageable the page settings to be used
-     * @returns Promise with the result of the query
-     */
-    namedQueryPage<U>(queryName: string, parameters: QueryParameter[], pageable: Pageable): Promise<IterablePage<U>>;
-    /**
      * Saves a given entity. This will override all data if there is an existing entity with the same id.
      * Use the returned instance for further operations as the save operation might have changed the entity instance.
      *
@@ -130,8 +127,8 @@ export interface IEntityService<T> {
 export declare class EntityService<T> implements IEntityService<T> {
     structureNamespace: string;
     structureName: string;
-    private entitiesService;
-    private readonly structuresId;
+    structureId: string;
+    private readonly entitiesService;
     constructor(structureNamespace: string, structureName: string, entitiesService?: IEntitiesService);
     bulkSave(entities: T[]): Promise<void>;
     bulkUpdate(entities: T[]): Promise<void>;
@@ -143,7 +140,7 @@ export declare class EntityService<T> implements IEntityService<T> {
     findById(id: string): Promise<T>;
     findByIds(ids: string[]): Promise<T[]>;
     namedQuery<U>(queryName: string, parameters: QueryParameter[]): Promise<U>;
-    namedQueryPage<U>(queryName: string, parameters: QueryParameter[], pageable: Pageable): Promise<IterablePage<U>>;
+    protected namedQueryPage<T>(queryName: string, parameters: QueryParameter[], pageable: Pageable, pageableIndex: number): Promise<IterablePage<T>>;
     save(entity: T): Promise<T>;
     search(searchText: string, pageable: Pageable): Promise<IterablePage<T>>;
     update(entity: T): Promise<T>;

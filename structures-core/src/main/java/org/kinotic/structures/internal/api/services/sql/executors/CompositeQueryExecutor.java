@@ -20,9 +20,9 @@ public class CompositeQueryExecutor implements QueryExecutor {
     }
 
     @Override
-    public <T> CompletableFuture<List<T>> execute(List<QueryParameter> parameters,
-                                                  Class<T> type,
-                                                  EntityContext context) {
+    public <T> CompletableFuture<T> execute(List<QueryParameter> parameters,
+                                            Class<?> type,
+                                            EntityContext context) {
 //         CompletableFuture.allOf(queryExecutors.stream()
 //                                             .map(executor -> executor.execute(parameters, type, context))
 //                                             .toArray(CompletableFuture[]::new));

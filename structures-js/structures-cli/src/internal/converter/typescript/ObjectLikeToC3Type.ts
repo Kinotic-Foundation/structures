@@ -20,7 +20,9 @@ export class ObjectLikeToC3Type implements ITypeConverter<Type, C3Type, Typescri
 
         // We store the original source path so, it can be used later
         const declarations = value.getSymbol()?.getDeclarations()
-        if(declarations && declarations.length > 0){
+        if(conversionContext.state().shouldAddSourcePathToMetadata
+            && declarations
+            && declarations.length > 0){
             if(!ret.metadata){
                 ret.metadata = {}
             }

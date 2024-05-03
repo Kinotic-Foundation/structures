@@ -1,6 +1,5 @@
 import {QueryParameter} from '@/api/domain/QueryParameter.js'
 import {FindAllIterablePage} from '@/internal/api/domain/FindAllIterablePage'
-import {NamedQueryIterablePage} from '@/internal/api/domain/NamedQueryIterablePage.js'
 import {SearchIterablePage} from '@/internal/api/domain/SearchIterablePage'
 import {
     Continuum,
@@ -111,16 +110,6 @@ export interface IEntitiesService {
     namedQuery<T>(structureId: string, queryName: string, parameters: QueryParameter[]): Promise<T>
 
     /**
-     * Executes a named query and returns a Page of results.
-     * @param structureId the id of the structure that this named query is defined for
-     * @param queryName the name of the function that defines the query
-     * @param parameters to pass to the query
-     * @param pageable the page settings to be used
-     * @returns Promise with the result of the query
-     */
-    namedQueryPage<T>(structureId: string, queryName: string, parameters: QueryParameter[], pageable: Pageable): Promise<IterablePage<T>>
-
-    /**
      * Saves a given entity. Use the returned instance for further operations as the save operation might have changed the
      * entity instance completely.
      *
@@ -222,15 +211,6 @@ export class EntitiesService implements IEntitiesService {
 
     public namedQuery<T>(structureId: string, queryName: string, parameters: QueryParameter[]): Promise<T> {
         return this.serviceProxy.invoke('namedQuery', [structureId, queryName, parameters])
-    }
-
-    public async namedQueryPage<T>(structureId: string, queryName: string, parameters: QueryParameter[], pageable: Pageable): Promise<IterablePage<T>> {
-        const page: Page<T> = await this.namedQuerySinglePage(structureId, queryName, parameters, pageable)
-        return new NamedQueryIterablePage(this, pageable, page, parameters, queryName, structureId)
-    }
-
-    public namedQuerySinglePage<T>(structureId: string, queryName: string, parameters: QueryParameter[], pageable: Pageable): Promise<Page<T>> {
-        return this.serviceProxy.invoke('namedQueryPage', [structureId, queryName, parameters, pageable])
     }
 
     public save<T>(structureId: string, entity: T): Promise<T> {

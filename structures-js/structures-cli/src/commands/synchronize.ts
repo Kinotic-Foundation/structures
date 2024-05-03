@@ -1,6 +1,6 @@
 import {Args, Command, Flags} from '@oclif/core'
 import path from 'path'
-import {FunctionDefinition, ObjectC3Type, ServiceDefinition} from '@kinotic/continuum-idl'
+import {FunctionDefinition, ObjectC3Type} from '@kinotic/continuum-idl'
 import {CodeGenerationService} from '../internal/CodeGenerationService.js'
 import {resolveServer} from '../internal/state/Environment.js'
 import {

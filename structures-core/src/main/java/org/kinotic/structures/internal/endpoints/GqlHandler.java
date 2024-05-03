@@ -11,6 +11,7 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.graphql.impl.GraphQLBatch;
 import io.vertx.ext.web.handler.graphql.impl.GraphQLInput;
 import io.vertx.ext.web.handler.graphql.impl.GraphQLQuery;
+import lombok.RequiredArgsConstructor;
 import org.kinotic.structures.internal.graphql.GqlOperationService;
 
 import java.util.Map;
@@ -21,13 +22,10 @@ import static io.vertx.core.http.HttpMethod.POST;
 /**
  * Created by Navíd Mitchell 🤪 on 6/7/23.
  */
+@RequiredArgsConstructor
 public class GqlHandler implements Handler<RoutingContext> {
 
     private final GqlOperationService gqlOperationService;
-
-    public GqlHandler(GqlOperationService gqlOperationService) {
-        this.gqlOperationService = gqlOperationService;
-    }
 
     @Override
     public void handle(RoutingContext rc) {

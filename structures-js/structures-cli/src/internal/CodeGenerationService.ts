@@ -1,3 +1,5 @@
+import {PageableC3Type} from './converter/typescript/PageableC3Type.js'
+import {PageC3Type} from './converter/typescript/PageC3Type.js'
 import {C3Type, FunctionDefinition} from '@kinotic/continuum-idl'
 import fs from 'fs'
 import {Liquid} from 'liquidjs'
@@ -21,6 +23,7 @@ import {
     getRelativeImportPath,
     tryGetNodeModuleName
 } from './Utils.js'
+import chalk from 'chalk'
 
 
 
@@ -43,10 +46,9 @@ export class CodeGenerationService {
                                  });
         this.tsMorphProject = createTsMorphProject()
 
-        this.conversionContext
-            = createConversionContext(new TypescriptConverterStrategy(new TypescriptConversionState(namespace,
-                                                                                                    null),
-                                                                      logger))
+        const state = new TypescriptConversionState(namespace, null)
+        state.shouldAddSourcePathToMetadata = false
+        this.conversionContext = createConversionContext(new TypescriptConverterStrategy(state, logger))
     }
 
     public async generateEntityService(entityInfo: EntityInfo,
@@ -68,9 +70,8 @@ export class CodeGenerationService {
             entityImportPath = getRelativeImportPath(baseEntityServicePath, entityInfo.exportedFromFile, fileExtensionForImports)
         }
 
-        const statement = this.createStatementMapper(baseEntityServicePath,
-                                                     entityInfo,
-                                                     utilFunctionLocator)
+        const statement = this.createStatementMapper(entityInfo, utilFunctionLocator)
+
         const validationLogic = statement.toStatementString()
         const importStatements = createImportString(statement, baseEntityServicePath, fileExtensionForImports) || ''
 
@@ -104,13 +105,6 @@ export class CodeGenerationService {
             // if it already exists we check if there are any named queries defined
             namedQueries = await this.processNamedQueries(entityName + 'EntityService',
                                                           entityServicePath)
-
-            // Below will be used if we go back to the concept of providing the implementation in the base service class
-
-            // namedQueries = await this.createServiceDefinition('Base' + entityName + 'EntityService',
-            //                                                   entityName + 'EntityService',
-            //                                                   baseEntityServicePath,
-            //                                                   entityServicePath)
         }
 
         return {
@@ -126,16 +120,13 @@ export class CodeGenerationService {
                                       entityServicePath: string): Promise<FunctionDefinition[]>{
 
         const namedQueries: FunctionDefinition[] = []
-        // this.tsMorphProject.addSourceFileAtPath(baseEntityServicePath)
         this.tsMorphProject.addSourceFileAtPath(entityServicePath)
-        // const baseEntityServiceSource = this.tsMorphProject.getSourceFile(baseEntityServicePath)
         const entityServiceSource = this.tsMorphProject.getSourceFile(entityServicePath)
 
         // Currently we only support named queries when added to the generated entity service class
         if(entityServiceSource){
 
             const serviceClass = entityServiceSource.getClass(entityServiceName)
-            // const baseClass = baseEntityServiceSource.getClass(baseEntityServiceName)
             if(serviceClass){
 
                 // Convert all methods that have a @Query decorator to a C3 FunctionDefinition
@@ -148,43 +139,40 @@ export class CodeGenerationService {
                         const methodName = method.getName()
                         const functionDefinition = new FunctionDefinition(methodName,
                                                                           [tsDecoratorToC3Decorator(queryDecorator)!])
-                        // we assume this is a promise for now
-                        if(method.getReturnType().getText().startsWith('Promise')){
-                            const typeArguments = method.getReturnType().getTypeArguments()
-                            if(typeArguments?.length !== 1){
-                                throw new Error('Promise must have exactly one type argument')
-                            }
-                            const returnType = typeArguments[0]
-                            functionDefinition.returnType = this.conversionContext.convert(returnType)
-                        }else{
-                            throw new Error('Only methods that return a Promise are supported for named queries')
-                        }
+
+                        functionDefinition.returnType = this.createC3TypeForReturnType(method.getReturnType())
 
                         // Find page parameter if any and store all parameter names for later
                         const argNames: string[] = []
-                        let pageArgName: string | null = null
-                        for(let parameter of method.getParameters()){
+                        let pageableArgName: string | null = null
+                        let pageableIndex: number | null = null
+
+                        const parameters = method.getParameters()
+                        for(let i = 0; i < parameters.length; i++){
+                            let parameter = parameters[i]
                             const parameterName = parameter.getName()
                             const parameterTypeName = parameter.getType().getSymbol()?.getName();
 
+                            let parameterC3Type: C3Type
                             if(parameterTypeName === 'Pageable'
                                 || parameterTypeName === 'OffsetPageable'
                                 || parameterTypeName === 'CursorPageable') {
-                                pageArgName = parameterName
+                                if(i > 0){
+                                    this.logger.log(chalk.yellow(`It is best if Pageable is always the first parameter.`))
+                                }
+                                pageableArgName = parameterName
+                                pageableIndex = i
+                                parameterC3Type = new PageableC3Type()
                             } else {
-                                argNames.push(parameterName)
+                                parameterC3Type = this.conversionContext.convert(parameter.getType())
                             }
 
-                            functionDefinition.addArgument(parameterName,
-                                                           this.conversionContext.convert(parameter.getType()))
+                            argNames.push(parameterName)
+                            functionDefinition.addArgument(parameterName, parameterC3Type)
                         }
 
-                        // ******
-                        // We intended to implement the entitiesService invocation for namedQueries in the Structure service base class.
-                        // However, to get this done faster we have decided to add the invocation in the child Structure service
-                        // The code directly below is the cut corner, the commented out was the original direction
-                        // ******
 
+                        // Code generated is similar to the following
                         // const parameters = [
                         //     {key: 'who', value: who},
                         //     {key: 'howMany', value: howMany}
@@ -208,28 +196,13 @@ export class CodeGenerationService {
                                       .writeLine(']')
                             }
 
-                            if(pageArgName){
-                                writer.writeLine(`return this.namedQueryPage('${methodName}', ${argNames.length > 0 ? 'parameters' : '[]'}, ${pageArgName})`)
+                            if(pageableArgName){
+                                writer.writeLine(`return this.namedQueryPage('${methodName}', ${argNames.length > 0 ? 'parameters' : '[]'}, ${pageableArgName}, ${pageableIndex})`)
                             }else{
                                 writer.writeLine(`return this.namedQuery('${methodName}', ${argNames.length > 0 ? 'parameters' : '[]'})`)
                             }
                         })
 
-                        // Code below was the beginning of using the base class.
-                        // The logic needs to handle all imports properly since any used would not be in the base class.
-
-                        // remove existing method if it exists
-                        // const baseClassMethod = baseClass.getMethod(methodName)
-                        // if(baseClassMethod){
-                        //     baseClassMethod.remove()
-                        // }
-                        //
-                        // const baseMethod = baseClass.addMethod({
-                        //                                            isStatic: false,
-                        //                                            name: methodName,
-                        //                                            returnType: method.getStructure().returnType,
-                        //                                            parameters: method.getStructure().parameters
-                        // })
                         namedQueries.push(functionDefinition)
                     }
                 }
@@ -239,8 +212,33 @@ export class CodeGenerationService {
         return namedQueries
     }
 
-    private createStatementMapper(generatedServicePath: string,
-                                  entityInfo: EntityInfo,
+    private createC3TypeForReturnType(returnType: Type): C3Type {
+        let ret: C3Type
+        // All methods must return a Promise
+        if (returnType.getSymbol()?.getName() === 'Promise') {
+            let typeArguments = returnType.getTypeArguments()
+            if (typeArguments?.length !== 1) {
+                throw new Error('Promise must have exactly one type argument')
+            }
+            returnType = typeArguments[0]
+            // If a Page is being returned then use internal PageC3Type for simplicity
+            if(returnType.getSymbol()?.getName() === 'Page'){
+                typeArguments = returnType.getTypeArguments()
+                if (typeArguments?.length !== 1) {
+                    throw new Error('Page must have exactly one type argument')
+                }
+                const contentType = this.conversionContext.convert(typeArguments[0])
+                ret = new PageC3Type(contentType)
+            }else{
+                ret = this.conversionContext.convert(returnType)
+            }
+        } else {
+            throw new Error('Only methods that return a Promise are supported for named queries')
+        }
+        return ret
+    }
+
+    private createStatementMapper(entityInfo: EntityInfo,
                                   utilFunctionLocator: UtilFunctionLocator): StatementMapper{
         const state = new StatementMapperConversionState(utilFunctionLocator)
         state.entityConfiguration = entityInfo.entityConfiguration

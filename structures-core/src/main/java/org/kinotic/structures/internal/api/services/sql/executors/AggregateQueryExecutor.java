@@ -41,9 +41,9 @@ public class AggregateQueryExecutor extends AbstractQueryExecutor {
     }
 
     @Override
-    public <T> CompletableFuture<List<T>> execute(List<QueryParameter> parameters,
-                                                  Class<T> type,
-                                                  EntityContext context) {
+    public <T> CompletableFuture<T> execute(List<QueryParameter> parameters,
+                                            Class<?> type,
+                                            EntityContext context) {
         List<Object> paramsToUse = new ArrayList<>();
         if(parameters != null){
             paramsToUse = parameters.stream()
@@ -86,14 +86,14 @@ public class AggregateQueryExecutor extends AbstractQueryExecutor {
                     if(RawJson.class.isAssignableFrom(type)){
                         try {
                             //noinspection unchecked
-                            return (List<T>) processBufferToRawJson(buffer);
+                            return (T) processBufferToRawJson(buffer);
                         } catch (Exception e) {
                             throw new RuntimeException("Failed to process buffer to raw json", e);
                         }
                     } else if(Map.class.isAssignableFrom(type)){
                         try {
                             //noinspection unchecked
-                            return (List<T>) processBufferToMap(buffer);
+                            return (T) processBufferToMap(buffer);
                         } catch (Exception e) {
                             throw new RuntimeException("Failed to process buffer to map", e);
                         }
