@@ -17,11 +17,11 @@ import java.util.concurrent.CompletableFuture;
  */
 public abstract class AbstractCrudService<T extends Identifiable<String>> implements IdentifiableCrudService<T, String> {
 
-    protected final String indexName;
-    protected final Class<T> type;
+    protected final CrudServiceTemplate crudServiceTemplate;
     protected final ElasticsearchAsyncClient esAsyncClient;
     protected final ReactiveElasticsearchOperations esOperations;
-    protected final CrudServiceTemplate crudServiceTemplate;
+    protected final String indexName;
+    protected final Class<T> type;
 
     public AbstractCrudService(String indexName,
                                Class<T> type,
@@ -33,6 +33,27 @@ public abstract class AbstractCrudService<T extends Identifiable<String>> implem
         this.esAsyncClient = esAsyncClient;
         this.esOperations = esOperations;
         this.crudServiceTemplate = crudServiceTemplate;
+    }
+
+    @Override
+    public CompletableFuture<Long> count() {
+        return crudServiceTemplate.count(indexName, null);
+    }
+
+    @Override
+    public CompletableFuture<Void> deleteById(String id) {
+        return crudServiceTemplate.deleteById(indexName, id, null)
+                                  .thenApply(response -> null);
+    }
+
+    @Override
+    public CompletableFuture<Page<T>> findAll(Pageable pageable) {
+        return crudServiceTemplate.search(indexName, pageable, type, null);
+    }
+
+    @Override
+    public CompletableFuture<T> findById(String id) {
+        return crudServiceTemplate.findById(indexName, id, type, null);
     }
 
     @PostConstruct
@@ -53,27 +74,6 @@ public abstract class AbstractCrudService<T extends Identifiable<String>> implem
                 .document(entity)
                 .refresh(Refresh.True))
                 .thenCompose(indexResponse -> findById(indexResponse.id()));
-    }
-
-    @Override
-    public CompletableFuture<T> findById(String id) {
-        return crudServiceTemplate.findById(indexName, id, type, null);
-    }
-
-    @Override
-    public CompletableFuture<Long> count() {
-        return crudServiceTemplate.count(indexName, null);
-    }
-
-    @Override
-    public CompletableFuture<Void> deleteById(String id) {
-        return crudServiceTemplate.deleteById(indexName, id, null)
-                                  .thenApply(response -> null);
-    }
-
-    @Override
-    public CompletableFuture<Page<T>> findAll(Pageable pageable) {
-        return crudServiceTemplate.search(indexName, pageable, type, null);
     }
 
 }

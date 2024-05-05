@@ -65,11 +65,6 @@ public class StructuresElasticsearchConfig extends ReactiveElasticsearchConfigur
     }
 
     @Bean
-    public JsonpMapper jsonpMapper(ObjectMapper objectMapper){
-        return new JacksonJsonpMapper(objectMapper);
-    }
-
-    @Bean
     public ElasticsearchAsyncClient elasticsearchAsyncClient(JsonpMapper jsonpMapper){
         HttpHost[] hosts = structuresProperties.getElasticConnections()
                                                .stream()
@@ -103,6 +98,11 @@ public class StructuresElasticsearchConfig extends ReactiveElasticsearchConfigur
         ElasticsearchTransport transport = new RestClientTransport(restClient, jsonpMapper);
 
         return new ElasticsearchAsyncClient(transport);
+    }
+
+    @Bean
+    public JsonpMapper jsonpMapper(ObjectMapper objectMapper){
+        return new JacksonJsonpMapper(objectMapper);
     }
 
     @Override

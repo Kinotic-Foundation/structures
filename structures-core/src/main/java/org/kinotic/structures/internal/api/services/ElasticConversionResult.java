@@ -17,11 +17,6 @@ import java.util.List;
 public class ElasticConversionResult {
 
     /**
-     * The root object property that represents the converted C3Type
-     */
-    private final ObjectProperty objectProperty;
-
-    /**
      * A list of all {@link DecoratedProperty} that were found during the conversion process
      */
     private final List<DecoratedProperty> decoratedProperties;
@@ -30,5 +25,10 @@ public class ElasticConversionResult {
      * The {@link MultiTenancyType} of the converted structure
      */
     private final MultiTenancyType multiTenancyType;
+
+    /**
+     * The root object property that represents the converted C3Type
+     */
+    private final ObjectProperty objectProperty;
 
 }

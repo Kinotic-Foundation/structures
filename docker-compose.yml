@@ -58,6 +58,8 @@ services:
       STRUCTURES_HEALTH_CHECK_PATH: /health/
       STRUCTURES_ENABLE_STATIC_FILE_SERVER: true
       STRUCTURES_INITIALIZE_WITH_SAMPLE_DATA: false
+    volumes:
+      - /tmp/structures/ignite:/workspace/ignite/work
     stdin_open: true # docker run -i
     tty: true        # docker run -t
     deploy:

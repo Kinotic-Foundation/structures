@@ -11,9 +11,6 @@ import io.vertx.ext.web.handler.CorsHandler;
 import io.vertx.ext.web.handler.StaticHandler;
 import lombok.RequiredArgsConstructor;
 import org.kinotic.structures.api.config.StructuresProperties;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
 
 import java.util.Set;
 
@@ -23,10 +20,8 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class WebServerVerticle extends AbstractVerticle{
 
-    private static final Logger log = LoggerFactory.getLogger(WebServerVerticle.class);
-
-    private final StructuresProperties properties;
     private final HealthChecks healthChecks;
+    private final StructuresProperties properties;
     private HttpServer server;
 
     @Override

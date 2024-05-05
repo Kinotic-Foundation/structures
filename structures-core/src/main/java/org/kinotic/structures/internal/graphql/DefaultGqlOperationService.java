@@ -160,7 +160,7 @@ public class DefaultGqlOperationService implements GqlOperationService {
 
     private Map<String, Object> parseArguments(List<Argument> arguments,
                                                Map<String, Object> rawVariables) {
-        Map<String, Object> ret = new HashMap<>(rawVariables.size(), 1);
+        Map<String, Object> ret = new HashMap<>(rawVariables.size(), 1.5F);
         for (Argument argument : arguments) {
             Value<?> value = argument.getValue();
             Object parsedValue = parseLiteral(value, rawVariables);

@@ -25,16 +25,14 @@ import javax.annotation.PostConstruct;
 public class StructuresEndpointInitializer {
 
     private static final Logger log = LoggerFactory.getLogger(StructuresEndpointInitializer.class);
-
-    private final StructuresProperties properties;
     private final ContinuumProperties continuumProperties;
-    private final Vertx vertx;
-    private final StructuresVerticleFactory verticleFactory;
-    private final HealthChecks healthChecks;
     private final ElasticsearchAsyncClient esAsyncClient;
-
-    private boolean lastEsStatus = true;
+    private final HealthChecks healthChecks;
+    private final StructuresProperties properties;
+    private final StructuresVerticleFactory verticleFactory;
+    private final Vertx vertx;
     private Throwable lastEsError = null;
+    private boolean lastEsStatus = true;
 
     @PostConstruct
     public void init(){
@@ -47,7 +45,7 @@ public class StructuresEndpointInitializer {
 
         vertx.deployVerticle(verticleFactory::createGqlVerticle, options);
 
-       vertx.deployVerticle(verticleFactory::createWebServerVerticle, new DeploymentOptions()); // only 1 web server verticle
+        vertx.deployVerticle(verticleFactory::createWebServerVerticle, new DeploymentOptions()); // only 1 web server verticle
 
         healthChecks.register("elasticsearch", future -> {
             if(lastEsStatus){

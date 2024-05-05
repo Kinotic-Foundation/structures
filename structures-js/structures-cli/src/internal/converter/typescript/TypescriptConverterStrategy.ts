@@ -1,6 +1,7 @@
 import {C3Type} from '@kinotic/continuum-idl'
 import {Type} from 'ts-morph'
-import {IConverterStrategy, Logger} from '../IConverterStrategy.js'
+import {IConverterStrategy} from '../IConverterStrategy.js'
+import {Logger} from '../../Logger.js'
 import {TypescriptConversionState} from './TypescriptConversionState.js'
 import {ITypeConverter} from '../ITypeConverter.js'
 import {ObjectLikeToC3Type} from './ObjectLikeToC3Type.js'

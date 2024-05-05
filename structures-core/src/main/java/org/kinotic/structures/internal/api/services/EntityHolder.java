@@ -14,13 +14,10 @@ import org.kinotic.structures.api.decorators.MultiTenancyType;
 @Accessors(chain = true)
 public class EntityHolder {
 
-    private String id;
-
-    private String tenantId;
-
-    private MultiTenancyType multiTenancyType;
-
     private Object entity;
+    private String id;
+    private MultiTenancyType multiTenancyType;
+    private String tenantId;
 
     public EntityHolder(String id,
                         String tenantId,

@@ -124,7 +124,7 @@ public class BulkUpdateTests extends ElasticsearchTestBase {
             car.setId(UUID.randomUUID().toString());
             car.setMake("Honda-"+count);
             car.setModel("Civic-"+count);
-            car.setYear("2019");
+            car.setYear(2019);
             car.setOwner(person);
             cars.add(car);
         }
@@ -161,7 +161,7 @@ public class BulkUpdateTests extends ElasticsearchTestBase {
             car.setId(UUID.randomUUID().toString());
             car.setMake("Honda-"+count);
             car.setModel("Civic-"+count);
-            car.setYear("2019");
+            car.setYear(2019);
             car.setOwner(person);
             cars.add(car);
         }

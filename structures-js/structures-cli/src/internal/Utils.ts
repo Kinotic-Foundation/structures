@@ -2,28 +2,33 @@ import {
     ConnectedInfo,
     ConnectionInfo,
     Continuum,
+    Event,
     EventConstants,
     IEvent,
-    Event,
     ParticipantConstants
 } from '@kinotic/continuum-client'
+import {C3Type, ComplexC3Type, FunctionDefinition, ObjectC3Type} from '@kinotic/continuum-idl'
 import {EntityDecorator} from '@kinotic/structures-api'
 import fs from 'fs'
-import {Node, Project} from 'ts-morph'
-import { v4 as uuidv4 } from 'uuid'
+import fsPromises from 'fs/promises'
 import inquirer from 'inquirer'
 import open from 'open'
 import pTimeout from 'p-timeout'
-import {C3Type, ObjectC3Type} from '@kinotic/continuum-idl'
 import path from 'path'
-import fsPromises from 'fs/promises'
+import {IndentationText, Node, Project} from 'ts-morph'
+import {v4 as uuidv4} from 'uuid'
 import {createConversionContext} from './converter/IConversionContext.js'
-import {Logger} from './converter/IConverterStrategy.js'
 import {tsDecoratorToC3Decorator} from './converter/typescript/ConverterUtils.js'
 import {TypescriptConversionState} from './converter/typescript/TypescriptConversionState.js'
 import {TypescriptConverterStrategy} from './converter/typescript/TypescriptConverterStrategy.js'
+import {Logger} from './Logger.js'
 import {EntityConfiguration} from './state/StructuresProject.js'
 import {UtilFunctionLocator} from './UtilFunctionLocator.js'
+
+export type GeneratedServiceInfo = {
+    entityServiceName: string
+    namedQueries: FunctionDefinition[]
+}
 
 function isEmpty(value: any): boolean {
     if (value === null || value === undefined) {
@@ -194,13 +199,37 @@ export function pathToTsGlobPath(path: string): string{
     return path.endsWith('.ts') ? path : (path.endsWith('/') ? path + '*.ts' : path + '/*.ts')
 }
 
-export function convertAllEntities(config: ConversionConfiguration): EntityInfo[]{
-    const entities: EntityInfo[] = []
+export function createTsMorphProject(): Project {
     const tsConfigFilePath = path.resolve('tsconfig.json')
     if(!fs.existsSync(tsConfigFilePath)){
         throw new Error(`No tsconfig.json found in working directory: ${process.cwd()}`)
     }
+    return new Project({
+       tsConfigFilePath: tsConfigFilePath,
+       manipulationSettings: {
+           indentationText: IndentationText.TwoSpaces
+       }
 
+       // compilerOptions: {
+       //     target: ScriptTarget.ES2020,
+       //     useDefineForClassFields: true,
+       //     module: ModuleKind.ES2020,
+       //     lib: ["ES2020"],
+       //     skipLibCheck: true,
+       //     downlevelIteration: true,
+       //     emitDecoratorMetadata: true,
+       //     experimentalDecorators: true,
+       //     esModuleInterop: true,
+       //     moduleResolution: ModuleResolutionKind.NodeNext,
+       //     resolveJsonModule: true,
+       //     isolatedModules: true,
+       //     noEmit: true,
+       // }
+    })
+}
+
+export function convertAllEntities(config: ConversionConfiguration): EntityInfo[]{
+    const entities: EntityInfo[] = []
     const entityConfigMap = new Map<string, EntityConfiguration>()
     if(config.entityConfigurations) {
         for (const entityConfiguration of config.entityConfigurations) {
@@ -208,9 +237,7 @@ export function convertAllEntities(config: ConversionConfiguration): EntityInfo[
         }
     }
 
-    const project = new Project({
-        tsConfigFilePath: tsConfigFilePath
-    })
+    const project = createTsMorphProject()
 
     if(config.verbose) {
         project.enableLogging(true)
@@ -256,12 +283,15 @@ export function convertAllEntities(config: ConversionConfiguration): EntityInfo[
 
                             if (c3Type != null) {
 
-                                if (decorator) {
-                                    c3Type.addDecorator(tsDecoratorToC3Decorator(decorator)!)
-                                } else if (entityConfig) {
-                                    const entityDecorator = new EntityDecorator()
-                                    entityDecorator.multiTenancyType = entityConfig.multiTenancyType
-                                    c3Type.addDecorator(entityDecorator)
+                                // TODO; this seems like it is only needed if we are going to add this to the entities array
+                                if(c3Type instanceof ComplexC3Type) {
+                                    if (decorator) {
+                                        c3Type.addDecorator(tsDecoratorToC3Decorator(decorator)!)
+                                    } else if (entityConfig) {
+                                        const entityDecorator = new EntityDecorator()
+                                        entityDecorator.multiTenancyType = entityConfig.multiTenancyType
+                                        c3Type.addDecorator(entityDecorator)
+                                    }
                                 }
 
                                 if (c3Type instanceof ObjectC3Type) {
@@ -339,7 +369,7 @@ export function tryGetNodeModuleName(nodeModulePath: string): string | null {
 }
 
 /**
- * Will save the C3Type to the local filesystem
+ * Saves the C3Type to the local filesystem
  * @param savePath to save the entities to
  * @param entity to save
  * @param logger to log to if desired, if null nothing will be logged
@@ -357,7 +387,7 @@ export async function writeEntityJsonToFilesystem(savePath: string, entity: Obje
 }
 
 /**
- * Will save the C3Type(s) to the local filesystem
+ * Savee the C3Type(s) to the local filesystem
  * @param savePath to save the entities to
  * @param entities to save
  * @param logger to log to if desired, if null nothing will be logged
@@ -365,5 +395,17 @@ export async function writeEntityJsonToFilesystem(savePath: string, entity: Obje
 export async function writeEntitiesJsonToFilesystem(savePath: string, entities: ObjectC3Type[], logger?: Logger): Promise<void> {
     for(const entity of entities){
         await writeEntityJsonToFilesystem(savePath, entity, logger)
+    }
+}
+
+export async function writeGeneratedServiceInfoToFilesystem(savePath: string, info: GeneratedServiceInfo, logger?: Logger): Promise<void> {
+    const json = JSON.stringify(info, jsonStringifyReplacer, 2)
+    if (json && json.length > 0) {
+        const outputPath = path.resolve(savePath, 'generated', 'query-definitions', `${info.entityServiceName}.json`)
+        await fsPromises.mkdir(path.dirname(outputPath), {recursive: true})
+        await fsPromises.writeFile(outputPath, json)
+        if (logger) {
+            logger.log(`Wrote ${info.entityServiceName} named queries to ${outputPath}`)
+        }
     }
 }

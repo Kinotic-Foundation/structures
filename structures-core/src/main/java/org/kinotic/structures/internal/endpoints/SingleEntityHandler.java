@@ -2,6 +2,7 @@ package org.kinotic.structures.internal.endpoints;
 
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.RoutingContext;
+import lombok.RequiredArgsConstructor;
 import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.internal.utils.VertxWebUtil;
 
@@ -10,13 +11,10 @@ import java.util.function.BiFunction;
 /**
  * Created by Navíd Mitchell 🤪 on 6/1/23.
  */
+@RequiredArgsConstructor
 class SingleEntityHandler implements BiFunction<RawJson, Throwable, Void> {
 
     private final RoutingContext context;
-
-    public SingleEntityHandler(RoutingContext context) {
-        this.context = context;
-    }
 
     @Override
     public Void apply(RawJson rawJson, Throwable throwable) {

@@ -4,9 +4,11 @@ import { createStateManager } from './IStateManager.js'
 
 const STRUCTURES_KEY = 'structures'
 
+// FIXME: make sure comments are correct
+
 /**
  * The configuration for a property that should be overridden.
- * This allows you to specify a {@link C3Type} for a property that you cannot add a {@link C3Decorator} to.
+ * This allows you to specify a static {@link C3Type} for a property.
  */
 export class OverrideConfiguration {
     /**

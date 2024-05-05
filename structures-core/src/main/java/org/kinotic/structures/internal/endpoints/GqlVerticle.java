@@ -13,8 +13,6 @@ import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.internal.graphql.GqlOperationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 
 import java.util.Set;
 
@@ -27,9 +25,8 @@ public class GqlVerticle extends AbstractVerticle {
     public static final String NAMESPACE_PATH_PARAMETER = "structureNamespace";
 
     private static final Logger log = LoggerFactory.getLogger(GqlVerticle.class);
-
-    private final StructuresProperties properties;
     private final GqlOperationService gqlOperationService;
+    private final StructuresProperties properties;
     private final SecurityService securityService;
     private HttpServer server;
 

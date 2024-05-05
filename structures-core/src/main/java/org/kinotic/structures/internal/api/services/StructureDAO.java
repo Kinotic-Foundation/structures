@@ -14,14 +14,6 @@ import java.util.concurrent.CompletableFuture;
 public interface StructureDAO extends IdentifiableCrudService<Structure, String> {
 
     /**
-     * Finds all published structures for the given namespace.
-     * @param namespace the namespace to find structures for
-     * @param pageable the page to return
-     * @return a future that will complete with a page of structures
-     */
-    CompletableFuture<Page<Structure>> findAllPublishedForNamespace(String namespace, Pageable pageable);
-
-    /**
      * Counts all structures for the given namespace.
      * @param namespace the namespace to find structures for
      * @return a future that will complete with a page of structures
@@ -29,12 +21,11 @@ public interface StructureDAO extends IdentifiableCrudService<Structure, String>
     CompletableFuture<Long> countForNamespace(String namespace);
 
     /**
-     * Retrieves an entity by its id.
-     *
-     * @param id must not be {@literal null}
-     * @return {@link CompletableFuture} emitting the entity with the given id or {@link CompletableFuture} emitting null if none found
-     * @throws IllegalArgumentException in case the given {@literal id} is {@literal null}
+     * Finds all published structures for the given namespace.
+     * @param namespace the namespace to find structures for
+     * @param pageable the page to return
+     * @return a future that will complete with a page of structures
      */
-    CompletableFuture<Structure> findById(String id);
+    CompletableFuture<Page<Structure>> findAllPublishedForNamespace(String namespace, Pageable pageable);
 
 }

@@ -1,5 +1,6 @@
 import {C3Type} from '@kinotic/continuum-idl'
-import {IConverterStrategy, Logger} from '../IConverterStrategy.js'
+import {Logger} from '../../Logger.js'
+import {IConverterStrategy} from '../IConverterStrategy.js'
 import {ITypeConverter} from '../ITypeConverter.js'
 import {ArrayC3TypeToStatementMapper} from './ArrayC3TypeToStatementMapper.js'
 import {StatementMapper} from './StatementMapper.js'

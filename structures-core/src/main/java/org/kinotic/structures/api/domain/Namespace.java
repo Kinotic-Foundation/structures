@@ -15,18 +15,14 @@ import java.util.Date;
 @Setter
 @Accessors(chain = true)
 @NoArgsConstructor
-@RequiredArgsConstructor
 @Document(indexName = "namespace")
 @Setting(shards = 2, replicas = 2)
 public class Namespace implements Identifiable<String> {
 
     @Id
-    @Field(type = FieldType.Keyword)
-    @NonNull
     private String id;
 
     @Field(type = FieldType.Text)
-    @NonNull
     private String description;
 
     @Field(type=FieldType.Date)
@@ -35,4 +31,8 @@ public class Namespace implements Identifiable<String> {
     @Field(type = FieldType.Boolean)
     private boolean federatedGraphQl = false;
 
+    public Namespace(String id, String description) {
+        this.id = id;
+        this.description = description;
+    }
 }

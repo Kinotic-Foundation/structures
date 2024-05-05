@@ -42,8 +42,8 @@ public class CrudServiceTemplate {
     private static final Logger log = LoggerFactory.getLogger(CrudServiceTemplate.class);
 
     private final ElasticsearchAsyncClient esAsyncClient;
-    private final RawJsonJsonpDeserializer rawJsonJsonpDeserializer;
     private final ObjectMapper objectMapper;
+    private final RawJsonJsonpDeserializer rawJsonJsonpDeserializer;
 
     public CrudServiceTemplate(ElasticsearchAsyncClient esAsyncClient,
                                ObjectMapper objectMapper) {
@@ -115,27 +115,159 @@ public class CrudServiceTemplate {
                             });
     }
 
-    CompletableFuture<Void> updateIndexMapping(String indexName,
-                                               Consumer<PutMappingRequest.Builder> builderConsumer){
-        return esAsyncClient.indices().exists(builder -> builder.index(indexName))
-                            .thenCompose(exists -> {
-                                if (exists.value()) {
-                                    return esAsyncClient.indices()
-                                                        .putMapping(builder -> {
-                                                            builder.index(indexName);
-                                                            if (builderConsumer != null) {
-                                                                builderConsumer.accept(builder);
-                                                            }
-                                                            return builder;
-                                                        })
-                                                        .thenApply(response -> null);
-                                } else {
-                                    return CompletableFuture.failedFuture(new IllegalArgumentException(
-                                            "Index "+indexName+" does not exist"));
-                                }
-                            });
+    /**
+     * Deletes a document by id. Also allows for customization of the {@link DeleteRequest}.
+     *
+     * @param indexName       name of the index to delete from
+     * @param id              of the document to delete
+     * @param builderConsumer to customize the {@link DeleteRequest}, or null if no customization is needed
+     * @return a {@link CompletableFuture} that will complete with the {@link DeleteResponse}
+     */
+    public CompletableFuture<DeleteResponse> deleteById(String indexName,
+                                                        String id,
+                                                        Consumer<DeleteRequest.Builder> builderConsumer) {
+        return esAsyncClient.delete(builder -> {
+            builder.index(indexName).id(id);
+            if (builderConsumer != null) {
+                builderConsumer.accept(builder);
+            }
+            return builder;
+        });
     }
 
+    /**
+     * Deletes a list of documents by provided query. Also allows for customization of the {@link DeleteRequest}.
+     *
+     * @param indexName       name of the index to delete from
+     * @param builderConsumer to customize the {@link DeleteRequest}, or null if no customization is needed
+     * @return a {@link CompletableFuture} that will complete with the {@link DeleteResponse}
+     */
+    public CompletableFuture<DeleteByQueryResponse> deleteByQuery(String indexName,
+                                                                  Consumer<DeleteByQueryRequest.Builder> builderConsumer) {
+        return esAsyncClient.deleteByQuery(builder -> {
+            builder.index(indexName);
+            if (builderConsumer != null) {
+                builderConsumer.accept(builder);
+            }
+            return builder;
+        });
+    }
+
+    /**
+     * Finds a document by id. Also allows for customization of the {@link GetRequest}.
+     *
+     * @param <T>             type of the document to return
+     * @param indexName       name of the index to search
+     * @param id              of the document to return
+     * @param type            of the document to return
+     * @param builderConsumer to customize the {@link GetRequest}, or null if no customization is needed
+     * @return a {@link CompletableFuture} that will complete with the document
+     */
+    public <T> CompletableFuture<T> findById(String indexName,
+                                             String id,
+                                             Class<T> type,
+                                             Consumer<GetRequest.Builder> builderConsumer) {
+        return this.findById(indexName, id, getDeserializer(type), builderConsumer)
+                   .thenApply(GetResult::source);
+    }
+
+    /**
+     * Finds a document by id. Also allows for customization of the {@link GetRequest}.
+     *
+     * @param indexName       name of the index to search
+     * @param id              of the document to return
+     * @param deserializer    to use to deserialize the document
+     * @param builderConsumer to customize the {@link GetRequest}, or null if no customization is needed
+     * @param <T>             type of the document to return
+     * @return a {@link CompletableFuture} that will complete with the document
+     */
+    public <T> CompletableFuture<GetResponse<T>> findById(String indexName,
+                                                          String id,
+                                                          JsonpDeserializer<T> deserializer,
+                                                          Consumer<GetRequest.Builder> builderConsumer) {
+        //noinspection unchecked
+        JsonEndpoint<GetRequest, GetResponse<T>, ErrorResponse> endpoint =
+                (JsonEndpoint<GetRequest, GetResponse<T>, ErrorResponse>) GetRequest._ENDPOINT;
+
+        endpoint = new EndpointWithResponseMapperAttr<>(endpoint,
+                                                        "co.elastic.clients:Deserializer:_global.get.TDocument",
+                                                        deserializer);
+
+        GetRequest.Builder builder = new GetRequest.Builder();
+
+        builder.index(indexName).id(id);
+        if (builderConsumer != null) {
+            builderConsumer.accept(builder);
+        }
+
+        //noinspection resource
+        return esAsyncClient._transport()
+                            .performRequestAsync(builder.build(), endpoint, esAsyncClient._transportOptions());
+    }
+
+    /**
+     * Finds a list document by their id. Also allows for customization of the {@link MgetRequest}.
+     *
+     * @param <T>             type of the document to return
+     * @param indexName       name of the index to search
+     * @param ids             of the documents to return
+     * @param type            of the document to return
+     * @param builderConsumer to customize the {@link GetRequest}, or null if no customization is needed
+     * @return a {@link CompletableFuture} that will complete with the documents requested
+     */
+    public <T> CompletableFuture<List<T>> findByIds(String indexName,
+                                                    List<String> ids,
+                                                    Class<T> type,
+                                                    Consumer<MgetRequest.Builder> builderConsumer) {
+        return this.findByIds(indexName, ids, getDeserializer(type), builderConsumer)
+                .thenApply(response -> {
+
+                    List<MultiGetResponseItem<T>> recordsResponse = response.docs();
+                    ArrayList<T> content = new ArrayList<>();
+
+                    for (MultiGetResponseItem<T> hit : recordsResponse) {
+                        if(hit.isResult() && hit.result().found()){
+                            content.add(hit.result().source());
+                        }
+                    }
+
+                    return content;
+                });
+    }
+
+    /**
+     * Finds a list of document by their ids. Also allows for customization of the {@link MgetRequest}.
+     *
+     * @param indexName       name of the index to search
+     * @param ids             ids of the documents to return
+     * @param deserializer    to use to deserialize the document
+     * @param builderConsumer to customize the {@link GetRequest}, or null if no customization is needed
+     * @param <T>             type of the document to return
+     * @return a {@link CompletableFuture} that will complete with the document
+     */
+    public <T> CompletableFuture<MgetResponse<T>> findByIds(String indexName,
+                                                            List<String> ids,
+                                                            JsonpDeserializer<T> deserializer,
+                                                            Consumer<MgetRequest.Builder> builderConsumer) {
+        //noinspection unchecked
+        JsonEndpoint<MgetRequest, MgetResponse<T>, ErrorResponse> endpoint =
+                (JsonEndpoint<MgetRequest, MgetResponse<T>, ErrorResponse>) MgetRequest._ENDPOINT;
+
+        endpoint = new EndpointWithResponseMapperAttr<>(endpoint,
+                "co.elastic.clients:Deserializer:_global.mget.TDocument",
+                deserializer);
+
+        MgetRequest.Builder builder = new MgetRequest.Builder();
+
+        builder.index(indexName).ids(ids);
+        if (builderConsumer != null) {
+            builderConsumer.accept(builder);
+        }
+
+        //noinspection resource
+        return esAsyncClient._transport()
+                .performRequestAsync(builder.build(), endpoint, esAsyncClient._transportOptions());
+    }
 
     /**
      * Provides base functionality to get a {@link Page} of documents from elasticsearch. With the ability to customize the {@link SearchRequest}.
@@ -186,7 +318,6 @@ public class CrudServiceTemplate {
                     }
                 });
     }
-
 
     /**
      * Provides base functionality to get a {@link Page} of documents from elasticsearch. With the ability to customize the {@link SearchRequest}.
@@ -279,166 +410,6 @@ public class CrudServiceTemplate {
                             .performRequestAsync(request, endpoint, esAsyncClient._transportOptions());
     }
 
-
-    /**
-     * Finds a document by id. Also allows for customization of the {@link GetRequest}.
-     *
-     * @param <T>             type of the document to return
-     * @param indexName       name of the index to search
-     * @param id              of the document to return
-     * @param type            of the document to return
-     * @param builderConsumer to customize the {@link GetRequest}, or null if no customization is needed
-     * @return a {@link CompletableFuture} that will complete with the document
-     */
-    public <T> CompletableFuture<T> findById(String indexName,
-                                             String id,
-                                             Class<T> type,
-                                             Consumer<GetRequest.Builder> builderConsumer) {
-        return this.findById(indexName, id, getDeserializer(type), builderConsumer)
-                   .thenApply(GetResult::source);
-    }
-
-
-    /**
-     * Finds a list document by their id. Also allows for customization of the {@link GetRequest}.
-     *
-     * @param <T>             type of the document to return
-     * @param indexName       name of the index to search
-     * @param ids             of the documents to return
-     * @param type            of the document to return
-     * @param builderConsumer to customize the {@link GetRequest}, or null if no customization is needed
-     * @return a {@link CompletableFuture} that will complete with the documents requested
-     */
-    public <T> CompletableFuture<List<T>> findByIds(String indexName,
-                                                    List<String> ids,
-                                                    Class<T> type,
-                                                    Consumer<MgetRequest.Builder> builderConsumer) {
-        return this.findByIds(indexName, ids, getDeserializer(type), builderConsumer)
-                .thenApply(response -> {
-
-                    List<MultiGetResponseItem<T>> recordsResponse = response.docs();
-                    ArrayList<T> content = new ArrayList<>();
-
-                    for (MultiGetResponseItem<T> hit : recordsResponse) {
-                        if(hit.isResult() && hit.result().found()){
-                            content.add(hit.result().source());
-                        }
-                    }
-
-                    return content;
-                });
-    }
-
-
-    /**
-     * Finds a document by id. Also allows for customization of the {@link GetRequest}.
-     *
-     * @param indexName       name of the index to search
-     * @param id              of the document to return
-     * @param deserializer    to use to deserialize the document
-     * @param builderConsumer to customize the {@link GetRequest}, or null if no customization is needed
-     * @param <T>             type of the document to return
-     * @return a {@link CompletableFuture} that will complete with the document
-     */
-    public <T> CompletableFuture<GetResponse<T>> findById(String indexName,
-                                                          String id,
-                                                          JsonpDeserializer<T> deserializer,
-                                                          Consumer<GetRequest.Builder> builderConsumer) {
-        //noinspection unchecked
-        JsonEndpoint<GetRequest, GetResponse<T>, ErrorResponse> endpoint =
-                (JsonEndpoint<GetRequest, GetResponse<T>, ErrorResponse>) GetRequest._ENDPOINT;
-
-        endpoint = new EndpointWithResponseMapperAttr<>(endpoint,
-                                                        "co.elastic.clients:Deserializer:_global.get.TDocument",
-                                                        deserializer);
-
-        GetRequest.Builder builder = new GetRequest.Builder();
-
-        builder.index(indexName).id(id);
-        if (builderConsumer != null) {
-            builderConsumer.accept(builder);
-        }
-
-        //noinspection resource
-        return esAsyncClient._transport()
-                            .performRequestAsync(builder.build(), endpoint, esAsyncClient._transportOptions());
-    }
-
-
-    /**
-     * Finds a list of document by their ids. Also allows for customization of the {@link GetRequest}.
-     *
-     * @param indexName       name of the index to search
-     * @param ids             ids of the documents to return
-     * @param deserializer    to use to deserialize the document
-     * @param builderConsumer to customize the {@link GetRequest}, or null if no customization is needed
-     * @param <T>             type of the document to return
-     * @return a {@link CompletableFuture} that will complete with the document
-     */
-    public <T> CompletableFuture<MgetResponse<T>> findByIds(String indexName,
-                                                           List<String> ids,
-                                                           JsonpDeserializer<T> deserializer,
-                                                           Consumer<MgetRequest.Builder> builderConsumer) {
-        //noinspection unchecked
-        JsonEndpoint<MgetRequest, MgetResponse<T>, ErrorResponse> endpoint =
-                (JsonEndpoint<MgetRequest, MgetResponse<T>, ErrorResponse>) MgetRequest._ENDPOINT;
-
-        endpoint = new EndpointWithResponseMapperAttr<>(endpoint,
-                "co.elastic.clients:Deserializer:_global.mget.TDocument",
-                deserializer);
-
-        MgetRequest.Builder builder = new MgetRequest.Builder();
-
-        builder.index(indexName).ids(ids);
-        if (builderConsumer != null) {
-            builderConsumer.accept(builder);
-        }
-
-        //noinspection resource
-        return esAsyncClient._transport()
-                .performRequestAsync(builder.build(), endpoint, esAsyncClient._transportOptions());
-    }
-
-
-    /**
-     * Deletes a document by id. Also allows for customization of the {@link DeleteRequest}.
-     *
-     * @param indexName       name of the index to delete from
-     * @param id              of the document to delete
-     * @param builderConsumer to customize the {@link DeleteRequest}, or null if no customization is needed
-     * @return a {@link CompletableFuture} that will complete with the {@link DeleteResponse}
-     */
-    public CompletableFuture<DeleteResponse> deleteById(String indexName,
-                                                        String id,
-                                                        Consumer<DeleteRequest.Builder> builderConsumer) {
-        return esAsyncClient.delete(builder -> {
-            builder.index(indexName).id(id);
-            if (builderConsumer != null) {
-                builderConsumer.accept(builder);
-            }
-            return builder;
-        });
-    }
-
-
-    /**
-     * Deletes a list of documents by provided query. Also allows for customization of the {@link DeleteRequest}.
-     *
-     * @param indexName       name of the index to delete from
-     * @param builderConsumer to customize the {@link DeleteRequest}, or null if no customization is needed
-     * @return a {@link CompletableFuture} that will complete with the {@link DeleteResponse}
-     */
-    public CompletableFuture<DeleteByQueryResponse> deleteByQuery(String indexName,
-                                                                  Consumer<DeleteByQueryRequest.Builder> builderConsumer) {
-        return esAsyncClient.deleteByQuery(builder -> {
-            builder.index(indexName);
-            if (builderConsumer != null) {
-                builderConsumer.accept(builder);
-            }
-            return builder;
-        });
-    }
-
     private <T> JsonpDeserializer<T> getDeserializer(Class<T> type) {
         if (RawJson.class.isAssignableFrom(type)) {
             //noinspection unchecked
@@ -452,6 +423,27 @@ public class CrudServiceTemplate {
         }
 
         return JsonpDeserializer.of(type);
+    }
+
+    CompletableFuture<Void> updateIndexMapping(String indexName,
+                                               Consumer<PutMappingRequest.Builder> builderConsumer){
+        return esAsyncClient.indices().exists(builder -> builder.index(indexName))
+                            .thenCompose(exists -> {
+                                if (exists.value()) {
+                                    return esAsyncClient.indices()
+                                                        .putMapping(builder -> {
+                                                            builder.index(indexName);
+                                                            if (builderConsumer != null) {
+                                                                builderConsumer.accept(builder);
+                                                            }
+                                                            return builder;
+                                                        })
+                                                        .thenApply(response -> null);
+                                } else {
+                                    return CompletableFuture.failedFuture(new IllegalArgumentException(
+                                            "Index "+indexName+" does not exist"));
+                                }
+                            });
     }
 
 }

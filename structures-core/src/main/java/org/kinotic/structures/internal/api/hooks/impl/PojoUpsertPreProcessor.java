@@ -15,7 +15,7 @@ public class PojoUpsertPreProcessor implements UpsertPreProcessor<Object, List<O
 
     @Override
     public CompletableFuture<EntityHolder> process(Object entity, EntityContext context) {
-        return null;
+        throw new NotImplementedException("Pojo upsert is not implemented yet");
     }
 
     @Override

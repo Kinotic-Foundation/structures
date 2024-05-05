@@ -33,8 +33,8 @@ import java.util.concurrent.CompletableFuture;
 @Component
 public class DefaultOpenApiService implements OpenApiService {
 
-    private final StructureService structureService;
     private final StructureConversionService structureConversionService;
+    private final StructureService structureService;
     private final StructuresProperties structuresProperties;
 
     public DefaultOpenApiService(StructureService structureService,
@@ -45,64 +45,14 @@ public class DefaultOpenApiService implements OpenApiService {
         this.structuresProperties = structuresProperties;
     }
 
-    @Override
-    public CompletableFuture<OpenAPI> getOpenApiSpec(String namespace) {
-        return structureService
-                .findAllPublishedForNamespace(namespace, Pageable.ofSize(100))
-                .thenComposeAsync(structures -> {
-                    OpenAPI openAPI = new OpenAPI(SpecVersion.V30);
-
-                    Info info = new Info()
-                            .title(namespace + " Structures API")
-                            .version("1.0")
-                            .description("Provides access to Structures Items for the " + namespace + " namespace");
-                    openAPI.setInfo(info);
-
-                    if(structuresProperties.getOpenApiServerUrl() != null){
-                        openAPI.addServersItem(new Server().url(structuresProperties.getOpenApiServerUrl()));
-                    }
-
-                    Components components = new Components();
-
-                    // security scheme
-                    if(structuresProperties.getOpenApiSecurityType() == OpenApiSecurityType.BASIC){
-                        SecurityScheme securityScheme = new SecurityScheme();
-                        securityScheme.setType(SecurityScheme.Type.HTTP);
-                        securityScheme.setScheme("basic");
-                        components.addSecuritySchemes("BasicAuth", securityScheme);
-                        openAPI.setSecurity(List.of(new SecurityRequirement().addList("BasicAuth")));
-                    } else if (structuresProperties.getOpenApiSecurityType() == OpenApiSecurityType.BEARER) {
-                        SecurityScheme securityScheme = new SecurityScheme();
-                        securityScheme.setType(SecurityScheme.Type.HTTP);
-                        securityScheme.setScheme("bearer");
-                        components.addSecuritySchemes("BearerAuth", securityScheme);
-                        openAPI.setSecurity(List.of(new SecurityRequirement().addList("BearerAuth")));
-                    }
-
-                    Paths paths = new Paths();
-                    String basePath = structuresProperties.getOpenApiPath();
-
-                    for(Structure structure : structures.getContent()){
-                        // Add path items for the structure
-                        addPathItemsForStructure(paths, basePath, structure);
-
-                        OpenApiConversionResult result = structureConversionService.convertToOpenApiMapping(structure);
-
-                        components.addSchemas(structure.getName(), result.getObjectSchema());
-
-                        for(Map.Entry<String, Schema<?>> entry : result.getReferenceSchemas().entrySet()){
-                            components.addSchemas(entry.getKey(), entry.getValue());
-                        }
-                    }
-
-                    ObjectSchema countSchema = new ObjectSchema();
-                    countSchema.addProperty("count", new IntegerSchema());
-                    components.addSchemas("CountResponse", countSchema);
-
-                    openAPI.setPaths(paths);
-                    openAPI.components(components);
-                    return CompletableFuture.completedFuture(openAPI);
-                });
+    private static ApiResponses getDefaultResponses(){
+        ApiResponses responses = new ApiResponses();
+        responses.put("400", new ApiResponse().description("Bad Request"));
+        responses.put("401", new ApiResponse().description("Unauthorized"));
+        responses.put("403", new ApiResponse().description("Forbidden"));
+        responses.put("404", new ApiResponse().description("Not Found"));
+        responses.put("500", new ApiResponse().description("Internal Server Error"));
+        return responses;
     }
 
     public void addPathItemsForStructure(Paths paths, String basePath, Structure structure){
@@ -319,6 +269,66 @@ public class DefaultOpenApiService implements OpenApiService {
         paths.put(basePath + lowercaseNamespace + "/" + lowercaseName + "/search", searchPathItem);
     }
 
+    @Override
+    public CompletableFuture<OpenAPI> getOpenApiSpec(String namespace) {
+        return structureService
+                .findAllPublishedForNamespace(namespace, Pageable.ofSize(100))
+                .thenComposeAsync(structures -> {
+                    OpenAPI openAPI = new OpenAPI(SpecVersion.V30);
+
+                    Info info = new Info()
+                            .title(namespace + " Structures API")
+                            .version("1.0")
+                            .description("Provides access to Structures Items for the " + namespace + " namespace");
+                    openAPI.setInfo(info);
+
+                    if(structuresProperties.getOpenApiServerUrl() != null){
+                        openAPI.addServersItem(new Server().url(structuresProperties.getOpenApiServerUrl()));
+                    }
+
+                    Components components = new Components();
+
+                    // security scheme
+                    if(structuresProperties.getOpenApiSecurityType() == OpenApiSecurityType.BASIC){
+                        SecurityScheme securityScheme = new SecurityScheme();
+                        securityScheme.setType(SecurityScheme.Type.HTTP);
+                        securityScheme.setScheme("basic");
+                        components.addSecuritySchemes("BasicAuth", securityScheme);
+                        openAPI.setSecurity(List.of(new SecurityRequirement().addList("BasicAuth")));
+                    } else if (structuresProperties.getOpenApiSecurityType() == OpenApiSecurityType.BEARER) {
+                        SecurityScheme securityScheme = new SecurityScheme();
+                        securityScheme.setType(SecurityScheme.Type.HTTP);
+                        securityScheme.setScheme("bearer");
+                        components.addSecuritySchemes("BearerAuth", securityScheme);
+                        openAPI.setSecurity(List.of(new SecurityRequirement().addList("BearerAuth")));
+                    }
+
+                    Paths paths = new Paths();
+                    String basePath = structuresProperties.getOpenApiPath();
+
+                    for(Structure structure : structures.getContent()){
+                        // Add path items for the structure
+                        addPathItemsForStructure(paths, basePath, structure);
+
+                        OpenApiConversionResult result = structureConversionService.convertToOpenApiMapping(structure);
+
+                        components.addSchemas(structure.getName(), result.getObjectSchema());
+
+                        for(Map.Entry<String, Schema<?>> entry : result.getReferenceSchemas().entrySet()){
+                            components.addSchemas(entry.getKey(), entry.getValue());
+                        }
+                    }
+
+                    ObjectSchema countSchema = new ObjectSchema();
+                    countSchema.addProperty("count", new IntegerSchema());
+                    components.addSchemas("CountResponse", countSchema);
+
+                    openAPI.setPaths(paths);
+                    openAPI.components(components);
+                    return CompletableFuture.completedFuture(openAPI);
+                });
+    }
+
     private void addPagingAndSortingParameters(Operation operation){
         operation.addParametersItem(new Parameter().name("page")
                                                    .in("query")
@@ -412,16 +422,6 @@ public class DefaultOpenApiService implements OpenApiService {
         operation.setResponses(defaultResponses);
 
         return operation;
-    }
-
-    private static ApiResponses getDefaultResponses(){
-        ApiResponses responses = new ApiResponses();
-        responses.put("400", new ApiResponse().description("Bad Request"));
-        responses.put("401", new ApiResponse().description("Unauthorized"));
-        responses.put("403", new ApiResponse().description("Forbidden"));
-        responses.put("404", new ApiResponse().description("Not Found"));
-        responses.put("500", new ApiResponse().description("Internal Server Error"));
-        return responses;
     }
 
 }

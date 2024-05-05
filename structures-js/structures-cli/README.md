@@ -12,7 +12,7 @@ $ npm install -g @kinotic/structures-cli
 $ structures COMMAND
 running command...
 $ structures (--version)
-@kinotic/structures-cli/1.13.3 darwin-x64 node-v20.11.0
+@kinotic/structures-cli/1.4.0 darwin-x64 node-v20.11.0
 $ structures --help [COMMAND]
 USAGE
   $ structures COMMAND
@@ -110,7 +110,7 @@ EXAMPLES
   $ structures init -n my.namespace -e path/to/entities -g path/to/services
 ```
 
-_See code: [dist/commands/init.ts](https://github.com/Kinotic-Foundation/structures/blob/v1.13.3/dist/commands/init.ts)_
+_See code: [dist/commands/init.ts](https://github.com/Kinotic-Foundation/structures/blob/v1.4.0/dist/commands/init.ts)_
 
 ## `structures plugins`
 
@@ -376,7 +376,7 @@ EXAMPLES
   $ structures synchronize
 ```
 
-_See code: [dist/commands/synchronize.ts](https://github.com/Kinotic-Foundation/structures/blob/v1.13.3/dist/commands/synchronize.ts)_
+_See code: [dist/commands/synchronize.ts](https://github.com/Kinotic-Foundation/structures/blob/v1.4.0/dist/commands/synchronize.ts)_
 
 ## `structures update [CHANNEL]`
 

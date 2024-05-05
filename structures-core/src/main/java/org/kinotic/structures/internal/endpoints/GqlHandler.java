@@ -11,26 +11,21 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.graphql.impl.GraphQLBatch;
 import io.vertx.ext.web.handler.graphql.impl.GraphQLInput;
 import io.vertx.ext.web.handler.graphql.impl.GraphQLQuery;
+import lombok.RequiredArgsConstructor;
 import org.kinotic.structures.internal.graphql.GqlOperationService;
 
-import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
 import static io.vertx.core.http.HttpMethod.GET;
 import static io.vertx.core.http.HttpMethod.POST;
-import static java.util.stream.Collectors.toList;
 
 /**
  * Created by Navíd Mitchell 🤪 on 6/7/23.
  */
+@RequiredArgsConstructor
 public class GqlHandler implements Handler<RoutingContext> {
 
     private final GqlOperationService gqlOperationService;
-
-    public GqlHandler(GqlOperationService gqlOperationService) {
-        this.gqlOperationService = gqlOperationService;
-    }
 
     @Override
     public void handle(RoutingContext rc) {
@@ -49,6 +44,51 @@ public class GqlHandler implements Handler<RoutingContext> {
             }
         } else {
             rc.fail(405);
+        }
+    }
+
+    private void executeBatch(RoutingContext rc, GraphQLBatch batch) {
+
+        rc.fail(500, new NoStackTraceThrowable("Batch execution not supported"));
+
+//        List<CompletableFuture<Buffer>> results = batch.stream()
+//                                                           .map(q -> gqlOperationService.execute(rc, q))
+//                                                           .collect(toList());
+
+        // FIXME: send result as response
+
+//        CompletableFuture.allOf(results.toArray(new CompletableFuture<?>[0]))
+//                         .thenApply(v -> {
+//                             JsonArray jsonArray = results.stream()
+//                                                          .map(CompletableFuture::join)
+//                                                          .collect(JsonArray::new, JsonArray::add, JsonArray::addAll);
+//                             return jsonArray.toBuffer();
+//                         })
+//                         .whenComplete((buffer, throwable) -> {
+//                             sendResponse(rc, buffer, throwable);
+//                         });
+    }
+
+    private void executeOne(RoutingContext rc, GraphQLQuery query) {
+        gqlOperationService.execute(rc, query)
+                           .whenComplete((buffer, throwable) -> sendResponse(rc, buffer, throwable));
+    }
+
+    private void failQueryMissing(RoutingContext rc) {
+        rc.fail(400, new NoStackTraceThrowable("Query is missing"));
+    }
+
+    private String getContentType(RoutingContext rc) {
+        String contentType = rc.parsedHeaders().contentType().value();
+        return contentType.isEmpty() ? "application/json" : contentType.toLowerCase();
+    }
+
+    private Map<String, Object> getVariablesFromQueryParam(RoutingContext rc) throws Exception {
+        String variablesParam = rc.queryParams().get("variables");
+        if (variablesParam == null) {
+            return null;
+        } else {
+            return new JsonObject(variablesParam).getMap();
         }
     }
 
@@ -95,6 +135,22 @@ public class GqlHandler implements Handler<RoutingContext> {
         }
     }
 
+    private void handlePostBatch(RoutingContext rc, GraphQLBatch batch, String operationName, Map<String, Object> variables) {
+        for (GraphQLQuery query : batch) {
+            if (query.getQuery() == null) {
+                failQueryMissing(rc);
+                return;
+            }
+            if (operationName != null) {
+                query.setOperationName(operationName);
+            }
+            if (variables != null) {
+                query.setVariables(variables);
+            }
+        }
+        executeBatch(rc, batch);
+    }
+
     private void handlePostJson(RoutingContext rc, Buffer body, String operationName, Map<String, Object> variables) {
         GraphQLInput graphQLInput;
         try {
@@ -112,44 +168,6 @@ public class GqlHandler implements Handler<RoutingContext> {
         }
     }
 
-    private void handlePostBatch(RoutingContext rc, GraphQLBatch batch, String operationName, Map<String, Object> variables) {
-        for (GraphQLQuery query : batch) {
-            if (query.getQuery() == null) {
-                failQueryMissing(rc);
-                return;
-            }
-            if (operationName != null) {
-                query.setOperationName(operationName);
-            }
-            if (variables != null) {
-                query.setVariables(variables);
-            }
-        }
-        executeBatch(rc, batch);
-    }
-
-    private void executeBatch(RoutingContext rc, GraphQLBatch batch) {
-
-        rc.fail(500, new NoStackTraceThrowable("Batch execution not supported"));
-
-//        List<CompletableFuture<Buffer>> results = batch.stream()
-//                                                           .map(q -> gqlOperationService.execute(rc, q))
-//                                                           .collect(toList());
-
-        // FIXME: send result as response
-
-//        CompletableFuture.allOf(results.toArray(new CompletableFuture<?>[0]))
-//                         .thenApply(v -> {
-//                             JsonArray jsonArray = results.stream()
-//                                                          .map(CompletableFuture::join)
-//                                                          .collect(JsonArray::new, JsonArray::add, JsonArray::addAll);
-//                             return jsonArray.toBuffer();
-//                         })
-//                         .whenComplete((buffer, throwable) -> {
-//                             sendResponse(rc, buffer, throwable);
-//                         });
-    }
-
     private void handlePostQuery(RoutingContext rc, GraphQLQuery query, String operationName, Map<String, Object> variables) {
         if (query.getQuery() == null) {
             failQueryMissing(rc);
@@ -164,35 +182,12 @@ public class GqlHandler implements Handler<RoutingContext> {
         executeOne(rc, query);
     }
 
-    private void executeOne(RoutingContext rc, GraphQLQuery query) {
-        gqlOperationService.execute(rc, query)
-                           .whenComplete((buffer, throwable) -> sendResponse(rc, buffer, throwable));
-    }
-
-    private String getContentType(RoutingContext rc) {
-        String contentType = rc.parsedHeaders().contentType().value();
-        return contentType.isEmpty() ? "application/json" : contentType.toLowerCase();
-    }
-
-    private Map<String, Object> getVariablesFromQueryParam(RoutingContext rc) throws Exception {
-        String variablesParam = rc.queryParams().get("variables");
-        if (variablesParam == null) {
-            return null;
-        } else {
-            return new JsonObject(variablesParam).getMap();
-        }
-    }
-
     private void sendResponse(RoutingContext rc, Buffer buffer, Throwable throwable) {
         if (throwable == null) {
             rc.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json").end(buffer);
         } else {
             rc.fail(throwable);
         }
-    }
-
-    private void failQueryMissing(RoutingContext rc) {
-        rc.fail(400, new NoStackTraceThrowable("Query is missing"));
     }
 
 

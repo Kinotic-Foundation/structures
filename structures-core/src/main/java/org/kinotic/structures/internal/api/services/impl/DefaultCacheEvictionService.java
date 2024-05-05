@@ -12,8 +12,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class DefaultCacheEvictionService implements CacheEvictionService {
 
-    private final GqlProviderService gqlProviderService;
     private final EntitiesService entitiesService;
+    private final GqlProviderService gqlProviderService;
 
     public DefaultCacheEvictionService(GqlProviderService gqlProviderService,
                                        EntitiesService entitiesService) {

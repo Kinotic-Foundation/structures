@@ -1,3 +1,4 @@
+import {QueryParameter} from '@/api/domain/QueryParameter.js'
 import {FindAllIterablePage} from '@/internal/api/domain/FindAllIterablePage'
 import {SearchIterablePage} from '@/internal/api/domain/SearchIterablePage'
 import {
@@ -12,17 +13,6 @@ import {
 export interface IEntitiesService {
 
     /**
-     * Saves a given entity. Use the returned instance for further operations as the save operation might have changed the
-     * entity instance completely.
-     *
-     * @param structureId the id of the structure to save the entity for
-     * @param entity      must not be {@literal null}
-     * @return {@link Promise} emitting the saved entity
-     * @throws IllegalArgumentException in case the given {@literal entity} is {@literal null}
-     */
-    save<T>(structureId: string, entity: T): Promise<T>
-
-    /**
      * Saves all given entities.
      * @param structureId the id of the structure to save the entities for
      * @param entities all the entities to save
@@ -31,45 +21,12 @@ export interface IEntitiesService {
     bulkSave<T>(structureId: string, entities: T[]): Promise<void>
 
     /**
-     * Updates a given entity. This will only override the fields that are present in the given entity.
-     * If any fields are not present in the given entity data they will not be changed.
-     * If the entity does not exist it will be created.
-     * Use the returned instance for further operations as the save operation might have changed the entity instance.
-     *
-     * @param structureId the id of the structure to update the entity for
-     * @param entity      must not be {@literal null}
-     * @return Promise emitting the saved entity
-     * @throws Error in case the given {@literal entity} is {@literal null}
-     */
-    update<T>(structureId: string, entity: T): Promise<T>
-
-    /**
      * Updates all given entities.
      * @param structureId the id of the structure to update the entities for
      * @param entities all the entities to save
      * @return Promise that will complete when all entities have been saved
      */
     bulkUpdate<T>(structureId: string, entities: T[]): Promise<void>
-
-    /**
-     * Retrieves an entity by its id.
-     *
-     * @param structureId the id of the structure to save the entity for
-     * @param id          must not be {@literal null}
-     * @return {@link Promise} with the entity with the given id or {@link Promise} emitting null if none found
-     * @throws IllegalArgumentException in case the given {@literal id} is {@literal null}
-     */
-    findById<T>(structureId: string, id: string): Promise<T>
-
-    /**
-     * Retrieves a list of entities by their id.
-     *
-     * @param structureId the id of the structure to save the entity for
-     * @param ids      must not be {@literal null}
-     * @return Promise emitting the entities with the given ids or Promise emitting null if none found
-     * @throws Error in case the given {@literal ids} is {@literal null}
-     */
-    findByIds<T>(structureId: string, ids: string[]): Promise<T[]>
 
     /**
      * Returns the number of entities available.
@@ -108,7 +65,7 @@ export interface IEntitiesService {
     deleteByQuery(structureId: string, query: string): Promise<void>
 
     /**
-     * Returns a {@link Page} of entities meeting the paging restriction provided in the {@code Pageable} object.
+     * Returns a {@link IterablePage} of entities meeting the paging restriction provided in the {@link Pageable} object.
      *
      * @param structureId the id of the structure to save the entity for
      * @param pageable    the page settings to be used
@@ -117,7 +74,54 @@ export interface IEntitiesService {
     findAll<T>(structureId: string, pageable: Pageable): Promise<IterablePage<T>>
 
     /**
-     * Returns a {@link Page} of entities matching the search text and paging restriction provided in the {@code Pageable} object.
+     * Returns a single {@link Page} of entities meeting the paging restriction provided in the {@link Pageable} object.
+     * @param structureId
+     * @param pageable
+     */
+    findAllSinglePage<T>(structureId: string, pageable: Pageable): Promise<Page<T>>
+
+    /**
+     * Retrieves an entity by its id.
+     *
+     * @param structureId the id of the structure to save the entity for
+     * @param id          must not be {@literal null}
+     * @return {@link Promise} with the entity with the given id or {@link Promise} emitting null if none found
+     * @throws IllegalArgumentException in case the given {@literal id} is {@literal null}
+     */
+    findById<T>(structureId: string, id: string): Promise<T>
+
+    /**
+     * Retrieves a list of entities by their id.
+     *
+     * @param structureId the id of the structure to save the entity for
+     * @param ids      must not be {@literal null}
+     * @return Promise emitting the entities with the given ids or Promise emitting null if none found
+     * @throws Error in case the given {@literal ids} is {@literal null}
+     */
+    findByIds<T>(structureId: string, ids: string[]): Promise<T[]>
+
+    /**
+     * Executes a named query.
+     * @param structureId the id of the structure that this named query is defined for
+     * @param queryName the name of the function that defines the query
+     * @param parameters to pass to the query
+     * @returns Promise with the result of the query
+     */
+    namedQuery<T>(structureId: string, queryName: string, parameters: QueryParameter[]): Promise<T>
+
+    /**
+     * Saves a given entity. Use the returned instance for further operations as the save operation might have changed the
+     * entity instance completely.
+     *
+     * @param structureId the id of the structure to save the entity for
+     * @param entity      must not be {@literal null}
+     * @return {@link Promise} emitting the saved entity
+     * @throws IllegalArgumentException in case the given {@literal entity} is {@literal null}
+     */
+    save<T>(structureId: string, entity: T): Promise<T>
+
+    /**
+     * Returns a {@link IterablePage} of entities matching the search text and paging restriction provided in the {@link Pageable} object.
      * <p>
      * You can find more information about the search syntax <a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html#query-string-syntax">here</a>
      *
@@ -127,6 +131,31 @@ export interface IEntitiesService {
      * @return a page of entities
      */
     search<T>(structureId: string, searchText: string, pageable: Pageable): Promise<IterablePage<T>>
+
+    /**
+     * Returns a single {@link Page} of entities matching the search text and paging restriction provided in the {@link Pageable} object.
+     * <p>
+     * You can find more information about the search syntax <a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html#query-string-syntax">here</a>
+     *
+     * @param structureId the id of the structure to save the entity for
+     * @param searchText  the text to search for entities for
+     * @param pageable    the page settings to be used
+     * @return a page of entities
+     */
+    searchSinglePage<T>(structureId: string, searchText: string, pageable: Pageable): Promise<Page<T>>
+
+    /**
+     * Updates a given entity. This will only override the fields that are present in the given entity.
+     * If any fields are not present in the given entity data they will not be changed.
+     * If the entity does not exist it will be created.
+     * Use the returned instance for further operations as the save operation might have changed the entity instance.
+     *
+     * @param structureId the id of the structure to update the entity for
+     * @param entity      must not be {@literal null}
+     * @return Promise emitting the saved entity
+     * @throws Error in case the given {@literal entity} is {@literal null}
+     */
+    update<T>(structureId: string, entity: T): Promise<T>
 
 }
 
@@ -139,28 +168,12 @@ export class EntitiesService implements IEntitiesService {
         this.serviceProxy = serviceRegistry?.serviceProxy(service) || Continuum.serviceProxy(service)
     }
 
-    public save<T>(structureId: string, entity: T): Promise<T> {
-        return this.serviceProxy.invoke('save', [structureId, entity])
-    }
-
     public bulkSave<T>(structureId: string, entities: T[]): Promise<void>{
         return this.serviceProxy.invoke('bulkSave', [structureId, entities])
     }
 
-    public update<T>(structureId: string, entity: T): Promise<T>{
-        return this.serviceProxy.invoke('update', [structureId, entity])
-    }
-
     public bulkUpdate<T>(structureId: string, entities: T[]): Promise<void>{
         return this.serviceProxy.invoke('bulkUpdate', [structureId, entities])
-    }
-
-    public findById<T>(structureId: string, id: string): Promise<T> {
-        return this.serviceProxy.invoke('findById', [structureId, id])
-    }
-
-    public findByIds<T>(structureId: string, ids: string[]): Promise<T[]> {
-        return this.serviceProxy.invoke('findByIds', [structureId, ids])
     }
 
     public count(structureId: string): Promise<number> {
@@ -181,20 +194,40 @@ export class EntitiesService implements IEntitiesService {
 
     public async findAll<T>(structureId: string, pageable: Pageable): Promise<IterablePage<T>> {
         const page: Page<T> = await this.findAllSinglePage(structureId, pageable)
-        return new FindAllIterablePage(pageable, page, structureId)
+        return new FindAllIterablePage(this, pageable, page, structureId)
     }
 
-    public async findAllSinglePage<T>(structureId: string, pageable: Pageable): Promise<IterablePage<T>> {
+    public async findAllSinglePage<T>(structureId: string, pageable: Pageable): Promise<Page<T>> {
         return this.serviceProxy.invoke('findAll', [structureId, pageable])
+    }
+
+    public findById<T>(structureId: string, id: string): Promise<T> {
+        return this.serviceProxy.invoke('findById', [structureId, id])
+    }
+
+    public findByIds<T>(structureId: string, ids: string[]): Promise<T[]> {
+        return this.serviceProxy.invoke('findByIds', [structureId, ids])
+    }
+
+    public namedQuery<T>(structureId: string, queryName: string, parameters: QueryParameter[]): Promise<T> {
+        return this.serviceProxy.invoke('namedQuery', [structureId, queryName, parameters])
+    }
+
+    public save<T>(structureId: string, entity: T): Promise<T> {
+        return this.serviceProxy.invoke('save', [structureId, entity])
     }
 
     public async search<T>(structureId: string, searchText: string, pageable: Pageable): Promise<IterablePage<T>> {
         const page: Page<T> = await this.searchSinglePage(structureId, searchText, pageable)
-        return new SearchIterablePage(pageable, page, searchText, structureId)
+        return new SearchIterablePage(this, pageable, page, searchText, structureId)
     }
 
     public async searchSinglePage<T>(structureId: string, searchText: string, pageable: Pageable): Promise<Page<T>> {
         return this.serviceProxy.invoke('search', [structureId, searchText, pageable])
+    }
+
+    public update<T>(structureId: string, entity: T): Promise<T>{
+        return this.serviceProxy.invoke('update', [structureId, entity])
     }
 }
 

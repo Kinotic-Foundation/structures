@@ -27,11 +27,11 @@ import org.springframework.stereotype.Component;
 @Component
 public class DefaultStructureConversionService implements StructureConversionService {
 
-    private final StructuresProperties structuresProperties;
-    private final IdlConverterFactory idlConverterFactory;
     private final ElasticConverterStrategy elasticConverterStrategy;
     private final GqlConverterStrategy gqlConverterStrategy;
+    private final IdlConverterFactory idlConverterFactory;
     private final OpenApiConverterStrategy openApiConverterStrategy;
+    private final StructuresProperties structuresProperties;
 
     public DefaultStructureConversionService(StructuresProperties structuresProperties,
                                              IdlConverterFactory idlConverterFactory,
@@ -62,7 +62,7 @@ public class DefaultStructureConversionService implements StructureConversionSer
             throw new IllegalStateException("EntityDefinition must be an object");
         }
 
-        return new ElasticConversionResult(ret, state.getDecoratedProperties(), state.getMultiTenancyType());
+        return new ElasticConversionResult(state.getDecoratedProperties(), state.getMultiTenancyType(), ret);
     }
 
     @Override
@@ -76,7 +76,7 @@ public class DefaultStructureConversionService implements StructureConversionSer
 
         GqlTypeHolder typeHolder = converter.convert(structure.getEntityDefinition());
 
-        return new GqlConversionResult(typeHolder, state.getUnionTypes(), state.getReferencedTypes());
+        return new GqlConversionResult(state.getReferencedTypes(), typeHolder, state.getUnionTypes());
     }
 
     @Override
