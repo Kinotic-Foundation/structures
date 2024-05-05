@@ -146,7 +146,6 @@ public class DefaultEntityService implements EntityService {
                                                List<QueryParameter> parameters,
                                                Class<?> type,
                                                EntityContext context) {
-
         return queryExecutorFactory.createQueryExecutor(queryName, structure)
                                    .thenCompose(executor -> executor.execute(parameters, type, context));
     }
