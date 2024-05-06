@@ -103,12 +103,12 @@ public interface EntityService {
      * Executes a named query.
      *
      * @param queryName  the name of {@link FunctionDefinition} that defines the query
-     * @param parameters the parameters to pass to the query
+     * @param queryParameters the parameters to pass to the query
      * @param type       the type of the entity, the returned type will always be a {@link Page} or {@link List} this is the type of the elements
      * @param context    the context for this operation
      * @return {@link CompletableFuture} with the result of the query
      */
-    <T> CompletableFuture<T> namedQuery(String queryName, List<QueryParameter> parameters, Class<?> type, EntityContext context);
+    <T> CompletableFuture<T> namedQuery(String queryName, List<QueryParameter> queryParameters, Class<?> type, EntityContext context);
 
     /**
      * Saves a given entity. This will override all data if there is an existing entity with the same id.

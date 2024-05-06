@@ -18,6 +18,8 @@
 package org.kinotic.structures.entity;
 
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.kinotic.continuum.idl.api.schema.*;
 import org.kinotic.structures.api.decorators.QueryDecorator;
 import org.kinotic.structures.api.domain.*;
@@ -26,6 +28,9 @@ import org.kinotic.structures.api.services.NamedQueriesService;
 import org.kinotic.structures.internal.sample.DummyParticipant;
 import org.kinotic.structures.support.StructureAndPersonHolder;
 import org.kinotic.structures.support.TestHelper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
@@ -33,15 +38,15 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
 
-//@ExtendWith(SpringExtension.class)
-//@SpringBootTest
+@ExtendWith(SpringExtension.class)
+@SpringBootTest
 public class NamedQueryTests {
 
-   // @Autowired
+    @Autowired
     private NamedQueriesService namedQueriesService;
-   // @Autowired
+    @Autowired
     private EntitiesService entitiesService;
-    //@Autowired
+    @Autowired
     private TestHelper testHelper;
 
 
@@ -76,7 +81,7 @@ public class NamedQueryTests {
         return ret;
     }
 
-    //@Test
+    @Test
     public void testNamedQuery() {
 
         EntityContext context1 = new DefaultEntityContext(new DummyParticipant("tenant1", "user1"));
@@ -121,14 +126,14 @@ public class NamedQueryTests {
                                                     .addProperty("lastName", new StringC3Type());
 
         QueryDecorator queryDecorator = new QueryDecorator()
-                .setStatements("SELECT COUNT(*) as count, lastName FROM \""+structure.getItemIndex()+"\" GROUP BY lastName");
-        FunctionDefinition findAllPeopleDefinition = new FunctionDefinition().setName("countPeopleByLastName");
-        findAllPeopleDefinition.setDecorators(List.of(queryDecorator));
-        findAllPeopleDefinition.setReturnType(new ArrayC3Type().setContains(resultType));
+                .setStatements("SELECT COUNT(firstName) as count, lastName FROM \""+structure.getItemIndex()+"\" GROUP BY lastName");
+        FunctionDefinition countPeopleDefinition = new FunctionDefinition().setName("countPeopleByLastName");
+        countPeopleDefinition.setDecorators(List.of(queryDecorator));
+        countPeopleDefinition.setReturnType(new ArrayC3Type().setContains(resultType));
 
         return new NamedQueriesDefinition().setNamespace(structure.getNamespace())
                                            .setStructure(structure.getName())
                                            .setId((structure.getNamespace() + "." + structure.getName()).toLowerCase())
-                                           .setNamedQueries(List.of(findAllPeopleDefinition));
+                                           .setNamedQueries(List.of(countPeopleDefinition));
     }
 }

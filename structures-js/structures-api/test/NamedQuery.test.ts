@@ -1,23 +1,16 @@
-// @ts-nocheck
-import {FunctionDefinition} from '@kinotic/continuum-idl'
+import {FunctionDefinition, LongC3Type, ObjectC3Type, StringC3Type} from '@kinotic/continuum-idl'
 import {describe, it, expect, beforeAll, afterAll, beforeEach, afterEach} from 'vitest'
 import { WebSocket } from 'ws'
-import {getNamedQueriesService} from '../src/api/Structures.js'
 import {
     createPersonStructureIfNotExist,
-    findAndVerifyPeopleWithCursorPaging,
     createTestPeopleAndVerify,
-    createTestPerson,
-    deleteStructure,
     generateRandomString,
     initStructuresServer,
     shutdownStructuresServer,
-    logFailure, findAndVerifyPeopleWithOffsetPaging
 } from './TestHelpers.js'
 import {Person} from './domain/Person.js'
-import {Page, Pageable, Order, Direction} from '@kinotic/continuum-client'
+import {Page, Pageable} from '@kinotic/continuum-client'
 import {IEntityService, Structures, Structure, QueryDecorator, NamedQueriesDefinition} from '../src'
-import delay from 'delay'
 
 Object.assign(global, { WebSocket})
 
@@ -48,7 +41,7 @@ describe('NamedQueryTest', () => {
     })
 
 
-    it<LocalTestContext>('Test Bulk CRUD',
+    it<LocalTestContext>('Aggregate Test',
         async ({entityService}) => {
             // Create people
             await createTestPeopleAndVerify(entityService, 100, 2000)
@@ -60,18 +53,32 @@ describe('NamedQueryTest', () => {
             expect(page.content.length).toBe(10)
 
             const structureId = entityService.structureId
-            const query = new QueryDecorator(`SELECT * FROM "struct_${structureId}" where firstName = :name`)
-            const namedQuery = new FunctionDefinition('selectAllPeople', [query])
+
+            const returnType = new ObjectC3Type('CountByLastName',
+                                                entityService.structureNamespace)
+                .addProperty("count", new LongC3Type())
+                .addProperty("lastName", new StringC3Type())
+            const query = new QueryDecorator(`SELECT COUNT(firstName) as count FROM "struct_${structureId}"`)
+            const namedQuery = new FunctionDefinition('countAllPeople', [query])
+           // namedQuery.addParameter('pageable', new ObjectC3Type('Pageable', 'org.kinotic'))
+            namedQuery.returnType = returnType
+
             const namedQueriesDefinition = new NamedQueriesDefinition(structureId,
                                                                       entityService.structureNamespace,
                                                                       entityService.structureName,
                                                                       [namedQuery])
+
+
             const namedQueriesService = Structures.getNamedQueriesService()
             await namedQueriesService.save(namedQueriesDefinition)
 
-            const allPeople = await entityService.namedQuery('selectAllPeople', [])
-
+            const pageable = Pageable.createWithCursor(null, 10)
+            const parameters = [
+                //{key: 'pageable' , value:pageable}
+            ]
+            const allPeople = await entityService.namedQuery('countAllPeople', parameters)
+            console.log(allPeople)
         }
-    )
+    , 300000)
 
 })

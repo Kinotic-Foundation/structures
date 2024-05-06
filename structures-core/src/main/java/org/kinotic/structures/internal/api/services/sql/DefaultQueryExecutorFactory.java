@@ -1,5 +1,6 @@
 package org.kinotic.structures.internal.api.services.sql;
 
+import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.NotImplementedException;
@@ -26,7 +27,7 @@ public class DefaultQueryExecutorFactory implements QueryExecutorFactory {
     private final ElasticVertxClient elasticVertxClient;
     private final NamedQueriesService namedQueriesService;
     private final ObjectMapper objectMapper;
-
+    private final ElasticsearchAsyncClient esAsyncClient;
 
     @Override
     public CompletableFuture<QueryExecutor> createQueryExecutor(String queryName, Structure structure){
@@ -72,12 +73,28 @@ public class DefaultQueryExecutorFactory implements QueryExecutorFactory {
 
             // Add dummy values for arguments since this is required by elastic
             List<String> arguments = null;
-            if(namedQuery.getArguments() != null){
-                arguments = new ArrayList<>(namedQuery.getArguments().size());
-                for(int i = 0; i < namedQuery.getArguments().size(); i++){
+            if(namedQuery.getParameters() != null){
+                arguments = new ArrayList<>(namedQuery.getParameters().size());
+                for(int i = 0; i < namedQuery.getParameters().size(); i++){
                     arguments.add("test");
                 }
             }
+
+            // leaving here until finished testng since this helps with debugging
+//            return esAsyncClient.sql().translate(builder -> {
+//                builder.query(statement);
+//                return builder;
+//            }).thenApply(translateResponse -> {
+//                if(translateResponse.aggregations() != null
+//                        && !translateResponse.aggregations().isEmpty()){
+//                    return new AggregateQueryExecutor(structure,
+//                                                      elasticVertxClient,
+//                                                      objectMapper,
+//                                                      statement);
+//                }else{
+//                    throw (new NotImplementedException("Select without aggregate not supported yet"));
+//                }
+//            });
 
             return elasticVertxClient.translateSql(statement, arguments)
                                      .thenApply(translateResponse -> {
@@ -85,6 +102,7 @@ public class DefaultQueryExecutorFactory implements QueryExecutorFactory {
                                                  && !translateResponse.aggregations().isEmpty()){
                                              return new AggregateQueryExecutor(structure,
                                                                                elasticVertxClient,
+                                                                               namedQuery,
                                                                                objectMapper,
                                                                                statement);
                                          }else{

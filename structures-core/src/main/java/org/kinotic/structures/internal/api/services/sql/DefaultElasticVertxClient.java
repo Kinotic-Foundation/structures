@@ -1,6 +1,8 @@
 package org.kinotic.structures.internal.api.services.sql;
 
 import co.elastic.clients.elasticsearch.sql.TranslateResponse;
+import co.elastic.clients.json.JsonpMapper;
+import co.elastic.clients.json.SimpleJsonpMapper;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
@@ -10,11 +12,14 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.apache.commons.lang3.Validate;
+import org.kinotic.continuum.core.api.crud.CursorPageable;
+import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.internal.config.ElasticConnectionInfo;
 import org.springframework.stereotype.Component;
 
 import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -59,25 +64,31 @@ public class DefaultElasticVertxClient implements ElasticVertxClient {
 
     @Override
     public CompletableFuture<TranslateResponse> translateSql(String statement,
-                                                             List<?> params){
+                                                             List<?> parameters){
         VertxCompletableFuture<TranslateResponse> responseFuture = new VertxCompletableFuture<>(vertx);
         JsonObject json = new JsonObject().put("query", statement);
-        if(params != null) {
+        if(parameters != null) {
             JsonArray paramsJson = new JsonArray();
-            for(Object param : params){
+            for(Object param : parameters){
                 paramsJson.add(param);
             }
             json.put("params", paramsJson);
         }
         sqlTranslateRequest.sendJsonObject(json, ar -> {
             if(ar.succeeded()){
-                TranslateResponse translateResponse = TranslateResponse.of(builder -> {
-                    builder.withJson(new ByteArrayInputStream(ar.result()
-                                                                .body()
-                                                                .getBytes()));
-                    return builder;
-                });
-                responseFuture.complete(translateResponse);
+                try {
+                    TranslateResponse translateResponse = TranslateResponse.of(builder -> {
+                        InputStream input = new ByteArrayInputStream(ar.result()
+                                                                    .body()
+                                                                    .getBytes());
+                        JsonpMapper mapper = SimpleJsonpMapper.INSTANCE; // We don't want to fail on unknown fields
+                        builder.withJson(mapper.jsonProvider().createParser(input), mapper);
+                        return builder;
+                    });
+                    responseFuture.complete(translateResponse);
+                } catch (Exception e) {
+                    responseFuture.completeExceptionally(e);
+                }
             }else{
                 responseFuture.completeExceptionally(ar.cause());
             }
@@ -87,22 +98,41 @@ public class DefaultElasticVertxClient implements ElasticVertxClient {
 
     @Override
     public CompletableFuture<Buffer> querySql(String statement,
-                                              List<?> params,
-                                              JsonObject filter){
-        VertxCompletableFuture<Buffer> responseFuture = new VertxCompletableFuture<>(vertx);
-        JsonObject json = new JsonObject()
-                .put("query", statement)
-                .put("page_timeout", "2m");
-        if(params != null) {
-            JsonArray paramsJson = new JsonArray();
-            for(Object param : params){
-                paramsJson.add(param);
+                                              List<?> parameters,
+                                              JsonObject filter,
+                                              Pageable pageable){
+        JsonObject json = new JsonObject();
+        boolean foundCursor = false;
+        if(pageable != null){
+            if(pageable instanceof CursorPageable){
+                CursorPageable cursorPageable = (CursorPageable) pageable;
+                if(cursorPageable.getCursor() != null) {
+                    foundCursor = true;
+                    json.put("cursor", cursorPageable.getCursor());
+                }
+                json.put("fetch_size", pageable.getPageSize());
+            }else{
+                throw new IllegalArgumentException("Only CursorPageable is supported for queries containing Aggregations.");
             }
-            json.put("params", paramsJson);
         }
-        if(filter != null){
-            json.put("filter", filter);
+
+        // Only add the query if we are not using a cursor
+        if(!foundCursor){
+            json.put("query", statement)
+                .put("page_timeout", "2m");
+            if(parameters != null) {
+                JsonArray paramsJson = new JsonArray();
+                for(Object param : parameters){
+                    paramsJson.add(param);
+                }
+                json.put("params", paramsJson);
+            }
+            if(filter != null){
+                json.put("filter", filter);
+            }
         }
+
+        VertxCompletableFuture<Buffer> responseFuture = new VertxCompletableFuture<>(vertx);
         sqlQueryRequest.sendJsonObject(json, ar -> {
             if(ar.succeeded()){
                 responseFuture.complete(ar.result().body());

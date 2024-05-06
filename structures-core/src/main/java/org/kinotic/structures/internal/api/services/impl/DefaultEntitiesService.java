@@ -108,11 +108,11 @@ public class DefaultEntitiesService implements EntitiesService {
     @Override
     public <T> CompletableFuture<T> namedQuery(String structureId,
                                                      String queryName,
-                                                     List<QueryParameter> parameters,
+                                                     List<QueryParameter> queryParameters,
                                                      Class<?> type,
                                                      EntityContext context) {
         return cache.get(structureId)
-                    .thenCompose(entityService -> entityService.namedQuery(queryName, parameters, type, context));
+                    .thenCompose(entityService -> entityService.namedQuery(queryName, queryParameters, type, context));
     }
 
     @Override

@@ -6,12 +6,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import org.apache.commons.lang3.tuple.Pair;
+import org.kinotic.continuum.core.api.crud.Pageable;
+import org.kinotic.continuum.idl.api.schema.FunctionDefinition;
 import org.kinotic.structures.api.decorators.MultiTenancyType;
 import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.QueryParameter;
 import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.internal.api.services.sql.ElasticVertxClient;
+import org.kinotic.structures.internal.utils.NamedQueryUtils;
 
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
@@ -19,7 +23,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 /**
  * Created by Navíd Mitchell 🤪 on 4/28/24.
@@ -29,28 +32,24 @@ public class AggregateQueryExecutor extends AbstractQueryExecutor {
     private final ElasticVertxClient elasticVertxClient;
     private final ObjectMapper objectMapper;
     private final String statement;
+    private final Integer pageableIndex;
 
     public AggregateQueryExecutor(Structure structure,
                                   ElasticVertxClient elasticVertxClient,
+                                  FunctionDefinition functionDefinition,
                                   ObjectMapper objectMapper,
                                   String statement) {
         super(structure);
         this.elasticVertxClient = elasticVertxClient;
         this.objectMapper = objectMapper;
         this.statement = statement;
+        pageableIndex = NamedQueryUtils.getPageableIndex(functionDefinition);
     }
 
     @Override
-    public <T> CompletableFuture<T> execute(List<QueryParameter> parameters,
+    public <T> CompletableFuture<T> execute(List<QueryParameter> queryParameters,
                                             Class<?> type,
                                             EntityContext context) {
-        List<Object> paramsToUse = new ArrayList<>();
-        if(parameters != null){
-            paramsToUse = parameters.stream()
-                                    .map(QueryParameter::getValue)
-                                    .collect(Collectors.toList());
-        }
-
         JsonObject filter = null;
         // add multi tenancy filters if needed
         if(structure.getMultiTenancyType() == MultiTenancyType.SHARED) {
@@ -81,7 +80,20 @@ public class AggregateQueryExecutor extends AbstractQueryExecutor {
                                     .put("_routing", new JsonArray().add(tenantId))))
                     ));
         }
-        return elasticVertxClient.querySql(statement, paramsToUse, filter)
+
+        Pageable pageable = null;
+        List<Object> paramsToUse;
+        if(pageableIndex != null){
+            Pair<Pageable, List<Object>> pair = NamedQueryUtils.extractArgumentsList(queryParameters,
+                                                                                     pageableIndex,
+                                                                                     objectMapper);
+            pageable = pair.getLeft();
+            paramsToUse = pair.getRight();
+        }else{
+            paramsToUse = NamedQueryUtils.extractArgumentsList(queryParameters);
+        }
+
+        return elasticVertxClient.querySql(statement, paramsToUse, filter, pageable)
                 .thenApply(buffer -> {
                     if(RawJson.class.isAssignableFrom(type)){
                         try {

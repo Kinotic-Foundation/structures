@@ -117,14 +117,14 @@ public interface EntitiesService {
      *
      * @param structureId the id of the structure that this named query is defined for
      * @param queryName   the name of {@link FunctionDefinition} that defines the query
-     * @param parameters  the parameters to pass to the query
+     * @param queryParameters  the parameters to pass to the query
      * @param type        the type of the entity, the returned type will always be a {@link Page} or {@link List} this is the type of the elements
      * @param context     the context for this operation
      * @return {@link CompletableFuture} with the result of the query
      */
     <T> CompletableFuture<T> namedQuery(String structureId,
                                         String queryName,
-                                        List<QueryParameter> parameters,
+                                        List<QueryParameter> queryParameters,
                                         Class<?> type,
                                         EntityContext context);
 

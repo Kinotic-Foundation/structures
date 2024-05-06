@@ -20,7 +20,7 @@ public class CompositeQueryExecutor implements QueryExecutor {
     }
 
     @Override
-    public <T> CompletableFuture<T> execute(List<QueryParameter> parameters,
+    public <T> CompletableFuture<T> execute(List<QueryParameter> queryParameters,
                                             Class<?> type,
                                             EntityContext context) {
 //         CompletableFuture.allOf(queryExecutors.stream()

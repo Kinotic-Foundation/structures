@@ -26,7 +26,7 @@ dependencies {
 	implementation "org.kinotic:continuum-core:${continuumVersion}"
 	implementation "org.kinotic:continuum-core-vertx:${continuumVersion}"
 	implementation "org.kinotic:continuum-gateway:${continuumVersion}"
-	implementation "org.kinotic:continuum-idl:${continuumVersion}"
+	implementation "org.kinotic:continuum-idl:${continuumIdlVersion}"
 
 	implementation 'com.fasterxml.jackson.core:jackson-annotations'
 	implementation 'com.fasterxml.jackson.core:jackson-core'

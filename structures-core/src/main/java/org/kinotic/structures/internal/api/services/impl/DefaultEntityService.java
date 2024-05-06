@@ -143,11 +143,11 @@ public class DefaultEntityService implements EntityService {
 
     @Override
     public <T> CompletableFuture<T> namedQuery(String queryName,
-                                               List<QueryParameter> parameters,
+                                               List<QueryParameter> queryParameters,
                                                Class<?> type,
                                                EntityContext context) {
         return queryExecutorFactory.createQueryExecutor(queryName, structure)
-                                   .thenCompose(executor -> executor.execute(parameters, type, context));
+                                   .thenCompose(executor -> executor.execute(queryParameters, type, context));
     }
 
     @SuppressWarnings("unchecked")

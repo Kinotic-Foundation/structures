@@ -24,11 +24,9 @@ import java.util.concurrent.CompletableFuture;
 public class MapUpsertPreProcessor implements UpsertPreProcessor<Map<Object, Object>, List<Map<Object, Object>>> {
 
     private static final Logger log = LoggerFactory.getLogger(MapUpsertPreProcessor.class);
-
-    private final Structure structure;
     // Map of json path to decorator logic
     private final Map<String, DecoratorLogic> fieldPreProcessors;
-
+    private final Structure structure;
     private Pair<String, DecoratorLogic> idFieldPreProcessor = null;
 
     public MapUpsertPreProcessor(Structure structure,
@@ -65,6 +63,25 @@ public class MapUpsertPreProcessor implements UpsertPreProcessor<Map<Object, Obj
         }
     }
 
+    @Override
+    public CompletableFuture<List<EntityHolder>> processArray(List<Map<Object, Object>> entities,
+                                                              EntityContext context) {
+        try {
+            // ids are not allowed to be nested
+            if(idFieldPreProcessor != null && !idFieldPreProcessor.getLeft().contains(".")){
+                List<EntityHolder> entityHolders = new ArrayList<>();
+                for(Map<Object, Object> entity : entities) {
+                    entityHolders.add(processIdField(entity, context));
+                }
+                return CompletableFuture.completedFuture(entityHolders);
+            }else{
+                return CompletableFuture.failedFuture(new IllegalStateException("No id field found"));
+            }
+        } catch (Exception e) {
+            return CompletableFuture.failedFuture(e);
+        }
+    }
+
     private EntityHolder processIdField(Map<Object, Object> entity, EntityContext context) {
         String fieldName = idFieldPreProcessor.getLeft();
         Object fieldValue = entity.get(fieldName);
@@ -88,24 +105,5 @@ public class MapUpsertPreProcessor implements UpsertPreProcessor<Map<Object, Obj
                                 context.getParticipant().getTenantId(),
                                 structure.getMultiTenancyType(),
                                 entity);
-    }
-
-    @Override
-    public CompletableFuture<List<EntityHolder>> processArray(List<Map<Object, Object>> entities,
-                                                              EntityContext context) {
-        try {
-            // ids are not allowed to be nested
-            if(idFieldPreProcessor != null && !idFieldPreProcessor.getLeft().contains(".")){
-                List<EntityHolder> entityHolders = new ArrayList<>();
-                for(Map<Object, Object> entity : entities) {
-                    entityHolders.add(processIdField(entity, context));
-                }
-                return CompletableFuture.completedFuture(entityHolders);
-            }else{
-                return CompletableFuture.failedFuture(new IllegalStateException("No id field found"));
-            }
-        } catch (Exception e) {
-            return CompletableFuture.failedFuture(e);
-        }
     }
 }

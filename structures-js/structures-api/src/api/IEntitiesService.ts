@@ -104,10 +104,10 @@ export interface IEntitiesService {
      * Executes a named query.
      * @param structureId the id of the structure that this named query is defined for
      * @param queryName the name of the function that defines the query
-     * @param parameters to pass to the query
+     * @param queryParameters to pass to the query
      * @returns Promise with the result of the query
      */
-    namedQuery<T>(structureId: string, queryName: string, parameters: QueryParameter[]): Promise<T>
+    namedQuery<T>(structureId: string, queryName: string, queryParameters: QueryParameter[]): Promise<T>
 
     /**
      * Saves a given entity. Use the returned instance for further operations as the save operation might have changed the
@@ -209,8 +209,8 @@ export class EntitiesService implements IEntitiesService {
         return this.serviceProxy.invoke('findByIds', [structureId, ids])
     }
 
-    public namedQuery<T>(structureId: string, queryName: string, parameters: QueryParameter[]): Promise<T> {
-        return this.serviceProxy.invoke('namedQuery', [structureId, queryName, parameters])
+    public namedQuery<T>(structureId: string, queryName: string, queryParameters: QueryParameter[]): Promise<T> {
+        return this.serviceProxy.invoke('namedQuery', [structureId, queryName, queryParameters])
     }
 
     public save<T>(structureId: string, entity: T): Promise<T> {

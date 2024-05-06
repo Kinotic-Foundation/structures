@@ -101,10 +101,10 @@ export interface IEntityService<T> {
     /**
      * Executes a named query.
      * @param queryName the name of the function that defines the query
-     * @param parameters to pass to the query
+     * @param queryParameters to pass to the query
      * @returns Promise with the result of the query
      */
-    namedQuery<U>(queryName: string, parameters: QueryParameter[]): Promise<U>
+    namedQuery<U>(queryName: string, queryParameters: QueryParameter[]): Promise<U>
 
     /**
      * Saves a given entity. This will override all data if there is an existing entity with the same id.
@@ -198,16 +198,16 @@ export class EntityService<T> implements IEntityService<T>{
         return this.entitiesService.findByIds(this.structureId, ids)
     }
 
-    public namedQuery<U>(queryName: string, parameters: QueryParameter[]): Promise<U> {
-        return this.entitiesService.namedQuery(this.structureId, queryName, parameters)
+    public namedQuery<U>(queryName: string, queryParameters: QueryParameter[]): Promise<U> {
+        return this.entitiesService.namedQuery(this.structureId, queryName, queryParameters)
     }
 
     protected async namedQueryPage<T>(queryName: string,
-                                      parameters: QueryParameter[],
+                                      queryParameters: QueryParameter[],
                                       pageable: Pageable,
                                       pageableIndex: number): Promise<IterablePage<T>> {
-        const page: Page<T> = await this.entitiesService.namedQuery(this.structureId, queryName, parameters)
-        return new NamedQueryIterablePage(this.entitiesService, pageableIndex, pageable, page, parameters, queryName, this.structureId)
+        const page: Page<T> = await this.entitiesService.namedQuery(this.structureId, queryName, queryParameters)
+        return new NamedQueryIterablePage(this.entitiesService, pageableIndex, pageable, page, queryParameters, queryName, this.structureId)
     }
 
     public async save(entity: T): Promise<T>{
