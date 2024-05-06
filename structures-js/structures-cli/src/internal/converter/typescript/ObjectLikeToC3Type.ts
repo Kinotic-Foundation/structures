@@ -1,5 +1,5 @@
 import {Type, Symbol, DecoratableNode} from 'ts-morph'
-import {C3Decorator, C3Type, ObjectC3Type, PropertyDefinition} from '@kinotic/continuum-idl'
+import {C3Type, ObjectC3Type, PropertyDefinition} from '@kinotic/continuum-idl'
 import {ConverterConstants} from '../ConverterConstants.js'
 import {TypescriptConversionState} from './TypescriptConversionState.js'
 import {IConversionContext} from '../IConversionContext.js'

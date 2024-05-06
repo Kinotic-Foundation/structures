@@ -1,8 +1,8 @@
-import {INamedQueriesService, NamedQueriesService} from '@/api/INamedQueriesService.js'
-import {IEntitiesService, EntitiesService} from './IEntitiesService.js'
-import {IStructureService, StructureService} from './IStructureService.js'
-import {INamespaceService, NamespaceService} from '@/api/INamespaceService.js'
-import {EntityService, IEntityService} from '@/api/IEntityService.js'
+import {INamedQueriesService, NamedQueriesService} from '@/api/INamedQueriesService'
+import {IEntitiesService, EntitiesService} from '@/api/IEntitiesService'
+import {IStructureService, StructureService} from '@/api/IStructureService'
+import {INamespaceService, NamespaceService} from '@/api/INamespaceService'
+import {EntityService, IEntityService} from '@/api/IEntityService'
 
 const NAMESPACE_SERVICE: INamespaceService = new NamespaceService()
 const STRUCTURE_SERVICE: IStructureService = new StructureService()

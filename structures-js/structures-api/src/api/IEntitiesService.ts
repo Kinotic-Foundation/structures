@@ -1,4 +1,4 @@
-import {QueryParameter} from '@/api/domain/QueryParameter.js'
+import {QueryParameter} from '@/api/domain/QueryParameter'
 import {FindAllIterablePage} from '@/internal/api/domain/FindAllIterablePage'
 import {SearchIterablePage} from '@/internal/api/domain/SearchIterablePage'
 import {

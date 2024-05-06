@@ -23,7 +23,8 @@ import {
     connectAndUpgradeSession,
     convertAllEntities,
     ConversionConfiguration,
-    writeEntityJsonToFilesystem, createTsMorphProject, writeGeneratedServiceInfoToFilesystem,
+    writeEntityJsonToFilesystem,
+    writeGeneratedServiceInfoToFilesystem,
 } from '../internal/Utils.js'
 import {UtilFunctionLocator} from '../internal/UtilFunctionLocator.js'
 import chalk from 'chalk'

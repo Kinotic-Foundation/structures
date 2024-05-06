@@ -1,4 +1,4 @@
-import {QueryParameter} from '@/api/domain/QueryParameter.js'
+import {QueryParameter} from '@/api/domain/QueryParameter'
 import {IEntitiesService} from '@/api/IEntitiesService'
 import {AbstractIterablePage, Page, Pageable, IterablePage} from '@kinotic/continuum-client'
 

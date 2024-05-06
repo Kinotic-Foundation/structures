@@ -1,5 +1,5 @@
 import {Continuum, CrudServiceProxy, ICrudServiceProxy, Page, Pageable} from '@kinotic/continuum-client'
-import {Structure} from '@/api/domain/Structure.js'
+import {Structure} from '@/api/domain/Structure'
 
 
 export interface IStructureService extends ICrudServiceProxy<Structure> {

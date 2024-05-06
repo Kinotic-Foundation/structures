@@ -115,7 +115,7 @@ public interface JsonEntitiesService {
      */
     CompletableFuture<?> namedQuery(String structureId,
                                     String queryName,
-                                    QueryParameter[] queryParameters,
+                                    List<QueryParameter> queryParameters,
                                     Participant participant);
 
     /**

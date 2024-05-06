@@ -1,5 +1,5 @@
-import {QueryParameter} from '@/api/domain/QueryParameter.js'
-import {NamedQueryIterablePage} from '@/internal/api/domain/NamedQueryIterablePage.js'
+import {QueryParameter} from '@/api/domain/QueryParameter'
+import {NamedQueryIterablePage} from '@/internal/api/domain/NamedQueryIterablePage'
 import {Page, Pageable, IterablePage} from '@kinotic/continuum-client'
 import {EntitiesServiceSingleton, IEntitiesService} from '@/api/IEntitiesService'
 
@@ -202,10 +202,10 @@ export class EntityService<T> implements IEntityService<T>{
         return this.entitiesService.namedQuery(this.structureId, queryName, queryParameters)
     }
 
-    protected async namedQueryPage<T>(queryName: string,
-                                      queryParameters: QueryParameter[],
-                                      pageable: Pageable,
-                                      pageableIndex: number): Promise<IterablePage<T>> {
+    public async namedQueryPage<T>(queryName: string,
+                                   queryParameters: QueryParameter[],
+                                   pageable: Pageable,
+                                   pageableIndex: number): Promise<IterablePage<T>> {
         const page: Page<T> = await this.entitiesService.namedQuery(this.structureId, queryName, queryParameters)
         return new NamedQueryIterablePage(this.entitiesService, pageableIndex, pageable, page, queryParameters, queryName, this.structureId)
     }
