@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.endpoints;
+package org.kinotic.structures.internal.endpoints.openapi;
 
 import io.vertx.ext.web.RoutingContext;
 import org.kinotic.continuum.core.api.event.EventConstants;

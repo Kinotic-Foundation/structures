@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.graphql;
+package org.kinotic.structures.internal.endpoints.graphql;
 
 import graphql.TypeResolutionEnvironment;
 import graphql.schema.GraphQLObjectType;

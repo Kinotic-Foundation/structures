@@ -51,7 +51,6 @@ public class DefaultStructureConversionService implements StructureConversionSer
         IdlConverter<Property, ElasticConversionState> converter = idlConverterFactory.createConverter(elasticConverterStrategy);
 
         ElasticConversionState state = converter.getConversionContext().state();
-        state.setStructureBeingConverted(structure);
         state.setStructuresProperties(structuresProperties);
 
         Property esProperty = converter.convert(structure.getEntityDefinition());
@@ -71,7 +70,6 @@ public class DefaultStructureConversionService implements StructureConversionSer
                 gqlConverterStrategy);
 
         GqlConversionState state = converter.getConversionContext().state();
-        state.setStructureBeingConverted(structure);
         state.setStructuresProperties(structuresProperties);
 
         GqlTypeHolder typeHolder = converter.convert(structure.getEntityDefinition());
@@ -85,7 +83,6 @@ public class DefaultStructureConversionService implements StructureConversionSer
         IdlConverter<Schema<?>, OpenApiConversionState> converter = idlConverterFactory.createConverter(openApiConverterStrategy);
 
         OpenApiConversionState state = converter.getConversionContext().state();
-        state.setStructureBeingConverted(structure);
         state.setStructuresProperties(structuresProperties);
 
         Schema<?> schema = converter.convert(structure.getEntityDefinition());

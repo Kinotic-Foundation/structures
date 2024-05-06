@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.api.services.impl;
+package org.kinotic.structures.internal.endpoints.openapi;
 
 import io.swagger.v3.oas.models.*;
 import io.swagger.v3.oas.models.examples.Example;
@@ -11,13 +11,13 @@ import io.swagger.v3.oas.models.responses.ApiResponses;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.servers.Server;
+import lombok.RequiredArgsConstructor;
 import org.apache.commons.text.WordUtils;
 import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.StructureService;
 import org.kinotic.structures.internal.api.services.OpenApiConversionResult;
-import org.kinotic.structures.internal.api.services.OpenApiService;
 import org.kinotic.structures.internal.api.services.StructureConversionService;
 import org.kinotic.structures.internal.config.OpenApiSecurityType;
 import org.springframework.stereotype.Component;
@@ -30,6 +30,7 @@ import java.util.concurrent.CompletableFuture;
 /**
  * Created by Navíd Mitchell 🤪on 3/17/23.
  */
+@RequiredArgsConstructor
 @Component
 public class DefaultOpenApiService implements OpenApiService {
 
@@ -37,13 +38,6 @@ public class DefaultOpenApiService implements OpenApiService {
     private final StructureService structureService;
     private final StructuresProperties structuresProperties;
 
-    public DefaultOpenApiService(StructureService structureService,
-                                 StructureConversionService structureConversionService,
-                                 StructuresProperties structuresProperties) {
-        this.structureService = structureService;
-        this.structureConversionService = structureConversionService;
-        this.structuresProperties = structuresProperties;
-    }
 
     private static ApiResponses getDefaultResponses(){
         ApiResponses responses = new ApiResponses();
@@ -55,7 +49,84 @@ public class DefaultOpenApiService implements OpenApiService {
         return responses;
     }
 
-    public void addPathItemsForStructure(Paths paths, String basePath, Structure structure){
+    @Override
+    public CompletableFuture<OpenAPI> getOpenApiSpec(String namespace) {
+        return structureService
+                .findAllPublishedForNamespace(namespace, Pageable.ofSize(100))
+                .thenComposeAsync(structures -> {
+                    OpenAPI openAPI = new OpenAPI(SpecVersion.V30);
+
+                    Info info = new Info()
+                            .title(namespace + " Structures API")
+                            .version("1.0")
+                            .description("Provides access to Structures Items for the " + namespace + " namespace");
+                    openAPI.setInfo(info);
+
+                    if(structuresProperties.getOpenApiServerUrl() != null){
+                        openAPI.addServersItem(new Server().url(structuresProperties.getOpenApiServerUrl()));
+                    }
+
+                    Components components = new Components();
+
+                    // security scheme
+                    if(structuresProperties.getOpenApiSecurityType() == OpenApiSecurityType.BASIC){
+                        SecurityScheme securityScheme = new SecurityScheme();
+                        securityScheme.setType(SecurityScheme.Type.HTTP);
+                        securityScheme.setScheme("basic");
+                        components.addSecuritySchemes("BasicAuth", securityScheme);
+                        openAPI.setSecurity(List.of(new SecurityRequirement().addList("BasicAuth")));
+                    } else if (structuresProperties.getOpenApiSecurityType() == OpenApiSecurityType.BEARER) {
+                        SecurityScheme securityScheme = new SecurityScheme();
+                        securityScheme.setType(SecurityScheme.Type.HTTP);
+                        securityScheme.setScheme("bearer");
+                        components.addSecuritySchemes("BearerAuth", securityScheme);
+                        openAPI.setSecurity(List.of(new SecurityRequirement().addList("BearerAuth")));
+                    }
+
+                    Paths paths = new Paths();
+                    String basePath = structuresProperties.getOpenApiPath();
+
+                    for(Structure structure : structures.getContent()){
+                        // Add path items for the structure
+                        addPathItemsForStructure(paths, basePath, structure);
+
+                        OpenApiConversionResult result = structureConversionService.convertToOpenApiMapping(structure);
+
+                        components.addSchemas(structure.getName(), result.getObjectSchema());
+
+                        for(Map.Entry<String, Schema<?>> entry : result.getReferenceSchemas().entrySet()){
+                            components.addSchemas(entry.getKey(), entry.getValue());
+                        }
+                    }
+
+                    ObjectSchema countSchema = new ObjectSchema();
+                    countSchema.addProperty("count", new IntegerSchema());
+                    components.addSchemas("CountResponse", countSchema);
+
+                    openAPI.setPaths(paths);
+                    openAPI.components(components);
+                    return CompletableFuture.completedFuture(openAPI);
+                });
+    }
+
+    private void addPagingAndSortingParameters(Operation operation){
+        operation.addParametersItem(new Parameter().name("page")
+                                                   .in("query")
+                                                   .required(false)
+                                                   .schema(new IntegerSchema()._default(0))
+                                                   .description("The page number to get. The first page is 0. The default is 0."));
+
+        operation.addParametersItem(new Parameter().name("size")
+                                                   .in("query")
+                                                   .required(false)
+                                                   .schema(new IntegerSchema()._default(25)
+                                                                              .maximum(BigDecimal.valueOf(100)))
+                                                   .description("The number of items per page. The default is 25."));
+
+        addSortingParameters(operation);
+    }
+
+    private void addPathItemsForStructure(Paths paths, String basePath, Structure structure){
 
         String lowercaseNamespace = structure.getNamespace().toLowerCase();
         String lowercaseName = structure.getName().toLowerCase();
@@ -265,85 +336,8 @@ public class DefaultOpenApiService implements OpenApiService {
 
         searchPathItem.post(searchOperation);
 
-        // add the path item to the paths
+        // add the path item for search to the paths
         paths.put(basePath + lowercaseNamespace + "/" + lowercaseName + "/search", searchPathItem);
-    }
-
-    @Override
-    public CompletableFuture<OpenAPI> getOpenApiSpec(String namespace) {
-        return structureService
-                .findAllPublishedForNamespace(namespace, Pageable.ofSize(100))
-                .thenComposeAsync(structures -> {
-                    OpenAPI openAPI = new OpenAPI(SpecVersion.V30);
-
-                    Info info = new Info()
-                            .title(namespace + " Structures API")
-                            .version("1.0")
-                            .description("Provides access to Structures Items for the " + namespace + " namespace");
-                    openAPI.setInfo(info);
-
-                    if(structuresProperties.getOpenApiServerUrl() != null){
-                        openAPI.addServersItem(new Server().url(structuresProperties.getOpenApiServerUrl()));
-                    }
-
-                    Components components = new Components();
-
-                    // security scheme
-                    if(structuresProperties.getOpenApiSecurityType() == OpenApiSecurityType.BASIC){
-                        SecurityScheme securityScheme = new SecurityScheme();
-                        securityScheme.setType(SecurityScheme.Type.HTTP);
-                        securityScheme.setScheme("basic");
-                        components.addSecuritySchemes("BasicAuth", securityScheme);
-                        openAPI.setSecurity(List.of(new SecurityRequirement().addList("BasicAuth")));
-                    } else if (structuresProperties.getOpenApiSecurityType() == OpenApiSecurityType.BEARER) {
-                        SecurityScheme securityScheme = new SecurityScheme();
-                        securityScheme.setType(SecurityScheme.Type.HTTP);
-                        securityScheme.setScheme("bearer");
-                        components.addSecuritySchemes("BearerAuth", securityScheme);
-                        openAPI.setSecurity(List.of(new SecurityRequirement().addList("BearerAuth")));
-                    }
-
-                    Paths paths = new Paths();
-                    String basePath = structuresProperties.getOpenApiPath();
-
-                    for(Structure structure : structures.getContent()){
-                        // Add path items for the structure
-                        addPathItemsForStructure(paths, basePath, structure);
-
-                        OpenApiConversionResult result = structureConversionService.convertToOpenApiMapping(structure);
-
-                        components.addSchemas(structure.getName(), result.getObjectSchema());
-
-                        for(Map.Entry<String, Schema<?>> entry : result.getReferenceSchemas().entrySet()){
-                            components.addSchemas(entry.getKey(), entry.getValue());
-                        }
-                    }
-
-                    ObjectSchema countSchema = new ObjectSchema();
-                    countSchema.addProperty("count", new IntegerSchema());
-                    components.addSchemas("CountResponse", countSchema);
-
-                    openAPI.setPaths(paths);
-                    openAPI.components(components);
-                    return CompletableFuture.completedFuture(openAPI);
-                });
-    }
-
-    private void addPagingAndSortingParameters(Operation operation){
-        operation.addParametersItem(new Parameter().name("page")
-                                                   .in("query")
-                                                   .required(false)
-                                                   .schema(new IntegerSchema()._default(0))
-                                                   .description("The page number to get. The first page is 0. The default is 0."));
-
-        operation.addParametersItem(new Parameter().name("size")
-                                                   .in("query")
-                                                   .required(false)
-                                                   .schema(new IntegerSchema()._default(25)
-                                                                              .maximum(BigDecimal.valueOf(100)))
-                                                   .description("The number of items per page. The default is 25."));
-
-        addSortingParameters(operation);
     }
 
     private void addSortingParameters(Operation operation){
@@ -382,19 +376,20 @@ public class DefaultOpenApiService implements OpenApiService {
         ApiResponse response = new ApiResponse().description(operationSummary + " OK");
         Content content = new Content();
         MediaType mediaType = new MediaType();
-        if(responseType == 0){
+
+        if(responseType == 0){ // Count Response
 
             mediaType.setSchema(new Schema<>().$ref(Components.COMPONENTS_SCHEMAS_REF + "CountResponse"));
             content.addMediaType("application/json", mediaType);
             response.setContent(content);
 
-        }else if(responseType == 1){
+        }else if(responseType == 1){ // Structure Response
 
             mediaType.setSchema(new Schema<>().$ref(Components.COMPONENTS_SCHEMAS_REF + structure.getName()));
             content.addMediaType("application/json", mediaType);
             response.setContent(content);
 
-        }else if(responseType == 2){
+        }else if(responseType == 2){ // Page Response
 
             ObjectSchema pageSchema = new ObjectSchema();
 
@@ -408,7 +403,7 @@ public class DefaultOpenApiService implements OpenApiService {
             content.addMediaType("application/json", mediaType);
             response.setContent(content);
 
-        }else if(responseType == 3){
+        }else if(responseType == 3){ // Array Response
 
             mediaType.setSchema(new ArraySchema()
                     .items(new Schema<>().$ref(Components.COMPONENTS_SCHEMAS_REF + structure.getName())));

@@ -53,12 +53,13 @@ public class VertxWebUtil {
         return ctx -> {
             Throwable failure = ctx.failure();
             if(failure != null){
-                writeException(ctx.response(), failure);
+                writeException(ctx, failure);
             }
         };
     }
 
-    public static void writeException(HttpServerResponse response, Throwable throwable){
+    public static void writeException(RoutingContext context, Throwable throwable){
+        HttpServerResponse response = context.response();
         if(throwable instanceof IllegalArgumentException) {
             response.setStatusCode(400);
         }else if(throwable instanceof NullPointerException){

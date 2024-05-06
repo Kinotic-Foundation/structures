@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.graphql;
+package org.kinotic.structures.internal.endpoints.graphql;
 
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Caffeine;

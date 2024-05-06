@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.graphql;
+package org.kinotic.structures.internal.endpoints.graphql;
 
 /**
  * Created by Navíd Mitchell 🤪 on 12/14/23.

@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.graphql;
+package org.kinotic.structures.internal.endpoints.graphql;
 
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.RoutingContext;

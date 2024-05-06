@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.graphql;
+package org.kinotic.structures.internal.endpoints.graphql;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -15,7 +15,6 @@ import lombok.RequiredArgsConstructor;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.kinotic.continuum.api.security.Participant;
 import org.kinotic.continuum.core.api.event.EventConstants;
-import org.kinotic.structures.internal.endpoints.GqlVerticle;
 import org.kinotic.structures.internal.utils.StructuresUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -1,38 +1,37 @@
-package org.kinotic.structures.internal.endpoints;
+package org.kinotic.structures.internal.endpoints.openapi;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.RoutingContext;
 import lombok.RequiredArgsConstructor;
-import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.internal.utils.VertxWebUtil;
-import org.kinotic.continuum.core.api.crud.Page;
 
 import java.util.function.BiFunction;
 
 /**
+ * Handles any object that can be serialized directly to JSON
  * Created by Navíd Mitchell 🤪 on 6/1/23.
  */
 @RequiredArgsConstructor
-class MultiEntityHandler implements BiFunction<Page<RawJson>, Throwable, Void> {
+class ValueToJsonHandler<T> implements BiFunction<T, Throwable, Void> {
 
     private final RoutingContext context;
     private final ObjectMapper objectMapper;
 
     @Override
-    public Void apply(Page<RawJson> rawJsonPage, Throwable throwable) {
+    public Void apply(T value, Throwable throwable) {
         if (throwable == null) {
             try {
                 context.response().putHeader("Content-Type", "application/json");
                 context.response().setStatusCode(200);
-                byte[] data = objectMapper.writeValueAsBytes(rawJsonPage);
+                byte[] data = objectMapper.writeValueAsBytes(value);
                 context.response().end(Buffer.buffer(data));
             } catch (JsonProcessingException e) {
-                VertxWebUtil.writeException(context.response(), e);
+                VertxWebUtil.writeException(context, e);
             }
         } else {
-            VertxWebUtil.writeException(context.response(), throwable);
+            VertxWebUtil.writeException(context, throwable);
         }
         return null;
     }

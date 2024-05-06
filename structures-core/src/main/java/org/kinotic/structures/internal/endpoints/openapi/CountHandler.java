@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.endpoints;
+package org.kinotic.structures.internal.endpoints.openapi;
 
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.RoutingContext;
@@ -22,7 +22,7 @@ public class CountHandler implements BiFunction<Long, Throwable, Void> {
             context.response().setStatusCode(200);
             context.response().end(Buffer.buffer("{ \"count\": " + value.toString() + '}'));
         } else {
-            VertxWebUtil.writeException(context.response(), throwable);
+            VertxWebUtil.writeException(context, throwable);
         }
         return null;
     }

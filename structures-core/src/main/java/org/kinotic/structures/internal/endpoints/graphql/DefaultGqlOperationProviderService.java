@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.graphql;
+package org.kinotic.structures.internal.endpoints.graphql;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import graphql.ExecutionResult;

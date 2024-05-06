@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.endpoints;
+package org.kinotic.structures.internal.endpoints.openapi;
 
 import io.vertx.ext.web.RoutingContext;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +17,7 @@ class NoValueHandler implements BiFunction<Void, Throwable, Void>{
     @Override
     public Void apply(Void aVoid, Throwable throwable) {
         if(throwable != null){
-            VertxWebUtil.writeException(context.response(), throwable);
+            VertxWebUtil.writeException(context, throwable);
         }else {
             context.response().setStatusCode(200);
             context.response().end();

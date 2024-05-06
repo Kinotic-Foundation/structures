@@ -8,7 +8,6 @@ import lombok.experimental.Accessors;
 import org.kinotic.continuum.idl.api.schema.C3Type;
 import org.kinotic.continuum.idl.api.schema.PropertyDefinition;
 import org.kinotic.structures.api.config.StructuresProperties;
-import org.kinotic.structures.api.domain.Structure;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -23,8 +22,6 @@ import java.util.List;
 @Accessors(chain = true)
 @NoArgsConstructor
 public class BaseConversionState {
-
-    private Structure structureBeingConverted;
 
     private StructuresProperties structuresProperties;
 
