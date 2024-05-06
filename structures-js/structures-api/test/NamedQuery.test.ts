@@ -60,7 +60,7 @@ describe('NamedQueryTest', () => {
                 .addProperty("lastName", new StringC3Type())
             const query = new QueryDecorator(`SELECT COUNT(firstName) as count FROM "struct_${structureId}"`)
             const namedQuery = new FunctionDefinition('countAllPeople', [query])
-           // namedQuery.addParameter('pageable', new ObjectC3Type('Pageable', 'org.kinotic'))
+            namedQuery.addParameter('pageable', new ObjectC3Type('Pageable', 'org.kinotic'))
             namedQuery.returnType = returnType
 
             const namedQueriesDefinition = new NamedQueriesDefinition(structureId,
@@ -74,7 +74,7 @@ describe('NamedQueryTest', () => {
 
             const pageable = Pageable.createWithCursor(null, 10)
             const parameters = [
-                //{key: 'pageable' , value:pageable}
+                {key: 'pageable' , value:pageable}
             ]
             const allPeople = await entityService.namedQuery('countAllPeople', parameters)
             console.log(allPeople)

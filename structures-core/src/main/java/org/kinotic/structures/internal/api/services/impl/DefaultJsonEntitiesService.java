@@ -74,11 +74,11 @@ public class DefaultJsonEntitiesService implements JsonEntitiesService {
     @Override
     public CompletableFuture<?> namedQuery(String structureId,
                                            String queryName,
-                                           List<QueryParameter> queryParameters,
+                                           QueryParameter[] queryParameters,
                                            Participant participant) {
         return defaultEntitiesService.namedQuery(structureId,
                                                  queryName,
-                                                 queryParameters,
+                                                 List.of(queryParameters),
                                                  RawJson.class,
                                                  new DefaultEntityContext(participant));
     }
