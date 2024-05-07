@@ -1,5 +1,4 @@
 import {QueryParameter} from '@/api/domain/QueryParameter'
-import {NamedQueryIterablePage} from '@/internal/api/domain/NamedQueryIterablePage'
 import {Page, Pageable, IterablePage} from '@kinotic/continuum-client'
 import {EntitiesServiceSingleton, IEntitiesService} from '@/api/IEntitiesService'
 
@@ -107,6 +106,15 @@ export interface IEntityService<T> {
     namedQuery<U>(queryName: string, queryParameters: QueryParameter[]): Promise<U>
 
     /**
+     * Executes a named query and returns a Page of results.
+     * @param queryName the name of the function that defines the query
+     * @param queryParameters to pass to the query
+     * @param pageable the page settings to be used
+     * @returns Promise with the result of the query
+     */
+    namedQueryPage<U>(queryName: string, queryParameters: QueryParameter[], pageable: Pageable): Promise<IterablePage<U>>
+
+    /**
      * Saves a given entity. This will override all data if there is an existing entity with the same id.
      * Use the returned instance for further operations as the save operation might have changed the entity instance.
      *
@@ -202,12 +210,8 @@ export class EntityService<T> implements IEntityService<T>{
         return this.entitiesService.namedQuery(this.structureId, queryName, queryParameters)
     }
 
-    public async namedQueryPage<T>(queryName: string,
-                                   queryParameters: QueryParameter[],
-                                   pageable: Pageable,
-                                   pageableIndex: number): Promise<IterablePage<T>> {
-        const page: Page<T> = await this.entitiesService.namedQuery(this.structureId, queryName, queryParameters)
-        return new NamedQueryIterablePage(this.entitiesService, pageableIndex, pageable, page, queryParameters, queryName, this.structureId)
+    public namedQueryPage<U>(queryName: string, queryParameters: QueryParameter[], pageable: Pageable): Promise<IterablePage<U>> {
+        return this.entitiesService.namedQueryPage(this.structureId, queryName, queryParameters, pageable)
     }
 
     public async save(entity: T): Promise<T>{

@@ -1,5 +1,5 @@
 import {QueryParameter} from '@/api/domain/QueryParameter'
-import {IEntitiesService} from '@/api/IEntitiesService'
+import {EntitiesService} from '@/api/IEntitiesService'
 import {AbstractIterablePage, Page, Pageable, IterablePage} from '@kinotic/continuum-client'
 
 /**
@@ -7,14 +7,12 @@ import {AbstractIterablePage, Page, Pageable, IterablePage} from '@kinotic/conti
  */
 export class NamedQueryIterablePage<T> extends AbstractIterablePage<T> {
 
-    private readonly pageableIndex: number
     private readonly parameters: QueryParameter[]
     private readonly queryName: string
     private readonly structureId: string
-    private readonly entitiesService: IEntitiesService
+    private readonly entitiesService: EntitiesService
 
-    constructor(entitiesService: IEntitiesService,
-                pageableIndex: number,
+    constructor(entitiesService: EntitiesService,
                 pageable: Pageable,
                 page: Page<T>,
                 parameters: QueryParameter[],
@@ -22,15 +20,13 @@ export class NamedQueryIterablePage<T> extends AbstractIterablePage<T> {
                 structureId: string) {
         super(pageable, page)
         this.entitiesService = entitiesService
-        this.pageableIndex = pageableIndex
         this.parameters = parameters
         this.queryName = queryName
         this.structureId = structureId
     }
 
     protected findNext(pageable: Pageable): Promise<Page<T>> {
-        this.parameters[this.pageableIndex].value = pageable
-        return this.entitiesService.namedQuery(this.structureId, this.queryName, this.parameters)
+        return this.entitiesService.namedQuerySinglePage(this.structureId, this.queryName, this.parameters, pageable)
     }
 
 }

@@ -21,8 +21,9 @@ public interface JsonEntitiesService {
 
     /**
      * Updates all given entities, this gives an opportunity to perform partial updates of the data structure.
+     *
      * @param structureId the id of the structure to save the entities for
-     * @param entities all the entities to save
+     * @param entities    all the entities to save
      * @param participant the participant of the logged-in user
      * @return {@link CompletableFuture} that will complete when all entities have been saved
      */
@@ -30,8 +31,9 @@ public interface JsonEntitiesService {
 
     /**
      * Saves all given entities.
+     *
      * @param structureId the id of the structure to update the entities for
-     * @param entities all the entities to save
+     * @param entities    all the entities to save
      * @param participant the participant of the logged-in user
      * @return {@link CompletableFuture} that will complete when all entities have been saved
      */
@@ -39,6 +41,7 @@ public interface JsonEntitiesService {
 
     /**
      * Returns the number of entities available.
+     *
      * @param structureId the id of the structure to count
      * @param participant the participant of the logged-in user
      * @return {@link CompletableFuture} emitting the number of entities.
@@ -47,6 +50,7 @@ public interface JsonEntitiesService {
 
     /**
      * Returns the number of entities available for the given query.
+     *
      * @param structureId the id of the structure to count. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
      * @param query       the query used to limit result
      * @param participant the participant of the logged-in user
@@ -107,16 +111,33 @@ public interface JsonEntitiesService {
     /**
      * Executes a named query.
      *
-     * @param structureId the id of the structure that this named query is defined for
-     * @param queryName   the name of {@link FunctionDefinition} that defines the query
-     * @param queryParameters  the parameters to pass to the query
-     * @param participant the participant of the logged-in user
+     * @param structureId     the id of the structure that this named query is defined for
+     * @param queryName       the name of {@link FunctionDefinition} that defines the query
+     * @param queryParameters the parameters to pass to the query
+     * @param participant     the participant of the logged-in user
      * @return {@link CompletableFuture} with the result of the query
      */
-    CompletableFuture<?> namedQuery(String structureId,
-                                    String queryName,
-                                    List<QueryParameter> queryParameters,
-                                    Participant participant);
+    CompletableFuture<List<RawJson>> namedQuery(String structureId,
+                                                String queryName,
+                                                List<QueryParameter> queryParameters,
+                                                Participant participant);
+
+
+    /**
+     * Executes a named query and returns a {@link Page} of results.
+     *
+     * @param structureId     the id of the structure that this named query is defined for
+     * @param queryName       the name of {@link FunctionDefinition} that defines the query
+     * @param queryParameters the parameters to pass to the query
+     * @param pageable        the page settings to be useds
+     * @param participant     the participant of the logged-in user
+     * @return {@link CompletableFuture} with the result of the query
+     */
+    CompletableFuture<Page<RawJson>> namedQueryPage(String structureId,
+                                                    String queryName,
+                                                    List<QueryParameter> queryParameters,
+                                                    Pageable pageable,
+                                                    Participant participant);
 
     /**
      * Saves a given entity. Use the returned instance for further operations as the save operation might have changed the
@@ -138,7 +159,7 @@ public interface JsonEntitiesService {
      * @param searchText  the text to search for entities for
      * @param pageable    the page settings to be used
      * @param participant the participant of the logged-in user
-     * @return a page of entities
+     * @return a {@link CompletableFuture} of a page of entities
      */
     CompletableFuture<Page<RawJson>> search(String structureId, String searchText, Pageable pageable, Participant participant);
 

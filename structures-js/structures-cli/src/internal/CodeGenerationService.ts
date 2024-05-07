@@ -144,7 +144,6 @@ export class CodeGenerationService {
                         // Find page parameter if any and store all parameter names for later
                         const argNames: string[] = []
                         let pageableParameterName: string | null = null
-                        let pageableIndex: number | null = null
 
                         const parameters = method.getParameters()
                         for(let i = 0; i < parameters.length; i++){
@@ -160,13 +159,12 @@ export class CodeGenerationService {
                                     this.logger.log(chalk.yellow(`It is best if Pageable is always the first parameter.`))
                                 }
                                 pageableParameterName = parameterName
-                                pageableIndex = i
                                 parameterC3Type = new PageableC3Type()
                             } else {
+                                argNames.push(parameterName)
                                 parameterC3Type = this.conversionContext.convert(parameter.getType())
                             }
 
-                            argNames.push(parameterName)
                             functionDefinition.addParameter(parameterName, parameterC3Type)
                         }
 
@@ -196,7 +194,7 @@ export class CodeGenerationService {
                             }
 
                             if(pageableParameterName){
-                                writer.writeLine(`return this.namedQueryPage('${methodName}', ${argNames.length > 0 ? 'parameters' : '[]'}, ${pageableParameterName}, ${pageableIndex})`)
+                                writer.writeLine(`return this.namedQueryPage('${methodName}', ${argNames.length > 0 ? 'parameters' : '[]'}, ${pageableParameterName})`)
                             }else{
                                 writer.writeLine(`return this.namedQuery('${methodName}', ${argNames.length > 0 ? 'parameters' : '[]'})`)
                             }

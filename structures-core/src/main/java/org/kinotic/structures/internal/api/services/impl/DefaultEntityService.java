@@ -92,7 +92,7 @@ public class DefaultEntityService implements EntityService {
         return validateTenant(context)
                 .thenCompose(unused -> crudServiceTemplate
                         .count(structure.getItemIndex(),
-                                builder -> readPreProcessor.beforeCount(structure, query, builder, context)));
+                               builder -> readPreProcessor.beforeCount(structure, query, builder, context)));
     }
 
     @Override
@@ -110,7 +110,7 @@ public class DefaultEntityService implements EntityService {
         return validateTenant(context)
                 .thenCompose(unused -> crudServiceTemplate
                         .deleteByQuery(structure.getItemIndex(),
-                                builder -> readPreProcessor.beforeDeleteByQuery(structure, query, builder, context))
+                                       builder -> readPreProcessor.beforeDeleteByQuery(structure, query, builder, context))
                         .thenApply(deleteResponse -> null));
     }
 
@@ -138,16 +138,33 @@ public class DefaultEntityService implements EntityService {
         return validateTenantAndComposeIds(ids, context)
                 .thenCompose(composedIds -> crudServiceTemplate
                         .findByIds(structure.getItemIndex(), composedIds, type,
-                                builder -> readPreProcessor.beforeFindByIds(structure, builder, context)));
+                                   builder -> readPreProcessor.beforeFindByIds(structure, builder, context)));
     }
 
     @Override
-    public <T> CompletableFuture<T> namedQuery(String queryName,
-                                               List<QueryParameter> queryParameters,
-                                               Class<?> type,
-                                               EntityContext context) {
-        return queryExecutorFactory.createQueryExecutor(queryName, structure)
-                                   .thenCompose(executor -> executor.execute(queryParameters, type, context));
+    public <T> CompletableFuture<List<T>> namedQuery(String queryName,
+                                                     List<QueryParameter> queryParameters,
+                                                     Class<T> type,
+                                                     EntityContext context) {
+        return validateTenant(context)
+                .thenCompose(unused -> queryExecutorFactory.createQueryExecutor(queryName, structure)
+                                                           .thenCompose(executor -> executor.execute(queryParameters,
+                                                                                                     type,
+                                                                                                     context)));
+    }
+
+    @Override
+    public <T> CompletableFuture<Page<T>> namedQueryPage(String queryName,
+                                                         List<QueryParameter> queryParameters,
+                                                         Pageable pageable,
+                                                         Class<T> type,
+                                                         EntityContext context) {
+        return validateTenant(context)
+                .thenCompose(unused -> queryExecutorFactory.createQueryExecutor(queryName, structure)
+                                                           .thenCompose(executor -> executor.executePage(queryParameters,
+                                                                                                         pageable,
+                                                                                                         type,
+                                                                                                         context)));
     }
 
     @SuppressWarnings("unchecked")

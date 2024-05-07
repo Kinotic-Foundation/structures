@@ -19,20 +19,18 @@ public interface EntitiesService {
     /**
      * Saves all given entities.
      * @param structureId the id of the structure to save the entities for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
-     * @param entities all the entities to save
-     * @param context the context for this operation
+     * @param entities    all the entities to save
+     * @param context     the context for this operation
      * @return {@link CompletableFuture} that will complete when all entities have been saved
-     * @param <T> the type of the entities
      */
     <T> CompletableFuture<Void> bulkSave(String structureId, T entities, EntityContext context);
 
     /**
      * Updates all given entities.
      * @param structureId the id of the structure to update the entities for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
-     * @param entities all the entities to save
-     * @param context the context for this operation
+     * @param entities    all the entities to save
+     * @param context     the context for this operation
      * @return {@link CompletableFuture} that will complete when all entities have been saved
-     * @param <T> the type of the entities
      */
     <T> CompletableFuture<Void> bulkUpdate(String structureId, T entities, EntityContext context);
 
@@ -115,18 +113,36 @@ public interface EntitiesService {
     /**
      * Executes a named query.
      *
-     * @param structureId the id of the structure that this named query is defined for
-     * @param queryName   the name of {@link FunctionDefinition} that defines the query
-     * @param queryParameters  the parameters to pass to the query
-     * @param type        the type of the entity, the returned type will always be a {@link Page} or {@link List} this is the type of the elements
-     * @param context     the context for this operation
+     * @param structureId     the id of the structure that this named query is defined for
+     * @param queryName       the name of {@link FunctionDefinition} that defines the query
+     * @param queryParameters the parameters to pass to the query
+     * @param type            the type of the entity
+     * @param context         the context for this operation
      * @return {@link CompletableFuture} with the result of the query
      */
-    <T> CompletableFuture<T> namedQuery(String structureId,
-                                        String queryName,
-                                        List<QueryParameter> queryParameters,
-                                        Class<?> type,
-                                        EntityContext context);
+    <T> CompletableFuture<List<T>> namedQuery(String structureId,
+                                              String queryName,
+                                              List<QueryParameter> queryParameters,
+                                              Class<T> type,
+                                              EntityContext context);
+
+    /**
+     * Executes a named query and returns a {@link Page} of results.
+     *
+     * @param structureId     the id of the structure that this named query is defined for
+     * @param queryName       the name of {@link FunctionDefinition} that defines the query
+     * @param queryParameters the parameters to pass to the query
+     * @param pageable        the page settings to be used
+     * @param type            the type of the entity
+     * @param context         the context for this operation
+     * @return {@link CompletableFuture} with the result of the query
+     */
+    <T> CompletableFuture<Page<T>> namedQueryPage(String structureId,
+                                                  String queryName,
+                                                  List<QueryParameter> queryParameters,
+                                                  Pageable pageable,
+                                                  Class<T> type,
+                                                  EntityContext context);
 
     /**
      * Saves a given entity. This will override all data if there is an existing entity with the same id.
@@ -145,11 +161,11 @@ public interface EntitiesService {
      * You can find more information about the search syntax <a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html#query-string-syntax">here</a>
      *
      * @param structureId the id of the structure to search. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
-     * @param searchText  the text to search for entities
+     * @param searchText  the text to search for entitiess
      * @param pageable    the page settings to be used
      * @param type        the type of the entity
      * @param context     the context for this operation
-     * @return a page of entities
+     * @return a {@link CompletableFuture} of a page of entities
      */
     <T> CompletableFuture<Page<T>> search(String structureId, String searchText, Pageable pageable, Class<T> type, EntityContext context);
 

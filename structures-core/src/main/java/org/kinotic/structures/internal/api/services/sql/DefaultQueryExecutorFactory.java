@@ -102,8 +102,6 @@ public class DefaultQueryExecutorFactory implements QueryExecutorFactory {
                                                  && !translateResponse.aggregations().isEmpty()){
                                              return new AggregateQueryExecutor(structure,
                                                                                elasticVertxClient,
-                                                                               namedQuery,
-                                                                               objectMapper,
                                                                                statement);
                                          }else{
                                              throw (new NotImplementedException("Select without aggregate not supported yet"));
