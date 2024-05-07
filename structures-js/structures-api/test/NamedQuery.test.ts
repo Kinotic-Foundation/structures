@@ -1,4 +1,4 @@
-import {FunctionDefinition, LongC3Type, ObjectC3Type, ArrayC3Type} from '@kinotic/continuum-idl'
+import {FunctionDefinition, LongC3Type, ObjectC3Type, ArrayC3Type, StringC3Type} from '@kinotic/continuum-idl'
 import {describe, it, expect, beforeAll, afterAll, beforeEach, afterEach} from 'vitest'
 import { WebSocket } from 'ws'
 import {PageableC3Type} from '../src/api/idl/PageableC3Type.js'
@@ -32,7 +32,7 @@ describe('NamedQueryTest', () => {
     }, 60000)
 
     beforeEach<LocalTestContext>(async (context) => {
-        context.structure = await createPersonStructureIfNotExist(generateRandomString(5))
+        context.structure = await createPersonStructureIfNotExist('-' + generateRandomString(5))
         expect(context.structure).toBeDefined()
         context.entityService = Structures.createEntityService(context.structure.namespace, context.structure.name)
         expect(context.entityService).toBeDefined()
@@ -78,8 +78,8 @@ describe('NamedQueryTest', () => {
      }
     )
 
-    it<LocalTestContext>('Select All Test',
-     async ({entityService, structure}) => {
+    it<LocalTestContext>('Aggregate Pageable Test',
+     async ({entityService}) => {
          // Create people
          await createTestPeopleAndVerify(entityService, 100, 2000)
 
@@ -90,10 +90,13 @@ describe('NamedQueryTest', () => {
          expect(page.content.length).toBe(10)
 
          const structureId = entityService.structureId
-         const query = new QueryDecorator(`SELECT * FROM "struct_${structureId}"`)
-         const namedQuery = new FunctionDefinition('getAllPeople', [query])
+         const query = new QueryDecorator(`SELECT COUNT(firstName) as count, lastName FROM "struct_${structureId}" GROUP BY lastName`)
+         const namedQuery = new FunctionDefinition('countPeopleByLastName', [query])
          namedQuery.addParameter('pageable', new PageableC3Type())
-         namedQuery.returnType = new PageC3Type(structure.entityDefinition)
+         const contentType = new ObjectC3Type('CountByLastName', entityService.structureNamespace)
+                                               .addProperty("count", new LongC3Type())
+                                               .addProperty("lastName", new StringC3Type())
+         namedQuery.returnType = new PageC3Type(contentType)
 
          const namedQueriesDefinition = new NamedQueriesDefinition(structureId,
                                                                    entityService.structureNamespace,
@@ -105,9 +108,10 @@ describe('NamedQueryTest', () => {
          await namedQueriesService.save(namedQueriesDefinition)
 
          const pageable = Pageable.createWithCursor(null, 10)
-         const personPage: Page<Person> = await entityService.namedQueryPage('getAllPeople',
+         const personPage: Page<Person> = await entityService.namedQueryPage('countPeopleByLastName',
                                                                              [],
                                                                              pageable)
+         console.log(personPage)
      }
     )
 

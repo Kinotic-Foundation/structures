@@ -27,11 +27,15 @@ public class BaseConversionState {
 
     private final List<DecoratedProperty> decoratedProperties = new LinkedList<>();
 
-    @Getter(AccessLevel.NONE) private final Deque<String> propertyStack = new ArrayDeque<>();
+    @Getter(AccessLevel.NONE)
+    @Setter(AccessLevel.NONE)
+    private final Deque<String> propertyStack = new ArrayDeque<>();
 
-    @Setter(AccessLevel.NONE) private String currentFieldName;
+    @Setter(AccessLevel.NONE)
+    private String currentFieldName = null;
 
-    @Setter(AccessLevel.NONE) private String currentJsonPath;
+    @Setter(AccessLevel.NONE)
+    private String currentJsonPath = null;
 
     /**
      * Must be called before processing a field.
@@ -58,6 +62,8 @@ public class BaseConversionState {
      */
     public void endProcessingField(){
         propertyStack.removeFirst();
+        currentFieldName = null;
+        currentJsonPath = propertyStack.peekFirst();
     }
 
     /**

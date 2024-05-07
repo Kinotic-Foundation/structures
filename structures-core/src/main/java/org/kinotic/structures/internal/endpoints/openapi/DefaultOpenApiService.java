@@ -376,11 +376,11 @@ public class DefaultOpenApiService implements OpenApiService {
                                                            response);
 
                 // Build the request body if there are parameters
-                if(!query.getParameters().isEmpty()) {
-                    RequestBody requestBody = convertParamsToRequestBody(queryName,
-                                                                         query.getParameters(),
-                                                                         converter,
-                                                                         components);
+                RequestBody requestBody = convertParamsToRequestBody(queryName,
+                                                                     query.getParameters(),
+                                                                     converter,
+                                                                     components);
+                if(requestBody != null) {
                     queryOperation.requestBody(requestBody);
                 }
 
@@ -459,13 +459,20 @@ public class DefaultOpenApiService implements OpenApiService {
             }
         }
 
-        components.addSchemas(requestSchemaName, requestSchema);
-        Schema<?> refSchema = new Schema<>().$ref("#/components/schemas/"+requestSchemaName);
+        // If no properties then we return null
+        if(requestSchema.getProperties() != null
+                && !requestSchema.getProperties().isEmpty()) {
 
-        return new RequestBody().description("The Body for the named query " + name)
-                                .content(new Content()
-                                                 .addMediaType("application/json",
-                                                               new MediaType().schema(refSchema)));
+            components.addSchemas(requestSchemaName, requestSchema);
+            Schema<?> refSchema = new Schema<>().$ref("#/components/schemas/" + requestSchemaName);
+
+            return new RequestBody().description("The Body for the named query " + name)
+                                    .content(new Content()
+                                                     .addMediaType("application/json",
+                                                                   new MediaType().schema(refSchema)));
+        } else {
+            return null;
+        }
     }
 
     private Operation createOperation(String operationSummary,
@@ -482,30 +489,25 @@ public class DefaultOpenApiService implements OpenApiService {
         if(responseType == 0){ // Count Response
 
             mediaType.setSchema(new Schema<>().$ref(Components.COMPONENTS_SCHEMAS_REF + "CountResponse"));
-            content.addMediaType("application/json", mediaType);
-            response.setContent(content);
 
         }else if(responseType == 1){ // Structure Response
 
             mediaType.setSchema(new Schema<>().$ref(Components.COMPONENTS_SCHEMAS_REF + structure.getName()));
-            content.addMediaType("application/json", mediaType);
-            response.setContent(content);
 
         }else if(responseType == 2){ // Page Response
 
             ObjectSchema pageSchema = OpenApiUtils.createPageSchema(new Schema<>().$ref(Components.COMPONENTS_SCHEMAS_REF + structure.getName()));
             mediaType.setSchema(pageSchema);
-            content.addMediaType("application/json", mediaType);
-            response.setContent(content);
 
         }else if(responseType == 3){ // Array Response
 
             mediaType.setSchema(new ArraySchema()
                                         .items(new Schema<>().$ref(Components.COMPONENTS_SCHEMAS_REF + structure.getName())));
-            content.addMediaType("application/json", mediaType);
-            response.setContent(content);
 
         }
+
+        content.addMediaType("application/json", mediaType);
+        response.setContent(content);
 
         return createOperation(operationSummary,
                                description,
