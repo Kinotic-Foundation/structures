@@ -3,7 +3,7 @@ package org.kinotic.structures.internal.api.hooks;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import co.elastic.clients.elasticsearch.core.*;
 import org.kinotic.structures.api.config.StructuresProperties;
-import org.kinotic.structures.api.decorators.MultiTenancyType;
+import org.kinotic.structures.api.idl.decorators.MultiTenancyType;
 import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.Structure;
 import org.springframework.stereotype.Component;

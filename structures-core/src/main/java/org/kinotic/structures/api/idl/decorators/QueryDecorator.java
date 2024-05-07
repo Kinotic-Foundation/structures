@@ -1,4 +1,4 @@
-package org.kinotic.structures.api.decorators;
+package org.kinotic.structures.api.idl.decorators;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
@@ -10,19 +10,19 @@ import org.kinotic.continuum.idl.api.schema.decorators.DecoratorTarget;
 import java.util.List;
 
 /**
- * Created by Navíd Mitchell 🤪on 6/16/23.
+ * Contains the statements for a named query
+ * Created by Navíd Mitchell 🤪on 6/24/23.
  */
 @Getter
 @Setter
 @Accessors(chain = true)
-public final class EntityDecorator extends C3Decorator {
-
+public final class QueryDecorator extends C3Decorator {
     @JsonIgnore
-    public static final String type = "Entity";
+    public static final String type = "Query";
 
-    private MultiTenancyType multiTenancyType = MultiTenancyType.NONE;
+    private String statements;
 
-    public EntityDecorator() {
-        this.targets = List.of(DecoratorTarget.TYPE);
+    public QueryDecorator(){
+        this.targets = List.of(DecoratorTarget.FUNCTION);
     }
 }

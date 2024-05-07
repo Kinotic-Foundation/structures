@@ -5,10 +5,7 @@ import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.commons.lang3.Validate;
-import org.kinotic.continuum.core.api.crud.Direction;
-import org.kinotic.continuum.core.api.crud.Order;
-import org.kinotic.continuum.core.api.crud.Pageable;
-import org.kinotic.continuum.core.api.crud.Sort;
+import org.kinotic.continuum.core.api.crud.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,14 +25,48 @@ public class VertxWebUtil {
         return StructuresUtil.structureNameToId(structureNamespace, structureName);
     }
 
-    public static Pageable validateAndReturnPageable(RoutingContext ctx){
-        String pageString = ctx.request().getParam("page");
-        String sizeString = ctx.request().getParam("size");
-        String sortString = ctx.request().getParam("sort");
+    /**
+     * Returns a {@link Pageable} from the request or a default {@link OffsetPageable} if none is present
+     * @param ctx the routing context to get the pageable from
+     * @return a {@link Pageable}
+     */
+    public static Pageable getPageableOrDefaultOffsetPageable(RoutingContext ctx){
+       Pageable ret = getPageableIfExits(ctx ,true);
+         if(ret == null){
+              ret = Pageable.create(0, 25, null);
+         }
+         return ret;
+    }
 
-        int page = (pageString != null && !pageString.isEmpty()) ? Integer.parseInt(pageString) : 0;
+    /**
+     * Returns a {@link Pageable} if either a cursor or page number is present in the request
+     * @param ctx the routing context to get the pageable from
+     * @param createIfOnlySortPresent if true and only a sort is present a {@link Pageable} will be created with a page number of 0
+     * @return a {@link Pageable} or null if neither a cursor nor page number is present
+     */
+    public static Pageable getPageableIfExits(RoutingContext ctx,
+                                              boolean createIfOnlySortPresent){
+        Pageable ret = null;
+        String sizeString = ctx.request().getParam("size");
         int size = (sizeString != null && !sizeString.isEmpty()) ? Integer.parseInt(sizeString) : 25;
 
+        String pageString = ctx.request().getParam("page");
+        Integer pageNumber = pageString != null ? Integer.parseInt(pageString) : null;
+
+        String cursor = ctx.request().getParam("page");
+        boolean cursorPresent = false;
+        if(cursor != null){
+            if(cursor.equals("null")){
+                cursor = null;
+            }
+            cursorPresent = true;
+        }
+
+        if (cursorPresent && pageNumber != null) {
+            throw new IllegalArgumentException("Pageable cannot have both a cursor and a pageNumber");
+        }
+
+        String sortString = ctx.request().getParam("sort");
         String[] sort = (sortString != null && !sortString.isEmpty()) ? sortString.split(",") : new String[0];
         List<Order> orders = new ArrayList<>();
         for(String fieldString : sort){
@@ -46,7 +77,15 @@ public class VertxWebUtil {
             }
         }
 
-        return Pageable.create(page, size, Sort.by(orders));
+        if(pageNumber != null){
+            ret = Pageable.create(pageNumber, size, Sort.by(orders));
+        } else if(cursorPresent){
+            ret = Pageable.create(cursor, size, Sort.by(orders));
+        } else if(createIfOnlySortPresent && !orders.isEmpty()){
+            ret = Pageable.create(0, size, Sort.by(orders));
+        }
+
+        return ret;
     }
 
     public static Handler<RoutingContext> createExceptionConvertingFailureHandler(){

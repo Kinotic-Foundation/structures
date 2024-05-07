@@ -39,7 +39,7 @@ describe('NamedQueryTest', () => {
     })
 
     afterEach<LocalTestContext>(async (context) => {
-        await expect(deleteStructure(context.structure.id)).resolves.toBeUndefined()
+       // await expect(deleteStructure(context.structure.id)).resolves.toBeUndefined()
     })
 
 

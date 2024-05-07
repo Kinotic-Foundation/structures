@@ -1,4 +1,4 @@
-package org.kinotic.structures.api.decorators;
+package org.kinotic.structures.api.idl.decorators;
 
 /**
  * Created by Navíd Mitchell 🤪on 6/16/23.

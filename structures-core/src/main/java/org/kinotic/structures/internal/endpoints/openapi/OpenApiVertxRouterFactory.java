@@ -1,10 +1,10 @@
 package org.kinotic.structures.internal.endpoints.openapi;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
+import io.swagger.v3.core.util.ObjectMapperFactory;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -46,6 +46,8 @@ public class OpenApiVertxRouterFactory {
     private final SecurityService securityService;
     private final Vertx vertx;
 
+    private static ObjectMapper openApiMapper;
+
     public Router createRouter() {
         String apiBasePath = properties.getOpenApiPath();
         Router router = Router.router(vertx);
@@ -65,10 +67,11 @@ public class OpenApiVertxRouterFactory {
                   VertxCompletableFuture.from(vertx, openApiService.getOpenApiSpec(structureNamespace))
                                         .thenApply((Function<OpenAPI, Void>) openAPI -> {
                                             try {
+                                                if(openApiMapper == null){
+                                                    openApiMapper = ObjectMapperFactory.createJson();
+                                                }
 
-                                                ObjectMapper mapper = new ObjectMapper();
-                                                mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-                                                byte[] bytes = mapper.writeValueAsBytes(openAPI);
+                                                byte[] bytes = openApiMapper.writeValueAsBytes(openAPI);
                                                 ctx.response().putHeader("Content-Type", "application/json");
                                                 ctx.response().end(Buffer.buffer(bytes));
 
@@ -107,7 +110,7 @@ public class OpenApiVertxRouterFactory {
 
                   String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
 
-                  Pageable pageable = VertxWebUtil.validateAndReturnPageable(ctx);
+                  Pageable pageable = VertxWebUtil.getPageableOrDefaultOffsetPageable(ctx);
 
                   VertxCompletableFuture.from(vertx, entitiesService.findAll(structureId,
                                                                              pageable,
@@ -285,6 +288,33 @@ public class OpenApiVertxRouterFactory {
                   }
               });
 
+        router.post(apiBasePath + ":structureNamespace/:structureName/named-query-page/:queryName")
+              .consumes("application/json")
+              .produces("application/json")
+              .failureHandler(failureHandler)
+              .handler(BodyHandler.create(false))
+              .handler(ctx -> {
+
+                  String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
+                  String queryName = ctx.pathParam("queryName");
+                  Validate.notNull(queryName, "queryName must not be null");
+
+                  try {
+                      TypeFactory typeFactory = this.objectMapper.getTypeFactory();
+                      JavaType listType = typeFactory.constructCollectionType(List.class, QueryParameter.class);
+                      List<QueryParameter> parameters = this.objectMapper.readValue(ctx.getBody().getBytes(), listType);
+
+                      VertxCompletableFuture.from(vertx, entitiesService.namedQuery(structureId,
+                                                                                    queryName,
+                                                                                    parameters,
+                                                                                    RawJson.class,
+                                                                                    new RoutingContextToEntityContextAdapter(ctx)))
+                                            .handle(new ValueToJsonHandler<>(ctx, objectMapper));
+                  } catch (IOException e) {
+                      VertxWebUtil.writeException(ctx, e);
+                  }
+              });
+
         // Search for entities
         router.post(apiBasePath + ":structureNamespace/:structureName/search")
               .consumes("text/plain")
@@ -295,7 +325,7 @@ public class OpenApiVertxRouterFactory {
 
                   String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
 
-                  Pageable pageable = VertxWebUtil.validateAndReturnPageable(ctx);
+                  Pageable pageable = VertxWebUtil.getPageableOrDefaultOffsetPageable(ctx);
 
                   String searchString = ctx.getBody().toString();
 

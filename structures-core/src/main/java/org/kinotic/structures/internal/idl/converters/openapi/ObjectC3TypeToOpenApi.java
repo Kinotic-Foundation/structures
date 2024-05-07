@@ -6,10 +6,11 @@ import org.kinotic.continuum.idl.api.converter.C3ConversionContext;
 import org.kinotic.continuum.idl.api.converter.C3TypeConverter;
 import org.kinotic.continuum.idl.api.converter.Cacheable;
 import org.kinotic.continuum.idl.api.schema.C3Type;
+import org.kinotic.continuum.idl.api.schema.ComplexC3Type;
 import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
 import org.kinotic.continuum.idl.api.schema.PropertyDefinition;
 import org.kinotic.continuum.idl.api.schema.decorators.NotNullC3Decorator;
-import org.kinotic.structures.api.decorators.ReadOnlyDecorator;
+import org.kinotic.structures.api.idl.decorators.ReadOnlyDecorator;
 
 /**
  * Created by Navíd Mitchell 🤪 on 5/15/23.
@@ -42,10 +43,10 @@ public class ObjectC3TypeToOpenApi implements C3TypeConverter<Schema<?>, ObjectC
             // TODO: handle cases where the same object name is used across multiple different types in the same namespace
             //       To handle this we will need to keep track of all "Models" per namespace and check for conflicts
             //       Or this could be done by keeping the Conversion State around and converting all Structures for a namespace at once
-            if(type instanceof ObjectC3Type){
-                ObjectC3Type objectField = (ObjectC3Type) type;
-                conversionContext.state().addReferencedSchema(objectField.getName(), fieldValue);
-                fieldValue = new Schema<>().$ref("#/components/schemas/"+objectField.getName());
+            if(type instanceof ComplexC3Type){
+                ComplexC3Type complexField = (ComplexC3Type) type;
+                conversionContext.state().addReferencedSchema(complexField.getName(), fieldValue);
+                fieldValue = new Schema<>().$ref("#/components/schemas/"+complexField.getName());
             }
 
             objectSchema.addProperty(fieldName, fieldValue);

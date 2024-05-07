@@ -20,6 +20,7 @@ import co.elastic.clients.transport.endpoints.EndpointWithResponseMapperAttr;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
+import org.apache.commons.lang3.Validate;
 import org.kinotic.continuum.core.api.crud.*;
 import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.internal.serializer.RawJsonJsonpDeserializer;
@@ -286,7 +287,7 @@ public class CrudServiceTemplate {
                                                  Class<T> type,
                                                  Consumer<SearchRequest.Builder> builderConsumer) {
 
-        return search(indexName, pageable, getDeserializer(type), builderConsumer)
+        return searchFullResponse(indexName, pageable, type, builderConsumer)
                 .thenApply(response -> {
 
                     HitsMetadata<T> hitsMetadata = response.hits();
@@ -324,20 +325,24 @@ public class CrudServiceTemplate {
      *
      * @param indexName       name of the index to search
      * @param pageable        to use for the search
-     * @param deserializer    to use to deserialize the documents
+     * @param type            of the documents to return
      * @param builderConsumer to customize the {@link SearchRequest}, or null if no customization is needed
-     * @param <T>             type of the documents to return
      * @return a {@link CompletableFuture} that will complete with a {@link SearchResponse} of documents
      */
-    public <T> CompletableFuture<SearchResponse<T>> search(String indexName,
-                                                           Pageable pageable,
-                                                           JsonpDeserializer<T> deserializer,
-                                                           Consumer<SearchRequest.Builder> builderConsumer) {
+    public <T> CompletableFuture<SearchResponse<T>> searchFullResponse(String indexName,
+                                                                       Pageable pageable,
+                                                                       Class<T> type,
+                                                                       Consumer<SearchRequest.Builder> builderConsumer) {
+
+        Validate.notNull(indexName, "indexName cannot be null");
+        Validate.notNull(pageable, "pageable cannot be null");
+
         @SuppressWarnings("unchecked")
-        JsonEndpoint<SearchRequest, SearchResponse<T>, ErrorResponse> endpoint = (JsonEndpoint<SearchRequest, SearchResponse<T>, ErrorResponse>) SearchRequest._ENDPOINT;
+        JsonEndpoint<SearchRequest, SearchResponse<T>, ErrorResponse> endpoint =
+                (JsonEndpoint<SearchRequest, SearchResponse<T>, ErrorResponse>) SearchRequest._ENDPOINT;
         endpoint = new EndpointWithResponseMapperAttr<>(endpoint,
                                                         "co.elastic.clients:Deserializer:_global.search.TDocument",
-                                                        deserializer);
+                                                        getDeserializer(type));
 
         SearchRequest.Builder builder = new SearchRequest.Builder();
 

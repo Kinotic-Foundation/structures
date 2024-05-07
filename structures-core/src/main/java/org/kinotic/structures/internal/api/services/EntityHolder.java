@@ -3,7 +3,7 @@ package org.kinotic.structures.internal.api.services;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.kinotic.structures.api.decorators.MultiTenancyType;
+import org.kinotic.structures.api.idl.decorators.MultiTenancyType;
 
 /**
  * {@link EntityHolder} holds the data and the id for an entity

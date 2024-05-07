@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.kinotic.continuum.idl.api.schema.*;
-import org.kinotic.structures.api.decorators.QueryDecorator;
+import org.kinotic.structures.api.idl.decorators.QueryDecorator;
 import org.kinotic.structures.api.domain.*;
 import org.kinotic.structures.api.services.EntitiesService;
 import org.kinotic.structures.api.services.NamedQueriesService;

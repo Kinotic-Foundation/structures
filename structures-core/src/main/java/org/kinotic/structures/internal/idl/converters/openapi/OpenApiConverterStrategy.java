@@ -29,6 +29,7 @@ public class OpenApiConverterStrategy implements IdlConverterStrategy<Schema<?>,
                                                              .maximum(BigDecimal.valueOf(Short.MAX_VALUE));
     private static final Schema<?> STRING = new StringSchema();
     private final Set<C3TypeConverter<Schema<?>, ? extends C3Type, OpenApiConversionState>> converters;
+    private final OpenApiConversionState state = new OpenApiConversionState();
 
     public OpenApiConverterStrategy() {
         // Basic types
@@ -70,7 +71,7 @@ public class OpenApiConverterStrategy implements IdlConverterStrategy<Schema<?>,
                     }
                 });
 
-        converters = Set.of(container, new ObjectC3TypeToOpenApi(), new UnionC3TypeToOpenApi());
+        converters = Set.of(container, new ObjectC3TypeToOpenApi(), new UnionC3TypeToOpenApi(), new PageC3TypeToOpenApi());
     }
 
     @Override
@@ -80,7 +81,7 @@ public class OpenApiConverterStrategy implements IdlConverterStrategy<Schema<?>,
 
     @Override
     public OpenApiConversionState initialState() {
-        return new OpenApiConversionState();
+        return state;
     }
 
     @Override

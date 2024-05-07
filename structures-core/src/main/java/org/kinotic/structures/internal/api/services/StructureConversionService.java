@@ -1,6 +1,9 @@
 package org.kinotic.structures.internal.api.services;
 
+import io.swagger.v3.oas.models.media.Schema;
+import org.kinotic.continuum.idl.api.converter.IdlConverter;
 import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.internal.idl.converters.openapi.OpenApiConversionState;
 
 /**
  * Handles converting {@link Structure}s to various mappings. Such as ElasticSearch, OpenAPI, GraphQL.
@@ -23,10 +26,9 @@ public interface StructureConversionService {
     GqlConversionResult convertToGqlMapping(Structure structure);
 
     /**
-     * Converts the given {@link Structure#getEntityDefinition()} to an OpenAPI Schema
-     * @param structure to convert
-     * @return the {@link OpenApiConversionResult} created for the {@link Structure}
+     * Creates a new {@link IdlConverter} for converting {@link org.kinotic.continuum.idl.api.schema.C3Type}s to an OpenAPI Schema
+     * @return the new {@link IdlConverter}
      */
-    OpenApiConversionResult convertToOpenApiMapping(Structure structure);
+    IdlConverter<Schema<?>, OpenApiConversionState> createOpenApiConverter();
 
 }
