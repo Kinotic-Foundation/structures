@@ -36,9 +36,9 @@ import static graphql.schema.GraphQLObjectType.newObject;
  */
 @Component
 @RequiredArgsConstructor
-public class GqlCacheLoader implements AsyncCacheLoader<String, GraphQL> {
+public class GqlSchemaCacheLoader implements AsyncCacheLoader<String, GraphQL> {
 
-    private static final Logger log = LoggerFactory.getLogger(GqlCacheLoader.class);
+    private static final Logger log = LoggerFactory.getLogger(GqlSchemaCacheLoader.class);
 
     private final StructureDAO structureDAO;
     private final StructureConversionService structureConversionService;
@@ -80,9 +80,9 @@ public class GqlCacheLoader implements AsyncCacheLoader<String, GraphQL> {
                     GraphQLCodeRegistry.Builder codeRegistryBuilder = GraphQLCodeRegistry.newCodeRegistry();
                     Map<String, GraphQLType> additionalTypes = new HashMap<>();
 
-                    for (Map.Entry<String, GqlConversionResult> entry : conversionResultMap.entrySet()) {
+                    for (GqlConversionResult conversionResult : conversionResultMap.values()) {
 
-                        GqlTypeHolder structureType = entry.getValue().getStructureType();
+                        GqlTypeHolder structureType = conversionResult.getStructureType();
                         GraphQLObjectType outputType;
                         if (structureType.getOutputType() instanceof GraphQLObjectType) {
                             outputType = (GraphQLObjectType) structureType.getOutputType();
@@ -110,13 +110,13 @@ public class GqlCacheLoader implements AsyncCacheLoader<String, GraphQL> {
                         addOperations(queryBuilder, fieldDefinitionData, mutationBuilder);
 
                         // Add all type resolvers to the schema
-                        for (GraphQLUnionType unionType : entry.getValue().getUnionTypes()) {
+                        for (GraphQLUnionType unionType : conversionResult.getUnionTypes()) {
                             // NoOp is used since we do not actually use the GraphQL api to execute operations
                             codeRegistryBuilder.typeResolver(unionType, new NoOpTypeResolver());
                         }
 
                         // Add all additional types to the schema
-                        additionalTypes.putAll(entry.getValue().getAdditionalTypes());
+                        additionalTypes.putAll(conversionResult.getAdditionalTypes());
                     }
 
                     GraphQLSchema.Builder graphQLSchemaBuilder = GraphQLSchema.newSchema()

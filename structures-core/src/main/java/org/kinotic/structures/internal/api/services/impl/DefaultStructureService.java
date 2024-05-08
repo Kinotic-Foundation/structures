@@ -57,13 +57,15 @@ public class DefaultStructureService implements StructureService {
         String logicalIndexName;
         try {
             // will throw an exception if invalid
-            validateStructure(structure);
+            StructuresUtil.validateStructure(structure);
 
             structure.setNamespace(structure.getNamespace().trim());
             structure.setName(structure.getName().trim());
             logicalIndexName = StructuresUtil.structureNameToId(structure.getNamespace(), structure.getName());
 
-            StructuresUtil.indexNameValidation(logicalIndexName);
+            if(logicalIndexName.length() > 255){
+                throw new IllegalArgumentException("Structure Id is too long, 'namespace.name' must be less than 256 characters");
+            }
 
         } catch (IllegalArgumentException e) {
             return CompletableFuture.failedFuture(e);
@@ -178,7 +180,7 @@ public class DefaultStructureService implements StructureService {
             if (structure.getId() == null || structure.getId().isBlank()) {
                 throw new IllegalArgumentException("Structure Id Invalid");
             }
-            validateStructure(structure);
+            StructuresUtil.validateStructure(structure);
         } catch (IllegalArgumentException e) {
             return CompletableFuture.failedFuture(e);
         }
@@ -265,18 +267,6 @@ public class DefaultStructureService implements StructureService {
                                                                });
                                         });
                 });
-    }
-
-    private void validateStructure(Structure structure){
-        if (structure.getName() == null || structure.getName().isBlank() || structure.getName().contains(".")) {
-            throw new IllegalArgumentException("Structure Name Invalid");
-        }
-        if (structure.getNamespace() == null || structure.getNamespace().isBlank()) {
-            throw new IllegalArgumentException("Structure Namespace Invalid");
-        }
-        if (structure.getEntityDefinition() == null) {
-            throw new IllegalArgumentException("Structure entityDefinition must not be null");
-        }
     }
 
 }

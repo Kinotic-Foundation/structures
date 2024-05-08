@@ -1,13 +1,18 @@
 package org.kinotic.structures.internal.utils;
 
 import org.apache.commons.lang3.Validate;
+import org.kinotic.structures.api.domain.Structure;
 
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 
 public class StructuresUtil {
+
+    private static final Pattern IdentifierNamePattern = Pattern.compile("^[A-Za-z_][A-Za-z0-9_]*$");
+    private static final Pattern StructureNamespacePattern = Pattern.compile("^[A-Za-z][A-Za-z0-9._-]*$");
 
     /**
      * Function will convert a structure namespace and name to a valid
@@ -20,64 +25,62 @@ public class StructuresUtil {
     }
 
     /**
-     * Function will validate the index name, ensures we can use it for creating an
-     * elasticsearch index.
+     * Function will validate a structure
      *
-     * @param indexName to validate
-     * @throws IllegalArgumentException will be thrown if the index name is invalid
+     * @param structure to validate
+     * @throws IllegalArgumentException will be thrown if the structure is invalid
      */
-    public static void indexNameValidation(String indexName) throws IllegalArgumentException {
-        //    255 characters in length
-        //    must be lowercase
-        //    must not start with '_', '-', or '+'
-        //    must not be '.' or '..' -
-        //
-        //    must not contain the following characters
-        //    '\\', '/', '*', '?', '"', '<', '>', '|', ' ', ',', '#', ':', ';'
-        if(indexName.startsWith("_")
-                || indexName.startsWith("-")
-                || indexName.startsWith("+")
-                || indexName.startsWith(".")
-                || indexName.startsWith("..")
-                || indexName.contains("\\")
-                || indexName.contains("/")
-                || indexName.contains("*")
-                || indexName.contains("?")
-                || indexName.contains("\"")
-                || indexName.contains("<")
-                || indexName.contains(">")
-                || indexName.contains("|")
-                || indexName.contains(" ")
-                || indexName.contains(",")
-                || indexName.contains("#")
-                || indexName.contains(":")
-                || indexName.contains(";")
-                || indexName.contains("..")
-                || indexName.getBytes().length > 255){
-            throw new IllegalArgumentException("Elastic index name is not in correct format, \ncannot start with _ - +\ncannot contain . .. \\ / * ? \" < > | , # : ; space, or be longer than 255 bytes");
+    public static void validateStructure(Structure structure){
+
+        validateStructureName(structure.getName());
+
+        validateStructureNamespaceName(structure.getNamespace());
+
+        if (structure.getEntityDefinition() == null) {
+            throw new IllegalArgumentException("Structure entityDefinition must not be null");
         }
     }
 
-    public static void fieldNameValidation(String fieldName){
-        if(fieldName.contains("-")
-                || fieldName.contains("+")
-                || fieldName.contains(".")
-                || fieldName.contains("..")
-                || fieldName.contains("\\")
-                || fieldName.contains("/")
-                || fieldName.contains("*")
-                || fieldName.contains("?")
-                || fieldName.contains("\"")
-                || fieldName.contains("<")
-                || fieldName.contains(">")
-                || fieldName.contains("|")
-                || fieldName.contains(" ")
-                || fieldName.contains(",")
-                || fieldName.contains("#")
-                || fieldName.contains(":")
-                || fieldName.contains(";")
-                || fieldName.getBytes().length > 255){
-            throw new IllegalArgumentException("Field Name is not in correct format, \ncannot contain - + . .. \\ / * ? \" < > | , # : ; space, or be longer than 255 bytes");
+    /**
+     * Function will validate the structure name
+     *
+     * @param structureName to validate
+     * @throws IllegalArgumentException will be thrown if the structure name is invalid
+     */
+    public static void validateStructureName(String structureName){
+        if (structureName == null
+                || !IdentifierNamePattern.matcher(structureName).matches()){
+            throw new IllegalArgumentException("Structure Name Invalid, first character must be a " +
+                                               "letter, number or underscore. And contain only letters, numbers or underscores");
+        }
+    }
+
+    /**
+     * Function will validate the structure namespace name
+     *
+     * @param structureNamespace to validate
+     * @throws IllegalArgumentException will be thrown if the structure namespace is invalid
+     */
+    public static void validateStructureNamespaceName(String structureNamespace){
+        if (structureNamespace == null
+                || !StructureNamespacePattern.matcher(structureNamespace).matches()){
+            throw new IllegalArgumentException("Structure Namespace Invalid, first character must be a " +
+                                               "letter. And contain only letters, numbers, periods, underscores or dashes");
+        }
+    }
+
+    /**
+     * Function will validate the property name
+     *
+     * @param propertyName to validate
+     * @throws IllegalArgumentException will be thrown if the property name is invalid
+     */
+    public static void validatePropertyName(String propertyName){
+        if(propertyName == null
+            || propertyName.length() > 255
+            || !IdentifierNamePattern.matcher(propertyName).matches()){
+            throw new IllegalArgumentException("Property Name Invalid, first character must be a " +
+                                               "letter, number or underscore. And contain only letters, numbers or underscores");
         }
     }
 

@@ -25,13 +25,19 @@ public class VertxWebUtil {
         return StructuresUtil.structureNameToId(structureNamespace, structureName);
     }
 
+    public static String validateAndReturnPathParam(String pathParamName, RoutingContext ctx){
+        String ret = ctx.pathParam(pathParamName);
+        Validate.notNull(ret, pathParamName + " must not be null");
+        return ret;
+    }
+
     /**
      * Returns a {@link Pageable} from the request or a default {@link OffsetPageable} if none is present
      * @param ctx the routing context to get the pageable from
      * @return a {@link Pageable}
      */
     public static Pageable getPageableOrDefaultOffsetPageable(RoutingContext ctx){
-       Pageable ret = getPageableIfExits(ctx ,true);
+       Pageable ret = getPageableIfExits(ctx ,true, OffsetPageable.class);
          if(ret == null){
               ret = Pageable.create(0, 25, null);
          }
@@ -39,13 +45,28 @@ public class VertxWebUtil {
     }
 
     /**
+     * Returns a {@link Pageable} from the request or a default {@link CursorPageable} if none is present
+     * @param ctx the routing context to get the pageable from
+     * @return a {@link Pageable}
+     */
+    public static Pageable getPageableOrDefaultCursorPageable(RoutingContext ctx){
+        Pageable ret = getPageableIfExits(ctx ,true, CursorPageable.class);
+        if(ret == null){
+            ret = Pageable.create(null, 25, null);
+        }
+        return ret;
+    }
+
+    /**
      * Returns a {@link Pageable} if either a cursor or page number is present in the request
      * @param ctx the routing context to get the pageable from
-     * @param createIfOnlySortPresent if true and only a sort is present a {@link Pageable} will be created with a page number of 0
+     * @param createIfOnlySortPresent if true and only a sort is present a {@link OffsetPageable} will be created with a page number of 0
+     * @param defaultPageableClass the default {@link Pageable} type if only a sort is present
      * @return a {@link Pageable} or null if neither a cursor nor page number is present
      */
     public static Pageable getPageableIfExits(RoutingContext ctx,
-                                              boolean createIfOnlySortPresent){
+                                              boolean createIfOnlySortPresent,
+                                              Class<? extends Pageable> defaultPageableClass){
         Pageable ret = null;
         String sizeString = ctx.request().getParam("size");
         int size = (sizeString != null && !sizeString.isEmpty()) ? Integer.parseInt(sizeString) : 25;
@@ -53,7 +74,7 @@ public class VertxWebUtil {
         String pageString = ctx.request().getParam("page");
         Integer pageNumber = pageString != null ? Integer.parseInt(pageString) : null;
 
-        String cursor = ctx.request().getParam("page");
+        String cursor = ctx.request().getParam("cursor");
         boolean cursorPresent = false;
         if(cursor != null){
             if(cursor.equals("null")){
@@ -81,8 +102,14 @@ public class VertxWebUtil {
             ret = Pageable.create(pageNumber, size, Sort.by(orders));
         } else if(cursorPresent){
             ret = Pageable.create(cursor, size, Sort.by(orders));
-        } else if(createIfOnlySortPresent && !orders.isEmpty()){
-            ret = Pageable.create(0, size, Sort.by(orders));
+        } else if(createIfOnlySortPresent && defaultPageableClass != null && !orders.isEmpty()){
+            if(defaultPageableClass == OffsetPageable.class){
+                ret = Pageable.create(0, size, Sort.by(orders));
+            }else if(defaultPageableClass == CursorPageable.class){
+                ret = Pageable.create(null, size, Sort.by(orders));
+            }else{
+                throw new IllegalArgumentException("Unsupported defaultPageableClass: " + defaultPageableClass);
+            }
         }
 
         return ret;

@@ -3,7 +3,7 @@ package org.kinotic.structures.internal.api.services.sql.executors;
 import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.structures.api.domain.EntityContext;
-import org.kinotic.structures.api.domain.QueryParameter;
+import org.kinotic.structures.internal.api.services.sql.ParameterHolder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,7 +22,7 @@ public class CompositeQueryExecutor implements QueryExecutor {
     }
 
     @Override
-    public <T> CompletableFuture<List<T>> execute(List<QueryParameter> queryParameters,
+    public <T> CompletableFuture<List<T>> execute(ParameterHolder parameterHolder,
                                                   Class<T> type,
                                                   EntityContext context) {
 //         CompletableFuture.allOf(queryExecutors.stream()
@@ -32,7 +32,7 @@ public class CompositeQueryExecutor implements QueryExecutor {
     }
 
     @Override
-    public <T> CompletableFuture<Page<T>> executePage(List<QueryParameter> queryParameters,
+    public <T> CompletableFuture<Page<T>> executePage(ParameterHolder parameterHolder,
                                                       Pageable pageable,
                                                       Class<T> type,
                                                       EntityContext context) {

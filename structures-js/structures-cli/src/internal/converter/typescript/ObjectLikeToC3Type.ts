@@ -18,6 +18,9 @@ export class ObjectLikeToC3Type implements ITypeConverter<Type, C3Type, Typescri
         const namespace = conversionContext.state().namespace
         ret = new ObjectC3Type(name, namespace)
 
+        // Object stack name is used to help name properties that are not defined such as with union literals
+        conversionContext.state().objectNameStack.push(name)
+
         // We store the original source path so, it can be used later
         const declarations = value.getSymbol()?.getDeclarations()
         if(conversionContext.state().shouldAddSourcePathToMetadata
@@ -70,6 +73,8 @@ export class ObjectLikeToC3Type implements ITypeConverter<Type, C3Type, Typescri
                 ret.properties.push(new PropertyDefinition(calcProp.propertyName, converted, calcProp.decorators))
             }
         }
+
+        conversionContext.state().objectNameStack.pop()
 
         return ret
     }

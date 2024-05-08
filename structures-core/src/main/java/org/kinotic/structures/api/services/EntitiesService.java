@@ -4,8 +4,8 @@ import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.continuum.idl.api.schema.FunctionDefinition;
 import org.kinotic.structures.api.domain.EntityContext;
-import org.kinotic.structures.api.domain.QueryParameter;
 import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.internal.api.services.sql.ParameterHolder;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -115,14 +115,14 @@ public interface EntitiesService {
      *
      * @param structureId     the id of the structure that this named query is defined for
      * @param queryName       the name of {@link FunctionDefinition} that defines the query
-     * @param queryParameters the parameters to pass to the query
+     * @param parameterHolder the parameters to pass to the query
      * @param type            the type of the entity
      * @param context         the context for this operation
      * @return {@link CompletableFuture} with the result of the query
      */
     <T> CompletableFuture<List<T>> namedQuery(String structureId,
                                               String queryName,
-                                              List<QueryParameter> queryParameters,
+                                              ParameterHolder parameterHolder,
                                               Class<T> type,
                                               EntityContext context);
 
@@ -131,7 +131,7 @@ public interface EntitiesService {
      *
      * @param structureId     the id of the structure that this named query is defined for
      * @param queryName       the name of {@link FunctionDefinition} that defines the query
-     * @param queryParameters the parameters to pass to the query
+     * @param parameterHolder the parameters to pass to the query
      * @param pageable        the page settings to be used
      * @param type            the type of the entity
      * @param context         the context for this operation
@@ -139,7 +139,7 @@ public interface EntitiesService {
      */
     <T> CompletableFuture<Page<T>> namedQueryPage(String structureId,
                                                   String queryName,
-                                                  List<QueryParameter> queryParameters,
+                                                  ParameterHolder parameterHolder,
                                                   Pageable pageable,
                                                   Class<T> type,
                                                   EntityContext context);

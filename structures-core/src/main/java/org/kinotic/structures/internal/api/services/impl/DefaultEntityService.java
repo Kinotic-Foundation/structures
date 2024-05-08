@@ -15,16 +15,16 @@ import org.kinotic.continuum.core.api.crud.CursorPage;
 import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.structures.api.config.StructuresProperties;
-import org.kinotic.structures.api.idl.decorators.MultiTenancyType;
 import org.kinotic.structures.api.domain.EntityContext;
-import org.kinotic.structures.api.domain.QueryParameter;
 import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.domain.Structure;
-import org.kinotic.structures.internal.api.hooks.ReadPreProcessor;
+import org.kinotic.structures.api.idl.decorators.MultiTenancyType;
 import org.kinotic.structures.internal.api.hooks.DelegatingUpsertPreProcessor;
+import org.kinotic.structures.internal.api.hooks.ReadPreProcessor;
 import org.kinotic.structures.internal.api.services.EntityContextConstants;
 import org.kinotic.structures.internal.api.services.EntityHolder;
 import org.kinotic.structures.internal.api.services.EntityService;
+import org.kinotic.structures.internal.api.services.sql.ParameterHolder;
 import org.kinotic.structures.internal.api.services.sql.QueryExecutorFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -143,25 +143,25 @@ public class DefaultEntityService implements EntityService {
 
     @Override
     public <T> CompletableFuture<List<T>> namedQuery(String queryName,
-                                                     List<QueryParameter> queryParameters,
+                                                     ParameterHolder parameterHolder,
                                                      Class<T> type,
                                                      EntityContext context) {
         return validateTenant(context)
                 .thenCompose(unused -> queryExecutorFactory.createQueryExecutor(queryName, structure)
-                                                           .thenCompose(executor -> executor.execute(queryParameters,
+                                                           .thenCompose(executor -> executor.execute(parameterHolder,
                                                                                                      type,
                                                                                                      context)));
     }
 
     @Override
     public <T> CompletableFuture<Page<T>> namedQueryPage(String queryName,
-                                                         List<QueryParameter> queryParameters,
+                                                         ParameterHolder parameterHolder,
                                                          Pageable pageable,
                                                          Class<T> type,
                                                          EntityContext context) {
         return validateTenant(context)
                 .thenCompose(unused -> queryExecutorFactory.createQueryExecutor(queryName, structure)
-                                                           .thenCompose(executor -> executor.executePage(queryParameters,
+                                                           .thenCompose(executor -> executor.executePage(parameterHolder,
                                                                                                          pageable,
                                                                                                          type,
                                                                                                          context)));

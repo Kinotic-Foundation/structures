@@ -3,11 +3,12 @@ package org.kinotic.structures.internal.idl.converters.graphql;
 import graphql.scalars.ExtendedScalars;
 import graphql.schema.GraphQLEnumType;
 import graphql.schema.GraphQLList;
+import lombok.RequiredArgsConstructor;
 import org.kinotic.continuum.idl.api.converter.C3TypeConverter;
 import org.kinotic.continuum.idl.api.converter.C3TypeConverterContainer;
 import org.kinotic.continuum.idl.api.converter.IdlConverterStrategy;
 import org.kinotic.continuum.idl.api.schema.*;
-import org.springframework.stereotype.Component;
+import org.kinotic.structures.api.config.StructuresProperties;
 
 import java.util.Set;
 
@@ -16,7 +17,7 @@ import static graphql.Scalars.*;
 /**
  * Created by Navíd Mitchell 🤪 on 5/14/23.
  */
-@Component
+@RequiredArgsConstructor
 public class GqlConverterStrategy implements IdlConverterStrategy<GqlTypeHolder, GqlConversionState> {
 
     private static final GqlTypeHolder BOOL = new GqlTypeHolder(GraphQLBoolean, GraphQLBoolean);
@@ -29,9 +30,10 @@ public class GqlConverterStrategy implements IdlConverterStrategy<GqlTypeHolder,
     private static final GqlTypeHolder LONG = new GqlTypeHolder(ExtendedScalars.GraphQLLong, ExtendedScalars.GraphQLLong);
     private static final GqlTypeHolder SHORT = new GqlTypeHolder(ExtendedScalars.GraphQLShort, ExtendedScalars.GraphQLShort);
     private static final GqlTypeHolder STRING = new GqlTypeHolder(GraphQLString, GraphQLString);
-    private final Set<C3TypeConverter<GqlTypeHolder, ? extends C3Type, GqlConversionState>> converters;
+    private static final Set<C3TypeConverter<GqlTypeHolder, ? extends C3Type, GqlConversionState>> converters;
+    private final StructuresProperties structuresProperties;
 
-    public GqlConverterStrategy() {
+    static {
         C3TypeConverterContainer<GqlTypeHolder, GqlConversionState> container = new C3TypeConverterContainer<>();
         container.addConverter(BooleanC3Type.class, (c3Type, context) -> BOOL)
                  .addConverter(ByteC3Type.class, (c3Type, context) -> BYTE)
@@ -75,7 +77,7 @@ public class GqlConverterStrategy implements IdlConverterStrategy<GqlTypeHolder,
 
     @Override
     public GqlConversionState initialState() {
-        return new GqlConversionState();
+        return new GqlConversionState(this.structuresProperties);
     }
 
     @Override

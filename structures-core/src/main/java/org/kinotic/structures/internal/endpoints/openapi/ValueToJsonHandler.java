@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.RoutingContext;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.Validate;
 import org.kinotic.structures.internal.utils.VertxWebUtil;
 
 import java.util.function.BiFunction;
@@ -22,6 +23,7 @@ class ValueToJsonHandler<T> implements BiFunction<T, Throwable, Void> {
     @Override
     public Void apply(T value, Throwable throwable) {
         if (throwable == null) {
+            Validate.notNull(context, "context must not be null");
             try {
                 context.response().putHeader("Content-Type", "application/json");
                 context.response().setStatusCode(200);

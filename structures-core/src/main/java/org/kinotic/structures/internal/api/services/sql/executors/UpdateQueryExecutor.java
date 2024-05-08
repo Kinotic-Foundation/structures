@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.structures.api.domain.EntityContext;
-import org.kinotic.structures.api.domain.QueryParameter;
+import org.kinotic.structures.internal.api.services.sql.ParameterHolder;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -18,14 +18,14 @@ public class UpdateQueryExecutor implements QueryExecutor {
     private final String statement;
 
     @Override
-    public <T> CompletableFuture<List<T>> execute(List<QueryParameter> queryParameters,
+    public <T> CompletableFuture<List<T>> execute(ParameterHolder parameterHolder,
                                                   Class<T> type,
                                                   EntityContext context) {
         return null;
     }
 
     @Override
-    public <T> CompletableFuture<Page<T>> executePage(List<QueryParameter> queryParameters,
+    public <T> CompletableFuture<Page<T>> executePage(ParameterHolder parameterHolder,
                                                       Pageable pageable,
                                                       Class<T> type,
                                                       EntityContext context) {

@@ -126,9 +126,10 @@ public class NamedQueryTests {
                                                     .addProperty("lastName", new StringC3Type());
 
         QueryDecorator queryDecorator = new QueryDecorator()
-                .setStatements("SELECT COUNT(firstName) as count, lastName FROM \""+structure.getItemIndex()+"\" GROUP BY lastName");
+                .setStatements("SELECT COUNT(firstName) as count, lastName FROM \""+structure.getItemIndex()+"\" GROUP BY lastName WHERE lastName = ?");
         FunctionDefinition countPeopleDefinition = new FunctionDefinition().setName("countPeopleByLastName");
         countPeopleDefinition.setDecorators(List.of(queryDecorator));
+        countPeopleDefinition.addParameter("lastName", new StringC3Type());
         countPeopleDefinition.setReturnType(new ArrayC3Type().setContains(resultType));
 
         return new NamedQueriesDefinition().setNamespace(structure.getNamespace())

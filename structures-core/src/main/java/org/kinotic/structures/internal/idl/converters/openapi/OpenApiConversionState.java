@@ -2,9 +2,9 @@ package org.kinotic.structures.internal.idl.converters.openapi;
 
 import io.swagger.v3.oas.models.media.Schema;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.internal.idl.converters.common.BaseConversionState;
 
 import java.util.HashMap;
@@ -16,10 +16,13 @@ import java.util.Map;
 @Getter
 @Setter
 @Accessors(chain = true)
-@NoArgsConstructor
 public class OpenApiConversionState extends BaseConversionState {
 
     private final Map<String, Schema<?>> referencedSchemas = new HashMap<>();
+
+    public OpenApiConversionState(StructuresProperties structuresProperties) {
+        super(structuresProperties);
+    }
 
     public OpenApiConversionState addReferencedSchema(String name, Schema<?> schema){
         referencedSchemas.put(name, schema);

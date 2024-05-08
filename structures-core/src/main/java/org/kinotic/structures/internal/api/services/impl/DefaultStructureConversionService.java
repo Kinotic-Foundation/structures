@@ -27,8 +27,6 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class DefaultStructureConversionService implements StructureConversionService {
 
-    private final ElasticConverterStrategy elasticConverterStrategy;
-    private final GqlConverterStrategy gqlConverterStrategy;
     private final IdlConverterFactory idlConverterFactory;
     private final StructuresProperties structuresProperties;
 
@@ -36,10 +34,10 @@ public class DefaultStructureConversionService implements StructureConversionSer
     public ElasticConversionResult convertToElasticMapping(Structure structure) {
         ObjectProperty ret;
 
-        IdlConverter<Property, ElasticConversionState> converter = idlConverterFactory.createConverter(elasticConverterStrategy);
+        IdlConverter<Property, ElasticConversionState> converter = idlConverterFactory
+                .createConverter(new ElasticConverterStrategy(structuresProperties));
 
         ElasticConversionState state = converter.getConversionContext().state();
-        state.setStructuresProperties(structuresProperties);
 
         Property esProperty = converter.convert(structure.getEntityDefinition());
 
@@ -54,11 +52,10 @@ public class DefaultStructureConversionService implements StructureConversionSer
 
     @Override
     public GqlConversionResult convertToGqlMapping(Structure structure) {
-        IdlConverter<GqlTypeHolder, GqlConversionState> converter = idlConverterFactory.createConverter(
-                gqlConverterStrategy);
+        IdlConverter<GqlTypeHolder, GqlConversionState> converter = idlConverterFactory
+                .createConverter(new GqlConverterStrategy(structuresProperties));
 
         GqlConversionState state = converter.getConversionContext().state();
-        state.setStructuresProperties(structuresProperties);
 
         GqlTypeHolder typeHolder = converter.convert(structure.getEntityDefinition());
 
@@ -67,10 +64,8 @@ public class DefaultStructureConversionService implements StructureConversionSer
 
     @Override
     public IdlConverter<Schema<?>, OpenApiConversionState> createOpenApiConverter(){
-        IdlConverter<Schema<?>, OpenApiConversionState> converter = idlConverterFactory.createConverter(new OpenApiConverterStrategy());
-        OpenApiConversionState state = converter.getConversionContext().state();
-        state.setStructuresProperties(structuresProperties);
-        return converter;
+        return idlConverterFactory
+                .createConverter(new OpenApiConverterStrategy(structuresProperties));
     }
 
 }

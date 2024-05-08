@@ -31,7 +31,7 @@ public class OpenApiUtils {
         operation.addParametersItem(new Parameter().name("page")
                                                    .in("query")
                                                    .required(false)
-                                                   .schema(new IntegerSchema())
+                                                   .schema(new IntegerSchema().nullable(true))
                                                    .description("The page number to get. The first page is 0. (This is not needed if cursor paging is being used.)"));
 
         operation.addParametersItem(new Parameter().name("cursor")

@@ -7,6 +7,7 @@ import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.services.JsonEntitiesService;
 import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
+import org.kinotic.structures.internal.api.services.sql.ListParameterHolder;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -78,7 +79,7 @@ public class DefaultJsonEntitiesService implements JsonEntitiesService {
                                                        Participant participant) {
         return defaultEntitiesService.namedQuery(structureId,
                                                  queryName,
-                                                 queryParameters,
+                                                 new ListParameterHolder(queryParameters),
                                                  RawJson.class,
                                                  new DefaultEntityContext(participant));
     }
@@ -91,7 +92,7 @@ public class DefaultJsonEntitiesService implements JsonEntitiesService {
                                                            Participant participant) {
         return defaultEntitiesService.namedQueryPage(structureId,
                                                      queryName,
-                                                     queryParameters,
+                                                     new ListParameterHolder(queryParameters),
                                                      pageable,
                                                      RawJson.class,
                                                      new DefaultEntityContext(participant));

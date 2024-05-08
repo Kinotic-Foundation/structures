@@ -93,9 +93,12 @@ public class StructuresProperties {
 
     @PostConstruct
     public void validate(){
-        // this will validate we do not contain invalid characters
-        // FIXME: should we limit the number of chars as well?
-        StructuresUtil.indexNameValidation(indexPrefix);
+        // validate index prefix
+        if(indexPrefix.length() > 16){
+            throw new IllegalArgumentException("indexPrefix cannot be longer than 16 characters");
+        }
+        // The prefix must be a valid namespace name
+        StructuresUtil.validateStructureNamespaceName(indexPrefix);
     }
 
     public boolean hasElasticUsernameAndPassword(){

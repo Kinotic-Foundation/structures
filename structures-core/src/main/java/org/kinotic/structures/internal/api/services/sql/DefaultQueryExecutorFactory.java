@@ -1,13 +1,11 @@
 package org.kinotic.structures.internal.api.services.sql;
 
-import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.NotImplementedException;
 import org.kinotic.continuum.idl.api.schema.FunctionDefinition;
-import org.kinotic.structures.api.idl.decorators.QueryDecorator;
 import org.kinotic.structures.api.domain.NamedQueriesDefinition;
 import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.api.idl.decorators.QueryDecorator;
 import org.kinotic.structures.api.services.NamedQueriesService;
 import org.kinotic.structures.internal.api.services.sql.executors.AggregateQueryExecutor;
 import org.kinotic.structures.internal.api.services.sql.executors.QueryExecutor;
@@ -26,8 +24,6 @@ public class DefaultQueryExecutorFactory implements QueryExecutorFactory {
 
     private final ElasticVertxClient elasticVertxClient;
     private final NamedQueriesService namedQueriesService;
-    private final ObjectMapper objectMapper;
-    private final ElasticsearchAsyncClient esAsyncClient;
 
     @Override
     public CompletableFuture<QueryExecutor> createQueryExecutor(String queryName, Structure structure){
@@ -65,7 +61,7 @@ public class DefaultQueryExecutorFactory implements QueryExecutorFactory {
         }
     }
 
-    private CompletableFuture<QueryExecutor> createQueryExecutorForStatement(FunctionDefinition namedQuery,
+    private CompletableFuture<QueryExecutor> createQueryExecutorForStatement(FunctionDefinition namedQueryDefinition,
                                                                              String statement,
                                                                              Structure structure){
         // naive approach to how we handle these queries, this will be improved as we do more R&D on advanced approaches
@@ -73,28 +69,12 @@ public class DefaultQueryExecutorFactory implements QueryExecutorFactory {
 
             // Add dummy values for arguments since this is required by elastic
             List<String> arguments = null;
-            if(namedQuery.getParameters() != null){
-                arguments = new ArrayList<>(namedQuery.getParameters().size());
-                for(int i = 0; i < namedQuery.getParameters().size(); i++){
+            if(namedQueryDefinition.getParameters() != null){
+                arguments = new ArrayList<>(namedQueryDefinition.getParameters().size());
+                for(int i = 0; i < namedQueryDefinition.getParameters().size(); i++){
                     arguments.add("test");
                 }
             }
-
-            // leaving here until finished testng since this helps with debugging
-//            return esAsyncClient.sql().translate(builder -> {
-//                builder.query(statement);
-//                return builder;
-//            }).thenApply(translateResponse -> {
-//                if(translateResponse.aggregations() != null
-//                        && !translateResponse.aggregations().isEmpty()){
-//                    return new AggregateQueryExecutor(structure,
-//                                                      elasticVertxClient,
-//                                                      objectMapper,
-//                                                      statement);
-//                }else{
-//                    throw (new NotImplementedException("Select without aggregate not supported yet"));
-//                }
-//            });
 
             return elasticVertxClient.translateSql(statement, arguments)
                                      .thenApply(translateResponse -> {
@@ -102,6 +82,7 @@ public class DefaultQueryExecutorFactory implements QueryExecutorFactory {
                                                  && !translateResponse.aggregations().isEmpty()){
                                              return new AggregateQueryExecutor(structure,
                                                                                elasticVertxClient,
+                                                                               namedQueryDefinition,
                                                                                statement);
                                          }else{
                                              throw (new NotImplementedException("Select without aggregate not supported yet"));

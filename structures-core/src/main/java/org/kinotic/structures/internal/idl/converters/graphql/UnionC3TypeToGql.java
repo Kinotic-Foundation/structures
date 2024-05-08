@@ -9,6 +9,8 @@ import org.kinotic.continuum.idl.api.schema.C3Type;
 import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
 import org.kinotic.continuum.idl.api.schema.UnionC3Type;
 
+import static graphql.schema.GraphQLTypeReference.typeRef;
+
 /**
  * Created by Navíd Mitchell 🤪 on 5/27/23.
  */
@@ -24,7 +26,11 @@ public class UnionC3TypeToGql implements C3TypeConverter<GqlTypeHolder, UnionC3T
         for(ObjectC3Type objectC3Type : c3Type.getTypes()){
             GqlTypeHolder typeHolder = conversionContext.convert(objectC3Type);
             if(typeHolder.getOutputType() instanceof GraphQLObjectType){
-                unionBuilder.possibleType((GraphQLObjectType) typeHolder.getOutputType());
+                GraphQLObjectType objectType = (GraphQLObjectType) typeHolder.getOutputType();
+                String objectTypeName = objectType.getName();
+
+                conversionContext.state().getReferencedTypes().put(objectTypeName, objectType);
+                unionBuilder.possibleType(typeRef(objectTypeName));
             }else{
                 throw new RuntimeException("Union types can only contain Object types");
             }

@@ -4,9 +4,9 @@ import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.continuum.idl.api.schema.FunctionDefinition;
 import org.kinotic.structures.api.domain.EntityContext;
-import org.kinotic.structures.api.domain.QueryParameter;
 import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.internal.api.services.sql.ParameterHolder;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -103,24 +103,31 @@ public interface EntityService {
      * Executes a named query.
      *
      * @param queryName       the name of {@link FunctionDefinition} that defines the query
-     * @param queryParameters the parameters to pass to the query
+     * @param parameterHolder the parameters to pass to the query
      * @param type            the type of the entity
      * @param context         the context for this operation
      * @return {@link CompletableFuture} with the result of the query
      */
-    <T> CompletableFuture<List<T>> namedQuery(String queryName, List<QueryParameter> queryParameters, Class<T> type, EntityContext context);
+    <T> CompletableFuture<List<T>> namedQuery(String queryName,
+                                              ParameterHolder parameterHolder,
+                                              Class<T> type,
+                                              EntityContext context);
 
     /**
      * Executes a named query and returns a {@link Page} of results.
      *
      * @param queryName       the name of {@link FunctionDefinition} that defines the query
-     * @param queryParameters the parameters to pass to the query
+     * @param parameterHolder the parameters to pass to the query
      * @param pageable        the page settings to be used
      * @param type            the type of the entity
      * @param context         the context for this operation
      * @return {@link CompletableFuture} with the result of the query
      */
-    <T> CompletableFuture<Page<T>> namedQueryPage(String queryName, List<QueryParameter> queryParameters, Pageable pageable, Class<T> type, EntityContext context);
+    <T> CompletableFuture<Page<T>> namedQueryPage(String queryName,
+                                                  ParameterHolder parameterHolder,
+                                                  Pageable pageable,
+                                                  Class<T> type,
+                                                  EntityContext context);
 
     /**
      * Saves a given entity. This will override all data if there is an existing entity with the same id.

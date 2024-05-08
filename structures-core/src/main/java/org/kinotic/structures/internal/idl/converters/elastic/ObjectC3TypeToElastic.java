@@ -44,7 +44,7 @@ public class ObjectC3TypeToElastic implements C3TypeConverter<Property, ObjectC3
 
             String fieldName = property.getName();
             C3Type type = property.getType();
-            StructuresUtil.fieldNameValidation(fieldName);
+            StructuresUtil.validatePropertyName(fieldName);
 
             // This will also store decorators encountered
             state.beginProcessingField(property);

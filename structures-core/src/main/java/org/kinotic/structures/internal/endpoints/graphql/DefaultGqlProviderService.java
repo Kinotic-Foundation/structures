@@ -18,11 +18,11 @@ public class DefaultGqlProviderService implements GqlProviderService {
 
     private final AsyncLoadingCache<String, GraphQL> graphQLCache;
 
-    public DefaultGqlProviderService(GqlCacheLoader gqlCacheLoader) {
+    public DefaultGqlProviderService(GqlSchemaCacheLoader gqlSchemaCacheLoader) {
         graphQLCache = Caffeine.newBuilder()
                                .expireAfterAccess(20, TimeUnit.HOURS)
                                .maximumSize(10_000)
-                               .buildAsync(gqlCacheLoader);
+                               .buildAsync(gqlSchemaCacheLoader);
     }
 
     @Override

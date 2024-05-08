@@ -5,7 +5,7 @@ import org.kinotic.continuum.idl.api.converter.C3TypeConverter;
 import org.kinotic.continuum.idl.api.converter.C3TypeConverterContainer;
 import org.kinotic.continuum.idl.api.converter.IdlConverterStrategy;
 import org.kinotic.continuum.idl.api.schema.*;
-import org.springframework.stereotype.Component;
+import org.kinotic.structures.api.config.StructuresProperties;
 
 import java.math.BigDecimal;
 import java.util.Set;
@@ -13,7 +13,6 @@ import java.util.Set;
 /**
  * Created by Navíd Mitchell 🤪 on 5/14/23.
  */
-@Component
 public class OpenApiConverterStrategy implements IdlConverterStrategy<Schema<?>, OpenApiConversionState> {
 
     private static final Schema<?> BOOL = new BooleanSchema();
@@ -28,10 +27,11 @@ public class OpenApiConverterStrategy implements IdlConverterStrategy<Schema<?>,
     private static final Schema<?> SHORT = new NumberSchema().minimum(BigDecimal.valueOf(Short.MIN_VALUE))
                                                              .maximum(BigDecimal.valueOf(Short.MAX_VALUE));
     private static final Schema<?> STRING = new StringSchema();
-    private final Set<C3TypeConverter<Schema<?>, ? extends C3Type, OpenApiConversionState>> converters;
-    private final OpenApiConversionState state = new OpenApiConversionState();
+    private static final Set<C3TypeConverter<Schema<?>, ? extends C3Type, OpenApiConversionState>> converters;
 
-    public OpenApiConverterStrategy() {
+    private final OpenApiConversionState state;
+
+    static {
         // Basic types
         C3TypeConverterContainer<Schema<?>, OpenApiConversionState> container = new C3TypeConverterContainer<>();
         container.addConverter(BooleanC3Type.class, (c3Type, context) -> BOOL)
@@ -52,26 +52,30 @@ public class OpenApiConverterStrategy implements IdlConverterStrategy<Schema<?>,
                      return new Schema<>().$ref("#/components/schemas/"+c3Type.getName());
                  })
                  // Array Type
-                .addConverter(ArrayC3Type.class, (c3Type, context) ->{
-                    // byte arrays are a special case per the open api spec
-                    // https://swagger.io/docs/specification/data-models/data-types/#string
-                    if(c3Type.getContains() instanceof ByteC3Type){
-                        return new StringSchema().format("binary");
-                    } else {
+                 .addConverter(ArrayC3Type.class, (c3Type, context) ->{
+                     // byte arrays are a special case per the open api spec
+                     // https://swagger.io/docs/specification/data-models/data-types/#string
+                     if(c3Type.getContains() instanceof ByteC3Type){
+                         return new StringSchema().format("binary");
+                     } else {
 
-                        Schema<?> schema = context.convert(c3Type.getContains());
+                         Schema<?> schema = context.convert(c3Type.getContains());
 
-                        if(c3Type.getContains() instanceof ObjectC3Type){
-                            ObjectC3Type objectC3Type = (ObjectC3Type) c3Type.getContains();
-                            context.state().addReferencedSchema(objectC3Type.getName(), schema);
-                            schema = new Schema<>().$ref("#/components/schemas/"+objectC3Type.getName());
-                        }
+                         if(c3Type.getContains() instanceof ObjectC3Type){
+                             ObjectC3Type objectC3Type = (ObjectC3Type) c3Type.getContains();
+                             context.state().addReferencedSchema(objectC3Type.getName(), schema);
+                             schema = new Schema<>().$ref("#/components/schemas/"+objectC3Type.getName());
+                         }
 
-                        return new ArraySchema().items(schema);
-                    }
-                });
+                         return new ArraySchema().items(schema);
+                     }
+                 });
 
         converters = Set.of(container, new ObjectC3TypeToOpenApi(), new UnionC3TypeToOpenApi(), new PageC3TypeToOpenApi());
+    }
+
+    public OpenApiConverterStrategy(StructuresProperties structuresProperties) {
+        this.state = new OpenApiConversionState(structuresProperties);
     }
 
     @Override

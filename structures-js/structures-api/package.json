@@ -1,6 +1,6 @@
 {
   "name": "@kinotic/structures-api",
-  "version": "1.14.0",
+  "version": "2.0.0",
   "author": "Kinotic Foundation <develop@kinotic.org>",
   "license": "MIT",
   "homepage": "https://kinotic-foundation.github.io/structures/",
@@ -42,6 +42,6 @@
     "ws": "^8.13.0"
   },
   "peerDependencies": {
-    "@kinotic/continuum-client": "^2.10.2"
+    "@kinotic/continuum-client": "^2.10.3"
   }
 }

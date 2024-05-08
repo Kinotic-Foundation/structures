@@ -1,11 +1,12 @@
 package org.kinotic.structures.internal.idl.converters.elastic;
 
 import co.elastic.clients.elasticsearch._types.mapping.*;
+import lombok.RequiredArgsConstructor;
 import org.kinotic.continuum.idl.api.converter.C3TypeConverter;
 import org.kinotic.continuum.idl.api.converter.C3TypeConverterContainer;
 import org.kinotic.continuum.idl.api.converter.IdlConverterStrategy;
 import org.kinotic.continuum.idl.api.schema.*;
-import org.springframework.stereotype.Component;
+import org.kinotic.structures.api.config.StructuresProperties;
 
 import java.util.Set;
 
@@ -13,7 +14,7 @@ import java.util.Set;
  * Strategy for converting C3 types to ES properties
  * Created by Navíd Mitchell 🤪 on 4/28/23.
  */
-@Component
+@RequiredArgsConstructor
 public class ElasticConverterStrategy implements IdlConverterStrategy<Property, ElasticConversionState> {
 
     private static final Property BOOL = BooleanProperty.of(f -> f)._toProperty();
@@ -27,9 +28,10 @@ public class ElasticConverterStrategy implements IdlConverterStrategy<Property, 
     private static final Property LONG = LongNumberProperty.of(f -> f)._toProperty();
     private static final Property SHORT = ShortNumberProperty.of(f -> f)._toProperty();
     private static final Property STRING = KeywordProperty.of(f -> f)._toProperty();
-    private final Set<C3TypeConverter<Property, ? extends C3Type, ElasticConversionState>> converters;
+    private static final Set<C3TypeConverter<Property, ? extends C3Type, ElasticConversionState>> converters;
+    private final StructuresProperties structuresProperties;
 
-    public ElasticConverterStrategy() {
+    static {
         // Basic types
         C3TypeConverterContainer<Property, ElasticConversionState> container = new C3TypeConverterContainer<>();
         container.addConverter(BooleanC3Type.class, (c3Type, context) -> BOOL)
@@ -51,6 +53,7 @@ public class ElasticConverterStrategy implements IdlConverterStrategy<Property, 
         converters = Set.of(container, new ObjectC3TypeToElastic(), new UnionC3TypeToElastic());
     }
 
+
     @Override
     public Set<C3TypeConverter<Property, ? extends C3Type, ElasticConversionState>> converters() {
         return converters;
@@ -58,7 +61,7 @@ public class ElasticConverterStrategy implements IdlConverterStrategy<Property, 
 
     @Override
     public ElasticConversionState initialState() {
-        return new ElasticConversionState();
+        return new ElasticConversionState(this.structuresProperties);
     }
 
     @Override

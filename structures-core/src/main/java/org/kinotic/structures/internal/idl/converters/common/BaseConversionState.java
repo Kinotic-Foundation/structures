@@ -1,40 +1,27 @@
 package org.kinotic.structures.internal.idl.converters.common;
 
-import lombok.AccessLevel;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;
-import org.kinotic.continuum.idl.api.schema.C3Type;
 import org.kinotic.continuum.idl.api.schema.PropertyDefinition;
 import org.kinotic.structures.api.config.StructuresProperties;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.LinkedList;
-import java.util.List;
 
 /**
  * Created by Navíd Mitchell 🤪 on 5/14/23.
  */
-@Getter
-@Setter
 @Accessors(chain = true)
-@NoArgsConstructor
+@RequiredArgsConstructor
 public class BaseConversionState {
 
-    private StructuresProperties structuresProperties;
-
-    private final List<DecoratedProperty> decoratedProperties = new LinkedList<>();
-
-    @Getter(AccessLevel.NONE)
-    @Setter(AccessLevel.NONE)
     private final Deque<String> propertyStack = new ArrayDeque<>();
-
-    @Setter(AccessLevel.NONE)
+    @Getter
+    private final StructuresProperties structuresProperties;
+    @Getter
     private String currentFieldName = null;
-
-    @Setter(AccessLevel.NONE)
+    @Getter
     private String currentJsonPath = null;
 
     /**
@@ -48,13 +35,6 @@ public class BaseConversionState {
         currentJsonPath = !propertyStack.isEmpty()
                 ? propertyStack.peekFirst() + "." + propertyDefinition.getName() : propertyDefinition.getName();
         propertyStack.addFirst(currentJsonPath);
-
-        C3Type value = propertyDefinition.getType();
-        if(propertyDefinition.hasDecorators()){
-            decoratedProperties.add(new DecoratedProperty(currentJsonPath,
-                                                          value.getClass(),
-                                                          propertyDefinition.getDecorators()));
-        }
     }
 
     /**

@@ -1,4 +1,4 @@
-import {C3Type, FunctionDefinition} from '@kinotic/continuum-idl'
+import {C3Type, FunctionDefinition, ObjectC3Type} from '@kinotic/continuum-idl'
 import fs from 'fs'
 import {Liquid} from 'liquidjs'
 import path from 'path'
@@ -226,7 +226,11 @@ export class CodeGenerationService {
                     throw new Error('Page must have exactly one type argument')
                 }
                 const contentType = this.conversionContext.convert(typeArguments[0])
-                ret = new PageC3Type(contentType)
+                if(contentType instanceof ObjectC3Type){
+                    ret = new PageC3Type(contentType)
+                }else{
+                    throw new Error('Only Object types are supported for Page content types')
+                }
             }else{
                 ret = this.conversionContext.convert(returnType)
             }

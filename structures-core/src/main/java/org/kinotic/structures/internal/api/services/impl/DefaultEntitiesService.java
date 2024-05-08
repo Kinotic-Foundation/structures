@@ -6,12 +6,12 @@ import org.apache.commons.lang3.Validate;
 import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.structures.api.domain.EntityContext;
-import org.kinotic.structures.api.domain.QueryParameter;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.EntitiesService;
 import org.kinotic.structures.internal.api.services.EntityService;
 import org.kinotic.structures.internal.api.services.EntityServiceFactory;
 import org.kinotic.structures.internal.api.services.StructureDAO;
+import org.kinotic.structures.internal.api.services.sql.ParameterHolder;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -108,23 +108,23 @@ public class DefaultEntitiesService implements EntitiesService {
     @Override
     public <T> CompletableFuture<List<T>> namedQuery(String structureId,
                                                      String queryName,
-                                                     List<QueryParameter> queryParameters,
+                                                     ParameterHolder parameterHolder,
                                                      Class<T> type,
                                                      EntityContext context) {
         return cache.get(structureId)
-                    .thenCompose(entityService -> entityService.namedQuery(queryName, queryParameters, type, context));
+                    .thenCompose(entityService -> entityService.namedQuery(queryName, parameterHolder, type, context));
     }
 
     @Override
     public <T> CompletableFuture<Page<T>> namedQueryPage(String structureId,
                                                          String queryName,
-                                                         List<QueryParameter> queryParameters,
+                                                         ParameterHolder parameterHolder,
                                                          Pageable pageable,
                                                          Class<T> type,
                                                          EntityContext context) {
         return cache.get(structureId)
                     .thenCompose(entityService -> entityService.namedQueryPage(queryName,
-                                                                               queryParameters,
+                                                                               parameterHolder,
                                                                                pageable,
                                                                                type,
                                                                                context));

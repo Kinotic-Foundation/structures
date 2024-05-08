@@ -6,14 +6,14 @@ settings:
 
 dependencies:
   '@kinotic/continuum-client':
-    specifier: ^2.10.2
-    version: 2.10.2
+    specifier: ^2.10.3
+    version: 2.10.3
   '@kinotic/continuum-idl':
     specifier: ^2.0.0
     version: 2.0.0
   '@kinotic/structures-api':
-    specifier: file:.yalc/@kinotic/structures-api
-    version: file:.yalc/@kinotic/structures-api(@kinotic/continuum-client@2.10.2)
+    specifier: 2.0.0
+    version: 2.0.0(@kinotic/continuum-client@2.10.3)
   '@oclif/core':
     specifier: ^3.26.4
     version: 3.26.4
@@ -955,8 +955,8 @@ packages:
       '@jridgewell/resolve-uri': 3.1.1
       '@jridgewell/sourcemap-codec': 1.4.15
 
-  /@kinotic/continuum-client@2.10.2:
-    resolution: {integrity: sha512-4fukwDgyRwqtFMhqxvwFmv6pTq0Wj8pEoAZ23ONElFjrxCH3dvSvMb85wHhsfi/qPGWpGWWxdVUncbeB9RdHoQ==}
+  /@kinotic/continuum-client@2.10.3:
+    resolution: {integrity: sha512-qqV9cL9e8uTipvSNhMo6cxtc/+fk2XLMiAF42CHpj6DWVcX9fZS5t6uih4u6yA8NOPh5pm20jCD2tKriCURyww==}
     dependencies:
       '@stomp/rx-stomp': 2.0.0(@stomp/stompjs@7.0.0)(rxjs@7.8.1)(uuid@9.0.1)
       '@stomp/stompjs': 7.0.0
@@ -968,6 +968,16 @@ packages:
 
   /@kinotic/continuum-idl@2.0.0:
     resolution: {integrity: sha512-7SblwX24A7xLsDYOy1if/iy+tUPjlbm8Ej1IPPGj5ENKvecKbkvxRo4nCL/Yl7CjY3GYJD9wZVvl8TNfGJPyVw==}
+    dev: false
+
+  /@kinotic/structures-api@2.0.0(@kinotic/continuum-client@2.10.3):
+    resolution: {integrity: sha512-hU5frPJyLKSqGyeZFbgtAo9vD4mqpcOcJwXiDlPvR+R3VM+j9ph8ypGXS5ENNK3gJgkI/KegBhTViQtNEdHQxw==}
+    peerDependencies:
+      '@kinotic/continuum-client': ^2.10.3
+    dependencies:
+      '@kinotic/continuum-client': 2.10.3
+      '@kinotic/continuum-idl': 2.0.0
+      reflect-metadata: 0.2.2
     dev: false
 
   /@ljharb/through@2.3.13:
@@ -5972,15 +5982,3 @@ packages:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
     dev: true
-
-  file:.yalc/@kinotic/structures-api(@kinotic/continuum-client@2.10.2):
-    resolution: {directory: .yalc/@kinotic/structures-api, type: directory}
-    id: file:.yalc/@kinotic/structures-api
-    name: '@kinotic/structures-api'
-    peerDependencies:
-      '@kinotic/continuum-client': ^2.10.2
-    dependencies:
-      '@kinotic/continuum-client': 2.10.2
-      '@kinotic/continuum-idl': 2.0.0
-      reflect-metadata: 0.2.2
-    dev: false
