@@ -361,7 +361,7 @@ public class DefaultOpenApiService implements OpenApiService {
             // For any FunctionDefinition create a Named Query path item
             for(FunctionDefinition query : namedQueriesDefinition.getNamedQueries()){
                 String queryName = query.getName();
-                String summary = "Named Query: " + queryName;
+                String summary = "Named query: " + queryName;
 
                 // Build the response schema
                 ApiResponse response = createResponse(queryName,
@@ -370,7 +370,7 @@ public class DefaultOpenApiService implements OpenApiService {
                                                       components);
 
                 Operation queryOperation = createOperation(summary,
-                                                           "Executes the named query: " + queryName,
+                                                           "Executes the named query " + queryName,
                                                            queryName,
                                                            structure,
                                                            response);
