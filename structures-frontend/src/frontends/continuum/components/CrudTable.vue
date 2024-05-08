@@ -38,7 +38,7 @@
                                   @keyup.enter.capture="search($event)">
                     </v-text-field>
                     <v-spacer></v-spacer>
-                    <v-btn v-if="editable"
+                    <v-btn v-if="editable && !disableModifications"
                            color="primary"
                            fab
                            small
@@ -55,7 +55,8 @@
 
             <!--  Add Action columns  -->
             <template v-if="editable" v-slot:item.action="{ item }" >
-                <v-icon title="Edit"
+                <v-icon v-if="!disableModifications"
+                        title="Edit"
                         small
                         class="mr-2"
                         @click="editItem(item)">
@@ -128,6 +129,9 @@ export default class CrudTable extends Vue {
 
     @Prop({ type: Boolean, required: false, default: false })
     public singleExpand!: boolean
+
+    @Prop({ type: Boolean, required: false, default: false })
+    public disableModifications!: boolean
 
     /**
      * Icons

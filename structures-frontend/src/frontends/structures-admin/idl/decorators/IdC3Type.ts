@@ -8,9 +8,7 @@ import {IdDecorator} from '@kinotic/structures-api'
 export class IdC3Type extends C3Type {
 
     constructor() {
-        super()
-        this.type = 'string'
-        this.addDecorator(new IdDecorator())
+        super('string')
     }
 }
 

@@ -26,7 +26,7 @@
                 <tbody>
                 <tr v-if="items.length > 0" v-for="item in items" :key="item.id">
                     <td v-for="(key, index) in keys">
-                        {{ structureProperties[key].type === "date" ? DatetimeUtil.formatDate(item[key]) : item[key] }}
+                        {{ StructureUtil.getPropertyDefinition(key, structureProperties).type === "date" ? DatetimeUtil.formatDate(item[key]) : item[key] }}
                     </td>
                 </tr>
                 <tr v-if="items.length === 0">
@@ -88,6 +88,9 @@ import {StructureUtil} from "@/frontends/structures-admin/pages/structures/util/
                computed: {
                    DatetimeUtil() {
                        return DatetimeUtil
+                   },
+                   StructureUtil() {
+                       return StructureUtil
                    }
                },
                components: { CrudTable }
@@ -155,25 +158,26 @@ export default class EntityList extends Vue {
             .then((structure) => {
                 this.structure = structure
                 this.structureProperties = this.structure.entityDefinition.properties
-                let keys: string[] = Object.keys(this.structureProperties)
-                for (let key of keys) {
-                    if (this.structureProperties.hasOwnProperty(key)) {
-                        let definition: any = this.structureProperties[key]
-                        let fieldName = key.charAt(0).toUpperCase() + key.slice(1)
+
+                for (const property of this.structureProperties){
+                    if(property){
+                        let fieldName = property.name[0].toUpperCase() + property.name.slice(1)
                         let sortable: boolean = true
-                        // FIXME: how to ensure we don't try and sort on full text search fields?
-                        if (definition.type === "ref" || definition.type === "array" || definition.type === "object" || (definition.type === "string" && StructureUtil.hasDecorator('Text', definition.decorators))) {
+                        if (property.type.type === "ref"
+                            || property.type.type === "array"
+                            || property.type.type === "object"
+                            || (property.type.type === "string"
+                                && StructureUtil.hasDecorator('Text', property.decorators))) {
                             sortable = false
                         }
-                        let headerDef: any = {text: fieldName, value: key, sortable: sortable}
-                        //
-                        if(key === 'id'){
+                        let headerDef: any = {text: fieldName, value: property.name, sortable: sortable}
+                        if(property.name === 'id'){
                             headerDef.width = 300
                         } else if(sortable){
                             headerDef.width = 150
                         }
                         this.headers.push(headerDef)
-                        this.keys.push(key)
+                        this.keys.push(property.name)
                     }
                 }
                 this.find()
