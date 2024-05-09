@@ -1,16 +1,19 @@
 version: "3.9"
 services:
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.9
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.2
     container_name: elasticsearch
     environment:
       - discovery.type=single-node
+      - xpack.security.enabled=false
     healthcheck:
       test: ["CMD-SHELL", "curl --silent --fail localhost:9200/_cluster/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 60s
+    ports:
+      - "9200:9200" # allow local kibana or curl usage
     stdin_open: true
     tty: true
     deploy:
@@ -19,6 +22,8 @@ services:
           memory: 4G
         limits:
           memory: 4G
+    volumes:
+      - ~/structures/elastic-data:/usr/share/elasticsearch/data
   structures-server:
     image: kinotic/structures-server:latest
     depends_on:
