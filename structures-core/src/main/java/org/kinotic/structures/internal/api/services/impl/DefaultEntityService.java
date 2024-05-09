@@ -147,7 +147,7 @@ public class DefaultEntityService implements EntityService {
                                                      Class<T> type,
                                                      EntityContext context) {
         return validateTenant(context)
-                .thenCompose(unused -> queryExecutorFactory.createQueryExecutor(queryName, structure)
+                .thenCompose(unused -> queryExecutorFactory.createQueryExecutor(structure, queryName)
                                                            .thenCompose(executor -> executor.execute(parameterHolder,
                                                                                                      type,
                                                                                                      context)));
@@ -160,7 +160,7 @@ public class DefaultEntityService implements EntityService {
                                                          Class<T> type,
                                                          EntityContext context) {
         return validateTenant(context)
-                .thenCompose(unused -> queryExecutorFactory.createQueryExecutor(queryName, structure)
+                .thenCompose(unused -> queryExecutorFactory.createQueryExecutor(structure, queryName)
                                                            .thenCompose(executor -> executor.executePage(parameterHolder,
                                                                                                          pageable,
                                                                                                          type,

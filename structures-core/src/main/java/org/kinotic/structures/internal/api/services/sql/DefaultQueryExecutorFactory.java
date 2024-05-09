@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.regex.Pattern;
 
 /**
  * Created by Navíd Mitchell 🤪 on 4/28/24.
@@ -22,20 +23,22 @@ import java.util.concurrent.CompletableFuture;
 @Component
 public class DefaultQueryExecutorFactory implements QueryExecutorFactory {
 
+    private static Pattern aggregatePattern = Pattern.compile("\\b(AVG|COUNT|FIRST|LAST|MAX|MIN|SUM|KURTOSIS|MAD|PERCENTILE|PERCENTILE_RANK|SKEWNESS|STDDEV_POP|STDDEV_SAMP|SUM_OF_SQUARES|VAR_POP|VAR_SAMP)\\s*\\([a-zA-Z0-9_, ]+\\)");
     private final ElasticVertxClient elasticVertxClient;
     private final NamedQueriesService namedQueriesService;
 //    private final ElasticsearchAsyncClient esAsyncClient;
 
     @Override
-    public CompletableFuture<QueryExecutor> createQueryExecutor(String queryName, Structure structure){
+    public CompletableFuture<QueryExecutor> createQueryExecutor(Structure structure,
+                                                                String queryName){
         return namedQueriesService.findByNamespaceAndStructure(structure.getNamespace(),
                                                                structure.getName())
-                                  .thenCompose(nqd -> createQueryExecutor(nqd, queryName, structure));
+                                  .thenCompose(nqd -> createQueryExecutor(structure, queryName, nqd));
     }
 
-    private CompletableFuture<QueryExecutor> createQueryExecutor(NamedQueriesDefinition namedQueriesDefinition,
+    private CompletableFuture<QueryExecutor> createQueryExecutor(Structure structure,
                                                                  String queryName,
-                                                                 Structure structure){
+                                                                 NamedQueriesDefinition namedQueriesDefinition){
         FunctionDefinition namedQuery = null;
         for(FunctionDefinition queries : namedQueriesDefinition.getNamedQueries()){
             if(queries.getName().equals(queryName)){
@@ -56,15 +59,15 @@ public class DefaultQueryExecutorFactory implements QueryExecutorFactory {
 
         String[] statements = queryDecorator.getStatements().split(";");
         if(statements.length == 1){
-            return createQueryExecutorForStatement(namedQuery, statements[0], structure);
+            return createQueryExecutorForStatement(structure, statements[0], namedQuery);
         }else{
             return CompletableFuture.failedFuture(new IllegalArgumentException("Multiple statements not supported yet"));
         }
     }
 
-    private CompletableFuture<QueryExecutor> createQueryExecutorForStatement(FunctionDefinition namedQueryDefinition,
+    private CompletableFuture<QueryExecutor> createQueryExecutorForStatement(Structure structure,
                                                                              String statement,
-                                                                             Structure structure){
+                                                                             FunctionDefinition namedQueryDefinition){
         // naive approach to how we handle these queries, this will be improved as we do more R&D on advanced approaches
         if(statement.toLowerCase().startsWith("select")) {
 
@@ -76,40 +79,15 @@ public class DefaultQueryExecutorFactory implements QueryExecutorFactory {
                     arguments.add("test");
                 }
             }
-
-            // leaving here until finished testng since this helps with debugging
-//            return esAsyncClient.sql().translate(builder -> {
-//                builder.query(statement);
-//                return builder;
-//            }).exceptionally(new Function<Throwable, TranslateResponse>() {
-//                @Override
-//                public TranslateResponse apply(Throwable throwable) {
-//                    return null;
-//                }
-//            }).thenApply(translateResponse -> {
-//                if(translateResponse.aggregations() != null
-//                        && !translateResponse.aggregations().isEmpty()){
-//                    return new AggregateQueryExecutor(structure,
-//                                                      elasticVertxClient,
-//                                                      namedQueryDefinition,
-//                                                      statement);
-//                }else{
-//                    throw (new NotImplementedException("Select without aggregate not supported yet"));
-//                }
-//            });
-
-            return elasticVertxClient.translateSql(statement, arguments)
-                                     .thenApply(translateResponse -> {
-                                         if(translateResponse.aggregations() != null
-                                                 && !translateResponse.aggregations().isEmpty()){
-                                             return new AggregateQueryExecutor(structure,
-                                                                               elasticVertxClient,
-                                                                               namedQueryDefinition,
-                                                                               statement);
-                                         }else{
-                                             throw (new NotImplementedException("Select without aggregate not supported yet"));
-                                         }
-                                     });
+            // Check if this is an aggregate query
+            if(aggregatePattern.matcher(statement.toUpperCase()).find()){
+                return CompletableFuture.completedFuture(new AggregateQueryExecutor(structure,
+                                                                                   elasticVertxClient,
+                                                                                   namedQueryDefinition,
+                                                                                   statement));
+            }else {
+                throw (new NotImplementedException("Select without aggregate not supported yet"));
+            }
 
         }else if(statement.toLowerCase().startsWith("update")) {
             return CompletableFuture.failedFuture(new NotImplementedException("Update not supported yet"));
