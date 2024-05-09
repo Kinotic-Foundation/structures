@@ -27,6 +27,7 @@ import org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfig
 import org.springframework.boot.autoconfigure.graphql.GraphQlAutoConfiguration;
 import org.springframework.boot.autoconfigure.graphql.reactive.GraphQlWebFluxAutoConfiguration;
 import org.springframework.boot.autoconfigure.hazelcast.HazelcastAutoConfiguration;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Import;
 
 @SpringBootApplication(exclude = {HazelcastAutoConfiguration.class,
@@ -37,6 +38,7 @@ import org.springframework.context.annotation.Import;
 @Import(VertxBeans.class)
 @EnableContinuum
 @EnableStructures
+@EnableConfigurationProperties
 public class StructuresTestApplication {
     public static void main(String[] args) {
         SpringApplication.run(StructuresTestApplication.class, args);

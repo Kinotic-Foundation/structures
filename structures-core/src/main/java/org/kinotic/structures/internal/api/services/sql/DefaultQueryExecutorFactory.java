@@ -24,6 +24,7 @@ public class DefaultQueryExecutorFactory implements QueryExecutorFactory {
 
     private final ElasticVertxClient elasticVertxClient;
     private final NamedQueriesService namedQueriesService;
+//    private final ElasticsearchAsyncClient esAsyncClient;
 
     @Override
     public CompletableFuture<QueryExecutor> createQueryExecutor(String queryName, Structure structure){
@@ -75,6 +76,27 @@ public class DefaultQueryExecutorFactory implements QueryExecutorFactory {
                     arguments.add("test");
                 }
             }
+
+            // leaving here until finished testng since this helps with debugging
+//            return esAsyncClient.sql().translate(builder -> {
+//                builder.query(statement);
+//                return builder;
+//            }).exceptionally(new Function<Throwable, TranslateResponse>() {
+//                @Override
+//                public TranslateResponse apply(Throwable throwable) {
+//                    return null;
+//                }
+//            }).thenApply(translateResponse -> {
+//                if(translateResponse.aggregations() != null
+//                        && !translateResponse.aggregations().isEmpty()){
+//                    return new AggregateQueryExecutor(structure,
+//                                                      elasticVertxClient,
+//                                                      namedQueryDefinition,
+//                                                      statement);
+//                }else{
+//                    throw (new NotImplementedException("Select without aggregate not supported yet"));
+//                }
+//            });
 
             return elasticVertxClient.translateSql(statement, arguments)
                                      .thenApply(translateResponse -> {

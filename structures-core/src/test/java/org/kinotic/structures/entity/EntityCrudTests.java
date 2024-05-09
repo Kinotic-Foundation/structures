@@ -74,7 +74,7 @@ public class EntityCrudTests extends ElasticsearchTestBase {
         return createAndVerify(1,
                                true,
                                new DefaultEntityContext(new DummyParticipant()),
-                               "-" + System.currentTimeMillis());
+                               "_" + System.currentTimeMillis());
     }
 
     private StructureAndPersonHolder createAndVerify(int numberOfPeopleToCreate,
@@ -117,7 +117,7 @@ public class EntityCrudTests extends ElasticsearchTestBase {
     public void testCreateAndDeleteByQuery() throws InterruptedException {
         EntityContext context = new DefaultEntityContext(new DummyParticipant("tenant", "user"));
 
-        StructureAndPersonHolder holder = createAndVerify(20, false, context, "-testFindByIds");
+        StructureAndPersonHolder holder = createAndVerify(20, false, context, "_testFindByIds");
 
         Assertions.assertNotNull(holder);
 
@@ -173,7 +173,7 @@ public class EntityCrudTests extends ElasticsearchTestBase {
     public void testFindByIds(){
         EntityContext context = new DefaultEntityContext(new DummyParticipant("tenant", "user"));
 
-        StructureAndPersonHolder holder = createAndVerify(10, true, context, "-testFindByIds");
+        StructureAndPersonHolder holder = createAndVerify(10, true, context, "_testFindByIds");
 
         Assertions.assertNotNull(holder);
 
@@ -217,7 +217,7 @@ public class EntityCrudTests extends ElasticsearchTestBase {
     public void testFindByIdsNoneFound(){
         EntityContext context = new DefaultEntityContext(new DummyParticipant("tenant", "user"));
 
-        StructureAndPersonHolder holder = createAndVerify(10, true, context, "-testFindByIdsNoneFound");
+        StructureAndPersonHolder holder = createAndVerify(10, true, context, "_testFindByIdsNoneFound");
 
         Assertions.assertNotNull(holder);
 
@@ -244,11 +244,11 @@ public class EntityCrudTests extends ElasticsearchTestBase {
         EntityContext context1 = new DefaultEntityContext(new DummyParticipant("tenant1", "user1"));
         EntityContext context2 = new DefaultEntityContext(new DummyParticipant("tenant2", "user2"));
 
-        StructureAndPersonHolder holder1 = createAndVerify(10, true, context1, "-testCount");
+        StructureAndPersonHolder holder1 = createAndVerify(10, true, context1, "_testCount");
 
         Assertions.assertNotNull(holder1);
 
-        StructureAndPersonHolder holder2 = createAndVerify(20, true, context2, "-testCount");
+        StructureAndPersonHolder holder2 = createAndVerify(20, true, context2, "_testCount");
 
         Assertions.assertNotNull(holder2);
 
@@ -269,11 +269,11 @@ public class EntityCrudTests extends ElasticsearchTestBase {
         EntityContext context1 = new DefaultEntityContext(new DummyParticipant("tenant1", "user1"));
         EntityContext context2 = new DefaultEntityContext(new DummyParticipant("tenant2", "user2"));
 
-        StructureAndPersonHolder holder1 = createAndVerify(10, false, context1, "-testCountByQuery");
+        StructureAndPersonHolder holder1 = createAndVerify(10, false, context1, "_testCountByQuery");
 
         Assertions.assertNotNull(holder1);
 
-        StructureAndPersonHolder holder2 = createAndVerify(20, false, context2, "-testCountByQuery");
+        StructureAndPersonHolder holder2 = createAndVerify(20, false, context2, "_testCountByQuery");
 
         Assertions.assertNotNull(holder2);
 
@@ -301,11 +301,11 @@ public class EntityCrudTests extends ElasticsearchTestBase {
         EntityContext context1 = new DefaultEntityContext(new DummyParticipant("tenant1", "user1"));
         EntityContext context2 = new DefaultEntityContext(new DummyParticipant("tenant2", "user2"));
 
-        StructureAndPersonHolder holder1 = createAndVerify(10, true, context1, "-testAll");
+        StructureAndPersonHolder holder1 = createAndVerify(10, true, context1, "_testAll");
 
         Assertions.assertNotNull(holder1);
 
-        StructureAndPersonHolder holder2 = createAndVerify(20, true, context2, "-testAll");
+        StructureAndPersonHolder holder2 = createAndVerify(20, true, context2, "_testAll");
 
         Assertions.assertNotNull(holder2);
 
@@ -335,11 +335,11 @@ public class EntityCrudTests extends ElasticsearchTestBase {
         EntityContext context1 = new DefaultEntityContext(new DummyParticipant("tenant1", "user1"));
         EntityContext context2 = new DefaultEntityContext(new DummyParticipant("tenant2", "user2"));
 
-        StructureAndPersonHolder holder1 = createAndVerify(40, true, context1, "-testAllWCursor");
+        StructureAndPersonHolder holder1 = createAndVerify(40, true, context1, "_testAllWCursor");
 
         Assertions.assertNotNull(holder1);
 
-        StructureAndPersonHolder holder2 = createAndVerify(30, true, context2, "-testAllWCursor");
+        StructureAndPersonHolder holder2 = createAndVerify(30, true, context2, "_testAllWCursor");
 
         Assertions.assertNotNull(holder2);
 
@@ -501,11 +501,11 @@ public class EntityCrudTests extends ElasticsearchTestBase {
         EntityContext context1 = new DefaultEntityContext(new DummyParticipant("tenant1", "user1"));
         EntityContext context2 = new DefaultEntityContext(new DummyParticipant("tenant2", "user2"));
 
-        StructureAndPersonHolder holder1 = createAndVerify(10, false, context1, "-testSearch");
+        StructureAndPersonHolder holder1 = createAndVerify(10, false, context1, "_testSearch");
 
         Assertions.assertNotNull(holder1);
 
-        StructureAndPersonHolder holder2 = createAndVerify(20, false, context2, "-testSearch");
+        StructureAndPersonHolder holder2 = createAndVerify(20, false, context2, "_testSearch");
 
         Assertions.assertNotNull(holder2);
 
@@ -551,7 +551,7 @@ public class EntityCrudTests extends ElasticsearchTestBase {
         for(int i = 0; i < 10; i++){
             int numberOfPeople = (int)(Math.random()*100);
             DefaultEntityContext context = new DefaultEntityContext(new DummyParticipant("tenant"+i, "user"+i));
-            StructureAndPersonHolder holder = createAndVerify(numberOfPeople, true, context, "-testMultiTenantSearch");
+            StructureAndPersonHolder holder = createAndVerify(numberOfPeople, true, context, "_testMultiTenantSearch");
             Assertions.assertNotNull(holder);
             contextMap.put(context,  holder);
         }
@@ -592,7 +592,7 @@ public class EntityCrudTests extends ElasticsearchTestBase {
     @Test
     public void testPartialUpdate() throws Exception {
         EntityContext entityContext = new DefaultEntityContext(new DummyParticipant());
-        CompletableFuture<Pair<Structure, Boolean>> createStructure = testDataService.createCarStructureIfNotExists("-partialUpdate");
+        CompletableFuture<Pair<Structure, Boolean>> createStructure = testDataService.createCarStructureIfNotExists("_partialUpdate");
 
         StepVerifier.create(Mono.fromFuture(createStructure))
                     .expectNextMatches(pair -> {

@@ -1,5 +1,7 @@
 package org.kinotic.structures.internal.api.services.sql;
 
+import co.elastic.clients.elasticsearch._types.ErrorCause;
+import co.elastic.clients.elasticsearch._types.ErrorResponse;
 import co.elastic.clients.elasticsearch.sql.TranslateResponse;
 import co.elastic.clients.json.JsonpMapper;
 import co.elastic.clients.json.SimpleJsonpMapper;
@@ -24,6 +26,8 @@ import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.internal.api.services.sql.executors.ElasticColumn;
 import org.kinotic.structures.internal.api.services.sql.executors.ElasticSQLResponse;
 import org.kinotic.structures.internal.config.ElasticConnectionInfo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PreDestroy;
@@ -43,10 +47,10 @@ import java.util.concurrent.CompletableFuture;
  */
 @Component
 public class DefaultElasticVertxClient implements ElasticVertxClient {
-
+    private static final Logger log = LoggerFactory.getLogger(DefaultElasticVertxClient.class);
+    private final ObjectMapper objectMapper;
     private final HttpRequest<Buffer> sqlQueryRequest;
     private final HttpRequest<Buffer> sqlTranslateRequest;
-    private final ObjectMapper objectMapper;
     private final Vertx vertx;
     private final WebClient webClient;
 
@@ -121,23 +125,27 @@ public class DefaultElasticVertxClient implements ElasticVertxClient {
         VertxCompletableFuture<Page<T>> fut = new VertxCompletableFuture<>(vertx);
         sqlQueryRequest.sendJsonObject(json, ar -> {
             if(ar.succeeded()){
-                Buffer buffer = ar.result().body();
-                if(RawJson.class.isAssignableFrom(type)){
-                    try {
-                        //noinspection unchecked
-                        fut.complete((Page<T>)processBufferToRawJson(buffer));
-                    } catch (Exception e) {
-                        fut.completeExceptionally(new IllegalStateException("Failed to process buffer to raw json", e));
+                if(ar.result().statusCode() == 200) {
+                    Buffer buffer = ar.result().body();
+                    if (RawJson.class.isAssignableFrom(type)) {
+                        try {
+                            //noinspection unchecked
+                            fut.complete((Page<T>) processBufferToRawJson(buffer));
+                        } catch (Exception e) {
+                            fut.completeExceptionally(new IllegalStateException("Failed to process buffer to raw json", e));
+                        }
+                    } else if (Map.class.isAssignableFrom(type)) {
+                        try {
+                            //noinspection unchecked
+                            fut.complete((Page<T>) processBufferToMap(buffer));
+                        } catch (Exception e) {
+                            fut.completeExceptionally(new IllegalStateException("Failed to process buffer to map", e));
+                        }
+                    } else {
+                        fut.completeExceptionally(new IllegalArgumentException("Type: " + type.getName() + " is not supported at this time"));
                     }
-                } else if(Map.class.isAssignableFrom(type)){
-                    try {
-                        //noinspection unchecked
-                        fut.complete((Page<T>)processBufferToMap(buffer));
-                    } catch (Exception e) {
-                        fut.completeExceptionally(new IllegalStateException("Failed to process buffer to map", e));
-                    }
-                } else {
-                    fut.completeExceptionally(new IllegalArgumentException("Type: " + type.getName() + " is not supported at this time"));
+                }else{
+                    fut.completeExceptionally(convertErrorResponse(new ByteArrayInputStream(ar.result().body().getBytes())));
                 }
             }else{
                 fut.completeExceptionally(ar.cause());
@@ -160,24 +168,39 @@ public class DefaultElasticVertxClient implements ElasticVertxClient {
         }
         sqlTranslateRequest.sendJsonObject(json, ar -> {
             if(ar.succeeded()){
-                try {
-                    TranslateResponse translateResponse = TranslateResponse.of(builder -> {
-                        InputStream input = new ByteArrayInputStream(ar.result()
-                                                                    .body()
-                                                                    .getBytes());
-                        JsonpMapper mapper = SimpleJsonpMapper.INSTANCE; // We don't want to fail on unknown fields
-                        builder.withJson(mapper.jsonProvider().createParser(input), mapper);
-                        return builder;
-                    });
-                    responseFuture.complete(translateResponse);
-                } catch (Exception e) {
-                    responseFuture.completeExceptionally(e);
+                InputStream input = new ByteArrayInputStream(ar.result()
+                                                               .body()
+                                                               .getBytes());
+                if(ar.result().statusCode() == 200) {
+                    try {
+                        TranslateResponse translateResponse = TranslateResponse.of(builder -> {
+                            JsonpMapper mapper = SimpleJsonpMapper.INSTANCE; // We don't want to fail on unknown fields
+                            builder.withJson(mapper.jsonProvider().createParser(input), mapper);
+                            return builder;
+                        });
+                        responseFuture.complete(translateResponse);
+                    } catch (Exception e) {
+                        responseFuture.completeExceptionally(e);
+                    }
+                }else{
+                    responseFuture.completeExceptionally(convertErrorResponse(input));
                 }
             }else{
                 responseFuture.completeExceptionally(ar.cause());
             }
         });
         return responseFuture;
+    }
+
+    private Exception convertErrorResponse(InputStream input) {
+        ErrorResponse errorResponse = ErrorResponse.of(builder -> {
+            JsonpMapper mapper = SimpleJsonpMapper.INSTANCE; // We don't want to fail on unknown fields
+            builder.withJson(mapper.jsonProvider().createParser(input), mapper);
+            return builder;
+        });
+        ErrorCause cause = errorResponse.error();
+        log.debug("Exception from Elastic SQL: {} {} \n{}", cause.type(), cause.reason(), cause.stackTrace());
+        return new IllegalArgumentException("SQL " + cause.type() + " " + cause.reason());
     }
 
     private Page<Map<String, Object>> processBufferToMap(Buffer buffer) throws Exception {

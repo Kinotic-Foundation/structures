@@ -71,11 +71,11 @@ public class BulkUpdateTests extends ElasticsearchTestBase {
         EntityContext context1 = new DefaultEntityContext(new DummyParticipant("tenant1", "user1"));
         EntityContext context2 = new DefaultEntityContext(new DummyParticipant("tenant2", "user2"));
 
-        StructureAndPersonHolder holder1 = createAndVerifyBulk(numberOfPeopleToCreate, true, context1, "-testBulk");
+        StructureAndPersonHolder holder1 = createAndVerifyBulk(numberOfPeopleToCreate, true, context1, "_testBulk");
 
         Assertions.assertNotNull(holder1);
 
-        StructureAndPersonHolder holder2 = createAndVerifyBulk(numberOfPeopleToCreate, true, context2, "-testBulk");
+        StructureAndPersonHolder holder2 = createAndVerifyBulk(numberOfPeopleToCreate, true, context2, "_testBulk");
 
         Assertions.assertNotNull(holder2);
 
@@ -105,7 +105,7 @@ public class BulkUpdateTests extends ElasticsearchTestBase {
     @Test
     public void bulkSaveObjectWithMultipleIds() throws Exception{
         EntityContext entityContext = new DefaultEntityContext(new DummyParticipant());
-        CompletableFuture<Pair<Structure, Boolean>> createStructure = testDataService.createCarStructureIfNotExists("-bulkSaveMultipleIds");
+        CompletableFuture<Pair<Structure, Boolean>> createStructure = testDataService.createCarStructureIfNotExists("_bulkSaveMultipleIds");
 
         StepVerifier.create(Mono.fromFuture(createStructure))
                     .expectNextMatches(pair -> pair.getLeft() != null && pair.getRight())
@@ -142,7 +142,7 @@ public class BulkUpdateTests extends ElasticsearchTestBase {
     @Test
     public void bulkUpdateObjectWithMultipleIds() throws Exception{
         EntityContext entityContext = new DefaultEntityContext(new DummyParticipant());
-        CompletableFuture<Pair<Structure, Boolean>> createStructure = testDataService.createCarStructureIfNotExists("-bulkUpdateMultipleIds");
+        CompletableFuture<Pair<Structure, Boolean>> createStructure = testDataService.createCarStructureIfNotExists("_bulkUpdateMultipleIds");
 
         StepVerifier.create(Mono.fromFuture(createStructure))
                     .expectNextMatches(pair -> pair.getLeft() != null && pair.getRight())

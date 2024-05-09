@@ -53,7 +53,6 @@ public class AggregateQueryExecutor extends AbstractQueryExecutor {
             paramsToUse = QueryUtils.extractOrderedParameterList(parameterHolder, parameterNames);
         }else if(parameterHolder != null){
             throw new IllegalArgumentException("This query does not support any parameters");
-
         }
 
         JsonObject filter = createFilterIfNeeded(context);
@@ -72,7 +71,6 @@ public class AggregateQueryExecutor extends AbstractQueryExecutor {
             paramsToUse = QueryUtils.extractOrderedParameterList(parameterHolder, parameterNames);
         }else if(parameterHolder != null){
             throw new IllegalArgumentException("This query does not support any parameters");
-
         }
 
         JsonObject filter = createFilterIfNeeded(context);

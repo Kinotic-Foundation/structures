@@ -54,7 +54,7 @@ public class NamedQueryTests {
         return createAndVerify(1,
                                true,
                                new DefaultEntityContext(new DummyParticipant()),
-                               "-" + System.currentTimeMillis());
+                               "_" + System.currentTimeMillis());
     }
 
     private StructureAndPersonHolder createAndVerify(int numberOfPeopleToCreate,
