@@ -26,14 +26,17 @@ public class AggregateQueryExecutor extends AbstractQueryExecutor {
     private final ElasticVertxClient elasticVertxClient;
     private final List<String> parameterNames = new ArrayList<>();
     private final String statement;
+    private final String tenantIdFieldName;
 
     public AggregateQueryExecutor(Structure structure,
                                   ElasticVertxClient elasticVertxClient,
                                   FunctionDefinition namedQueryDefinition,
-                                  String statement) {
+                                  String statement,
+                                  String tenantIdFieldName) {
         super(structure);
         this.elasticVertxClient = elasticVertxClient;
         this.statement = statement;
+        this.tenantIdFieldName = tenantIdFieldName;
 
         if(!namedQueryDefinition.getParameters().isEmpty()){
             for(ParameterDefinition definition : namedQueryDefinition.getParameters()) {
@@ -103,7 +106,7 @@ public class AggregateQueryExecutor extends AbstractQueryExecutor {
             filter = new JsonObject().put("bool", new JsonObject()
                     .put("filter", new JsonArray()
                             .add(new JsonObject().put("term", new JsonObject()
-                                    .put("structuresTenantId", new JsonObject()
+                                    .put(this.tenantIdFieldName, new JsonObject()
                                             .put("value", tenantId))))
                             .add(new JsonObject().put("terms", new JsonObject()
                                     .put("_routing", new JsonArray().add(tenantId))))

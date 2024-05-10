@@ -3,6 +3,7 @@ package org.kinotic.structures.internal.api.services.sql;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.NotImplementedException;
 import org.kinotic.continuum.idl.api.schema.FunctionDefinition;
+import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.domain.NamedQueriesDefinition;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.idl.decorators.QueryDecorator;
@@ -26,6 +27,7 @@ public class DefaultQueryExecutorFactory implements QueryExecutorFactory {
     private static Pattern aggregatePattern = Pattern.compile("\\b(AVG|COUNT|FIRST|LAST|MAX|MIN|SUM|KURTOSIS|MAD|PERCENTILE|PERCENTILE_RANK|SKEWNESS|STDDEV_POP|STDDEV_SAMP|SUM_OF_SQUARES|VAR_POP|VAR_SAMP)\\s*\\([a-zA-Z0-9_, ]+\\)");
     private final ElasticVertxClient elasticVertxClient;
     private final NamedQueriesService namedQueriesService;
+    private final StructuresProperties structuresProperties;
 //    private final ElasticsearchAsyncClient esAsyncClient;
 
     @Override
@@ -84,7 +86,8 @@ public class DefaultQueryExecutorFactory implements QueryExecutorFactory {
                 return CompletableFuture.completedFuture(new AggregateQueryExecutor(structure,
                                                                                    elasticVertxClient,
                                                                                    namedQueryDefinition,
-                                                                                   statement));
+                                                                                   statement,
+                                                                                   structuresProperties.getTenantIdFieldName()));
             }else {
                 throw (new NotImplementedException("Select without aggregate not supported yet"));
             }
