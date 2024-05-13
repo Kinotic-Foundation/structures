@@ -48,8 +48,7 @@ public class OpenApiConverterStrategy implements IdlConverterStrategy<Schema<?>,
                  .addConverter(EnumC3Type.class, (c3Type, context) -> {
                      StringSchema stringSchema = new StringSchema();
                      stringSchema.setEnum(c3Type.getValues());
-                     context.state().addReferencedSchema(c3Type.getName(), stringSchema);
-                     return new Schema<>().$ref("#/components/schemas/"+c3Type.getName());
+                     return stringSchema;
                  })
                  // Array Type
                  .addConverter(ArrayC3Type.class, (c3Type, context) ->{
