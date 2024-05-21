@@ -1,15 +1,14 @@
 package org.kinotic.structures.internal.idl.converters.openapi;
 
+import io.swagger.v3.oas.models.media.Discriminator;
 import io.swagger.v3.oas.models.media.ObjectSchema;
 import io.swagger.v3.oas.models.media.Schema;
 import org.kinotic.continuum.idl.api.converter.C3ConversionContext;
 import org.kinotic.continuum.idl.api.converter.C3TypeConverter;
 import org.kinotic.continuum.idl.api.converter.Cacheable;
-import org.kinotic.continuum.idl.api.schema.C3Type;
-import org.kinotic.continuum.idl.api.schema.ComplexC3Type;
-import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
-import org.kinotic.continuum.idl.api.schema.PropertyDefinition;
+import org.kinotic.continuum.idl.api.schema.*;
 import org.kinotic.continuum.idl.api.schema.decorators.NotNullC3Decorator;
+import org.kinotic.structures.api.idl.decorators.DiscriminatorDecorator;
 import org.kinotic.structures.api.idl.decorators.ReadOnlyDecorator;
 
 /**
@@ -44,6 +43,14 @@ public class ObjectC3TypeToOpenApi implements C3TypeConverter<Schema<?>, ObjectC
             //       To handle this we will need to keep track of all "Models" per namespace and check for conflicts
             //       Or this could be done by keeping the Conversion State around and converting all Structures for a namespace at once
             if(type instanceof ComplexC3Type){
+                // For union literals the DiscriminatorDecorator can be on the property, we capture that here.
+                if(type instanceof UnionC3Type){
+                    DiscriminatorDecorator discriminatorDecorator = property.findDecorator(DiscriminatorDecorator.class);
+                    if(discriminatorDecorator != null && discriminatorDecorator.getPropertyName() != null){
+                        fieldValue.setDiscriminator(new Discriminator().propertyName(discriminatorDecorator.getPropertyName()));
+                    }
+                }
+
                 ComplexC3Type complexField = (ComplexC3Type) type;
                 conversionContext.state().addReferencedSchema(complexField.getName(), fieldValue);
                 fieldValue = new Schema<>().$ref("#/components/schemas/"+complexField.getName());

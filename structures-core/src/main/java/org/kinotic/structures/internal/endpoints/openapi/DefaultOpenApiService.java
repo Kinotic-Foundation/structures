@@ -366,8 +366,7 @@ public class DefaultOpenApiService implements OpenApiService {
                 // Build the response schema
                 ApiResponse response = createResponse(queryName,
                                                       query,
-                                                      converter,
-                                                      components);
+                                                      converter);
 
                 Operation queryOperation = createOperation(summary,
                                                            "Executes the named query " + queryName,
@@ -401,29 +400,14 @@ public class DefaultOpenApiService implements OpenApiService {
 
     private static ApiResponse createResponse(String queryName,
                                               FunctionDefinition query,
-                                              IdlConverter<Schema<?>, OpenApiConversionState> converter,
-                                              Components components) {
+                                              IdlConverter<Schema<?>, OpenApiConversionState> converter) {
 
         ApiResponse response = new ApiResponse().description(queryName + " OK");
         Content content = new Content();
 
         C3Type returnType = query.getReturnType();
 
-        // We create a schema reference for any complex or page types
-        if(returnType instanceof ComplexC3Type
-                || returnType instanceof PageC3Type){
-
-            String responseSchemaName = WordUtils.capitalize(queryName) + "Response";
-
-            components.addSchemas(responseSchemaName, converter.convert(returnType));
-
-            MediaType mediaType = new MediaType();
-            mediaType.setSchema(new Schema<>().$ref(Components.COMPONENTS_SCHEMAS_REF + responseSchemaName));
-            content.addMediaType("application/json", mediaType);
-
-        }else if(!(returnType instanceof VoidC3Type)){
-            // All other primitive types are inlined
-
+        if(!(returnType instanceof VoidC3Type)){
             MediaType mediaType = new MediaType();
             mediaType.setSchema(converter.convert(returnType));
             content.addMediaType("application/json", mediaType);
