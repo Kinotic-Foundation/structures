@@ -30,12 +30,10 @@ public class DefaultEntitiesService implements EntitiesService {
                                   EntityServiceFactory entityServiceFactory){
         cache = Caffeine.newBuilder()
                         .expireAfterAccess(20, TimeUnit.HOURS)
-                        .maximumSize(10_000)
+                        .maximumSize(2_000)
                         .buildAsync((key, executor) -> structureDAO.findById(key)
                                                                    .thenApply(structure -> {
-                                                                       if(structure == null){
-                                                                           throw new IllegalArgumentException("No structure found for id: " + key);
-                                                                       }
+                                                                       Validate.notNull(structure, "No Structure found for key: " + key);
                                                                        return structure;
                                                                    })
                                                                    .thenComposeAsync(entityServiceFactory::createEntityService,

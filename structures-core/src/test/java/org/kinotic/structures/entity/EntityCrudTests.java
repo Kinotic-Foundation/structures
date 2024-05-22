@@ -37,7 +37,6 @@ import org.kinotic.structures.internal.sample.DummyParticipant;
 import org.kinotic.structures.internal.sample.Person;
 import org.kinotic.structures.internal.sample.TestDataService;
 import org.kinotic.structures.support.StructureAndPersonHolder;
-import org.kinotic.structures.support.TestHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -63,43 +62,9 @@ public class EntityCrudTests extends ElasticsearchTestBase {
     @Autowired
     private EntitiesService entitiesService;
     @Autowired
-    private TestHelper testHelper;
-    @Autowired
     private ObjectMapper objectMapper;
     @Autowired
     private TestDataService testDataService;
-
-
-    private StructureAndPersonHolder createAndVerify(){
-        return createAndVerify(1,
-                               true,
-                               new DefaultEntityContext(new DummyParticipant()),
-                               "_" + System.currentTimeMillis());
-    }
-
-    private StructureAndPersonHolder createAndVerify(int numberOfPeopleToCreate,
-                                                     boolean randomPeople,
-                                                     EntityContext entityContext,
-                                                     String structureSuffix){
-        StructureAndPersonHolder ret = new StructureAndPersonHolder();
-
-        StepVerifier.create(testHelper.createPersonStructureAndEntities(numberOfPeopleToCreate,
-                                                                        randomPeople,
-                                                                        entityContext,
-                                                                        structureSuffix))
-                    .expectNextMatches(structureAndPersonHolder -> {
-                        boolean matches = structureAndPersonHolder.getStructure() != null &&
-                                structureAndPersonHolder.getStructure().getId() != null &&
-                                structureAndPersonHolder.getPersons().size() == numberOfPeopleToCreate;
-                        if(matches){
-                            ret.setStructure(structureAndPersonHolder.getStructure());
-                            ret.setPersons(structureAndPersonHolder.getPersons());
-                        }
-                        return matches;
-                    })
-                    .verifyComplete();
-        return ret;
-    }
 
     @Test
     public void testCreateAndDeleteItem() {

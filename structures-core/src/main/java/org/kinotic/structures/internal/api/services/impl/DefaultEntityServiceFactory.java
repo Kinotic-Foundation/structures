@@ -5,13 +5,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.kinotic.continuum.idl.api.schema.decorators.C3Decorator;
 import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.api.services.NamedQueriesService;
 import org.kinotic.structures.internal.api.hooks.DecoratorLogic;
-import org.kinotic.structures.internal.api.hooks.ReadPreProcessor;
 import org.kinotic.structures.internal.api.hooks.DelegatingUpsertPreProcessor;
+import org.kinotic.structures.internal.api.hooks.ReadPreProcessor;
 import org.kinotic.structures.internal.api.hooks.UpsertFieldPreProcessor;
 import org.kinotic.structures.internal.api.services.EntityService;
 import org.kinotic.structures.internal.api.services.EntityServiceFactory;
-import org.kinotic.structures.internal.api.services.sql.QueryExecutorFactory;
 import org.kinotic.structures.internal.idl.converters.common.DecoratedProperty;
 import org.kinotic.structures.internal.utils.StructuresUtil;
 import org.springframework.stereotype.Component;
@@ -30,25 +30,25 @@ public class DefaultEntityServiceFactory implements EntityServiceFactory {
 
     private final CrudServiceTemplate crudServiceTemplate;
     private final ElasticsearchAsyncClient esAsyncClient;
-    private final ReadPreProcessor readPreProcessor;
+    private final NamedQueriesService namedQueriesService;
     private final ObjectMapper objectMapper;
-    private final QueryExecutorFactory queryExecutorFactory;
+    private final ReadPreProcessor readPreProcessor;
     private final StructuresProperties structuresProperties;
     private final Map<String, UpsertFieldPreProcessor<?, ?, ?>> upsertFieldPreProcessors;
 
+
     public DefaultEntityServiceFactory(CrudServiceTemplate crudServiceTemplate,
                                        ElasticsearchAsyncClient esAsyncClient,
-                                       ReadPreProcessor readPreProcessor,
+                                       NamedQueriesService namedQueriesService,
                                        ObjectMapper objectMapper,
-                                       QueryExecutorFactory queryExecutorFactory,
+                                       ReadPreProcessor readPreProcessor,
                                        StructuresProperties structuresProperties,
                                        List<UpsertFieldPreProcessor<?, ?, ?>> upsertFieldPreProcessors) {
-
         this.crudServiceTemplate = crudServiceTemplate;
         this.esAsyncClient = esAsyncClient;
-        this.readPreProcessor = readPreProcessor;
+        this.namedQueriesService = namedQueriesService;
         this.objectMapper = objectMapper;
-        this.queryExecutorFactory = queryExecutorFactory;
+        this.readPreProcessor = readPreProcessor;
         this.structuresProperties = structuresProperties;
 
         this.upsertFieldPreProcessors = StructuresUtil.listToMap(upsertFieldPreProcessors,
@@ -82,14 +82,14 @@ public class DefaultEntityServiceFactory implements EntityServiceFactory {
         }
 
         return CompletableFuture.completedFuture(new DefaultEntityService(crudServiceTemplate,
-                                                                          readPreProcessor,
                                                                           new DelegatingUpsertPreProcessor(structuresProperties,
                                                                                                            objectMapper,
                                                                                                            structure,
                                                                                                            fieldPreProcessors),
                                                                           esAsyncClient,
+                                                                          namedQueriesService,
                                                                           objectMapper,
-                                                                          queryExecutorFactory,
+                                                                          readPreProcessor,
                                                                           structure,
                                                                           structuresProperties)
         );

@@ -52,8 +52,7 @@ standaloneFunctionSpecification
 
 statement
     : rootQuery                                                        #statementDefault
-    | USE schema=identifier                                            #use
-    | USE catalog=identifier '.' schema=identifier                     #use
+    | DELETE FROM qualifiedName (WHERE booleanExpression)?             #delete
     | UPDATE qualifiedName
         SET updateAssignment (',' updateAssignment)*
         (WHERE where=booleanExpression)?                               #update
@@ -73,11 +72,6 @@ query
 
 with
     : WITH RECURSIVE? namedQuery (',' namedQuery)*
-    ;
-
-tableElement
-    : columnDefinition
-    | likeClause
     ;
 
 columnDefinition
@@ -817,14 +811,6 @@ principal
     | ROLE identifier       #rolePrincipal
     ;
 
-roles
-    : identifier (',' identifier)*
-    ;
-
-privilegeOrRole
-    : CREATE | SELECT | DELETE | INSERT | UPDATE | identifier
-    ;
-
 identifier
     : IDENTIFIER             #unquotedIdentifier
     | QUOTED_IDENTIFIER      #quotedIdentifier
@@ -837,11 +823,6 @@ number
     : MINUS? DECIMAL_VALUE  #decimalLiteral
     | MINUS? DOUBLE_VALUE   #doubleLiteral
     | MINUS? INTEGER_VALUE  #integerLiteral
-    ;
-
-authorizationUser
-    : identifier            #identifierUser
-    | string                #stringUser
     ;
 
 nonReserved

@@ -6,6 +6,7 @@ import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.continuum.idl.api.schema.FunctionDefinition;
 import org.kinotic.continuum.idl.api.schema.ParameterDefinition;
+import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.idl.PageableC3Type;
@@ -26,17 +27,17 @@ public class AggregateQueryExecutor extends AbstractQueryExecutor {
     private final ElasticVertxClient elasticVertxClient;
     private final List<String> parameterNames = new ArrayList<>();
     private final String statement;
-    private final String tenantIdFieldName;
+    private final StructuresProperties structuresProperties;
 
     public AggregateQueryExecutor(Structure structure,
                                   ElasticVertxClient elasticVertxClient,
                                   FunctionDefinition namedQueryDefinition,
                                   String statement,
-                                  String tenantIdFieldName) {
+                                  StructuresProperties structuresProperties) {
         super(structure);
         this.elasticVertxClient = elasticVertxClient;
         this.statement = statement;
-        this.tenantIdFieldName = tenantIdFieldName;
+        this.structuresProperties = structuresProperties;
 
         if(!namedQueryDefinition.getParameters().isEmpty()){
             for(ParameterDefinition definition : namedQueryDefinition.getParameters()) {
@@ -106,7 +107,7 @@ public class AggregateQueryExecutor extends AbstractQueryExecutor {
             filter = new JsonObject().put("bool", new JsonObject()
                     .put("filter", new JsonArray()
                             .add(new JsonObject().put("term", new JsonObject()
-                                    .put(this.tenantIdFieldName, new JsonObject()
+                                    .put(structuresProperties.getTenantIdFieldName(), new JsonObject()
                                             .put("value", tenantId))))
                             .add(new JsonObject().put("terms", new JsonObject()
                                     .put("_routing", new JsonArray().add(tenantId))))

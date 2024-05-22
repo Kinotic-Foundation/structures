@@ -19,13 +19,13 @@ import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.idl.decorators.MultiTenancyType;
+import org.kinotic.structures.api.services.NamedQueriesService;
 import org.kinotic.structures.internal.api.hooks.DelegatingUpsertPreProcessor;
 import org.kinotic.structures.internal.api.hooks.ReadPreProcessor;
 import org.kinotic.structures.internal.api.services.EntityContextConstants;
 import org.kinotic.structures.internal.api.services.EntityHolder;
 import org.kinotic.structures.internal.api.services.EntityService;
 import org.kinotic.structures.internal.api.services.sql.ParameterHolder;
-import org.kinotic.structures.internal.api.services.sql.QueryExecutorFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,11 +45,11 @@ public class DefaultEntityService implements EntityService {
 
     private static final Logger log = LoggerFactory.getLogger(DefaultEntityService.class);
     private final CrudServiceTemplate crudServiceTemplate;
-    private final ReadPreProcessor readPreProcessor;
     private final DelegatingUpsertPreProcessor delegatingUpsertPreProcessor;
     private final ElasticsearchAsyncClient esAsyncClient;
+    private final NamedQueriesService namedQueriesService;
     private final ObjectMapper objectMapper;
-    private final QueryExecutorFactory queryExecutorFactory;
+    private final ReadPreProcessor readPreProcessor;
     private final Structure structure;
     private final StructuresProperties structuresProperties;
 
@@ -147,10 +147,11 @@ public class DefaultEntityService implements EntityService {
                                                      Class<T> type,
                                                      EntityContext context) {
         return validateTenant(context)
-                .thenCompose(unused -> queryExecutorFactory.createQueryExecutor(structure, queryName)
-                                                           .thenCompose(executor -> executor.execute(parameterHolder,
-                                                                                                     type,
-                                                                                                     context)));
+                .thenCompose(unused -> namedQueriesService.executeNamedQuery(structure,
+                                                                             queryName,
+                                                                             parameterHolder,
+                                                                             type,
+                                                                             context));
     }
 
     @Override
@@ -160,11 +161,12 @@ public class DefaultEntityService implements EntityService {
                                                          Class<T> type,
                                                          EntityContext context) {
         return validateTenant(context)
-                .thenCompose(unused -> queryExecutorFactory.createQueryExecutor(structure, queryName)
-                                                           .thenCompose(executor -> executor.executePage(parameterHolder,
-                                                                                                         pageable,
-                                                                                                         type,
-                                                                                                         context)));
+                .thenCompose(unused -> namedQueriesService.executeNamedQueryPage(structure,
+                                                                                 queryName,
+                                                                                 parameterHolder,
+                                                                                 pageable,
+                                                                                 type,
+                                                                                 context));
     }
 
     @SuppressWarnings("unchecked")

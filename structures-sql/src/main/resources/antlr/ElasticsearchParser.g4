@@ -5,40 +5,16 @@ options {
 }
 
 sql: (
-		selectOperation
-		| deleteOperation
-		| descOperation
+		deleteOperation
 		| updateOperation
-		| insertOperation
-		| reindexOperation
 	) SEMI? EOF;
 
 //OPERATIONS
-selectOperation:
-	SELECT fieldList FROM tableRef (COMMA tableRef)* ((whereClause functionScoreClause?) | disMaxClause)? routingClause? (groupByClause | aggregateByClause)? orderClause? limitClause? trackTotalClause?;
-
-descOperation: (DESCRIBE|DESC) tableRef (DIVIDE identity)?;
-
-deleteOperation: DELETE FROM tableRef (COMMA tableRef)* (identifyClause|whereClause)? routingClause? batchClause? limitClause? ;
+deleteOperation: DELETE FROM tableRef whereClause?;
 
 updateOperation:
-	UPDATE tableRef SET ID EQ identity (COMMA ID EQ identity)*  (identifyClause|whereClause)? routingClause? batchClause? limitClause?;
+	UPDATE tableRef SET ID EQ identity (COMMA ID EQ identity)*  whereClause?;
 
-insertOperation:
-	INSERT INTO tableRef (
-		LPAREN identity (COMMA identity)* RPAREN
-	) VALUES LPAREN identity (COMMA identity)* RPAREN routingClause?;
-
-reindexOperation:
-	INSERT INTO tableRef SELECT fieldList FROM tableRef (COMMA tableRef)* whereClause? batchClause? limitClause? ( REMOTE EQ LPAREN host = STRING ( COMMA user = STRING COMMA password = STRING )? RPAREN )?
-;
-
-fieldList: STAR | ( nameOperand ( COMMA nameOperand)*);
-
-nameOperand: //^field,field
-	exclude = XOR? fieldName = nameClause (
-		AS alias = ID
-	)?;
 
 nameClause:
 	LPAREN nameClause RPAREN														# lrName
@@ -49,10 +25,6 @@ nameClause:
 ;
 
 identity: ID | number = ( INT | FLOAT ) | str = STRING | list = identityList;
-
-identifyClause:
-    IDENTIFY BY id = STRING
-;
 
 expression:
 	LPAREN expression RPAREN															# lrExpr
@@ -73,8 +45,7 @@ expression:
 	| identity																			# primitive
 	| isClause																			# binary
 	| nestedClause																		# nested
-	| likeClause																		# binary
-	| geoClause																			# geo
+	| likeClause																		# binar
 	| fullTextClause																	# fullText
 	| notClause 															            # binary
 ;
@@ -130,94 +101,6 @@ nestedClause:
 
 whereClause: WHERE expression;
 
-groupByClause: GROUP BY ID ( COMMA ID)* havingClause?;
-
-havingClause: HAVING havingExpression;
-
-havingExpression:
-    LPAREN havingExpression RPAREN															# lrHavingExpr
-    | leftExpr = havingExpression operator = AND rightExpr = havingExpression				# havingBinary
-    | leftExpr = havingExpression operator = OR rightExpr = havingExpression			    # havingBinary
-    | leftExpr = havingExpression operator = (LT | LTE | GT | GTE | EQ) rightExpr = havingExpression			# havingBinary
-    | identity																			    # havingPrimitive
-    | funcName = ID collection                                                              # functionExpr
-;
-
-aggregateByClause:
-	AGGREGATE BY aggregationClause;
-
-aggregationClause: aggregateItemClause | nestedAggregationClause ;
-
-nestedAggregationClause:
-	LBRACKET nestedPath = ID COMMA  aggregationClause RBRACKET ((COMMA aggregationClause)| subAggregationClause)*
-;
-
-subAggregationClause: GT LPAREN aggregationClause RPAREN;
-
-aggregateItemClause: ID collection ((COMMA aggregationClause)| subAggregationClause)*;
-
-routingClause: ROUTING BY STRING ( COMMA STRING)*;
-
-orderClause: ORDER BY order ( COMMA order)*;
-
-order: nameClause (ASC|DESC)?;
-
-limitClause: LIMIT ( offset = INT COMMA)? size = INT;
-
-batchClause: BATCH size = INT;
-
-trackTotalClause:
-    TRACK TOTAL
-;
-
-//Geo Clause
-geoClause: geoDistanceClause | geoBoundingBoxClause|geoPolygonClause|geoShapeClause|geoJsonShapeClause;
-
-geoDistanceClause:
-	ID EQ coordinate = point AND DISTANCE EQ distance = STRING;
-
-geoBoundingBoxClause:
-	field = ID BETWEEN leftTop = point AND rightBottom = point ;
-
-geoPolygonClause:
-    ID IN LBRACKET point (COMMA point)* RBRACKET
-;
-
-point:
-    LBRACKET (lon =(INT|FLOAT) COMMA lat= (INT|FLOAT)) RBRACKET
-;
-
-//multiPoint、LineString、Envelope
-points:
-    LBRACKET point (COMMA point)* RBRACKET
-;
-
-//multiLine、Polygon
-polygon:
-    LBRACKET points (COMMA points)* RBRACKET
-;
-
-multiPolygon:
-    LBRACKET polygon (COMMA polygon)* RBRACKET
-;
-
-geoShapeClause:
-    field=ID relation =(INTERSECTS|DISJOINT|WITHIN|CONTAINS) (point|points|polygon|multiPolygon) SHAPED AS shape = (POINT|MULTIPOINT|LINESTRING|ENVELOPE|MULTILINESTRING|POLYGON|MULTIPOLYGON)
-;
-
-geoJsonShapeClause:
-    field = ID relation =(INTERSECTS|DISJOINT|WITHIN|CONTAINS) geojson = STRING
-;
-
-geometryCollectionClause:
-;
 
 
-//Score Clause
-functionScoreClause:
- 	FUNCTION_SCORE expression (BOOLAND expression)*
-;
 
-disMaxClause:
-	DIS_MAX expression (BOOLOR expression)* (AND TIE_BREAKER EQ tieBreaker = FLOAT)?
-;
