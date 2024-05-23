@@ -34,11 +34,13 @@ dependencies {
 //                     https://paketo.io/docs/reference/java-reference/
 bootBuildImage {
 	network = "host"
-	publish = !version.endsWith('SNAPSHOT')
+	publish = true
 	imageName = "kinotic/${project.name}:${project.version}"
-	tags = [
-			"kinotic/${project.name}:latest"
-	]
+	tags = ( !version.endsWith('SNAPSHOT') ?
+			[
+				"kinotic/${project.name}:latest"
+			]
+			: [] )
 	environment = [
 			"BPE_DELIM_JAVA_TOOL_OPTIONS" : " ",
 			"BPE_APPEND_JAVA_TOOL_OPTIONS" : "-XX:+UseG1GC -XX:+ScavengeBeforeFullGC -XX:+DisableExplicitGC"
