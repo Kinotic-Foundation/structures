@@ -112,6 +112,8 @@ public class DefaultNamedQueriesService extends AbstractCrudService<NamedQueries
 
     @Override
     public CompletableFuture<NamedQueriesDefinition> save(NamedQueriesDefinition entity) {
+        // TODO: preprocess queries to correct index name and add Metadata about query type to be used by other parts of the system
+        //       The Query type information will speed up other areas the need this as well
         return super.save(entity)
                     .thenApply(namedQueriesDefinition -> {
                         evictCachesFor(namedQueriesDefinition);
