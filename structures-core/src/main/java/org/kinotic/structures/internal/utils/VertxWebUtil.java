@@ -6,6 +6,8 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.continuum.core.api.crud.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,6 +16,7 @@ import java.util.List;
  * Created by Navíd Mitchell 🤪 on 6/1/23.
  */
 public class VertxWebUtil {
+    private static final Logger log = LoggerFactory.getLogger(VertxWebUtil.class);
 
     public static String validateAndReturnStructureId(RoutingContext ctx){
         String structureNamespace = ctx.pathParam("structureNamespace");
@@ -133,6 +136,9 @@ public class VertxWebUtil {
         } else {
             response.setStatusCode(500);
         }
+
+        log.warn("Error processing OpenAPI request", throwable);
+
         response.putHeader("Content-Type", "application/json");
         response.end(new JsonObject().put("error", throwable.getMessage()).encode());
     }
