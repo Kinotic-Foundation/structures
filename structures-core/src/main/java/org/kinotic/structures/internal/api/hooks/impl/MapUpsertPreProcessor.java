@@ -53,6 +53,7 @@ public class MapUpsertPreProcessor implements UpsertPreProcessor<Map<Object, Obj
                                                    EntityContext context) {
         try {
             // ids are not allowed to be nested
+            // FIXME: why isn't contains(.) just checked during C3Type conversion, and not needed here?
             if(idFieldPreProcessor != null && !idFieldPreProcessor.getLeft().contains(".")){
                 return CompletableFuture.completedFuture(processIdField(entity, context));
             }else{
@@ -68,6 +69,7 @@ public class MapUpsertPreProcessor implements UpsertPreProcessor<Map<Object, Obj
                                                               EntityContext context) {
         try {
             // ids are not allowed to be nested
+            // FIXME: why isn't contains(.) just checked during C3Type conversion, and not needed here?
             if(idFieldPreProcessor != null && !idFieldPreProcessor.getLeft().contains(".")){
                 List<EntityHolder> entityHolders = new ArrayList<>();
                 for(Map<Object, Object> entity : entities) {

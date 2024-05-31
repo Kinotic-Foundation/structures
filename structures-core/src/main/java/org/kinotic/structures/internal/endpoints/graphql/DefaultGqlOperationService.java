@@ -13,6 +13,7 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.graphql.impl.GraphQLQuery;
 import lombok.RequiredArgsConstructor;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
+import org.dataloader.DataLoader;
 import org.kinotic.continuum.api.security.Participant;
 import org.kinotic.continuum.core.api.event.EventConstants;
 import org.kinotic.structures.internal.utils.StructuresUtil;
@@ -63,14 +64,14 @@ public class DefaultGqlOperationService implements GqlOperationService {
         if (variables != null) {
             executionInputBuilder.variables(variables);
         }
+        DataLoader
 
-        if (query.getOperationName() != null && query.getOperationName().equals("IntrospectionQuery")) {
+        if (operationName != null && (operationName.equals("IntrospectionQuery") || operationName.equals("_service"))) {
             // We execute Introspection Queries using the java graphql library
             return VertxCompletableFuture.from(vertx, gqlProviderService.getOrCreateGraphQL(namespace)
                                                                         .thenCompose(graphQL -> graphQL.executeAsync(
-                                                                                    executionInputBuilder.build()))
+                                                                                executionInputBuilder.build()))
                                                                         .thenApply(this::convertToBuffer));
-
         } else {
             // We execute all others using our own logic path optimized for elasticsearch
             Participant participant = routingContext.get(EventConstants.SENDER_HEADER);

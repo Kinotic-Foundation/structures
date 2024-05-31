@@ -1,5 +1,8 @@
 package org.kinotic.structures.internal.endpoints.graphql;
 
+import com.apollographql.federation.graphqljava.Federation;
+import com.apollographql.federation.graphqljava._Entity;
+import com.apollographql.federation.graphqljava.printer.ServiceSDLPrinter;
 import com.github.benmanes.caffeine.cache.AsyncCacheLoader;
 import graphql.GraphQL;
 import graphql.language.OperationDefinition;
@@ -7,16 +10,17 @@ import graphql.schema.*;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.text.WordUtils;
 import org.kinotic.continuum.core.api.crud.Pageable;
-import org.kinotic.structures.internal.api.services.GqlConversionResult;
-import org.kinotic.structures.internal.idl.converters.graphql.GqlTypeHolder;
 import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.internal.api.services.GqlConversionResult;
 import org.kinotic.structures.internal.api.services.StructureConversionService;
 import org.kinotic.structures.internal.api.services.StructureDAO;
+import org.kinotic.structures.internal.idl.converters.graphql.GqlTypeHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -39,6 +43,7 @@ import static graphql.schema.GraphQLObjectType.newObject;
 public class GqlSchemaCacheLoader implements AsyncCacheLoader<String, GraphQL> {
 
     private static final Logger log = LoggerFactory.getLogger(GqlSchemaCacheLoader.class);
+    private static final NoOpTypeResolver NO_OP_TYPE_RESOLVER = new NoOpTypeResolver();
 
     private final StructureDAO structureDAO;
     private final StructureConversionService structureConversionService;
@@ -112,7 +117,7 @@ public class GqlSchemaCacheLoader implements AsyncCacheLoader<String, GraphQL> {
                         // Add all type resolvers to the schema
                         for (GraphQLUnionType unionType : conversionResult.getUnionTypes()) {
                             // NoOp is used since we do not actually use the GraphQL api to execute operations
-                            codeRegistryBuilder.typeResolver(unionType, new NoOpTypeResolver());
+                            codeRegistryBuilder.typeResolver(unionType, NO_OP_TYPE_RESOLVER);
                         }
 
                         // Add all additional types to the schema
@@ -139,26 +144,26 @@ public class GqlSchemaCacheLoader implements AsyncCacheLoader<String, GraphQL> {
                     graphQLSchemaBuilder.additionalTypes(Set.copyOf(additionalTypes.values()));
                     GraphQLSchema graphQLSchema = graphQLSchemaBuilder.build();
 
+                    // Add GQL federation support (Fetcher and Resolver below not really needed unless we want to allow entities to contribute to one another)
+                    DataFetcher<?> entityDataFetcher = env -> {
+                        List<Map<String, Object>> representations = env.getArgument(_Entity.argumentName);
+                        log.warn("Entity data fetcher called with representations: {}", representations);
+                        return null;
+                    };
+
+                    graphQLSchema = Federation.transform(graphQLSchema)
+                                              .setFederation2(true)
+                                              .fetchEntities(entityDataFetcher)
+                                              .resolveEntityType(NO_OP_TYPE_RESOLVER) // No type resolvers needed since we don't actually use the GraphQL API to execute operations
+                                              .build();
+
                     log.debug("Finished creating GraphQL Schema for namespace: {} in {}ms",
                               namespace,
                               System.currentTimeMillis() - start);
 
-//                    DataFetcher<?> entityDataFetcher = env -> {
-//                        List<Map<String, Object>> representations = env.getArgument(_Entity.argumentName);
-//                        log.warn("Entity data fetcher called with representations: {}", representations);
-//                        return null;
-//                    };
-//                    TypeResolver entityTypeResolver = env -> {
-//                        final Object obj = env.getObject();
-//                        log.warn("Type resolver called with class: {}", obj.getClass());
-//                        return null;
-//                    };
-
-//                    graphQLSchema = Federation.transform(graphQLSchema)
-//                                              .setFederation2(true)
-//                                              .fetchEntities(entityDataFetcher)
-//                                              .resolveEntityType(entityTypeResolver)
-//                                              .build();
+                    if(log.isTraceEnabled()){
+                        log.info(ServiceSDLPrinter.generateServiceSDLV2(graphQLSchema));
+                    }
 
                     return CompletableFuture.completedFuture(graphQLSchema);
                 }, executor);

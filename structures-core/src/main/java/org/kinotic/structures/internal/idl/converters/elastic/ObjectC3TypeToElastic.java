@@ -49,8 +49,9 @@ public class ObjectC3TypeToElastic implements C3TypeConverter<Property, ObjectC3
             // This will also store decorators encountered
             state.beginProcessingField(property);
 
-            // We have to apply nested decorators here as well due to the same problem mentioned above on line 35
             if(property.hasDecorators()){
+                // FIXME: make sure Id decorator is only on the root object, remove all other checks elsewhere
+
                 if(property.containsDecorator(NestedDecorator.class)) {
 
                     if (type instanceof ArrayC3Type) {

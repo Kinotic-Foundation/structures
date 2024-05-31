@@ -22,12 +22,6 @@ public class CachingPreparsedDocumentProvider implements PreparsedDocumentProvid
                                                                                .buildAsync();
 
     @Override
-    public PreparsedDocumentEntry getDocument(ExecutionInput executionInput,
-                                              Function<ExecutionInput, PreparsedDocumentEntry> parseAndValidateFunction) {
-        return getDocumentAsync(executionInput, parseAndValidateFunction).join();
-    }
-
-    @Override
     public CompletableFuture<PreparsedDocumentEntry> getDocumentAsync(ExecutionInput executionInput,
                                                                       Function<ExecutionInput, PreparsedDocumentEntry> parseAndValidateFunction) {
         Function<String, PreparsedDocumentEntry> mapCompute = key -> parseAndValidateFunction.apply(executionInput);
