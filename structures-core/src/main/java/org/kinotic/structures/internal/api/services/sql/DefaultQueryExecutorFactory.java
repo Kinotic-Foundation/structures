@@ -20,7 +20,7 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 public class DefaultQueryExecutorFactory implements QueryExecutorFactory {
 
-    private static final Pattern aggregatePattern = Pattern.compile("\\b(AVG|COUNT|FIRST|LAST|MAX|MIN|SUM|KURTOSIS|MAD|PERCENTILE|PERCENTILE_RANK|SKEWNESS|STDDEV_POP|STDDEV_SAMP|SUM_OF_SQUARES|VAR_POP|VAR_SAMP)\\s*\\([a-zA-Z0-9_., ]+\\)");
+    private static final Pattern aggregatePattern = Pattern.compile("\\b(AVG|COUNT|FIRST|LAST|MAX|MIN|SUM|KURTOSIS|MAD|PERCENTILE|PERCENTILE_RANK|SKEWNESS|STDDEV_POP|STDDEV_SAMP|SUM_OF_SQUARES|VAR_POP|VAR_SAMP)\\s*\\([a-zA-Z0-9_.,='() ]+\\)");
     private final ElasticVertxClient elasticVertxClient;
     private final StructuresProperties structuresProperties;
 
