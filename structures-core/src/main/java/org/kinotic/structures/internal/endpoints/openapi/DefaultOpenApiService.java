@@ -20,12 +20,15 @@ import org.kinotic.structures.api.domain.NamedQueriesDefinition;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.idl.PageC3Type;
 import org.kinotic.structures.api.idl.PageableC3Type;
+import org.kinotic.structures.api.idl.decorators.QueryDecorator;
 import org.kinotic.structures.api.services.NamedQueriesService;
 import org.kinotic.structures.api.services.StructureService;
 import org.kinotic.structures.internal.api.services.StructureConversionService;
 import org.kinotic.structures.internal.config.OpenApiSecurityType;
 import org.kinotic.structures.internal.idl.converters.openapi.OpenApiConversionState;
 import org.kinotic.structures.internal.utils.OpenApiUtils;
+import org.kinotic.structures.internal.utils.QueryUtils;
+import org.kinotic.structures.internal.utils.SqlQueryType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -362,37 +365,58 @@ public class DefaultOpenApiService implements OpenApiService {
             for(FunctionDefinition query : namedQueriesDefinition.getNamedQueries()){
                 String queryName = query.getName();
                 String summary = "Named query: " + queryName;
+                QueryDecorator queryDecorator = query.findDecorator(QueryDecorator.class);
+                if(queryDecorator != null) {
 
-                // Build the response schema
-                ApiResponse response = createResponse(queryName,
-                                                      query,
-                                                      converter);
+                    // Build the response schema
+                    ApiResponse response = createResponse(queryName,
+                                                          query,
+                                                          converter);
 
-                Operation queryOperation = createOperation(summary,
-                                                           "Executes the named query " + queryName,
-                                                           queryName,
-                                                           structure,
-                                                           response);
+                    Operation queryOperation = createOperation(summary,
+                                                               "Executes the named query " + queryName,
+                                                               queryName,
+                                                               structure,
+                                                               response);
 
-                // Build the request body if there are parameters
-                RequestBody requestBody = convertParamsToRequestBody(queryName,
-                                                                     query.getParameters(),
-                                                                     converter,
-                                                                     components);
-                if(requestBody != null) {
-                    queryOperation.requestBody(requestBody);
-                }
+                    // Build the request body if there are parameters
+                    RequestBody requestBody = convertParamsToRequestBody(queryName,
+                                                                         query.getParameters(),
+                                                                         converter,
+                                                                         components);
+                    if (requestBody != null) {
+                        queryOperation.requestBody(requestBody);
+                    }
 
-                PathItem queryPathItem = new PathItem();
-                queryPathItem.post(queryOperation);
+                    PathItem queryPathItem = new PathItem();
+                    queryPathItem.post(queryOperation);
 
-                // vertx route is
-                // :structureNamespace/:structureName/named-query/:queryName
-                if(query.getReturnType() instanceof PageC3Type){
-                    OpenApiUtils.addPagingAndSortingParameters(queryOperation);
-                    paths.put(basePath + lowercaseNamespace + "/" + lowercaseName + "/named-query-page/" + queryName, queryPathItem);
+                    // vertx route is
+                    // :structureNamespace/:structureName/named-query/:queryName
+                    if (query.getReturnType() instanceof PageC3Type) {
+                        SqlQueryType queryType = QueryUtils.determineQueryType(queryDecorator.getStatements());
+                        switch (queryType) {
+                            case AGGREGATE:
+                                OpenApiUtils.addCursorPagingWithoutSortParameters(queryOperation);
+                                break;
+                            case SELECT:
+                                OpenApiUtils.addPagingAndSortingParameters(queryOperation);
+                                break;
+                            default:
+                                log.warn("Named query {} in Structure {} has a Page return type but, paging is not supported for query type {}. No page parameters will be added.",
+                                         queryName,
+                                         structure.getName(),
+                                         queryType);
+                                break;
+                        }
+                        paths.put(basePath + lowercaseNamespace + "/" + lowercaseName + "/named-query-page/" + queryName,
+                                  queryPathItem);
+                    } else {
+                        paths.put(basePath + lowercaseNamespace + "/" + lowercaseName + "/named-query/" + queryName,
+                                  queryPathItem);
+                    }
                 }else{
-                    paths.put(basePath + lowercaseNamespace + "/" + lowercaseName + "/named-query/" + queryName, queryPathItem);
+                    log.warn("No QueryDecorator found for Named query {} in Structure {}. No OpenAPI path will be created.", queryName, structure.getName());
                 }
             }
         }

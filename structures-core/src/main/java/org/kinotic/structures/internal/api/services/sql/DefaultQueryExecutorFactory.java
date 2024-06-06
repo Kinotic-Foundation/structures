@@ -9,9 +9,9 @@ import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.idl.decorators.QueryDecorator;
 import org.kinotic.structures.internal.api.services.sql.executors.AggregateQueryExecutor;
 import org.kinotic.structures.internal.api.services.sql.executors.QueryExecutor;
+import org.kinotic.structures.internal.utils.QueryUtils;
+import org.kinotic.structures.internal.utils.SqlQueryType;
 import org.springframework.stereotype.Component;
-
-import java.util.regex.Pattern;
 
 /**
  * Created by Navíd Mitchell 🤪 on 4/28/24.
@@ -20,7 +20,6 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 public class DefaultQueryExecutorFactory implements QueryExecutorFactory {
 
-    private static final Pattern aggregatePattern = Pattern.compile("\\b(AVG|COUNT|FIRST|LAST|MAX|MIN|SUM|KURTOSIS|MAD|PERCENTILE|PERCENTILE_RANK|SKEWNESS|STDDEV_POP|STDDEV_SAMP|SUM_OF_SQUARES|VAR_POP|VAR_SAMP)\\s*\\([a-zA-Z0-9_.,='() ]+\\)");
     private final ElasticVertxClient elasticVertxClient;
     private final StructuresProperties structuresProperties;
 
@@ -55,29 +54,26 @@ public class DefaultQueryExecutorFactory implements QueryExecutorFactory {
 
     private QueryExecutor createQueryExecutorForStatement(Structure structure,
                                                           String statement,
-                                                          FunctionDefinition namedQueryDefinition){
+                                                          FunctionDefinition namedQueryDefinition) {
         // naive approach to how we handle these queries, this will be improved as we do more R&D on advanced approaches
-        if(statement.toLowerCase().startsWith("select")) {
-
-            // Check if this is an aggregate query
-            if(aggregatePattern.matcher(statement.toUpperCase()).find()){
+        SqlQueryType queryType = QueryUtils.determineQueryType(statement);
+        switch (queryType) {
+            case AGGREGATE:
                 return new AggregateQueryExecutor(structure,
                                                   elasticVertxClient,
                                                   namedQueryDefinition,
                                                   statement,
                                                   structuresProperties);
-            }else {
+            case DELETE:
+                throw new NotImplementedException("Delete not supported yet");
+            case INSERT:
+                throw new NotImplementedException("Insert not supported yet");
+            case SELECT:
                 throw new NotImplementedException("Select without aggregate not supported yet");
-            }
-
-        }else if(statement.toLowerCase().startsWith("update")) {
-            throw new NotImplementedException("Update not supported yet");
-        }else if(statement.toLowerCase().startsWith("delete")) {
-            throw new NotImplementedException("Delete not supported yet");
-        }else if(statement.toLowerCase().startsWith("insert")) {
-            throw new NotImplementedException("Insert not supported yet");
-        }else {
-            throw new IllegalArgumentException("Unsupported statement " + statement);
+            case UPDATE:
+                throw new NotImplementedException("Update not supported yet");
+            default:
+                throw new IllegalArgumentException("Unsupported query type " + queryType);
         }
     }
 }

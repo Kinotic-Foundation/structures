@@ -27,6 +27,20 @@ public class OpenApiUtils {
         return pageSchema;
     }
 
+    public static void addCursorPagingWithoutSortParameters(Operation operation){
+        operation.addParametersItem(new Parameter().name("cursor")
+                                                   .in("query")
+                                                   .required(false)
+                                                   .schema(new StringSchema().nullable(true))
+                                                   .description("The page to get with a cursor. Use null to get the first page."));
+        operation.addParametersItem(new Parameter().name("size")
+                                                   .in("query")
+                                                   .required(false)
+                                                   .schema(new IntegerSchema()._default(25)
+                                                                              .maximum(BigDecimal.valueOf(1000)))
+                                                   .description("The number of items per page. The default is 25."));
+    }
+
     public static void addPagingAndSortingParameters(Operation operation){
         operation.addParametersItem(new Parameter().name("page")
                                                    .in("query")
