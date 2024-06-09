@@ -1,4 +1,4 @@
-import {C3Type} from '@kinotic/continuum-idl'
+import {C3Type, PropertyDefinition} from '@kinotic/continuum-idl'
 import {FunctionDeclaration} from 'ts-morph'
 import {
     CalculatedPropertyConfiguration,
@@ -92,12 +92,12 @@ export class BaseConversionState {
         return ret
     }
 
-    getOverrideType(jsonPath: string): C3Type | null {
-        let ret: C3Type | null = null
+    getOverrideType(jsonPath: string): PropertyDefinition | null {
+        let ret: PropertyDefinition | null = null
         if (this._overridesMap) {
             const override = this._overridesMap.get(jsonPath)
             if (override) {
-                ret = override.c3Type
+                ret = override.propertyDefinition
             }
         }
         return ret
