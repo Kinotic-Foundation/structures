@@ -16,6 +16,7 @@ import javax.annotation.PostConstruct;
 import javax.validation.constraints.NotNull;
 import java.time.Duration;
 import java.util.List;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -58,6 +59,17 @@ public class StructuresProperties {
      * @see java.util.regex.Pattern
      */
     private String corsAllowedOriginPattern = "http://localhost.*";
+
+    /**
+     * The allowed headers for CORS
+     */
+    private Set<String> corsAllowedHeaders = Set.of("Accept", "Authorization", "Content-Type");
+
+    /**
+     * If set will set the CORS Access-Control-Allow-Credentials header to this value
+     * If true then allowed origins must not contain a wildcard "*"
+     */
+    private Boolean corsAllowCredentials = null;
 
     private OpenApiSecurityType openApiSecurityType = OpenApiSecurityType.NONE;
 

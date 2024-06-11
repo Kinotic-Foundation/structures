@@ -13,7 +13,6 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.graphql.impl.GraphQLQuery;
 import lombok.RequiredArgsConstructor;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
-import org.dataloader.DataLoader;
 import org.kinotic.continuum.api.security.Participant;
 import org.kinotic.continuum.core.api.event.EventConstants;
 import org.kinotic.structures.internal.utils.StructuresUtil;
@@ -64,9 +63,9 @@ public class DefaultGqlOperationService implements GqlOperationService {
         if (variables != null) {
             executionInputBuilder.variables(variables);
         }
-        DataLoader
 
-        if (operationName != null && (operationName.equals("IntrospectionQuery") || operationName.equals("_service"))) {
+        // TODO: This should maybe look at the selection set for __schema and __service since the operationName here is not required
+        if (operationName != null && (operationName.equals("IntrospectionQuery") || operationName.equals("SubgraphIntrospectQuery"))) {
             // We execute Introspection Queries using the java graphql library
             return VertxCompletableFuture.from(vertx, gqlProviderService.getOrCreateGraphQL(namespace)
                                                                         .thenCompose(graphQL -> graphQL.executeAsync(
@@ -81,7 +80,6 @@ public class DefaultGqlOperationService implements GqlOperationService {
                                                                                   graphQL,
                                                                                   executionInputBuilder.build()))
                                          .thenApply(this::convertToBuffer);
-
         }
     }
 
@@ -141,11 +139,12 @@ public class DefaultGqlOperationService implements GqlOperationService {
             if (definition != null) {
                 String structureId = getStructureId(namespace, operationName, definition.getOperationNamePrefix());
                 Function<GqlOperationArguments, CompletableFuture<ExecutionResult>> function = definition.getOperationExecutionFunction();
-                return function.apply(new GqlOperationArguments(structureId,
+                return function.apply(new GqlOperationArguments(operationName,
+                                                                parsedFields,
                                                                 participant,
+                                                                structureId,
                                                                 parseArguments(selection.getArguments(),
-                                                                               executionInput.getVariables()),
-                                                                parsedFields));
+                                                                               executionInput.getVariables())));
             } else {
                 return CompletableFuture
                         .completedFuture(convertToResult(new IllegalArgumentException("Unsupported operation name: " + operationName)));

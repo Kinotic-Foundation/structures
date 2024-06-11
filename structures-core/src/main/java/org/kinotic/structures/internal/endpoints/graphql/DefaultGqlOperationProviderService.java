@@ -61,7 +61,8 @@ public class DefaultGqlOperationProviderService implements GqlOperationProviderS
                                                                               RawJson.class,
                                                                               createContext(args,
                                                                                             fields.getNonContentFields()))
-                                                                    .thenApply(this::convertToResult);
+                                                                    .thenApply(entity -> convertToResult(args.getOperationName(),
+                                                                                                         entity));
                                           })
                                       .build(),
 
@@ -83,7 +84,8 @@ public class DefaultGqlOperationProviderService implements GqlOperationProviderS
                                                                              pageable,
                                                                              RawJson.class,
                                                                              createContext(args, fields.getContentFields()))
-                                                                    .thenApply(page -> convertToResult(page,
+                                                                    .thenApply(page -> convertToResult(args.getOperationName(),
+                                                                                                       page,
                                                                                                        args.getParsedFields()));
                                           })
                                       .build(),
@@ -111,7 +113,8 @@ public class DefaultGqlOperationProviderService implements GqlOperationProviderS
                                                                             pageable,
                                                                             RawJson.class,
                                                                             createContext(args, fields.getContentFields()))
-                                                                    .thenApply(page -> convertToResult(page,
+                                                                    .thenApply(page -> convertToResult(args.getOperationName(),
+                                                                                                       page,
                                                                                                        args.getParsedFields()));
                                           })
                                       .build(),
@@ -131,8 +134,8 @@ public class DefaultGqlOperationProviderService implements GqlOperationProviderS
                                               return entitiesService.save(args.getStructureId(),
                                                                           map,
                                                                           context)
-                                                                    .thenApply(savedEntity -> convertToResult(context.get(
-                                                                            EntityContextConstants.ENTITY_ID_KEY)));
+                                                                    .thenApply(savedEntity -> convertToResult(args.getOperationName(),
+                                                                                                              context.get(EntityContextConstants.ENTITY_ID_KEY)));
                                           })
                                       .build(),
 
@@ -152,7 +155,8 @@ public class DefaultGqlOperationProviderService implements GqlOperationProviderS
                                               return entitiesService.bulkSave(args.getStructureId(),
                                                                               input,
                                                                               context)
-                                                                    .thenApply(res -> convertToResult(Boolean.TRUE));
+                                                                    .thenApply(res -> convertToResult(args.getOperationName(),
+                                                                                                      Boolean.TRUE));
                                           })
                                       .build(),
 
@@ -171,8 +175,8 @@ public class DefaultGqlOperationProviderService implements GqlOperationProviderS
                                               return entitiesService.save(args.getStructureId(),
                                                                           rawJson,
                                                                           context)
-                                                                    .thenApply(savedEntity -> convertToResult(context.get(
-                                                                            EntityContextConstants.ENTITY_ID_KEY)));
+                                                                    .thenApply(savedEntity -> convertToResult(args.getOperationName(),
+                                                                                                              context.get(EntityContextConstants.ENTITY_ID_KEY)));
                                           })
                                       .build()
         );
@@ -208,13 +212,13 @@ public class DefaultGqlOperationProviderService implements GqlOperationProviderS
         }
     }
 
-    private ExecutionResult convertToResult(Object data) {
+    private ExecutionResult convertToResult(String fieldName, Object data) {
         return ExecutionResultImpl.newExecutionResult()
-                                  .data(data)
+                                  .data(Map.of(fieldName, data))
                                   .build();
     }
 
-    private ExecutionResult convertToResult(Page<?> page, ParsedFields parsedFields) {
+    private ExecutionResult convertToResult(String fieldName, Page<?> page, ParsedFields parsedFields) {
         Map<String, Object> data = new HashMap<>();
         boolean shouldHaveTotalElements = false;
         boolean shouldHaveCursor = false;
@@ -244,7 +248,7 @@ public class DefaultGqlOperationProviderService implements GqlOperationProviderS
             }
         }
         return ExecutionResultImpl.newExecutionResult()
-                                  .data(data)
+                                  .data(Map.of(fieldName, data))
                                   .build();
     }
 

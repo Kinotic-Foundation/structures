@@ -13,8 +13,6 @@ import org.kinotic.structures.api.config.StructuresProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Set;
-
 /**
  * Created by Navíd Mitchell 🤪 on 6/7/23.
  */
@@ -35,8 +33,13 @@ public class GqlVerticle extends AbstractVerticle {
         server = vertx.createHttpServer();
         Router router = Router.router(vertx);
 
-        router.route().handler(CorsHandler.create(properties.getCorsAllowedOriginPattern())
-                                          .allowedHeaders(Set.of("Accept", "Authorization", "Content-Type")));
+        CorsHandler corsHandler = CorsHandler.create(properties.getCorsAllowedOriginPattern())
+                                             .allowedHeaders(properties.getCorsAllowedHeaders());
+        if(properties.getCorsAllowCredentials() != null){
+            corsHandler.allowCredentials(properties.getCorsAllowCredentials());
+        }
+
+        router.route().handler(corsHandler);
 
         if(securityService !=null){
             router.route().handler(new AuthenticationHandler(securityService, vertx));

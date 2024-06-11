@@ -50,7 +50,6 @@ public class ObjectC3TypeToElastic implements C3TypeConverter<Property, ObjectC3
             state.beginProcessingField(property);
 
             if(property.hasDecorators()){
-                // FIXME: make sure Id decorator is only on the root object, remove all other checks elsewhere
 
                 if(property.containsDecorator(NestedDecorator.class)) {
 
@@ -90,7 +89,7 @@ public class ObjectC3TypeToElastic implements C3TypeConverter<Property, ObjectC3
                                                                    ._toProperty());
                 } else {
 
-                    // No decorators that we care about so, just convert the type
+                    // No decorators that effect elastic mapping, just convert the type
                     builder.properties(fieldName, conversionContext.convert(type));
 
                 }

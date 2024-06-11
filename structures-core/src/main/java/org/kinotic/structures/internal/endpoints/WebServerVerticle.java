@@ -12,8 +12,6 @@ import io.vertx.ext.web.handler.StaticHandler;
 import lombok.RequiredArgsConstructor;
 import org.kinotic.structures.api.config.StructuresProperties;
 
-import java.util.Set;
-
 /**
  * Created by Navíd Mitchell 🤪on 6/8/23.
  */
@@ -30,16 +28,20 @@ public class WebServerVerticle extends AbstractVerticle{
 
         Router router = Router.router(vertx);
 
-        Route route = router.route()
-                            .handler(CorsHandler.create(properties.getCorsAllowedOriginPattern())
-                                  .allowedHeaders(Set.of("Accept", "Authorization", "Content-Type")));
+        CorsHandler corsHandler = CorsHandler.create(properties.getCorsAllowedOriginPattern())
+                                             .allowedHeaders(properties.getCorsAllowedHeaders());
+        if(properties.getCorsAllowCredentials() != null){
+            corsHandler.allowCredentials(properties.getCorsAllowCredentials());
+        }
+
+        Route route =  router.route().handler(corsHandler);
+
+        HealthCheckHandler healthCheckHandler = HealthCheckHandler.createWithHealthChecks(healthChecks);
+        router.get("/health").handler(healthCheckHandler);
 
         if(properties.isEnableStaticFileServer()) {
             route.handler(StaticHandler.create());
         }
-
-        HealthCheckHandler healthCheckHandler = HealthCheckHandler.createWithHealthChecks(healthChecks);
-        router.get("/health").handler(healthCheckHandler);
 
         // Begin listening for requests
         server.requestHandler(router).listen(properties.getWebServerPort(), ar -> {

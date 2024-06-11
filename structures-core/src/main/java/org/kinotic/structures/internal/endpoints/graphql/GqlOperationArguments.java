@@ -12,10 +12,10 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Getter
 public class GqlOperationArguments {
-
-    private final String structureId;
-    private final Participant participant;
-    private final Map<String, Object> variables;
+    private final String operationName;
     private final ParsedFields parsedFields;
+    private final Participant participant;
+    private final String structureId;
+    private final Map<String, Object> variables;
 
 }
