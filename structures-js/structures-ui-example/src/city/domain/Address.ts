@@ -1,7 +1,5 @@
 export class Address{
-    public street1!: string
-
-    public street2!: string
+    public street!: string
 
     public city!: string
 
