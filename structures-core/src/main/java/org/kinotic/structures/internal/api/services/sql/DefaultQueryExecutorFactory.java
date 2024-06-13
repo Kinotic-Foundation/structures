@@ -6,7 +6,7 @@ import org.kinotic.continuum.idl.api.schema.FunctionDefinition;
 import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.domain.NamedQueriesDefinition;
 import org.kinotic.structures.api.domain.Structure;
-import org.kinotic.structures.api.idl.decorators.QueryDecorator;
+import org.kinotic.structures.api.domain.idl.decorators.QueryDecorator;
 import org.kinotic.structures.internal.api.services.sql.executors.AggregateQueryExecutor;
 import org.kinotic.structures.internal.api.services.sql.executors.QueryExecutor;
 import org.kinotic.structures.internal.utils.QueryUtils;

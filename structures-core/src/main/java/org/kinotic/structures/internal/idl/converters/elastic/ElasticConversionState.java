@@ -6,7 +6,7 @@ import lombok.experimental.Accessors;
 import org.kinotic.continuum.idl.api.schema.C3Type;
 import org.kinotic.continuum.idl.api.schema.PropertyDefinition;
 import org.kinotic.structures.api.config.StructuresProperties;
-import org.kinotic.structures.api.idl.decorators.MultiTenancyType;
+import org.kinotic.structures.api.domain.idl.decorators.MultiTenancyType;
 import org.kinotic.structures.internal.idl.converters.common.BaseConversionState;
 import org.kinotic.structures.internal.idl.converters.common.DecoratedProperty;
 
@@ -38,7 +38,6 @@ public class ElasticConversionState extends BaseConversionState {
         C3Type value = propertyDefinition.getType();
         if(propertyDefinition.hasDecorators()){
             decoratedProperties.add(new DecoratedProperty(getCurrentJsonPath(),
-                                                          value.getClass(),
                                                           propertyDefinition.getDecorators()));
         }
     }

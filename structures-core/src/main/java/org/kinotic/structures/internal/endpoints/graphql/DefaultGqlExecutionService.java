@@ -18,7 +18,6 @@ import org.apache.commons.lang3.Validate;
 import org.kinotic.continuum.api.security.Participant;
 import org.kinotic.continuum.core.api.event.EventConstants;
 import org.kinotic.structures.api.domain.Structure;
-import org.kinotic.structures.internal.utils.StructuresUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -36,16 +35,16 @@ import java.util.function.Function;
 public class DefaultGqlExecutionService implements GqlExecutionService {
     private static final Logger log = LoggerFactory.getLogger(DefaultGqlExecutionService.class);
 
-    private final GqlOperationProviderService gqlOperationProviderService;
+    private final GqlOperationDefinitionService gqlOperationDefinitionService;
     private final AsyncLoadingCache<String, GraphQL> graphQLCache;
     private final ObjectMapper objectMapper;
     private final Vertx vertx;
 
-    public DefaultGqlExecutionService(GqlOperationProviderService gqlOperationProviderService,
+    public DefaultGqlExecutionService(GqlOperationDefinitionService gqlOperationDefinitionService,
                                       GqlSchemaCacheLoader gqlSchemaCacheLoader,
                                       ObjectMapper objectMapper,
                                       Vertx vertx) {
-        this.gqlOperationProviderService = gqlOperationProviderService;
+        this.gqlOperationDefinitionService = gqlOperationDefinitionService;
         this.objectMapper = objectMapper;
         this.vertx = vertx;
 
@@ -142,14 +141,12 @@ public class DefaultGqlExecutionService implements GqlExecutionService {
 
             String operationName = selection.getName();
 
-            GqlOperationDefinition definition = gqlOperationProviderService.findOperationDefinition(operationName);
-            if (definition != null) {
-                String structureId = getStructureId(namespace, operationName, definition.getOperationNamePrefix());
-                Function<GqlOperationArguments, CompletableFuture<ExecutionResult>> function = definition.getOperationExecutionFunction();
-                return function.apply(new GqlOperationArguments(operationName,
+            GqlOperationExecutionFunction function = gqlOperationDefinitionService.findOperationExecutionFunction(operationName);
+            if (function != null) {
+                return function.apply(new GqlOperationArguments(namespace,
+                                                                operationName,
                                                                 parsedFields,
                                                                 participant,
-                                                                structureId,
                                                                 parseArguments(selection.getArguments(),
                                                                                executionInput.getVariables())));
             } else {
@@ -242,11 +239,6 @@ public class DefaultGqlExecutionService implements GqlExecutionService {
 
     private CompletableFuture<GraphQL> getOrCreateGraphQL(String namespace) {
         return graphQLCache.get(namespace);
-    }
-
-    private String getStructureId(String namespace, String operationName, String operationPrefix) {
-        String structureName = operationName.substring(operationPrefix.length());
-        return StructuresUtil.structureNameToId(namespace, structureName);
     }
 
     private PreparsedDocumentEntry parseAndValidate(AtomicReference<ExecutionInput> executionInputRef,

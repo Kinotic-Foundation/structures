@@ -5,10 +5,8 @@ import graphql.schema.GraphQLFieldDefinition;
 import lombok.Builder;
 import lombok.Getter;
 
-import java.util.function.Function;
-
 /**
- * Defines all the needed data to define a GraphQL Query or Mutation
+ * Holds all the information needed to define a GraphQL operation and how to execute it
  * Created by Navíd Mitchell 🤪 on 12/14/23.
  */
 @Builder
@@ -16,11 +14,11 @@ import java.util.function.Function;
 public class GqlOperationDefinition {
 
     /**
-     * The prefix of the operation name
+     * The operation name, or in the case of built-in operations, the prefix of the operation name
      * Such as findById, findAll, update, delete, etc...
      * NOTE: This must be unique for the operation, and only contain alpha characters.
      */
-    private final String operationNamePrefix;
+    private final String operationName;
 
     /**
      * The type of operation this definition is for
@@ -28,14 +26,13 @@ public class GqlOperationDefinition {
     private final OperationDefinition.Operation operationType;
 
     /**
-     * The function that will execute the operation
+     * The function that will execute this operation
      */
     private final GqlOperationExecutionFunction operationExecutionFunction;
 
     /**
-     * The function that will build the {@link GraphQLFieldDefinition} for this operation
-     * This function will be passed a {@link GqlFieldDefinitionData} that contains all the needed data to build the {@link GraphQLFieldDefinition
+     * The function that will define the {@link GraphQLFieldDefinition} for this operation
      */
-    private final Function<GqlFieldDefinitionData, GraphQLFieldDefinition> fieldDefinitionFunction;
+    private final GqlFieldDefinitionFunction fieldDefinitionFunction;
 
 }

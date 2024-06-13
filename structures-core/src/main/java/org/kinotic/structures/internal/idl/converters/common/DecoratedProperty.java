@@ -5,7 +5,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.kinotic.continuum.idl.api.schema.C3Type;
 import org.kinotic.continuum.idl.api.schema.decorators.C3Decorator;
 
 import java.util.List;
@@ -21,8 +20,6 @@ import java.util.List;
 public class DecoratedProperty {
 
     private String jsonPath;
-
-    private Class<? extends C3Type> decoratedTypeClass;
 
     private List<C3Decorator> decorators;
 

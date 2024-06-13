@@ -1,4 +1,4 @@
-package org.kinotic.structures.api.idl;
+package org.kinotic.structures.api.domain.idl;
 
 import lombok.*;
 import lombok.experimental.Accessors;

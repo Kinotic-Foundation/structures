@@ -16,6 +16,7 @@ import org.kinotic.structures.internal.api.services.StructureConversionService;
 import org.kinotic.structures.internal.api.services.StructureDAO;
 import org.kinotic.structures.internal.idl.converters.graphql.GqlConversionState;
 import org.kinotic.structures.internal.idl.converters.graphql.GqlTypeHolder;
+import org.kinotic.structures.internal.utils.GqlUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -48,7 +49,7 @@ public class GqlSchemaCacheLoader implements AsyncCacheLoader<String, GraphQL> {
 
     private final StructureDAO structureDAO;
     private final StructureConversionService structureConversionService;
-    private final GqlOperationProviderService gqlOperationProviderService;
+    private final GqlOperationDefinitionService gqlOperationDefinitionService;
 
 
     @Override
@@ -93,22 +94,21 @@ public class GqlSchemaCacheLoader implements AsyncCacheLoader<String, GraphQL> {
 
                         GraphQLInputObjectType inputType = getGraphQLInputObjectType(structureType);
 
-                        String structureName = WordUtils.capitalize(outputType.getName());
                         GraphQLTypeReference graphQLTypeReference = new GraphQLTypeReference(outputType.getName());
-                        GraphQLNamedOutputType pageResponseType = wrapForItemListResponse(graphQLTypeReference);
+                        GraphQLNamedOutputType pageResponseType = GqlUtils.wrapTypeWithPage(graphQLTypeReference);
 
+                        String structureName = WordUtils.capitalize(structure.getName());
                         GqlFieldDefinitionData fieldDefinitionData = GqlFieldDefinitionData.builder()
-                                                                                           .outputType(outputType)
+                                                                                           .converter(converter)
                                                                                            .inputType(inputType)
-                                                                                           .structuresName(structureName)
-                                                                                           .pageableReference(
-                                                                                                   pageableReference)
-                                                                                           .pageResponseType(
-                                                                                                   pageResponseType)
+                                                                                           .outputType(outputType)
+                                                                                           .pageableReference(pageableReference)
+                                                                                           .pageResponseType(pageResponseType)
+                                                                                           .structureName(structureName)
                                                                                            .build();
 
                         // Add all graphQL operations to the schema
-                        addOperations(fieldDefinitionData, mutationBuilder, queryBuilder);
+                        addOperations(fieldDefinitionData, mutationBuilder, queryBuilder, structure);
                     }
 
 
@@ -174,41 +174,55 @@ public class GqlSchemaCacheLoader implements AsyncCacheLoader<String, GraphQL> {
 
     /**
      * Adds all operations to the query and mutation builders
-     * @param fieldDefinitionData
-     * @param mutationBuilder
-     * @param queryBuilder
+     * @param fieldDefinitionData the data needed to build the operations
+     * @param mutationBuilder the mutation builder
+     * @param queryBuilder the query builder
      */
     private void addOperations(GqlFieldDefinitionData fieldDefinitionData,
                                GraphQLObjectType.Builder mutationBuilder,
-                               GraphQLObjectType.Builder queryBuilder) {
-        for (GqlOperationDefinition definition : gqlOperationProviderService.getOperationDefinitions()) {
+                               GraphQLObjectType.Builder queryBuilder,
+                               Structure structure) {
 
-            Function<GqlFieldDefinitionData, GraphQLFieldDefinition> function = definition.getFieldDefinitionFunction();
+        // Add built in operations
+        for (GqlOperationDefinition definition : gqlOperationDefinitionService.getBuiltInOperationDefinitions()) {
+            addOperation(definition, fieldDefinitionData, mutationBuilder, queryBuilder);
+        }
 
-            if (definition.getOperationType() == OperationDefinition.Operation.QUERY) {
-
-                queryBuilder.field(function.apply(fieldDefinitionData));
-
-            } else if (definition.getOperationType() == OperationDefinition.Operation.MUTATION) {
-
-                if (fieldDefinitionData.getInputType() != null) {
-                    mutationBuilder.field(function.apply(fieldDefinitionData));
-                }
-
-            } else {
-                log.error("Unsupported operation {} type: {}",
-                          definition.getOperationNamePrefix(),
-                          definition.getOperationType());
-            }
+        // Add named query operations
+        for(GqlOperationDefinition definition : gqlOperationDefinitionService.getNamedQueryOperationDefinitions(structure)){
+            addOperation(definition, fieldDefinitionData, mutationBuilder, queryBuilder);
         }
     }
 
-    private static GraphQLInputObjectType getGraphQLInputObjectType(GqlTypeHolder structureType) {
+    private static void addOperation(GqlOperationDefinition definition,
+                                     GqlFieldDefinitionData fieldDefinitionData,
+                                     GraphQLObjectType.Builder mutationBuilder,
+                                     GraphQLObjectType.Builder queryBuilder) {
+        Function<GqlFieldDefinitionData, GraphQLFieldDefinition> function = definition.getFieldDefinitionFunction();
+
+        if (definition.getOperationType() == OperationDefinition.Operation.QUERY) {
+
+            queryBuilder.field(function.apply(fieldDefinitionData));
+
+        } else if (definition.getOperationType() == OperationDefinition.Operation.MUTATION) {
+
+            if (fieldDefinitionData.getInputType() != null) {
+                mutationBuilder.field(function.apply(fieldDefinitionData));
+            }
+
+        } else {
+            log.error("Unsupported operation {} type: {}",
+                      definition.getOperationName(),
+                      definition.getOperationType());
+        }
+    }
+
+    private static GraphQLInputObjectType getGraphQLInputObjectType(GqlTypeHolder gqlTypeHolder) {
         GraphQLInputObjectType inputType = null;
         // Will be null if a UnionC3Type is found anywhere in the object graph
-        if (structureType.getInputType() != null) {
-            if (structureType.getInputType() instanceof GraphQLInputObjectType) {
-                inputType = (GraphQLInputObjectType) structureType.getInputType();
+        if (gqlTypeHolder.getInputType() != null) {
+            if (gqlTypeHolder.getInputType() instanceof GraphQLInputObjectType) {
+                inputType = (GraphQLInputObjectType) gqlTypeHolder.getInputType();
             } else {
                 throw new IllegalStateException("Input type must be a GraphQLInputObjectType");
             }
@@ -258,16 +272,4 @@ public class GqlSchemaCacheLoader implements AsyncCacheLoader<String, GraphQL> {
         return inputBuilder.build();
     }
 
-    private GraphQLNamedOutputType wrapForItemListResponse(GraphQLNamedOutputType graphQlOutputStructureItem) {
-        return newObject()
-                .name(graphQlOutputStructureItem.getName() + "Page")
-                .field(newFieldDefinition()
-                               .name("totalElements")
-                               .type(GraphQLInt))
-                .field(newFieldDefinition()
-                               .name("content")
-                               .type(GraphQLNonNull.nonNull(GraphQLList.list(GraphQLNonNull.nonNull(
-                                       graphQlOutputStructureItem)))))
-                .build();
-    }
 }

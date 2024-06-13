@@ -1,4 +1,4 @@
-package org.kinotic.structures.api.idl.decorators;
+package org.kinotic.structures.api.domain.idl.decorators;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
@@ -10,19 +10,18 @@ import org.kinotic.continuum.idl.api.schema.decorators.DecoratorTarget;
 import java.util.List;
 
 /**
- * Created by Navíd Mitchell 🤪on 6/16/23.
+ * Created by Navíd Mitchell 🤪on 6/8/23.
  */
 @Getter
 @Setter
 @Accessors(chain = true)
-public final class DiscriminatorDecorator extends C3Decorator {
+public final class NestedDecorator extends C3Decorator {
 
     @JsonIgnore
-    public static final String type = "Discriminator";
+    public static final String type = "Nested";
 
-    private String propertyName = null;
-
-    public DiscriminatorDecorator() {
+    public NestedDecorator() {
         this.targets = List.of(DecoratorTarget.FIELD);
     }
+
 }

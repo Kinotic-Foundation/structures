@@ -1,0 +1,44 @@
+{
+  "entityServiceName": "PersonEntityService",
+  "namedQueries": [
+    {
+      "name": "countByCity",
+      "decorators": [
+        {
+          "type": "Query",
+          "statements": "select count(firstName) from Person where city = ? group by city"
+        }
+      ],
+      "returnType": {
+        "type": "array",
+        "contains": {
+          "type": "object",
+          "name": "CityCount",
+          "namespace": "city",
+          "properties": [
+            {
+              "name": "city",
+              "type": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "count",
+              "type": {
+                "type": "int"
+              }
+            }
+          ]
+        }
+      },
+      "parameters": [
+        {
+          "name": "city",
+          "type": {
+            "type": "string"
+          }
+        }
+      ]
+    }
+  ]
+}

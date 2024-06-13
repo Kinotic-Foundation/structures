@@ -1,4 +1,4 @@
-package org.kinotic.structures.api.idl.decorators;
+package org.kinotic.structures.api.domain.idl.decorators;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;

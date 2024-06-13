@@ -11,7 +11,7 @@ import java.util.List;
  */
 @NoArgsConstructor
 @Getter
-class ParsedFields {
+public class ParsedFields {
     /**
      * Content fields are any fields in the selection set that are inside content:{}
      * This is done to make handling of pageable response easy.

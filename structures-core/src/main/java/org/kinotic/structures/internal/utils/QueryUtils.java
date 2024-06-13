@@ -78,7 +78,7 @@ public class QueryUtils {
             List<QueryParameter> queryParameters
                     = ((ListParameterHolder) parameterHolder).getParameterList();
 
-            ret = new HashMap<>(queryParameters.size(), 1.5F);
+            ret = new HashMap<>(queryParameters.size(), 1.2F);
             for(QueryParameter queryParameter : queryParameters){
                 ret.put(queryParameter.getKey(), queryParameter.getValue());
             }
