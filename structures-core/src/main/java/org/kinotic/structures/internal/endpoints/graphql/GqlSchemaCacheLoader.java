@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import static graphql.Scalars.GraphQLInt;
@@ -54,13 +55,19 @@ public class GqlSchemaCacheLoader implements AsyncCacheLoader<String, GraphQL> {
 
     @Override
     public CompletableFuture<GraphQL> asyncLoad(String key, Executor executor) throws Exception {
+        long now = System.nanoTime();
         return createGraphQlSchema(key, executor)
                 .thenCompose(schema -> {
 
                     GraphQL.Builder builder = GraphQL.newGraphQL(schema)
                                                      .preparsedDocumentProvider(new CachingPreparsedDocumentProvider());
+                    GraphQL graphQL = builder.build();
 
-                    return CompletableFuture.completedFuture(builder.build());
+                    log.debug("Finished creating GraphQL Schema for namespace: {} in {}ms",
+                              key,
+                              TimeUnit.MILLISECONDS.convert(System.nanoTime() - now, TimeUnit.NANOSECONDS));
+
+                    return CompletableFuture.completedFuture(graphQL);
                 });
     }
 
@@ -70,7 +77,6 @@ public class GqlSchemaCacheLoader implements AsyncCacheLoader<String, GraphQL> {
                 .findAllPublishedForNamespace(namespace, Pageable.ofSize(100))
                 .thenComposeAsync(structures -> {
 
-                    long start = System.currentTimeMillis();
                     log.debug("Creating GraphQL Schema for namespace: {}", namespace);
 
                     GraphQLInputObjectType pageableType = createPageableType();
@@ -160,12 +166,8 @@ public class GqlSchemaCacheLoader implements AsyncCacheLoader<String, GraphQL> {
                                               .resolveEntityType(NO_OP_TYPE_RESOLVER) // No type resolvers needed since we don't actually use the GraphQL API to execute operations
                                               .build();
 
-                    log.debug("Finished creating GraphQL Schema for namespace: {} in {}ms",
-                              namespace,
-                              System.currentTimeMillis() - start);
-
                     if(log.isTraceEnabled()){
-                        log.info(ServiceSDLPrinter.generateServiceSDLV2(graphQLSchema));
+                        log.trace(ServiceSDLPrinter.generateServiceSDLV2(graphQLSchema));
                     }
 
                     return CompletableFuture.completedFuture(graphQLSchema);
