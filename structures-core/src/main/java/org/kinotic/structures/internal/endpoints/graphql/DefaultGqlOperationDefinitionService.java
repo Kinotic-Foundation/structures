@@ -25,6 +25,7 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static graphql.Scalars.*;
 import static graphql.schema.GraphQLArgument.newArgument;
@@ -44,8 +45,8 @@ public class DefaultGqlOperationDefinitionService implements GqlOperationDefinit
     private final EntitiesService entitiesService;
     private final NamedQueriesService namedQueriesService;
     private final ObjectMapper objectMapper;
-    private final Trie<GqlOperationDefinition> operationTrie = new Trie<>();
-
+    private final Trie<GqlOperationExecutionFunction> builtInOperationTrie = new Trie<>();
+    private final ConcurrentHashMap<String, GqlOperationExecutionFunction> namedQueryExecutionFunctionMap = new ConcurrentHashMap<>();
 
     public DefaultGqlOperationDefinitionService(EntitiesService entitiesService,
                                                 NamedQueriesService namedQueriesService,
@@ -214,16 +215,21 @@ public class DefaultGqlOperationDefinitionService implements GqlOperationDefinit
         );
 
         for(GqlOperationDefinition definition : builtInOperationDefinitions){
-            operationTrie.insert(definition.getOperationName(), definition);
+            builtInOperationTrie.insert(definition.getOperationName(), definition.getOperationExecutionFunction());
         }
     }
 
     @Override
     public GqlOperationExecutionFunction findOperationExecutionFunction(String operationName) {
         long now = System.nanoTime();
-        GqlOperationDefinition ret = operationTrie.findValue(operationName);
+        GqlOperationExecutionFunction ret = builtInOperationTrie.findValue(operationName);
         log.debug("Finished Searching Trie for: {} in {}ns", operationName, System.nanoTime() - now);
-        return ret.getOperationExecutionFunction();
+        if(ret == null){
+            now = System.nanoTime();
+            ret = namedQueryExecutionFunctionMap.get(operationName);
+            log.debug("Finished Searching Named Query Map for: {} in {}ns", operationName, System.nanoTime() - now);
+        }
+        return ret;
     }
 
     @Override
@@ -285,8 +291,9 @@ public class DefaultGqlOperationDefinitionService implements GqlOperationDefinit
                                                                                                 entity));
                         });
                     }
-
-                    ret.add(builder.build());
+                    GqlOperationDefinition definition = builder.build();
+                    namedQueryExecutionFunctionMap.put(definition.getOperationName(), definition.getOperationExecutionFunction());
+                    ret.add(definition);
                 }else{
                     log.warn("No QueryDecorator found for Named query {} in Structure {}. No GraphQL operation will be created.",
                              queryDefinition.getName(),
