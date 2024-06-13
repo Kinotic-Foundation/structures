@@ -10,10 +10,11 @@ import graphql.schema.*;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.text.WordUtils;
 import org.kinotic.continuum.core.api.crud.Pageable;
+import org.kinotic.continuum.idl.api.converter.IdlConverter;
 import org.kinotic.structures.api.domain.Structure;
-import org.kinotic.structures.internal.api.services.GqlConversionResult;
 import org.kinotic.structures.internal.api.services.StructureConversionService;
 import org.kinotic.structures.internal.api.services.StructureDAO;
+import org.kinotic.structures.internal.idl.converters.graphql.GqlConversionState;
 import org.kinotic.structures.internal.idl.converters.graphql.GqlTypeHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -71,23 +72,18 @@ public class GqlSchemaCacheLoader implements AsyncCacheLoader<String, GraphQL> {
                     long start = System.currentTimeMillis();
                     log.debug("Creating GraphQL Schema for namespace: {}", namespace);
 
-                    Map<String, GqlConversionResult> conversionResultMap = new HashMap<>();
-                    for (Structure structure : structures.getContent()) {
-                        conversionResultMap.put(structure.getId(),
-                                                structureConversionService.convertToGqlMapping(structure));
-                    }
-
                     GraphQLInputObjectType pageableType = createPageableType();
                     GraphQLTypeReference pageableReference = new GraphQLTypeReference(pageableType.getName());
 
                     GraphQLObjectType.Builder queryBuilder = newObject().name("Query");
                     GraphQLObjectType.Builder mutationBuilder = newObject().name("Mutation");
-                    GraphQLCodeRegistry.Builder codeRegistryBuilder = GraphQLCodeRegistry.newCodeRegistry();
-                    Map<String, GraphQLType> additionalTypes = new HashMap<>();
 
-                    for (GqlConversionResult conversionResult : conversionResultMap.values()) {
+                    IdlConverter<GqlTypeHolder, GqlConversionState> converter
+                            = structureConversionService.createGqlConverter();
 
-                        GqlTypeHolder structureType = conversionResult.getStructureType();
+                    for (Structure structure : structures.getContent()) {
+
+                        GqlTypeHolder structureType = converter.convert(structure.getEntityDefinition());
                         GraphQLObjectType outputType;
                         if (structureType.getOutputType() instanceof GraphQLObjectType) {
                             outputType = (GraphQLObjectType) structureType.getOutputType();
@@ -112,17 +108,24 @@ public class GqlSchemaCacheLoader implements AsyncCacheLoader<String, GraphQL> {
                                                                                            .build();
 
                         // Add all graphQL operations to the schema
-                        addOperations(queryBuilder, fieldDefinitionData, mutationBuilder);
-
-                        // Add all type resolvers to the schema
-                        for (GraphQLUnionType unionType : conversionResult.getUnionTypes()) {
-                            // NoOp is used since we do not actually use the GraphQL api to execute operations
-                            codeRegistryBuilder.typeResolver(unionType, NO_OP_TYPE_RESOLVER);
-                        }
-
-                        // Add all additional types to the schema
-                        additionalTypes.putAll(conversionResult.getAdditionalTypes());
+                        addOperations(fieldDefinitionData, mutationBuilder, queryBuilder);
                     }
+
+
+                    // Add all type resolvers to the schema
+                    GraphQLCodeRegistry.Builder codeRegistryBuilder = GraphQLCodeRegistry.newCodeRegistry();
+                    for (GraphQLUnionType unionType : converter.getConversionContext()
+                                                               .state()
+                                                               .getUnionTypes()) {
+                        // NoOp is used since we do not actually use the GraphQL api to execute operations
+                        codeRegistryBuilder.typeResolver(unionType, NO_OP_TYPE_RESOLVER);
+                    }
+
+                    // Add all additional types to the schema
+                    Map<String, GraphQLType> additionalTypes = new HashMap<>(converter.getConversionContext()
+                                                                                      .state()
+                                                                                      .getReferencedTypes());
+
 
                     GraphQLSchema.Builder graphQLSchemaBuilder = GraphQLSchema.newSchema()
                                                                               .codeRegistry(codeRegistryBuilder.build())
@@ -171,14 +174,13 @@ public class GqlSchemaCacheLoader implements AsyncCacheLoader<String, GraphQL> {
 
     /**
      * Adds all operations to the query and mutation builders
-     *
-     * @param queryBuilder        the query builder
-     * @param fieldDefinitionData the field definition data
-     * @param mutationBuilder     the mutation builder
+     * @param fieldDefinitionData
+     * @param mutationBuilder
+     * @param queryBuilder
      */
-    private void addOperations(GraphQLObjectType.Builder queryBuilder,
-                               GqlFieldDefinitionData fieldDefinitionData,
-                               GraphQLObjectType.Builder mutationBuilder) {
+    private void addOperations(GqlFieldDefinitionData fieldDefinitionData,
+                               GraphQLObjectType.Builder mutationBuilder,
+                               GraphQLObjectType.Builder queryBuilder) {
         for (GqlOperationDefinition definition : gqlOperationProviderService.getOperationDefinitions()) {
 
             Function<GqlFieldDefinitionData, GraphQLFieldDefinition> function = definition.getFieldDefinitionFunction();

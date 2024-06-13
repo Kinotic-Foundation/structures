@@ -8,4 +8,6 @@ export class Person {
     @Id
     public id!: string
 
+    public __typename: string = "Person"
+
 }

@@ -6,7 +6,7 @@ import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.EntitiesService;
 import org.kinotic.structures.api.services.NamedQueriesService;
 import org.kinotic.structures.internal.api.services.CacheEvictionService;
-import org.kinotic.structures.internal.endpoints.graphql.GqlProviderService;
+import org.kinotic.structures.internal.endpoints.graphql.GqlExecutionService;
 import org.springframework.stereotype.Component;
 
 /**
@@ -17,12 +17,12 @@ import org.springframework.stereotype.Component;
 public class DefaultCacheEvictionService implements CacheEvictionService {
 
     private final EntitiesService entitiesService;
-    private final GqlProviderService gqlProviderService;
+    private final GqlExecutionService gqlExecutionService;
     private final NamedQueriesService namedQueriesService;
 
     @Override
     public void evictCachesFor(Structure structure) {
-        gqlProviderService.evictCachesFor(structure);
+        gqlExecutionService.evictCachesFor(structure);
         entitiesService.evictCachesFor(structure);
     }
 

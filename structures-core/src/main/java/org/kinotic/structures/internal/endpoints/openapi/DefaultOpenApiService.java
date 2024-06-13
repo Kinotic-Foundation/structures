@@ -109,7 +109,8 @@ public class DefaultOpenApiService implements OpenApiService {
                             // Add path items for the structure
                             addDefaultPathItems(paths, basePath, structure);
                         }else{
-                            log.error("Structure "+structure.getId()+" EntityDefinition did not convert to an OpenAPI ObjectSchema");
+                            log.error("Structure {} EntityDefinition did not convert to an OpenAPI ObjectSchema",
+                                      structure.getId());
                         }
 
                         addNamedQueryPathItems(paths, basePath, structure, converter, components);

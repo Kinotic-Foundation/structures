@@ -1,12 +1,10 @@
 package org.kinotic.structures.internal.endpoints.graphql;
 
-import graphql.ExecutionResult;
 import graphql.language.OperationDefinition;
 import graphql.schema.GraphQLFieldDefinition;
 import lombok.Builder;
 import lombok.Getter;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 /**
@@ -32,7 +30,7 @@ public class GqlOperationDefinition {
     /**
      * The function that will execute the operation
      */
-    private final Function<GqlOperationArguments, CompletableFuture<ExecutionResult>> operationExecutionFunction;
+    private final GqlOperationExecutionFunction operationExecutionFunction;
 
     /**
      * The function that will build the {@link GraphQLFieldDefinition} for this operation

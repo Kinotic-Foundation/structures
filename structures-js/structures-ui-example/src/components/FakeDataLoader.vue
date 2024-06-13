@@ -53,7 +53,8 @@ function generateData(number: number): {persons: Person[], vehicles: Vehicle[]} 
             type: faker.vehicle.type(),
             color: faker.vehicle.color(),
             owner: {
-                id: person.id
+                id: person.id,
+                __typename: 'Person'
             }
         }
         persons.push(person)

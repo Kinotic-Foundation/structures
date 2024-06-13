@@ -38,7 +38,7 @@ public interface EntityContext {
     EntityContext put(String key, Object obj);
 
     /**
-     * Get some data from the context. The data is available in any servces that receive the context.
+     * Get some data from the context. The data is available in any services that receive the context.
      *
      * @param key  the key for the data
      * @param <T>  the type of the data

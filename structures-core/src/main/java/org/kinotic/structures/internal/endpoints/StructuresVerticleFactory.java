@@ -3,10 +3,10 @@ package org.kinotic.structures.internal.endpoints;
 import io.vertx.ext.healthchecks.HealthChecks;
 import org.kinotic.continuum.api.security.SecurityService;
 import org.kinotic.structures.api.config.StructuresProperties;
+import org.kinotic.structures.internal.endpoints.graphql.GqlExecutionService;
 import org.kinotic.structures.internal.endpoints.graphql.GqlVerticle;
 import org.kinotic.structures.internal.endpoints.openapi.OpenApiVerticle;
 import org.kinotic.structures.internal.endpoints.openapi.OpenApiVertxRouterFactory;
-import org.kinotic.structures.internal.endpoints.graphql.GqlOperationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -25,7 +25,7 @@ public class StructuresVerticleFactory {
     private final OpenApiVertxRouterFactory openApiVertxRouterFactory;
 
     // Gql Deps
-    private final GqlOperationService gqlOperationService;
+    private final GqlExecutionService gqlExecutionService;
 
     // Web Server Deps
     private final HealthChecks healthChecks;
@@ -33,18 +33,18 @@ public class StructuresVerticleFactory {
 
     public StructuresVerticleFactory(OpenApiVertxRouterFactory openApiVertxRouterFactory,
                                      StructuresProperties properties,
-                                     GqlOperationService gqlOperationService,
+                                     GqlExecutionService gqlExecutionService,
                                      HealthChecks healthChecks,
                                      @Autowired(required = false) SecurityService securityService) {
         this.openApiVertxRouterFactory = openApiVertxRouterFactory;
         this.properties = properties;
         this.securityService = securityService;
-        this.gqlOperationService = gqlOperationService;
+        this.gqlExecutionService = gqlExecutionService;
         this.healthChecks = healthChecks;
     }
 
     public GqlVerticle createGqlVerticle(){
-        return new GqlVerticle(gqlOperationService, properties, securityService);
+        return new GqlVerticle(gqlExecutionService, properties, securityService);
     }
 
     public OpenApiVerticle createOpenApiVerticle(){

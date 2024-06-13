@@ -47,6 +47,7 @@ export class BaseVehicleEntityService extends EntityService<Vehicle> {
       if (entity.owner) {
         ret.owner = (ret.owner ? ret.owner : {})
         ret.owner.id = entity.owner.id
+        ret.owner.__typename = entity.owner.__typename
       }
     }
 

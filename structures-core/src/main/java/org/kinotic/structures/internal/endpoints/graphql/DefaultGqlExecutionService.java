@@ -2,6 +2,8 @@ package org.kinotic.structures.internal.endpoints.graphql;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import graphql.*;
 import graphql.execution.preparsed.PreparsedDocumentEntry;
 import graphql.language.*;
@@ -11,10 +13,11 @@ import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.graphql.impl.GraphQLQuery;
-import lombok.RequiredArgsConstructor;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
+import org.apache.commons.lang3.Validate;
 import org.kinotic.continuum.api.security.Participant;
 import org.kinotic.continuum.core.api.event.EventConstants;
+import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.internal.utils.StructuresUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,22 +25,41 @@ import org.springframework.stereotype.Component;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 /**
- * Created by Navíd Mitchell 🤪 on 12/13/23.
+ * Created by Navíd Mitchell 🤪on 6/25/23.
  */
 @Component
-@RequiredArgsConstructor
-public class DefaultGqlOperationService implements GqlOperationService {
+public class DefaultGqlExecutionService implements GqlExecutionService {
+    private static final Logger log = LoggerFactory.getLogger(DefaultGqlExecutionService.class);
 
-    private static final Logger log = LoggerFactory.getLogger(DefaultGqlOperationService.class);
-
-    private final GqlProviderService gqlProviderService;
     private final GqlOperationProviderService gqlOperationProviderService;
-    private final Vertx vertx;
+    private final AsyncLoadingCache<String, GraphQL> graphQLCache;
     private final ObjectMapper objectMapper;
+    private final Vertx vertx;
+
+    public DefaultGqlExecutionService(GqlOperationProviderService gqlOperationProviderService,
+                                      GqlSchemaCacheLoader gqlSchemaCacheLoader,
+                                      ObjectMapper objectMapper,
+                                      Vertx vertx) {
+        this.gqlOperationProviderService = gqlOperationProviderService;
+        this.objectMapper = objectMapper;
+        this.vertx = vertx;
+
+        graphQLCache = Caffeine.newBuilder()
+                               .expireAfterAccess(20, TimeUnit.HOURS)
+                               .maximumSize(10_000)
+                               .buildAsync(gqlSchemaCacheLoader);
+    }
+
+    @Override
+    public void evictCachesFor(Structure structure) {
+        Validate.notNull(structure, "structure must not be null");
+        graphQLCache.asMap().remove(structure.getNamespace());
+    }
 
     /**
      * Executes the GQL request.
@@ -67,55 +89,40 @@ public class DefaultGqlOperationService implements GqlOperationService {
         // TODO: This should maybe look at the selection set for __schema and __service since the operationName here is not required
         if (operationName != null && (operationName.equals("IntrospectionQuery") || operationName.equals("SubgraphIntrospectQuery"))) {
             // We execute Introspection Queries using the java graphql library
-            return VertxCompletableFuture.from(vertx, gqlProviderService.getOrCreateGraphQL(namespace)
-                                                                        .thenCompose(graphQL -> graphQL.executeAsync(
-                                                                                executionInputBuilder.build()))
-                                                                        .thenApply(this::convertToBuffer));
+            return VertxCompletableFuture.from(vertx, getOrCreateGraphQL(namespace)
+                                                                         .thenCompose(graphQL -> graphQL.executeAsync(
+                                                                                 executionInputBuilder.build()))
+                                                                         .thenApply(this::convertToBuffer));
         } else {
             // We execute all others using our own logic path optimized for elasticsearch
             Participant participant = routingContext.get(EventConstants.SENDER_HEADER);
-            return VertxCompletableFuture.from(vertx, gqlProviderService.getOrCreateGraphQL(namespace))
+            return VertxCompletableFuture.from(vertx, getOrCreateGraphQL(namespace))
                                          .thenCompose(graphQL -> executeOperation(namespace,
                                                                                   participant,
                                                                                   graphQL,
                                                                                   executionInputBuilder.build()))
-                                         .thenApply(this::convertToBuffer);
+                                         .thenApply(executionResult -> {
+                                             return convertToBuffer(executionResult);
+                                         });
         }
     }
 
-    private CompletableFuture<ExecutionResult> executeOperation(String namespace,
-                                                                Participant participant,
-                                                                GraphQL graphQL,
-                                                                ExecutionInput executionInput) {
+    private Buffer convertToBuffer(ExecutionResult executionResult) {
+        try {
+            return Buffer.buffer(objectMapper.writeValueAsBytes(executionResult.toSpecification()));
+        } catch (JsonProcessingException e) {
+            log.error("Error converting ExecutionResult to JSON", e);
+            throw new IllegalStateException(e);
+        }
+    }
 
-        AtomicReference<ExecutionInput> executionInputRef = new AtomicReference<>(executionInput);
-        Function<ExecutionInput, PreparsedDocumentEntry> computeFunction = transformedInput -> {
-            // if they change the original query in the pre-parser, then we want to see it downstream from then on
-            executionInputRef.set(transformedInput);
-            return parseAndValidate(executionInputRef, graphQL.getGraphQLSchema());
-        };
-
-        CompletableFuture<PreparsedDocumentEntry> preparsedDoc = graphQL.getPreparsedDocumentProvider()
-                                                                        .getDocumentAsync(executionInput,
-                                                                                          computeFunction);
-        return preparsedDoc.thenCompose(documentEntry -> {
-            CompletableFuture<ExecutionResult> ret;
-            if (!documentEntry.hasErrors()) {
-                try {
-
-                    ret = executeDocument(namespace,
-                                          participant,
-                                          documentEntry.getDocument(),
-                                          executionInput);
-
-                } catch (Exception e) {
-                    ret = CompletableFuture.completedFuture(convertToResult(e));
-                }
-            } else {
-                ret = CompletableFuture.completedFuture(new ExecutionResultImpl(documentEntry.getErrors()));
-            }
-            return ret;
-        });
+    private ExecutionResult convertToResult(Throwable throwable) {
+        GraphQLError error = GraphQLError.newError()
+                                         .message(throwable.getMessage())
+                                         .build();
+        return ExecutionResultImpl.newExecutionResult()
+                                  .addError(error)
+                                  .build();
     }
 
     private CompletableFuture<ExecutionResult> executeDocument(String namespace,
@@ -157,9 +164,123 @@ public class DefaultGqlOperationService implements GqlOperationService {
         }
     }
 
+    private CompletableFuture<ExecutionResult> executeOperation(String namespace,
+                                                                Participant participant,
+                                                                GraphQL graphQL,
+                                                                ExecutionInput executionInput) {
+
+        AtomicReference<ExecutionInput> executionInputRef = new AtomicReference<>(executionInput);
+        Function<ExecutionInput, PreparsedDocumentEntry> computeFunction = transformedInput -> {
+            // if they change the original query in the pre-parser, then we want to see it downstream from then on
+            executionInputRef.set(transformedInput);
+            return parseAndValidate(executionInputRef, graphQL.getGraphQLSchema());
+        };
+
+        CompletableFuture<PreparsedDocumentEntry> preparsedDoc = graphQL.getPreparsedDocumentProvider()
+                                                                        .getDocumentAsync(executionInput,
+                                                                                          computeFunction);
+        return preparsedDoc.thenCompose(documentEntry -> {
+            CompletableFuture<ExecutionResult> ret;
+            if (!documentEntry.hasErrors()) {
+                try {
+
+                    ret = executeDocument(namespace,
+                                          participant,
+                                          documentEntry.getDocument(),
+                                          executionInput);
+
+                } catch (Exception e) {
+                    ret = CompletableFuture.completedFuture(convertToResult(e));
+                }
+            } else {
+                ret = CompletableFuture.completedFuture(new ExecutionResultImpl(documentEntry.getErrors()));
+            }
+            return ret;
+        });
+    }
+
+    /**
+     * Recursively parses a selection set and returns a list of fields
+     * All fields beginning with "content" are considered content fields and will be stored in the ParsedFields.contentFields list
+     *
+     * @param selectionSet the selection set to parse
+     * @param rootField    the root field of the selection set, or null if this is the root
+     * @return a ParsedFields object containing the parsed fields
+     */
+    private ParsedFields getFieldsFromSelectionSet(SelectionSet selectionSet, String rootField) {
+        ParsedFields ret = new ParsedFields();
+        if(selectionSet != null) {
+            for (Selection<?> selection : selectionSet.getSelections()) {
+                // Look at FieldCollector for parsing InlineFragments used by _entities queries
+                if (selection instanceof Field) {
+                    Field field = (Field) selection;
+                    String jsonPath = (rootField != null) ? rootField + "." + field.getName() : field.getName();
+                    if (field.getSelectionSet() != null) {
+                        if (rootField != null && rootField.equals("content")) {
+                            ParsedFields parsedFields = getFieldsFromSelectionSet(field.getSelectionSet(), field.getName());
+                            ret.getContentFields().addAll(parsedFields.getContentFields());
+                            ret.getContentFields().addAll(parsedFields.getNonContentFields());
+                        } else {
+                            ParsedFields parsedFields = getFieldsFromSelectionSet(field.getSelectionSet(), jsonPath);
+                            ret.getContentFields().addAll(parsedFields.getContentFields());
+                            ret.getNonContentFields().addAll(parsedFields.getNonContentFields());
+                        }
+                    } else {
+                        if (rootField != null && rootField.equals("content")) {
+                            ret.getContentFields().add(field.getName());
+                        } else {
+                            ret.getNonContentFields().add(jsonPath);
+                        }
+                    }
+                } else {
+                    throw new IllegalArgumentException("Unsupported selection type: " + selection.getClass());
+                }
+            }
+        }
+        return ret;
+    }
+
+    private CompletableFuture<GraphQL> getOrCreateGraphQL(String namespace) {
+        return graphQLCache.get(namespace);
+    }
+
+    private String getStructureId(String namespace, String operationName, String operationPrefix) {
+        String structureName = operationName.substring(operationPrefix.length());
+        return StructuresUtil.structureNameToId(namespace, structureName);
+    }
+
+    private PreparsedDocumentEntry parseAndValidate(AtomicReference<ExecutionInput> executionInputRef,
+                                                    GraphQLSchema graphQLSchema) {
+        ExecutionInput executionInput = executionInputRef.get();
+        String query = executionInput.getQuery();
+        PreparsedDocumentEntry ret;
+
+        ParseAndValidateResult parseResult = ParseAndValidate.parse(executionInput);
+        if (parseResult.isFailure()) {
+
+            log.trace("Query did not parse : '{}'", executionInput.getQuery());
+            ret = new PreparsedDocumentEntry(parseResult.getSyntaxException().toInvalidSyntaxError());
+
+        } else {
+
+            final Document document = parseResult.getDocument();
+
+            log.trace("Validating query: '{}'", query);
+            List<ValidationError> validationErrors = ParseAndValidate.validate(graphQLSchema, document);
+
+            if (validationErrors.isEmpty()) {
+                ret = new PreparsedDocumentEntry(document);
+            } else {
+                log.warn("Query did not validate : '{}'", query);
+                ret = new PreparsedDocumentEntry(document, validationErrors);
+            }
+        }
+        return ret;
+    }
+
     private Map<String, Object> parseArguments(List<Argument> arguments,
                                                Map<String, Object> rawVariables) {
-        Map<String, Object> ret = new HashMap<>(rawVariables.size(), 1.5F);
+        Map<String, Object> ret = new HashMap<>(rawVariables.size(), 1.2F);
         for (Argument argument : arguments) {
             Value<?> value = argument.getValue();
             Object parsedValue = parseLiteral(value, rawVariables);
@@ -209,51 +330,6 @@ public class DefaultGqlOperationService implements GqlOperationService {
         return ret;
     }
 
-    /**
-     * Recursively parses a selection set and returns a list of fields
-     * All fields beginning with "content" are considered content fields and will be stored in the ParsedFields.contentFields list
-     *
-     * @param selectionSet the selection set to parse
-     * @param rootField    the root field of the selection set, or null if this is the root
-     * @return a ParsedFields object containing the parsed fields
-     */
-    private ParsedFields getFieldsFromSelectionSet(SelectionSet selectionSet, String rootField) {
-        ParsedFields ret = new ParsedFields();
-        if(selectionSet != null) {
-            for (Selection<?> selection : selectionSet.getSelections()) {
-                if (selection instanceof Field) {
-                    Field field = (Field) selection;
-                    String jsonPath = (rootField != null) ? rootField + "." + field.getName() : field.getName();
-                    if (field.getSelectionSet() != null) {
-                        if (rootField != null && rootField.equals("content")) {
-                            ParsedFields parsedFields = getFieldsFromSelectionSet(field.getSelectionSet(), field.getName());
-                            ret.getContentFields().addAll(parsedFields.getContentFields());
-                            ret.getContentFields().addAll(parsedFields.getNonContentFields());
-                        } else {
-                            ParsedFields parsedFields = getFieldsFromSelectionSet(field.getSelectionSet(), jsonPath);
-                            ret.getContentFields().addAll(parsedFields.getContentFields());
-                            ret.getNonContentFields().addAll(parsedFields.getNonContentFields());
-                        }
-                    } else {
-                        if (rootField != null && rootField.equals("content")) {
-                            ret.getContentFields().add(field.getName());
-                        } else {
-                            ret.getNonContentFields().add(jsonPath);
-                        }
-                    }
-                } else {
-                    throw new IllegalArgumentException("Unsupported selection type: " + selection.getClass());
-                }
-            }
-        }
-        return ret;
-    }
-
-    private String getStructureId(String namespace, String operationName, String operationPrefix) {
-        String structureName = operationName.substring(operationPrefix.length());
-        return StructuresUtil.structureNameToId(namespace, structureName);
-    }
-
     private Field validateAndGetSelection(OperationDefinition operationDefinition) {
         if (operationDefinition.getOperation() != OperationDefinition.Operation.QUERY
                 && operationDefinition.getOperation() != OperationDefinition.Operation.MUTATION) {
@@ -276,52 +352,4 @@ public class DefaultGqlOperationService implements GqlOperationService {
             throw new IllegalArgumentException("Multi-operation documents not supported");
         }
     }
-
-    private PreparsedDocumentEntry parseAndValidate(AtomicReference<ExecutionInput> executionInputRef,
-                                                    GraphQLSchema graphQLSchema) {
-        ExecutionInput executionInput = executionInputRef.get();
-        String query = executionInput.getQuery();
-        PreparsedDocumentEntry ret;
-
-        ParseAndValidateResult parseResult = ParseAndValidate.parse(executionInput);
-        if (parseResult.isFailure()) {
-
-            log.trace("Query did not parse : '{}'", executionInput.getQuery());
-            ret = new PreparsedDocumentEntry(parseResult.getSyntaxException().toInvalidSyntaxError());
-
-        } else {
-
-            final Document document = parseResult.getDocument();
-
-            log.trace("Validating query: '{}'", query);
-            List<ValidationError> validationErrors = ParseAndValidate.validate(graphQLSchema, document);
-
-            if (validationErrors.isEmpty()) {
-                ret = new PreparsedDocumentEntry(document);
-            } else {
-                log.warn("Query did not validate : '{}'", query);
-                ret = new PreparsedDocumentEntry(document, validationErrors);
-            }
-        }
-        return ret;
-    }
-
-    private Buffer convertToBuffer(ExecutionResult executionResult) {
-        try {
-            return Buffer.buffer(objectMapper.writeValueAsBytes(executionResult.toSpecification()));
-        } catch (JsonProcessingException e) {
-            log.error("Error converting ExecutionResult to JSON", e);
-            throw new IllegalStateException(e);
-        }
-    }
-
-    private ExecutionResult convertToResult(Throwable throwable) {
-        GraphQLError error = GraphQLError.newError()
-                                         .message(throwable.getMessage())
-                                         .build();
-        return ExecutionResultImpl.newExecutionResult()
-                                  .addError(error)
-                                  .build();
-    }
-
 }

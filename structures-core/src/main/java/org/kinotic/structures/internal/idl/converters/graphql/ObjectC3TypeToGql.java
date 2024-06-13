@@ -2,10 +2,8 @@ package org.kinotic.structures.internal.idl.converters.graphql;
 
 import com.apollographql.federation.graphqljava.FederationDirectives;
 import graphql.Scalars;
-import graphql.schema.GraphQLAppliedDirective;
-import graphql.schema.GraphQLInputObjectType;
-import graphql.schema.GraphQLNonNull;
-import graphql.schema.GraphQLObjectType;
+import graphql.language.BooleanValue;
+import graphql.schema.*;
 import org.kinotic.continuum.idl.api.converter.C3ConversionContext;
 import org.kinotic.continuum.idl.api.converter.C3TypeConverter;
 import org.kinotic.continuum.idl.api.converter.Cacheable;
@@ -27,6 +25,7 @@ import static graphql.schema.GraphQLTypeReference.typeRef;
  * Created by Navíd Mitchell 🤪 on 5/2/23.
  */
 public class ObjectC3TypeToGql implements C3TypeConverter<GqlTypeHolder, ObjectC3Type, GqlConversionState>, Cacheable {
+
 
     @Override
     public GqlTypeHolder convert(ObjectC3Type objectC3Type,
@@ -51,7 +50,18 @@ public class ObjectC3TypeToGql implements C3TypeConverter<GqlTypeHolder, ObjectC
                 fieldValue = new GqlTypeHolder(GraphQLNonNull.nonNull(Scalars.GraphQLID), GraphQLNonNull.nonNull(Scalars.GraphQLID));
 
                 // Add the @key directive to the field if federated
-                outputBuilder.withAppliedDirective(FederationDirectives.key(fieldName).toAppliedDirective());
+                if(objectC3Type.getProperties().size() == 1){
+                    GraphQLDirective keyDirective = GraphQLDirective.newDirective(FederationDirectives.key(fieldName))
+                                                                            .argument(builder -> {
+                                                                                builder.name("resolvable")
+                                                                                        .type(GraphQLTypeReference.typeRef(Scalars.GraphQLBoolean.getName()))
+                                                                                        .valueLiteral(new BooleanValue(false));
+                                                                                return builder;
+                                                                            }).build();
+                    outputBuilder.withAppliedDirective(keyDirective.toAppliedDirective());
+                }else{
+                    outputBuilder.withAppliedDirective(FederationDirectives.key(fieldName).toAppliedDirective());
+                }
 
             } else {
 

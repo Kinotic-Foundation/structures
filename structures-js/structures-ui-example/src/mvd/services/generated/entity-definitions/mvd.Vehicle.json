@@ -61,6 +61,12 @@
             "type": {
               "type": "string"
             }
+          },
+          {
+            "name": "__typename",
+            "type": {
+              "type": "string"
+            }
           }
         ]
       }

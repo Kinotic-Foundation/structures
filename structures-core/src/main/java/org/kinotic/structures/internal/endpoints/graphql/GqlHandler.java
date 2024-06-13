@@ -24,7 +24,7 @@ import static io.vertx.core.http.HttpMethod.POST;
 @RequiredArgsConstructor
 public class GqlHandler implements Handler<RoutingContext> {
 
-    private final GqlOperationService gqlOperationService;
+    private final GqlExecutionService gqlExecutionService;
 
     @Override
     public void handle(RoutingContext rc) {
@@ -69,7 +69,7 @@ public class GqlHandler implements Handler<RoutingContext> {
     }
 
     private void executeOne(RoutingContext rc, GraphQLQuery query) {
-        gqlOperationService.execute(rc, query)
+        gqlExecutionService.execute(rc, query)
                            .whenComplete((buffer, throwable) -> sendResponse(rc, buffer, throwable));
     }
 
