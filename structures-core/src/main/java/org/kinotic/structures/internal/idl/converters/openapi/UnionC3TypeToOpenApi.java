@@ -24,7 +24,7 @@ public class UnionC3TypeToOpenApi implements C3TypeConverter<Schema<?>, UnionC3T
 
         ObjectSchema unionSchema = new ObjectSchema();
 
-        // For union types the DiscriminatorDecorator will be on the type so capture that
+        // For union types the DiscriminatorDecorator can be on the type so capture that
         DiscriminatorDecorator discriminatorDecorator = c3Type.findDecorator(DiscriminatorDecorator.class);
         if(discriminatorDecorator != null && discriminatorDecorator.getPropertyName() != null){
             unionSchema.setDiscriminator(new Discriminator().propertyName(discriminatorDecorator.getPropertyName()));

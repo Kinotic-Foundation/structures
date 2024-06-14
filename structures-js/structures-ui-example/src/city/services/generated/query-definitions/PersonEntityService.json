@@ -39,6 +39,51 @@
           }
         }
       ]
+    },
+    {
+      "name": "countByLastName",
+      "decorators": [
+        {
+          "type": "Query",
+          "statements": "select count(firstName) as count, lastName from \"struct_city.person\" where lastName = ? group by lastName"
+        }
+      ],
+      "returnType": {
+        "type": "page",
+        "contentType": {
+          "type": "object",
+          "name": "LastNameCount",
+          "namespace": "city",
+          "properties": [
+            {
+              "name": "lastName",
+              "type": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "count",
+              "type": {
+                "type": "int"
+              }
+            }
+          ]
+        }
+      },
+      "parameters": [
+        {
+          "name": "lastName",
+          "type": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "pageable",
+          "type": {
+            "type": "pageable"
+          }
+        }
+      ]
     }
   ]
 }

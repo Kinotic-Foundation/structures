@@ -5,7 +5,6 @@ import graphql.ExecutionResult;
 import graphql.ExecutionResultImpl;
 import graphql.schema.GraphQLList;
 import graphql.schema.GraphQLNamedOutputType;
-import graphql.schema.GraphQLNonNull;
 import org.kinotic.continuum.core.api.crud.CursorPage;
 import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.structures.api.domain.DefaultEntityContext;
@@ -21,6 +20,7 @@ import java.util.Map;
 
 import static graphql.Scalars.GraphQLInt;
 import static graphql.schema.GraphQLFieldDefinition.newFieldDefinition;
+import static graphql.schema.GraphQLNonNull.nonNull;
 import static graphql.schema.GraphQLObjectType.newObject;
 
 /**
@@ -106,8 +106,7 @@ public class GqlUtils {
                                .type(GraphQLInt))
                 .field(newFieldDefinition()
                                .name("content")
-                               .type(GraphQLNonNull.nonNull(GraphQLList.list(GraphQLNonNull.nonNull(
-                                       namedOutputType)))))
+                               .type(nonNull(GraphQLList.list(nonNull(namedOutputType)))))
                 .build();
     }
 }

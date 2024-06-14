@@ -2,6 +2,8 @@ package org.kinotic.structures.internal.endpoints.graphql;
 
 import graphql.schema.GraphQLFieldDefinition;
 import graphql.schema.GraphQLInputType;
+import graphql.schema.GraphQLList;
+import graphql.schema.GraphQLOutputType;
 import lombok.RequiredArgsConstructor;
 import org.kinotic.continuum.idl.api.schema.FunctionDefinition;
 import org.kinotic.continuum.idl.api.schema.ParameterDefinition;
@@ -27,7 +29,16 @@ public class QueryGqlFieldDefinitionFunction implements GqlFieldDefinitionFuncti
                 = newFieldDefinition().name(queryDefinition.getName() + data.getStructureName());
 
         GqlTypeHolder retTypeHolder = data.getConverter().convert(queryDefinition.getReturnType());
-        builder.type(retTypeHolder.getOutputType());
+        GraphQLOutputType outputType = retTypeHolder.getOutputType();
+
+        // If the return type is an array we need to wrap in notNull objs.
+        // The converter does not do this since this is not specified with a NotNull decorator
+        if(outputType instanceof GraphQLList){
+            GraphQLList list = (GraphQLList) outputType;
+            outputType = GraphQLList.list(nonNull(list.getWrappedType()));
+            outputType = nonNull(outputType);
+        }
+        builder.type(outputType);
 
         for(ParameterDefinition parameter : queryDefinition.getParameters()){
 

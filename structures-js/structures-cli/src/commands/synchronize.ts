@@ -1,5 +1,4 @@
 import {Args, Command, Flags} from '@oclif/core'
-import path from 'path'
 import {FunctionDefinition, ObjectC3Type} from '@kinotic/continuum-idl'
 import {CodeGenerationService} from '../internal/CodeGenerationService.js'
 import {resolveServer} from '../internal/state/Environment.js'
@@ -28,19 +27,11 @@ import {
 } from '../internal/Utils.js'
 import {UtilFunctionLocator} from '../internal/UtilFunctionLocator.js'
 import chalk from 'chalk'
-import { Liquid } from 'liquidjs'
 import fs from 'fs'
-import {fileURLToPath} from 'url'
 import { WebSocket } from 'ws'
 
 // This is required when running Continuum from node
 Object.assign(global, { WebSocket})
-
-const filename = fileURLToPath(import.meta.url)
-const engine = new Liquid({
-                              root: path.resolve(path.dirname(filename), '../templates/'),  // root for templates lookup
-                              extname: '.liquid'
-                          });
 
 export class Synchronize extends Command {
     static description = 'Synchronize the local Entity definitions with the Structures Server'
@@ -184,13 +175,16 @@ export class Synchronize extends Command {
                     }
                 }
 
-                if(!config.dryRun) {
-                    await this.synchronizeEntity(entityInfo.entity, publish, config.verbose)
-                }
-
-                // If named queries were found save them
+                // We sync named queries first since currently the backend cache eviction logic is a little dumb
+                // i.e. The cache eviction for the structure deletes the GraphQL schema
+                //      This will evict the named query execution plan cache
+                //      We want to make sure the GraphQL schema is updated after both these are updated and the structure below
                 if(!config.dryRun && generatedServiceInfo.namedQueries.length > 0){
                     await this.synchronizeNamedQueries(entityInfo.entity, generatedServiceInfo.namedQueries)
+                }
+
+                if(!config.dryRun) {
+                    await this.synchronizeEntity(entityInfo.entity, publish, config.verbose)
                 }
             }
 

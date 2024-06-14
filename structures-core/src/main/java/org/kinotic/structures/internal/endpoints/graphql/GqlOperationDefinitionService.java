@@ -11,6 +11,12 @@ import java.util.List;
 public interface GqlOperationDefinitionService {
 
     /**
+     * Evicts the cache for a given {@link Structure}
+     * @param structure to evict the cache for
+     */
+    void evictCachesFor(Structure structure);
+
+    /**
      * Finds a {@link GqlOperationExecutionFunction} by its operation name
      *
      * @param operationName to find the {@link GqlOperationExecutionFunction} for

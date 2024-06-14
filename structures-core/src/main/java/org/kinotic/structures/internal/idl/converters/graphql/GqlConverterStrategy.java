@@ -59,7 +59,11 @@ public class GqlConverterStrategy implements IdlConverterStrategy<GqlTypeHolder,
                  })
                  // Array type
                  .addConverter(ArrayC3Type.class, (c3Type, context) -> {
+
+                     // TODO: How do we want to specify that Nulls are allowed of not?
+                     //       GQL allows the schema to specify this. However, we do not have a similar concept in C3.
                      GqlTypeHolder typeHolder = context.convert(c3Type.getContains());
+
                      // input type can be null in some cases such as a Union type.
                      // This can create a paradigm mismatch between OpenApi and GraphQL, but we cannot do anything about it.
                      // For now, we will not create an input type for these cases.

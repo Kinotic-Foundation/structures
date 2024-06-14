@@ -25,7 +25,6 @@ import org.springframework.stereotype.Component;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 /**
@@ -58,6 +57,7 @@ public class DefaultGqlExecutionService implements GqlExecutionService {
     public void evictCachesFor(Structure structure) {
         Validate.notNull(structure, "structure must not be null");
         graphQLCache.asMap().remove(structure.getNamespace());
+        gqlOperationDefinitionService.evictCachesFor(structure);
     }
 
     /**
@@ -166,12 +166,8 @@ public class DefaultGqlExecutionService implements GqlExecutionService {
                                                                 GraphQL graphQL,
                                                                 ExecutionInput executionInput) {
 
-        AtomicReference<ExecutionInput> executionInputRef = new AtomicReference<>(executionInput);
-        Function<ExecutionInput, PreparsedDocumentEntry> computeFunction = transformedInput -> {
-            // if they change the original query in the pre-parser, then we want to see it downstream from then on
-            executionInputRef.set(transformedInput);
-            return parseAndValidate(executionInputRef, graphQL.getGraphQLSchema());
-        };
+        Function<ExecutionInput, PreparsedDocumentEntry> computeFunction
+                = transformedInput -> parseAndValidate(transformedInput, graphQL.getGraphQLSchema());
 
         CompletableFuture<PreparsedDocumentEntry> preparsedDoc = graphQL.getPreparsedDocumentProvider()
                                                                         .getDocumentAsync(executionInput,
@@ -241,9 +237,8 @@ public class DefaultGqlExecutionService implements GqlExecutionService {
         return graphQLCache.get(namespace);
     }
 
-    private PreparsedDocumentEntry parseAndValidate(AtomicReference<ExecutionInput> executionInputRef,
+    private PreparsedDocumentEntry parseAndValidate(ExecutionInput executionInput,
                                                     GraphQLSchema graphQLSchema) {
-        ExecutionInput executionInput = executionInputRef.get();
         String query = executionInput.getQuery();
         PreparsedDocumentEntry ret;
 

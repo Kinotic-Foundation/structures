@@ -3,7 +3,6 @@ package org.kinotic.structures.internal.idl.converters.elastic;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.kinotic.continuum.idl.api.schema.C3Type;
 import org.kinotic.continuum.idl.api.schema.PropertyDefinition;
 import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.domain.idl.decorators.MultiTenancyType;
@@ -35,7 +34,6 @@ public class ElasticConversionState extends BaseConversionState {
     public void beginProcessingField(PropertyDefinition propertyDefinition) {
         super.beginProcessingField(propertyDefinition);
 
-        C3Type value = propertyDefinition.getType();
         if(propertyDefinition.hasDecorators()){
             decoratedProperties.add(new DecoratedProperty(getCurrentJsonPath(),
                                                           propertyDefinition.getDecorators()));

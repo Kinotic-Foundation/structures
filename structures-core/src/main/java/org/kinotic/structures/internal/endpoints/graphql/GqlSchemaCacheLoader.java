@@ -65,7 +65,7 @@ public class GqlSchemaCacheLoader implements AsyncCacheLoader<String, GraphQL> {
 
                     log.debug("Finished creating GraphQL Schema for namespace: {} in {}ms",
                               key,
-                              TimeUnit.MILLISECONDS.convert(System.nanoTime() - now, TimeUnit.NANOSECONDS));
+                              TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - now));
 
                     return CompletableFuture.completedFuture(graphQL);
                 });
@@ -131,7 +131,6 @@ public class GqlSchemaCacheLoader implements AsyncCacheLoader<String, GraphQL> {
                     Map<String, GraphQLType> additionalTypes = new HashMap<>(converter.getConversionContext()
                                                                                       .state()
                                                                                       .getReferencedTypes());
-
 
                     GraphQLSchema.Builder graphQLSchemaBuilder = GraphQLSchema.newSchema()
                                                                               .codeRegistry(codeRegistryBuilder.build())
