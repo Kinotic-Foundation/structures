@@ -52,9 +52,9 @@ public class PagedQueryGqlOperationExecutionFunction implements GqlOperationExec
         Pageable pageable;
         if(pageableName != null) {
             pageable = GqlUtils.parseVariable(args.getVariables(),
-                                                       pageableName,
-                                                       Pageable.class,
-                                                       objectMapper);
+                                              pageableName,
+                                              Pageable.class,
+                                              objectMapper);
         }else{
             pageable = CURSOR_PAGEABLE;
         }

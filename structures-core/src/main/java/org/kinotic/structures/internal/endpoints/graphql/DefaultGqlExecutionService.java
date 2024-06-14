@@ -89,9 +89,9 @@ public class DefaultGqlExecutionService implements GqlExecutionService {
         if (operationName != null && (operationName.equals("IntrospectionQuery") || operationName.equals("SubgraphIntrospectQuery"))) {
             // We execute Introspection Queries using the java graphql library
             return VertxCompletableFuture.from(vertx, getOrCreateGraphQL(namespace)
-                                                                         .thenCompose(graphQL -> graphQL.executeAsync(
-                                                                                 executionInputBuilder.build()))
-                                                                         .thenApply(this::convertToBuffer));
+                    .thenCompose(graphQL -> graphQL.executeAsync(
+                            executionInputBuilder.build()))
+                    .thenApply(this::convertToBuffer));
         } else {
             // We execute all others using our own logic path optimized for elasticsearch
             Participant participant = routingContext.get(EventConstants.SENDER_HEADER);
@@ -101,7 +101,9 @@ public class DefaultGqlExecutionService implements GqlExecutionService {
                                                                                   graphQL,
                                                                                   executionInputBuilder.build()))
                                          .thenApply(executionResult -> {
-                                             return convertToBuffer(executionResult);
+                                             Buffer buffer = convertToBuffer(executionResult);
+                                             log.trace("GraphQL {} Execution result: {}", operationName, buffer.toString());
+                                             return buffer;
                                          });
         }
     }
@@ -143,15 +145,24 @@ public class DefaultGqlExecutionService implements GqlExecutionService {
 
             GqlOperationExecutionFunction function = gqlOperationDefinitionService.findOperationExecutionFunction(operationName);
             if (function != null) {
-                return function.apply(new GqlOperationArguments(namespace,
-                                                                operationName,
-                                                                parsedFields,
-                                                                participant,
-                                                                parseArguments(selection.getArguments(),
-                                                                               executionInput.getVariables())));
+                CompletableFuture<ExecutionResult> result
+                        = function.apply(new GqlOperationArguments(namespace,
+                                                                   operationName,
+                                                                   parsedFields,
+                                                                   participant,
+                                                                   parseArguments(selection.getArguments(),
+                                                                                  executionInput.getVariables())));
+
+                return result.handle((executionResult, throwable) -> {
+                    if (throwable != null) {
+                        log.error("Error calling GqlOperationExecutionFunction for operation: {}", operationName, throwable);
+                        return convertToResult(throwable);
+                    } else {
+                        return executionResult;
+                    }
+                });
             } else {
-                return CompletableFuture
-                        .completedFuture(convertToResult(new IllegalArgumentException("Unsupported operation name: " + operationName)));
+                throw new IllegalArgumentException("Unsupported operation name: " + operationName);
             }
 
         } else {
@@ -183,6 +194,7 @@ public class DefaultGqlExecutionService implements GqlExecutionService {
                                           executionInput);
 
                 } catch (Exception e) {
+                    log.trace("Error executing operation", e);
                     ret = CompletableFuture.completedFuture(convertToResult(e));
                 }
             } else {
