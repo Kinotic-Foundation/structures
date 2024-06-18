@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import {Continuum} from '@kinotic/continuum-client'
+import {Animal, AnimalDen} from '../animal/domain/Animal.js'
+import {AnimalDenEntityService} from '../animal/services/AnimalDenEntityService.js'
 import {Person} from '../city/domain/Person.js'
 import {PersonEntityService} from '../city/services/PersonEntityService.js'
 import {Vehicle} from '../mvd/domain/Vehicle.js'
@@ -22,16 +24,45 @@ async function generateFakeData(): Promise<void> {
     const data = generateData(20)
     const personService = new PersonEntityService()
     const vehicleService = new VehicleEntityService()
+    const animalDenService = new AnimalDenEntityService()
     loading.value = true
     await personService.bulkSave(data.persons)
     await vehicleService.bulkSave(data.vehicles)
+    await animalDenService.bulkSave(data.animals)
     count.value = data.persons.length
     loading.value = false
+
+    await Continuum.disconnect()
 }
 
-function generateData(number: number): {persons: Person[], vehicles: Vehicle[]} {
+type TypeAndFunction = {
+    type: string,
+    fakerFunction: () => string
+}
+
+function generateData(number: number): {persons: Person[], vehicles: Vehicle[], animals: AnimalDen[]} {
     const persons: Person[] = []
     const vehicles: Vehicle[] = []
+    const animals: AnimalDen[] = []
+    const animalTypes: TypeAndFunction[] = [
+        {
+            type: 'Dog',
+            fakerFunction: faker.animal.dog
+        },
+        {
+            type: 'Cat',
+            fakerFunction: faker.animal.cat
+        },
+        {
+            type: 'Bear',
+            fakerFunction: faker.animal.bear
+        },
+        {
+            type: 'Rabbit',
+            fakerFunction: faker.animal.rabbit
+        }
+    ]
+
     for(let i = 0; i < number; i++){
         let person = {
             id: uuidv4(),
@@ -54,13 +85,22 @@ function generateData(number: number): {persons: Person[], vehicles: Vehicle[]} 
             color: faker.vehicle.color(),
             owner: {
                 id: person.id,
-                __typename: 'Person'
             }
         }
+        let typeAndFunction = animalTypes[faker.number.int({ min: 0, max: animalTypes.length - 1 })]
+        let animal: Animal = {
+            type: typeAndFunction.type,
+            species: typeAndFunction.fakerFunction(),
+        }
+        animals.push({
+                         id: uuidv4(),
+                         livesHere: animal,
+                         madeOf: 'Dirt'
+                     })
         persons.push(person)
         vehicles.push(vehicle)
     }
-    return {persons, vehicles}
+    return {persons, vehicles, animals}
 }
 
 </script>

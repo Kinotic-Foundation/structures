@@ -2,12 +2,16 @@ package org.kinotic.structures.internal.idl.converters.graphql;
 
 import graphql.schema.GraphQLObjectType;
 import graphql.schema.GraphQLUnionType;
+import org.apache.commons.lang3.tuple.Pair;
 import org.kinotic.continuum.idl.api.converter.C3ConversionContext;
 import org.kinotic.continuum.idl.api.converter.C3TypeConverter;
 import org.kinotic.continuum.idl.api.converter.Cacheable;
 import org.kinotic.continuum.idl.api.schema.C3Type;
 import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
 import org.kinotic.continuum.idl.api.schema.UnionC3Type;
+import org.kinotic.structures.api.domain.idl.decorators.DiscriminatorDecorator;
+import org.kinotic.structures.internal.endpoints.graphql.DiscriminatorTypeResolver;
+import org.kinotic.structures.internal.endpoints.graphql.NoOpTypeResolver;
 
 import static graphql.schema.GraphQLTypeReference.typeRef;
 
@@ -37,9 +41,19 @@ public class UnionC3TypeToGql implements C3TypeConverter<GqlTypeHolder, UnionC3T
         }
 
         GraphQLUnionType unionType = unionBuilder.build();
-        conversionContext.state().getUnionTypes().add(unionType);
 
-        return new GqlTypeHolder(null, unionBuilder.build());
+        // For union types the DiscriminatorDecorator can be on the type so capture that
+        DiscriminatorDecorator discriminatorDecorator = c3Type.findDecorator(DiscriminatorDecorator.class);
+        if(discriminatorDecorator != null && discriminatorDecorator.getPropertyName() != null){
+            conversionContext.state().getUnionTypes().put(unionType.getName(),
+                                                          Pair.of(unionType, new DiscriminatorTypeResolver(discriminatorDecorator.getPropertyName())));
+        }else{
+            //  we set a no op resolver and if this is an Object property that has a Discriminator that will take precedence
+            conversionContext.state().getUnionTypes().put(unionType.getName(),
+                                                          Pair.of(unionType, new NoOpTypeResolver()));
+        }
+
+        return new GqlTypeHolder(null, unionType);
     }
 
     @Override

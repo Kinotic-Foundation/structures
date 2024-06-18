@@ -1,6 +1,14 @@
 {
   "namespaces": [
     {
+      "namespaceName": "animal",
+      "entitiesPaths": [
+        "src/animal/domain"
+      ],
+      "generatedPath": "src/animal/services",
+      "validate": false
+    },
+    {
       "namespaceName": "city",
       "entitiesPaths": [
         "src/city/domain"

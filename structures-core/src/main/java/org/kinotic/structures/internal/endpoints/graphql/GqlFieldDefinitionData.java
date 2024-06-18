@@ -3,6 +3,7 @@ package org.kinotic.structures.internal.endpoints.graphql;
 import graphql.schema.*;
 import lombok.Builder;
 import lombok.Getter;
+import org.kinotic.continuum.core.api.crud.CursorPage;
 import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.continuum.idl.api.converter.IdlConverter;
@@ -39,9 +40,19 @@ public class GqlFieldDefinitionData {
     private final GraphQLNamedOutputType pageResponseType;
 
     /**
+     * The {@link GraphQLNamedOutputType} for the {@link CursorPage} type containing the {@link ObjectC3Type} for the {@link Structure}
+     */
+    private final GraphQLNamedOutputType cursorPageResponseType;
+
+    /**
      * The {@link GraphQLTypeReference} for the {@link Pageable} type used for all requests needing paging
      */
-    private final GraphQLTypeReference pageableReference;
+    private final GraphQLTypeReference offsetPageableReference;
+
+    /**
+     * The {@link GraphQLTypeReference} for the {@link Pageable} type used for all requests needing paging
+     */
+    private final GraphQLTypeReference cursorPageableReference;
 
     /**
      * The {@link Structure#getName()} (first letter capitalized) that the {@link GraphQLFieldDefinition} is for

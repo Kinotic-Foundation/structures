@@ -16,8 +16,9 @@ import io.vertx.ext.web.handler.graphql.impl.GraphQLQuery;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.continuum.api.security.Participant;
-import org.kinotic.continuum.core.api.event.EventConstants;
 import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.internal.endpoints.openapi.RoutingContextToEntityContextAdapter;
+import org.kinotic.structures.internal.utils.GqlUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -85,27 +86,28 @@ public class DefaultGqlExecutionService implements GqlExecutionService {
             executionInputBuilder.variables(variables);
         }
 
+        executionInputBuilder.localContext(new RoutingContextToEntityContextAdapter(routingContext));
+
         // TODO: This should maybe look at the selection set for __schema and __service since the operationName here is not required
-        if (operationName != null && (operationName.equals("IntrospectionQuery") || operationName.equals("SubgraphIntrospectQuery"))) {
+//        if (operationName != null && (operationName.equals("IntrospectionQuery") || operationName.equals("SubgraphIntrospectQuery"))) {
             // We execute Introspection Queries using the java graphql library
             return VertxCompletableFuture.from(vertx, getOrCreateGraphQL(namespace)
-                    .thenCompose(graphQL -> graphQL.executeAsync(
-                            executionInputBuilder.build()))
+                    .thenCompose(graphQL -> graphQL.executeAsync(executionInputBuilder.build()))
                     .thenApply(this::convertToBuffer));
-        } else {
-            // We execute all others using our own logic path optimized for elasticsearch
-            Participant participant = routingContext.get(EventConstants.SENDER_HEADER);
-            return VertxCompletableFuture.from(vertx, getOrCreateGraphQL(namespace))
-                                         .thenCompose(graphQL -> executeOperation(namespace,
-                                                                                  participant,
-                                                                                  graphQL,
-                                                                                  executionInputBuilder.build()))
-                                         .thenApply(executionResult -> {
-                                             Buffer buffer = convertToBuffer(executionResult);
-                                             log.trace("GraphQL {} Execution result: {}", operationName, buffer.toString());
-                                             return buffer;
-                                         });
-        }
+//        } else {
+//            // We execute all others using our own logic path optimized for elasticsearch
+//            Participant participant = routingContext.get(EventConstants.SENDER_HEADER);
+//            return VertxCompletableFuture.from(vertx, getOrCreateGraphQL(namespace))
+//                                         .thenCompose(graphQL -> executeOperation(namespace,
+//                                                                                  participant,
+//                                                                                  graphQL,
+//                                                                                  executionInputBuilder.build()))
+//                                         .thenApply(executionResult -> {
+//                                             Buffer buffer = convertToBuffer(executionResult);
+//                                             log.trace("GraphQL {} Execution result: {}", operationName, buffer.toString());
+//                                             return buffer;
+//                                         });
+//        }
     }
 
     private Buffer convertToBuffer(ExecutionResult executionResult) {
@@ -115,15 +117,6 @@ public class DefaultGqlExecutionService implements GqlExecutionService {
             log.error("Error converting ExecutionResult to JSON", e);
             throw new IllegalStateException(e);
         }
-    }
-
-    private ExecutionResult convertToResult(Throwable throwable) {
-        GraphQLError error = GraphQLError.newError()
-                                         .message(throwable.getMessage())
-                                         .build();
-        return ExecutionResultImpl.newExecutionResult()
-                                  .addError(error)
-                                  .build();
     }
 
     private CompletableFuture<ExecutionResult> executeDocument(String namespace,
@@ -156,7 +149,7 @@ public class DefaultGqlExecutionService implements GqlExecutionService {
                 return result.handle((executionResult, throwable) -> {
                     if (throwable != null) {
                         log.error("Error calling GqlOperationExecutionFunction for operation: {}", operationName, throwable);
-                        return convertToResult(throwable);
+                        return GqlUtils.convertToExecutionResult(throwable);
                     } else {
                         return executionResult;
                     }
@@ -195,7 +188,7 @@ public class DefaultGqlExecutionService implements GqlExecutionService {
 
                 } catch (Exception e) {
                     log.trace("Error executing operation", e);
-                    ret = CompletableFuture.completedFuture(convertToResult(e));
+                    ret = CompletableFuture.completedFuture(GqlUtils.convertToExecutionResult(e));
                 }
             } else {
                 ret = CompletableFuture.completedFuture(new ExecutionResultImpl(documentEntry.getErrors()));

@@ -3,6 +3,7 @@ package org.kinotic.structures.internal.utils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import graphql.ExecutionResult;
 import graphql.ExecutionResultImpl;
+import graphql.GraphQLError;
 import graphql.schema.GraphQLList;
 import graphql.schema.GraphQLNamedOutputType;
 import org.kinotic.continuum.core.api.crud.CursorPage;
@@ -19,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 
 import static graphql.Scalars.GraphQLInt;
+import static graphql.Scalars.GraphQLString;
 import static graphql.schema.GraphQLFieldDefinition.newFieldDefinition;
 import static graphql.schema.GraphQLNonNull.nonNull;
 import static graphql.schema.GraphQLObjectType.newObject;
@@ -28,6 +30,15 @@ import static graphql.schema.GraphQLObjectType.newObject;
  */
 public class GqlUtils {
     private static final Logger log = LoggerFactory.getLogger(GqlUtils.class);
+
+    public static ExecutionResult convertToExecutionResult(Throwable throwable) {
+        GraphQLError error = GraphQLError.newError()
+                                         .message(throwable.getMessage())
+                                         .build();
+        return ExecutionResultImpl.newExecutionResult()
+                                  .addError(error)
+                                  .build();
+    }
 
     public static ExecutionResult convertToResult(String fieldName, Object data) {
         return ExecutionResultImpl.newExecutionResult()
@@ -60,7 +71,7 @@ public class GqlUtils {
             if (page instanceof CursorPage) {
                 data.put("cursor", ((CursorPage<?>) page).getCursor());
             } else {
-                log.warn("Page should have cursor but does not: {}", page.getClass());
+                log.warn("{}.cursor requested cursor but page is not a CursorPage", fieldName);
                 data.put("cursor", null);
             }
         }
@@ -104,6 +115,21 @@ public class GqlUtils {
                 .field(newFieldDefinition()
                                .name("totalElements")
                                .type(GraphQLInt))
+                .field(newFieldDefinition()
+                               .name("content")
+                               .type(nonNull(GraphQLList.list(nonNull(namedOutputType)))))
+                .build();
+    }
+
+    public static GraphQLNamedOutputType wrapTypeWithCursorPage(GraphQLNamedOutputType namedOutputType) {
+        return newObject()
+                .name(namedOutputType.getName() + "CursorPage")
+                .field(newFieldDefinition()
+                               .name("totalElements")
+                               .type(GraphQLInt))
+                .field(newFieldDefinition()
+                               .name("cursor")
+                               .type(GraphQLString))
                 .field(newFieldDefinition()
                                .name("content")
                                .type(nonNull(GraphQLList.list(nonNull(namedOutputType)))))

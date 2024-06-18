@@ -15,6 +15,7 @@ import org.kinotic.structures.api.services.EntitiesService;
 import org.kinotic.structures.api.services.NamedQueriesService;
 import org.kinotic.structures.internal.api.services.EntityContextConstants;
 import org.kinotic.structures.internal.api.services.sql.MapParameterHolder;
+import org.kinotic.structures.internal.endpoints.graphql.datafetchers.*;
 import org.kinotic.structures.internal.utils.GqlUtils;
 import org.kinotic.structures.internal.utils.QueryUtils;
 import org.kinotic.structures.internal.utils.SqlQueryType;
@@ -41,6 +42,8 @@ import static graphql.schema.GraphQLNonNull.nonNull;
 public class DefaultGqlOperationDefinitionService implements GqlOperationDefinitionService {
 
     private static final Logger log = LoggerFactory.getLogger(DefaultGqlOperationDefinitionService.class);
+    private static final Pageable CURSOR_PAGEABLE = Pageable.create(null, 25, null);
+    private static final Pageable OFFSET_PAGEABLE = Pageable.create(0, 25, null);
 
     private final List<GqlOperationDefinition> builtInOperationDefinitions;
     private final Trie<GqlOperationExecutionFunction> builtInOperationTrie = new Trie<>();
@@ -74,6 +77,7 @@ public class DefaultGqlOperationDefinitionService implements GqlOperationDefinit
                                               .argument(newArgument().name("id")
                                                                      .type(nonNull(GraphQLID)))
                                               .build())
+                                      .dataFetcherDefinitionFunction(structure -> new FindByIdDataFetcher(structure.getId(), entitiesService))
                                       .operationExecutionFunction(args -> {
 
                                           ParsedFields fields = args.getParsedFields();
@@ -97,8 +101,9 @@ public class DefaultGqlOperationDefinitionService implements GqlOperationDefinit
                                               .name("findAll" + args.getStructureName())
                                               .type(nonNull(args.getPageResponseType()))
                                               .argument(newArgument().name("pageable")
-                                                                     .type(nonNull(args.getPageableReference())))
+                                                                     .type(nonNull(args.getOffsetPageableReference())))
                                               .build())
+                                      .dataFetcherDefinitionFunction(structure -> new FindAllDataFetcher(structure.getId(), entitiesService, objectMapper))
                                       .operationExecutionFunction(args -> {
 
                                           ParsedFields fields = args.getParsedFields();
@@ -119,6 +124,35 @@ public class DefaultGqlOperationDefinitionService implements GqlOperationDefinit
                                       .build(),
 
                 GqlOperationDefinition.builder()
+                                      .operationName("findAllWithCursor")
+                                      .operationType(OperationDefinition.Operation.QUERY)
+                                      .fieldDefinitionFunction(args -> newFieldDefinition()
+                                              .name("findAllWithCursor" + args.getStructureName())
+                                              .type(nonNull(args.getCursorPageResponseType()))
+                                              .argument(newArgument().name("pageable")
+                                                                     .type(nonNull(args.getCursorPageableReference())))
+                                              .build())
+                                      .dataFetcherDefinitionFunction(structure -> new FindAllDataFetcher(structure.getId(), entitiesService, objectMapper))
+                                      .operationExecutionFunction(args -> {
+
+                                          ParsedFields fields = args.getParsedFields();
+                                          Pageable pageable = GqlUtils.parseVariable(args.getVariables(),
+                                                                                     "pageable",
+                                                                                     Pageable.class,
+                                                                                     objectMapper);
+                                          String structureId = GqlUtils.getStructureId(args.getNamespace(), args.getOperationName(), "findAllWithCursor");
+
+                                          return entitiesService.findAll(structureId,
+                                                                         pageable,
+                                                                         RawJson.class,
+                                                                         GqlUtils.createContext(args, fields.getContentFields()))
+                                                                .thenApply(page -> GqlUtils.convertToResult(args.getOperationName(),
+                                                                                                            page,
+                                                                                                            args.getParsedFields()));
+                                      })
+                                      .build(),
+
+                GqlOperationDefinition.builder()
                                       .operationName("search")
                                       .operationType(OperationDefinition.Operation.QUERY)
                                       .fieldDefinitionFunction(args -> newFieldDefinition()
@@ -127,8 +161,9 @@ public class DefaultGqlOperationDefinitionService implements GqlOperationDefinit
                                               .argument(newArgument().name("searchText")
                                                                      .type(nonNull(GraphQLString)))
                                               .argument(newArgument().name("pageable")
-                                                                     .type(nonNull(args.getPageableReference())))
+                                                                     .type(nonNull(args.getOffsetPageableReference())))
                                               .build())
+                                      .dataFetcherDefinitionFunction(structure -> new SearchDataFetcher(structure.getId(), entitiesService, objectMapper))
                                       .operationExecutionFunction(args -> {
 
                                           ParsedFields fields = args.getParsedFields();
@@ -152,6 +187,40 @@ public class DefaultGqlOperationDefinitionService implements GqlOperationDefinit
                                       .build(),
 
                 GqlOperationDefinition.builder()
+                                      .operationName("searchWithCursor")
+                                      .operationType(OperationDefinition.Operation.QUERY)
+                                      .fieldDefinitionFunction(args -> newFieldDefinition()
+                                              .name("searchWithCursor" + args.getStructureName())
+                                              .type(nonNull(args.getCursorPageResponseType()))
+                                              .argument(newArgument().name("searchText")
+                                                                     .type(nonNull(GraphQLString)))
+                                              .argument(newArgument().name("pageable")
+                                                                     .type(nonNull(args.getCursorPageableReference())))
+                                              .build())
+                                      .dataFetcherDefinitionFunction(structure -> new SearchDataFetcher(structure.getId(), entitiesService, objectMapper))
+                                      .operationExecutionFunction(args -> {
+
+                                          ParsedFields fields = args.getParsedFields();
+                                          Pageable pageable = GqlUtils.parseVariable(args.getVariables(),
+                                                                                     "pageable",
+                                                                                     Pageable.class,
+                                                                                     objectMapper);
+                                          String searchText = (String) args.getVariables()
+                                                                           .get("searchText");
+                                          String structureId = GqlUtils.getStructureId(args.getNamespace(), args.getOperationName(), "searchWithCursor");
+
+                                          return entitiesService.search(structureId,
+                                                                        searchText,
+                                                                        pageable,
+                                                                        RawJson.class,
+                                                                        GqlUtils.createContext(args, fields.getContentFields()))
+                                                                .thenApply(page -> GqlUtils.convertToResult(args.getOperationName(),
+                                                                                                            page,
+                                                                                                            args.getParsedFields()));
+                                      })
+                                      .build(),
+
+                GqlOperationDefinition.builder()
                                       .operationName("save")
                                       .operationType(OperationDefinition.Operation.MUTATION)
                                       .fieldDefinitionFunction(args -> newFieldDefinition()
@@ -160,6 +229,7 @@ public class DefaultGqlOperationDefinitionService implements GqlOperationDefinit
                                               .argument(newArgument().name("input")
                                                                      .type(nonNull(args.getInputType())))
                                               .build())
+                                      .dataFetcherDefinitionFunction(structure -> new SaveDataFetcher(structure.getId(), entitiesService))
                                       .operationExecutionFunction(args -> {
 
                                           Map<?,?> map = (Map<?,?>) args.getVariables().get("input");
@@ -183,6 +253,7 @@ public class DefaultGqlOperationDefinitionService implements GqlOperationDefinit
                                               .argument(newArgument().name("input")
                                                                      .type(nonNull(list(nonNull(args.getInputType())))))
                                               .build())
+                                      .dataFetcherDefinitionFunction(structure -> new BulkSaveDataFetcher(structure.getId(), entitiesService))
                                       .operationExecutionFunction(args -> {
 
                                           @SuppressWarnings("unchecked")
@@ -207,6 +278,7 @@ public class DefaultGqlOperationDefinitionService implements GqlOperationDefinit
                                               .argument(newArgument().name("id")
                                                                      .type(nonNull(GraphQLID)))
                                               .build())
+                                      .dataFetcherDefinitionFunction(structure -> new DeleteDataFetcher(structure.getId(), entitiesService))
                                       .operationExecutionFunction(args -> {
 
                                           RawJson rawJson = (RawJson) args.getVariables().get("input");
@@ -263,73 +335,140 @@ public class DefaultGqlOperationDefinitionService implements GqlOperationDefinit
     public List<GqlOperationDefinition> getNamedQueryOperationDefinitions(final Structure structure) {
         Function<String, List<GqlOperationDefinition>> computeFunction
                 = s -> {
-                    NamedQueriesDefinition namedQueriesDefinition = namedQueriesService.findByNamespaceAndStructure(structure.getNamespace(),
-                                                                                                                    structure.getName())
-                                                                                       .join();
-                    List<GqlOperationDefinition> ret;
-                    if(namedQueriesDefinition != null) {
+            NamedQueriesDefinition namedQueriesDefinition = namedQueriesService.findByNamespaceAndStructure(structure.getNamespace(),
+                                                                                                            structure.getName())
+                                                                               .join();
+            List<GqlOperationDefinition> ret;
+            if(namedQueriesDefinition != null) {
 
-                        ret = new ArrayList<>(namedQueriesDefinition.getNamedQueries().size());
-                        for (FunctionDefinition queryDefinition : namedQueriesDefinition.getNamedQueries()) {
+                ret = new ArrayList<>(namedQueriesDefinition.getNamedQueries().size());
+                for (FunctionDefinition queryDefinition : namedQueriesDefinition.getNamedQueries()) {
 
-                            String queryName = queryDefinition.getName();
-                            QueryDecorator queryDecorator = queryDefinition.findDecorator(QueryDecorator.class);
-                            if(queryDecorator != null) {
+                    QueryDecorator queryDecorator = queryDefinition.findDecorator(QueryDecorator.class);
+                    if(queryDecorator != null) {
 
-                                GqlOperationDefinition.GqlOperationDefinitionBuilder builder = GqlOperationDefinition.builder();
-                                builder.operationName(queryName + WordUtils.capitalize(structure.getName()));
+                        List<GqlOperationDefinition> definitions = buildGqlOperationDefinitions(structure,
+                                                                                                queryDefinition,
+                                                                                                queryDecorator);
 
-                                SqlQueryType queryType = QueryUtils.determineQueryType(queryDecorator.getStatements());
-                                switch (queryType) {
-                                    case AGGREGATE:
-                                    case SELECT:
-                                        builder.operationType(OperationDefinition.Operation.QUERY);
-                                        break;
-                                    case DELETE:
-                                    case INSERT:
-                                    case UPDATE:
-                                        builder.operationType(OperationDefinition.Operation.MUTATION);
-                                        break;
-                                }
-
-                                builder.fieldDefinitionFunction(new QueryGqlFieldDefinitionFunction(queryDefinition));
-
-                                // If we return a page type then we must query with for a page response else just the list content
-                                if(queryDefinition.getReturnType() instanceof PageC3Type) {
-
-                                    builder.operationExecutionFunction(new PagedQueryGqlOperationExecutionFunction(entitiesService,
-                                                                                                                   objectMapper,
-                                                                                                                   queryDefinition,
-                                                                                                                   structure.getId()));
-                                }else{
-                                    builder.operationExecutionFunction(args -> {
-
-                                        ParsedFields fields = args.getParsedFields();
-
-                                        return entitiesService.namedQuery(structure.getId(),
-                                                                          queryName,
-                                                                          new MapParameterHolder(args.getVariables()),
-                                                                          RawJson.class,
-                                                                          GqlUtils.createContext(args, fields.getNonContentFields()))
-                                                              .thenApply(entity -> GqlUtils.convertToResult(args.getOperationName(),
-                                                                                                            entity));
-                                    });
-                                }
-                                GqlOperationDefinition definition = builder.build();
-                                namedQueryExecutionFunctionMap.put(definition.getOperationName(), definition.getOperationExecutionFunction());
-                                ret.add(definition);
-                            }else{
-                                log.warn("No QueryDecorator found for Named query {} in Structure {}. No GraphQL operation will be created.",
-                                         queryDefinition.getName(),
-                                         structure.getName());
-                            }
+                        for(GqlOperationDefinition definition : definitions) {
+                            namedQueryExecutionFunctionMap.put(definition.getOperationName(),
+                                                               definition.getOperationExecutionFunction());
+                            ret.add(definition);
                         }
                     }else{
-                        ret = List.of();
+                        log.warn("No QueryDecorator found for Named query {} in Structure {}. No GraphQL operation will be created.",
+                                 queryDefinition.getName(),
+                                 structure.getName());
                     }
-                    return ret;
-                };
+                }
+            }else{
+                ret = List.of();
+            }
+            return ret;
+        };
         return namedQueryOperationDefinitionMap.computeIfAbsent(structure.getId(), computeFunction);
+    }
+
+    private List<GqlOperationDefinition> buildGqlOperationDefinitions(Structure structure,
+                                                                      FunctionDefinition queryDefinition,
+                                                                      QueryDecorator queryDecorator) {
+        List<GqlOperationDefinition> ret = new ArrayList<>();
+        String queryName = queryDefinition.getName();
+        SqlQueryType queryType = QueryUtils.determineQueryType(queryDecorator.getStatements());
+
+        // If we return a page then we can potentially have multiple operations
+        if(queryDefinition.getReturnType() instanceof PageC3Type) {
+            switch (queryType) {
+                case AGGREGATE:
+                    ret.add(createForCursorPageQuery(structure, queryDefinition, queryName, ""));
+                    break;
+                case SELECT:
+                    ret.add(createForCursorPageQuery(structure, queryDefinition, queryName, "WithCursor"));
+                    ret.add(createForOffsetPageQuery(structure, queryDefinition, queryName));
+                    break;
+                default:
+                    log.warn("The Page Return type is not valid for a {} query. Query {} will be skipped.", queryType, queryName);
+                    break;
+            }
+        }else{
+            GqlOperationDefinition.GqlOperationDefinitionBuilder builder = GqlOperationDefinition.builder();
+            builder.operationName(queryName + WordUtils.capitalize(structure.getName()))
+                   .operationType(getGqlOperationType(queryType))
+                   .fieldDefinitionFunction(new QueryGqlFieldDefinitionFunction(queryDefinition, false))
+                   .dataFetcherDefinitionFunction(struct -> new QueryDataFetcher(entitiesService, queryName, struct.getId()))
+                   .operationExecutionFunction(args -> {
+
+                       ParsedFields fields = args.getParsedFields();
+
+                       return entitiesService.namedQuery(structure.getId(),
+                                                         queryName,
+                                                         new MapParameterHolder(args.getVariables()),
+                                                         RawJson.class,
+                                                         GqlUtils.createContext(args, fields.getNonContentFields()))
+                                             .thenApply(entity -> GqlUtils.convertToResult(args.getOperationName(),
+                                                                                           entity));
+                   });
+            ret.add(builder.build());
+        }
+        return ret;
+    }
+
+    private GqlOperationDefinition createForCursorPageQuery(Structure structure,
+                                                            FunctionDefinition queryDefinition,
+                                                            String queryName,
+                                                            String suffix) {
+        GqlOperationDefinition.GqlOperationDefinitionBuilder builder = GqlOperationDefinition.builder();
+        builder.operationName(queryName + suffix + WordUtils.capitalize(structure.getName()))
+               .operationType(OperationDefinition.Operation.QUERY)
+               .fieldDefinitionFunction(new QueryGqlFieldDefinitionFunction(queryDefinition, true))
+               .dataFetcherDefinitionFunction(struct -> new PagedQueryDataFetcher(entitiesService,
+                                                                                  objectMapper,
+                                                                                  queryDefinition,
+                                                                                  CURSOR_PAGEABLE,
+                                                                                  struct.getId()))
+               .operationExecutionFunction(new PagedQueryGqlOperationExecutionFunction(entitiesService,
+                                                                                       objectMapper,
+                                                                                       queryDefinition,
+                                                                                       CURSOR_PAGEABLE,
+                                                                                       structure.getId()));
+        return builder.build();
+    }
+
+    private GqlOperationDefinition createForOffsetPageQuery(Structure structure,
+                                                            FunctionDefinition queryDefinition,
+                                                            String queryName) {
+        GqlOperationDefinition.GqlOperationDefinitionBuilder builder = GqlOperationDefinition.builder();
+        builder.operationName(queryName + WordUtils.capitalize(structure.getName()))
+               .operationType(OperationDefinition.Operation.QUERY)
+               .fieldDefinitionFunction(new QueryGqlFieldDefinitionFunction(queryDefinition, false))
+               .dataFetcherDefinitionFunction(struct -> new PagedQueryDataFetcher(entitiesService,
+                                                                                  objectMapper,
+                                                                                  queryDefinition,
+                                                                                  OFFSET_PAGEABLE,
+                                                                                  struct.getId()))
+               .operationExecutionFunction(new PagedQueryGqlOperationExecutionFunction(entitiesService,
+                                                                                       objectMapper,
+                                                                                       queryDefinition,
+                                                                                       OFFSET_PAGEABLE,
+                                                                                       structure.getId()));
+        return builder.build();
+    }
+
+    private static OperationDefinition.Operation getGqlOperationType(SqlQueryType queryType) {
+        OperationDefinition.Operation operation = null;
+        switch (queryType) {
+            case AGGREGATE:
+            case SELECT:
+                operation = OperationDefinition.Operation.QUERY;
+                break;
+            case DELETE:
+            case INSERT:
+            case UPDATE:
+                operation = OperationDefinition.Operation.MUTATION;
+                break;
+        }
+        return operation;
     }
 
 }

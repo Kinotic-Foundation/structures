@@ -394,6 +394,7 @@ public class DefaultOpenApiService implements OpenApiService {
 
                     // vertx route is
                     // :structureNamespace/:structureName/named-query/:queryName
+                    // TODO: should we also check if a Pageable parameter is defined in the FunctionDefinition
                     if (query.getReturnType() instanceof PageC3Type) {
                         SqlQueryType queryType = QueryUtils.determineQueryType(queryDecorator.getStatements());
                         switch (queryType) {

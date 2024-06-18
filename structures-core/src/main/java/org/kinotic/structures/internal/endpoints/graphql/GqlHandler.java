@@ -12,6 +12,7 @@ import io.vertx.ext.web.handler.graphql.impl.GraphQLBatch;
 import io.vertx.ext.web.handler.graphql.impl.GraphQLInput;
 import io.vertx.ext.web.handler.graphql.impl.GraphQLQuery;
 import lombok.RequiredArgsConstructor;
+import org.kinotic.structures.internal.utils.VertxWebUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -188,8 +189,7 @@ public class GqlHandler implements Handler<RoutingContext> {
         if (throwable == null) {
             rc.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json").end(buffer);
         } else {
-            log.error("GraphQL query failed, unhandled exception. Sending 500.", throwable);
-            rc.fail(throwable);
+            VertxWebUtil.writeException(rc, throwable);
         }
     }
 

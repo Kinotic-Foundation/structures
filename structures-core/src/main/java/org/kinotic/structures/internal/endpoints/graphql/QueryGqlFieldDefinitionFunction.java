@@ -7,6 +7,8 @@ import graphql.schema.GraphQLOutputType;
 import lombok.RequiredArgsConstructor;
 import org.kinotic.continuum.idl.api.schema.FunctionDefinition;
 import org.kinotic.continuum.idl.api.schema.ParameterDefinition;
+import org.kinotic.structures.api.domain.idl.CursorPageC3Type;
+import org.kinotic.structures.api.domain.idl.PageC3Type;
 import org.kinotic.structures.api.domain.idl.PageableC3Type;
 import org.kinotic.structures.internal.idl.converters.graphql.GqlTypeHolder;
 
@@ -22,14 +24,27 @@ import static graphql.schema.GraphQLNonNull.nonNull;
 public class QueryGqlFieldDefinitionFunction implements GqlFieldDefinitionFunction {
 
     private final FunctionDefinition queryDefinition;
+    private final boolean shouldUseCursorPageable ;
 
     @Override
     public GraphQLFieldDefinition apply(GqlFieldDefinitionData data) {
         GraphQLFieldDefinition.Builder builder
                 = newFieldDefinition().name(queryDefinition.getName() + data.getStructureName());
 
-        GqlTypeHolder retTypeHolder = data.getConverter().convert(queryDefinition.getReturnType());
+        // This is kinda a hack. The CLI will always just create a PageC3Type, but if a cursor is used it needs to explicitly defined for GQL
+        GqlTypeHolder retTypeHolder;
+        if(queryDefinition.getReturnType() instanceof PageC3Type
+            && shouldUseCursorPageable){
+
+            PageC3Type pageC3Type = (PageC3Type) queryDefinition.getReturnType();
+            CursorPageC3Type cursorPageC3Type = new CursorPageC3Type(pageC3Type.getContentType());
+
+            retTypeHolder = data.getConverter().convert(cursorPageC3Type);
+        }else{
+            retTypeHolder = data.getConverter().convert(queryDefinition.getReturnType());
+        }
         GraphQLOutputType outputType = retTypeHolder.getOutputType();
+
 
         // If the return type is an array we need to wrap in notNull objs.
         // The converter does not do this since this is not specified with a NotNull decorator
@@ -47,7 +62,11 @@ public class QueryGqlFieldDefinitionFunction implements GqlFieldDefinitionFuncti
                 GqlTypeHolder paramType = data.getConverter().convert(parameter.getType());
                 inputType = paramType.getInputType();
             }else{
-                inputType = data.getPageableReference();
+                if(shouldUseCursorPageable){
+                    inputType = data.getCursorPageableReference();
+                }else{
+                    inputType = data.getOffsetPageableReference();
+                }
             }
             builder.argument(newArgument().name(parameter.getName())
                                           .type(nonNull(inputType)));

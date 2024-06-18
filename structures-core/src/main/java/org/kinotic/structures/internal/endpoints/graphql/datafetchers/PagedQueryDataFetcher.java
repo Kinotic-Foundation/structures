@@ -1,22 +1,28 @@
-package org.kinotic.structures.internal.endpoints.graphql;
+package org.kinotic.structures.internal.endpoints.graphql.datafetchers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import graphql.ExecutionResult;
+import graphql.schema.DataFetcher;
+import graphql.schema.DataFetchingEnvironment;
+import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.continuum.idl.api.schema.FunctionDefinition;
 import org.kinotic.continuum.idl.api.schema.ParameterDefinition;
-import org.kinotic.structures.api.domain.RawJson;
+import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.domain.idl.PageableC3Type;
 import org.kinotic.structures.api.services.EntitiesService;
 import org.kinotic.structures.internal.api.services.sql.MapParameterHolder;
+import org.kinotic.structures.internal.endpoints.graphql.GqlOperationExecutionFunction;
 import org.kinotic.structures.internal.utils.GqlUtils;
-import org.kinotic.structures.api.domain.Structure;
+
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
  * Created by Navíd Mitchell 🤪 on 6/13/24.
  */
-public class PagedQueryGqlOperationExecutionFunction implements GqlOperationExecutionFunction {
+@SuppressWarnings("rawtypes")
+public class PagedQueryDataFetcher implements DataFetcher<CompletableFuture<Page<Map>>> {
 
     private final Pageable defaultPageable;
     private final EntitiesService entitiesService;
@@ -33,11 +39,11 @@ public class PagedQueryGqlOperationExecutionFunction implements GqlOperationExec
      * @param defaultPageable the default {@link Pageable} to use if no pageable parameter is defined in the {@link FunctionDefinition}
      * @param structureId the id of the {@link Structure} that the query is for
      */
-    public PagedQueryGqlOperationExecutionFunction(EntitiesService entitiesService,
-                                                   ObjectMapper objectMapper,
-                                                   FunctionDefinition queryDefinition,
-                                                   Pageable defaultPageable,
-                                                   String structureId) {
+    public PagedQueryDataFetcher(EntitiesService entitiesService,
+                                 ObjectMapper objectMapper,
+                                 FunctionDefinition queryDefinition,
+                                 Pageable defaultPageable,
+                                 String structureId) {
         this.defaultPageable = defaultPageable;
         this.entitiesService = entitiesService;
         this.objectMapper = objectMapper;
@@ -55,27 +61,21 @@ public class PagedQueryGqlOperationExecutionFunction implements GqlOperationExec
     }
 
     @Override
-    public CompletableFuture<ExecutionResult> apply(GqlOperationArguments args) {
-
-        ParsedFields fields = args.getParsedFields();
+    public CompletableFuture<Page<Map>> get(DataFetchingEnvironment environment) throws Exception {
         Pageable pageable;
         if(pageableName != null) {
-            pageable = GqlUtils.parseVariable(args.getVariables(),
+            pageable = GqlUtils.parseVariable(environment.getArguments(),
                                               pageableName,
                                               Pageable.class,
                                               objectMapper);
-        }else{
+        }else {
             pageable = defaultPageable;
         }
-
         return entitiesService.namedQueryPage(structureId,
                                               queryName,
-                                              new MapParameterHolder(args.getVariables()),
+                                              new MapParameterHolder(environment.getArguments()),
                                               pageable,
-                                              RawJson.class,
-                                              GqlUtils.createContext(args, fields.getContentFields()))
-                              .thenApply(page -> GqlUtils.convertToResult(args.getOperationName(),
-                                                                          page,
-                                                                          args.getParsedFields()));
+                                              Map.class,
+                                              environment.getLocalContext());
     }
 }

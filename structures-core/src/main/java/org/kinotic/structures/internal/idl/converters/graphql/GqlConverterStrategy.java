@@ -71,7 +71,7 @@ public class GqlConverterStrategy implements IdlConverterStrategy<GqlTypeHolder,
                                               GraphQLList.list(typeHolder.getOutputType()));
                  });
 
-        converters = Set.of(container, new ObjectC3TypeToGql(), new UnionC3TypeToGql(), new PageC3TypeToGql());
+        converters = Set.of(container, new ObjectC3TypeToGql(), new UnionC3TypeToGql(), new CursorPageC3TypeToGql(), new PageC3TypeToGql());
     }
 
     @Override
