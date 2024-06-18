@@ -50,7 +50,7 @@ public class DefaultGqlExecutionService implements GqlExecutionService {
 
         graphQLCache = Caffeine.newBuilder()
                                .expireAfterAccess(20, TimeUnit.HOURS)
-                               .maximumSize(10_000)
+                               .maximumSize(2000)
                                .buildAsync(gqlSchemaCacheLoader);
     }
 
