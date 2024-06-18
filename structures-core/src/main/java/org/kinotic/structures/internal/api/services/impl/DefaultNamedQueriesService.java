@@ -1,6 +1,7 @@
 package org.kinotic.structures.internal.api.services.impl;
 
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
+import co.elastic.clients.elasticsearch._types.query_dsl.TermQuery;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import lombok.AllArgsConstructor;
@@ -106,8 +107,15 @@ public class DefaultNamedQueriesService extends AbstractCrudService<NamedQueries
 
     @Override
     public CompletableFuture<NamedQueriesDefinition> findByNamespaceAndStructure(String namespace, String structure) {
-        // TODO: This should not depend on the id format in the future
-        return this.findById((namespace + "." + structure).toLowerCase());
+        return crudServiceTemplate.search(indexName, Pageable.ofSize(1), type, builder -> builder
+                .query(q -> q
+                        .bool(b -> b
+                                .filter(TermQuery.of(tq -> tq.field("namespace").value(namespace))._toQuery(),
+                                        TermQuery.of(tq -> tq.field("structure").value(structure))._toQuery())
+                        )
+                )).thenApply(page -> page.getContent() != null && !page.getContent().isEmpty()
+                        ? page.getContent().get(0)
+                        : null);
     }
 
     @Override
@@ -120,6 +128,7 @@ public class DefaultNamedQueriesService extends AbstractCrudService<NamedQueries
                         return namedQueriesDefinition;
                     });
     }
+
 
     @Override
     public CompletableFuture<Page<NamedQueriesDefinition>> search(String searchText, Pageable pageable) {

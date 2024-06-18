@@ -12,6 +12,9 @@ import io.vertx.ext.web.handler.graphql.impl.GraphQLBatch;
 import io.vertx.ext.web.handler.graphql.impl.GraphQLInput;
 import io.vertx.ext.web.handler.graphql.impl.GraphQLQuery;
 import lombok.RequiredArgsConstructor;
+import org.kinotic.structures.internal.utils.VertxWebUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 
@@ -23,8 +26,8 @@ import static io.vertx.core.http.HttpMethod.POST;
  */
 @RequiredArgsConstructor
 public class GqlHandler implements Handler<RoutingContext> {
-
-    private final GqlOperationService gqlOperationService;
+    private static final Logger log = LoggerFactory.getLogger(GqlHandler.class);
+    private final GqlExecutionService gqlExecutionService;
 
     @Override
     public void handle(RoutingContext rc) {
@@ -37,6 +40,7 @@ public class GqlHandler implements Handler<RoutingContext> {
                 // we could just add an ad-hoc body handler but this can lead to DDoS attacks
                 // and it doesn't really cover all the uploads, such as multipart, etc...
                 // as well as resource cleanup
+                log.warn("BodyHandler is required to process POST requests");
                 rc.fail(500, new NoStackTraceThrowable("BodyHandler is required to process POST requests"));
             } else {
                 handlePost(rc, rc.getBody());
@@ -47,7 +51,7 @@ public class GqlHandler implements Handler<RoutingContext> {
     }
 
     private void executeBatch(RoutingContext rc, GraphQLBatch batch) {
-
+        log.warn("Batch execution not supported");
         rc.fail(500, new NoStackTraceThrowable("Batch execution not supported"));
 
 //        List<CompletableFuture<Buffer>> results = batch.stream()
@@ -69,7 +73,7 @@ public class GqlHandler implements Handler<RoutingContext> {
     }
 
     private void executeOne(RoutingContext rc, GraphQLQuery query) {
-        gqlOperationService.execute(rc, query)
+        gqlExecutionService.execute(rc, query)
                            .whenComplete((buffer, throwable) -> sendResponse(rc, buffer, throwable));
     }
 
@@ -185,7 +189,7 @@ public class GqlHandler implements Handler<RoutingContext> {
         if (throwable == null) {
             rc.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json").end(buffer);
         } else {
-            rc.fail(throwable);
+            VertxWebUtil.writeException(rc, throwable);
         }
     }
 

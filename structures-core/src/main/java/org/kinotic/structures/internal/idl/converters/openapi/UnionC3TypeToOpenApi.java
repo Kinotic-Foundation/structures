@@ -10,7 +10,7 @@ import org.kinotic.continuum.idl.api.converter.Cacheable;
 import org.kinotic.continuum.idl.api.schema.C3Type;
 import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
 import org.kinotic.continuum.idl.api.schema.UnionC3Type;
-import org.kinotic.structures.api.idl.decorators.DiscriminatorDecorator;
+import org.kinotic.structures.api.domain.idl.decorators.DiscriminatorDecorator;
 
 /**
  * {@link UnionC3TypeToOpenApi} is a {@link C3TypeConverterContainer} that converts a {@link UnionC3Type} to a {@link Schema}.
@@ -24,7 +24,7 @@ public class UnionC3TypeToOpenApi implements C3TypeConverter<Schema<?>, UnionC3T
 
         ObjectSchema unionSchema = new ObjectSchema();
 
-        // For union types the DiscriminatorDecorator will be on the type so capture that
+        // For union types the DiscriminatorDecorator can be on the type so capture that
         DiscriminatorDecorator discriminatorDecorator = c3Type.findDecorator(DiscriminatorDecorator.class);
         if(discriminatorDecorator != null && discriminatorDecorator.getPropertyName() != null){
             unionSchema.setDiscriminator(new Discriminator().propertyName(discriminatorDecorator.getPropertyName()));

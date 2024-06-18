@@ -5,7 +5,7 @@ import org.kinotic.continuum.idl.api.converter.C3ConversionContext;
 import org.kinotic.continuum.idl.api.converter.C3TypeConverter;
 import org.kinotic.continuum.idl.api.converter.Cacheable;
 import org.kinotic.continuum.idl.api.schema.*;
-import org.kinotic.structures.api.idl.decorators.*;
+import org.kinotic.structures.api.domain.idl.decorators.*;
 import org.kinotic.structures.internal.utils.StructuresUtil;
 
 /**
@@ -49,8 +49,8 @@ public class ObjectC3TypeToElastic implements C3TypeConverter<Property, ObjectC3
             // This will also store decorators encountered
             state.beginProcessingField(property);
 
-            // We have to apply nested decorators here as well due to the same problem mentioned above on line 35
             if(property.hasDecorators()){
+
                 if(property.containsDecorator(NestedDecorator.class)) {
 
                     if (type instanceof ArrayC3Type) {
@@ -89,7 +89,7 @@ public class ObjectC3TypeToElastic implements C3TypeConverter<Property, ObjectC3
                                                                    ._toProperty());
                 } else {
 
-                    // No decorators that we care about so, just convert the type
+                    // No decorators that effect elastic mapping, just convert the type
                     builder.properties(fieldName, conversionContext.convert(type));
 
                 }

@@ -35,7 +35,7 @@ dependencies {
 	implementation "com.github.ben-manes.caffeine:caffeine:${caffeineVersion}"
 
 	implementation "com.graphql-java:graphql-java"
-	implementation "com.apollographql.federation:federation-graphql-java-support:${federationJvmVersion}"
+	implementation "com.apollographql.federation:federation-graphql-java-support:${graphQlFederationJvmVersion}"
 	implementation "com.graphql-java:graphql-java-extended-scalars:${graphQlJavaExtendedScalarsVersion}"
 
 	implementation "io.swagger.core.v3:swagger-models:${swaggerCoreVersion}"

@@ -12,7 +12,7 @@ import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
 import org.kinotic.continuum.idl.api.schema.StringC3Type;
 import org.kinotic.continuum.internal.utils.ContinuumUtil;
 import org.kinotic.structures.api.domain.Structure;
-import org.kinotic.structures.api.idl.decorators.*;
+import org.kinotic.structures.api.domain.idl.decorators.*;
 import org.kinotic.structures.api.services.NamespaceService;
 import org.kinotic.structures.api.services.StructureService;
 import org.kinotic.structures.internal.utils.StructuresUtil;

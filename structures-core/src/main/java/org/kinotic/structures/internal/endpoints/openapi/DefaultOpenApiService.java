@@ -18,9 +18,9 @@ import org.kinotic.continuum.idl.api.schema.*;
 import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.domain.NamedQueriesDefinition;
 import org.kinotic.structures.api.domain.Structure;
-import org.kinotic.structures.api.idl.PageC3Type;
-import org.kinotic.structures.api.idl.PageableC3Type;
-import org.kinotic.structures.api.idl.decorators.QueryDecorator;
+import org.kinotic.structures.api.domain.idl.PageC3Type;
+import org.kinotic.structures.api.domain.idl.PageableC3Type;
+import org.kinotic.structures.api.domain.idl.decorators.QueryDecorator;
 import org.kinotic.structures.api.services.NamedQueriesService;
 import org.kinotic.structures.api.services.StructureService;
 import org.kinotic.structures.internal.api.services.StructureConversionService;
@@ -109,7 +109,8 @@ public class DefaultOpenApiService implements OpenApiService {
                             // Add path items for the structure
                             addDefaultPathItems(paths, basePath, structure);
                         }else{
-                            log.error("Structure "+structure.getId()+" EntityDefinition did not convert to an OpenAPI ObjectSchema");
+                            log.error("Structure {} EntityDefinition did not convert to an OpenAPI ObjectSchema",
+                                      structure.getId());
                         }
 
                         addNamedQueryPathItems(paths, basePath, structure, converter, components);
@@ -393,6 +394,7 @@ public class DefaultOpenApiService implements OpenApiService {
 
                     // vertx route is
                     // :structureNamespace/:structureName/named-query/:queryName
+                    // TODO: should we also check if a Pageable parameter is defined in the FunctionDefinition
                     if (query.getReturnType() instanceof PageC3Type) {
                         SqlQueryType queryType = QueryUtils.determineQueryType(queryDecorator.getStatements());
                         switch (queryType) {

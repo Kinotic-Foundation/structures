@@ -27,7 +27,7 @@ import org.kinotic.structures.api.domain.DefaultEntityContext;
 import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.NamedQueriesDefinition;
 import org.kinotic.structures.api.domain.Structure;
-import org.kinotic.structures.api.idl.decorators.QueryDecorator;
+import org.kinotic.structures.api.domain.idl.decorators.QueryDecorator;
 import org.kinotic.structures.api.services.EntitiesService;
 import org.kinotic.structures.api.services.NamedQueriesService;
 import org.kinotic.structures.internal.api.services.sql.MapParameterHolder;

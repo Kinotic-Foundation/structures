@@ -31,7 +31,6 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Function;
 
 /**
@@ -55,8 +54,13 @@ public class OpenApiVertxRouterFactory {
         String apiBasePath = properties.getOpenApiPath();
         Router router = Router.router(vertx);
 
-        router.route().handler(CorsHandler.create(properties.getCorsAllowedOriginPattern())
-                                          .allowedHeaders(Set.of("Accept", "Authorization", "Content-Type")));
+        CorsHandler corsHandler = CorsHandler.create(properties.getCorsAllowedOriginPattern())
+                                             .allowedHeaders(properties.getCorsAllowedHeaders());
+        if(properties.getCorsAllowCredentials() != null){
+            corsHandler.allowCredentials(properties.getCorsAllowCredentials());
+        }
+
+        router.route().handler(corsHandler);
 
         // Open API Docs
         router.get("/api-docs/:structureNamespace/openapi.json")

@@ -46,7 +46,11 @@ class DefaultStateManager implements IStateManager {
         const filePath = path.resolve(this.dataDir, `${key}.json`)
         if(fs.existsSync(filePath)){
             const data = await fsPromises.readFile(filePath, {encoding: 'utf-8'})
-            return JSON.parse(data) as T
+            try {
+                return JSON.parse(data) as T
+            } catch (e) {
+                return Promise.reject('Failed to parse JSON for filePath: ' + filePath + '\n' + e)
+            }
         }else{
             return Promise.reject('State not found for key: ' + key)
         }

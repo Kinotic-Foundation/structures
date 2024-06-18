@@ -1,0 +1,89 @@
+{
+  "entityServiceName": "PersonEntityService",
+  "namedQueries": [
+    {
+      "name": "countByCity",
+      "decorators": [
+        {
+          "type": "Query",
+          "statements": "select count(firstName) as count, address.city as city from \"struct_city.person\" where address.city = ? group by address.city"
+        }
+      ],
+      "returnType": {
+        "type": "array",
+        "contains": {
+          "type": "object",
+          "name": "CityCount",
+          "namespace": "city",
+          "properties": [
+            {
+              "name": "city",
+              "type": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "count",
+              "type": {
+                "type": "int"
+              }
+            }
+          ]
+        }
+      },
+      "parameters": [
+        {
+          "name": "city",
+          "type": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "countByLastName",
+      "decorators": [
+        {
+          "type": "Query",
+          "statements": "select count(firstName) as count, lastName from \"struct_city.person\" where lastName = ? group by lastName"
+        }
+      ],
+      "returnType": {
+        "type": "page",
+        "contentType": {
+          "type": "object",
+          "name": "LastNameCount",
+          "namespace": "city",
+          "properties": [
+            {
+              "name": "lastName",
+              "type": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "count",
+              "type": {
+                "type": "int"
+              }
+            }
+          ]
+        }
+      },
+      "parameters": [
+        {
+          "name": "lastName",
+          "type": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "pageable",
+          "type": {
+            "type": "pageable"
+          }
+        }
+      ]
+    }
+  ]
+}

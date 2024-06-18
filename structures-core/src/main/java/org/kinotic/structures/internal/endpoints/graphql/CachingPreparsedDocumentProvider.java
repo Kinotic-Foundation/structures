@@ -17,15 +17,9 @@ import java.util.function.Function;
 public class CachingPreparsedDocumentProvider implements PreparsedDocumentProvider {
 
     private final AsyncCache<String, PreparsedDocumentEntry> cache  = Caffeine.newBuilder()
-                                                                               .expireAfterWrite(30, TimeUnit.MINUTES)
-                                                                               .maximumSize(500)
-                                                                               .buildAsync();
-
-    @Override
-    public PreparsedDocumentEntry getDocument(ExecutionInput executionInput,
-                                              Function<ExecutionInput, PreparsedDocumentEntry> parseAndValidateFunction) {
-        return getDocumentAsync(executionInput, parseAndValidateFunction).join();
-    }
+                                                                              .expireAfterWrite(2, TimeUnit.HOURS)
+                                                                              .maximumSize(1000)
+                                                                              .buildAsync();
 
     @Override
     public CompletableFuture<PreparsedDocumentEntry> getDocumentAsync(ExecutionInput executionInput,

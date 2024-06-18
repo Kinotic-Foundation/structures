@@ -44,7 +44,7 @@ export class ObjectLikeToC3Type implements ITypeConverter<Type, C3Type, Typescri
 
                 const override = conversionContext.state().getOverrideType(conversionContext.currentJsonPath)
                 if(override){
-                    propertyDefinition = new PropertyDefinition(propertyName, override)
+                    propertyDefinition = override
                 }else{
                     const transform = conversionContext.state().getTransformFunction(conversionContext.currentJsonPath)
                     if(transform){

@@ -200,7 +200,7 @@ public class DefaultStructureService implements StructureService {
                     structure.setNamespace(existingStructure.getNamespace());
                     structure.setItemIndex(existingStructure.getItemIndex());
                     structure.setPublished(existingStructure.isPublished());
-                    structure.setPublishedTimestamp(null);
+                    structure.setPublishedTimestamp(existingStructure.getPublishedTimestamp());
                     structure.setDecoratedProperties(null);
 
                     // Try and create ES mapping to make sure IDL is valid

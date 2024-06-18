@@ -9,7 +9,6 @@ import org.kinotic.continuum.idl.api.converter.IdlConverterFactory;
 import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.internal.api.services.ElasticConversionResult;
-import org.kinotic.structures.internal.api.services.GqlConversionResult;
 import org.kinotic.structures.internal.api.services.StructureConversionService;
 import org.kinotic.structures.internal.idl.converters.elastic.ElasticConversionState;
 import org.kinotic.structures.internal.idl.converters.elastic.ElasticConverterStrategy;
@@ -51,21 +50,13 @@ public class DefaultStructureConversionService implements StructureConversionSer
     }
 
     @Override
-    public GqlConversionResult convertToGqlMapping(Structure structure) {
-        IdlConverter<GqlTypeHolder, GqlConversionState> converter = idlConverterFactory
-                .createConverter(new GqlConverterStrategy(structuresProperties));
-
-        GqlConversionState state = converter.getConversionContext().state();
-
-        GqlTypeHolder typeHolder = converter.convert(structure.getEntityDefinition());
-
-        return new GqlConversionResult(state.getReferencedTypes(), typeHolder, state.getUnionTypes());
+    public IdlConverter<GqlTypeHolder, GqlConversionState> createGqlConverter() {
+        return idlConverterFactory.createConverter(new GqlConverterStrategy(structuresProperties));
     }
 
     @Override
     public IdlConverter<Schema<?>, OpenApiConversionState> createOpenApiConverter(){
-        return idlConverterFactory
-                .createConverter(new OpenApiConverterStrategy(structuresProperties));
+        return idlConverterFactory.createConverter(new OpenApiConverterStrategy(structuresProperties));
     }
 
 }

@@ -137,7 +137,7 @@ public class VertxWebUtil {
             response.setStatusCode(500);
         }
 
-        log.warn("Error processing OpenAPI request", throwable);
+        log.warn("Error processing request", throwable);
 
         response.putHeader("Content-Type", "application/json");
         response.end(new JsonObject().put("error", throwable.getMessage()).encode());

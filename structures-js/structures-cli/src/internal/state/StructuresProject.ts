@@ -1,5 +1,5 @@
 import {MultiTenancyType} from '@kinotic/structures-api'
-import {C3Type, C3Decorator} from '@kinotic/continuum-idl'
+import {C3Type, C3Decorator, PropertyDefinition} from '@kinotic/continuum-idl'
 import { createStateManager } from './IStateManager.js'
 
 const STRUCTURES_KEY = 'structures'
@@ -8,7 +8,7 @@ const STRUCTURES_KEY = 'structures'
 
 /**
  * The configuration for a property that should be overridden.
- * This allows you to specify a static {@link C3Type} for a property.
+ * This allows you to specify a static {@link PropertyDefinition} for a property.
  */
 export class OverrideConfiguration {
     /**
@@ -17,9 +17,9 @@ export class OverrideConfiguration {
     jsonPath!: string
 
     /**
-     * The {@link C3Type} that should be used for the property.
+     * The {@link PropertyDefinition} that should be used for the property.
      */
-    c3Type!: C3Type
+    propertyDefinition!: PropertyDefinition
 }
 
 /**
