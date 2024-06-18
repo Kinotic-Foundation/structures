@@ -135,7 +135,6 @@ public class GqlSchemaCacheLoader implements AsyncCacheLoader<String, GraphQL> {
                             addOperations(fieldDefinitionData, codeRegistryBuilder, mutationBuilder, queryBuilder, structure);
                         }
 
-
                         // Add all type resolvers to the schema
                         for (Pair<GraphQLUnionType, TypeResolver> pair : converter.getConversionContext()
                                                                                   .state()
@@ -176,7 +175,9 @@ public class GqlSchemaCacheLoader implements AsyncCacheLoader<String, GraphQL> {
                                                   .build();
 
                         if (log.isTraceEnabled()) {
-                            log.trace(ServiceSDLPrinter.generateServiceSDLV2(graphQLSchema));
+                            log.trace("GraphQL Schema for namespace {}\n{}",
+                                      namespace,
+                                      ServiceSDLPrinter.generateServiceSDLV2(graphQLSchema));
                         }
 
                         return CompletableFuture.completedFuture(graphQLSchema);

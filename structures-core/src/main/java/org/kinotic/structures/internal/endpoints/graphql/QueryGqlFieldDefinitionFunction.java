@@ -24,7 +24,7 @@ import static graphql.schema.GraphQLNonNull.nonNull;
 public class QueryGqlFieldDefinitionFunction implements GqlFieldDefinitionFunction {
 
     private final FunctionDefinition queryDefinition;
-    private final boolean shouldUseCursorPageable ;
+    private final boolean shouldUseCursorPageable;
 
     @Override
     public GraphQLFieldDefinition apply(GqlFieldDefinitionData data) {
