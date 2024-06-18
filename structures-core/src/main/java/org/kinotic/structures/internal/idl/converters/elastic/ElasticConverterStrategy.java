@@ -8,6 +8,8 @@ import org.kinotic.continuum.idl.api.converter.IdlConverterStrategy;
 import org.kinotic.continuum.idl.api.schema.*;
 import org.kinotic.structures.api.config.StructuresProperties;
 
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -50,7 +52,7 @@ public class ElasticConverterStrategy implements IdlConverterStrategy<Property, 
                      return context.convert(arrayC3Type.getContains());
                  });
 
-        converters = Set.of(container, new ObjectC3TypeToElastic(), new UnionC3TypeToElastic());
+        converters = new LinkedHashSet<>(List.of(container, new ObjectC3TypeToElastic(), new UnionC3TypeToElastic()));
     }
 
 

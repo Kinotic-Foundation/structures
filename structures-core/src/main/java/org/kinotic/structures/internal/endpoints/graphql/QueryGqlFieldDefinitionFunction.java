@@ -33,8 +33,8 @@ public class QueryGqlFieldDefinitionFunction implements GqlFieldDefinitionFuncti
 
         // This is kinda a hack. The CLI will always just create a PageC3Type, but if a cursor is used it needs to explicitly defined for GQL
         GqlTypeHolder retTypeHolder;
-        if(queryDefinition.getReturnType() instanceof PageC3Type
-            && shouldUseCursorPageable){
+        if(shouldUseCursorPageable &&
+                (queryDefinition.getReturnType() instanceof PageC3Type)){
 
             PageC3Type pageC3Type = (PageC3Type) queryDefinition.getReturnType();
             CursorPageC3Type cursorPageC3Type = new CursorPageC3Type(pageC3Type.getContentType());

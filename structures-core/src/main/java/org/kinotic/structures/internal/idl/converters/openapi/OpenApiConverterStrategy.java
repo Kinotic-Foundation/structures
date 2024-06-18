@@ -8,6 +8,8 @@ import org.kinotic.continuum.idl.api.schema.*;
 import org.kinotic.structures.api.config.StructuresProperties;
 
 import java.math.BigDecimal;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -70,7 +72,7 @@ public class OpenApiConverterStrategy implements IdlConverterStrategy<Schema<?>,
                      }
                  });
 
-        converters = Set.of(container, new ObjectC3TypeToOpenApi(), new UnionC3TypeToOpenApi(), new PageC3TypeToOpenApi());
+        converters = new LinkedHashSet<>(List.of(container, new ObjectC3TypeToOpenApi(), new UnionC3TypeToOpenApi(), new PageC3TypeToOpenApi()));
     }
 
     public OpenApiConverterStrategy(StructuresProperties structuresProperties) {

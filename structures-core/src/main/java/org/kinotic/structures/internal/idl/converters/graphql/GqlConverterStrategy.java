@@ -10,6 +10,8 @@ import org.kinotic.continuum.idl.api.converter.IdlConverterStrategy;
 import org.kinotic.continuum.idl.api.schema.*;
 import org.kinotic.structures.api.config.StructuresProperties;
 
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
 import static graphql.Scalars.*;
@@ -70,8 +72,7 @@ public class GqlConverterStrategy implements IdlConverterStrategy<GqlTypeHolder,
                      return new GqlTypeHolder(typeHolder.getInputType() != null ? GraphQLList.list(typeHolder.getInputType()) : null,
                                               GraphQLList.list(typeHolder.getOutputType()));
                  });
-
-        converters = Set.of(container, new ObjectC3TypeToGql(), new UnionC3TypeToGql(), new CursorPageC3TypeToGql(), new PageC3TypeToGql());
+        converters = new LinkedHashSet<>(List.of(container, new ObjectC3TypeToGql(), new UnionC3TypeToGql(), new CursorPageC3TypeToGql(), new PageC3TypeToGql()));
     }
 
     @Override

@@ -13,7 +13,7 @@ import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
 @Setter
 @Accessors(chain = true)
 @NoArgsConstructor
-@EqualsAndHashCode(callSuper = false)
+@EqualsAndHashCode(callSuper = true)
 @ToString(callSuper = true)
 public class CursorPageC3Type extends PageC3Type {
 
