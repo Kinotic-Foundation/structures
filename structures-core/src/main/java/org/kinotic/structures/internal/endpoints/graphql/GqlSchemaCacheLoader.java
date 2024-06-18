@@ -1,7 +1,6 @@
 package org.kinotic.structures.internal.endpoints.graphql;
 
 import com.apollographql.federation.graphqljava.Federation;
-import com.apollographql.federation.graphqljava._Entity;
 import com.apollographql.federation.graphqljava.printer.ServiceSDLPrinter;
 import com.github.benmanes.caffeine.cache.AsyncCacheLoader;
 import graphql.GraphQL;
@@ -13,8 +12,11 @@ import org.apache.commons.text.WordUtils;
 import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.continuum.idl.api.converter.IdlConverter;
 import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.api.services.EntitiesService;
 import org.kinotic.structures.internal.api.services.StructureConversionService;
 import org.kinotic.structures.internal.api.services.StructureDAO;
+import org.kinotic.structures.internal.endpoints.graphql.datafetchers.EntitiesDataFetcher;
+import org.kinotic.structures.internal.endpoints.graphql.datafetchers.EntitiesTypeResolver;
 import org.kinotic.structures.internal.idl.converters.graphql.GqlConversionState;
 import org.kinotic.structures.internal.idl.converters.graphql.GqlTypeHolder;
 import org.kinotic.structures.internal.utils.GqlUtils;
@@ -23,7 +25,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -47,8 +48,9 @@ import static graphql.schema.GraphQLObjectType.newObject;
 public class GqlSchemaCacheLoader implements AsyncCacheLoader<String, GraphQL> {
 
     private static final Logger log = LoggerFactory.getLogger(GqlSchemaCacheLoader.class);
-    private static final NoOpTypeResolver NO_OP_TYPE_RESOLVER = new NoOpTypeResolver();
+    private static final EntitiesTypeResolver ENTITIES_TYPE_RESOLVER = new EntitiesTypeResolver();
 
+    private final EntitiesService entitiesService;
     private final StructureDAO structureDAO;
     private final StructureConversionService structureConversionService;
     private final GqlOperationDefinitionService gqlOperationDefinitionService;
@@ -167,17 +169,10 @@ public class GqlSchemaCacheLoader implements AsyncCacheLoader<String, GraphQL> {
                         graphQLSchemaBuilder.additionalTypes(Set.copyOf(additionalTypes.values()));
                         GraphQLSchema graphQLSchema = graphQLSchemaBuilder.build();
 
-                        // Add GQL federation support (Fetcher and Resolver below not really needed unless we want to allow entities to contribute to one another)
-                        DataFetcher<?> entityDataFetcher = env -> {
-                            List<Map<String, Object>> representations = env.getArgument(_Entity.argumentName);
-                            log.warn("Entity data fetcher called with representations: {}", representations);
-                            return null;
-                        };
-
                         graphQLSchema = Federation.transform(graphQLSchema)
                                                   .setFederation2(true)
-                                                  .fetchEntities(entityDataFetcher)
-                                                  .resolveEntityType(NO_OP_TYPE_RESOLVER) // No type resolvers needed since we don't actually use the GraphQL API to execute operations
+                                                  .fetchEntities(new EntitiesDataFetcher(entitiesService, namespace))
+                                                  .resolveEntityType(ENTITIES_TYPE_RESOLVER)
                                                   .build();
 
                         if (log.isTraceEnabled()) {
