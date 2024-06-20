@@ -22,7 +22,6 @@ import org.kinotic.structures.internal.idl.converters.graphql.GqlTypeHolder;
 import org.kinotic.structures.internal.utils.GqlUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
@@ -53,7 +52,7 @@ public class GqlSchemaCacheLoader implements AsyncCacheLoader<String, GraphQL> {
 
     private static final String FEDERATION_BASE = "extend schema\n" +
             "@link(\n" +
-            "    url: \"https://specs.apollo.dev/federation/v2.7\"\n" +
+            "    url: \"https://specs.apollo.dev/federation/v2.4\"\n" +
             "    import: [\n" +
             "        \"@key\"\n" +
             "    ]\n" +
@@ -63,7 +62,6 @@ public class GqlSchemaCacheLoader implements AsyncCacheLoader<String, GraphQL> {
     private final StructureDAO structureDAO;
     private final StructureConversionService structureConversionService;
     private final GqlOperationDefinitionService gqlOperationDefinitionService;
-    private final ResourceLoader resourceLoader;
 
     @Override
     public CompletableFuture<GraphQL> asyncLoad(String key, Executor executor) throws Exception {
