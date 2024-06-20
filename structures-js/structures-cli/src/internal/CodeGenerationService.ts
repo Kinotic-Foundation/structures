@@ -155,8 +155,8 @@ export class CodeGenerationService {
                             if(parameterTypeName === 'Pageable'
                                 || parameterTypeName === 'OffsetPageable'
                                 || parameterTypeName === 'CursorPageable') {
-                                if(i > 0){
-                                    this.logger.log(chalk.yellow(`It is best if Pageable is always the first parameter.`))
+                                if(i > 0 && i < parameters.length - 1){
+                                    this.logger.log(chalk.yellow(`It is best if Pageable is always the first or last parameter.`))
                                 }
                                 pageableParameterName = parameterName
                                 parameterC3Type = new PageableC3Type()

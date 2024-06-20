@@ -2,6 +2,7 @@ package org.kinotic.structures.internal.api.services.sql.executors;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import org.apache.commons.lang3.tuple.Pair;
 import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.continuum.idl.api.schema.FunctionDefinition;
@@ -13,6 +14,7 @@ import org.kinotic.structures.api.domain.idl.PageableC3Type;
 import org.kinotic.structures.api.domain.idl.decorators.MultiTenancyType;
 import org.kinotic.structures.internal.api.services.sql.ElasticVertxClient;
 import org.kinotic.structures.internal.api.services.sql.ParameterHolder;
+import org.kinotic.structures.internal.api.services.sql.QueryOptions;
 import org.kinotic.structures.internal.utils.QueryUtils;
 
 import java.util.ArrayList;
@@ -52,16 +54,8 @@ public class AggregateQueryExecutor extends AbstractQueryExecutor {
     public <T> CompletableFuture<List<T>> execute(ParameterHolder parameterHolder,
                                                   Class<T> type,
                                                   EntityContext context) {
-        List<Object> paramsToUse = null;
-        if(!parameterNames.isEmpty()){
-            paramsToUse = QueryUtils.extractOrderedParameterList(parameterHolder, parameterNames);
-        }else if(parameterHolder != null){
-            throw new IllegalArgumentException("This query does not support any parameters");
-        }
 
-        JsonObject filter = createFilterIfNeeded(context);
-
-        return elasticVertxClient.querySql(statement, paramsToUse, filter, null, type)
+        return executePage(parameterHolder,null, type, context)
                                  .thenApply(Page::getContent);
     }
 
@@ -71,15 +65,18 @@ public class AggregateQueryExecutor extends AbstractQueryExecutor {
                                                       Class<T> type,
                                                       EntityContext context) {
         List<Object> paramsToUse = null;
+        QueryOptions options = null;
         if(!parameterNames.isEmpty()){
-            paramsToUse = QueryUtils.extractOrderedParameterList(parameterHolder, parameterNames);
+            Pair<List<Object>, QueryOptions> pair = QueryUtils.extractOrderedParameterList(parameterHolder, parameterNames);
+            paramsToUse = pair.getLeft();
+            options = pair.getRight();
         }else if(parameterHolder != null){
             throw new IllegalArgumentException("This query does not support any parameters");
         }
 
         JsonObject filter = createFilterIfNeeded(context);
 
-        return elasticVertxClient.querySql(statement, paramsToUse, filter, pageable, type);
+        return elasticVertxClient.querySql(statement, paramsToUse, filter, options, pageable, type);
     }
 
     private JsonObject createFilterIfNeeded(EntityContext context) {

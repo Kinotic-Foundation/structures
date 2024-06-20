@@ -29,6 +29,7 @@ public interface ElasticVertxClient {
      * @param statement  the SQL statement to execute
      * @param parameters any arguments to be used in the SQL statement
      * @param filter     the Query DSL filter if desired as explained <a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/sql-rest-filtering.html">here</a>
+     * @param options    the options to use for the query
      * @param pageable   the pageable to use for the query or null if not needed
      * @param type       the type of the entity
      * @return a {@link CompletableFuture} that will complete with the response or an exception if an error occurred
@@ -36,6 +37,7 @@ public interface ElasticVertxClient {
     <T> CompletableFuture<Page<T>> querySql(String statement,
                                             List<?> parameters,
                                             JsonObject filter,
+                                            QueryOptions options,
                                             Pageable pageable,
                                             Class<T> type);
 }

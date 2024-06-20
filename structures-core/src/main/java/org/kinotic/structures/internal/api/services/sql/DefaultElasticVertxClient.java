@@ -89,6 +89,7 @@ public class DefaultElasticVertxClient implements ElasticVertxClient {
     public <T> CompletableFuture<Page<T>> querySql(String statement,
                                                    List<?> parameters,
                                                    JsonObject filter,
+                                                   QueryOptions options,
                                                    Pageable pageable,
                                                    Class<T> type) {
         JsonObject json = new JsonObject();
@@ -108,8 +109,7 @@ public class DefaultElasticVertxClient implements ElasticVertxClient {
 
         // Only add the query if we are not using a cursor
         if(!foundCursor){
-            json.put("query", statement)
-                .put("page_timeout", "2m");
+            json.put("query", statement);
             if(parameters != null) {
                 JsonArray paramsJson = new JsonArray();
                 for(Object param : parameters){
@@ -119,6 +119,19 @@ public class DefaultElasticVertxClient implements ElasticVertxClient {
             }
             if(filter != null){
                 json.put("filter", filter);
+            }
+            if(options != null){
+                if(options.getTimeZone() != null){
+                    json.put("time_zone", options.getTimeZone());
+                }
+                if (options.getPageTimeout() != null) {
+                    json.put("page_timeout", options.getPageTimeout());
+                }else{
+                    json.put("page_timeout", "2m");
+                }
+                if (options.getRequestTimeout() != null) {
+                    json.put("request_timeout", options.getRequestTimeout());
+                }
             }
         }
 

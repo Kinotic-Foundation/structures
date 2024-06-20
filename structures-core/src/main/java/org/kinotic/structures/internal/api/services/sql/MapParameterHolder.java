@@ -12,6 +12,6 @@ import java.util.Map;
 @Getter
 public class MapParameterHolder implements ParameterHolder {
 
-    private final Map<String, Object> parameterMap;
+    private final Map<String, Object> parameters;
 
 }

@@ -13,6 +13,6 @@ import java.util.List;
 @Getter
 public class ListParameterHolder implements ParameterHolder {
 
-    private final List<QueryParameter> parameterList;
+    private final List<QueryParameter> parameters;
 
 }
