@@ -270,10 +270,10 @@ public class GqlSchemaCacheLoader implements AsyncCacheLoader<String, GraphQL> {
 
         inputBuilder.field(newInputObjectField()
                                    .name("direction")
-                                   .type(GraphQLNonNull.nonNull(enumType)))
+                                   .type(nonNull(enumType)))
                     .field(newInputObjectField()
                                    .name("property")
-                                   .type(GraphQLNonNull.nonNull(GraphQLString)));
+                                   .type(nonNull(GraphQLString)));
 
         return inputBuilder.build();
     }
@@ -282,8 +282,7 @@ public class GqlSchemaCacheLoader implements AsyncCacheLoader<String, GraphQL> {
         GraphQLInputObjectType.Builder inputBuilder = newInputObject().name("Sort");
         inputBuilder.field(newInputObjectField()
                                    .name("orders")
-                                   .type(GraphQLNonNull.nonNull(GraphQLList.list(GraphQLNonNull.nonNull(
-                                           createOrderType())))));
+                                   .type(nonNull(GraphQLList.list(nonNull(createOrderType())))));
         return inputBuilder.build();
     }
 
@@ -291,10 +290,10 @@ public class GqlSchemaCacheLoader implements AsyncCacheLoader<String, GraphQL> {
         GraphQLInputObjectType.Builder inputBuilder = newInputObject().name("Pageable");
         inputBuilder.field(newInputObjectField()
                                    .name("pageNumber")
-                                   .type(GraphQLNonNull.nonNull(GraphQLInt)))
+                                   .type(nonNull(GraphQLInt)))
                     .field(newInputObjectField()
                                    .name("pageSize")
-                                   .type(GraphQLNonNull.nonNull(GraphQLInt)))
+                                   .type(nonNull(GraphQLInt)))
                     .field(newInputObjectField()
                                    .name("sort")
                                    .type(sortType));

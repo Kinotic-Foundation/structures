@@ -79,7 +79,7 @@ public class ObjectC3TypeToGql implements C3TypeConverter<GqlTypeHolder, ObjectC
                     String objectTypeName = objectType.getName();
 
                     conversionContext.state().getReferencedTypes().put(objectTypeName, objectType);
-                    fieldValue.setOutputType(typeRef(objectTypeName));
+                    fieldValue = fieldValue.toBuilder().outputType(typeRef(objectTypeName)).build();
                 }
 
                 if (fieldValue.getInputType() instanceof GraphQLInputObjectType) {
@@ -87,7 +87,7 @@ public class ObjectC3TypeToGql implements C3TypeConverter<GqlTypeHolder, ObjectC
                     String inputTypeName = inputObjectType.getName();
 
                     conversionContext.state().getReferencedTypes().put(inputTypeName, inputObjectType);
-                    fieldValue.setInputType(typeRef(inputTypeName));
+                    fieldValue = fieldValue.toBuilder().inputType(typeRef(inputTypeName)).build();
                 }
 
                 // For union literals the DiscriminatorDecorator can be on the property, we capture that here.
@@ -104,8 +104,10 @@ public class ObjectC3TypeToGql implements C3TypeConverter<GqlTypeHolder, ObjectC
                 }
 
                 if (isNotNull(property)) {
-                    fieldValue.setOutputType(nonNull(fieldValue.getOutputType()));
-                    fieldValue.setInputType(nonNull(fieldValue.getInputType()));
+                    fieldValue = fieldValue.toBuilder()
+                                           .outputType(nonNull(fieldValue.getOutputType()))
+                                           .inputType(nonNull(fieldValue.getInputType()))
+                                           .build();
                 }
             }
 
