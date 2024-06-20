@@ -104,10 +104,13 @@ public class ObjectC3TypeToGql implements C3TypeConverter<GqlTypeHolder, ObjectC
                 }
 
                 if (isNotNull(property)) {
-                    fieldValue = fieldValue.toBuilder()
-                                           .outputType(nonNull(fieldValue.getOutputType()))
-                                           .inputType(nonNull(fieldValue.getInputType()))
-                                           .build();
+                    GqlTypeHolder.GqlTypeHolderBuilder builder
+                            = fieldValue.toBuilder()
+                                        .outputType(nonNull(fieldValue.getOutputType()));
+                    if (fieldValue.getInputType() != null) {
+                        builder.inputType(nonNull(fieldValue.getInputType()));
+                    }
+                    fieldValue = builder.build();
                 }
             }
 
