@@ -22,6 +22,7 @@ import org.kinotic.structures.internal.idl.converters.graphql.GqlTypeHolder;
 import org.kinotic.structures.internal.utils.GqlUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
@@ -50,11 +51,19 @@ public class GqlSchemaCacheLoader implements AsyncCacheLoader<String, GraphQL> {
     private static final Logger log = LoggerFactory.getLogger(GqlSchemaCacheLoader.class);
     private static final EntitiesTypeResolver ENTITIES_TYPE_RESOLVER = new EntitiesTypeResolver();
 
+    private static final String FEDERATION_BASE = "extend schema\n" +
+            "@link(\n" +
+            "    url: \"https://specs.apollo.dev/federation/v2.7\"\n" +
+            "    import: [\n" +
+            "        \"@key\"\n" +
+            "    ]\n" +
+            ")\n";
+
     private final EntitiesService entitiesService;
     private final StructureDAO structureDAO;
     private final StructureConversionService structureConversionService;
     private final GqlOperationDefinitionService gqlOperationDefinitionService;
-
+    private final ResourceLoader resourceLoader;
 
     @Override
     public CompletableFuture<GraphQL> asyncLoad(String key, Executor executor) throws Exception {
@@ -149,7 +158,12 @@ public class GqlSchemaCacheLoader implements AsyncCacheLoader<String, GraphQL> {
                                                                                           .state()
                                                                                           .getReferencedTypes());
 
-                        GraphQLSchema.Builder graphQLSchemaBuilder = GraphQLSchema.newSchema()
+                        // Since the transformer does not add all needed directives if not loaded from a file
+                        // We load an empty file first then uss that as the base for our schema
+                        GraphQLSchema federationBaseSchema = Federation.transform(FEDERATION_BASE)
+                                                                       .build();
+
+                        GraphQLSchema.Builder graphQLSchemaBuilder = GraphQLSchema.newSchema(federationBaseSchema)
                                                                                   .codeRegistry(codeRegistryBuilder.build())
                                                                                   .additionalType(sortType)
                                                                                   .additionalType(pageableType)
@@ -166,8 +180,8 @@ public class GqlSchemaCacheLoader implements AsyncCacheLoader<String, GraphQL> {
                         }
 
                         graphQLSchemaBuilder.additionalTypes(Set.copyOf(additionalTypes.values()));
-                        GraphQLSchema graphQLSchema = graphQLSchemaBuilder.build();
 
+                        GraphQLSchema graphQLSchema = graphQLSchemaBuilder.build();
                         graphQLSchema = Federation.transform(graphQLSchema)
                                                   .setFederation2(true)
                                                   .fetchEntities(new EntitiesDataFetcher(entitiesService, namespace))
