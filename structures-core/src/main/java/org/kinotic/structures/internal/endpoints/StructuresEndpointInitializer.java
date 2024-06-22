@@ -38,7 +38,7 @@ public class StructuresEndpointInitializer {
     public void init(){
         // If production deploy one verticle of each per core
         int numToDeploy = continuumProperties.getMaxNumberOfCoresToUse();
-        log.info(numToDeploy + " Cores will be used for Structures Endpoints");
+        log.info("{} Cores will be used for Structures Endpoints", numToDeploy);
         DeploymentOptions options = new DeploymentOptions().setInstances(numToDeploy);
 
         vertx.deployVerticle(verticleFactory::createOpenApiVerticle, options);
