@@ -185,7 +185,6 @@ export type ConversionConfiguration = {
     utilFunctionLocator: UtilFunctionLocator,
     entityConfigurations?: EntityConfiguration[],
     verbose: boolean,
-    dryRun: boolean,
     logger: Logger,
 }
 

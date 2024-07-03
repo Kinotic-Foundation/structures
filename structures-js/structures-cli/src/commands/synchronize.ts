@@ -1,45 +1,27 @@
-import {Args, Command, Flags} from '@oclif/core'
+import {Continuum} from '@kinotic/continuum-client'
 import {FunctionDefinition, ObjectC3Type} from '@kinotic/continuum-idl'
+import {INamedQueriesService, IStructureService, NamedQueriesDefinition, Structure, Structures} from '@kinotic/structures-api'
+import {Args, Command, Flags} from '@oclif/core'
+import chalk from 'chalk'
+import {WebSocket} from 'ws'
 import {CodeGenerationService} from '../internal/CodeGenerationService.js'
 import {resolveServer} from '../internal/state/Environment.js'
-import {
-    Continuum
-} from '@kinotic/continuum-client'
-import {
-    Structures,
-    IStructureService,
-    Structure,
-    INamedQueriesService,
-    NamedQueriesDefinition
-} from '@kinotic/structures-api'
-import {
-    isStructuresProject,
-    loadStructuresProject,
-    NamespaceConfiguration
-} from '../internal/state/StructuresProject.js'
-import {
-    EntityInfo,
-    connectAndUpgradeSession,
-    convertAllEntities,
-    ConversionConfiguration,
-    writeEntityJsonToFilesystem,
-    writeGeneratedServiceInfoToFilesystem,
-} from '../internal/Utils.js'
-import {UtilFunctionLocator} from '../internal/UtilFunctionLocator.js'
-import chalk from 'chalk'
-import fs from 'fs'
-import { WebSocket } from 'ws'
+import {isStructuresProject, loadStructuresProject} from '../internal/state/StructuresProject.js'
+import {connectAndUpgradeSession} from '../internal/Utils.js'
 
 // This is required when running Continuum from node
 Object.assign(global, { WebSocket})
 
 export class Synchronize extends Command {
+    static aliases = ['sync']
+
     static description = 'Synchronize the local Entity definitions with the Structures Server'
 
     static examples = [
-        '$ structures synchronize my.namespace --server http://localhost:9090 --publish --verbose',
-        '$ structures synchronize my.namespace -p',
         '$ structures synchronize',
+        '$ structures sync',
+        '$ structures synchronize my.namespace --server http://localhost:9090 --publish --verbose',
+        '$ structures sync my.namespace -p -v -s http://localhost:9090'
     ]
 
     static flags = {
@@ -64,15 +46,7 @@ export class Synchronize extends Command {
 
             const structuresProject= await loadStructuresProject()
 
-            let namespaceConfig
-            if(args.namespace){
-                namespaceConfig = structuresProject.findNamespaceConfig(args.namespace)
-                if(namespaceConfig === null){
-                    this.error(`No configured namespace found with name ${args.namespace}`)
-                }
-            }else{
-                namespaceConfig = structuresProject.getDefaultNamespaceConfig()
-            }
+            let namespaceConfig = structuresProject.findNamespaceConfigOrDefault(args.namespace)
 
             let serverUrl = ''
             if(!flags.dryRun) {
@@ -87,32 +61,28 @@ export class Synchronize extends Command {
                         await Structures.getNamespaceService().createNamespaceIfNotExist(namespaceConfig.namespaceName, '')
                     }
 
-                    const utilFunctionLocator = new UtilFunctionLocator(namespaceConfig || [], flags.verbose)
+                    const codeGenerationService = new CodeGenerationService(namespaceConfig.namespaceName,
+                                                                                                 structuresProject.fileExtensionForImports,
+                                                                                                 this)
 
-                    for(const entitiesPath of namespaceConfig.entitiesPaths) {
-                        const config: ConversionConfiguration = {
-                            namespace: namespaceConfig.namespaceName,
-                            entitiesPath: entitiesPath,
-                            utilFunctionLocator: utilFunctionLocator,
-                            verbose: flags.verbose || flags.dryRun,
-                            dryRun: flags.dryRun,
-                            logger: this
-                        }
-                        await this.processEntities(config, namespaceConfig, structuresProject.fileExtensionForImports, flags.publish)
-                    }
+                    await codeGenerationService
+                            .generateAllEntities(namespaceConfig,
+                                                 flags.verbose || flags.dryRun,
+                                                 async (entityInfo, serviceInfo) =>{
+                                                     // We sync named queries first since currently the backend cache eviction logic is a little dumb
+                                                     // i.e. The cache eviction for the structure deletes the GraphQL schema
+                                                     //      This will evict the named query execution plan cache
+                                                     //      We want to make sure the GraphQL schema is updated after both these are updated and the structure below
+                                                     if(!flags.dryRun && serviceInfo.namedQueries.length > 0){
+                                                         await this.synchronizeNamedQueries(entityInfo.entity, serviceInfo.namedQueries)
+                                                     }
 
-                    for(const [externalEntitiesPath, entityConfigurations] of Object.entries(namespaceConfig.externalEntities || {})){
-                        const config: ConversionConfiguration = {
-                            namespace: namespaceConfig.namespaceName,
-                            entitiesPath: externalEntitiesPath,
-                            utilFunctionLocator: utilFunctionLocator,
-                            entityConfigurations: entityConfigurations,
-                            verbose: flags.verbose || flags.dryRun,
-                            dryRun: flags.dryRun,
-                            logger: this
-                        }
-                        await this.processEntities(config, namespaceConfig, structuresProject.fileExtensionForImports, flags.publish)
-                    }
+                                                     if(!flags.dryRun) {
+                                                         await this.synchronizeEntity(entityInfo.entity, flags.publish, flags.verbose)
+                                                     }
+                                                 })
+
+                    this.log(`Synchronization Complete For namespace: ${namespaceConfig.namespaceName}`, flags.verbose)
 
                 } catch (e) {
                     if (e instanceof Error) {
@@ -132,65 +102,13 @@ export class Synchronize extends Command {
         return
     }
 
-    private logVerbose(message: string | ( () => string ), verbose: boolean): void {
+    public logVerbose(message: string | ( () => string ), verbose: boolean): void {
         if (verbose) {
             if (typeof message === 'function') {
                 this.log(message())
             }else{
                 this.log(message)
             }
-        }
-    }
-
-    private async processEntities(config: ConversionConfiguration,
-                                  namespaceConfig: NamespaceConfiguration,
-                                  fileExtensionForImports: string,
-                                  publish: boolean){
-
-        if (!fs.existsSync(config.entitiesPath)) {
-            throw new Error(`Entities path does not exist: ${config.entitiesPath}`)
-        }
-
-        const convertedEntities: EntityInfo[] = convertAllEntities(config)
-        const codeGenerationService = new CodeGenerationService(namespaceConfig.namespaceName, this)
-
-        if (convertedEntities.length > 0) {
-
-            for (const entityInfo of convertedEntities) {
-
-                this.logVerbose(`Generated Structure Mapping for ${entityInfo.entity.namespace}.${entityInfo.entity.name}`, config.verbose)
-
-                const generatedServiceInfo
-                          = await codeGenerationService.generateEntityService(entityInfo,
-                                                                              namespaceConfig,
-                                                                              config.utilFunctionLocator,
-                                                                              fileExtensionForImports)
-
-                if(config.verbose){
-                    await writeEntityJsonToFilesystem(namespaceConfig.generatedPath, entityInfo.entity, this)
-                    if(generatedServiceInfo.namedQueries.length > 0) {
-                        await writeGeneratedServiceInfoToFilesystem(namespaceConfig.generatedPath,
-                                                                    generatedServiceInfo,
-                                                                    this)
-                    }
-                }
-
-                // We sync named queries first since currently the backend cache eviction logic is a little dumb
-                // i.e. The cache eviction for the structure deletes the GraphQL schema
-                //      This will evict the named query execution plan cache
-                //      We want to make sure the GraphQL schema is updated after both these are updated and the structure below
-                if(!config.dryRun && generatedServiceInfo.namedQueries.length > 0){
-                    await this.synchronizeNamedQueries(entityInfo.entity, generatedServiceInfo.namedQueries)
-                }
-
-                if(!config.dryRun) {
-                    await this.synchronizeEntity(entityInfo.entity, publish, config.verbose)
-                }
-            }
-
-            this.logVerbose(`Synchronization Complete For namespace: ${config.namespace} and Entities Path: ${config.entitiesPath}`, config.verbose)
-        } else {
-            this.logVerbose(`No Entities found to Synchronize For namespace: ${config.namespace} and Entities Path: ${config.entitiesPath}`, config.verbose)
         }
     }
 

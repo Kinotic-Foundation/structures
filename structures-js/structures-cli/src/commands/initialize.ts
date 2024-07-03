@@ -9,10 +9,13 @@ import {
     saveStructuresProject
 } from '../internal/state/StructuresProject.js'
 
-export default class Init extends Command {
+export class Initialize extends Command {
+    static aliases = ['init']
+
     static description = 'This will initialize a new Structures Project for use with the Structures CLI.'
 
     static examples = [
+        '$ structures initialize --namespace my.namespace --entities path/to/entities --generated path/to/services',
         '$ structures init --namespace my.namespace --entities path/to/entities --generated path/to/services',
         '$ structures init -n my.namespace -e path/to/entities -g path/to/services',
     ]
@@ -24,7 +27,7 @@ export default class Init extends Command {
     }
 
     public async run(): Promise<void> {
-        const {args, flags} = await this.parse(Init)
+        const {args, flags} = await this.parse(Initialize)
 
         if(await isStructuresProject()){
             this.log(chalk.red('Error: ') + ' The working directory is already a Structures Project')

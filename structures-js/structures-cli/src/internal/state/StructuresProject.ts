@@ -164,6 +164,19 @@ export class StructuresProject {
         return this.findNamespaceConfig(name) !== null
     }
 
+    findNamespaceConfigOrDefault(namespaceName?: string): NamespaceConfiguration {
+        let ret: NamespaceConfiguration | null
+        if(namespaceName){
+            ret = this.findNamespaceConfig(namespaceName)
+            if(ret === null){
+                throw new Error(`No configured namespace found with name ${namespaceName}`)
+            }
+        }else{
+            ret = this.getDefaultNamespaceConfig()
+        }
+        return ret
+    }
+
     findNamespaceConfig(namespaceName: string): NamespaceConfiguration | null {
         let ret: NamespaceConfiguration | null = null
         for(const namespace of this.namespaces){
