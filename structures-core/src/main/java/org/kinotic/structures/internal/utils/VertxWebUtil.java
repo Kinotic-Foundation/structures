@@ -5,10 +5,9 @@ import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.commons.lang3.Validate;
-import org.kinotic.continuum.core.api.crud.Direction;
-import org.kinotic.continuum.core.api.crud.Order;
-import org.kinotic.continuum.core.api.crud.Pageable;
-import org.kinotic.continuum.core.api.crud.Sort;
+import org.kinotic.continuum.core.api.crud.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,6 +16,7 @@ import java.util.List;
  * Created by Navíd Mitchell 🤪 on 6/1/23.
  */
 public class VertxWebUtil {
+    private static final Logger log = LoggerFactory.getLogger(VertxWebUtil.class);
 
     public static String validateAndReturnStructureId(RoutingContext ctx){
         String structureNamespace = ctx.pathParam("structureNamespace");
@@ -28,14 +28,69 @@ public class VertxWebUtil {
         return StructuresUtil.structureNameToId(structureNamespace, structureName);
     }
 
-    public static Pageable validateAndReturnPageable(RoutingContext ctx){
-        String pageString = ctx.request().getParam("page");
-        String sizeString = ctx.request().getParam("size");
-        String sortString = ctx.request().getParam("sort");
+    public static String validateAndReturnPathParam(String pathParamName, RoutingContext ctx){
+        String ret = ctx.pathParam(pathParamName);
+        Validate.notNull(ret, pathParamName + " must not be null");
+        return ret;
+    }
 
-        int page = (pageString != null && !pageString.isEmpty()) ? Integer.parseInt(pageString) : 0;
+    /**
+     * Returns a {@link Pageable} from the request or a default {@link OffsetPageable} if none is present
+     * @param ctx the routing context to get the pageable from
+     * @return a {@link Pageable}
+     */
+    public static Pageable getPageableOrDefaultOffsetPageable(RoutingContext ctx){
+       Pageable ret = getPageableIfExits(ctx ,true, OffsetPageable.class);
+         if(ret == null){
+              ret = Pageable.create(0, 25, null);
+         }
+         return ret;
+    }
+
+    /**
+     * Returns a {@link Pageable} from the request or a default {@link CursorPageable} if none is present
+     * @param ctx the routing context to get the pageable from
+     * @return a {@link Pageable}
+     */
+    public static Pageable getPageableOrDefaultCursorPageable(RoutingContext ctx){
+        Pageable ret = getPageableIfExits(ctx ,true, CursorPageable.class);
+        if(ret == null){
+            ret = Pageable.create(null, 25, null);
+        }
+        return ret;
+    }
+
+    /**
+     * Returns a {@link Pageable} if either a cursor or page number is present in the request
+     * @param ctx the routing context to get the pageable from
+     * @param createIfOnlySortPresent if true and only a sort is present a {@link OffsetPageable} will be created with a page number of 0
+     * @param defaultPageableClass the default {@link Pageable} type if only a sort is present
+     * @return a {@link Pageable} or null if neither a cursor nor page number is present
+     */
+    public static Pageable getPageableIfExits(RoutingContext ctx,
+                                              boolean createIfOnlySortPresent,
+                                              Class<? extends Pageable> defaultPageableClass){
+        Pageable ret = null;
+        String sizeString = ctx.request().getParam("size");
         int size = (sizeString != null && !sizeString.isEmpty()) ? Integer.parseInt(sizeString) : 25;
 
+        String pageString = ctx.request().getParam("page");
+        Integer pageNumber = pageString != null ? Integer.parseInt(pageString) : null;
+
+        String cursor = ctx.request().getParam("cursor");
+        boolean cursorPresent = false;
+        if(cursor != null){
+            if(cursor.equals("null")){
+                cursor = null;
+            }
+            cursorPresent = true;
+        }
+
+        if (cursorPresent && pageNumber != null) {
+            throw new IllegalArgumentException("Pageable cannot have both a cursor and a pageNumber");
+        }
+
+        String sortString = ctx.request().getParam("sort");
         String[] sort = (sortString != null && !sortString.isEmpty()) ? sortString.split(",") : new String[0];
         List<Order> orders = new ArrayList<>();
         for(String fieldString : sort){
@@ -46,19 +101,34 @@ public class VertxWebUtil {
             }
         }
 
-        return Pageable.create(page, size, Sort.by(orders));
+        if(pageNumber != null){
+            ret = Pageable.create(pageNumber, size, Sort.by(orders));
+        } else if(cursorPresent){
+            ret = Pageable.create(cursor, size, Sort.by(orders));
+        } else if(createIfOnlySortPresent && defaultPageableClass != null && !orders.isEmpty()){
+            if(defaultPageableClass == OffsetPageable.class){
+                ret = Pageable.create(0, size, Sort.by(orders));
+            }else if(defaultPageableClass == CursorPageable.class){
+                ret = Pageable.create(null, size, Sort.by(orders));
+            }else{
+                throw new IllegalArgumentException("Unsupported defaultPageableClass: " + defaultPageableClass);
+            }
+        }
+
+        return ret;
     }
 
     public static Handler<RoutingContext> createExceptionConvertingFailureHandler(){
         return ctx -> {
             Throwable failure = ctx.failure();
             if(failure != null){
-                writeException(ctx.response(), failure);
+                writeException(ctx, failure);
             }
         };
     }
 
-    public static void writeException(HttpServerResponse response, Throwable throwable){
+    public static void writeException(RoutingContext context, Throwable throwable){
+        HttpServerResponse response = context.response();
         if(throwable instanceof IllegalArgumentException) {
             response.setStatusCode(400);
         }else if(throwable instanceof NullPointerException){
@@ -66,6 +136,9 @@ public class VertxWebUtil {
         } else {
             response.setStatusCode(500);
         }
+
+        log.warn("Error processing request", throwable);
+
         response.putHeader("Content-Type", "application/json");
         response.end(new JsonObject().put("error", throwable.getMessage()).encode());
     }

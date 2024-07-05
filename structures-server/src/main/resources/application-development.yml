@@ -1,7 +1,12 @@
+
 # YAML Reference http://www.yaml.org/refcard.html
 continuum:
   discovery: sharedfs
   debug: true
+  maxNumberOfCoresToUse: 4
+#continuum-gateway:
+#  stomp:
+#    port: 9090
 
 logging:
   level:
@@ -12,5 +17,12 @@ logging:
 
 structures:
   initializeWithSampleData: true
+  corsAllowedOriginPattern: "https:\\/\\/studio.apollographql.com|http:\\/\\/localhost:\\d+|http:\\/\\/121.0.0.1:\\d+"
+  corsAllowedHeaders:
+    - "*"
+  corsAllowCredentials: true
+
+#  openApiPort: 9090s
+#  graphqlPort: 9090s
 #  elastic-username: structures
 #  elastic-password: pass79

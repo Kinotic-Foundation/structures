@@ -21,7 +21,7 @@ public class Car {
     private String id;
     private String make;
     private String model;
-    private String year;
+    private Integer year;
     private Person owner;
 
 

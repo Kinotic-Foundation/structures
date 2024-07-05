@@ -1,5 +1,5 @@
 import {Continuum, CrudServiceProxy, ICrudServiceProxy,} from '@kinotic/continuum-client'
-import {Namespace} from '@/api/domain/Namespace.js'
+import {Namespace} from '@/api/domain/Namespace'
 
 
 export interface INamespaceService extends ICrudServiceProxy<Namespace> {

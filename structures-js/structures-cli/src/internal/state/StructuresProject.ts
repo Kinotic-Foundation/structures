@@ -1,12 +1,14 @@
 import {MultiTenancyType} from '@kinotic/structures-api'
-import {C3Type, C3Decorator} from '@kinotic/continuum-idl'
+import {C3Type, C3Decorator, PropertyDefinition} from '@kinotic/continuum-idl'
 import { createStateManager } from './IStateManager.js'
 
 const STRUCTURES_KEY = 'structures'
 
+// FIXME: make sure comments are correct
+
 /**
  * The configuration for a property that should be overridden.
- * This allows you to specify a {@link C3Type} for a property that you cannot add a {@link C3Decorator} to.
+ * This allows you to specify a static {@link PropertyDefinition} for a property.
  */
 export class OverrideConfiguration {
     /**
@@ -15,9 +17,9 @@ export class OverrideConfiguration {
     jsonPath!: string
 
     /**
-     * The {@link C3Type} that should be used for the property.
+     * The {@link PropertyDefinition} that should be used for the property.
      */
-    c3Type!: C3Type
+    propertyDefinition!: PropertyDefinition
 }
 
 /**
@@ -160,6 +162,19 @@ export class StructuresProject {
 
     hasNamespaceConfig(name: string): boolean {
         return this.findNamespaceConfig(name) !== null
+    }
+
+    findNamespaceConfigOrDefault(namespaceName?: string): NamespaceConfiguration {
+        let ret: NamespaceConfiguration | null
+        if(namespaceName){
+            ret = this.findNamespaceConfig(namespaceName)
+            if(ret === null){
+                throw new Error(`No configured namespace found with name ${namespaceName}`)
+            }
+        }else{
+            ret = this.getDefaultNamespaceConfig()
+        }
+        return ret
     }
 
     findNamespaceConfig(namespaceName: string): NamespaceConfiguration | null {

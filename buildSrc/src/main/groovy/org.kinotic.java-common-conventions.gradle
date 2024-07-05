@@ -2,11 +2,10 @@ plugins {
     // Apply the java Plugin to add support for Java.
     id 'java'
     id 'io.spring.dependency-management'
-    id 'io.freefair.lombok'
 }
 
 group 'org.kinotic'
-version '1.13.2'
+version '2.0.0'
 sourceCompatibility = '11'
 
 repositories {

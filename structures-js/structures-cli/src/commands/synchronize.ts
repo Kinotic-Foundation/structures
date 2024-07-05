@@ -1,51 +1,27 @@
+import {Continuum} from '@kinotic/continuum-client'
+import {FunctionDefinition, ObjectC3Type} from '@kinotic/continuum-idl'
+import {INamedQueriesService, IStructureService, NamedQueriesDefinition, Structure, Structures} from '@kinotic/structures-api'
 import {Args, Command, Flags} from '@oclif/core'
-import path from 'path'
-import {ObjectC3Type} from '@kinotic/continuum-idl'
-import {StatementMapper, createImportString} from '../internal/converter/codegen/StatementMapper.js'
-import {StatementMapperConversionState} from '../internal/converter/codegen/StatementMapperConversionState.js'
-import {StatementMapperConverterStrategy} from '../internal/converter/codegen/StatementMapperConverterStrategy.js'
-import {createConversionContext} from '../internal/converter/IConversionContext.js'
-import {resolveServer} from '../internal/state/Environment.js'
-import {
-    Continuum
-} from '@kinotic/continuum-client'
-import {Structures, IStructureService, Structure} from '@kinotic/structures-api'
-import {
-    isStructuresProject,
-    loadStructuresProject,
-    NamespaceConfiguration
-} from '../internal/state/StructuresProject.js'
-import {
-    EntityInfo,
-    connectAndUpgradeSession,
-    convertAllEntities,
-    ConversionConfiguration,
-    writeEntityJsonToFilesystem,
-    getRelativeImportPath, tryGetNodeModuleName
-} from '../internal/Utils.js'
-import {UtilFunctionLocator} from '../internal/UtilFunctionLocator.js'
 import chalk from 'chalk'
-import { Liquid } from 'liquidjs'
-import fs from 'fs'
-import {fileURLToPath} from 'url'
-import { WebSocket } from 'ws'
+import {WebSocket} from 'ws'
+import {CodeGenerationService} from '../internal/CodeGenerationService.js'
+import {resolveServer} from '../internal/state/Environment.js'
+import {isStructuresProject, loadStructuresProject} from '../internal/state/StructuresProject.js'
+import {connectAndUpgradeSession} from '../internal/Utils.js'
 
 // This is required when running Continuum from node
 Object.assign(global, { WebSocket})
 
-const filename = fileURLToPath(import.meta.url)
-const engine = new Liquid({
-    root: path.resolve(path.dirname(filename), '../templates/'),  // root for templates lookup
-    extname: '.liquid'
-});
-
 export class Synchronize extends Command {
+    static aliases = ['sync']
+
     static description = 'Synchronize the local Entity definitions with the Structures Server'
 
     static examples = [
-        '$ structures synchronize my.namespace --server http://localhost:9090 --publish --verbose',
-        '$ structures synchronize my.namespace -p',
         '$ structures synchronize',
+        '$ structures sync',
+        '$ structures synchronize my.namespace --server http://localhost:9090 --publish --verbose',
+        '$ structures sync my.namespace -p -v -s http://localhost:9090'
     ]
 
     static flags = {
@@ -70,15 +46,7 @@ export class Synchronize extends Command {
 
             const structuresProject= await loadStructuresProject()
 
-            let namespaceConfig
-            if(args.namespace){
-                namespaceConfig = structuresProject.findNamespaceConfig(args.namespace)
-                if(namespaceConfig === null){
-                    this.error(`No configured namespace found with name ${args.namespace}`)
-                }
-            }else{
-                namespaceConfig = structuresProject.getDefaultNamespaceConfig()
-            }
+            let namespaceConfig = structuresProject.findNamespaceConfigOrDefault(args.namespace)
 
             let serverUrl = ''
             if(!flags.dryRun) {
@@ -93,32 +61,28 @@ export class Synchronize extends Command {
                         await Structures.getNamespaceService().createNamespaceIfNotExist(namespaceConfig.namespaceName, '')
                     }
 
-                    const utilFunctionLocator = new UtilFunctionLocator(namespaceConfig || [], flags.verbose)
+                    const codeGenerationService = new CodeGenerationService(namespaceConfig.namespaceName,
+                                                                                                 structuresProject.fileExtensionForImports,
+                                                                                                 this)
 
-                    for(const entitiesPath of namespaceConfig.entitiesPaths) {
-                        const config: ConversionConfiguration = {
-                            namespace: namespaceConfig.namespaceName,
-                            entitiesPath: entitiesPath,
-                            utilFunctionLocator: utilFunctionLocator,
-                            verbose: flags.verbose || flags.dryRun,
-                            dryRun: flags.dryRun,
-                            logger: this
-                        }
-                        await this.processEntities(config, namespaceConfig, structuresProject.fileExtensionForImports, flags.publish)
-                    }
+                    await codeGenerationService
+                            .generateAllEntities(namespaceConfig,
+                                                 flags.verbose || flags.dryRun,
+                                                 async (entityInfo, serviceInfo) =>{
+                                                     // We sync named queries first since currently the backend cache eviction logic is a little dumb
+                                                     // i.e. The cache eviction for the structure deletes the GraphQL schema
+                                                     //      This will evict the named query execution plan cache
+                                                     //      We want to make sure the GraphQL schema is updated after both these are updated and the structure below
+                                                     if(!flags.dryRun && serviceInfo.namedQueries.length > 0){
+                                                         await this.synchronizeNamedQueries(entityInfo.entity, serviceInfo.namedQueries)
+                                                     }
 
-                    for(const [externalEntitiesPath, entityConfigurations] of Object.entries(namespaceConfig.externalEntities || {})){
-                        const config: ConversionConfiguration = {
-                            namespace: namespaceConfig.namespaceName,
-                            entitiesPath: externalEntitiesPath,
-                            utilFunctionLocator: utilFunctionLocator,
-                            entityConfigurations: entityConfigurations,
-                            verbose: flags.verbose || flags.dryRun,
-                            dryRun: flags.dryRun,
-                            logger: this
-                        }
-                        await this.processEntities(config, namespaceConfig, structuresProject.fileExtensionForImports, flags.publish)
-                    }
+                                                     if(!flags.dryRun) {
+                                                         await this.synchronizeEntity(entityInfo.entity, flags.publish, flags.verbose)
+                                                     }
+                                                 })
+
+                    this.log(`Synchronization Complete For namespace: ${namespaceConfig.namespaceName}`, flags.verbose)
 
                 } catch (e) {
                     if (e instanceof Error) {
@@ -138,37 +102,13 @@ export class Synchronize extends Command {
         return
     }
 
-    private async processEntities(config: ConversionConfiguration,
-                                  namespaceConfig: NamespaceConfiguration,
-                                  fileExtensionForImports: string,
-                                  publish: boolean){
-
-        if (!fs.existsSync(config.entitiesPath)) {
-            throw new Error(`Entities path does not exist: ${config.entitiesPath}`)
-        }
-
-        const convertedEntities: EntityInfo[] = convertAllEntities(config)
-
-        if (convertedEntities.length > 0) {
-
-            for (const entityInfo of convertedEntities) {
-
-                this.logVerbose(`Generated Structure Mapping for ${entityInfo.entity.namespace}.${entityInfo.entity.name}`, config.verbose)
-
-                await this.generateEntityService(entityInfo, namespaceConfig, config.utilFunctionLocator, fileExtensionForImports)
-
-                if(config.verbose){
-                    await writeEntityJsonToFilesystem(namespaceConfig.generatedPath, entityInfo.entity, this)
-                }
-
-                if(!config.dryRun) {
-                    await this.synchronizeEntity(entityInfo.entity, publish, config.verbose)
-                }
+    public logVerbose(message: string | ( () => string ), verbose: boolean): void {
+        if (verbose) {
+            if (typeof message === 'function') {
+                this.log(message())
+            }else{
+                this.log(message)
             }
-
-            this.logVerbose(`Synchronization Complete For namespace: ${config.namespace} and Entities Path: ${config.entitiesPath}`, config.verbose)
-        } else {
-            this.logVerbose(`No Entities found to Synchronize For namespace: ${config.namespace} and Entities Path: ${config.entitiesPath}`, config.verbose)
         }
     }
 
@@ -207,81 +147,28 @@ export class Synchronize extends Command {
             }
         } catch (e: any) {
             const message = e?.message || e
-            this.log(chalk.red('Error') + ` Synchronizing Structure: ${namespace}.${name}, Exception: ${message}`)
+            this.log(chalk.red('Error') + ` Synchronizing Structure: ${structureId}, Exception: ${message}`)
         }
     }
 
-    private async generateEntityService(entityInfo: EntityInfo,
-                                        namespaceConfig: NamespaceConfiguration,
-                                        utilFunctionLocator: UtilFunctionLocator,
-                                        fileExtensionForImports: string): Promise<void> {
+    private async synchronizeNamedQueries(entity:       ObjectC3Type,
+                                          namedQueries: FunctionDefinition[]): Promise<void> {
+        const namedQueriesService: INamedQueriesService = Structures.getNamedQueriesService()
+        const namespace = entity.namespace
+        const structure = entity.name
+        const id = (namespace + '.' + structure).toLowerCase()
 
-        const generatedPath = namespaceConfig.generatedPath
-        const baseEntityServicePath = path.resolve(generatedPath, 'generated', `Base${entityInfo.entity.name}EntityService.ts`)
-        const entityServicePath = path.resolve(generatedPath, `${entityInfo.entity.name}EntityService.ts`)
+        this.log(`Synchronizing Named Queries for Structure: ${namespace}.${structure}`)
 
-        const entityName = entityInfo.entity.name
-        const entityNamespace = entityInfo.entity.namespace
-        const defaultExport = entityInfo.defaultExport
-        const validate = namespaceConfig.validate
-
-        let entityImportPath = tryGetNodeModuleName(entityInfo.exportedFromFile)
-        if(!entityImportPath){
-            entityImportPath = getRelativeImportPath(baseEntityServicePath, entityInfo.exportedFromFile, fileExtensionForImports)
-        }
-
-        const statement = this.createStatementMapper(baseEntityServicePath,
-                                                                   entityInfo,
-                                                                   utilFunctionLocator)
-        const validationLogic = statement.toStatementString()
-        const importStatements = createImportString(statement, baseEntityServicePath, fileExtensionForImports) || ''
-
-        //  We always generate the base entity service. This way if our internal logic changes we can update it
-        fs.mkdirSync(path.dirname(baseEntityServicePath), {recursive: true})
-        const baseReadStream= await engine.renderFileToNodeStream('BaseEntityService',
-            {
-                entityName,
-                entityNamespace,
-                defaultExport,
-                entityImportPath,
-                validationLogic,
-                importStatements
-            })
-        let baseWriteStream = fs.createWriteStream(baseEntityServicePath)
-        baseReadStream.pipe(baseWriteStream)
-
-        //  we only generate if the file does not exist
-        if (!fs.existsSync(entityServicePath)) {
-            const readStream= await engine.renderFileToNodeStream('EntityService',
-                {
-                    entityName,
-                    entityNamespace,
-                    validate,
-                    fileExtensionForImports
-                })
-            let writeStream = fs.createWriteStream(entityServicePath)
-            readStream.pipe(writeStream)
-        }
-    }
-
-    private createStatementMapper(generatedServicePath: string,
-                                  entityInfo: EntityInfo,
-                                  utilFunctionLocator: UtilFunctionLocator): StatementMapper{
-        const state = new StatementMapperConversionState(utilFunctionLocator)
-        state.entityConfiguration = entityInfo.entityConfiguration
-
-        const conversionContext =
-                  createConversionContext(new StatementMapperConverterStrategy(state, this))
-        return conversionContext.convert(entityInfo.entity)
-    }
-
-    private logVerbose(message: string | ( () => string ), verbose: boolean): void {
-        if (verbose) {
-            if (typeof message === 'function') {
-                this.log(message())
-            }else{
-                this.log(message)
-            }
+        try {
+            const namedQueriesDefinition = new NamedQueriesDefinition(id,
+                                                                      namespace,
+                                                                      structure,
+                                                                      namedQueries)
+            await namedQueriesService.save(namedQueriesDefinition)
+        } catch (e: any) {
+            const message = e?.message || e
+            this.log(chalk.red('Error') + ` Synchronizing Named Queries for Structure: ${id}, Exception: ${message}`)
         }
     }
 }

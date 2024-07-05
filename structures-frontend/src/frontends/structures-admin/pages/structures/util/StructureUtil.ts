@@ -1,4 +1,4 @@
-import {C3Decorator} from '@kinotic/continuum-idl'
+import {C3Decorator, PropertyDefinition} from '@kinotic/continuum-idl'
 
 export class StructureUtil {
     public static hasDecorator(decoratorName: string, decorators: C3Decorator[] | undefined): boolean {
@@ -12,5 +12,16 @@ export class StructureUtil {
             })
         }
         return hasDecorator
+    }
+
+    public static getPropertyDefinition(propertyName: string, propertyDefinitions: PropertyDefinition[]): PropertyDefinition | null {
+        let definition = null
+        for(const property of propertyDefinitions){
+            if(property.name === propertyName){
+                definition = property
+                break
+            }
+        }
+        return definition
     }
 }

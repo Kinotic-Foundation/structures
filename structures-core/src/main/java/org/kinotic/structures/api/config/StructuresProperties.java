@@ -16,6 +16,7 @@ import javax.annotation.PostConstruct;
 import javax.validation.constraints.NotNull;
 import java.time.Duration;
 import java.util.List;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -59,6 +60,17 @@ public class StructuresProperties {
      */
     private String corsAllowedOriginPattern = "http://localhost.*";
 
+    /**
+     * The allowed headers for CORS
+     */
+    private Set<String> corsAllowedHeaders = Set.of("Accept", "Authorization", "Content-Type");
+
+    /**
+     * If set will set the CORS Access-Control-Allow-Credentials header to this value
+     * If true then allowed origins must not contain a wildcard "*"
+     */
+    private Boolean corsAllowCredentials = null;
+
     private OpenApiSecurityType openApiSecurityType = OpenApiSecurityType.NONE;
 
     private int openApiPort = 8080;
@@ -93,9 +105,12 @@ public class StructuresProperties {
 
     @PostConstruct
     public void validate(){
-        // this will validate we do not contain invalid characters
-        // FIXME: should we limit the number of chars as well?
-        StructuresUtil.indexNameValidation(indexPrefix);
+        // validate index prefix
+        if(indexPrefix.length() > 16){
+            throw new IllegalArgumentException("indexPrefix cannot be longer than 16 characters");
+        }
+        // The prefix must be a valid namespace name
+        StructuresUtil.validateStructureNamespaceName(indexPrefix);
     }
 
     public boolean hasElasticUsernameAndPassword(){

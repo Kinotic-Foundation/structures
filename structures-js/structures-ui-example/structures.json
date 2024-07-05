@@ -1,0 +1,30 @@
+{
+  "namespaces": [
+    {
+      "namespaceName": "animal",
+      "entitiesPaths": [
+        "src/animal/domain"
+      ],
+      "generatedPath": "src/animal/services",
+      "validate": false
+    },
+    {
+      "namespaceName": "city",
+      "entitiesPaths": [
+        "src/city/domain"
+      ],
+      "generatedPath": "src/city/services",
+      "validate": false
+    },
+    {
+      "namespaceName": "mvd",
+      "entitiesPaths": [
+        "src/mvd/domain"
+      ],
+      "generatedPath": "src/mvd/services",
+      "validate": false
+    }
+  ],
+  "defaultNamespaceName": "city",
+  "fileExtensionForImports": ".js"
+}

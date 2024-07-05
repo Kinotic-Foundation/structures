@@ -1,5 +1,6 @@
 package org.kinotic.structures.internal.api.services;
 
+import org.kinotic.structures.api.domain.NamedQueriesDefinition;
 import org.kinotic.structures.api.domain.Structure;
 
 /**
@@ -12,5 +13,7 @@ public interface CacheEvictionService {
      * @param structure to evict the cache for
      */
     void evictCachesFor(Structure structure);
+
+    void evictCachesFor(NamedQueriesDefinition namedQueriesDefinition);
 
 }

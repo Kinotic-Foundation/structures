@@ -26,7 +26,7 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.kinotic.continuum.api.Identifiable;
 import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
-import org.kinotic.structures.api.decorators.MultiTenancyType;
+import org.kinotic.structures.api.domain.idl.decorators.MultiTenancyType;
 import org.kinotic.structures.internal.idl.converters.common.DecoratedProperty;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.*;
@@ -43,7 +43,6 @@ import java.util.List;
 public class Structure implements Identifiable<String> {
 
     @Id
-    @Field(type = FieldType.Keyword)
     private String id = null; // do not ever set, system managed
 
     @Field(type = FieldType.Keyword)
@@ -98,6 +97,8 @@ public class Structure implements Identifiable<String> {
     public String toString() {
         return new ToStringBuilder(this)
                 .append("id", id)
+                .append("name", name)
+                .append("namespace", namespace)
                 .append("description", description)
                 .append("multiTenancyType", multiTenancyType)
                 .toString();

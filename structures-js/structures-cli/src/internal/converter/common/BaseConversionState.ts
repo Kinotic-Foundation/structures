@@ -1,4 +1,4 @@
-import {C3Type} from '@kinotic/continuum-idl'
+import {C3Type, PropertyDefinition} from '@kinotic/continuum-idl'
 import {FunctionDeclaration} from 'ts-morph'
 import {
     CalculatedPropertyConfiguration,
@@ -10,7 +10,7 @@ import {UtilFunctionLocator} from '../../UtilFunctionLocator.js'
 
 export class BaseConversionState {
 
-    private readonly utilFunctionLocator: UtilFunctionLocator
+    private readonly utilFunctionLocator: UtilFunctionLocator | null
     private readonly useFullJsonPathForCalculatedProperties: boolean
     private _entityConfiguration: EntityConfiguration | undefined = undefined
     private _exclusionMap: Map<string, void> | null = null
@@ -24,7 +24,7 @@ export class BaseConversionState {
      * @param utilFunctionLocator used to locate util functions
      * @param useFullJsonPathForCalculatedProperties
      */
-    constructor(utilFunctionLocator: UtilFunctionLocator,
+    constructor(utilFunctionLocator: UtilFunctionLocator | null,
                 useFullJsonPathForCalculatedProperties = false) {
         this.utilFunctionLocator = utilFunctionLocator
         this.useFullJsonPathForCalculatedProperties = useFullJsonPathForCalculatedProperties
@@ -92,12 +92,12 @@ export class BaseConversionState {
         return ret
     }
 
-    getOverrideType(jsonPath: string): C3Type | null {
-        let ret: C3Type | null = null
+    getOverrideType(jsonPath: string): PropertyDefinition | null {
+        let ret: PropertyDefinition | null = null
         if (this._overridesMap) {
             const override = this._overridesMap.get(jsonPath)
             if (override) {
-                ret = override.c3Type
+                ret = override.propertyDefinition
             }
         }
         return ret
@@ -108,7 +108,7 @@ export class BaseConversionState {
         if (this._transformsMap) {
             const transform = this._transformsMap.get(jsonPath)
             if (transform) {
-                ret = this.utilFunctionLocator.resolveFunction(transform.transformerFunctionName)
+                ret = this.getUtilFunctionByName(transform.transformerFunctionName)
                 if (!ret) {
                     throw new Error(`No transformer function could be found with name ${transform.transformerFunctionName}`)
                 }
@@ -126,6 +126,9 @@ export class BaseConversionState {
     }
 
     getUtilFunctionByName(name: string): FunctionDeclaration | null {
+        if(!this.utilFunctionLocator){
+            throw new Error(`Util Function ${name} required, but no UtilFunctionLocator set`)
+        }
         return this.utilFunctionLocator.resolveFunction(name)
     }
 

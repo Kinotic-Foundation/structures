@@ -16,7 +16,6 @@ import org.elasticsearch.client.RestClientBuilder;
 import org.kinotic.structures.api.config.StructuresProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Profile;
 import org.springframework.data.elasticsearch.client.ClientConfiguration;
 import org.springframework.data.elasticsearch.client.elc.ReactiveElasticsearchConfiguration;
 
@@ -26,7 +25,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Created by Navíd Mitchell 🤪 on 4/26/23.
  */
 @Configuration
-@Profile("!test")
 public class StructuresElasticsearchConfig extends ReactiveElasticsearchConfiguration {
 
     private final StructuresProperties structuresProperties;
@@ -65,11 +63,6 @@ public class StructuresElasticsearchConfig extends ReactiveElasticsearchConfigur
     }
 
     @Bean
-    public JsonpMapper jsonpMapper(ObjectMapper objectMapper){
-        return new JacksonJsonpMapper(objectMapper);
-    }
-
-    @Bean
     public ElasticsearchAsyncClient elasticsearchAsyncClient(JsonpMapper jsonpMapper){
         HttpHost[] hosts = structuresProperties.getElasticConnections()
                                                .stream()
@@ -103,6 +96,11 @@ public class StructuresElasticsearchConfig extends ReactiveElasticsearchConfigur
         ElasticsearchTransport transport = new RestClientTransport(restClient, jsonpMapper);
 
         return new ElasticsearchAsyncClient(transport);
+    }
+
+    @Bean
+    public JsonpMapper jsonpMapper(ObjectMapper objectMapper){
+        return new JacksonJsonpMapper(objectMapper);
     }
 
     @Override

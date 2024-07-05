@@ -1,0 +1,40 @@
+replicaCount: 1
+nameOverride: ""
+
+image:
+  repository: kinotic/structures-server
+  pullPolicy: Always
+  tag: "1.14.0-SNAPSHOT"
+  sha: ""
+
+properties:
+  springActiveProfiles: "production"
+  corsAllowedOriginPattern: "*"
+  enableJmx: true
+  enableNmt: true
+  javaToolOptions: "-XX:MaxDirectMemorySize=1024M -javaagent:/workspace/BOOT-INF/classes/elastic-apm-agent.jar -Delastic.apm.service_name=structures -Delastic.apm.server_urls=https://506858167386480c97844870a815ed13.apm.centralus.azure.elastic-cloud.com:443 -Delastic.apm.secret_token=iwWOfv0uaECcDXMtX4 -Delastic.apm.environment=production -Delastic.apm.application_packages=org.kinotic"
+  structures:
+    tenantIdFieldName: "tenantId"
+    indexPrefix: "struct_"
+    openApiSecurityType: "BASIC"
+    openApiPort: 8080
+    openApiPath: "/api/"
+    openApiServerUrl: "http://127.0.0.1:8080"
+    graphqlPort: 4000
+    graphqlPath: "/graphql/"
+    webServerPort: 9090
+    healthCheckPath: "/health"
+    enableStaticFileServer: true
+    initializeWithSampleData: false
+    elastic:
+      connections:
+        - host: "minds-test-elasticsearch.es.centralus.azure.elastic-cloud.com"
+          port: 443
+          scheme: "https"
+      connectionTimeout: "1M"
+      socketTimeout: "1M"
+      username: "structures"
+      password: "asdfsda898u7fsad8sfa@sdfa"
+
+
+nodeSelector: {}

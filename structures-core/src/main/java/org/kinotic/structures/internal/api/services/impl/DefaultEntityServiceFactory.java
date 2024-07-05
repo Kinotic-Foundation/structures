@@ -5,9 +5,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.kinotic.continuum.idl.api.schema.decorators.C3Decorator;
 import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.api.services.NamedQueriesService;
 import org.kinotic.structures.internal.api.hooks.DecoratorLogic;
-import org.kinotic.structures.internal.api.hooks.DelegatingReadPreProcessor;
 import org.kinotic.structures.internal.api.hooks.DelegatingUpsertPreProcessor;
+import org.kinotic.structures.internal.api.hooks.ReadPreProcessor;
 import org.kinotic.structures.internal.api.hooks.UpsertFieldPreProcessor;
 import org.kinotic.structures.internal.api.services.EntityService;
 import org.kinotic.structures.internal.api.services.EntityServiceFactory;
@@ -27,22 +28,28 @@ import java.util.concurrent.CompletableFuture;
 @Component
 public class DefaultEntityServiceFactory implements EntityServiceFactory {
 
-    private final StructuresProperties structuresProperties;
-    private final ObjectMapper objectMapper;
-    private final ElasticsearchAsyncClient esAsyncClient;
     private final CrudServiceTemplate crudServiceTemplate;
+    private final ElasticsearchAsyncClient esAsyncClient;
+    private final NamedQueriesService namedQueriesService;
+    private final ObjectMapper objectMapper;
+    private final ReadPreProcessor readPreProcessor;
+    private final StructuresProperties structuresProperties;
     private final Map<String, UpsertFieldPreProcessor<?, ?, ?>> upsertFieldPreProcessors;
 
-    public DefaultEntityServiceFactory(StructuresProperties structuresProperties,
-                                       ObjectMapper objectMapper,
-                                       ElasticsearchAsyncClient esAsyncClient,
-                                       CrudServiceTemplate crudServiceTemplate,
-                                       List<UpsertFieldPreProcessor<?, ?, ?>> upsertFieldPreProcessors) {
 
-        this.structuresProperties = structuresProperties;
-        this.objectMapper = objectMapper;
-        this.esAsyncClient = esAsyncClient;
+    public DefaultEntityServiceFactory(CrudServiceTemplate crudServiceTemplate,
+                                       ElasticsearchAsyncClient esAsyncClient,
+                                       NamedQueriesService namedQueriesService,
+                                       ObjectMapper objectMapper,
+                                       ReadPreProcessor readPreProcessor,
+                                       StructuresProperties structuresProperties,
+                                       List<UpsertFieldPreProcessor<?, ?, ?>> upsertFieldPreProcessors) {
         this.crudServiceTemplate = crudServiceTemplate;
+        this.esAsyncClient = esAsyncClient;
+        this.namedQueriesService = namedQueriesService;
+        this.objectMapper = objectMapper;
+        this.readPreProcessor = readPreProcessor;
+        this.structuresProperties = structuresProperties;
 
         this.upsertFieldPreProcessors = StructuresUtil.listToMap(upsertFieldPreProcessors,
                                                                  p -> p.implementsDecorator().getName());
@@ -53,7 +60,7 @@ public class DefaultEntityServiceFactory implements EntityServiceFactory {
     public CompletableFuture<EntityService> createEntityService(Structure structure) {
 
         if(structure == null){
-           return CompletableFuture.failedFuture(new IllegalArgumentException("Structure must not be null"));
+            return CompletableFuture.failedFuture(new IllegalArgumentException("Structure must not be null"));
         } else if (!structure.isPublished()) {
             return CompletableFuture.failedFuture(new IllegalArgumentException("Structure must be published"));
         }
@@ -74,16 +81,18 @@ public class DefaultEntityServiceFactory implements EntityServiceFactory {
             }
         }
 
-        return CompletableFuture.completedFuture(new DefaultEntityService(structure,
-                                                                          structuresProperties,
-                                                                          objectMapper,
-                                                                          esAsyncClient,
-                                                                          crudServiceTemplate,
+        return CompletableFuture.completedFuture(new DefaultEntityService(crudServiceTemplate,
                                                                           new DelegatingUpsertPreProcessor(structuresProperties,
                                                                                                            objectMapper,
                                                                                                            structure,
                                                                                                            fieldPreProcessors),
-                                                                          new DelegatingReadPreProcessor(structuresProperties)));
+                                                                          esAsyncClient,
+                                                                          namedQueriesService,
+                                                                          objectMapper,
+                                                                          readPreProcessor,
+                                                                          structure,
+                                                                          structuresProperties)
+        );
     }
 
 }

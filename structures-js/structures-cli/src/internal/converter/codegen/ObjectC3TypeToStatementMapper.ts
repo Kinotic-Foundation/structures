@@ -1,4 +1,4 @@
-import {ArrayC3Type, C3Type, ObjectC3Type, UnionC3Type} from '@kinotic/continuum-idl'
+import {ArrayC3Type, C3Type, ObjectC3Type, PropertyDefinition, UnionC3Type} from '@kinotic/continuum-idl'
 import {FunctionDeclaration} from 'ts-morph'
 import {ITypeConverter} from '../ITypeConverter.js'
 import {IConversionContext} from '../IConversionContext.js'
@@ -25,10 +25,8 @@ export class ObjectC3TypeToStatementMapper implements ITypeConverter<C3Type, Sta
         state.indentMore()
         ret.add(new LiteralStatementMapper(`${lhs} = (${lhs} ? ${lhs} : {})`))
 
-        const properties = objectC3Type.properties
-        for(const propertyName in properties){
-            const property = properties[propertyName]
-            conversionContext.beginProcessingProperty(propertyName)
+        for(const property of objectC3Type.properties){
+            conversionContext.beginProcessingProperty(property.name)
 
             const functionStatement = this.handleDynamicPropsIfNeeded(conversionContext);
 
@@ -37,7 +35,7 @@ export class ObjectC3TypeToStatementMapper implements ITypeConverter<C3Type, Sta
                 // Since this won't be handled by the normal property conversion we need to remove the source file path
                 this.removeSourceFilePath(value)
             }else{
-                ret.add(conversionContext.convert(property))
+                ret.add(conversionContext.convert(property.type))
             }
 
             conversionContext.endProcessingProperty()
@@ -46,8 +44,8 @@ export class ObjectC3TypeToStatementMapper implements ITypeConverter<C3Type, Sta
         state.indentLess()
         ret.addLiteral('}')
 
-        if(value?.metadata?.sourceFilePath){
-            delete value.metadata.sourceFilePath
+        if((value as any)?.metadata?.sourceFilePath){
+            delete (value as any).metadata.sourceFilePath
         }
 
         return ret
@@ -105,10 +103,8 @@ export class ObjectC3TypeToStatementMapper implements ITypeConverter<C3Type, Sta
         if(objectC3Type?.metadata?.sourceFilePath){
             delete objectC3Type.metadata.sourceFilePath
         }
-        const properties = objectC3Type.properties
-        for(const propertyName in properties){
-            const property = properties[propertyName]
-            this.removeSourceFilePath(property)
+        for(const property of objectC3Type.properties){
+            this.removeSourceFilePath(property.type)
         }
     }
 

@@ -18,7 +18,7 @@ public interface EntityContext {
 
     /**
      * If defined this will restrict the response to only include the fields listed here.
-     * @return a list of included fields, or an empty {@link List} or null if all fields should be included
+     * @return a list of included fields, if {@link List} is empty no fields will be included, if null all fields will be included.
      */
     List<String> getIncludedFieldsFilter();
 
@@ -38,7 +38,7 @@ public interface EntityContext {
     EntityContext put(String key, Object obj);
 
     /**
-     * Get some data from the context. The data is available in any servces that receive the context.
+     * Get some data from the context. The data is available in any services that receive the context.
      *
      * @param key  the key for the data
      * @param <T>  the type of the data

@@ -3,10 +3,12 @@ package org.kinotic.structures.internal.idl.converters.graphql;
 import graphql.schema.GraphQLAppliedDirective;
 import graphql.schema.GraphQLType;
 import graphql.schema.GraphQLUnionType;
+import graphql.schema.TypeResolver;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import org.apache.commons.lang3.tuple.Pair;
+import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.internal.idl.converters.common.BaseConversionState;
 
 import java.util.ArrayList;
@@ -20,7 +22,6 @@ import java.util.Map;
 @Getter
 @Setter
 @Accessors(chain = true)
-@NoArgsConstructor
 public class GqlConversionState extends BaseConversionState {
 
     private final Map<String, GraphQLType> referencedTypes = new HashMap<>();
@@ -29,5 +30,12 @@ public class GqlConversionState extends BaseConversionState {
 
     private List<GraphQLAppliedDirective> inputTypeDirectives = new ArrayList<>();
 
-    private List<GraphQLUnionType> unionTypes = new ArrayList<>();
+    /**
+     * Union types keyed by name with the value being a pair of the GraphQLUnionType and the TypeResolver
+     */
+    private Map<String, Pair<GraphQLUnionType, TypeResolver>> unionTypes = new HashMap<>();
+
+    public GqlConversionState(StructuresProperties structuresProperties) {
+        super(structuresProperties);
+    }
 }

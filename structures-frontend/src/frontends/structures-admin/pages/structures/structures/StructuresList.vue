@@ -5,6 +5,7 @@
                 <CrudTable :data-source="dataSource"
                            :headers="headers"
                            :singleExpand="true"
+                           :disable-modifications="true"
                            @add-item="onAddItem"
                            @edit-item="onEditItem"
                            ref="crudTable">

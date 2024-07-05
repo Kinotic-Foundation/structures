@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "structures-server.fullname" . }}
+spec:
+  type: LoadBalancer
+  ports:
+    - name: "ui"
+      protocol: TCP
+      port:  {{ .Values.properties.structures.webServerPort }} # UI PORTs
+      targetPort: {{ .Values.properties.structures.webServerPort }}
+    - name: "graph-ql"
+      protocol: TCP
+      port: {{ .Values.properties.structures.graphqlPort }} # GraphQL Port
+      targetPort: {{ .Values.properties.structures.graphqlPort }}
+    - name: "open-api"
+      protocol: TCP
+      port: {{ .Values.properties.structures.openApiPort }} # OpenAPI Port
+      targetPort: {{ .Values.properties.structures.openApiPort }}
+    - name: "stomp"
+      protocol: TCP
+      port: 58503 # Continuum Stomp Port
+      targetPort: 58503
+    - name: "rest"
+      protocol: TCP
+      port: 58504 # Continuum REST Port
+      targetPort: 58504
+  selector:
+    app: {{ include "structures-server.name" . }}

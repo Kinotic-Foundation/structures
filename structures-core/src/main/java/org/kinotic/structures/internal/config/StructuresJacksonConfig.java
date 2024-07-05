@@ -9,6 +9,8 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.kinotic.continuum.idl.api.schema.decorators.C3Decorator;
 import org.kinotic.continuum.internal.utils.MetaUtil;
 import org.kinotic.structures.api.domain.RawJson;
+import org.kinotic.structures.api.domain.idl.PageC3Type;
+import org.kinotic.structures.api.domain.idl.PageableC3Type;
 import org.kinotic.structures.internal.serializer.FieldValueDeserializer;
 import org.kinotic.structures.internal.serializer.FieldValueSerializer;
 import org.kinotic.structures.internal.serializer.RawJsonDeserializer;
@@ -37,7 +39,7 @@ public class StructuresJacksonConfig {
         SimpleModule ret = new SimpleModule("StructuresModule", Version.unknownVersion());
 
         Set<MetadataReader> decoratorMetas = MetaUtil.findClassesWithSuperClass(applicationContext,
-                                                                                List.of("org.kinotic.structures.api.decorators"),
+                                                                                List.of("org.kinotic.structures.api.domain.idl.decorators"),
                                                                                 C3Decorator.class.getName());
         // Register all C3Decorator's with Jackson
         for(MetadataReader decoratorMeta : decoratorMetas){
@@ -50,6 +52,9 @@ public class StructuresJacksonConfig {
                 log.warn(decoratorMeta.getClassMetadata().getClassName() + " Could not be mapped. A public static final field named 'type' must exist on the class.");
             }
         }
+        // register additional needed types
+        ret.registerSubtypes(new NamedType(PageableC3Type.class, "pageable"));
+        ret.registerSubtypes(new NamedType(PageC3Type.class, "page"));
 
         // register internal serializer deserializers
         ret.addDeserializer(RawJson.class, new RawJsonDeserializer(new ObjectMapper()));

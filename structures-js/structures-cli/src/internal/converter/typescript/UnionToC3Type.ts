@@ -148,13 +148,12 @@ export class UnionToC3Type implements ITypeConverter<Type, C3Type, TypescriptCon
             ret = convertedList[0]
 
         } else {
+            const namespace = conversionContext.state().namespace
+            const name = this.getUnionC3TypeName(value, conversionContext)
+            const unionType = new UnionC3Type(name, namespace)
 
-            const unionType = new UnionC3Type()
-            unionType.namespace = conversionContext.state().namespace
-            unionType.name = this.getUnionPropertyName(value, conversionContext)
             unionType.types = convertedList as ObjectC3Type[]
             ret = unionType
-
         }
 
         return ret
@@ -173,7 +172,7 @@ export class UnionToC3Type implements ITypeConverter<Type, C3Type, TypescriptCon
             || (type.isLiteral() && this.isPrimitive(type.getApparentType()))
     }
 
-    private getUnionPropertyName(value: Type, conversionContext: IConversionContext<Type, C3Type, TypescriptConversionState>): string {
+    private getUnionC3TypeName(value: Type, conversionContext: IConversionContext<Type, C3Type, TypescriptConversionState>): string {
         let ret: string | null = null
         // first try to get name from type.
         const parts = value.getText(undefined, 0).split('|')
@@ -191,8 +190,11 @@ export class UnionToC3Type implements ITypeConverter<Type, C3Type, TypescriptCon
         }
 
         if (!ret) {
+            // since we could not determine the type name above we can use the property name
             if (conversionContext.state().unionPropertyNameStack.length > 0) {
-                ret = this.capitalizeFirstLetter(conversionContext.state().unionPropertyNameStack[conversionContext.state().unionPropertyNameStack.length - 1])
+                const unionPropName = this.capitalizeFirstLetter(conversionContext.state().unionPropertyNameStack[conversionContext.state().unionPropertyNameStack.length - 1])
+                const objectName = conversionContext.state().objectNameStack[conversionContext.state().objectNameStack.length - 1]
+                ret = objectName + '_' + unionPropName
             } else {
                 throw new Error("The current property name is not set in the conversion state")
             }

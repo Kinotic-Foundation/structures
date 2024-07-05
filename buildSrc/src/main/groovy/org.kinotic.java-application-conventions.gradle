@@ -4,6 +4,7 @@ plugins {
 
 	id 'org.springframework.boot'
 	id 'application'
+	id 'io.freefair.lombok'
 }
 
 configurations {
@@ -29,13 +30,17 @@ dependencies {
 
 // Options to configure here https://docs.spring.io/spring-boot/docs/current/gradle-plugin/reference/htmlsingle/#build-image
 // bootBuildImage task source https://github.com/spring-projects/spring-boot/blob/main/spring-boot-project/spring-boot-tools/spring-boot-gradle-plugin/src/main/java/org/springframework/boot/gradle/tasks/bundling/BootBuildImage.java
+// Paketo options here https://paketo.io/docs/howto/java/#configure-the-jvm-at-runtime
+//                     https://paketo.io/docs/reference/java-reference/
 bootBuildImage {
 	network = "host"
-	publish = false
+	publish = true
 	imageName = "kinotic/${project.name}:${project.version}"
-	tags = [
-			"kinotic/${project.name}:latest"
-	]
+	tags = ( !version.endsWith('SNAPSHOT') ?
+			[
+				"kinotic/${project.name}:latest"
+			]
+			: [] )
 	environment = [
 			"BPE_DELIM_JAVA_TOOL_OPTIONS" : " ",
 			"BPE_APPEND_JAVA_TOOL_OPTIONS" : "-XX:+UseG1GC -XX:+ScavengeBeforeFullGC -XX:+DisableExplicitGC"

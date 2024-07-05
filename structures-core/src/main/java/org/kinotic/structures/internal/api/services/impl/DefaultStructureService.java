@@ -21,12 +21,12 @@ import java.util.concurrent.CompletableFuture;
 @Component
 public class DefaultStructureService implements StructureService {
 
-    private final StructuresProperties structuresProperties;
-    private final StructureConversionService structureConversionService;
     private final CacheEvictionService cacheEvictionService;
-    private final StructureDAO structureDAO;
-    private final ElasticsearchAsyncClient esAsyncClient;
     private final CrudServiceTemplate crudServiceTemplate;
+    private final ElasticsearchAsyncClient esAsyncClient;
+    private final StructureConversionService structureConversionService;
+    private final StructureDAO structureDAO;
+    private final StructuresProperties structuresProperties;
 
     public DefaultStructureService(StructuresProperties structuresProperties,
                                    StructureConversionService structureConversionService,
@@ -43,6 +43,11 @@ public class DefaultStructureService implements StructureService {
     }
 
     @Override
+    public CompletableFuture<Long> count() {
+        return structureDAO.count();
+    }
+
+    @Override
     public CompletableFuture<Long> countForNamespace(String namespace) {
         return structureDAO.countForNamespace(namespace);
     }
@@ -52,13 +57,15 @@ public class DefaultStructureService implements StructureService {
         String logicalIndexName;
         try {
             // will throw an exception if invalid
-            validateStructure(structure);
+            StructuresUtil.validateStructure(structure);
 
             structure.setNamespace(structure.getNamespace().trim());
             structure.setName(structure.getName().trim());
             logicalIndexName = StructuresUtil.structureNameToId(structure.getNamespace(), structure.getName());
 
-            StructuresUtil.indexNameValidation(logicalIndexName);
+            if(logicalIndexName.length() > 255){
+                throw new IllegalArgumentException("Structure Id is too long, 'namespace.name' must be less than 256 characters");
+            }
 
         } catch (IllegalArgumentException e) {
             return CompletableFuture.failedFuture(e);
@@ -95,90 +102,6 @@ public class DefaultStructureService implements StructureService {
     }
 
     @Override
-    public CompletableFuture<Structure> save(Structure structure) {
-
-        try {
-            if (structure.getId() == null || structure.getId().isBlank()) {
-                throw new IllegalArgumentException("Structure Id Invalid");
-            }
-            validateStructure(structure);
-        } catch (IllegalArgumentException e) {
-            return CompletableFuture.failedFuture(e);
-        }
-
-        return findById(structure.getId())
-                .thenCompose(existingStructure -> {
-                    // short circuit validation
-                    if(existingStructure == null){
-                        return CompletableFuture.failedFuture(new IllegalArgumentException("Structure cannot be found for id: " + structure.getId()));
-                    }
-
-                    // FIXME: handle namespace/name changes
-                    // updating an existing structure, reconcile the differences
-                    structure.setUpdated(new Date());
-                    structure.setCreated(existingStructure.getCreated());
-                    structure.setName(existingStructure.getName());
-                    structure.setNamespace(existingStructure.getNamespace());
-                    structure.setItemIndex(existingStructure.getItemIndex());
-                    structure.setPublished(existingStructure.isPublished());
-                    structure.setPublishedTimestamp(null);
-                    structure.setDecoratedProperties(null);
-
-                    // Try and create ES mapping to make sure IDL is valid
-                    ElasticConversionResult conversionResult = structureConversionService.convertToElasticMapping(structure);
-
-                    // TODO: how to ensure structures namespace name match the C3Type name
-                    // Should we just use the Structures one?
-                    structure.setMultiTenancyType(conversionResult.getMultiTenancyType());
-
-                    if(structure.isPublished()) {
-                        // FIXME: how to best handle an operation where the mapping completes but the save fails.
-                        //        Additionally this could have serious race conditions if multiple clients are updating the same structure
-                        //        This could probably be solved by verifying the mapping is still valid before saving
-                        //        (diff the fields and make sure only fields are added and no types are changed)
-                        //        Then this could be moved to save the structure first with optimistic locking, and if that succeeds then update the mapping
-                        return crudServiceTemplate
-                                .updateIndexMapping(structure.getItemIndex(),
-                                                    mappingBuilder -> mappingBuilder.dynamic(DynamicMapping.Strict)
-                                                                                    .properties(conversionResult.getObjectProperty()
-                                                                                                                .properties()))
-                                .thenCompose(v -> {
-                                    structure.setDecoratedProperties(conversionResult.getDecoratedProperties());
-                                    return structureDAO.save(structure)
-                                                       .thenApply(structure1 -> {
-                                                           cacheEvictionService.evictCachesFor(structure1);
-                                                           return structure1;
-                                                       });
-                                });
-                    }else{
-                        return structureDAO.save(structure);
-                    }
-                });
-    }
-
-    private void validateStructure(Structure structure){
-        if (structure.getName() == null || structure.getName().isBlank() || structure.getName().contains(".")) {
-            throw new IllegalArgumentException("Structure Name Invalid");
-        }
-        if (structure.getNamespace() == null || structure.getNamespace().isBlank()) {
-            throw new IllegalArgumentException("Structure Namespace Invalid");
-        }
-        if (structure.getEntityDefinition() == null) {
-            throw new IllegalArgumentException("Structure entityDefinition must not be null");
-        }
-    }
-
-    @Override
-    public CompletableFuture<Structure> findById(String id) {
-        return structureDAO.findById(id);
-    }
-
-    @Override
-    public CompletableFuture<Long> count() {
-        return structureDAO.count();
-    }
-
-    @Override
     public CompletableFuture<Void> deleteById(String structureId) {
         return findById(structureId)
                 .thenCompose(structure -> {
@@ -204,6 +127,11 @@ public class DefaultStructureService implements StructureService {
     @Override
     public CompletableFuture<Page<Structure>> findAllPublishedForNamespace(String namespace, Pageable pageable) {
         return structureDAO.findAllPublishedForNamespace(namespace, pageable);
+    }
+
+    @Override
+    public CompletableFuture<Structure> findById(String id) {
+        return structureDAO.findById(id);
     }
 
     @Override
@@ -246,6 +174,73 @@ public class DefaultStructureService implements StructureService {
     }
 
     @Override
+    public CompletableFuture<Structure> save(Structure structure) {
+
+        try {
+            if (structure.getId() == null || structure.getId().isBlank()) {
+                throw new IllegalArgumentException("Structure Id Invalid");
+            }
+            StructuresUtil.validateStructure(structure);
+        } catch (IllegalArgumentException e) {
+            return CompletableFuture.failedFuture(e);
+        }
+
+        return findById(structure.getId())
+                .thenCompose(existingStructure -> {
+                    // short circuit validation
+                    if(existingStructure == null){
+                        return CompletableFuture.failedFuture(new IllegalArgumentException("Structure cannot be found for id: " + structure.getId()));
+                    }
+
+                    // FIXME: handle namespace/name changes
+                    // updating an existing structure, reconcile the differences
+                    structure.setUpdated(new Date());
+                    structure.setCreated(existingStructure.getCreated());
+                    structure.setName(existingStructure.getName());
+                    structure.setNamespace(existingStructure.getNamespace());
+                    structure.setItemIndex(existingStructure.getItemIndex());
+                    structure.setPublished(existingStructure.isPublished());
+                    structure.setPublishedTimestamp(existingStructure.getPublishedTimestamp());
+                    structure.setDecoratedProperties(null);
+
+                    // Try and create ES mapping to make sure IDL is valid
+                    ElasticConversionResult conversionResult = structureConversionService.convertToElasticMapping(structure);
+
+                    // TODO: how to ensure structures namespace name match the C3Type name
+                    // Should we just use the Structures one?
+                    structure.setMultiTenancyType(conversionResult.getMultiTenancyType());
+
+                    if(structure.isPublished()) {
+                        // FIXME: how to best handle an operation where the mapping completes but the save fails.
+                        //        Additionally this could have serious race conditions if multiple clients are updating the same structure
+                        //        This could probably be solved by verifying the mapping is still valid before saving
+                        //        (diff the fields and make sure only fields are added and no types are changed)
+                        //        Then this could be moved to save the structure first with optimistic locking, and if that succeeds then update the mapping
+                        return crudServiceTemplate
+                                .updateIndexMapping(structure.getItemIndex(),
+                                                    mappingBuilder -> mappingBuilder.dynamic(DynamicMapping.Strict)
+                                                                                    .properties(conversionResult.getObjectProperty()
+                                                                                                                .properties()))
+                                .thenCompose(v -> {
+                                    structure.setDecoratedProperties(conversionResult.getDecoratedProperties());
+                                    return structureDAO.save(structure)
+                                                       .thenApply(structure1 -> {
+                                                           cacheEvictionService.evictCachesFor(structure1);
+                                                           return structure1;
+                                                       });
+                                });
+                    }else{
+                        return structureDAO.save(structure);
+                    }
+                });
+    }
+
+    @Override
+    public CompletableFuture<Page<Structure>> search(String searchText, Pageable pageable) {
+        return structureDAO.search(searchText, pageable);
+    }
+
+    @Override
     public CompletableFuture<Void> unPublish(String structureId) {
         return findById(structureId)
                 .thenCompose(structure -> {
@@ -272,11 +267,6 @@ public class DefaultStructureService implements StructureService {
                                                                });
                                         });
                 });
-    }
-
-    @Override
-    public CompletableFuture<Page<Structure>> search(String searchText, Pageable pageable) {
-        return structureDAO.search(searchText, pageable);
     }
 
 }

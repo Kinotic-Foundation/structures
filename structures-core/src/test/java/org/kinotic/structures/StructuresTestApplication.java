@@ -18,6 +18,7 @@
 package org.kinotic.structures;
 
 import io.vertxbeans.VertxBeans;
+import org.kinotic.continuum.api.annotations.EnableContinuum;
 import org.kinotic.structures.api.annotations.EnableStructures;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -26,6 +27,7 @@ import org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfig
 import org.springframework.boot.autoconfigure.graphql.GraphQlAutoConfiguration;
 import org.springframework.boot.autoconfigure.graphql.reactive.GraphQlWebFluxAutoConfiguration;
 import org.springframework.boot.autoconfigure.hazelcast.HazelcastAutoConfiguration;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Import;
 
 @SpringBootApplication(exclude = {HazelcastAutoConfiguration.class,
@@ -34,7 +36,9 @@ import org.springframework.context.annotation.Import;
                                   GraphQlWebFluxAutoConfiguration.class,
                                   ReactiveElasticsearchRestClientAutoConfiguration.class})
 @Import(VertxBeans.class)
+@EnableContinuum
 @EnableStructures
+@EnableConfigurationProperties
 public class StructuresTestApplication {
     public static void main(String[] args) {
         SpringApplication.run(StructuresTestApplication.class, args);

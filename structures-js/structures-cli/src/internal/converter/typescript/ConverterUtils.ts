@@ -14,12 +14,13 @@ import {
     IdDecorator,
     MultiTenancyType, NestedDecorator,
     TextDecorator,
-    DiscriminatorDecorator
+    DiscriminatorDecorator,
+    QueryDecorator
 } from '@kinotic/structures-api'
 import {Decorator} from 'ts-morph'
 
-export function tsDecoratorToC3Decorator(decorator: Decorator): C3Decorator{
-    let ret: C3Decorator
+export function tsDecoratorToC3Decorator(decorator: Decorator): C3Decorator | null{
+    let ret: C3Decorator | null = null
 
     if(decorator.getName() === 'Entity'){
         const entityDecorator = new EntityDecorator()
@@ -53,12 +54,19 @@ export function tsDecoratorToC3Decorator(decorator: Decorator): C3Decorator{
             if (argument?.getType()?.getLiteralValue()) {
                 discriminatorDecorator.propertyName = argument.getType().getLiteralValue() as string
             } else {
-                throw new Error('propertyName must be set on Discriminator Decorator}')
+                throw new Error('propertyName must be set on Discriminator Decorator')
             }
         }
         ret = discriminatorDecorator
-    }else{
-        throw new Error(`Unsupported decorator ${decorator.getName()}`)
+    }else if(decorator.getName() === 'Query') {
+        if(decorator.getArguments().length == 1){
+            const argument = decorator.getArguments()[0]
+            if (argument?.getType()?.getLiteralValue()) {
+                ret = new QueryDecorator(argument.getType().getLiteralValue() as string)
+            } else {
+                throw new Error('statement must be set on Query Decorator')
+            }
+        }
     }
 
     return ret

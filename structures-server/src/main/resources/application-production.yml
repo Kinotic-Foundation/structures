@@ -1,7 +1,7 @@
 # YAML Reference http://www.yaml.org/refcard.html
 continuum:
   discovery: sharedfs
-  debug: true
+  debug: false
 
 continuum-gateway:
   dataDir: /tmp/work
@@ -9,7 +9,7 @@ continuum-gateway:
 logging:
   level:
     org:
-      kinotic: TRACE
+      kinotic: INFO
     io:
       vertx: INFO
 
