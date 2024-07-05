@@ -69,7 +69,7 @@ export class CodeGenerationService {
                 verbose: verbose,
                 logger: this.logger
             }
-            await this.processEntities(config, namespaceConfig)
+            await this.processEntities(config, namespaceConfig, entityProcessor)
         }
 
         for(const [externalEntitiesPath, entityConfigurations] of Object.entries(namespaceConfig.externalEntities || {})){

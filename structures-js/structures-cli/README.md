@@ -12,7 +12,7 @@ $ npm install -g @kinotic/structures-cli
 $ structures COMMAND
 running command...
 $ structures (--version)
-@kinotic/structures-cli/2.1.0 darwin-x64 node-v18.17.0
+@kinotic/structures-cli/2.1.1 darwin-x64 node-v18.17.0
 $ structures --help [COMMAND]
 USAGE
   $ structures COMMAND
@@ -128,7 +128,7 @@ EXAMPLES
   $ structures gen my.namespace -v
 ```
 
-_See code: [src/commands/generate.ts](https://github.com/Kinotic-Foundation/structures/blob/v2.1.0/src/commands/generate.ts)_
+_See code: [src/commands/generate.ts](https://github.com/Kinotic-Foundation/structures/blob/v2.1.1/src/commands/generate.ts)_
 
 ## `structures help [COMMAND]`
 
@@ -205,7 +205,7 @@ EXAMPLES
   $ structures init -n my.namespace -e path/to/entities -g path/to/services
 ```
 
-_See code: [src/commands/initialize.ts](https://github.com/Kinotic-Foundation/structures/blob/v2.1.0/src/commands/initialize.ts)_
+_See code: [src/commands/initialize.ts](https://github.com/Kinotic-Foundation/structures/blob/v2.1.1/src/commands/initialize.ts)_
 
 ## `structures plugins`
 
@@ -562,7 +562,7 @@ EXAMPLES
   $ structures sync my.namespace -p -v -s http://localhost:9090
 ```
 
-_See code: [src/commands/synchronize.ts](https://github.com/Kinotic-Foundation/structures/blob/v2.1.0/src/commands/synchronize.ts)_
+_See code: [src/commands/synchronize.ts](https://github.com/Kinotic-Foundation/structures/blob/v2.1.1/src/commands/synchronize.ts)_
 
 ## `structures update [CHANNEL]`
 

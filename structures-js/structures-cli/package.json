@@ -1,6 +1,6 @@
 {
     "name": "@kinotic/structures-cli",
-    "version": "2.1.0",
+    "version": "2.1.1",
     "description": "Structures CLI provides the ability to interact with the Structures Server",
     "author": "Kinotic Developers",
     "bin": {
@@ -34,6 +34,7 @@
         "open": "^10.1.0",
         "p-timeout": "^6.1.2",
         "radash": "^12.1.0",
+        "terminal-link": "^3.0.0",
         "ts-morph": "^22.0.0",
         "uuid": "^9.0.1",
         "ws": "^8.16.0",
