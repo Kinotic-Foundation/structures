@@ -28,7 +28,7 @@ dependencies {
 	testImplementation 'io.projectreactor:reactor-test'
 }
 
-// Options to configure here https://docs.spring.io/spring-boot/docs/current/gradle-plugin/reference/htmlsingle/#build-image
+// Options to configure here https://docs.spring.io/spring-boot/docs/2.7.18/gradle-plugin/reference/htmlsingle/#build-image
 // bootBuildImage task source https://github.com/spring-projects/spring-boot/blob/main/spring-boot-project/spring-boot-tools/spring-boot-gradle-plugin/src/main/java/org/springframework/boot/gradle/tasks/bundling/BootBuildImage.java
 // Paketo options here https://paketo.io/docs/howto/java/#configure-the-jvm-at-runtime
 //                     https://paketo.io/docs/reference/java-reference/
