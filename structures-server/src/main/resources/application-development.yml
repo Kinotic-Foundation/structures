@@ -22,7 +22,7 @@ structures:
     - "*"
   corsAllowCredentials: true
 
-#  openApiPort: 9090s
-#  graphqlPort: 9090s
+#  openApiPort: 9090
+#  graphqlPort: 9090
 #  elastic-username: structures
 #  elastic-password: pass79

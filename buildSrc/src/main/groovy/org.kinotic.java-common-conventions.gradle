@@ -5,15 +5,12 @@ plugins {
 }
 
 group 'org.kinotic'
-version '2.0.0'
+version '2.0.1'
 sourceCompatibility = '11'
 
 repositories {
     // Use Maven Central for resolving dependencies.
     mavenCentral()
-    maven {
-        url "https://s01.oss.sonatype.org/content/repositories/snapshots"
-    }
 }
 
 dependencyManagement {
