@@ -1,8 +1,7 @@
-version: "3.9"
 services:
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.2
-    container_name: elasticsearch
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.14.1
+    container_name: structures-elasticsearch
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
@@ -24,8 +23,22 @@ services:
           memory: 4G
     volumes:
       - ~/structures/elastic-data:/usr/share/elasticsearch/data
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.14.1
+    container_name: structures-kibana
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    deploy:
+      resources:
+        reservations:
+          memory: 1G
+        limits:
+          memory: 1G
+    ports:
+      - "5601:5601"
   structures-server:
-    image: kinotic/structures-server:latest
+    image: kinotic/structures-server:3.0.0-SNAPSHOT
     depends_on:
       elasticsearch:
         condition: service_healthy

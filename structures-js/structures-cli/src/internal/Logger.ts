@@ -11,4 +11,7 @@ export type Logger = {
                                                code?: string;
                                                exit?: number;
                                            } & PrettyPrintableError): never
+
+    logVerbose(message: string | ( () => string ), verbose: boolean): void
+
 }

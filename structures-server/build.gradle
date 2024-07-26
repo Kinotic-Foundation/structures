@@ -16,8 +16,8 @@ dependencies {
 
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'
-	testImplementation 'org.testcontainers:testcontainers:1.17.6'
-	testImplementation 'org.testcontainers:elasticsearch:1.17.6'
+	testImplementation "org.testcontainers:testcontainers:${testContainersVersion}"
+	testImplementation "org.testcontainers:elasticsearch:${testContainersVersion}"
 	testImplementation 'junit:junit:4.13.1'
 }
 

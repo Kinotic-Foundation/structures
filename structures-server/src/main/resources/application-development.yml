@@ -4,9 +4,6 @@ continuum:
   discovery: sharedfs
   debug: true
   maxNumberOfCoresToUse: 4
-#continuum-gateway:
-#  stomp:
-#    port: 9090
 
 logging:
   level:
@@ -21,8 +18,12 @@ structures:
   corsAllowedHeaders:
     - "*"
   corsAllowCredentials: true
-
-#  openApiPort: 9090s
-#  graphqlPort: 9090s
-#  elastic-username: structures
-#  elastic-password: pass79
+#  elastic-connections:
+#    - scheme: "https"
+#      host: "test.com"
+#      port: "443"
+#    - scheme: "http"
+#      host: "host2.com"
+#      port: "9200"
+#  elastic-password: "test"
+#  elastic-username: "bob"

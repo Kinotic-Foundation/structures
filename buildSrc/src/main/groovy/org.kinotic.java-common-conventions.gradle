@@ -11,9 +11,6 @@ sourceCompatibility = '17'
 repositories {
     // Use Maven Central for resolving dependencies.
     mavenCentral()
-    maven {
-        url "https://s01.oss.sonatype.org/content/repositories/snapshots"
-    }
 }
 
 dependencyManagement {

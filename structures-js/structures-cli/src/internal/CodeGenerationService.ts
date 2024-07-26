@@ -16,28 +16,33 @@ import {Logger} from './Logger.js'
 import {NamespaceConfiguration} from './state/StructuresProject.js'
 import {UtilFunctionLocator} from './UtilFunctionLocator.js'
 import {
+    ConversionConfiguration, convertAllEntities,
     createTsMorphProject,
     EntityInfo,
     GeneratedServiceInfo,
     getRelativeImportPath,
-    tryGetNodeModuleName
+    tryGetNodeModuleName, writeEntityJsonToFilesystem, writeGeneratedServiceInfoToFilesystem
 } from './Utils.js'
 import chalk from 'chalk'
 
+export type GeneratedEntityProcessor = (entityInfo: EntityInfo, serviceInfo: GeneratedServiceInfo) => Promise<void>
 
 
 /**
- * Helper service for generating code.
+ * Helper service for generating code.s
  */
 export class CodeGenerationService {
 
+    private readonly fileExtensionForImports: string
     private readonly logger: Logger
     private readonly engine: Liquid
     private readonly tsMorphProject: Project
     private readonly conversionContext: IConversionContext<Type, C3Type, TypescriptConversionState>
 
     constructor(namespace: string,
+                fileExtensionForImports: string,
                 logger: Logger){
+        this.fileExtensionForImports = fileExtensionForImports
         this.logger = logger
         this.engine = new Liquid({
                                      root: path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../templates/'),  // root for templates lookup
@@ -50,11 +55,85 @@ export class CodeGenerationService {
         this.conversionContext = createConversionContext(new TypescriptConverterStrategy(state, logger))
     }
 
-    public async generateEntityService(entityInfo: EntityInfo,
-                                       namespaceConfig: NamespaceConfiguration,
-                                       utilFunctionLocator: UtilFunctionLocator,
-                                       fileExtensionForImports: string): Promise<GeneratedServiceInfo> {
+    public async generateAllEntities(namespaceConfig: NamespaceConfiguration,
+                                     verbose: boolean,
+                                     entityProcessor?: GeneratedEntityProcessor){
 
+        const utilFunctionLocator = new UtilFunctionLocator(namespaceConfig || [], verbose)
+
+        for(const entitiesPath of namespaceConfig.entitiesPaths) {
+            const config: ConversionConfiguration = {
+                namespace: namespaceConfig.namespaceName,
+                entitiesPath: entitiesPath,
+                utilFunctionLocator: utilFunctionLocator,
+                verbose: verbose,
+                logger: this.logger
+            }
+            await this.processEntities(config, namespaceConfig, entityProcessor)
+        }
+
+        for(const [externalEntitiesPath, entityConfigurations] of Object.entries(namespaceConfig.externalEntities || {})){
+            const config: ConversionConfiguration = {
+                namespace: namespaceConfig.namespaceName,
+                entitiesPath: externalEntitiesPath,
+                utilFunctionLocator: utilFunctionLocator,
+                entityConfigurations: entityConfigurations,
+                verbose: verbose,
+                logger: this.logger
+            }
+            await this.processEntities(config, namespaceConfig, entityProcessor)
+        }
+    }
+
+    private async processEntities(config: ConversionConfiguration,
+                                  namespaceConfig: NamespaceConfiguration,
+                                  entityProcessor?: GeneratedEntityProcessor): Promise<void>{
+
+        if (!fs.existsSync(config.entitiesPath)) {
+            throw new Error(`Entities path does not exist: ${config.entitiesPath}`)
+        }
+
+        const convertedEntities: EntityInfo[] = convertAllEntities(config)
+
+        if (convertedEntities.length > 0) {
+
+            for (const entityInfo of convertedEntities) {
+
+                this.logger.logVerbose(`Generated Structure Mapping for ${entityInfo.entity.namespace}.${entityInfo.entity.name}`, config.verbose)
+
+                const generatedServiceInfo
+                          = await this.generateEntityService(entityInfo,
+                                                             namespaceConfig,
+                                                             config.utilFunctionLocator)
+
+                if(config.verbose){
+
+                    await writeEntityJsonToFilesystem(namespaceConfig.generatedPath,
+                                                      entityInfo.entity,
+                                                      this.logger)
+
+                    if(generatedServiceInfo.namedQueries.length > 0) {
+                        await writeGeneratedServiceInfoToFilesystem(namespaceConfig.generatedPath,
+                                                                    generatedServiceInfo,
+                                                                    this.logger)
+                    }
+                }
+
+                if(entityProcessor){
+                    await entityProcessor(entityInfo, generatedServiceInfo)
+                }
+            }
+
+        } else {
+            this.logger.logVerbose(`No Entities found For namespace: ${config.namespace} and Entities Path: ${config.entitiesPath}`, config.verbose)
+        }
+    }
+
+    private async generateEntityService(entityInfo: EntityInfo,
+                                        namespaceConfig: NamespaceConfiguration,
+                                        utilFunctionLocator: UtilFunctionLocator): Promise<GeneratedServiceInfo> {
+
+        const fileExtensionForImports = this.fileExtensionForImports
         const generatedPath = namespaceConfig.generatedPath
         const baseEntityServicePath = path.resolve(generatedPath, 'generated', `Base${entityInfo.entity.name}EntityService.ts`)
         const entityServicePath = path.resolve(generatedPath, `${entityInfo.entity.name}EntityService.ts`)
