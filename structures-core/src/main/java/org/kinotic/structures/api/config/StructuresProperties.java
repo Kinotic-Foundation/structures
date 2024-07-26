@@ -6,7 +6,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.apache.commons.lang3.Validate;
-import org.kinotic.structures.internal.config.ElasticConnectionInfo;
 import org.kinotic.structures.internal.config.OpenApiSecurityType;
 import org.kinotic.structures.internal.utils.StructuresUtil;
 import org.springframework.boot.context.properties.ConfigurationProperties;

@@ -2,7 +2,7 @@ package org.kinotic.structures;
 
 import org.kinotic.structures.api.domain.DefaultEntityContext;
 import org.kinotic.structures.api.domain.EntityContext;
-import org.kinotic.structures.internal.config.ElasticConnectionInfo;
+import org.kinotic.structures.api.config.ElasticConnectionInfo;
 import org.kinotic.structures.internal.sample.DummyParticipant;
 import org.kinotic.structures.support.StructureAndPersonHolder;
 import org.kinotic.structures.support.TestHelper;

@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.config;
+package org.kinotic.structures.api.config;
 
 import lombok.*;
 import lombok.experimental.Accessors;
