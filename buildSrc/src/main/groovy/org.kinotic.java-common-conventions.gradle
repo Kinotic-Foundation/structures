@@ -5,8 +5,8 @@ plugins {
 }
 
 group 'org.kinotic'
-version '3.0.0-SNAPSHOT'
-sourceCompatibility = '17'
+version "${structuresVersion}"
+sourceCompatibility = '21'
 
 repositories {
     // Use Maven Central for resolving dependencies.
