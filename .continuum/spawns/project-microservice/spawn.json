@@ -1,9 +1,0 @@
-{
-  "inherits": "../microservice-common",
-  "propertySchema":{
-    "groupId": {
-      "type": "string",
-      "description": "Maven Group Id"
-    }
-  }
-}

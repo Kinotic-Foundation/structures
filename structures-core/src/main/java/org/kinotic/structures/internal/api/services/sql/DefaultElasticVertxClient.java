@@ -25,12 +25,12 @@ import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.internal.api.services.sql.executors.ElasticColumn;
 import org.kinotic.structures.internal.api.services.sql.executors.ElasticSQLResponse;
-import org.kinotic.structures.internal.config.ElasticConnectionInfo;
+import org.kinotic.structures.api.config.ElasticConnectionInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.PreDestroy;
+import jakarta.annotation.PreDestroy;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
