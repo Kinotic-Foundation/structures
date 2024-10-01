@@ -9,6 +9,7 @@ import graphql.execution.preparsed.PreparsedDocumentEntry;
 import graphql.language.*;
 import graphql.schema.GraphQLSchema;
 import graphql.validation.ValidationError;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.RoutingContext;
@@ -68,6 +69,7 @@ public class DefaultGqlExecutionService implements GqlExecutionService {
      * @param query the {@link GraphQLQuery} to execute
      * @return the result as a {@link Buffer} ready to send back over the wire
      */
+    @WithSpan
     @Override
     public CompletableFuture<Buffer> execute(RoutingContext routingContext, GraphQLQuery query) {
 

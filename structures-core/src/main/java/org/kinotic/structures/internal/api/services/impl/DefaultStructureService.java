@@ -2,6 +2,8 @@ package org.kinotic.structures.internal.api.services.impl;
 
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import co.elastic.clients.elasticsearch._types.mapping.DynamicMapping;
+import io.opentelemetry.instrumentation.annotations.SpanAttribute;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.StructureService;
@@ -42,18 +44,21 @@ public class DefaultStructureService implements StructureService {
         this.crudServiceTemplate = crudServiceTemplate;
     }
 
+    @WithSpan
     @Override
     public CompletableFuture<Long> count() {
         return structureDAO.count();
     }
 
+    @WithSpan
     @Override
-    public CompletableFuture<Long> countForNamespace(String namespace) {
+    public CompletableFuture<Long> countForNamespace(@SpanAttribute("namespace") String namespace) {
         return structureDAO.countForNamespace(namespace);
     }
 
+    @WithSpan
     @Override
-    public CompletableFuture<Structure> create(Structure structure) {
+    public CompletableFuture<Structure> create(@SpanAttribute("structure") Structure structure) {
         String logicalIndexName;
         try {
             // will throw an exception if invalid
@@ -101,8 +106,9 @@ public class DefaultStructureService implements StructureService {
                 });
     }
 
+    @WithSpan
     @Override
-    public CompletableFuture<Void> deleteById(String structureId) {
+    public CompletableFuture<Void> deleteById(@SpanAttribute("structureId") String structureId) {
         return findById(structureId)
                 .thenCompose(structure -> {
 
@@ -119,23 +125,27 @@ public class DefaultStructureService implements StructureService {
                 });
     }
 
+    @WithSpan
     @Override
     public CompletableFuture<Page<Structure>> findAll(Pageable pageable) {
         return structureDAO.findAll(pageable);
     }
 
+    @WithSpan
     @Override
-    public CompletableFuture<Page<Structure>> findAllPublishedForNamespace(String namespace, Pageable pageable) {
+    public CompletableFuture<Page<Structure>> findAllPublishedForNamespace(@SpanAttribute("namespace") String namespace, Pageable pageable) {
         return structureDAO.findAllPublishedForNamespace(namespace, pageable);
     }
 
+    @WithSpan
     @Override
-    public CompletableFuture<Structure> findById(String id) {
-        return structureDAO.findById(id);
+    public CompletableFuture<Structure> findById(@SpanAttribute("structureId") String structureId) {
+        return structureDAO.findById(structureId);
     }
 
+    @WithSpan
     @Override
-    public CompletableFuture<Void> publish(String structureId) {
+    public CompletableFuture<Void> publish(@SpanAttribute("structureId") String structureId) {
         return findById(structureId)
                 .thenCompose(structure -> {
 
@@ -173,8 +183,9 @@ public class DefaultStructureService implements StructureService {
                 });
     }
 
+    @WithSpan
     @Override
-    public CompletableFuture<Structure> save(Structure structure) {
+    public CompletableFuture<Structure> save(@SpanAttribute("structure") Structure structure) {
 
         try {
             if (structure.getId() == null || structure.getId().isBlank()) {
@@ -235,13 +246,15 @@ public class DefaultStructureService implements StructureService {
                 });
     }
 
+    @WithSpan
     @Override
-    public CompletableFuture<Page<Structure>> search(String searchText, Pageable pageable) {
+    public CompletableFuture<Page<Structure>> search(@SpanAttribute("searchText") String searchText, Pageable pageable) {
         return structureDAO.search(searchText, pageable);
     }
 
+    @WithSpan
     @Override
-    public CompletableFuture<Void> unPublish(String structureId) {
+    public CompletableFuture<Void> unPublish(@SpanAttribute("structureId") String structureId) {
         return findById(structureId)
                 .thenCompose(structure -> {
 

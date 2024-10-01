@@ -6,6 +6,8 @@ import com.github.benmanes.caffeine.cache.AsyncCacheLoader;
 import graphql.GraphQL;
 import graphql.language.OperationDefinition;
 import graphql.schema.*;
+import io.opentelemetry.instrumentation.annotations.SpanAttribute;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.text.WordUtils;
@@ -81,7 +83,9 @@ public class GqlSchemaCacheLoader implements AsyncCacheLoader<String, GraphQL> {
                 });
     }
 
-    private CompletableFuture<GraphQLSchema> createGraphQlSchema(String namespace,
+    @WithSpan
+    private CompletableFuture<GraphQLSchema> createGraphQlSchema(@SpanAttribute("namespace")
+                                                                 String namespace,
                                                                  Executor executor) {
         return structureDAO
                 .findAllPublishedForNamespace(namespace, Pageable.ofSize(100))
@@ -147,7 +151,6 @@ public class GqlSchemaCacheLoader implements AsyncCacheLoader<String, GraphQL> {
                                                                                   .state()
                                                                                   .getUnionTypes()
                                                                                   .values()) {
-                            // NoOp is used since we do not actually use the GraphQL api to execute operations
                             codeRegistryBuilder.typeResolver(pair.getLeft(), pair.getRight());
                         }
 
@@ -156,8 +159,8 @@ public class GqlSchemaCacheLoader implements AsyncCacheLoader<String, GraphQL> {
                                                                                           .state()
                                                                                           .getReferencedTypes());
 
-                        // Since the transformer does not add all needed directives if not loaded from a file
-                        // We load an empty file first then uss that as the base for our schema
+                        // Since the transformer does not add the necessary directives if not loaded from a file
+                        // we load an empty file first then uss that as the base for our schema
                         GraphQLSchema federationBaseSchema = Federation.transform(FEDERATION_BASE)
                                                                        .build();
 
