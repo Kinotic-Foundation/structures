@@ -29,7 +29,7 @@ public class OpenApiVerticle extends AbstractVerticle {
         server.requestHandler(router)
               .listen(properties.getOpenApiPort(), ar -> {
             if (ar.succeeded()) {
-                log.info("OpenApi Started Listener on Thread "+Thread.currentThread().getName());
+                log.info("OpenApi Started Listener on Thread {}", Thread.currentThread().getName());
                 startPromise.complete();
             } else {
                 startPromise.fail(ar.cause());

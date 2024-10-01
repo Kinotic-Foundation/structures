@@ -25,6 +25,16 @@ publishing {
 
             from components.java
 
+            // Use resolved versions since we are not directly depending on the spring POM
+            versionMapping {
+                usage('java-api') {
+                    fromResolutionOf('runtimeClasspath')
+                }
+                usage('java-runtime') {
+                    fromResolutionResult()
+                }
+            }
+
             pom {
                 name = 'Structures Framework'
                 description = 'Framework for data storage and retrieval, supporting schema evolution!'

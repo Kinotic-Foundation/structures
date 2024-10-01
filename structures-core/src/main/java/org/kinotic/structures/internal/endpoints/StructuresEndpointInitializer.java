@@ -14,7 +14,7 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.PostConstruct;
+import jakarta.annotation.PostConstruct;
 
 /**
  * This class is responsible for initializing the structures endpoints.
@@ -38,7 +38,7 @@ public class StructuresEndpointInitializer {
     public void init(){
         // If production deploy one verticle of each per core
         int numToDeploy = continuumProperties.getMaxNumberOfCoresToUse();
-        log.info(numToDeploy + " Cores will be used for Structures Endpoints");
+        log.info("{} Cores will be used for Structures Endpoints", numToDeploy);
         DeploymentOptions options = new DeploymentOptions().setInstances(numToDeploy);
 
         vertx.deployVerticle(verticleFactory::createOpenApiVerticle, options);
