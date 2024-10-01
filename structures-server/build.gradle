@@ -25,6 +25,4 @@ test {
 	useJUnitPlatform()
 }
 
-tasks.findByName('build').dependsOn ":structures-frontend:build"
-
-tasks.findByName('bootBuildImage').dependsOn ":structures-frontend:build"
+tasks.findByName('processResources').dependsOn ":structures-frontend:copyDist"
