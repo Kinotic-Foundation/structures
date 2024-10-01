@@ -310,7 +310,7 @@ public class EntityCrudTests extends ElasticsearchTestBase {
 
         // Make sure all data is indexed
         try {
-            Thread.sleep(1000);
+            Thread.sleep(10000);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
