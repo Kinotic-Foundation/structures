@@ -1,31 +1,31 @@
 plugins {
-	// Apply the common convention plugin for shared build configuration between library and application projects.
-	id 'org.kinotic.java-common-conventions'
+    // Apply the common convention plugin for shared build configuration between library and application projects.
+    id 'org.kinotic.java-common-conventions'
 
-	id 'org.springframework.boot'
-	id 'application'
-	id 'io.freefair.lombok'
+    id 'org.springframework.boot'
+    id 'application'
+    id 'io.freefair.lombok'
 }
 
 configurations {
-	developmentOnly
-	runtimeClasspath {
-		extendsFrom developmentOnly
-	}
-	compileOnly {
-		extendsFrom annotationProcessor
-	}
+    developmentOnly
+    runtimeClasspath {
+        extendsFrom developmentOnly
+    }
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
 }
 
 dependencies {
-	implementation 'org.springframework.boot:spring-boot-starter'
+    implementation 'org.springframework.boot:spring-boot-starter'
 
-	implementation "org.kinotic:continuum-core:${continuumVersion}"
-	implementation "org.kinotic:continuum-core-vertx:${continuumVersion}"
+    implementation "org.kinotic:continuum-core:${continuumVersion}"
+    implementation "org.kinotic:continuum-core-vertx:${continuumVersion}"
 
-	annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
-	testImplementation 'org.springframework.boot:spring-boot-starter-test'
-	testImplementation 'io.projectreactor:reactor-test'
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'io.projectreactor:reactor-test'
 }
 
 // Options to configure here https://docs.spring.io/spring-boot/docs/2.7.18/gradle-plugin/reference/htmlsingle/#build-image
@@ -33,36 +33,23 @@ dependencies {
 // Paketo options here https://paketo.io/docs/howto/java/#configure-the-jvm-at-runtime
 //                     https://paketo.io/docs/reference/java-reference/
 bootBuildImage {
-	network = "host"
-	publish = true
-	imageName = "kinotic/${project.name}:${project.version}"
-	tags = ( !version.endsWith('SNAPSHOT') ?
-			[
-				"kinotic/${project.name}:latest"
-			]
-			: [] )
-	environment = [
-			"BPE_DELIM_JAVA_TOOL_OPTIONS" : " ",
-			"BPE_APPEND_JAVA_TOOL_OPTIONS" : "-XX:+UseG1GC -XX:+ScavengeBeforeFullGC -XX:+DisableExplicitGC"
-	]
-	docker {
-		publishRegistry {
-			username = System.getenv("DOCKER_HUB_USERNAME")
-			password = System.getenv("DOCKER_HUB_PASSWORD")
-		}
-	}
+    network = "host"
+    publish = true
+    imageName = "kinotic/${project.name}:${project.version}"
+    tags = (!version.endsWith('SNAPSHOT') ?
+            [
+                    "kinotic/${project.name}:latest"
+            ]
+            : [])
+    environment = [
+            "BPE_DELIM_JAVA_TOOL_OPTIONS" : " ",
+            "BPE_APPEND_JAVA_TOOL_OPTIONS": "-XX:+UseG1GC -XX:+ScavengeBeforeFullGC -XX:+DisableExplicitGC --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED --add-opens=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED --add-opens=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED"
+    ]
+    docker {
+        publishRegistry {
+            username = System.getenv("DOCKER_HUB_USERNAME")
+            password = System.getenv("DOCKER_HUB_PASSWORD")
+        }
+    }
 }
 
-/**
- * Default Environment Vars
- */
-applicationDefaultJvmArgs = [
-		"-Djava.awt.headless=true",
-		"-Djava.net.preferIPv4Stack=true",
-		"-Dvertx.disableDnsResolver=true", // done because of this issue.. https://github.com/eclipse/vert.x/issues/1753 http://stackoverflow.com/questions/42110790/vertx-httpclient-getnow-not-working
-		"-server",
-		"-XX:+AlwaysPreTouch",
-		"-XX:+UseG1GC",
-		"-XX:+ScavengeBeforeFullGC",
-		"-XX:+DisableExplicitGC"
-]

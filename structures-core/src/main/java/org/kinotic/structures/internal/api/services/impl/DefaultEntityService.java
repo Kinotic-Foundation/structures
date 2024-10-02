@@ -9,6 +9,7 @@ import co.elastic.clients.elasticsearch.core.bulk.BulkResponseItem;
 import co.elastic.clients.util.BinaryData;
 import co.elastic.clients.util.ContentType;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.NotImplementedException;
 import org.kinotic.continuum.core.api.crud.CursorPage;
@@ -53,7 +54,7 @@ public class DefaultEntityService implements EntityService {
     private final Structure structure;
     private final StructuresProperties structuresProperties;
 
-
+    @WithSpan
     @Override
     public <T> CompletableFuture<Void> bulkSave(T entities, EntityContext context) {
         return doBulkPersist(entities,
@@ -65,6 +66,7 @@ public class DefaultEntityService implements EntityService {
                                      )));
     }
 
+    @WithSpan
     @Override
     public <T> CompletableFuture<Void> bulkUpdate(T entities, EntityContext context) {
         return doBulkPersist(entities,
@@ -79,6 +81,7 @@ public class DefaultEntityService implements EntityService {
                                      )));
     }
 
+    @WithSpan
     @Override
     public CompletableFuture<Long> count(EntityContext context) {
         return validateTenant(context)
@@ -87,6 +90,7 @@ public class DefaultEntityService implements EntityService {
                                builder -> readPreProcessor.beforeCount(structure, null, builder, context)));
     }
 
+    @WithSpan
     @Override
     public CompletableFuture<Long> countByQuery(String query, EntityContext context) {
         return validateTenant(context)
@@ -95,6 +99,7 @@ public class DefaultEntityService implements EntityService {
                                builder -> readPreProcessor.beforeCount(structure, query, builder, context)));
     }
 
+    @WithSpan
     @Override
     public CompletableFuture<Void> deleteById(String id, EntityContext context) {
         return validateTenantAndComposeId(id, context)
@@ -105,6 +110,7 @@ public class DefaultEntityService implements EntityService {
                         .thenApply(deleteResponse -> null));
     }
 
+    @WithSpan
     @Override
     public CompletableFuture<Void> deleteByQuery(String query, EntityContext context) {
         return validateTenant(context)
@@ -114,6 +120,7 @@ public class DefaultEntityService implements EntityService {
                         .thenApply(deleteResponse -> null));
     }
 
+    @WithSpan
     @Override
     public <T> CompletableFuture<Page<T>> findAll(Pageable pageable, Class<T> type, EntityContext context) {
         return validateTenant(context)
@@ -125,6 +132,7 @@ public class DefaultEntityService implements EntityService {
                         .thenApply(createParanoidCheck(type, context, "Find All")));
     }
 
+    @WithSpan
     @Override
     public <T> CompletableFuture<T> findById(String id, Class<T> type, EntityContext context) {
         return validateTenantAndComposeId(id, context)
@@ -133,6 +141,7 @@ public class DefaultEntityService implements EntityService {
                                   builder -> readPreProcessor.beforeFindById(structure, builder, context)));
     }
 
+    @WithSpan
     @Override
     public <T> CompletableFuture<List<T>> findByIds(List<String> ids, Class<T> type, EntityContext context) {
         return validateTenantAndComposeIds(ids, context)
@@ -141,6 +150,7 @@ public class DefaultEntityService implements EntityService {
                                    builder -> readPreProcessor.beforeFindByIds(structure, builder, context)));
     }
 
+    @WithSpan
     @Override
     public <T> CompletableFuture<List<T>> namedQuery(String queryName,
                                                      ParameterHolder parameterHolder,
@@ -154,6 +164,7 @@ public class DefaultEntityService implements EntityService {
                                                                              context));
     }
 
+    @WithSpan
     @Override
     public <T> CompletableFuture<Page<T>> namedQueryPage(String queryName,
                                                          ParameterHolder parameterHolder,
@@ -169,6 +180,7 @@ public class DefaultEntityService implements EntityService {
                                                                                  context));
     }
 
+    @WithSpan
     @SuppressWarnings("unchecked")
     @Override
     public <T> CompletableFuture<T> save(T entity, EntityContext context) {
@@ -208,6 +220,7 @@ public class DefaultEntityService implements EntityService {
         });
     }
 
+    @WithSpan
     @Override
     public <T> CompletableFuture<Page<T>> search(String searchText, Pageable pageable, Class<T> type, EntityContext context) {
         return validateTenant(context)
@@ -219,6 +232,7 @@ public class DefaultEntityService implements EntityService {
                         .thenApply(createParanoidCheck(type, context, "Search")));
     }
 
+    @WithSpan
     @SuppressWarnings("unchecked")
     @Override
     public <T> CompletableFuture<T> update(T entity, EntityContext context) {
@@ -242,6 +256,7 @@ public class DefaultEntityService implements EntityService {
         });
     }
 
+    @WithSpan
     @SuppressWarnings({"unchecked", "rawtypes"})
     private <T> Function<Page<T>, Page<T>> createParanoidCheck(Class<T> type, EntityContext context, String what){
         return page -> {
@@ -299,6 +314,7 @@ public class DefaultEntityService implements EntityService {
         };
     }
 
+    @WithSpan
     private <T> CompletableFuture<Void> doBulkPersist(T entities,
                                                       EntityContext context,
                                                       Function<EntityHolder, BulkOperation> persistLogic){
@@ -349,6 +365,7 @@ public class DefaultEntityService implements EntityService {
                         })).thenApply(unused -> null);
     }
 
+    @WithSpan
     @SuppressWarnings("unchecked")
     private <T> CompletableFuture<T> doPersist(T entity,
                                                EntityContext context,
@@ -367,6 +384,7 @@ public class DefaultEntityService implements EntityService {
                         }));
     }
 
+    @WithSpan
     private CompletableFuture<Void> validateTenant(final EntityContext context){
         if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
             if(context.getParticipant() != null && context.getParticipant().getTenantId() != null) {
@@ -379,6 +397,7 @@ public class DefaultEntityService implements EntityService {
         }
     }
 
+    @WithSpan
     private CompletableFuture<String> validateTenantAndComposeId(final String id, final EntityContext context){
         return validateTenant(context)
                 .thenApply(unused -> {
@@ -393,6 +412,7 @@ public class DefaultEntityService implements EntityService {
                 });
     }
 
+    @WithSpan
     private CompletableFuture<List<String>> validateTenantAndComposeIds(final List<String> ids, final EntityContext context){
         return validateTenant(context)
                 .thenApply(unused -> {

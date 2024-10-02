@@ -1,5 +1,7 @@
 package org.kinotic.structures.internal.endpoints.openapi;
 
+import io.opentelemetry.instrumentation.annotations.SpanAttribute;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import io.swagger.v3.oas.models.*;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.media.*;
@@ -61,8 +63,9 @@ public class DefaultOpenApiService implements OpenApiService {
         return responses;
     }
 
+    @WithSpan
     @Override
-    public CompletableFuture<OpenAPI> getOpenApiSpec(String namespace) {
+    public CompletableFuture<OpenAPI> getOpenApiSpec(@SpanAttribute("namespace") String namespace) {
         return structureService
                 .findAllPublishedForNamespace(namespace, Pageable.ofSize(100))
                 .thenComposeAsync(structures -> {
@@ -135,6 +138,7 @@ public class DefaultOpenApiService implements OpenApiService {
                 });
     }
 
+    @WithSpan
     private void addDefaultPathItems(Paths paths, String basePath, Structure structure){
 
         String lowercaseNamespace = structure.getNamespace().toLowerCase();
@@ -349,6 +353,7 @@ public class DefaultOpenApiService implements OpenApiService {
         paths.put(basePath + lowercaseNamespace + "/" + lowercaseName + "/search", searchPathItem);
     }
 
+    @WithSpan
     private void addNamedQueryPathItems(Paths paths,
                                         String basePath,
                                         Structure structure,
