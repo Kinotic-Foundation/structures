@@ -2,6 +2,7 @@ package org.kinotic.structures.internal.api.services.impl;
 
 import co.elastic.clients.elasticsearch._types.mapping.ObjectProperty;
 import co.elastic.clients.elasticsearch._types.mapping.Property;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import io.swagger.v3.oas.models.media.Schema;
 import lombok.RequiredArgsConstructor;
 import org.kinotic.continuum.idl.api.converter.IdlConverter;
@@ -29,6 +30,7 @@ public class DefaultStructureConversionService implements StructureConversionSer
     private final IdlConverterFactory idlConverterFactory;
     private final StructuresProperties structuresProperties;
 
+    @WithSpan
     @Override
     public ElasticConversionResult convertToElasticMapping(Structure structure) {
         ObjectProperty ret;

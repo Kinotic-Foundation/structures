@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import io.swagger.v3.core.util.ObjectMapperFactory;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.vertx.core.Handler;
@@ -50,6 +51,7 @@ public class OpenApiVertxRouterFactory {
 
     private static ObjectMapper openApiMapper;
 
+    @WithSpan
     public Router createRouter() {
         String apiBasePath = properties.getOpenApiPath();
         Router router = Router.router(vertx);
