@@ -38,7 +38,7 @@ services:
     ports:
       - "5601:5601"
   structures-server:
-    image: kinotic/structures-server:3.0.1-SNAPSHOT
+    image: kinotic/structures-server:3.0.1
     depends_on:
       elasticsearch:
         condition: service_healthy
