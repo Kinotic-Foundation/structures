@@ -18,13 +18,32 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
-      securityContext:
-        {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.loadGenerator.image.repository }}:{{ .Values.loadGenerator.image.tag }}"
+          image: "kinotic/structures-load-generator:{{ .Values.loadGenerator.image.tag }}"
           imagePullPolicy: {{ .Values.loadGenerator.image.pullPolicy }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+          env:
+            - name: KUBE_NODE
+              valueFrom:
+                  fieldRef:
+                    fieldPath: status.hostIP
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://$(KUBE_NODE):4317
+            - name: OTEL_EXPORTER_TYPE
+              value: OTLP
+            - name: STRUCTURES_HOST
+              value: {{ .Values.structures.host }}
+            - name: STRUCTURES_PORT
+              value: {{ .Values.structures.port }}
+            - name: BATCH_SIZE
+              value: {{ .Values.loadGenerator.config.batchSize }}
+            - name: TOTAL_NUMBER_OF_RECORDS
+              value: {{ .Values.loadGenerator.config.totalNumberOfRecords }}
+            - name: MAX_REQUESTS_PER_SECOND
+              value: {{ .Values.loadGenerator.config.maxRequestsPerSecond }}
+            - name: MOCK_USER_TENANT_ID
+              value: {{ .Values.loadGenerator.config.mockUserTenantId }}

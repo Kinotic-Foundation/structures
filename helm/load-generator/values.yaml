@@ -4,12 +4,20 @@
 
 loadGenerator:
   image:
-    repository: kinotic/structures-load-generator
     tag: latest
     pullPolicy: IfNotPresent
+  config:
+    batchSize: 1000
+    totalNumberOfRecords: 10000
+    maxRequestsPerSecond: 10
+    mockUserTenantId: test01
 
 # The number of jobs to run in parallel
 parallelism: 1
+
+structures:
+  host: 127.0.0.1
+  port: 8080
 
 # This is for setting Kubernetes Annotations to a Pod.
 # For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
