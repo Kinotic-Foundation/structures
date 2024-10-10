@@ -18,6 +18,7 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
+      restartPolicy: Never
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
@@ -35,19 +36,21 @@ spec:
               value: http://$(KUBE_NODE):4317
             - name: OTEL_EXPORTER_TYPE
               value: OTLP
-            - name: BATCH_SIZE
-              value: {{ .Values.loadGenerator.config.batchSize }}
-            - name: TOTAL_NUMBER_OF_RECORDS
-              value: {{ .Values.loadGenerator.config.totalNumberOfRecords }}
-            - name: MAX_REQUESTS_PER_SECOND
-              value: {{ .Values.loadGenerator.config.maxRequestsPerSecond }}
-            - name: MOCK_USER_TENANT_ID
-              value: {{ .Values.loadGenerator.config.mockUserTenantId }}
             - name: STRUCTURES_USE_SSL
-              value: {{ .Values.structures.useSsl }}
+              value: "{{ .Values.structures.useSsl }}"
             - name: STRUCTURES_HOST
-              value: {{ .Values.structures.host }}
+              value: "{{ .Values.structures.host }}"
           {{- if .Values.structures.port }}
             - name: STRUCTURES_PORT
-              value: {{ .Values.structures.port }}
+              value: "{{ .Values.structures.port }}"
           {{- end }}
+            - name: MAX_CONCURRENT_REQUESTS
+              value: "{{ .Values.loadGenerator.config.maxConcurrentRequests }}"
+            - name: MAX_REQUESTS_PER_SECOND
+              value: "{{ .Values.loadGenerator.config.maxRequestsPerSecond }}"
+            - name: TEST_NAME
+              value: "{{ .Values.loadGenerator.config.testName }}"
+            - name: BEGIN_TENANT_ID_NUMBER
+              value: "{{ .Values.loadGenerator.config.beginTenantIdNumber }}"
+            - name: NUMBER_OF_TENANTS
+              value: "{{ .Values.loadGenerator.config.numberOfTenants }}"

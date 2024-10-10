@@ -1,7 +1,7 @@
 import {ConcurrencyConfig} from '@/config/ConcurrencyConfig.js'
 import {LoadTestConfig} from '@/config/LoadTestConfig.js'
 import {StructuresConnectionConfig} from '@/config/StructuresConnectionConfig.js'
-// import {nodeSdk} from '@/instrumentation.js'
+import {nodeSdk} from '@/instrumentation.js'
 import {LoadTaskGeneratorFactory} from '@/services/LoadTaskGeneratorFactory.js'
 import {TaskExecutionService} from '@/services/TaskExecutionService.js'
 import {formatDuration} from '@/utils/DataUtil.js'
@@ -34,16 +34,16 @@ try {
         .on('uncaughtException', async err => {
             console.error(err, 'Uncaught Exception thrown')
             await taskExecutor.stop()
-            // await nodeSdk.shutdown().catch(console.error)
+            await nodeSdk.shutdown().catch(console.error)
             process.exit(1)
         }).on('SIGINT', async () => {
             console.log('SIGINT')
             await taskExecutor.stop()
-            // await nodeSdk.shutdown().catch(console.error)
+            await nodeSdk.shutdown().catch(console.error)
         }).on('SIGTERM', async () => {
             console.log('SIGTERM')
             await taskExecutor.stop()
-            // await nodeSdk.shutdown().catch(console.error)
+            await nodeSdk.shutdown().catch(console.error)
         })
 
     try {
@@ -58,13 +58,13 @@ try {
         const duration = end - start     // Calculate the duratio
         console.log(`Load Generation took ${formatDuration(duration)}.`)
 
-        // await nodeSdk.shutdown().catch(console.error)
+        await nodeSdk.shutdown().catch(console.error)
     } finally {
         await taskExecutor.stop()
     }
 
 } catch (e: any) {
     console.error(e, 'Exception thrown')
-    // await nodeSdk.shutdown().catch(console.error)
+    await nodeSdk.shutdown().catch(console.error)
 }
 
