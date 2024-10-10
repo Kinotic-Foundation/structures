@@ -22,3 +22,21 @@ export function generatePeople(number: number): Person[] {
     }
     return persons
 }
+
+
+export function formatDuration(durationMs: number): string {
+    // Convert milliseconds to hours, minutes, seconds, and remaining milliseconds
+    const hours = Math.floor(durationMs / 3600000);
+    const minutes = Math.floor((durationMs % 3600000) / 60000);
+    const seconds = Math.floor((durationMs % 60000) / 1000);
+    const milliseconds = Math.floor(durationMs % 1000);
+
+    // Build human-readable time string
+    const timeParts = [];
+    if (hours > 0) timeParts.push(`${hours}h`);
+    if (minutes > 0) timeParts.push(`${minutes}m`);
+    if (seconds > 0) timeParts.push(`${seconds}s`);
+    if (milliseconds > 0 || timeParts.length === 0) timeParts.push(`${milliseconds}ms`);
+
+    return timeParts.join(' ');
+}

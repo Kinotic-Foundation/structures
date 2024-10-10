@@ -11,6 +11,7 @@ export class LoadGenerationService {
     private continuum: ContinuumSingleton
     private personService: PersonEntityService
     private queue: PQueue
+    private started: boolean = false
     private completedPromise: Promise<void> | null = null
     private completeResolver: ((value: void) => void) | null = null
     private totalTasksNeeded: number = 0
@@ -52,32 +53,44 @@ export class LoadGenerationService {
     }
 
     public async start(): Promise<void>{
-        console.log('Starting Load Generation Service')
-        const connectionInfo: ConnectionInfo = {
-            host          : this.loadGenerationConfig.structuresHost,
-            port          : this.loadGenerationConfig.structuresPort,
-            maxConnectionAttempts: 5,
-            connectHeaders: {login: 'admin', passcode: 'structures', tenantId: this.loadGenerationConfig.mockUserTenantId}
+        if(!this.started) {
+            this.started = true
+            console.log('Starting Load Generation Service')
+            const connectionInfo: ConnectionInfo = {
+                host: this.loadGenerationConfig.structuresHost,
+                port: this.loadGenerationConfig.structuresPort,
+                maxConnectionAttempts: 5,
+                connectHeaders: {
+                    login   : 'admin',
+                    passcode: 'structures',
+                    tenantId: this.loadGenerationConfig.mockUserTenantId
+                }
+            }
+            await this.continuum.connect(connectionInfo)
+            this.completedPromise = new Promise<void>((resolve) => {
+                this.completeResolver = resolve
+            })
+            this.enqueueTasks()
+            this.queue.start()
+        }else{
+            throw new Error('Load Generation Service already started')
         }
-        await this.continuum.connect(connectionInfo)
-        this.completedPromise = new Promise<void>((resolve) => {
-            this.completeResolver = resolve
-        })
-        this.enqueueTasks()
-        this.queue.start()
     }
 
     public async stop(): Promise<void> {
-        console.log('Stopping Load Generation Service')
-        this.queue.pause()
-        this.queue.clear()
-        this.taskSubmitted = 0
-        this.totalTasksNeeded = 0
-        this.totalRecordsPendingCreation = 0
-        await this.continuum.disconnect()
-        if(this.completeResolver){
-            this.completeResolver()
-            this.completeResolver = null
+        if (this.started) {
+            this.started = false
+            console.log('Stopping Load Generation Service')
+            this.queue.pause()
+            this.queue.clear()
+            this.taskSubmitted = 0
+            this.totalTasksNeeded = 0
+            this.totalRecordsPendingCreation = 0
+            await this.continuum.disconnect()
+            if (this.completeResolver) {
+                this.completeResolver()
+                this.completeResolver = null
+            }
         }
     }
 

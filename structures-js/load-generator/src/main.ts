@@ -2,6 +2,7 @@ import './instrumentation.js'
 import {LoadGenerationConfig} from '@/config/LoadGenerationConfig.js'
 import {nodeSdk} from '@/instrumentation.js'
 import {LoadGenerationService} from '@/services/LoadGenerationService.js'
+import {formatDuration} from '@/utils/DataUtil.js'
 
 import {WebSocket} from 'ws'
 
@@ -35,12 +36,18 @@ try {
             await nodeSdk.shutdown().catch(console.error)
         })
 
+    const start = performance.now()
     await loadService.start()
     console.log('Load Generation Started')
 
     await loadService.waitForCompletion()
 
     console.log('Load Generation Completed')
+    const end = performance.now();    // Record end time
+    const duration = end - start;     // Calculate the duration
+
+    console.log(`Load Generation took ${formatDuration(duration)}.`);
+
     await nodeSdk.shutdown().catch(console.error)
 
 } catch (e: any) {
