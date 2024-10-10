@@ -14,11 +14,14 @@ const otelConfig = OtelConfig.fromEnv()
 console.log('Otel Config:')
 otelConfig.print()
 
-let spanExporter: SpanExporter = new ConsoleSpanExporter();
+// TODO: support Noop exporter
+let spanExporter: SpanExporter | undefined = undefined
 if(otelConfig.exporterType === OtelExporterType.OTLP){
     spanExporter = new OTLPTraceExporter({
                                             url: otelConfig.otelEndpoint
                                          })
+}else if(otelConfig.exporterType === OtelExporterType.CONSOLE){
+    spanExporter = new ConsoleSpanExporter()
 }
 
 export const nodeSdk = new NodeSDK({
@@ -28,5 +31,4 @@ export const nodeSdk = new NodeSDK({
                                                    }),
                             traceExporter: spanExporter,
                         })
-
 nodeSdk.start()

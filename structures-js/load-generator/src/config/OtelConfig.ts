@@ -1,6 +1,7 @@
 export enum OtelExporterType {
     OTLP = "OTLP",
-    CONSOLE = "CONSOLE"
+    CONSOLE = "CONSOLE",
+    NONE = "NONE"
 }
 
 export class OtelConfig {

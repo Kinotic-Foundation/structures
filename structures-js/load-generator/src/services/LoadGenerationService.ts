@@ -13,7 +13,9 @@ export class LoadGenerationService {
     private queue: PQueue
     private completedPromise: Promise<void> | null = null
     private completeResolver: ((value: void) => void) | null = null
-    private totalRecordsCreated: number = 0
+    private totalTasksNeeded: number = 0
+    private taskSubmitted: number = 0
+    private totalRecordsPendingCreation: number = 0
 
     constructor(loadGenerationConfig: LoadGenerationConfig) {
 
@@ -32,14 +34,21 @@ export class LoadGenerationService {
             console.error(error, "Error saving batch")
         })
 
+        // calculate the total number of tasks needed
+        if(loadGenerationConfig.totalNumberOfRecords > loadGenerationConfig.batchSize) {
+            this.totalTasksNeeded = Math.ceil(loadGenerationConfig.totalNumberOfRecords / loadGenerationConfig.batchSize)
+        }else{
+            this.totalTasksNeeded = 1
+        }
+        console.log(`For ${loadGenerationConfig.totalNumberOfRecords} records, ${this.totalTasksNeeded} tasks are needed with ${loadGenerationConfig.batchSize} records per task`)
+
         this.queue.on('empty', async () => {
-            if(this.totalRecordsCreated >= this.loadGenerationConfig.totalNumberOfRecords){
+            if(this.taskSubmitted >= this.totalTasksNeeded){
+               await this.queue.onIdle() // make sure all inflight tasks are completed
                await this.stop().catch(err => console.error(err, "Error stopping load generation service"))
             }
-            this.totalRecordsCreated += this.loadGenerationConfig.batchSize * 10
-            this.enqueueTasks(10)
+            this.enqueueTasks()
         });
-
     }
 
     public async start(): Promise<void>{
@@ -54,7 +63,7 @@ export class LoadGenerationService {
         this.completedPromise = new Promise<void>((resolve) => {
             this.completeResolver = resolve
         })
-        this.enqueueTasks(10)
+        this.enqueueTasks()
         this.queue.start()
     }
 
@@ -62,7 +71,9 @@ export class LoadGenerationService {
         console.log('Stopping Load Generation Service')
         this.queue.pause()
         this.queue.clear()
-        this.totalRecordsCreated = 0
+        this.taskSubmitted = 0
+        this.totalTasksNeeded = 0
+        this.totalRecordsPendingCreation = 0
         await this.continuum.disconnect()
         if(this.completeResolver){
             this.completeResolver()
@@ -78,20 +89,31 @@ export class LoadGenerationService {
         }
     }
 
-    private enqueueTasks(numberOfTasks: number): void {
+    private enqueueTasks(): void {
+        let numberOfTasks = Math.min(this.totalTasksNeeded - this.taskSubmitted, 10)
         for(let i = 0; i < numberOfTasks; i++) {
+
+            let recordsToCreate = this.loadGenerationConfig.batchSize
+            const recordsRemaining = this.loadGenerationConfig.totalNumberOfRecords - this.totalRecordsPendingCreation
+            if(recordsToCreate > recordsRemaining){
+                recordsToCreate = recordsRemaining
+            }
+
             this.queue.add(() => {
-                return this.persistFakeData(this.loadGenerationConfig.batchSize)
+                return this.persistFakeData(recordsToCreate)
             }).catch((e) => {
                 console.error(e, "Error saving batch");
             })
+
+            this.totalRecordsPendingCreation += recordsToCreate
         }
+        this.taskSubmitted += numberOfTasks
     }
 
     private persistFakeData(recordsToCreate: number): Promise<void> {
         return this.continuum.execute(async () => {
             const people = generatePeople(recordsToCreate)
-            return this.personService.bulkSave(people)
+            await this.personService.bulkSave(people)
         })
     }
 
