@@ -1,44 +1,51 @@
+import './instrumentation.js'
+import {LoadGenerationConfig} from '@/config/LoadGenerationConfig.js'
+import {nodeSdk} from '@/instrumentation.js'
 import {LoadGenerationService} from '@/services/LoadGenerationService.js'
+
 import {WebSocket} from 'ws'
 
 // This is required when running Continuum from node
 Object.assign(global, { WebSocket})
 
-process
-    .on('unhandledRejection', (reason, p) => {
-        console.error(reason, 'Unhandled Rejection at Promise', p);
-    })
-    .on('uncaughtException', err => {
-        console.error(err, 'Uncaught Exception thrown');
-        process.exit(1);
-    });
 
-console.log("Starting Load Generation")
-const loadService = new LoadGenerationService({
-                                                  host          : 'host.docker.internal',
-                                                  port          : 58503,
-                                                  maxConnectionAttempts: 3,
-                                                  connectHeaders: {login: 'admin', passcode: 'structures'}
-                                              })
-let connected = false
+const loadGenConfg: LoadGenerationConfig = LoadGenerationConfig.fromEnv()
+console.log('Load Generation Config:')
+loadGenConfg.print()
+
+const loadService = new LoadGenerationService(loadGenConfg)
+
 try {
-    console.log("Connecting")
-    await loadService.connect()
-    console.log("Connected to Structures")
-    connected = true
+    process
+        .on('unhandledRejection', (reason, p) => {
+            console.error(reason, 'Unhandled Rejection at Promise', p)
+        })
+        .on('uncaughtException', async err => {
+            console.error(err, 'Uncaught Exception thrown')
+            await loadService.stop()
+            await nodeSdk.shutdown().catch(console.error)
+            process.exit(1)
+        }).on('SIGINT', async () => {
+            console.log('SIGINT')
+            await loadService.stop()
+            await nodeSdk.shutdown().catch(console.error)
+        }).on('SIGTERM', async () => {
+            console.log('SIGTERM')
+            await loadService.stop()
+            await nodeSdk.shutdown().catch(console.error)
+        })
 
-    await loadService.persistFakeData(100)
+    await loadService.start()
+    console.log('Load Generation Started')
 
-    console.log("Disconnecting")
-    await loadService.disconnect()
-    connected = false
-    console.log("Disconnected")
+    await loadService.waitForCompletion()
 
-    console.log("Done")
+    console.log('Load Generation Completed')
+    await nodeSdk.shutdown().catch(console.error)
+
 } catch (e: any) {
-    console.error(e, 'Exception thrown');
-    if(connected){
-        await loadService.disconnect()
-    }
+    console.error(e, 'Exception thrown')
+    await loadService.stop()
+    await nodeSdk.shutdown().catch(console.error)
 }
 

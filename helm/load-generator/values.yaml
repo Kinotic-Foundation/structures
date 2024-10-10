@@ -1,0 +1,40 @@
+# Default values for load-generator.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+loadGenerator:
+  image:
+    repository: kinotic/structures-load-generator
+    tag: latest
+    pullPolicy: IfNotPresent
+
+# The number of jobs to run in parallel
+parallelism: 1
+
+# This is for setting Kubernetes Annotations to a Pod.
+# For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+podAnnotations: {}
+# This is for setting Kubernetes Labels to a Pod.
+# For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+podLabels: {}
+
+securityContext:
+  allowPrivilegeEscalation: false
+  privileged: false
+  readOnlyRootFilesystem: true
+  runAsGroup: 999
+  runAsNonRoot: true
+  runAsUser: 999
+  seccompProfile:
+    type: RuntimeDefault
+  capabilities:
+    drop:
+    - ALL
+
+resources:
+   limits:
+     memory: 512Mi
+   requests:
+     cpu: 100m
+     memory: 128Mi
+

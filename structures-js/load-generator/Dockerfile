@@ -11,6 +11,8 @@ RUN pnpm run build
 # Production stage
 FROM node:22-slim
 RUN corepack enable
+RUN groupmod -g 999 node && usermod -u 999 -g 999 node
+USER node
 WORKDIR /app
 COPY --from=builder /app .
 ENV NODE_ENV production
