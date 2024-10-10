@@ -59,6 +59,7 @@ export class LoadGenerationService {
             const connectionInfo: ConnectionInfo = {
                 host: this.loadGenerationConfig.structuresHost,
                 port: this.loadGenerationConfig.structuresPort,
+                useSSL: this.loadGenerationConfig.stucturesUseSsl,
                 maxConnectionAttempts: 5,
                 connectHeaders: {
                     login   : 'admin',

@@ -9,7 +9,6 @@ import {WebSocket} from 'ws'
 // This is required when running Continuum from node
 Object.assign(global, { WebSocket})
 
-
 const loadGenConfg: LoadGenerationConfig = LoadGenerationConfig.fromEnv()
 console.log('Load Generation Config:')
 loadGenConfg.print()

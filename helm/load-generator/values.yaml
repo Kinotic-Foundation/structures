@@ -16,6 +16,7 @@ loadGenerator:
 parallelism: 1
 
 structures:
+  useSsl: false
   host: 127.0.0.1
   port: 8080
 

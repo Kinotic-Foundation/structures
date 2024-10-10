@@ -35,10 +35,6 @@ spec:
               value: http://$(KUBE_NODE):4317
             - name: OTEL_EXPORTER_TYPE
               value: OTLP
-            - name: STRUCTURES_HOST
-              value: {{ .Values.structures.host }}
-            - name: STRUCTURES_PORT
-              value: {{ .Values.structures.port }}
             - name: BATCH_SIZE
               value: {{ .Values.loadGenerator.config.batchSize }}
             - name: TOTAL_NUMBER_OF_RECORDS
@@ -47,3 +43,11 @@ spec:
               value: {{ .Values.loadGenerator.config.maxRequestsPerSecond }}
             - name: MOCK_USER_TENANT_ID
               value: {{ .Values.loadGenerator.config.mockUserTenantId }}
+            - name: STRUCTURES_USE_SSL
+              value: {{ .Values.structures.useSsl }}
+            - name: STRUCTURES_HOST
+              value: {{ .Values.structures.host }}
+          {{- if .Values.structures.port }}
+            - name: STRUCTURES_PORT
+              value: {{ .Values.structures.port }}
+          {{- end }}
