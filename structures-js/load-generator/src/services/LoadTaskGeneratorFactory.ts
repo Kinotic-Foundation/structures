@@ -12,7 +12,21 @@ export class LoadTaskGeneratorFactory {
     public static createTaskGenerator(structuresConfig: StructuresConnectionConfig,
                                       loadTestConfig: LoadTestConfig): ITaskGenerator {
 
-        if(loadTestConfig.testName === 'bulkLoadMedium') {
+        if(loadTestConfig.testName === 'bulkLoadSmall') {
+
+            const peopleGenFactory: ITaskGeneratorFactory<TenantId>
+                      = (tenantId) => {
+                return new SavePeopleTaskGenerator(
+                    this.createConnectionInfo(tenantId, structuresConfig),
+                    1000,
+                    1000)
+            }
+
+            return new MultiTenantTaskGeneratorDelegator(loadTestConfig.beginTenantIdNumber,
+                                                         loadTestConfig.numberOfTenants,
+                                                         peopleGenFactory)
+
+        }else if(loadTestConfig.testName === 'bulkLoadMedium') {
 
             const peopleGenFactory: ITaskGeneratorFactory<TenantId>
              = (tenantId) => {
