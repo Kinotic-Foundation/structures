@@ -2,6 +2,7 @@ package org.kinotic.structures.internal.api.services.impl;
 
 import org.kinotic.continuum.api.security.Participant;
 import org.kinotic.structures.api.domain.DefaultEntityContext;
+import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.QueryParameter;
 import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.services.JsonEntitiesService;
@@ -11,6 +12,7 @@ import org.kinotic.structures.internal.api.services.sql.ListParameterHolder;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -63,6 +65,16 @@ public class DefaultJsonEntitiesService implements JsonEntitiesService {
     }
 
     @Override
+    public CompletableFuture<Page<RawJson>> findAllWithContext(String structureId,
+                                                               Pageable pageable,
+                                                               Map<String, Object> context,
+                                                               Participant participant) {
+        EntityContext entityContext = new DefaultEntityContext(participant);
+        entityContext.putAll(context);
+        return defaultEntitiesService.findAll(structureId, pageable, RawJson.class, entityContext);
+    }
+
+    @Override
     public CompletableFuture<RawJson> findById(String structureId, String id, Participant participant) {
         return defaultEntitiesService.findById(structureId, id, RawJson.class, new DefaultEntityContext(participant));
     }
@@ -109,6 +121,17 @@ public class DefaultJsonEntitiesService implements JsonEntitiesService {
                                                    Pageable pageable,
                                                    Participant participant) {
         return defaultEntitiesService.search(structureId, searchText, pageable, RawJson.class, new DefaultEntityContext(participant));
+    }
+
+    @Override
+    public CompletableFuture<Page<RawJson>> searchWithContext(String structureId,
+                                                              String searchText,
+                                                              Pageable pageable,
+                                                              Map<String, Object> context,
+                                                              Participant participant) {
+        EntityContext entityContext = new DefaultEntityContext(participant);
+        entityContext.putAll(context);
+        return defaultEntitiesService.search(structureId, searchText, pageable, RawJson.class, entityContext);
     }
 
     @Override

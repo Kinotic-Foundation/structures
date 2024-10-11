@@ -1,14 +1,22 @@
 package org.kinotic.structures.internal.api.hooks;
 
+import co.elastic.clients.elasticsearch._types.FieldValue;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
+import co.elastic.clients.elasticsearch._types.query_dsl.TermsQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.TermsQueryField;
 import co.elastic.clients.elasticsearch.core.*;
+import co.elastic.clients.util.ObjectBuilder;
 import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.domain.idl.decorators.MultiTenancyType;
 import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.internal.api.services.EntityContextConstants;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 /**
  * Keeps track of all read operations pre-processors for a given structure.
@@ -166,11 +174,22 @@ public class ReadPreProcessor {
         Query.Builder queryBuilder = null;
         // add multi tenancy filters if needed
         if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
-            routingConsumer.accept(context.getParticipant().getTenantId());
-            queryBuilder = new Query.Builder();
-            queryBuilder
-                    .bool(b -> b.filter(qb -> qb.term(tq -> tq.field(structuresProperties.getTenantIdFieldName())
-                                                              .value(context.getParticipant().getTenantId()))));
+            List<String> multiTenantSelection = context.get(EntityContextConstants.MULTI_TENANT_SELECTION_KEY);
+            if(multiTenantSelection != null && !multiTenantSelection.isEmpty()) {
+                // We do not add routing since the data could be spread across multiple shards
+                queryBuilder = new Query.Builder();
+                queryBuilder.bool(b -> b.filter(qb -> {
+                            List<FieldValue> fieldValues = new ArrayList<>(multiTenantSelection.size());
+                            return qb.terms(tsq -> tsq.field(structuresProperties.getTenantIdFieldName())
+                                               .terms(tqf-> tqf.value(fieldValues)));
+                        }));
+            }else{
+                routingConsumer.accept(context.getParticipant().getTenantId());
+                queryBuilder = new Query.Builder();
+                queryBuilder
+                        .bool(b -> b.filter(qb -> qb.term(tq -> tq.field(structuresProperties.getTenantIdFieldName())
+                                                                  .value(context.getParticipant().getTenantId()))));
+            }
         }
         return queryBuilder;
     }
