@@ -128,8 +128,7 @@ public class DefaultEntityService implements EntityService {
                         .search(structure.getItemIndex(),
                                 pageable,
                                 type,
-                                builder -> readPreProcessor.beforeFindAll(structure, builder, context))
-                        .thenApply(createParanoidCheck(type, context, "Find All")));
+                                builder -> readPreProcessor.beforeFindAll(structure, builder, context)));
     }
 
     @WithSpan
@@ -228,8 +227,7 @@ public class DefaultEntityService implements EntityService {
                         .search(structure.getItemIndex(),
                                 pageable,
                                 type,
-                                builder -> readPreProcessor.beforeSearch(structure, searchText, builder, context))
-                        .thenApply(createParanoidCheck(type, context, "Search")));
+                                builder -> readPreProcessor.beforeSearch(structure, searchText, builder, context)));
     }
 
     @WithSpan

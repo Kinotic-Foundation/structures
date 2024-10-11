@@ -156,11 +156,26 @@ public class ReadPreProcessor {
             queryBuilder = new Query.Builder();
             // add multi tenancy filters if needed
             if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
-                routingConsumer.accept(context.getParticipant().getTenantId());
-                queryBuilder
-                        .bool(b -> b.must(must -> must.queryString(qs -> qs.query(searchText).analyzeWildcard(true)))
-                                    .filter(qb -> qb.term(tq -> tq.field(structuresProperties.getTenantIdFieldName())
-                                                                  .value(context.getParticipant().getTenantId()))));
+
+                List<String> multiTenantSelection = context.get(EntityContextConstants.MULTI_TENANT_SELECTION_KEY);
+
+                if(multiTenantSelection != null && !multiTenantSelection.isEmpty()) {
+                    queryBuilder
+                            .bool(b -> b.must(must -> must.queryString(qs -> qs.query(searchText).analyzeWildcard(true)))
+                                        .filter(qb -> {
+                                            List<FieldValue> fieldValues = new ArrayList<>(multiTenantSelection.size());
+                                            return qb.terms(tsq -> tsq.field(structuresProperties.getTenantIdFieldName())
+                                                                      .terms(tqf-> tqf.value(fieldValues)));
+                                        }));
+
+                }else{
+
+                    routingConsumer.accept(context.getParticipant().getTenantId());
+                    queryBuilder
+                            .bool(b -> b.must(must -> must.queryString(qs -> qs.query(searchText).analyzeWildcard(true)))
+                                        .filter(qb -> qb.term(tq -> tq.field(structuresProperties.getTenantIdFieldName())
+                                                                      .value(context.getParticipant().getTenantId()))));
+                }
             }else{
                 queryBuilder.queryString(qs -> qs.query(searchText).analyzeWildcard(true));
             }
