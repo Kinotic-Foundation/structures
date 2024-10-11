@@ -18,8 +18,8 @@ importers:
         specifier: ^2.0.0
         version: 2.0.0
       '@kinotic/structures-api':
-        specifier: ^2.0.0
-        version: 2.0.0(@kinotic/continuum-client@2.10.5)
+        specifier: 3.0.0-beta.0
+        version: 3.0.0-beta.0(@kinotic/continuum-client@2.10.5)
       '@opentelemetry/api':
         specifier: ^1.9.0
         version: 1.9.0
@@ -253,8 +253,8 @@ packages:
   '@kinotic/continuum-idl@2.0.0':
     resolution: {integrity: sha512-7SblwX24A7xLsDYOy1if/iy+tUPjlbm8Ej1IPPGj5ENKvecKbkvxRo4nCL/Yl7CjY3GYJD9wZVvl8TNfGJPyVw==}
 
-  '@kinotic/structures-api@2.0.0':
-    resolution: {integrity: sha512-hU5frPJyLKSqGyeZFbgtAo9vD4mqpcOcJwXiDlPvR+R3VM+j9ph8ypGXS5ENNK3gJgkI/KegBhTViQtNEdHQxw==}
+  '@kinotic/structures-api@3.0.0-beta.0':
+    resolution: {integrity: sha512-15fXBkT6Kte4D0CthS0P9bYKBObGHOrPjQ0qTotQaSrR5OblcQfNbAbNk+ELKv5G+2ekR/gVkv9aHs5gP+GgAg==}
     peerDependencies:
       '@kinotic/continuum-client': ^2.10.3
 
@@ -1231,7 +1231,7 @@ snapshots:
 
   '@kinotic/continuum-idl@2.0.0': {}
 
-  '@kinotic/structures-api@2.0.0(@kinotic/continuum-client@2.10.5)':
+  '@kinotic/structures-api@3.0.0-beta.0(@kinotic/continuum-client@2.10.5)':
     dependencies:
       '@kinotic/continuum-client': 2.10.5
       '@kinotic/continuum-idl': 2.0.0

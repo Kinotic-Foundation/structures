@@ -8,7 +8,7 @@ import {EntitiesService} from '@kinotic/structures-api'
 import { ITask } from './ITask';
 
 /**
- * This class will generate tasks to fake {@link Person} objects
+ * This class will generate tasks to create fake {@link Person} objects
  */
 export class SavePeopleTaskGenerator implements ITaskGenerator {
 

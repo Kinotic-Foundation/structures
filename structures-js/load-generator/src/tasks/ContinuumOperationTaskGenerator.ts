@@ -43,12 +43,12 @@ export class ContinuumOperationTaskGenerator implements ITaskGenerator{
 
     constructor(connectionInfoSupplier: () => Promise<ConnectionInfo>,
                 continuum: ContinuumSingleton,
-                numberToCreate: number,
+                totalTasks: number,
                 taskFactory: ITaskFactory) {
         this.connectionInfoSupplier = connectionInfoSupplier
         this.continuum = continuum
         this.taskFactory = taskFactory
-        this.totalTasks = numberToCreate + 2// we add 2 for the connect and disconnect tasks
+        this.totalTasks = totalTasks + 2// we add 2 for the connect and disconnect tasks
         this.taskCreationsRemaining = this.totalTasks
         this.tasksComplete = new Promise<void>((resolve) => {
             this.resolveAllTasksComplete = resolve

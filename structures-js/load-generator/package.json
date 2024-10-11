@@ -30,7 +30,7 @@
     "@faker-js/faker": "^9.0.3",
     "@kinotic/continuum-client": "^2.10.5",
     "@kinotic/continuum-idl": "^2.0.0",
-    "@kinotic/structures-api": "^2.0.0",
+    "@kinotic/structures-api": "3.0.0-beta.0",
     "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/exporter-trace-otlp-grpc": "^0.53.0",
     "@opentelemetry/instrumentation": "^0.53.0",
