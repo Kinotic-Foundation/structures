@@ -10,13 +10,13 @@ import { ITask } from './ITask';
 /**
  * This class will generate tasks to create fake {@link Person} objects
  */
-export class SavePeopleTaskGenerator implements ITaskGenerator {
+export class SaveTaskGenerator implements ITaskGenerator {
 
     private continuumTaskGenerator: ContinuumOperationTaskGenerator
     private personEntityService: PersonEntityService
 
     /**
-     * Constructs a {@link SavePeopleTaskGenerator}
+     * Constructs a {@link SaveTaskGenerator}
      * NOTE: numberOfPeopleToCreate must be evenly divisible by batchSize or an error will be thrown
      * @param connectionInfoSupplier the supplier to get the {@link ConnectionInfo} to use
      * @param batchSize the number of people to create in a single batch.

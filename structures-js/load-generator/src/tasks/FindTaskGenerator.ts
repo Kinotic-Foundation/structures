@@ -9,11 +9,10 @@ import { ITask } from './ITask';
 /**
  * This class will generate tasks to find fake people
  */
-export class SavePeopleTaskGenerator implements ITaskGenerator {
+export class FindTaskGenerator implements ITaskGenerator {
 
     private continuumTaskGenerator: ContinuumOperationTaskGenerator
     private personEntityService: PersonEntityService
-
 
     constructor(connectionInfoSupplier: () => Promise<ConnectionInfo>,
                 totalToExecute: number,

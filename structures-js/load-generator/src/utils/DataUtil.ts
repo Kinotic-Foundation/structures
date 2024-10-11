@@ -83,3 +83,15 @@ export function generateDeterministicId(input: number): string {
     return `${identifier}${firstDigit}${secondDigit}`
 }
 
+/**
+ * Generates multiple deterministic identifiers starting from 0 and incrementing by 1, up to the given count.
+ * @param count The number of identifiers to generate
+ */
+export function generateMultipleDeterministicIds(count: number): string[] {
+    const ids: string[] = []
+    for (let i = 0; i < count; i++) {
+        ids.push(generateDeterministicId(i))
+    }
+    return ids
+}
+

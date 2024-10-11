@@ -1,9 +1,13 @@
 import {LoadTestConfig} from '@/config/LoadTestConfig.js'
 import {StructuresConnectionConfig} from '@/config/StructuresConnectionConfig.js'
+import {FindTaskGenerator} from '@/tasks/FindTaskGenerator.js'
 import {ITaskGenerator} from '@/tasks/ITaskGenerator.js'
 import {ITaskGeneratorFactory} from '@/tasks/ITaskGeneratorFactory.js'
+import {MultiTenantFindTaskGenerator} from '@/tasks/MultiTenantFindTaskGenerator.js'
+import {MultiTenantSearchTaskGenerator} from '@/tasks/MultiTenantSearchTaskGenerator.js'
 import {MultiTenantTaskGeneratorDelegator, TenantId} from '@/tasks/MultiTenantTaskGeneratorDelegator.js'
-import {SavePeopleTaskGenerator} from '@/tasks/SavePeopleTaskGenerator.js'
+import {SaveTaskGenerator} from '@/tasks/SaveTaskGenerator.js'
+import {SearchPeopleTaskGenerator} from '@/tasks/SearchPeopleTaskGenerator.js'
 import {ConnectionInfo} from '@kinotic/continuum-client'
 
 
@@ -16,7 +20,7 @@ export class LoadTaskGeneratorFactory {
 
             const peopleGenFactory: ITaskGeneratorFactory<TenantId>
                       = (tenantId) => {
-                return new SavePeopleTaskGenerator(
+                return new SaveTaskGenerator(
                     this.createConnectionInfo(tenantId, structuresConfig),
                     1000,
                     1000)
@@ -29,8 +33,8 @@ export class LoadTaskGeneratorFactory {
         }else if(loadTestConfig.testName === 'bulkLoadMedium') {
 
             const peopleGenFactory: ITaskGeneratorFactory<TenantId>
-             = (tenantId) => {
-                return new SavePeopleTaskGenerator(
+                      = (tenantId) => {
+                return new SaveTaskGenerator(
                     this.createConnectionInfo(tenantId, structuresConfig),
                     2000,
                     10000)
@@ -39,6 +43,64 @@ export class LoadTaskGeneratorFactory {
             return new MultiTenantTaskGeneratorDelegator(loadTestConfig.beginTenantIdNumber,
                                                          loadTestConfig.numberOfTenants,
                                                          peopleGenFactory)
+
+        }else if(loadTestConfig.testName === 'search') {
+
+            const peopleGenFactory: ITaskGeneratorFactory<TenantId>
+                      = (tenantId) => {
+                return new SearchPeopleTaskGenerator(
+                    this.createConnectionInfo(tenantId, structuresConfig),1, 'firstName: John', 100)
+            }
+
+            return new MultiTenantTaskGeneratorDelegator(loadTestConfig.beginTenantIdNumber,
+                                                         loadTestConfig.numberOfTenants,
+                                                         peopleGenFactory)
+
+        }else if(loadTestConfig.testName === 'searchMultiTenantSmall') {
+
+            // Tenant used during connection does not matter for this test
+            return new MultiTenantSearchTaskGenerator(this.createConnectionInfo('kinotic', structuresConfig),
+                                                      100,
+                                                      'firstName: John',
+                                                      100,
+                                                      loadTestConfig.numberOfTenants)
+
+        }else if(loadTestConfig.testName === 'searchMultiTenantLarge') {
+
+            // Tenant used during connection does not matter for this test
+            return new MultiTenantSearchTaskGenerator(this.createConnectionInfo('kinotic', structuresConfig),
+                                                      1000,
+                                                      'firstName: John',
+                                                      100,
+                                                      loadTestConfig.numberOfTenants)
+
+        }else if(loadTestConfig.testName === 'findAll') {
+
+            const peopleGenFactory: ITaskGeneratorFactory<TenantId>
+                      = (tenantId) => {
+                return new FindTaskGenerator(
+                    this.createConnectionInfo(tenantId, structuresConfig),1, 100)
+            }
+
+            return new MultiTenantTaskGeneratorDelegator(loadTestConfig.beginTenantIdNumber,
+                                                         loadTestConfig.numberOfTenants,
+                                                         peopleGenFactory)
+
+        }else if(loadTestConfig.testName === 'findAllMultiTenantSmall') {
+
+            // Tenant used during connection does not matter for this test
+            return new MultiTenantFindTaskGenerator(this.createConnectionInfo('kinotic', structuresConfig),
+                                                    100,
+                                                    100,
+                                                    loadTestConfig.numberOfTenants)
+
+        }else if(loadTestConfig.testName === 'findAllMultiTenantLarge') {
+
+            // Tenant used during connection does not matter for this test
+            return new MultiTenantFindTaskGenerator(this.createConnectionInfo('kinotic', structuresConfig),
+                                                    1000,
+                                                    100,
+                                                    loadTestConfig.numberOfTenants)
         }else {
             throw new Error(`Unsupported test name: ${loadTestConfig.testName}`)
         }

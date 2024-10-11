@@ -1,4 +1,5 @@
 /*instrumentation.ts*/
+import {LoadTestConfig} from '@/config/LoadTestConfig.js'
 import {OTLPTraceExporter} from '@opentelemetry/exporter-trace-otlp-grpc'
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import {ConsoleSpanExporter, SpanExporter} from '@opentelemetry/sdk-trace-node'
@@ -13,6 +14,8 @@ import {OtelConfig, OtelExporterType} from '@/config/OtelConfig.js'
 const otelConfig = OtelConfig.fromEnv()
 console.log('Otel Config:')
 otelConfig.print()
+// We use this with the name to help identify spans
+const loadTestConfig = LoadTestConfig.fromEnv()
 
 // TODO: support Noop exporter
 let spanExporter: SpanExporter | undefined = undefined
@@ -26,7 +29,7 @@ if(otelConfig.exporterType === OtelExporterType.OTLP){
 
 export const nodeSdk = new NodeSDK({
                             resource: new Resource({
-                                                       [ATTR_SERVICE_NAME]: 'structures.load-generator',
+                                                       [ATTR_SERVICE_NAME]: `structures.load-generator-${loadTestConfig.testName}`,
                                                        [ATTR_SERVICE_VERSION]: info.version,
                                                    }),
                             traceExporter: spanExporter,
