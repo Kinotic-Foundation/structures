@@ -111,6 +111,11 @@ public class DefaultJsonEntitiesService implements JsonEntitiesService {
     }
 
     @Override
+    public CompletableFuture<Void> syncIndex(String structureId) {
+        return defaultEntitiesService.syncIndex(structureId);
+    }
+
+    @Override
     public CompletableFuture<RawJson> save(String structureId, RawJson entity, Participant participant) {
         return defaultEntitiesService.save(structureId, entity, new DefaultEntityContext(participant));
     }

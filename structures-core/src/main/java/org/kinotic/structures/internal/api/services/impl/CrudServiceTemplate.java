@@ -94,7 +94,6 @@ public class CrudServiceTemplate {
                                                             builder.settings(s -> s
                                                                     .numberOfShards("3")
                                                                     .numberOfReplicas("2")
-                                                                    .refreshInterval(t -> t.time("1s"))
                                                                     .store(st -> st.type(StorageType.Fs))
                                                             );
 

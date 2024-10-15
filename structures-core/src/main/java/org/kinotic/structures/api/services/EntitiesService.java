@@ -145,6 +145,12 @@ public interface EntitiesService {
                                                   EntityContext context);
 
     /**
+     * This operation makes all the recent writes immediately available for search.
+     * @return a {@link CompletableFuture} that will complete when the operation is complete
+     */
+    CompletableFuture<Void> syncIndex(String structureId);
+
+    /**
      * Saves a given entity. This will override all data if there is an existing entity with the same id.
      * Use the returned instance for further operations as the save operation might have changed the entity instance.
      *

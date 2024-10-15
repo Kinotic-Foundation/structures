@@ -179,6 +179,13 @@ public class DefaultEntityService implements EntityService {
                                                                                  context));
     }
 
+    @Override
+    public CompletableFuture<Void> syncIndex() {
+        return esAsyncClient.indices()
+                     .refresh(b -> b.index(structure.getItemIndex()))
+                     .thenApply(unused -> null);
+    }
+
     @WithSpan
     @SuppressWarnings("unchecked")
     @Override
