@@ -6,6 +6,7 @@ import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.impl.NoStackTraceThrowable;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.json.jackson.JacksonCodec;
 import io.vertx.core.spi.json.JsonCodec;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.graphql.impl.GraphQLBatch;
