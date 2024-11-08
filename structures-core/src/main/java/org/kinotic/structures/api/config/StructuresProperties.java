@@ -70,6 +70,16 @@ public class StructuresProperties {
      */
     private Boolean corsAllowCredentials = null;
 
+    /**
+     * The max length of all HTTP headers in bytes. Default is 8KB.
+     */
+    private int maxHttpHeaderSize = 1024 * 8; // 8KB
+
+    /**
+     * The max length of the HTTP body in bytes, -1 for no limit. Default is no limit.
+     */
+    private long maxHttpBodySize = -1; // No Limit
+
     private OpenApiSecurityType openApiSecurityType = OpenApiSecurityType.NONE;
 
     private int openApiPort = 8080;
@@ -93,7 +103,7 @@ public class StructuresProperties {
     private String healthCheckPath = "/health/";
 
     /**
-     * If true static files will be served from resources/webroot
+     * If true, static files are served from resources/webroot
      */
     private boolean enableStaticFileServer = false;
 

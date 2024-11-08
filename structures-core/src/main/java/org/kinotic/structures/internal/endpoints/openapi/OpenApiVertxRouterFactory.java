@@ -64,6 +64,9 @@ public class OpenApiVertxRouterFactory {
 
         router.route().handler(corsHandler);
 
+        BodyHandler bodyHandler = BodyHandler.create(false);
+        bodyHandler.setBodyLimit(properties.getMaxHttpBodySize());
+
         // Open API Docs
         router.get("/api-docs/:structureNamespace/openapi.json")
               .produces("application/json")
@@ -165,7 +168,7 @@ public class OpenApiVertxRouterFactory {
               .consumes("text/plain")
               .produces("application/json")
               .failureHandler(failureHandler)
-              .handler(BodyHandler.create(false))
+              .handler(bodyHandler)
               .handler(ctx -> {
 
                   String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
@@ -181,7 +184,7 @@ public class OpenApiVertxRouterFactory {
         router.post(apiBasePath + ":structureNamespace/:structureName/delete/by-query")
               .consumes("text/plain")
               .failureHandler(failureHandler)
-              .handler(BodyHandler.create(false))
+              .handler(bodyHandler)
               .handler(ctx -> {
 
                   String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
@@ -198,7 +201,7 @@ public class OpenApiVertxRouterFactory {
               .consumes("application/json")
               .produces("application/json")
               .failureHandler(failureHandler)
-              .handler(BodyHandler.create(false))
+              .handler(bodyHandler)
               .handler(ctx -> {
 
                   String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
@@ -222,7 +225,7 @@ public class OpenApiVertxRouterFactory {
         router.post(apiBasePath + ":structureNamespace/:structureName/named-query/:queryName")
               .produces("application/json")
               .failureHandler(failureHandler)
-              .handler(BodyHandler.create(false))
+              .handler(bodyHandler)
               .handler(ctx -> {
 
                   String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
@@ -251,7 +254,7 @@ public class OpenApiVertxRouterFactory {
         router.post(apiBasePath + ":structureNamespace/:structureName/named-query-page/:queryName")
               .produces("application/json")
               .failureHandler(failureHandler)
-              .handler(BodyHandler.create(false))
+              .handler(bodyHandler)
               .handler(ctx -> {
 
                   String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
@@ -282,7 +285,7 @@ public class OpenApiVertxRouterFactory {
               .consumes("text/plain")
               .produces("application/json")
               .failureHandler(failureHandler)
-              .handler(BodyHandler.create(false))
+              .handler(bodyHandler)
               .handler(ctx -> {
 
                   String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
@@ -306,7 +309,7 @@ public class OpenApiVertxRouterFactory {
               .consumes("application/json")
               .produces("application/json")
               .failureHandler(failureHandler)
-              .handler(BodyHandler.create(false))
+              .handler(bodyHandler)
               .handler(ctx -> {
 
                   String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
@@ -323,7 +326,7 @@ public class OpenApiVertxRouterFactory {
               .consumes("application/json")
               .produces("application/json")
               .failureHandler(failureHandler)
-              .handler(BodyHandler.create(false))
+              .handler(bodyHandler)
               .handler(ctx -> {
 
                   String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
@@ -340,7 +343,7 @@ public class OpenApiVertxRouterFactory {
               .consumes("application/json")
               .produces("application/json")
               .failureHandler(failureHandler)
-              .handler(BodyHandler.create(false))
+              .handler(bodyHandler)
               .handler(ctx -> {
 
                   String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
@@ -357,7 +360,7 @@ public class OpenApiVertxRouterFactory {
               .consumes("application/json")
               .produces("application/json")
               .failureHandler(failureHandler)
-              .handler(BodyHandler.create(false))
+              .handler(bodyHandler)
               .handler(ctx -> {
 
                   String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);

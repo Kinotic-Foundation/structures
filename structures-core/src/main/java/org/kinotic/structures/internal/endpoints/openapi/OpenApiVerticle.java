@@ -3,6 +3,7 @@ package org.kinotic.structures.internal.endpoints.openapi;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpServer;
+import io.vertx.core.http.HttpServerOptions;
 import io.vertx.ext.web.Router;
 import lombok.RequiredArgsConstructor;
 import org.kinotic.structures.api.config.StructuresProperties;
@@ -24,7 +25,10 @@ public class OpenApiVerticle extends AbstractVerticle {
     private HttpServer server;
 
     public void start(Promise<Void> startPromise) {
-        server = vertx.createHttpServer();
+        HttpServerOptions options = new HttpServerOptions();
+        options.setMaxHeaderSize(properties.getMaxHttpHeaderSize());
+        server = vertx.createHttpServer(options);
+
         // Begin listening for requests
         server.requestHandler(router)
               .listen(properties.getOpenApiPort(), ar -> {
