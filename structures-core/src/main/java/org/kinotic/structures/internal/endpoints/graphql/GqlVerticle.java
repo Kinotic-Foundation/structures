@@ -3,6 +3,7 @@ package org.kinotic.structures.internal.endpoints.graphql;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpServer;
+import io.vertx.core.http.HttpServerOptions;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.CorsHandler;
@@ -30,7 +31,10 @@ public class GqlVerticle extends AbstractVerticle {
 
     @Override
     public void start(Promise<Void> startPromise) {
-        server = vertx.createHttpServer();
+        HttpServerOptions options = new HttpServerOptions();
+        options.setMaxHeaderSize(properties.getMaxHttpHeaderSize());
+        server = vertx.createHttpServer(options);
+
         Router router = Router.router(vertx);
 
         CorsHandler corsHandler = CorsHandler.create(properties.getCorsAllowedOriginPattern())
@@ -49,7 +53,8 @@ public class GqlVerticle extends AbstractVerticle {
               .consumes("application/json")
               .consumes("application/graphql")
               .produces("application/json")
-              .handler(BodyHandler.create(false))
+              .handler(BodyHandler.create(false)
+                                  .setBodyLimit(properties.getMaxHttpBodySize()))
               .handler(new GqlHandler(gqlExecutionService));
 
         // Begin listening for requests
