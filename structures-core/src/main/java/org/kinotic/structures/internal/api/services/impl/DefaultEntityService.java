@@ -198,8 +198,7 @@ public class DefaultEntityService implements EntityService {
 
             // This is a bit of a hack since the BinaryData type does not work properly to retrieve complex objects, but does work to store them.
             // https://github.com/elastic/elasticsearch-java/issues/574
-            if(entityHolder.getEntity() instanceof RawJson){
-                RawJson rawEntity = (RawJson) entityHolder.getEntity();
+            if(entityHolder.getEntity() instanceof RawJson rawEntity){
                 BinaryData binaryData = BinaryData.of(rawEntity.data(), ContentType.APPLICATION_JSON);
                 return esAsyncClient.index(i -> i
                                             .routing(routing)

@@ -196,8 +196,11 @@ public class ReadPreProcessor {
         Query.Builder queryBuilder = null;
         // add multi tenancy filters if needed
         if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
+
             List<String> multiTenantSelection = context.get(EntityContextConstants.MULTI_TENANT_SELECTION_KEY);
+
             if(multiTenantSelection != null && !multiTenantSelection.isEmpty()) {
+
                 log.info("Find All Multi tenant selection provided. Received {} tenants", multiTenantSelection.size());
                 // We do not add routing since the data could be spread across multiple shards
                 queryBuilder = new Query.Builder();
@@ -207,6 +210,7 @@ public class ReadPreProcessor {
                                                .terms(tqf-> tqf.value(fieldValues)));
                         }));
             }else{
+
                 routingConsumer.accept(context.getParticipant().getTenantId());
                 queryBuilder = new Query.Builder();
                 queryBuilder

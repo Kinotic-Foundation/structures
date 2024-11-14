@@ -65,16 +65,6 @@ public class DefaultJsonEntitiesService implements JsonEntitiesService {
     }
 
     @Override
-    public CompletableFuture<Page<RawJson>> findAllWithContext(String structureId,
-                                                               Pageable pageable,
-                                                               Map<String, Object> context,
-                                                               Participant participant) {
-        EntityContext entityContext = new DefaultEntityContext(participant);
-        entityContext.putAll(context);
-        return defaultEntitiesService.findAll(structureId, pageable, RawJson.class, entityContext);
-    }
-
-    @Override
     public CompletableFuture<RawJson> findById(String structureId, String id, Participant participant) {
         return defaultEntitiesService.findById(structureId, id, RawJson.class, new DefaultEntityContext(participant));
     }
@@ -126,17 +116,6 @@ public class DefaultJsonEntitiesService implements JsonEntitiesService {
                                                    Pageable pageable,
                                                    Participant participant) {
         return defaultEntitiesService.search(structureId, searchText, pageable, RawJson.class, new DefaultEntityContext(participant));
-    }
-
-    @Override
-    public CompletableFuture<Page<RawJson>> searchWithContext(String structureId,
-                                                              String searchText,
-                                                              Pageable pageable,
-                                                              Map<String, Object> context,
-                                                              Participant participant) {
-        EntityContext entityContext = new DefaultEntityContext(participant);
-        entityContext.putAll(context);
-        return defaultEntitiesService.search(structureId, searchText, pageable, RawJson.class, entityContext);
     }
 
     @Override

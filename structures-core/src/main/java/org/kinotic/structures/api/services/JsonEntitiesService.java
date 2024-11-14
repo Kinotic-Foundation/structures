@@ -89,11 +89,6 @@ public interface JsonEntitiesService {
      */
     CompletableFuture<Page<RawJson>> findAll(String structureId, Pageable pageable, Participant participant);
 
-    CompletableFuture<Page<RawJson>> findAllWithContext(String structureId,
-                                                        Pageable pageable,
-                                                        Map<String, Object> context,
-                                                        Participant participant);
-
     /**
      * Retrieves an entity by its id.
      *
@@ -174,12 +169,6 @@ public interface JsonEntitiesService {
      * @return a {@link CompletableFuture} of a page of entities
      */
     CompletableFuture<Page<RawJson>> search(String structureId, String searchText, Pageable pageable, Participant participant);
-
-    CompletableFuture<Page<RawJson>> searchWithContext(String structureId,
-                                                       String searchText,
-                                                       Pageable pageable,
-                                                       Map<String, Object> context,
-                                                       Participant participant);
 
     /**
      * Updates a given entity. This will only override the fields that are present in the given entity.
