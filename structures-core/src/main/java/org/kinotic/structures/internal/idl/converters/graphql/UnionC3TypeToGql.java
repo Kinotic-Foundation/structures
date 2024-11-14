@@ -29,8 +29,7 @@ public class UnionC3TypeToGql implements C3TypeConverter<GqlTypeHolder, UnionC3T
 
         for(ObjectC3Type objectC3Type : c3Type.getTypes()){
             GqlTypeHolder typeHolder = conversionContext.convert(objectC3Type);
-            if(typeHolder.getOutputType() instanceof GraphQLObjectType){
-                GraphQLObjectType objectType = (GraphQLObjectType) typeHolder.getOutputType();
+            if(typeHolder.getOutputType() instanceof GraphQLObjectType objectType){
                 String objectTypeName = objectType.getName();
 
                 conversionContext.state().getReferencedTypes().put(objectTypeName, objectType);

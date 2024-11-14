@@ -53,6 +53,9 @@ public class ObjectC3TypeToGql implements C3TypeConverter<GqlTypeHolder, ObjectC
                 fieldValue = new GqlTypeHolder(GraphQLNonNull.nonNull(Scalars.GraphQLID), GraphQLNonNull.nonNull(Scalars.GraphQLID));
 
                 // Add the @key directive to the field if federated
+                // We set resolvable to false if only one field exists.
+                // This is to support referencing an entity without contributing fields
+                // https://www.apollographql.com/docs/graphos/schema-design/federated-schemas/entities/contribute-fields#referencing-an-entity-without-contributing-fields
                 if(objectC3Type.getProperties().size() == 1){
                     GraphQLDirective keyDirective = GraphQLDirective.newDirective(FederationDirectives.key(fieldName))
                                                                             .argument(builder -> {
@@ -74,16 +77,14 @@ public class ObjectC3TypeToGql implements C3TypeConverter<GqlTypeHolder, ObjectC
                 // TODO: handle cases where the same object name is used across multiple different types in the same namespace
                 //       To handle this we will need to keep track of all "Models" per namespace and check for conflicts
                 //       Or this could be done by keeping the Conversion State around and converting all Structures for a namespace at once
-                if (fieldValue.getOutputType() instanceof GraphQLObjectType) {
-                    GraphQLObjectType objectType = (GraphQLObjectType) fieldValue.getOutputType();
+                if (fieldValue.getOutputType() instanceof GraphQLObjectType objectType) {
                     String objectTypeName = objectType.getName();
 
                     conversionContext.state().getReferencedTypes().put(objectTypeName, objectType);
                     fieldValue = fieldValue.toBuilder().outputType(typeRef(objectTypeName)).build();
                 }
 
-                if (fieldValue.getInputType() instanceof GraphQLInputObjectType) {
-                    GraphQLInputObjectType inputObjectType = (GraphQLInputObjectType) fieldValue.getInputType();
+                if (fieldValue.getInputType() instanceof GraphQLInputObjectType inputObjectType) {
                     String inputTypeName = inputObjectType.getName();
 
                     conversionContext.state().getReferencedTypes().put(inputTypeName, inputObjectType);
@@ -91,8 +92,7 @@ public class ObjectC3TypeToGql implements C3TypeConverter<GqlTypeHolder, ObjectC
                 }
 
                 // For union literals the DiscriminatorDecorator can be on the property, we capture that here.
-                if(fieldValue.getOutputType() instanceof GraphQLUnionType){
-                    GraphQLUnionType unionType = (GraphQLUnionType) fieldValue.getOutputType();
+                if(fieldValue.getOutputType() instanceof GraphQLUnionType unionType){
 
                     DiscriminatorDecorator discriminatorDecorator = property.findDecorator(DiscriminatorDecorator.class);
                     if(discriminatorDecorator != null && discriminatorDecorator.getPropertyName() != null){
