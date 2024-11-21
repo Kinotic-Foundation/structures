@@ -62,11 +62,18 @@ public class DefaultElasticVertxClient implements ElasticVertxClient {
 
         WebClientOptions options = new WebClientOptions()
                 .setConnectTimeout((int) structuresProperties.getElasticConnectionTimeout().toMillis());
+
+        // Looks like there is a bug in vertx required user agent to manually be set
+        // Caused by: java.lang.IncompatibleClassChangeError: Method 'io.vertx.core.MultiMap io.vertx.core.http.HttpHeaders.set(java.lang.CharSequence, java.lang.CharSequence)' must be Methodref constant
+       // options.setUserAgent("Structures-WebClient");
+
+
         this.webClient = WebClient.create(vertx, options);
 
         Validate.notEmpty(structuresProperties.getElasticConnections(), "No Elastic connections defined");
 
-        ElasticConnectionInfo elasticConnectionInfo = structuresProperties.getElasticConnections().get(0);
+        ElasticConnectionInfo elasticConnectionInfo = structuresProperties.getElasticConnections().getFirst();
+
         sqlQueryRequest = webClient.post(elasticConnectionInfo.getPort(),
                                          elasticConnectionInfo.getHost(), "/_sql");
         if(elasticConnectionInfo.getScheme().equalsIgnoreCase("https")){
@@ -95,8 +102,7 @@ public class DefaultElasticVertxClient implements ElasticVertxClient {
         JsonObject json = new JsonObject();
         boolean foundCursor = false;
         if(pageable != null){
-            if(pageable instanceof CursorPageable){
-                CursorPageable cursorPageable = (CursorPageable) pageable;
+            if(pageable instanceof CursorPageable cursorPageable){
                 if(cursorPageable.getCursor() != null) {
                     foundCursor = true;
                     json.put("cursor", cursorPageable.getCursor());

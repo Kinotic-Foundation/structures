@@ -74,18 +74,16 @@ export interface IEntitiesService {
      *
      * @param structureId the id of the structure to save the entity for
      * @param pageable    the page settings to be used
-     * @param entityContext optional context to pass to the entity service
      * @return a page of entities
      */
-    findAll<T>(structureId: string, pageable: Pageable, entityContext?: EntityContext): Promise<IterablePage<T>>
+    findAll<T>(structureId: string, pageable: Pageable): Promise<IterablePage<T>>
 
     /**
      * Returns a single {@link Page} of entities meeting the paging restriction provided in the {@link Pageable} object.
      * @param structureId the id of the structure to save the entity for
      * @param pageable the page settings to be used
-     * @param entityContext optional context to pass to the entity service
      */
-    findAllSinglePage<T>(structureId: string, pageable: Pageable, entityContext?: EntityContext): Promise<Page<T>>
+    findAllSinglePage<T>(structureId: string, pageable: Pageable): Promise<Page<T>>
 
     /**
      * Retrieves an entity by its id.
@@ -145,10 +143,9 @@ export interface IEntitiesService {
      * @param structureId the id of the structure to save the entity for
      * @param searchText  the text to search for entities for
      * @param pageable    the page settings to be used
-     * @param entityContext optional context to pass to the entity service
      * @return a page of entities
      */
-    search<T>(structureId: string, searchText: string, pageable: Pageable, entityContext?: EntityContext): Promise<IterablePage<T>>
+    search<T>(structureId: string, searchText: string, pageable: Pageable): Promise<IterablePage<T>>
 
     /**
      * Returns a single {@link Page} of entities matching the search text and paging restriction provided in the {@link Pageable} object.
@@ -158,15 +155,14 @@ export interface IEntitiesService {
      * @param structureId the id of the structure to save the entity for
      * @param searchText  the text to search for entities for
      * @param pageable    the page settings to be used
-     * @param entityContext optional context to pass to the entity service
      * @return a page of entities
      */
-    searchSinglePage<T>(structureId: string, searchText: string, pageable: Pageable, entityContext?: EntityContext): Promise<Page<T>>
+    searchSinglePage<T>(structureId: string, searchText: string, pageable: Pageable): Promise<Page<T>>
 
     /**
      * Updates a given entity. This will only override the fields that are present in the given entity.
-     * If any fields are not present in the given entity data they will not be changed.
-     * If the entity does not exist it will be created.
+     * If any fields are not present in the given entity data, they will not be changed.
+     * If the entity does not exist, it will be created.
      * Use the returned instance for further operations as the save operation might have changed the entity instance.
      *
      * @param structureId the id of the structure to update the entity for
@@ -211,17 +207,13 @@ export class EntitiesService implements IEntitiesService {
         return this.serviceProxy.invoke('deleteByQuery', [structureId, query])
     }
 
-    public async findAll<T>(structureId: string, pageable: Pageable, entityContext?: EntityContext): Promise<IterablePage<T>> {
-        const page: Page<T> = await this.findAllSinglePage(structureId, pageable, entityContext)
+    public async findAll<T>(structureId: string, pageable: Pageable): Promise<IterablePage<T>> {
+        const page: Page<T> = await this.findAllSinglePage(structureId, pageable)
         return new FindAllIterablePage(this, pageable, page, structureId)
     }
 
-    public async findAllSinglePage<T>(structureId: string, pageable: Pageable, entityContext?: EntityContext): Promise<Page<T>> {
-        if(entityContext){
-            return this.serviceProxy.invoke('findAllWithContext', [structureId, pageable, entityContext])
-        }else{
-            return this.serviceProxy.invoke('findAll', [structureId, pageable])
-        }
+    public async findAllSinglePage<T>(structureId: string, pageable: Pageable): Promise<Page<T>> {
+        return this.serviceProxy.invoke('findAll', [structureId, pageable])
     }
 
     public findById<T>(structureId: string, id: string): Promise<T> {
@@ -255,17 +247,13 @@ export class EntitiesService implements IEntitiesService {
         return this.serviceProxy.invoke('save', [structureId, entity])
     }
 
-    public async search<T>(structureId: string, searchText: string, pageable: Pageable, entityContext?: EntityContext): Promise<IterablePage<T>> {
-        const page: Page<T> = await this.searchSinglePage(structureId, searchText, pageable, entityContext)
+    public async search<T>(structureId: string, searchText: string, pageable: Pageable): Promise<IterablePage<T>> {
+        const page: Page<T> = await this.searchSinglePage(structureId, searchText, pageable)
         return new SearchIterablePage(this, pageable, page, searchText, structureId)
     }
 
-    public async searchSinglePage<T>(structureId: string, searchText: string, pageable: Pageable, entityContext?: EntityContext): Promise<Page<T>> {
-        if(entityContext){
-            return this.serviceProxy.invoke('searchWithContext', [structureId, searchText, pageable, entityContext])
-        }else{
-            return this.serviceProxy.invoke('search', [structureId, searchText, pageable])
-        }
+    public async searchSinglePage<T>(structureId: string, searchText: string, pageable: Pageable): Promise<Page<T>> {
+        return this.serviceProxy.invoke('search', [structureId, searchText, pageable])
     }
 
     public update<T>(structureId: string, entity: T): Promise<T>{

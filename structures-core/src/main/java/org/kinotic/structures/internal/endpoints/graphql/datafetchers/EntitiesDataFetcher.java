@@ -3,13 +3,17 @@ package org.kinotic.structures.internal.endpoints.graphql.datafetchers;
 import com.apollographql.federation.graphqljava._Entity;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
+import io.vertx.ext.web.RoutingContext;
 import lombok.RequiredArgsConstructor;
+import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.services.EntitiesService;
+import org.kinotic.structures.internal.endpoints.openapi.RoutingContextToEntityContextAdapter;
 import org.kinotic.structures.internal.utils.StructuresUtil;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -28,6 +32,10 @@ public class EntitiesDataFetcher implements DataFetcher<CompletableFuture<List<M
         List<Map<String, Object>> representations = env.getArgument(_Entity.argumentName);
         if(representations != null) {
 
+            RoutingContext rc = env.getGraphQlContext().get(RoutingContext.class);
+            Objects.requireNonNull(rc);
+            EntityContext ec = new RoutingContextToEntityContextAdapter(rc);
+
             List<CompletableFuture<Map>> futures = new ArrayList<>(representations.size());
             // TODO: change this to mget
             for (Map<String, Object> representation : representations) {
@@ -37,7 +45,7 @@ public class EntitiesDataFetcher implements DataFetcher<CompletableFuture<List<M
                 futures.add(entitiesService.findById(structureId,
                                                      id,
                                                      Map.class,
-                                                     env.getLocalContext())
+                                                     ec)
                                            .thenApply(entity -> new EntityMap(entity, typename)));
             }
 

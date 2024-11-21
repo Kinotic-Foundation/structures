@@ -47,7 +47,7 @@ public class UnionC3TypeToGql implements C3TypeConverter<GqlTypeHolder, UnionC3T
             conversionContext.state().getUnionTypes().put(unionType.getName(),
                                                           Pair.of(unionType, new DiscriminatorTypeResolver(discriminatorDecorator.getPropertyName())));
         }else{
-            //  we set a no op resolver and if this is an Object property that has a Discriminator that will take precedence
+            // we set a no op resolver, and if this is an Object property that has a Discriminator, that will take precedence
             conversionContext.state().getUnionTypes().put(unionType.getName(),
                                                           Pair.of(unionType, new NoOpTypeResolver()));
         }

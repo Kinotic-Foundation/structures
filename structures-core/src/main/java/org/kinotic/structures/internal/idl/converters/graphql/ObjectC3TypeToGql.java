@@ -134,13 +134,6 @@ public class ObjectC3TypeToGql implements C3TypeConverter<GqlTypeHolder, ObjectC
             }
         }
 
-        // if this is the top level object, add any directives
-        if(conversionContext.state().fieldDepth() == 0){
-            for(GraphQLAppliedDirective directive : conversionContext.state().getOutputTypeDirectives()){
-                outputBuilder.withAppliedDirective(directive);
-            }
-        }
-
         return new GqlTypeHolder(!nullInputTypeFound ? inputBuilder.build() : null, outputBuilder.build());
     }
 

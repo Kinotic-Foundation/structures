@@ -8,6 +8,7 @@ import graphql.language.OperationDefinition;
 import graphql.schema.*;
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
+import io.vertx.ext.web.handler.graphql.GraphQLHandler;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.text.WordUtils;
@@ -47,9 +48,9 @@ import static graphql.schema.GraphQLObjectType.newObject;
  */
 @Component
 @RequiredArgsConstructor
-public class GqlSchemaCacheLoader implements AsyncCacheLoader<String, GraphQL> {
+public class GqlSchemaHandlerCacheLoader implements AsyncCacheLoader<String, GraphQLHandler> {
 
-    private static final Logger log = LoggerFactory.getLogger(GqlSchemaCacheLoader.class);
+    private static final Logger log = LoggerFactory.getLogger(GqlSchemaHandlerCacheLoader.class);
     private static final EntitiesTypeResolver ENTITIES_TYPE_RESOLVER = new EntitiesTypeResolver();
 
     private static final String FEDERATION_BASE = "extend schema\n" +
@@ -66,7 +67,7 @@ public class GqlSchemaCacheLoader implements AsyncCacheLoader<String, GraphQL> {
     private final GqlOperationDefinitionService gqlOperationDefinitionService;
 
     @Override
-    public CompletableFuture<GraphQL> asyncLoad(String key, Executor executor) throws Exception {
+    public CompletableFuture<GraphQLHandler> asyncLoad(String key, Executor executor) throws Exception {
         long now = System.nanoTime();
         return createGraphQlSchema(key, executor)
                 .thenCompose(schema -> {
@@ -79,7 +80,7 @@ public class GqlSchemaCacheLoader implements AsyncCacheLoader<String, GraphQL> {
                               key,
                               TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - now));
 
-                    return CompletableFuture.completedFuture(graphQL);
+                    return CompletableFuture.completedFuture(GraphQLHandler.create(graphQL));
                 });
     }
 

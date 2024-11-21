@@ -1,6 +1,6 @@
 import {QueryParameter} from '@/api/domain/QueryParameter'
 import {Page, Pageable, IterablePage} from '@kinotic/continuum-client'
-import {EntitiesServiceSingleton, EntityContext, IEntitiesService} from '@/api/IEntitiesService'
+import {EntitiesServiceSingleton, IEntitiesService} from '@/api/IEntitiesService'
 
 /**
  * This is the base interface for all entity services.
@@ -75,10 +75,9 @@ export interface IEntityService<T> {
      * Returns a {@link Page} of entities meeting the paging restriction provided in the {@link Pageable} object.
      *
      * @param pageable the page settings to be used
-     * @param entityContext the context to use when fetching the entities
      * @return a page of entities
      */
-    findAll(pageable: Pageable, entityContext?: EntityContext): Promise<IterablePage<T>>;
+    findAll(pageable: Pageable): Promise<IterablePage<T>>;
 
     /**
      * Retrieves an entity by its id.
@@ -130,10 +129,9 @@ export interface IEntityService<T> {
      *
      * @param searchText the text to search for entities for
      * @param pageable   the page settings to be used
-     * @param entityContext the context to use when fetching the entities
      * @return a page of entities
      */
-    search(searchText: string, pageable: Pageable, entityContext?: EntityContext): Promise<IterablePage<T>>;
+    search(searchText: string, pageable: Pageable): Promise<IterablePage<T>>;
 
     /**
      * Updates a given entity. This will only override the fields that are present in the given entity.
@@ -196,8 +194,8 @@ export class EntityService<T> implements IEntityService<T>{
         return this.entitiesService.deleteByQuery(this.structureId, query)
     }
 
-    public findAll(pageable: Pageable, entityContext?: EntityContext): Promise<IterablePage<T>>{
-        return this.entitiesService.findAll(this.structureId, pageable, entityContext)
+    public findAll(pageable: Pageable): Promise<IterablePage<T>>{
+        return this.entitiesService.findAll(this.structureId, pageable)
     }
 
     public findById(id: string): Promise<T>{
@@ -221,8 +219,8 @@ export class EntityService<T> implements IEntityService<T>{
         return this.entitiesService.save(this.structureId, entityToSave)
     }
 
-    public search(searchText: string, pageable: Pageable, entityContext?: EntityContext): Promise<IterablePage<T>>{
-        return this.entitiesService.search(this.structureId, searchText, pageable, entityContext)
+    public search(searchText: string, pageable: Pageable): Promise<IterablePage<T>>{
+        return this.entitiesService.search(this.structureId, searchText, pageable)
     }
 
     public async update(entity: T): Promise<T>{

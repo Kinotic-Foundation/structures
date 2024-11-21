@@ -76,7 +76,7 @@ public class RawJsonUpsertPreProcessor implements UpsertPreProcessor<RawJson, Ra
 
                 if (token == JsonToken.FIELD_NAME) {
 
-                    String fieldName = jsonParser.getCurrentName();
+                    String fieldName = jsonParser.currentName();
 
                     // if the stack depth and the object depth are the same we are at a new field in the same object so pop the stack
                     if(jsonPathStack.size() == objectDepth){
@@ -172,7 +172,7 @@ public class RawJsonUpsertPreProcessor implements UpsertPreProcessor<RawJson, Ra
                         currentId = null;
                         currentTenantId = null;
                     }else{
-                        if(!shouldSkipToken(token, jsonParser.getCurrentValue(), arrayDepth, processArray)){
+                        if(!shouldSkipToken(token, jsonParser.currentValue(), arrayDepth, processArray)){
                             jsonGenerator.copyCurrentEvent(jsonParser);
                         }
                     }
@@ -227,7 +227,7 @@ public class RawJsonUpsertPreProcessor implements UpsertPreProcessor<RawJson, Ra
             if(list.size() != 1){
                 throw new IllegalStateException("Expected exactly one entity to be returned");
             }
-            return list.get(0);
+            return list.getFirst();
         });
     }
 

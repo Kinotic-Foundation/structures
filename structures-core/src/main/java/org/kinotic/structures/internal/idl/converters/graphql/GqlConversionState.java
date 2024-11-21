@@ -26,10 +26,6 @@ public class GqlConversionState extends BaseConversionState {
 
     private final Map<String, GraphQLType> referencedTypes = new HashMap<>();
 
-    private List<GraphQLAppliedDirective> outputTypeDirectives = new ArrayList<>();
-
-    private List<GraphQLAppliedDirective> inputTypeDirectives = new ArrayList<>();
-
     /**
      * Union types keyed by name with the value being a pair of the GraphQLUnionType and the TypeResolver
      */

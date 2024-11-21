@@ -10,7 +10,7 @@ dependencies {
 	implementation project(':structures-core')
 
 	// Additional Continuum Dependencies
-	implementation "org.kinotic:continuum-gateway:${continuumVersion}"
+	implementation "org.kinotic:continuum-gateway"
 
 	implementation 'com.github.ben-manes.caffeine:caffeine'
 

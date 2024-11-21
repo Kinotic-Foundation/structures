@@ -23,7 +23,7 @@ public class GqlVerticle extends AbstractVerticle {
     public static final String NAMESPACE_PATH_PARAMETER = "structureNamespace";
 
     private static final Logger log = LoggerFactory.getLogger(GqlVerticle.class);
-    private final GqlExecutionService gqlExecutionService;
+    private final DelegatingGqlHandler gqlHandler;
     private final StructuresProperties properties;
     private final SecurityService securityService;
     private HttpServer server;
@@ -55,7 +55,7 @@ public class GqlVerticle extends AbstractVerticle {
               .produces("application/json")
               .handler(BodyHandler.create(false)
                                   .setBodyLimit(properties.getMaxHttpBodySize()))
-              .handler(new GqlHandler(gqlExecutionService));
+              .handler(gqlHandler);
 
         // Begin listening for requests
         server.requestHandler(router).listen(properties.getGraphqlPort(), ar -> {
