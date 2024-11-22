@@ -48,6 +48,18 @@ export function Entity(multiTenancyType: MultiTenancyType = MultiTenancyType.NON
     }
 }
 
+/**
+ * A class Decorator when applied to an Entity will configure Decorators to be used by the EntityService
+ * @param decoratorsYaml a file path to a YAML file containing an {@link EntityServiceDecoratorsConfig}
+ */
+// @ts-ignore
+export function EntityServiceDecorators(decoratorsYaml: string) {
+    // @ts-ignore
+    return function (constructor: Function) {
+
+    }
+}
+
 export function Flattened(target: any, propertyKey: string) {
     Reflect.defineMetadata(StructuresDecorator.Flattened, {}, target, propertyKey)
 }
