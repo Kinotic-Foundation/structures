@@ -1,6 +1,6 @@
 {
   "name": "@kinotic/structures-api",
-  "version": "3.0.0-beta.0",
+  "version": "3.0.0-beta.1",
   "author": "Kinotic Foundation <develop@kinotic.org>",
   "license": "MIT",
   "homepage": "https://kinotic-foundation.github.io/structures/",
@@ -21,25 +21,27 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "gen-jschema": "ts-json-schema-generator --path 'my/project/**/*.ts' --type 'My.Type.Name'",
     "test": "vitest run --coverage"
   },
   "dependencies": {
-    "reflect-metadata": "^0.2.2",
-    "@kinotic/continuum-idl": "^2.0.0"
+    "@kinotic/continuum-idl": "^2.0.0",
+    "reflect-metadata": "^0.2.2"
   },
   "devDependencies": {
-    "@types/node": "^20.3.3",
-    "@types/ws": "^8.5.5",
-    "@vitest/coverage-v8": "^1.4.0",
+    "@types/node": "^22.9.1",
+    "@types/ws": "^8.5.13",
+    "@vitest/coverage-v8": "^2.1.5",
     "delay": "^6.0.0",
-    "docker-compose": "^0.24.1",
-    "testcontainers": "^9.9.1",
-    "typescript": "^5.4.5",
-    "vite": "^5.2.8",
-    "vite-plugin-dts": "^3.8.1",
+    "docker-compose": "^1.1.0",
+    "testcontainers": "^10.15.0",
+    "ts-json-schema-generator": "^2.3.0",
+    "typescript": "^5.7.2",
+    "vite": "^5.4.11",
+    "vite-plugin-dts": "^4.3.0",
     "vite-plugin-externalize-deps": "^0.8.0",
-    "vitest": "^1.4.0",
-    "ws": "^8.13.0"
+    "vitest": "^2.1.5",
+    "ws": "^8.18.0"
   },
   "peerDependencies": {
     "@kinotic/continuum-client": "^2.10.3"
