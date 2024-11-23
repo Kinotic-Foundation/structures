@@ -44,6 +44,6 @@
     "ws": "^8.18.0"
   },
   "peerDependencies": {
-    "@kinotic/continuum-client": "^2.10.3"
+    "@kinotic/continuum-client": "^2.10.5"
   }
 }

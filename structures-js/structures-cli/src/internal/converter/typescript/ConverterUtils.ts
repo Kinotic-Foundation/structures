@@ -17,7 +17,7 @@ import {
     DiscriminatorDecorator,
     QueryDecorator
 } from '@kinotic/structures-api'
-import {Decorator} from 'ts-morph'
+import {Decorator, SyntaxKind, ObjectLiteralExpression} from 'ts-morph'
 
 export function tsDecoratorToC3Decorator(decorator: Decorator): C3Decorator | null{
     let ret: C3Decorator | null = null
@@ -67,6 +67,15 @@ export function tsDecoratorToC3Decorator(decorator: Decorator): C3Decorator | nu
                 throw new Error('statement must be set on Query Decorator')
             }
         }
+    }else if(decorator.getName() === 'EntityServiceDecorators'){
+        const argument = decorator.getArguments()[0]
+        if(argument?.getKind() === SyntaxKind.ObjectLiteralExpression){
+            const obj = convertToObjectLiteral(argument as ObjectLiteralExpression)
+            obj.type = 'EntityServiceDecorators'
+            ret = obj
+        }else{
+            throw new Error('EntityServiceDecorators must have an object literal argument')
+        }
     }
 
     return ret
@@ -97,4 +106,41 @@ export function convertPrecisionToC3Type(decorator: Decorator): C3Type {
     }else{
         throw new Error('Decorator is not Precision decorator')
     }
+}
+
+function parseExpressionToJs(expression: any): any {
+    switch (expression.getKind()) {
+        case SyntaxKind.AsExpression:
+            // Directly handle the expression part of the AsExpression
+            const asExpr = expression.asKindOrThrow(SyntaxKind.AsExpression);
+            return parseExpressionToJs(asExpr.getExpression());
+        case SyntaxKind.ObjectLiteralExpression:
+            return convertToObjectLiteral(expression as ObjectLiteralExpression)
+        case SyntaxKind.ArrayLiteralExpression:
+            return expression.asKindOrThrow(SyntaxKind.ArrayLiteralExpression)
+                             .getElements()
+                             .map((el: any) => parseExpressionToJs(el))
+        case SyntaxKind.StringLiteral:
+            return expression.asKindOrThrow(SyntaxKind.StringLiteral).getLiteralValue()
+        case SyntaxKind.NumericLiteral:
+            return parseFloat(expression.asKindOrThrow(SyntaxKind.NumericLiteral).getLiteralText())
+        default:
+            return expression.getText() // Falls back to the text for other types
+    }
+}
+
+// Convert ObjectLiteralExpression to a JavaScript object
+function convertToObjectLiteral(expression: ObjectLiteralExpression): any {
+    const result: any = {}
+    for(const prop of expression.getProperties()) {
+        if (prop.getKind() === SyntaxKind.PropertyAssignment) {
+            const assignment = prop.asKindOrThrow(SyntaxKind.PropertyAssignment)
+            const key = assignment.getName()
+            const initializer = assignment.getInitializer()
+            if (initializer) {
+                result[key] = parseExpressionToJs(initializer)
+            }
+        }
+    }
+    return result
 }

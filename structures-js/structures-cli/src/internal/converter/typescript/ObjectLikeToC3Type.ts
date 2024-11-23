@@ -32,25 +32,78 @@ export class ObjectLikeToC3Type implements ITypeConverter<Type, C3Type, Typescri
             ret.metadata[ConverterConstants.SOURCE_FILE_PATH] = declarations[0].getSourceFile().getFilePath()
         }
 
+        // Get value declaration so we can get the decorators
+        this.convertDecorators(value, ret)
+
         // Translate all the typescript properties
+        this.convertProperties(value, conversionContext, ret)
+
+        // Now add any calculated properties, we do this, so we can override any of the default properties
+        this.convertCalculatedProperties(conversionContext, ret)
+
+        conversionContext.state().objectNameStack.pop()
+
+        return ret
+    }
+
+    supports(value: Type): boolean {
+        return value.isObject() && !value.isArray();
+    }
+
+    private convertCalculatedProperties(conversionContext: IConversionContext<Type, C3Type, TypescriptConversionState>, ret: ObjectC3Type) {
+        const calculatedProperties = conversionContext.state().getCalculatedProperties(conversionContext.currentJsonPath)
+        if (calculatedProperties) {
+            for (const calcProp of calculatedProperties) {
+                const functionName = calcProp.calculatedPropertyFunctionName
+                const calcFunction = conversionContext.state().getUtilFunctionByName(functionName)
+                if (!calcFunction) {
+                    throw new Error(`Could not find util function: ${functionName} for calculated property ${calcProp.entityJsonPath}.${calcProp.propertyName}`)
+                }
+                const converted = conversionContext.convert(calcFunction.getReturnType())
+                ret.properties.push(new PropertyDefinition(calcProp.propertyName, converted, calcProp.decorators))
+            }
+        }
+    }
+
+    private convertDecorators(value: Type, ret: ObjectC3Type) {
+        const errText = "No value declaration could be found for object " + value.getText()
+        const valueDeclaration = value.getSymbolOrThrow(errText)
+                                                   .getValueDeclarationOrThrow(errText)
+
+        // Typescript cannot detect that this can be a DecoratableNode, so we have to cast it twice
+        const decoratableNode = valueDeclaration as unknown as DecoratableNode
+
+        // Now Add any class level decorators
+        const decorators = decoratableNode.getDecorators()
+        if (decorators) {
+            for (const decorator of decorators) {
+                const c3Decorator = tsDecoratorToC3Decorator(decorator)
+                if (c3Decorator) {
+                    ret.addDecorator(c3Decorator)
+                }
+            }
+        }
+    }
+
+    private convertProperties(value: Type, conversionContext: IConversionContext<Type, C3Type, TypescriptConversionState>, ret: ObjectC3Type) {
         const properties = value.getProperties()
-        for(const property of properties){
+        for (const property of properties) {
             const propertyName = property.getName()
 
             conversionContext.beginProcessingProperty(propertyName)
 
-            if(!conversionContext.state().shouldExclude(conversionContext.currentJsonPath)) {
+            if (!conversionContext.state().shouldExclude(conversionContext.currentJsonPath)) {
                 let propertyDefinition: PropertyDefinition | null = null
 
                 const override = conversionContext.state().getOverrideType(conversionContext.currentJsonPath)
-                if(override){
+                if (override) {
                     propertyDefinition = override
-                }else{
+                } else {
                     const transform = conversionContext.state().getTransformFunction(conversionContext.currentJsonPath)
-                    if(transform){
+                    if (transform) {
                         const converted = conversionContext.convert(transform.getReturnType())
                         propertyDefinition = new PropertyDefinition(propertyName, converted)
-                    }else{
+                    } else {
                         propertyDefinition = this.convertProperty(property, propertyName, conversionContext)
                     }
                 }
@@ -59,24 +112,6 @@ export class ObjectLikeToC3Type implements ITypeConverter<Type, C3Type, Typescri
 
             conversionContext.endProcessingProperty()
         }
-
-        // Now add any calculated properties, we do this, so we can override any of the default properties
-        const calculatedProperties = conversionContext.state().getCalculatedProperties(conversionContext.currentJsonPath)
-        if(calculatedProperties){
-            for(const calcProp of calculatedProperties){
-                const functionName = calcProp.calculatedPropertyFunctionName
-                const calcFunction = conversionContext.state().getUtilFunctionByName(functionName)
-                if(!calcFunction){
-                    throw new Error(`Could not find util function: ${functionName} for calculated property ${calcProp.entityJsonPath}.${calcProp.propertyName}`)
-                }
-                const converted = conversionContext.convert(calcFunction.getReturnType())
-                ret.properties.push(new PropertyDefinition(calcProp.propertyName, converted, calcProp.decorators))
-            }
-        }
-
-        conversionContext.state().objectNameStack.pop()
-
-        return ret
     }
 
     private convertProperty(property: Symbol,
@@ -132,9 +167,5 @@ export class ObjectLikeToC3Type implements ITypeConverter<Type, C3Type, Typescri
         }
 
         return propertyDefinition
-    }
-
-    supports(value: Type): boolean {
-        return value.isObject() && !value.isArray();
     }
 }

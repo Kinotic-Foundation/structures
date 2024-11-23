@@ -1,4 +1,5 @@
 import 'reflect-metadata'
+import {EntityServiceDecoratorsConfig} from '@/api/idl/decorators/EntityServiceDecoratorsConfig.js'
 import {MultiTenancyType} from '@/api/idl/decorators/MultiTenancyType'
 import {PrecisionType} from '@/api/idl/decorators/PrecisionType'
 
@@ -50,10 +51,10 @@ export function Entity(multiTenancyType: MultiTenancyType = MultiTenancyType.NON
 
 /**
  * A class Decorator when applied to an Entity will configure Decorators to be used by the EntityService
- * @param decoratorsYaml a file path to a YAML file containing an {@link EntityServiceDecoratorsConfig}
+ * @param config the {@link EntityServiceDecoratorsConfig} to use
  */
 // @ts-ignore
-export function EntityServiceDecorators(decoratorsYaml: string) {
+export function EntityServiceDecorators(config: EntityServiceDecoratorsConfig) {
     // @ts-ignore
     return function (constructor: Function) {
 

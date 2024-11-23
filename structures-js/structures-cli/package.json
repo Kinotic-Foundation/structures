@@ -18,6 +18,7 @@
         "/oclif.manifest.json"
     ],
     "dependencies": {
+        "@inquirer/prompts": "^7.1.0",
         "@kinotic/continuum-client": "^2.10.5",
         "@kinotic/continuum-idl": "^2.0.0",
         "@kinotic/structures-api": "file:.yalc/@kinotic/structures-api",
@@ -29,7 +30,6 @@
         "@oclif/plugin-update": "^4.6.13",
         "@oclif/plugin-warn-if-update-available": "^3.1.23",
         "chalk": "^5.3.0",
-        "inquirer": "^12.1.0",
         "liquidjs": "^10.19.0",
         "open": "^10.1.0",
         "p-timeout": "^6.1.3",

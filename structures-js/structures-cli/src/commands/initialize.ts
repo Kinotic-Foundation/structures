@@ -39,11 +39,9 @@ export class Initialize extends Command {
 
         if(!fs.existsSync(entitiesPath)){
             this.error(`Entities path does not exist: ${entitiesPath}`)
-            return
         }
         if(!fs.existsSync(generatedPath)){
             this.error(`Generated path does not exist: ${generatedPath}`)
-            return
         }
 
         const namespace = flags.namespace
