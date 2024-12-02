@@ -7,7 +7,7 @@ import {
     IEvent,
     ParticipantConstants
 } from '@kinotic/continuum-client'
-import {C3Type, ComplexC3Type, FunctionDefinition, ObjectC3Type} from '@kinotic/continuum-idl'
+import {C3Type, FunctionDefinition, ObjectC3Type} from '@kinotic/continuum-idl'
 import {EntityDecorator} from '@kinotic/structures-api'
 import fs from 'fs'
 import fsPromises from 'fs/promises'
@@ -18,7 +18,6 @@ import path from 'path'
 import {IndentationText, Node, Project} from 'ts-morph'
 import {v4 as uuidv4} from 'uuid'
 import {createConversionContext} from './converter/IConversionContext.js'
-import {tsDecoratorToC3Decorator} from './converter/typescript/ConverterUtils.js'
 import {TypescriptConversionState} from './converter/typescript/TypescriptConversionState.js'
 import {TypescriptConverterStrategy} from './converter/typescript/TypescriptConverterStrategy.js'
 import {Logger} from './Logger.js'

@@ -15,7 +15,8 @@ import {
     MultiTenancyType, NestedDecorator,
     TextDecorator,
     DiscriminatorDecorator,
-    QueryDecorator
+    QueryDecorator,
+    EntityServiceDecoratorsDecorator, EntityServiceDecoratorsConfig
 } from '@kinotic/structures-api'
 import {Decorator, SyntaxKind, ObjectLiteralExpression} from 'ts-morph'
 
@@ -71,8 +72,10 @@ export function tsDecoratorToC3Decorator(decorator: Decorator): C3Decorator | nu
         const argument = decorator.getArguments()[0]
         if(argument?.getKind() === SyntaxKind.ObjectLiteralExpression){
             const obj = convertToObjectLiteral(argument as ObjectLiteralExpression)
-            obj.type = 'EntityServiceDecorators'
-            ret = obj
+            ret = {
+                type: 'EntityServiceDecorators',
+                config: obj as EntityServiceDecoratorsConfig
+            } as EntityServiceDecoratorsDecorator
         }else{
             throw new Error('EntityServiceDecorators must have an object literal argument')
         }

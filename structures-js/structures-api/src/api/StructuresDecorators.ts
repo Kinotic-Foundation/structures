@@ -1,5 +1,5 @@
 import 'reflect-metadata'
-import {EntityServiceDecoratorsConfig} from '@/api/idl/decorators/EntityServiceDecoratorsConfig.js'
+import {EntityServiceDecoratorsConfig} from '@/api/idl/decorators/EntityServiceDecoratorsConfig'
 import {MultiTenancyType} from '@/api/idl/decorators/MultiTenancyType'
 import {PrecisionType} from '@/api/idl/decorators/PrecisionType'
 

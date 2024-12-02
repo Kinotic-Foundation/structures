@@ -1,5 +1,5 @@
-import {EntityServiceDecorator} from '@/api/idl/decorators/EntityServiceDecorator.js'
-import {IEntityService} from '@/api/IEntityService.js'
+import {EntityServiceDecorator} from '@/api/idl/decorators/EntityServiceDecorator'
+import {IEntityService} from '@/api/IEntityService'
 
 // Helper type to determine if a type is a function
 type IfFunction<T, U> = T extends (...args: any[]) => any ? U : never;

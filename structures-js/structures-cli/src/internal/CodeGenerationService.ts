@@ -199,6 +199,7 @@ export class CodeGenerationService {
 
         const namedQueries: FunctionDefinition[] = []
         this.tsMorphProject.addSourceFileAtPath(entityServicePath)
+
         const entityServiceSource = this.tsMorphProject.getSourceFile(entityServicePath)
 
         // Currently we only support named queries when added to the generated entity service class

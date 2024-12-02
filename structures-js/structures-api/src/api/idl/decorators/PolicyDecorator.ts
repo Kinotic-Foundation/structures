@@ -1,4 +1,4 @@
-import {EntityServiceDecorator} from '@/api/idl/decorators/EntityServiceDecorator.js'
+import {EntityServiceDecorator} from '@/api/idl/decorators/EntityServiceDecorator'
 
 export class PolicyDecorator extends EntityServiceDecorator {
 
@@ -6,7 +6,7 @@ export class PolicyDecorator extends EntityServiceDecorator {
 
     constructor(policies: [string[]]) {
         super()
-        this.type = 'Policy'
+        this.type = 'PolicyDecorator'
         this.policies = policies
     }
 }
