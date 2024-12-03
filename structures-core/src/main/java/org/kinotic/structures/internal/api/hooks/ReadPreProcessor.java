@@ -70,6 +70,19 @@ public class ReadPreProcessor {
         }
     }
 
+    public void beforeFindAll(Structure structure,
+                              SearchRequest.Builder builder,
+                              EntityContext context) {
+
+        Query.Builder queryBuilder = createQueryWithTenantLogic(structure, context, builder::routing);
+
+        addSourceFilter(structure, builder, context);
+
+        if(queryBuilder != null){
+            builder.query(queryBuilder.build());
+        }
+    }
+
     public void beforeFindById(Structure structure,
                                GetRequest.Builder builder,
                                EntityContext context){
@@ -100,45 +113,6 @@ public class ReadPreProcessor {
         }
     }
 
-    public void beforeFindAll(Structure structure,
-                              SearchRequest.Builder builder,
-                              EntityContext context) {
-
-        Query.Builder queryBuilder = createQueryWithTenantLogic(structure, context, builder::routing);
-
-        addSourceFilter(structure, builder, context);
-
-        if(queryBuilder != null){
-            builder.query(queryBuilder.build());
-        }
-    }
-
-    private void addSourceFilter(Structure structure, SearchRequest.Builder builder, EntityContext context) {
-        // Set source fields filters
-        builder.source(b -> b.filter(sf -> {
-            // TODO: Put this back when no longer applicable
-            // If MultiTenancyType.SHARED exclude tenant id
-//            if(structure.getMultiTenancyType() == MultiTenancyType.SHARED) {
-//                // Currently this must not be done to support our multi tenancy paranoid check
-//                sf.excludes(structuresProperties.getTenantIdFieldName());
-//            }
-            // Add source fields filter
-            if(context.hasIncludedFieldsFilter()){
-                // If fields filter is empty  we exclude all fields from the source
-                if(context.getIncludedFieldsFilter().isEmpty()) {
-                    sf.excludes("*");
-                }else {
-                    sf.includes(context.getIncludedFieldsFilter());
-                }
-                // TODO: remove this when above is put back
-                if(structure.getMultiTenancyType() == MultiTenancyType.SHARED) {
-                    sf.includes(structuresProperties.getTenantIdFieldName());
-                }
-            }
-            return sf;
-        }));
-    }
-
     public void beforeSearch(Structure structure,
                              String searchText,
                              SearchRequest.Builder builder,
@@ -151,10 +125,39 @@ public class ReadPreProcessor {
         builder.query(queryBuilder.build());
     }
 
+    public Query.Builder createQueryWithTenantLogic(Structure structure, EntityContext context, Consumer<String> routingConsumer) {
+        Query.Builder queryBuilder = null;
+        // add multi tenancy filters if needed
+        if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
+
+            List<String> multiTenantSelection = context.get(EntityContextConstants.MULTI_TENANT_SELECTION_KEY);
+
+            if(multiTenantSelection != null && !multiTenantSelection.isEmpty()) {
+
+                log.info("Find All Multi tenant selection provided. Received {} tenants", multiTenantSelection.size());
+                // We do not add routing since the data could be spread across multiple shards
+                queryBuilder = new Query.Builder();
+                queryBuilder.bool(b -> b.filter(qb -> {
+                            List<FieldValue> fieldValues = new ArrayList<>(multiTenantSelection.size());
+                            return qb.terms(tsq -> tsq.field(structuresProperties.getTenantIdFieldName())
+                                               .terms(tqf-> tqf.value(fieldValues)));
+                        }));
+            }else{
+
+                routingConsumer.accept(context.getParticipant().getTenantId());
+                queryBuilder = new Query.Builder();
+                queryBuilder
+                        .bool(b -> b.filter(qb -> qb.term(tq -> tq.field(structuresProperties.getTenantIdFieldName())
+                                                                  .value(context.getParticipant().getTenantId()))));
+            }
+        }
+        return queryBuilder;
+    }
+
     public Query.Builder createQueryWithTenantLogicAndSearch(Structure structure,
-                                                              String searchText,
-                                                              EntityContext context,
-                                                              Consumer<String> routingConsumer) {
+                                                             String searchText,
+                                                             EntityContext context,
+                                                             Consumer<String> routingConsumer) {
         Query.Builder queryBuilder;
         if(searchText != null){
             queryBuilder = new Query.Builder();
@@ -192,33 +195,30 @@ public class ReadPreProcessor {
         return queryBuilder;
     }
 
-    public Query.Builder createQueryWithTenantLogic(Structure structure, EntityContext context, Consumer<String> routingConsumer) {
-        Query.Builder queryBuilder = null;
-        // add multi tenancy filters if needed
-        if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
-
-            List<String> multiTenantSelection = context.get(EntityContextConstants.MULTI_TENANT_SELECTION_KEY);
-
-            if(multiTenantSelection != null && !multiTenantSelection.isEmpty()) {
-
-                log.info("Find All Multi tenant selection provided. Received {} tenants", multiTenantSelection.size());
-                // We do not add routing since the data could be spread across multiple shards
-                queryBuilder = new Query.Builder();
-                queryBuilder.bool(b -> b.filter(qb -> {
-                            List<FieldValue> fieldValues = new ArrayList<>(multiTenantSelection.size());
-                            return qb.terms(tsq -> tsq.field(structuresProperties.getTenantIdFieldName())
-                                               .terms(tqf-> tqf.value(fieldValues)));
-                        }));
-            }else{
-
-                routingConsumer.accept(context.getParticipant().getTenantId());
-                queryBuilder = new Query.Builder();
-                queryBuilder
-                        .bool(b -> b.filter(qb -> qb.term(tq -> tq.field(structuresProperties.getTenantIdFieldName())
-                                                                  .value(context.getParticipant().getTenantId()))));
+    private void addSourceFilter(Structure structure, SearchRequest.Builder builder, EntityContext context) {
+        // Set source fields filters
+        builder.source(b -> b.filter(sf -> {
+            // TODO: Put this back when no longer applicable
+            // If MultiTenancyType.SHARED exclude tenant id
+//            if(structure.getMultiTenancyType() == MultiTenancyType.SHARED) {
+//                // Currently this must not be done to support our multi tenancy paranoid check
+//                sf.excludes(structuresProperties.getTenantIdFieldName());
+//            }
+            // Add source fields filter
+            if(context.hasIncludedFieldsFilter()){
+                // If fields filter is empty  we exclude all fields from the source
+                if(context.getIncludedFieldsFilter().isEmpty()) {
+                    sf.excludes("*");
+                }else {
+                    sf.includes(context.getIncludedFieldsFilter());
+                }
+                // TODO: remove this when above is put back
+                if(structure.getMultiTenancyType() == MultiTenancyType.SHARED) {
+                    sf.includes(structuresProperties.getTenantIdFieldName());
+                }
             }
-        }
-        return queryBuilder;
+            return sf;
+        }));
     }
 
 }
