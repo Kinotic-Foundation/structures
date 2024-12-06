@@ -42,6 +42,6 @@ public class GqlOperationDefinition {
     /**
      * The function that will define the {@link DataFetcher} for this operation
      */
-    private final Function<Structure, DataFetcher> dataFetcherDefinitionFunction;
+    private final Function<Structure, DataFetcher<?>> dataFetcherDefinitionFunction;
 
 }

@@ -53,13 +53,16 @@ public class GqlSchemaHandlerCacheLoader implements AsyncCacheLoader<String, Gra
     private static final Logger log = LoggerFactory.getLogger(GqlSchemaHandlerCacheLoader.class);
     private static final EntitiesTypeResolver ENTITIES_TYPE_RESOLVER = new EntitiesTypeResolver();
 
-    private static final String FEDERATION_BASE = "extend schema\n" +
-            "@link(\n" +
-            "    url: \"https://specs.apollo.dev/federation/v2.4\"\n" +
-            "    import: [\n" +
-            "        \"@key\"\n" +
-            "    ]\n" +
-            ")\n";
+    private static final String FEDERATION_BASE = """
+            extend schema
+                @link(
+                    url: "https://specs.apollo.dev/federation/v2.9"
+                    import: [
+                        "@key",
+                        "@policy"
+                    ]
+                )
+            """;
 
     private final EntitiesService entitiesService;
     private final StructureDAO structureDAO;

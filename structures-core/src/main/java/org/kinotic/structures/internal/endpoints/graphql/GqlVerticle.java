@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.kinotic.continuum.api.security.SecurityService;
 import org.kinotic.continuum.gateway.api.security.AuthenticationHandler;
 import org.kinotic.structures.api.config.StructuresProperties;
+import org.kinotic.structures.internal.utils.VertxWebUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,6 +40,7 @@ public class GqlVerticle extends AbstractVerticle {
 
         CorsHandler corsHandler = CorsHandler.create(properties.getCorsAllowedOriginPattern())
                                              .allowedHeaders(properties.getCorsAllowedHeaders());
+
         if(properties.getCorsAllowCredentials() != null){
             corsHandler.allowCredentials(properties.getCorsAllowCredentials());
         }
@@ -53,6 +55,7 @@ public class GqlVerticle extends AbstractVerticle {
               .consumes("application/json")
               .consumes("application/graphql")
               .produces("application/json")
+              .failureHandler(VertxWebUtil.createExceptionConvertingFailureHandler())
               .handler(BodyHandler.create(false)
                                   .setBodyLimit(properties.getMaxHttpBodySize()))
               .handler(gqlHandler);
@@ -60,7 +63,7 @@ public class GqlVerticle extends AbstractVerticle {
         // Begin listening for requests
         server.requestHandler(router).listen(properties.getGraphqlPort(), ar -> {
             if (ar.succeeded()) {
-                log.info("GraphQL Started Listener on Thread "+Thread.currentThread().getName());
+                log.info("GraphQL Started Listener on Thread {}", Thread.currentThread().getName());
                 startPromise.complete();
             } else {
                 startPromise.fail(ar.cause());

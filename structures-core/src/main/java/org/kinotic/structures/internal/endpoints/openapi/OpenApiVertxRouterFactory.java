@@ -172,7 +172,7 @@ public class OpenApiVertxRouterFactory {
               .handler(ctx -> {
 
                   String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
-                  String query = ctx.getBody().toString();
+                  String query = ctx.body().asString();
 
                   VertxCompletableFuture.from(vertx, entitiesService.countByQuery(structureId,
                                                                                   query,
@@ -188,7 +188,7 @@ public class OpenApiVertxRouterFactory {
               .handler(ctx -> {
 
                   String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
-                  String query = ctx.getBody().toString();
+                  String query = ctx.body().asString();
 
                   VertxCompletableFuture.from(vertx, entitiesService.deleteByQuery(structureId,
                                                                                    query,
@@ -209,7 +209,7 @@ public class OpenApiVertxRouterFactory {
                   try {
                       TypeFactory typeFactory = this.objectMapper.getTypeFactory();
                       JavaType listType = typeFactory.constructCollectionType(List.class, String.class);
-                      List<String> ids = this.objectMapper.readValue(ctx.getBody().getBytes(), listType);
+                      List<String> ids = this.objectMapper.readValue(ctx.body().buffer().getBytes(), listType);
 
                       VertxCompletableFuture.from(vertx, entitiesService.findByIds(structureId,
                                                                                    ids,
@@ -233,8 +233,8 @@ public class OpenApiVertxRouterFactory {
 
                   try {
                       ParameterHolder parameterHolder = null;
-                      if(ctx.getBody().getBytes().length > 0){
-                          Map<String, Object> paramMap = this.objectMapper.readValue(ctx.getBody().getBytes(), new TypeReference<>() {});
+                      if(!ctx.body().isEmpty()){
+                          Map<String, Object> paramMap = this.objectMapper.readValue(ctx.body().buffer().getBytes(), new TypeReference<>() {});
                           parameterHolder = new MapParameterHolder(paramMap);
                       }
 
@@ -263,8 +263,8 @@ public class OpenApiVertxRouterFactory {
 
                   try {
                       ParameterHolder parameterHolder = null;
-                      if(ctx.getBody().getBytes().length > 0){
-                          Map<String, Object> paramMap = this.objectMapper.readValue(ctx.getBody().getBytes(), new TypeReference<>() {});
+                      if(!ctx.body().isEmpty()){
+                          Map<String, Object> paramMap = this.objectMapper.readValue(ctx.body().buffer().getBytes(), new TypeReference<>() {});
                           parameterHolder = new MapParameterHolder(paramMap);
                       }
 
@@ -292,7 +292,7 @@ public class OpenApiVertxRouterFactory {
 
                   Pageable pageable = VertxWebUtil.getPageableOrDefaultOffsetPageable(ctx);
 
-                  String searchString = ctx.getBody().toString();
+                  String searchString = ctx.body().asString();
 
                   Validate.notBlank(searchString, "A request body containing a search string must be provided");
 
@@ -315,7 +315,7 @@ public class OpenApiVertxRouterFactory {
                   String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
 
                   VertxCompletableFuture.from(vertx, entitiesService.bulkSave(structureId,
-                                                                              new RawJson(ctx.getBody().getBytes()),
+                                                                              new RawJson(ctx.body().buffer().getBytes()),
                                                                               new RoutingContextToEntityContextAdapter(ctx)))
                                         .handle(new NoValueHandler(ctx));
 
@@ -332,7 +332,7 @@ public class OpenApiVertxRouterFactory {
                   String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
 
                   VertxCompletableFuture.from(vertx, entitiesService.bulkUpdate(structureId,
-                                                                                new RawJson(ctx.getBody().getBytes()),
+                                                                                new RawJson(ctx.body().buffer().getBytes()),
                                                                                 new RoutingContextToEntityContextAdapter(ctx)))
                                         .handle(new NoValueHandler(ctx));
 
@@ -349,7 +349,7 @@ public class OpenApiVertxRouterFactory {
                   String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
 
                   VertxCompletableFuture.from(vertx, entitiesService.update(structureId,
-                                                                            new RawJson(ctx.getBody().getBytes()),
+                                                                            new RawJson(ctx.body().buffer().getBytes()),
                                                                             new RoutingContextToEntityContextAdapter(ctx)))
                                         .handle(new RawJsonHandler(ctx));
 
@@ -366,7 +366,7 @@ public class OpenApiVertxRouterFactory {
                   String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
 
                   VertxCompletableFuture.from(vertx, entitiesService.save(structureId,
-                                                                          new RawJson(ctx.getBody().getBytes()),
+                                                                          new RawJson(ctx.body().buffer().getBytes()),
                                                                           new RoutingContextToEntityContextAdapter(ctx)))
                                         .handle(new RawJsonHandler(ctx));
 
