@@ -77,14 +77,14 @@ public class ObjectC3TypeToGql implements C3TypeConverter<GqlTypeHolder, ObjectC
                 // TODO: handle cases where the same object name is used across multiple different types in the same namespace
                 //       To handle this we will need to keep track of all "Models" per namespace and check for conflicts
                 //       Or this could be done by keeping the Conversion State around and converting all Structures for a namespace at once
-                if (fieldValue.getOutputType() instanceof GraphQLObjectType objectType) {
+                if (fieldValue.outputType() instanceof GraphQLObjectType objectType) {
                     String objectTypeName = objectType.getName();
 
                     conversionContext.state().getReferencedTypes().put(objectTypeName, objectType);
                     fieldValue = fieldValue.toBuilder().outputType(typeRef(objectTypeName)).build();
                 }
 
-                if (fieldValue.getInputType() instanceof GraphQLInputObjectType inputObjectType) {
+                if (fieldValue.inputType() instanceof GraphQLInputObjectType inputObjectType) {
                     String inputTypeName = inputObjectType.getName();
 
                     conversionContext.state().getReferencedTypes().put(inputTypeName, inputObjectType);
@@ -92,7 +92,7 @@ public class ObjectC3TypeToGql implements C3TypeConverter<GqlTypeHolder, ObjectC
                 }
 
                 // For union literals the DiscriminatorDecorator can be on the property, we capture that here.
-                if(fieldValue.getOutputType() instanceof GraphQLUnionType unionType){
+                if(fieldValue.outputType() instanceof GraphQLUnionType unionType){
 
                     DiscriminatorDecorator discriminatorDecorator = property.findDecorator(DiscriminatorDecorator.class);
                     if(discriminatorDecorator != null && discriminatorDecorator.getPropertyName() != null){
@@ -106,9 +106,9 @@ public class ObjectC3TypeToGql implements C3TypeConverter<GqlTypeHolder, ObjectC
                 if (isNotNull(property)) {
                     GqlTypeHolder.GqlTypeHolderBuilder builder
                             = fieldValue.toBuilder()
-                                        .outputType(nonNull(fieldValue.getOutputType()));
-                    if (fieldValue.getInputType() != null) {
-                        builder.inputType(nonNull(fieldValue.getInputType()));
+                                        .outputType(nonNull(fieldValue.outputType()));
+                    if (fieldValue.inputType() != null) {
+                        builder.inputType(nonNull(fieldValue.inputType()));
                     }
                     fieldValue = builder.build();
                 }
@@ -118,16 +118,16 @@ public class ObjectC3TypeToGql implements C3TypeConverter<GqlTypeHolder, ObjectC
 
             outputBuilder.field(newFieldDefinition()
                                         .name(fieldName)
-                                        .type(fieldValue.getOutputType()));
+                                        .type(fieldValue.outputType()));
 
             // input type can be null in some cases such as a Union type.
             // This can create a paradigm mismatch between OpenApi and GraphQL, but we cannot do anything about it.
             // For now, we will not create an input type for these cases.
-            if (fieldValue.getInputType() != null) {
+            if (fieldValue.inputType() != null) {
                 if (isTypeRequiredForInput(property)) {
                     inputBuilder.field(newInputObjectField()
                                                .name(fieldName)
-                                               .type(fieldValue.getInputType()));
+                                               .type(fieldValue.inputType()));
                 }
             } else {
                 nullInputTypeFound = true;

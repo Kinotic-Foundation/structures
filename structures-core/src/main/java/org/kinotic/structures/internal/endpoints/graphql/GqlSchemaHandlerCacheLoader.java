@@ -119,8 +119,8 @@ public class GqlSchemaHandlerCacheLoader implements AsyncCacheLoader<String, Gra
 
                             GqlTypeHolder structureType = converter.convert(structure.getEntityDefinition());
                             GraphQLObjectType outputType;
-                            if (structureType.getOutputType() instanceof GraphQLObjectType) {
-                                outputType = (GraphQLObjectType) structureType.getOutputType();
+                            if (structureType.outputType() instanceof GraphQLObjectType) {
+                                outputType = (GraphQLObjectType) structureType.outputType();
                             } else {
                                 throw new IllegalStateException("Output type must be a GraphQLObjectType");
                             }
@@ -269,9 +269,9 @@ public class GqlSchemaHandlerCacheLoader implements AsyncCacheLoader<String, Gra
     private static GraphQLInputObjectType getGraphQLInputObjectType(GqlTypeHolder gqlTypeHolder) {
         GraphQLInputObjectType inputType = null;
         // Will be null if a UnionC3Type is found anywhere in the object graph
-        if (gqlTypeHolder.getInputType() != null) {
-            if (gqlTypeHolder.getInputType() instanceof GraphQLInputObjectType) {
-                inputType = (GraphQLInputObjectType) gqlTypeHolder.getInputType();
+        if (gqlTypeHolder.inputType() != null) {
+            if (gqlTypeHolder.inputType() instanceof GraphQLInputObjectType) {
+                inputType = (GraphQLInputObjectType) gqlTypeHolder.inputType();
             } else {
                 throw new IllegalStateException("Input type must be a GraphQLInputObjectType");
             }

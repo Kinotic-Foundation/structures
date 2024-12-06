@@ -27,7 +27,7 @@ public class CursorPageC3TypeToGql implements C3TypeConverter<GqlTypeHolder, Cur
         // This is safe to assume because pageC3Type.getContentType() is an ObjectC3Type
         ret = ret.toBuilder()
                  .inputType(null) // page types are always output only
-                 .outputType(nonNull(GqlUtils.wrapTypeWithCursorPage((GraphQLNamedOutputType)ret.getOutputType())))
+                 .outputType(nonNull(GqlUtils.wrapTypeWithCursorPage((GraphQLNamedOutputType)ret.outputType())))
                  .build();
         return ret;
     }
