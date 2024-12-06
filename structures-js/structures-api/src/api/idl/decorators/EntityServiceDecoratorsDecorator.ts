@@ -2,7 +2,7 @@ import {EntityServiceDecoratorsConfig} from '@/api/idl/decorators/EntityServiceD
 import {C3Decorator} from '@kinotic/continuum-idl'
 
 /**
- * {@link C3Decorator} representation for the {@link EntityServiceDecorators}
+ * Provides a way to add decorators to an entity service
  */
 export class EntityServiceDecoratorsDecorator extends C3Decorator {
 

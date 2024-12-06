@@ -1,5 +1,5 @@
 include:
-  - docker-compose.ek-stack.yml
+  - compose.ek-stack.yml
 services:
   structures-server:
     image: kinotic/structures-server:3.0.1

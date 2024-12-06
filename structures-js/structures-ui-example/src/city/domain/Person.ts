@@ -1,8 +1,26 @@
-import {Entity, Id, MultiTenancyType, Precision, PrecisionType} from '@kinotic/structures-api'
+import {
+    Entity,
+    Id,
+    MultiTenancyType,
+    Precision,
+    PrecisionType,
+    EntityServiceDecorators,
+    $Role, $Policy,
+    Policy,
+    Role
+} from '@kinotic/structures-api'
 import {Address} from './Address.js'
 
-
+@EntityServiceDecorators(
+    {
+        allCreate: [
+            $Policy([['data:create']]),
+            $Role(['admin'])
+        ],
+    }
+)
 @Entity(MultiTenancyType.SHARED)
+@Role(['admin'])
 export class Person {
 
     @Id
@@ -17,6 +35,7 @@ export class Person {
     @Precision(PrecisionType.SHORT)
     public age?: number
 
+    @Policy([['data:create']])
     public address!: Address
 
 }

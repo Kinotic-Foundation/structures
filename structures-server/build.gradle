@@ -2,10 +2,6 @@ plugins {
 	id 'org.kinotic.java-application-conventions'
 }
 
-ext {
-
-}
-
 dependencies {
 	implementation project(':structures-core')
 
@@ -25,4 +21,6 @@ test {
 	useJUnitPlatform()
 }
 
-tasks.findByName('processResources').dependsOn ":structures-frontend:copyDist"
+tasks.named('processResources'){
+	dependsOn ":structures-frontend:copyDist"
+}

@@ -18,8 +18,8 @@ importers:
         specifier: ^2.0.0
         version: 2.0.0
       '@kinotic/structures-api':
-        specifier: ^2.0.0
-        version: 2.0.0(@kinotic/continuum-client@2.10.3)
+        specifier: file:.yalc/@kinotic/structures-api
+        version: file:.yalc/@kinotic/structures-api(@kinotic/continuum-client@2.10.3)
       '@types/uuid':
         specifier: ^9.0.8
         version: 9.0.8
@@ -213,10 +213,10 @@ packages:
   '@kinotic/continuum-idl@2.0.0':
     resolution: {integrity: sha512-7SblwX24A7xLsDYOy1if/iy+tUPjlbm8Ej1IPPGj5ENKvecKbkvxRo4nCL/Yl7CjY3GYJD9wZVvl8TNfGJPyVw==}
 
-  '@kinotic/structures-api@2.0.0':
-    resolution: {integrity: sha512-hU5frPJyLKSqGyeZFbgtAo9vD4mqpcOcJwXiDlPvR+R3VM+j9ph8ypGXS5ENNK3gJgkI/KegBhTViQtNEdHQxw==}
+  '@kinotic/structures-api@file:.yalc/@kinotic/structures-api':
+    resolution: {directory: .yalc/@kinotic/structures-api, type: directory}
     peerDependencies:
-      '@kinotic/continuum-client': ^2.10.3
+      '@kinotic/continuum-client': ^2.10.5
 
   '@rollup/rollup-android-arm-eabi@4.18.0':
     resolution: {integrity: sha512-Tya6xypR10giZV1XzxmH5wr25VcZSncG0pZIjfePT0OVBvqNEurzValetGNarVrGiq66EBVAFn15iYX4w6FKgQ==}
@@ -643,7 +643,7 @@ snapshots:
 
   '@kinotic/continuum-idl@2.0.0': {}
 
-  '@kinotic/structures-api@2.0.0(@kinotic/continuum-client@2.10.3)':
+  '@kinotic/structures-api@file:.yalc/@kinotic/structures-api(@kinotic/continuum-client@2.10.3)':
     dependencies:
       '@kinotic/continuum-client': 2.10.3
       '@kinotic/continuum-idl': 2.0.0

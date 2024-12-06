@@ -1,5 +1,5 @@
 import 'reflect-metadata'
-import {EntityServiceDecoratorsConfig} from '@/api/idl/decorators/EntityServiceDecoratorsConfig'
+import {EntityServiceDecoratorsConfig} from '@/api/idl/decorators/EntityServiceDecoratorsDecorator'
 import {MultiTenancyType} from '@/api/idl/decorators/MultiTenancyType'
 import {PrecisionType} from '@/api/idl/decorators/PrecisionType'
 
@@ -50,7 +50,7 @@ export function Entity(multiTenancyType: MultiTenancyType = MultiTenancyType.NON
 }
 
 /**
- * A class Decorator when applied to an Entity will configure Decorators to be used by the EntityService
+ * A class Decorator when applied to an Entity will configure Decorators to be applied to the EntityService
  * @param config the {@link EntityServiceDecoratorsConfig} to use
  */
 // @ts-ignore
@@ -75,6 +75,21 @@ export function Nested(target: any, propertyKey: string) {
 
 export function NotNull(target: any, propertyKey: string) {
     Reflect.defineMetadata(StructuresDecorator.NotNull, {}, target, propertyKey)
+}
+
+// @ts-ignore
+export function Policy(policies: [string[]]) {
+    // Definition below allows decorator to be used for class, method, or properties
+    // @ts-ignore
+    return function (target: any, propertyKey?: string, descriptor?: PropertyDescriptor) {
+        // if (descriptor) {
+        //     // Method Decorator
+        // } else if (propertyKey) {
+        //     // Property Decorator
+        // } else {
+        //     // Class Decorator
+        // }
+    }
 }
 
 export class PrecisionConfig {
@@ -113,6 +128,13 @@ export function Query(statements: string) {
         // };
 
         return descriptor;
+    }
+}
+
+// @ts-ignore
+export function Role(roles: string[]) {
+    // @ts-ignore
+    return function (target: any, propertyKey?: string, descriptor?: PropertyDescriptor) {
     }
 }
 

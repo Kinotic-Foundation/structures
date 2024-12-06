@@ -3,10 +3,6 @@ plugins {
 	id 'io.freefair.lombok'
 }
 
-ext {
-
-}
-
 dependencies {
 	implementation "io.opentelemetry.instrumentation:opentelemetry-instrumentation-annotations:${otelAnnotationsVersion}"
 

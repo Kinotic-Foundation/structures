@@ -1,0 +1,36 @@
+{
+  "name": "@kinotic/structures-api",
+  "version": "3.0.0-beta.1",
+  "author": "Kinotic Foundation <develop@kinotic.org>",
+  "license": "MIT",
+  "homepage": "https://kinotic-foundation.github.io/structures/",
+  "repository": "https://github.com/Kinotic-Foundation/structures",
+  "type": "module",
+  "main": "./dist/structures-api.cjs",
+  "module": "./dist/structures-api.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/structures-api.js",
+      "require": "./dist/structures-api.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "gen-jschema": "ts-json-schema-generator --path 'my/project/**/*.ts' --type 'My.Type.Name'",
+    "test": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@kinotic/continuum-idl": "^2.0.0",
+    "reflect-metadata": "^0.2.2"
+  },
+  "peerDependencies": {
+    "@kinotic/continuum-client": "^2.10.5"
+  },
+  "packageManager": "pnpm@9.14.4+sha512.c8180b3fbe4e4bca02c94234717896b5529740a6cbadf19fa78254270403ea2f27d4e1d46a08a0f56c89b63dc8ebfd3ee53326da720273794e6200fcf0d184ab",
+  "yalcSig": "36543027f4674bcd54b1130ad8a9d59c"
+}

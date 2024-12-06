@@ -4,8 +4,35 @@
   "namespace": "city",
   "decorators": [
     {
+      "type": "EntityServiceDecorators",
+      "config": {
+        "allCreate": [
+          {
+            "type": "PolicyDecorator",
+            "policies": [
+              [
+                "data:create"
+              ]
+            ]
+          },
+          {
+            "type": "RoleDecorator",
+            "roles": [
+              "admin"
+            ]
+          }
+        ]
+      }
+    },
+    {
       "type": "Entity",
       "multiTenancyType": 1
+    },
+    {
+      "type": "RoleDecorator",
+      "roles": [
+        "admin"
+      ]
     }
   ],
   "properties": [
@@ -46,6 +73,16 @@
     },
     {
       "name": "address",
+      "decorators": [
+        {
+          "type": "PolicyDecorator",
+          "policies": [
+            [
+              "data:create"
+            ]
+          ]
+        }
+      ],
       "type": {
         "type": "object",
         "name": "Address",

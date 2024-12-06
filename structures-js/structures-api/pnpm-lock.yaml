@@ -9,7 +9,7 @@ importers:
   .:
     dependencies:
       '@kinotic/continuum-client':
-        specifier: ^2.10.3
+        specifier: ^2.10.5
         version: 2.10.5
       '@kinotic/continuum-idl':
         specifier: ^2.0.0

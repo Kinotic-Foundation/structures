@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="StructuresCLI" type="NodeJSConfigurationType" application-parameters="synchronize --dryRun" path-to-node="$USER_HOME$/.local/share/mise/installs/node/22/bin/node" path-to-js-file="bin/dev.js" typescript-loader="bundled" working-dir="$PROJECT_DIR$/structures-js/structures-cli">
+  <configuration default="false" name="StructuresCLI" type="NodeJSConfigurationType" application-parameters="synchronize --dryRun" path-to-node="$USER_HOME$/.local/share/mise/installs/node/22/bin/node" node-parameters="--loader ts-node/esm" path-to-js-file="bin/dev.js" working-dir="$PROJECT_DIR$/structures-js/structures-cli">
     <method v="2" />
   </configuration>
 </component>
