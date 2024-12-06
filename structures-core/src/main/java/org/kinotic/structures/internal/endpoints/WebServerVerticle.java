@@ -11,6 +11,7 @@ import io.vertx.ext.web.handler.CorsHandler;
 import io.vertx.ext.web.handler.StaticHandler;
 import lombok.RequiredArgsConstructor;
 import org.kinotic.structures.api.config.StructuresProperties;
+import org.kinotic.structures.internal.utils.VertxWebUtil;
 
 /**
  * Created by Navíd Mitchell 🤪on 6/8/23.
@@ -27,6 +28,8 @@ public class WebServerVerticle extends AbstractVerticle{
         server = vertx.createHttpServer();
 
         Router router = Router.router(vertx);
+
+        router.route().failureHandler(VertxWebUtil.createExceptionConvertingFailureHandler());
 
         CorsHandler corsHandler = CorsHandler.create(properties.getCorsAllowedOriginPattern())
                                              .allowedHeaders(properties.getCorsAllowedHeaders());

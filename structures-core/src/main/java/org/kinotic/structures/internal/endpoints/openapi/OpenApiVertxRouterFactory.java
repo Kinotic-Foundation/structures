@@ -8,11 +8,9 @@ import com.fasterxml.jackson.databind.type.TypeFactory;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
 import io.swagger.v3.core.util.ObjectMapperFactory;
 import io.swagger.v3.oas.models.OpenAPI;
-import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.Router;
-import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.CorsHandler;
 import lombok.RequiredArgsConstructor;
@@ -42,7 +40,6 @@ import java.util.function.Function;
 public class OpenApiVertxRouterFactory {
 
     private final EntitiesService entitiesService;
-    private final Handler<RoutingContext> failureHandler = VertxWebUtil.createExceptionConvertingFailureHandler();
     private final ObjectMapper objectMapper;
     private final OpenApiService openApiService;
     private final StructuresProperties properties;
@@ -55,6 +52,8 @@ public class OpenApiVertxRouterFactory {
     public Router createRouter() {
         String apiBasePath = properties.getOpenApiPath();
         Router router = Router.router(vertx);
+
+        router.route().failureHandler(VertxWebUtil.createExceptionConvertingFailureHandler());
 
         CorsHandler corsHandler = CorsHandler.create(properties.getCorsAllowedOriginPattern())
                                              .allowedHeaders(properties.getCorsAllowedHeaders());
@@ -70,7 +69,6 @@ public class OpenApiVertxRouterFactory {
         // Open API Docs
         router.get("/api-docs/:structureNamespace/openapi.json")
               .produces("application/json")
-              .failureHandler(failureHandler)
               .handler(ctx -> {
 
                   String structureNamespace = ctx.pathParam("structureNamespace");
@@ -100,7 +98,6 @@ public class OpenApiVertxRouterFactory {
 
         // Delete Entity By ID
         router.delete(apiBasePath + ":structureNamespace/:structureName/:id")
-              .failureHandler(failureHandler)
               .handler(ctx -> {
 
                   String id = ctx.pathParam("id");
@@ -117,7 +114,6 @@ public class OpenApiVertxRouterFactory {
         // Get all entities
         router.get(apiBasePath + ":structureNamespace/:structureName")
               .produces("application/json")
-              .failureHandler(failureHandler)
               .handler(ctx -> {
 
                   String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
@@ -134,7 +130,6 @@ public class OpenApiVertxRouterFactory {
         // Get Entity By ID
         router.get(apiBasePath + ":structureNamespace/:structureName/:id")
               .produces("application/json")
-              .failureHandler(failureHandler)
               .handler(ctx -> {
 
                   String id = ctx.pathParam("id");
@@ -153,7 +148,6 @@ public class OpenApiVertxRouterFactory {
         // Get Total Count for entity
         router.get(apiBasePath + ":structureNamespace/:structureName/count/all")
               .produces("application/json")
-              .failureHandler(failureHandler)
               .handler(ctx -> {
 
                   String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
@@ -167,7 +161,6 @@ public class OpenApiVertxRouterFactory {
         router.post(apiBasePath + ":structureNamespace/:structureName/count/by-query")
               .consumes("text/plain")
               .produces("application/json")
-              .failureHandler(failureHandler)
               .handler(bodyHandler)
               .handler(ctx -> {
 
@@ -183,7 +176,6 @@ public class OpenApiVertxRouterFactory {
         // Delete Entity By Query
         router.post(apiBasePath + ":structureNamespace/:structureName/delete/by-query")
               .consumes("text/plain")
-              .failureHandler(failureHandler)
               .handler(bodyHandler)
               .handler(ctx -> {
 
@@ -200,7 +192,6 @@ public class OpenApiVertxRouterFactory {
         router.post(apiBasePath + ":structureNamespace/:structureName/find/by-ids")
               .consumes("application/json")
               .produces("application/json")
-              .failureHandler(failureHandler)
               .handler(bodyHandler)
               .handler(ctx -> {
 
@@ -224,7 +215,6 @@ public class OpenApiVertxRouterFactory {
         // Named Query
         router.post(apiBasePath + ":structureNamespace/:structureName/named-query/:queryName")
               .produces("application/json")
-              .failureHandler(failureHandler)
               .handler(bodyHandler)
               .handler(ctx -> {
 
@@ -253,7 +243,6 @@ public class OpenApiVertxRouterFactory {
         // Named Query Page
         router.post(apiBasePath + ":structureNamespace/:structureName/named-query-page/:queryName")
               .produces("application/json")
-              .failureHandler(failureHandler)
               .handler(bodyHandler)
               .handler(ctx -> {
 
@@ -284,7 +273,6 @@ public class OpenApiVertxRouterFactory {
         router.post(apiBasePath + ":structureNamespace/:structureName/search")
               .consumes("text/plain")
               .produces("application/json")
-              .failureHandler(failureHandler)
               .handler(bodyHandler)
               .handler(ctx -> {
 
@@ -308,7 +296,6 @@ public class OpenApiVertxRouterFactory {
         router.post(apiBasePath + ":structureNamespace/:structureName/bulk")
               .consumes("application/json")
               .produces("application/json")
-              .failureHandler(failureHandler)
               .handler(bodyHandler)
               .handler(ctx -> {
 
@@ -325,7 +312,6 @@ public class OpenApiVertxRouterFactory {
         router.post(apiBasePath + ":structureNamespace/:structureName/bulk-update")
               .consumes("application/json")
               .produces("application/json")
-              .failureHandler(failureHandler)
               .handler(bodyHandler)
               .handler(ctx -> {
 
@@ -342,7 +328,6 @@ public class OpenApiVertxRouterFactory {
         router.post(apiBasePath + ":structureNamespace/:structureName/update")
               .consumes("application/json")
               .produces("application/json")
-              .failureHandler(failureHandler)
               .handler(bodyHandler)
               .handler(ctx -> {
 
@@ -359,7 +344,6 @@ public class OpenApiVertxRouterFactory {
         router.post(apiBasePath + ":structureNamespace/:structureName")
               .consumes("application/json")
               .produces("application/json")
-              .failureHandler(failureHandler)
               .handler(bodyHandler)
               .handler(ctx -> {
 

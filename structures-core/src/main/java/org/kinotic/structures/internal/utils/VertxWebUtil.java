@@ -142,7 +142,7 @@ public class VertxWebUtil {
                     statusCode = 500;
                 }
             }
-            log.warn("Error processing request", throwable);
+            log.debug("Error processing web request. Status Code ({})", statusCode, throwable);
         }else{
 
             if(statusCode == -1){
@@ -150,7 +150,7 @@ public class VertxWebUtil {
             }
             errorMessage = "Server Error";
 
-            log.warn("Unknown exception occurred. Status Code {}", statusCode);
+            log.warn("Unknown exception occurred processing web request. Status Code ({})", statusCode);
         }
         String jsonString = new JsonObject().put("error", errorMessage).encode();
         response.setStatusCode(statusCode);

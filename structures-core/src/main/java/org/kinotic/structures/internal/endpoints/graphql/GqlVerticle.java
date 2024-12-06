@@ -38,6 +38,8 @@ public class GqlVerticle extends AbstractVerticle {
 
         Router router = Router.router(vertx);
 
+        router.route().failureHandler(VertxWebUtil.createExceptionConvertingFailureHandler());
+
         CorsHandler corsHandler = CorsHandler.create(properties.getCorsAllowedOriginPattern())
                                              .allowedHeaders(properties.getCorsAllowedHeaders());
 
@@ -55,7 +57,6 @@ public class GqlVerticle extends AbstractVerticle {
               .consumes("application/json")
               .consumes("application/graphql")
               .produces("application/json")
-              .failureHandler(VertxWebUtil.createExceptionConvertingFailureHandler())
               .handler(BodyHandler.create(false)
                                   .setBodyLimit(properties.getMaxHttpBodySize()))
               .handler(gqlHandler);
