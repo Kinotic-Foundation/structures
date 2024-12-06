@@ -62,14 +62,15 @@ public class GqlVerticle extends AbstractVerticle {
               .handler(gqlHandler);
 
         // Begin listening for requests
-        server.requestHandler(router).listen(properties.getGraphqlPort(), ar -> {
-            if (ar.succeeded()) {
-                log.info("GraphQL Started Listener on Thread {}", Thread.currentThread().getName());
-                startPromise.complete();
-            } else {
-                startPromise.fail(ar.cause());
-            }
-        });
+        server.requestHandler(router)
+              .listen(properties.getGraphqlPort(), ar -> {
+                  if (ar.succeeded()) {
+                      log.info("GraphQL Started Listener on Thread {}", Thread.currentThread().getName());
+                      startPromise.complete();
+                  } else {
+                      startPromise.fail(ar.cause());
+                  }
+              });
     }
 
     @Override

@@ -4,8 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import graphql.ExecutionResult;
 import graphql.ExecutionResultImpl;
 import graphql.GraphQLError;
-import graphql.schema.GraphQLList;
-import graphql.schema.GraphQLNamedOutputType;
+import graphql.schema.*;
 import org.kinotic.continuum.core.api.crud.CursorPage;
 import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.structures.api.domain.DefaultEntityContext;
@@ -21,6 +20,9 @@ import java.util.Map;
 
 import static graphql.Scalars.GraphQLInt;
 import static graphql.Scalars.GraphQLString;
+import static graphql.introspection.Introspection.DirectiveLocation.*;
+import static graphql.schema.GraphQLArgument.newArgument;
+import static graphql.schema.GraphQLDirective.newDirective;
 import static graphql.schema.GraphQLFieldDefinition.newFieldDefinition;
 import static graphql.schema.GraphQLNonNull.nonNull;
 import static graphql.schema.GraphQLObjectType.newObject;
@@ -30,6 +32,39 @@ import static graphql.schema.GraphQLObjectType.newObject;
  */
 public class GqlUtils {
     private static final Logger log = LoggerFactory.getLogger(GqlUtils.class);
+
+    public static final GraphQLScalarType FederationPolicyScalar = GraphQLScalarType.newScalar()
+                                                                             .name("federation__Policy")
+                                                                             .description("Apollo custom Scalar for the federation__Policy")
+                                                                             .coercing(new GqlPolicyCoercing())
+                                                                             .build();
+
+    private static final GraphQLList nestedPolicyList = GraphQLList.list( // Define the [[federation__Policy!]!] input type
+                                                                   new GraphQLNonNull(
+                                                                           GraphQLList.list(
+                                                                                   new GraphQLNonNull(FederationPolicyScalar)
+                                                                           )
+                                                                   )
+    );
+
+    private static final GraphQLArgument policiesArgument = newArgument()
+            .name("policies")
+            .description("Nested list of federation__Policy")
+            .type(new GraphQLNonNull(nestedPolicyList))
+            .build();
+
+    private static final GraphQLDirective policyDirective = newDirective()
+            .name("policy")
+            .description("Apollo federation policy directive")
+            .argument(policiesArgument)
+            .validLocations(
+                    OBJECT,
+                    FIELD_DEFINITION,
+                    INTERFACE,
+                    SCALAR,
+                    ENUM
+            )
+            .build();
 
     public static ExecutionResult convertToExecutionResult(Throwable throwable) {
         GraphQLError error = GraphQLError.newError()
@@ -95,6 +130,23 @@ public class GqlUtils {
     public static String getStructureId(String namespace, String operationName, String operationPrefix) {
         String structureName = operationName.substring(operationPrefix.length());
         return StructuresUtil.structureNameToId(namespace, structureName);
+    }
+
+    /**
+     * Creates a {@link GraphQLDirective} for the Apollo @policy directive
+     * @param policies a list of policies to apply
+     * @return the directive
+     */
+    public static GraphQLDirective policy(List<List<String>> policies){
+        return newDirective(policyDirective)
+                .argument(policiesArgument(policies))
+                .build();
+    }
+
+    private static GraphQLArgument policiesArgument(List<List<String>> policies){
+        return newArgument(policiesArgument)
+                .value(policies)
+                .build();
     }
 
     public static <T> T parseVariable(Map<String, Object> variables,

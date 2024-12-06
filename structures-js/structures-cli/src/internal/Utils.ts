@@ -112,11 +112,6 @@ export async function connectAndUpgradeSession(server: string, logger: Logger): 
 
             const sessionId = await receiveSessionId(scope)
 
-            // We got session id we don't care about the prompt anymore
-            // This happens if the user opens the url in the browser and authenticates
-            // @ts-ignore
-            answers.ui.close()
-
             await Continuum.disconnect()
 
             connectionInfo.connectHeaders = {
