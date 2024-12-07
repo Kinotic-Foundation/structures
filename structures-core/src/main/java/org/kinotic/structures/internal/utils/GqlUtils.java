@@ -33,6 +33,8 @@ import static graphql.schema.GraphQLObjectType.newObject;
 public class GqlUtils {
     private static final Logger log = LoggerFactory.getLogger(GqlUtils.class);
 
+    public static final GraphQLTypeReference federationPolicyTypeRef = new GraphQLTypeReference("federation__Policy");
+
     public static final GraphQLScalarType FederationPolicyScalar = GraphQLScalarType.newScalar()
                                                                              .name("federation__Policy")
                                                                              .description("Apollo custom Scalar for the federation__Policy")
@@ -42,7 +44,7 @@ public class GqlUtils {
     private static final GraphQLList nestedPolicyList = GraphQLList.list( // Define the [[federation__Policy!]!] input type
                                                                    new GraphQLNonNull(
                                                                            GraphQLList.list(
-                                                                                   new GraphQLNonNull(FederationPolicyScalar)
+                                                                                   new GraphQLNonNull(federationPolicyTypeRef)
                                                                            )
                                                                    )
     );

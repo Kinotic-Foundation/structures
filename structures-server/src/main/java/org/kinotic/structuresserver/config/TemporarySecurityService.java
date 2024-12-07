@@ -66,15 +66,11 @@ public class TemporarySecurityService implements SecurityService {
 
                         return CompletableFuture.completedFuture(createParticipant(authenticationInfo.get("tenantId")));
                     }else{
-                        if(log.isDebugEnabled()){
-                            log.debug("Failed to authenticate user: {}", authenticationInfo.get("login"));
-                        }
+                        log.debug("Failed to authenticate user: {}", authenticationInfo.get("login"));
                     }
                 }
             }else{
-                if(log.isDebugEnabled()){
-                    log.debug("Only Basic Auth is supported. Received {}", authorizationHeader);
-                }
+                log.debug("Only Basic Auth is supported. Received {}", authorizationHeader);
             }
         }
 
