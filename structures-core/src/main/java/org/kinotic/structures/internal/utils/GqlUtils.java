@@ -35,12 +35,6 @@ public class GqlUtils {
 
     public static final GraphQLTypeReference federationPolicyTypeRef = new GraphQLTypeReference("federation__Policy");
 
-    public static final GraphQLScalarType FederationPolicyScalar = GraphQLScalarType.newScalar()
-                                                                             .name("federation__Policy")
-                                                                             .description("Apollo custom Scalar for the federation__Policy")
-                                                                             .coercing(new GqlPolicyCoercing())
-                                                                             .build();
-
     private static final GraphQLList nestedPolicyList = GraphQLList.list( // Define the [[federation__Policy!]!] input type
                                                                    new GraphQLNonNull(
                                                                            GraphQLList.list(

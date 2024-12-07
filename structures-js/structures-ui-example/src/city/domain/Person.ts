@@ -21,6 +21,7 @@ import {Address} from './Address.js'
 )
 @Entity(MultiTenancyType.SHARED)
 @Role(['admin'])
+@Policy([['data:read']])
 export class Person {
 
     @Id

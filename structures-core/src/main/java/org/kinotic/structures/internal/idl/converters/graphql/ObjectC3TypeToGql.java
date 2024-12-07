@@ -36,6 +36,12 @@ public class ObjectC3TypeToGql implements C3TypeConverter<GqlTypeHolder, ObjectC
         GraphQLInputObjectType.Builder inputBuilder = newInputObject().name(objectC3Type.getName() + "Input");
         boolean nullInputTypeFound = false;
 
+        // Process decorators on the object
+        PolicyDecorator policyDecorator = objectC3Type.findDecorator(PolicyDecorator.class);
+        if(policyDecorator != null){
+            outputBuilder.withDirective(GqlUtils.policy(policyDecorator.getPolicies()));
+        }
+
         for (PropertyDefinition property : objectC3Type.getProperties()) {
 
             String fieldName = property.getName();
@@ -56,12 +62,12 @@ public class ObjectC3TypeToGql implements C3TypeConverter<GqlTypeHolder, ObjectC
                 // https://www.apollographql.com/docs/graphos/schema-design/federated-schemas/entities/contribute-fields#referencing-an-entity-without-contributing-fields
                 if(objectC3Type.getProperties().size() == 1){
                     GraphQLDirective keyDirective = GraphQLDirective.newDirective(FederationDirectives.key(fieldName))
-                                                                            .argument(builder -> {
-                                                                                builder.name("resolvable")
-                                                                                        .type(GraphQLTypeReference.typeRef(Scalars.GraphQLBoolean.getName()))
-                                                                                        .valueLiteral(new BooleanValue(false));
-                                                                                return builder;
-                                                                            }).build();
+                                                                    .argument(builder -> {
+                                                                        builder.name("resolvable")
+                                                                               .type(GraphQLTypeReference.typeRef(Scalars.GraphQLBoolean.getName()))
+                                                                               .valueLiteral(new BooleanValue(false));
+                                                                        return builder;
+                                                                    }).build();
                     outputBuilder.withAppliedDirective(keyDirective.toAppliedDirective());
                 }else{
                     outputBuilder.withAppliedDirective(FederationDirectives.key(fieldName).toAppliedDirective());
@@ -95,9 +101,11 @@ public class ObjectC3TypeToGql implements C3TypeConverter<GqlTypeHolder, ObjectC
                     DiscriminatorDecorator discriminatorDecorator = property.findDecorator(DiscriminatorDecorator.class);
                     if(discriminatorDecorator != null && discriminatorDecorator.getPropertyName() != null){
                         // We don't check for existence since field level always takes precedence over the type level
-                        conversionContext.state().getUnionTypes().put(unionType.getName(),
-                                                                      Pair.of(unionType,
-                                                                              new DiscriminatorTypeResolver(discriminatorDecorator.getPropertyName())));
+                        conversionContext.state()
+                                         .getUnionTypes()
+                                         .put(unionType.getName(),
+                                              Pair.of(unionType,
+                                                      new DiscriminatorTypeResolver(discriminatorDecorator.getPropertyName())));
                     }
                 }
 
@@ -112,14 +120,14 @@ public class ObjectC3TypeToGql implements C3TypeConverter<GqlTypeHolder, ObjectC
                 }
             }
 
-            conversionContext.state().endProcessingField();
-
             if(property.containsDecorator(PolicyDecorator.class)){
+
                 outputBuilder.field(newFieldDefinition()
                                             .name(fieldName)
                                             .type(fieldValue.outputType())
                                             .withDirective(GqlUtils.policy(property.findDecorator(PolicyDecorator.class).getPolicies())));
             }else{
+
                 outputBuilder.field(newFieldDefinition()
                                             .name(fieldName)
                                             .type(fieldValue.outputType()));
@@ -137,6 +145,8 @@ public class ObjectC3TypeToGql implements C3TypeConverter<GqlTypeHolder, ObjectC
             } else {
                 nullInputTypeFound = true;
             }
+
+            conversionContext.state().endProcessingField();
         }
 
         return new GqlTypeHolder(!nullInputTypeFound ? inputBuilder.build() : null, outputBuilder.build());
