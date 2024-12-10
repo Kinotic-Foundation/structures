@@ -6,8 +6,6 @@ import java.util.concurrent.CompletableFuture;
 
 public interface AuthorizationService {
 
-    CompletableFuture<Boolean> authorize(String service, String action, Participant participant);
-
-
+    CompletableFuture<Boolean> authorize(String serviceName, String methodName, Participant participant);
 
 }
