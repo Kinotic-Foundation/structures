@@ -101,7 +101,7 @@ public class TestDataService {
 
         structure.setEntityDefinition(carType);
 
-        return namespaceService.createNamespaceIfNotExist("org.kinotic.sample", "Sample namespace")
+        return namespaceService.createNamespaceIfNotExist("org.kinotic.sample", "Sample namespace", )
                                .thenCompose(v -> structureService.create(structure)
                                                                  .thenCompose(saved -> structureService.publish(saved.getId())
                                                                                                        .thenApply(published -> saved)));
@@ -184,7 +184,7 @@ public class TestDataService {
 
         structure.setEntityDefinition(personType);
 
-        return namespaceService.createNamespaceIfNotExist("org.kinotic.sample", "Sample namespace")
+        return namespaceService.createNamespaceIfNotExist("org.kinotic.sample", "Sample namespace", )
                                .thenCompose(v -> structureService.create(structure)
                                                                  .thenCompose(saved -> structureService.publish(saved.getId())
                                                                                                        .thenApply(published -> saved)));

@@ -4,6 +4,9 @@ import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import co.elastic.clients.elasticsearch._types.mapping.DynamicMapping;
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
+import org.kinotic.continuum.api.security.Participant;
+import org.kinotic.continuum.core.api.crud.Page;
+import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.StructureService;
@@ -12,8 +15,6 @@ import org.kinotic.structures.internal.api.services.ElasticConversionResult;
 import org.kinotic.structures.internal.api.services.StructureConversionService;
 import org.kinotic.structures.internal.api.services.StructureDAO;
 import org.kinotic.structures.internal.utils.StructuresUtil;
-import org.kinotic.continuum.core.api.crud.Page;
-import org.kinotic.continuum.core.api.crud.Pageable;
 import org.springframework.stereotype.Component;
 
 import java.util.Date;
@@ -46,19 +47,13 @@ public class DefaultStructureService implements StructureService {
 
     @WithSpan
     @Override
-    public CompletableFuture<Long> count() {
+    public CompletableFuture<Long> count(Participant participant) {
         return structureDAO.count();
     }
 
     @WithSpan
     @Override
-    public CompletableFuture<Long> countForNamespace(@SpanAttribute("namespace") String namespace) {
-        return structureDAO.countForNamespace(namespace);
-    }
-
-    @WithSpan
-    @Override
-    public CompletableFuture<Structure> create(@SpanAttribute("structure") Structure structure) {
+    public CompletableFuture<Structure> create(@SpanAttribute("structure") Structure structure, Participant participant) {
         String logicalIndexName;
         try {
             // will throw an exception if invalid
@@ -68,7 +63,7 @@ public class DefaultStructureService implements StructureService {
             structure.setName(structure.getName().trim());
             logicalIndexName = StructuresUtil.structureNameToId(structure.getNamespace(), structure.getName());
 
-            if(logicalIndexName.length() > 255){
+            if (logicalIndexName.length() > 255) {
                 throw new IllegalArgumentException("Structure Id is too long, 'namespace.name' must be less than 256 characters");
             }
 
@@ -76,7 +71,7 @@ public class DefaultStructureService implements StructureService {
             return CompletableFuture.failedFuture(e);
         }
 
-        return findById(logicalIndexName)
+        return findById(logicalIndexName, participant)
                 .thenCompose(existingStructure -> {
 
                     // Check if this is an existing structure or new one
@@ -102,21 +97,21 @@ public class DefaultStructureService implements StructureService {
 
                     structure.setMultiTenancyType(result.getMultiTenancyType());
 
-                    return  structureDAO.save(structure);
+                    return structureDAO.save(structure);
                 });
     }
 
     @WithSpan
     @Override
-    public CompletableFuture<Void> deleteById(@SpanAttribute("structureId") String structureId) {
-        return findById(structureId)
+    public CompletableFuture<Void> deleteById(@SpanAttribute("structureId") String structureId, Participant participant) {
+        return findById(structureId, participant)
                 .thenCompose(structure -> {
 
-                    if(structure == null){
+                    if (structure == null) {
                         return CompletableFuture.failedFuture(new IllegalArgumentException("Structure cannot be found for id: " + structureId));
                     }
 
-                    if(structure.isPublished()){
+                    if (structure.isPublished()) {
                         return CompletableFuture
                                 .failedFuture(new IllegalStateException("Structure must be Un-Published before Deleting"));
                     }
@@ -127,33 +122,35 @@ public class DefaultStructureService implements StructureService {
 
     @WithSpan
     @Override
-    public CompletableFuture<Page<Structure>> findAll(Pageable pageable) {
+    public CompletableFuture<Page<Structure>> findAll(Pageable pageable, Participant participant) {
         return structureDAO.findAll(pageable);
     }
 
     @WithSpan
     @Override
-    public CompletableFuture<Page<Structure>> findAllPublishedForNamespace(@SpanAttribute("namespace") String namespace, Pageable pageable) {
+    public CompletableFuture<Page<Structure>> findAllPublishedForNamespace(@SpanAttribute("namespace") String namespace,
+                                                                           Pageable pageable,
+                                                                           Participant participant) {
         return structureDAO.findAllPublishedForNamespace(namespace, pageable);
     }
 
     @WithSpan
     @Override
-    public CompletableFuture<Structure> findById(@SpanAttribute("structureId") String structureId) {
+    public CompletableFuture<Structure> findById(@SpanAttribute("structureId") String structureId, Participant participant) {
         return structureDAO.findById(structureId);
     }
 
     @WithSpan
     @Override
-    public CompletableFuture<Void> publish(@SpanAttribute("structureId") String structureId) {
-        return findById(structureId)
+    public CompletableFuture<Void> publish(@SpanAttribute("structureId") String structureId, Participant participant) {
+        return findById(structureId, participant)
                 .thenCompose(structure -> {
 
-                    if(structure == null){
+                    if (structure == null) {
                         return CompletableFuture.failedFuture(new IllegalArgumentException("Structure cannot be found for id: " + structureId));
                     }
 
-                    if(structure.isPublished()){
+                    if (structure.isPublished()) {
                         return CompletableFuture
                                 .failedFuture(new IllegalStateException("Structure is already published"));
                     }
@@ -185,7 +182,7 @@ public class DefaultStructureService implements StructureService {
 
     @WithSpan
     @Override
-    public CompletableFuture<Structure> save(@SpanAttribute("structure") Structure structure) {
+    public CompletableFuture<Structure> save(@SpanAttribute("structure") Structure structure, Participant participant) {
 
         try {
             if (structure.getId() == null || structure.getId().isBlank()) {
@@ -196,10 +193,10 @@ public class DefaultStructureService implements StructureService {
             return CompletableFuture.failedFuture(e);
         }
 
-        return findById(structure.getId())
+        return findById(structure.getId(), participant)
                 .thenCompose(existingStructure -> {
                     // short circuit validation
-                    if(existingStructure == null){
+                    if (existingStructure == null) {
                         return CompletableFuture.failedFuture(new IllegalArgumentException("Structure cannot be found for id: " + structure.getId()));
                     }
 
@@ -221,7 +218,7 @@ public class DefaultStructureService implements StructureService {
                     // Should we just use the Structures one?
                     structure.setMultiTenancyType(conversionResult.getMultiTenancyType());
 
-                    if(structure.isPublished()) {
+                    if (structure.isPublished()) {
                         // FIXME: how to best handle an operation where the mapping completes but the save fails.
                         //        Additionally this could have serious race conditions if multiple clients are updating the same structure
                         //        This could probably be solved by verifying the mapping is still valid before saving
@@ -240,7 +237,7 @@ public class DefaultStructureService implements StructureService {
                                                            return structure1;
                                                        });
                                 });
-                    }else{
+                    } else {
                         return structureDAO.save(structure);
                     }
                 });
@@ -248,21 +245,23 @@ public class DefaultStructureService implements StructureService {
 
     @WithSpan
     @Override
-    public CompletableFuture<Page<Structure>> search(@SpanAttribute("searchText") String searchText, Pageable pageable) {
+    public CompletableFuture<Page<Structure>> search(@SpanAttribute("searchText") String searchText,
+                                                     Pageable pageable,
+                                                     Participant participant) {
         return structureDAO.search(searchText, pageable);
     }
 
     @WithSpan
     @Override
-    public CompletableFuture<Void> unPublish(@SpanAttribute("structureId") String structureId) {
-        return findById(structureId)
+    public CompletableFuture<Void> unPublish(@SpanAttribute("structureId") String structureId, Participant participant) {
+        return findById(structureId, participant)
                 .thenCompose(structure -> {
 
-                    if(structure == null){
+                    if (structure == null) {
                         return CompletableFuture.failedFuture(new IllegalArgumentException("Structure cannot be found for id: " + structureId));
                     }
 
-                    if(!structure.isPublished()){
+                    if (!structure.isPublished()) {
                         return CompletableFuture
                                 .failedFuture(new IllegalStateException("Structure is not published"));
                     }

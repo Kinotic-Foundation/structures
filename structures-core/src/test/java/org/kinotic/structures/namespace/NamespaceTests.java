@@ -47,18 +47,18 @@ public class NamespaceTests extends ElasticsearchTestBase {
 		test.setId("Test");
 		test.setDescription("Testing This Namespace");
 
-		CompletableFuture<Namespace> future = namespaceService.save(test);
+		CompletableFuture<Namespace> future = namespaceService.save(test, );
 
 		StepVerifier.create(Mono.fromFuture(future))
 					.expectNextMatches(namespace -> namespace.getId().equals("Test") && namespace.getUpdated() != null)
 					.expectComplete()
 					.verify();
 
-		StepVerifier.create(Mono.fromFuture(namespaceService.deleteById(test.getId())))
+		StepVerifier.create(Mono.fromFuture(namespaceService.deleteById(test.getId(), )))
 					.expectComplete()
 					.verify();
 
-		StepVerifier.create(Mono.fromFuture(namespaceService.findById(test.getId())))
+		StepVerifier.create(Mono.fromFuture(namespaceService.findById(test.getId(), )))
 					.expectComplete()
 					.verify();
 	}

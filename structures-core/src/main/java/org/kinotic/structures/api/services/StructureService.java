@@ -18,7 +18,7 @@
 package org.kinotic.structures.api.services;
 
 import org.kinotic.continuum.api.annotations.Publish;
-import org.kinotic.continuum.core.api.crud.IdentifiableCrudService;
+import org.kinotic.continuum.api.security.Participant;
 import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.structures.api.domain.Structure;
@@ -26,7 +26,7 @@ import org.kinotic.structures.api.domain.Structure;
 import java.util.concurrent.CompletableFuture;
 
 @Publish
-public interface StructureService extends IdentifiableCrudService<Structure, String> {
+public interface StructureService extends SecuredCrudService<Structure, String> {
 
     /**
      * Finds all published structures for the given namespace.
@@ -34,14 +34,9 @@ public interface StructureService extends IdentifiableCrudService<Structure, Str
      * @param pageable the page to return
      * @return a future that will complete with a page of structures
      */
-    CompletableFuture<Page<Structure>> findAllPublishedForNamespace(String namespace, Pageable pageable);
-
-    /**
-     * Counts all structures for the given namespace.
-     * @param namespace the namespace to find structures for
-     * @return a future that will complete with a page of structures
-     */
-    CompletableFuture<Long> countForNamespace(String namespace);
+    CompletableFuture<Page<Structure>> findAllPublishedForNamespace(String namespace,
+                                                                    Pageable pageable,
+                                                                    Participant participant);
 
     /**
      * Publishes the structure with the given id.
@@ -49,13 +44,13 @@ public interface StructureService extends IdentifiableCrudService<Structure, Str
      * @param structureId the id of the structure to publish
      * @return a future that will complete when the structure has been published
      */
-    CompletableFuture<Void> publish(String structureId);
+    CompletableFuture<Void> publish(String structureId, Participant participant);
 
     /**
      * Un-publish the structure with the given id.
      * @param structureId the id of the structure to un-publish
      * @return a future that will complete when the structure has been unpublished
      */
-    CompletableFuture<Void> unPublish(String structureId);
+    CompletableFuture<Void> unPublish(String structureId, Participant participant);
 
 }

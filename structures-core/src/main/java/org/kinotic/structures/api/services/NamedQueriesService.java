@@ -1,7 +1,6 @@
 package org.kinotic.structures.api.services;
 
 import org.kinotic.continuum.api.annotations.Publish;
-import org.kinotic.continuum.core.api.crud.IdentifiableCrudService;
 import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.continuum.idl.api.schema.FunctionDefinition;
@@ -17,7 +16,7 @@ import java.util.concurrent.CompletableFuture;
  * Created by Navíd Mitchell 🤪 on 4/23/24.
  */
 @Publish
-public interface NamedQueriesService extends IdentifiableCrudService<NamedQueriesDefinition, String> {
+public interface NamedQueriesService extends SecuredCrudService<NamedQueriesDefinition, String> {
 
     /**
      * Evicts the cache for the given {@link NamedQueriesDefinition}
@@ -31,7 +30,7 @@ public interface NamedQueriesService extends IdentifiableCrudService<NamedQuerie
      * @param structure       the {@link Structure} that this named query is defined for
      * @param queryName       the name of {@link FunctionDefinition} that defines the query
      * @param parameterHolder the parameters to pass to the query
-     * @param type            the type of the entity
+     * @param type            the type of the namedQueryDefinition
      * @param context         the context for this operation
      * @return {@link CompletableFuture} with the result of the query
      */
@@ -48,7 +47,7 @@ public interface NamedQueriesService extends IdentifiableCrudService<NamedQuerie
      * @param queryName       the name of {@link FunctionDefinition} that defines the query
      * @param parameterHolder the parameters to pass to the query
      * @param pageable        the page settings to be used
-     * @param type            the type of the entity
+     * @param type            the type of the namedQueryDefinition
      * @param context         the context for this operation
      * @return {@link CompletableFuture} with the result of the query
      */

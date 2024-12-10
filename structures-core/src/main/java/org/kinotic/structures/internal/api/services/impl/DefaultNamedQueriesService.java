@@ -1,23 +1,22 @@
 package org.kinotic.structures.internal.api.services.impl;
 
-import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
-import co.elastic.clients.elasticsearch._types.query_dsl.TermQuery;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import org.apache.commons.lang3.Validate;
+import org.kinotic.continuum.api.security.Participant;
 import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.NamedQueriesDefinition;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.NamedQueriesService;
+import org.kinotic.structures.internal.api.services.NamedQueriesDAO;
 import org.kinotic.structures.internal.api.services.sql.ParameterHolder;
 import org.kinotic.structures.internal.api.services.sql.QueryExecutorFactory;
 import org.kinotic.structures.internal.api.services.sql.executors.QueryExecutor;
-import org.springframework.data.elasticsearch.core.ReactiveElasticsearchOperations;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -30,21 +29,14 @@ import java.util.concurrent.TimeUnit;
  * Created by Navíd Mitchell 🤪 on 4/23/24.
  */
 @Component
-public class DefaultNamedQueriesService extends AbstractCrudService<NamedQueriesDefinition> implements NamedQueriesService {
+public class DefaultNamedQueriesService implements NamedQueriesService {
 
     private final AsyncLoadingCache<CacheKey, QueryExecutor> cache;
     private final ConcurrentHashMap<String, List<CacheKey>> cacheKeyTracker = new ConcurrentHashMap<>();
+    private final NamedQueriesDAO namedQueriesDAO;
 
-    public DefaultNamedQueriesService(ElasticsearchAsyncClient esAsyncClient,
-                                      ReactiveElasticsearchOperations esOperations,
-                                      CrudServiceTemplate crudServiceTemplate,
+    public DefaultNamedQueriesService(NamedQueriesDAO namedQueriesDAO,
                                       QueryExecutorFactory queryExecutorFactory) {
-            super("named_query_service_definition",
-                  NamedQueriesDefinition.class,
-                  esAsyncClient,
-                  esOperations,
-                  crudServiceTemplate);
-
         cache = Caffeine.newBuilder()
                         .expireAfterAccess(20, TimeUnit.HOURS)
                         .maximumSize(10_000)
@@ -72,6 +64,22 @@ public class DefaultNamedQueriesService extends AbstractCrudService<NamedQueries
                                     return ret;
                                 }, executor));
 
+        this.namedQueriesDAO = namedQueriesDAO;
+    }
+
+    @Override
+    public CompletableFuture<Long> count(Participant participant) {
+        return namedQueriesDAO.count();
+    }
+
+    @Override
+    public CompletableFuture<NamedQueriesDefinition> create(NamedQueriesDefinition namedQueryDefinition, Participant participant) {
+        return namedQueriesDAO.create(namedQueryDefinition);
+    }
+
+    @Override
+    public CompletableFuture<Void> deleteById(String id, Participant participant) {
+        return namedQueriesDAO.deleteById(id);
     }
 
     @Override
@@ -106,36 +114,34 @@ public class DefaultNamedQueriesService extends AbstractCrudService<NamedQueries
     }
 
     @Override
-    public CompletableFuture<NamedQueriesDefinition> findByNamespaceAndStructure(String namespace, String structure) {
-        return crudServiceTemplate.search(indexName, Pageable.ofSize(1), type, builder -> builder
-                .query(q -> q
-                        .bool(b -> b
-                                .filter(TermQuery.of(tq -> tq.field("namespace").value(namespace))._toQuery(),
-                                        TermQuery.of(tq -> tq.field("structure").value(structure))._toQuery())
-                        )
-                )).thenApply(page -> page.getContent() != null && !page.getContent().isEmpty()
-                        ? page.getContent().get(0)
-                        : null);
+    public CompletableFuture<Page<NamedQueriesDefinition>> findAll(Pageable pageable, Participant participant) {
+        return namedQueriesDAO.findAll(pageable);
     }
 
     @Override
-    public CompletableFuture<NamedQueriesDefinition> save(NamedQueriesDefinition entity) {
+    public CompletableFuture<NamedQueriesDefinition> findById(String id, Participant participant) {
+        return namedQueriesDAO.findById(id);
+    }
+
+    @Override
+    public CompletableFuture<NamedQueriesDefinition> findByNamespaceAndStructure(String namespace, String structure) {
+        return namedQueriesDAO.findByNamespaceAndStructure(namespace, structure);
+    }
+
+    @Override
+    public CompletableFuture<NamedQueriesDefinition> save(NamedQueriesDefinition entity, Participant participant) {
         // TODO: preprocess queries to correct index name and add Metadata about query type to be used by other parts of the system
         //       The Query type information will speed up other areas the need this as well
-        return super.save(entity)
+        return namedQueriesDAO.save(entity)
                     .thenApply(namedQueriesDefinition -> {
                         evictCachesFor(namedQueriesDefinition);
                         return namedQueriesDefinition;
                     });
     }
 
-
     @Override
-    public CompletableFuture<Page<NamedQueriesDefinition>> search(String searchText, Pageable pageable) {
-        return crudServiceTemplate.search(indexName,
-                                          pageable,
-                                          NamedQueriesDefinition.class,
-                                          builder -> builder.q(searchText));
+    public CompletableFuture<Page<NamedQueriesDefinition>> search(String searchText, Pageable pageable, Participant participant) {
+        return namedQueriesDAO.search(searchText, pageable);
     }
 
     @AllArgsConstructor

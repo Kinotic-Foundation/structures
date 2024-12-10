@@ -4,8 +4,8 @@ import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.structures.api.domain.Namespace;
-import org.kinotic.structures.api.services.NamespaceService;
-import org.kinotic.structures.api.services.StructureService;
+import org.kinotic.structures.internal.api.services.NamespaceDAO;
+import org.kinotic.structures.internal.api.services.StructureDAO;
 import org.springframework.data.elasticsearch.core.ReactiveElasticsearchOperations;
 import org.springframework.stereotype.Component;
 
@@ -13,20 +13,20 @@ import java.util.Date;
 import java.util.concurrent.CompletableFuture;
 
 @Component
-public class DefaultNamespaceService extends AbstractCrudService<Namespace> implements NamespaceService {
+public class DefaultNamespaceDAO extends AbstractCrudService<Namespace> implements NamespaceDAO {
 
-    private final StructureService structureService;
+    private final StructureDAO structureDAO;
 
-    public DefaultNamespaceService(ElasticsearchAsyncClient esAsyncClient,
-                                   ReactiveElasticsearchOperations esOperations,
-                                   StructureService structureService,
-                                   CrudServiceTemplate crudServiceTemplate) {
+    public DefaultNamespaceDAO(ElasticsearchAsyncClient esAsyncClient,
+                               ReactiveElasticsearchOperations esOperations,
+                               StructureDAO structureDAO,
+                               CrudServiceTemplate crudServiceTemplate) {
         super("namespace",
               Namespace.class,
               esAsyncClient,
               esOperations,
               crudServiceTemplate);
-        this.structureService = structureService;
+        this.structureDAO = structureDAO;
     }
 
     @Override
@@ -43,7 +43,7 @@ public class DefaultNamespaceService extends AbstractCrudService<Namespace> impl
 
     @Override
     public CompletableFuture<Void> deleteById(String id) {
-        return structureService.countForNamespace(id).thenAccept(count -> {
+        return structureDAO.countForNamespace(id).thenAccept(count -> {
             if(count > 0){
                 throw new IllegalStateException("Cannot delete namespace with structures in it.");
             }
