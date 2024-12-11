@@ -21,6 +21,7 @@ import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.domain.idl.decorators.MultiTenancyType;
 import org.kinotic.structures.api.services.NamedQueriesService;
+import org.kinotic.structures.api.services.security.AuthorizationService;
 import org.kinotic.structures.internal.api.hooks.DelegatingUpsertPreProcessor;
 import org.kinotic.structures.internal.api.hooks.ReadPreProcessor;
 import org.kinotic.structures.internal.api.services.EntityContextConstants;
@@ -44,7 +45,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class DefaultEntityService implements EntityService {
 
+    private static final String SERVICE_NAME = "EntityService";
     private static final Logger log = LoggerFactory.getLogger(DefaultEntityService.class);
+    private final AuthorizationService authService;
     private final CrudServiceTemplate crudServiceTemplate;
     private final DelegatingUpsertPreProcessor delegatingUpsertPreProcessor;
     private final ElasticsearchAsyncClient esAsyncClient;
@@ -57,97 +60,106 @@ public class DefaultEntityService implements EntityService {
     @WithSpan
     @Override
     public <T> CompletableFuture<Void> bulkSave(T entities, EntityContext context) {
-        return doBulkPersist(entities,
-                             context,
-                             entityHolder -> BulkOperation.of(b -> b
-                                     .index(idx -> idx.index(structure.getItemIndex())
-                                                      .id(entityHolder.getDocumentId())
-                                                      .document(entityHolder.getEntity())
-                                     )));
+        return authService.authorize(SERVICE_NAME, EntityOperations.BULK_SAVE.getMethodName(), context).thenCompose(
+                un -> doBulkPersist(entities,
+                                    context,
+                                    entityHolder -> BulkOperation.of(b -> b
+                                            .index(idx -> idx.index(structure.getItemIndex())
+                                                             .id(entityHolder.getDocumentId())
+                                                             .document(entityHolder.getEntity())
+                                            ))));
     }
 
     @WithSpan
     @Override
     public <T> CompletableFuture<Void> bulkUpdate(T entities, EntityContext context) {
-        return doBulkPersist(entities,
-                             context,
-                             entityHolder -> BulkOperation.of(b -> b
-                                     .update(u -> u
-                                             .index(structure.getItemIndex())
-                                             .id(entityHolder.getDocumentId())
-                                             .action(upB -> upB.doc(entityHolder.getEntity())
-                                                               .docAsUpsert(true)
-                                                               .detectNoop(true))
-                                     )));
+        return authService.authorize(SERVICE_NAME, "bulkUpdate", context).thenCompose(
+                un -> doBulkPersist(entities,
+                                    context,
+                                    entityHolder -> BulkOperation.of(b -> b
+                                            .update(u -> u
+                                                    .index(structure.getItemIndex())
+                                                    .id(entityHolder.getDocumentId())
+                                                    .action(upB -> upB.doc(entityHolder.getEntity())
+                                                                      .docAsUpsert(true)
+                                                                      .detectNoop(true))
+                                            ))));
     }
 
     @WithSpan
     @Override
     public CompletableFuture<Long> count(EntityContext context) {
-        return validateTenant(context)
-                .thenCompose(unused -> crudServiceTemplate
-                        .count(structure.getItemIndex(),
-                               builder -> readPreProcessor.beforeCount(structure, null, builder, context)));
+        return authService.authorize(SERVICE_NAME, "count", context).thenCompose(
+                un -> validateTenant(context)
+                        .thenCompose(unused -> crudServiceTemplate
+                                .count(structure.getItemIndex(),
+                                       builder -> readPreProcessor.beforeCount(structure, null, builder, context))));
     }
 
     @WithSpan
     @Override
     public CompletableFuture<Long> countByQuery(String query, EntityContext context) {
-        return validateTenant(context)
-                .thenCompose(unused -> crudServiceTemplate
-                        .count(structure.getItemIndex(),
-                               builder -> readPreProcessor.beforeCount(structure, query, builder, context)));
+        return authService.authorize(SERVICE_NAME, "countByQuery", context).thenCompose(
+                un -> validateTenant(context)
+                        .thenCompose(unused -> crudServiceTemplate
+                                .count(structure.getItemIndex(),
+                                       builder -> readPreProcessor.beforeCount(structure, query, builder, context))));
     }
 
     @WithSpan
     @Override
     public CompletableFuture<Void> deleteById(String id, EntityContext context) {
-        return validateTenantAndComposeId(id, context)
-                .thenCompose(composedId -> crudServiceTemplate
-                        .deleteById(structure.getItemIndex(),
-                                    composedId,
-                                    builder -> readPreProcessor.beforeDelete(structure, builder, context))
-                        .thenApply(deleteResponse -> null));
+        return authService.authorize(SERVICE_NAME, "deleteById", context).thenCompose(
+                un -> validateTenantAndComposeId(id, context)
+                        .thenCompose(composedId -> crudServiceTemplate
+                                .deleteById(structure.getItemIndex(),
+                                            composedId,
+                                            builder -> readPreProcessor.beforeDelete(structure, builder, context))
+                                .thenApply(deleteResponse -> null)));
     }
 
     @WithSpan
     @Override
     public CompletableFuture<Void> deleteByQuery(String query, EntityContext context) {
-        return validateTenant(context)
-                .thenCompose(unused -> crudServiceTemplate
-                        .deleteByQuery(structure.getItemIndex(),
-                                       builder -> readPreProcessor.beforeDeleteByQuery(structure, query, builder, context))
-                        .thenApply(deleteResponse -> null));
+        return authService.authorize(SERVICE_NAME, "deleteByQuery", context).thenCompose(
+                un -> validateTenant(context)
+                        .thenCompose(unused -> crudServiceTemplate
+                                .deleteByQuery(structure.getItemIndex(),
+                                               builder -> readPreProcessor.beforeDeleteByQuery(structure, query, builder, context))
+                                .thenApply(deleteResponse -> null)));
     }
 
     @WithSpan
     @Override
     public <T> CompletableFuture<Page<T>> findAll(Pageable pageable, Class<T> type, EntityContext context) {
-        return validateTenant(context)
-                .thenCompose(unused -> crudServiceTemplate
-                        .search(structure.getItemIndex(),
-                                pageable,
-                                type,
-                                builder -> readPreProcessor.beforeFindAll(structure, builder, context))
-                        .thenApply(createParanoidCheck(type, context, "Find All")));
+        return authService.authorize(SERVICE_NAME, "findAll", context).thenCompose(
+                un -> validateTenant(context)
+                        .thenCompose(unused -> crudServiceTemplate
+                                .search(structure.getItemIndex(),
+                                        pageable,
+                                        type,
+                                        builder -> readPreProcessor.beforeFindAll(structure, builder, context))
+                                .thenApply(createParanoidCheck(type, context, "Find All"))));
     }
 
     @WithSpan
     @Override
     public <T> CompletableFuture<T> findById(String id, Class<T> type, EntityContext context) {
-        return validateTenantAndComposeId(id, context)
-                .thenCompose(composedId -> crudServiceTemplate
-                        .findById(structure.getItemIndex(), composedId, type,
-                                  builder -> readPreProcessor.beforeFindById(structure, builder, context)));
+        return authService.authorize(SERVICE_NAME, "findById", context).thenCompose(
+                un -> validateTenantAndComposeId(id, context).thenCompose(
+                        composedId -> crudServiceTemplate
+                                .findById(structure.getItemIndex(), composedId, type,
+                                          builder -> readPreProcessor.beforeFindById(structure, builder, context))));
     }
 
     @WithSpan
     @Override
     public <T> CompletableFuture<List<T>> findByIds(List<String> ids, Class<T> type, EntityContext context) {
-        return validateTenantAndComposeIds(ids, context)
-                .thenCompose(composedIds -> crudServiceTemplate
-                        .findByIds(structure.getItemIndex(), composedIds, type,
-                                   builder -> readPreProcessor.beforeFindByIds(structure, builder, context)));
+        return authService.authorize(SERVICE_NAME, "findByIds", context).thenCompose(
+                un -> validateTenantAndComposeIds(ids, context)
+                        .thenCompose(composedIds -> crudServiceTemplate
+                                .findByIds(structure.getItemIndex(), composedIds, type,
+                                           builder -> readPreProcessor.beforeFindByIds(structure, builder, context))));
     }
 
     @WithSpan
@@ -156,12 +168,13 @@ public class DefaultEntityService implements EntityService {
                                                      ParameterHolder parameterHolder,
                                                      Class<T> type,
                                                      EntityContext context) {
-        return validateTenant(context)
-                .thenCompose(unused -> namedQueriesService.executeNamedQuery(structure,
-                                                                             queryName,
-                                                                             parameterHolder,
-                                                                             type,
-                                                                             context));
+        return authService.authorize(SERVICE_NAME, "namedQuery", context).thenCompose(
+                un -> validateTenant(context)
+                        .thenCompose(unused -> namedQueriesService.executeNamedQuery(structure,
+                                                                                     queryName,
+                                                                                     parameterHolder,
+                                                                                     type,
+                                                                                     context)));
     }
 
     @WithSpan
@@ -171,95 +184,100 @@ public class DefaultEntityService implements EntityService {
                                                          Pageable pageable,
                                                          Class<T> type,
                                                          EntityContext context) {
-        return validateTenant(context)
-                .thenCompose(unused -> namedQueriesService.executeNamedQueryPage(structure,
-                                                                                 queryName,
-                                                                                 parameterHolder,
-                                                                                 pageable,
-                                                                                 type,
-                                                                                 context));
+        return authService.authorize(SERVICE_NAME, "namedQueryPage", context).thenCompose(
+                un -> validateTenant(context)
+                        .thenCompose(unused -> namedQueriesService.executeNamedQueryPage(structure,
+                                                                                         queryName,
+                                                                                         parameterHolder,
+                                                                                         pageable,
+                                                                                         type,
+                                                                                         context)));
     }
 
     @Override
-    public CompletableFuture<Void> syncIndex() {
-        return esAsyncClient.indices()
-                     .refresh(b -> b.index(structure.getItemIndex()))
-                     .thenApply(unused -> null);
+    public CompletableFuture<Void> syncIndex(EntityContext context) {
+        return authService.authorize(SERVICE_NAME, "syncIndex", context).thenCompose(
+                un -> esAsyncClient.indices()
+                                   .refresh(b -> b.index(structure.getItemIndex()))
+                                   .thenApply(unused -> null));
     }
 
     @WithSpan
     @SuppressWarnings("unchecked")
     @Override
     public <T> CompletableFuture<T> save(T entity, EntityContext context) {
-        return doPersist(entity, context, entityHolder -> {
+        return authService.authorize(SERVICE_NAME, "save", context).thenCompose(
+                un -> doPersist(entity, context, entityHolder -> {
 
-            String routing = (structure.getMultiTenancyType() == MultiTenancyType.SHARED)
-                    ? context.getParticipant().getTenantId()
-                    : null;
+                    String routing = (structure.getMultiTenancyType() == MultiTenancyType.SHARED)
+                            ? context.getParticipant().getTenantId()
+                            : null;
 
-            // This is a bit of a hack since the BinaryData type does not work properly to retrieve complex objects, but does work to store them.
-            // https://github.com/elastic/elasticsearch-java/issues/574
-            if(entityHolder.getEntity() instanceof RawJson rawEntity){
-                BinaryData binaryData = BinaryData.of(rawEntity.data(), ContentType.APPLICATION_JSON);
-                return esAsyncClient.index(i -> i
-                                            .routing(routing)
-                                            .index(structure.getItemIndex())
-                                            .id(entityHolder.getDocumentId())
-                                            .document(binaryData)
-                                            .refresh(Refresh.True))
-                                    .thenApply(indexResponse -> {
-                                        context.put(EntityContextConstants.ENTITY_ID_KEY, entityHolder.getId());
-                                        return (T) rawEntity;
-                                    });
-            }else{
-                return esAsyncClient.index(i -> i
-                                            .routing(routing)
-                                            .index(structure.getItemIndex())
-                                            .id(entityHolder.getDocumentId())
-                                            .document(entityHolder.getEntity())
-                                            .refresh(Refresh.True))
-                                    .thenApply(indexResponse -> {
-                                        context.put(EntityContextConstants.ENTITY_ID_KEY, entityHolder.getId());
-                                        return (T) entityHolder.getEntity();
-                                    });
-            }
-        });
+                    // This is a bit of a hack since the BinaryData type does not work properly to retrieve complex objects, but does work to store them.
+                    // https://github.com/elastic/elasticsearch-java/issues/574
+                    if(entityHolder.getEntity() instanceof RawJson rawEntity){
+                        BinaryData binaryData = BinaryData.of(rawEntity.data(), ContentType.APPLICATION_JSON);
+                        return esAsyncClient.index(i -> i
+                                                    .routing(routing)
+                                                    .index(structure.getItemIndex())
+                                                    .id(entityHolder.getDocumentId())
+                                                    .document(binaryData)
+                                                    .refresh(Refresh.True))
+                                            .thenApply(indexResponse -> {
+                                                context.put(EntityContextConstants.ENTITY_ID_KEY, entityHolder.getId());
+                                                return (T) rawEntity;
+                                            });
+                    }else{
+                        return esAsyncClient.index(i -> i
+                                                    .routing(routing)
+                                                    .index(structure.getItemIndex())
+                                                    .id(entityHolder.getDocumentId())
+                                                    .document(entityHolder.getEntity())
+                                                    .refresh(Refresh.True))
+                                            .thenApply(indexResponse -> {
+                                                context.put(EntityContextConstants.ENTITY_ID_KEY, entityHolder.getId());
+                                                return (T) entityHolder.getEntity();
+                                            });
+                    }
+                }));
     }
 
     @WithSpan
     @Override
     public <T> CompletableFuture<Page<T>> search(String searchText, Pageable pageable, Class<T> type, EntityContext context) {
-        return validateTenant(context)
-                .thenCompose(unused -> crudServiceTemplate
-                        .search(structure.getItemIndex(),
-                                pageable,
-                                type,
-                                builder -> readPreProcessor.beforeSearch(structure, searchText, builder, context))
-                        .thenApply(createParanoidCheck(type, context, "Search")));
+        return authService.authorize(SERVICE_NAME, "search", context).thenCompose(
+                un -> validateTenant(context)
+                        .thenCompose(unused -> crudServiceTemplate
+                                .search(structure.getItemIndex(),
+                                        pageable,
+                                        type,
+                                        builder -> readPreProcessor.beforeSearch(structure, searchText, builder, context))
+                                .thenApply(createParanoidCheck(type, context, "Search"))));
     }
 
     @WithSpan
     @SuppressWarnings("unchecked")
     @Override
     public <T> CompletableFuture<T> update(T entity, EntityContext context) {
-        return doPersist(entity, context, entityHolder -> {
+        return authService.authorize(SERVICE_NAME, "update", context).thenCompose(
+                un -> doPersist(entity, context, entityHolder -> {
 
-            String routing = (structure.getMultiTenancyType() == MultiTenancyType.SHARED)
-                    ? context.getParticipant().getTenantId()
-                    : null;
+                    String routing = (structure.getMultiTenancyType() == MultiTenancyType.SHARED)
+                            ? context.getParticipant().getTenantId()
+                            : null;
 
-            return esAsyncClient.update(UpdateRequest.of(u -> u
-                                        .routing(routing)
-                                        .index(structure.getItemIndex())
-                                        .id(entityHolder.getDocumentId())
-                                        .doc(entityHolder.getEntity())
-                                        .docAsUpsert(true)
-                                        .refresh(Refresh.True)), entityHolder.getEntity().getClass())
-                                .thenApply(updateResponse -> {
-                                    context.put(EntityContextConstants.ENTITY_ID_KEY, entityHolder.getId());
-                                    return (T) entityHolder.getEntity();
-                                });
-        });
+                    return esAsyncClient.update(UpdateRequest.of(u -> u
+                                                .routing(routing)
+                                                .index(structure.getItemIndex())
+                                                .id(entityHolder.getDocumentId())
+                                                .doc(entityHolder.getEntity())
+                                                .docAsUpsert(true)
+                                                .refresh(Refresh.True)), entityHolder.getEntity().getClass())
+                                        .thenApply(updateResponse -> {
+                                            context.put(EntityContextConstants.ENTITY_ID_KEY, entityHolder.getId());
+                                            return (T) entityHolder.getEntity();
+                                        });
+                }));
     }
 
     @WithSpan

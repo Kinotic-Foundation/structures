@@ -131,9 +131,10 @@ public interface EntityService {
 
     /**
      * This operation makes all the recent writes immediately available for search.
+     * @param context the context for this operation
      * @return a {@link CompletableFuture} that will complete when the operation is complete
      */
-    CompletableFuture<Void> syncIndex();
+    CompletableFuture<Void> syncIndex(EntityContext context);
 
     /**
      * Saves a given entity. This will override all data if there is an existing entity with the same id.

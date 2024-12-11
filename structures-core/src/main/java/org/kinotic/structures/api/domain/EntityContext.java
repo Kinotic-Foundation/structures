@@ -1,7 +1,5 @@
 package org.kinotic.structures.api.domain;
 
-import org.kinotic.continuum.api.security.Participant;
-
 import java.util.List;
 import java.util.Map;
 
@@ -9,12 +7,7 @@ import java.util.Map;
  * Holds information for all "Entity" related operations.
  * Created by Navíd Mitchell 🤪 on 6/7/23.
  */
-public interface EntityContext {
-
-    /**
-     * @return the {@link Participant} that is performing the operation
-     */
-    Participant getParticipant();
+public interface EntityContext extends SecurityContext{
 
     /**
      * If defined, this will restrict the response to only include the fields listed here.

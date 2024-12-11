@@ -1,11 +1,13 @@
 package org.kinotic.structures.api.services.security;
 
-import org.kinotic.continuum.api.security.Participant;
+import org.kinotic.structures.api.domain.SecurityContext;
 
 import java.util.concurrent.CompletableFuture;
 
 public interface AuthorizationService {
 
-    CompletableFuture<Boolean> authorize(String serviceName, String methodName, Participant participant);
+    CompletableFuture<Void> authorize(String serviceName,
+                                      String methodName,
+                                      SecurityContext securityContext);
 
 }

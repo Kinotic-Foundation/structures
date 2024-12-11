@@ -6,6 +6,7 @@ import org.kinotic.continuum.idl.api.schema.decorators.C3Decorator;
 import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.NamedQueriesService;
+import org.kinotic.structures.api.services.security.AuthorizationServiceFactory;
 import org.kinotic.structures.internal.api.hooks.DecoratorLogic;
 import org.kinotic.structures.internal.api.hooks.DelegatingUpsertPreProcessor;
 import org.kinotic.structures.internal.api.hooks.ReadPreProcessor;
@@ -28,6 +29,7 @@ import java.util.concurrent.CompletableFuture;
 @Component
 public class DefaultEntityServiceFactory implements EntityServiceFactory {
 
+    private final AuthorizationServiceFactory authServiceFactory;
     private final CrudServiceTemplate crudServiceTemplate;
     private final ElasticsearchAsyncClient esAsyncClient;
     private final NamedQueriesService namedQueriesService;
@@ -37,13 +39,15 @@ public class DefaultEntityServiceFactory implements EntityServiceFactory {
     private final Map<String, UpsertFieldPreProcessor<?, ?, ?>> upsertFieldPreProcessors;
 
 
-    public DefaultEntityServiceFactory(CrudServiceTemplate crudServiceTemplate,
+    public DefaultEntityServiceFactory(AuthorizationServiceFactory authServiceFactory,
+                                       CrudServiceTemplate crudServiceTemplate,
                                        ElasticsearchAsyncClient esAsyncClient,
                                        NamedQueriesService namedQueriesService,
                                        ObjectMapper objectMapper,
                                        ReadPreProcessor readPreProcessor,
                                        StructuresProperties structuresProperties,
                                        List<UpsertFieldPreProcessor<?, ?, ?>> upsertFieldPreProcessors) {
+        this.authServiceFactory = authServiceFactory;
         this.crudServiceTemplate = crudServiceTemplate;
         this.esAsyncClient = esAsyncClient;
         this.namedQueriesService = namedQueriesService;
@@ -81,18 +85,20 @@ public class DefaultEntityServiceFactory implements EntityServiceFactory {
             }
         }
 
-        return CompletableFuture.completedFuture(new DefaultEntityService(crudServiceTemplate,
-                                                                          new DelegatingUpsertPreProcessor(structuresProperties,
-                                                                                                           objectMapper,
-                                                                                                           structure,
-                                                                                                           fieldPreProcessors),
-                                                                          esAsyncClient,
-                                                                          namedQueriesService,
+        return authServiceFactory.createAuthorizationService("EntityService", structure)
+                                 .thenApply(authService -> new DefaultEntityService(
+                                         authService,
+                                         crudServiceTemplate,
+                                         new DelegatingUpsertPreProcessor(structuresProperties,
                                                                           objectMapper,
-                                                                          readPreProcessor,
                                                                           structure,
-                                                                          structuresProperties)
-        );
+                                                                          fieldPreProcessors),
+                                         esAsyncClient,
+                                         namedQueriesService,
+                                         objectMapper,
+                                         readPreProcessor,
+                                         structure,
+                                         structuresProperties));
     }
 
 }
