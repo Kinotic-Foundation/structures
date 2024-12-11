@@ -9,8 +9,14 @@ type MethodsOf<T> = {
     [K in keyof T]: IfFunction<T[K], K>;
 }[keyof T];
 
-// Defining the DecoratedFunction type based on IEntityService methods, and a few more
-export type DecoratedFunction = MethodsOf<IEntityService<any>> | 'allCreate' | 'allRead' | 'allUpdate' | 'allDelete';
+// List of methods to exclude
+type ExcludedMethods = 'namedQuery' | 'namedQueryPage';
+
+// Filtered methods from IEntityService
+type FilteredMethods<T> = Exclude<MethodsOf<T>, ExcludedMethods>;
+
+// Defining the DecoratedFunction type based on IEntityService methods, excluding some, and adding a few more
+export type DecoratedFunction = FilteredMethods<IEntityService<any>> | 'allCreate' | 'allRead' | 'allUpdate' | 'allDelete';
 
 /**
  * Configuration for the {@link EntityServiceDecoratorsDecorator}

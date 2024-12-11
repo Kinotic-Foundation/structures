@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.api.services.impl;
+package org.kinotic.structures.internal.api.services.impl.security;
 
 import org.kinotic.structures.api.services.security.AuthorizationService;
 import org.kinotic.structures.api.services.security.AuthorizationServiceFactory;

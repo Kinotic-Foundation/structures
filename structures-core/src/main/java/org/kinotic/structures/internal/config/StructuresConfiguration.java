@@ -2,7 +2,7 @@ package org.kinotic.structures.internal.config;
 
 import io.vertx.core.Vertx;
 import io.vertx.ext.healthchecks.HealthChecks;
-import org.kinotic.structures.internal.api.services.impl.NoopAuthorizationServiceFactory;
+import org.kinotic.structures.internal.api.services.impl.security.NoopAuthorizationServiceFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;

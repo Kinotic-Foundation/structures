@@ -40,8 +40,6 @@ public class EntityServiceDecoratorsConfig{
     private List<EntityServiceDecorator> findAll = List.of();
     private List<EntityServiceDecorator> findById = List.of();
     private List<EntityServiceDecorator> findByIds = List.of();
-    private List<EntityServiceDecorator> namedQuery = List.of();
-    private List<EntityServiceDecorator> namedQueryPage = List.of();
     private List<EntityServiceDecorator> syncIndex = List.of();
     private List<EntityServiceDecorator> save = List.of();
     private List<EntityServiceDecorator> search = List.of();

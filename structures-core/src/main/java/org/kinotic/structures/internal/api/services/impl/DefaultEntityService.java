@@ -60,7 +60,7 @@ public class DefaultEntityService implements EntityService {
     @WithSpan
     @Override
     public <T> CompletableFuture<Void> bulkSave(T entities, EntityContext context) {
-        return authService.authorize(SERVICE_NAME, EntityOperations.BULK_SAVE.getMethodName(), context).thenCompose(
+        return authService.authorize(EntityOperation.BULK_SAVE.methodName(), context).thenCompose(
                 un -> doBulkPersist(entities,
                                     context,
                                     entityHolder -> BulkOperation.of(b -> b
@@ -73,7 +73,7 @@ public class DefaultEntityService implements EntityService {
     @WithSpan
     @Override
     public <T> CompletableFuture<Void> bulkUpdate(T entities, EntityContext context) {
-        return authService.authorize(SERVICE_NAME, "bulkUpdate", context).thenCompose(
+        return authService.authorize(EntityOperation.BULK_UPDATE.methodName(), context).thenCompose(
                 un -> doBulkPersist(entities,
                                     context,
                                     entityHolder -> BulkOperation.of(b -> b
@@ -89,7 +89,7 @@ public class DefaultEntityService implements EntityService {
     @WithSpan
     @Override
     public CompletableFuture<Long> count(EntityContext context) {
-        return authService.authorize(SERVICE_NAME, "count", context).thenCompose(
+        return authService.authorize(EntityOperation.COUNT.methodName(), context).thenCompose(
                 un -> validateTenant(context)
                         .thenCompose(unused -> crudServiceTemplate
                                 .count(structure.getItemIndex(),
@@ -99,7 +99,7 @@ public class DefaultEntityService implements EntityService {
     @WithSpan
     @Override
     public CompletableFuture<Long> countByQuery(String query, EntityContext context) {
-        return authService.authorize(SERVICE_NAME, "countByQuery", context).thenCompose(
+        return authService.authorize(EntityOperation.COUNT_BY_QUERY.methodName(), context).thenCompose(
                 un -> validateTenant(context)
                         .thenCompose(unused -> crudServiceTemplate
                                 .count(structure.getItemIndex(),
@@ -109,7 +109,7 @@ public class DefaultEntityService implements EntityService {
     @WithSpan
     @Override
     public CompletableFuture<Void> deleteById(String id, EntityContext context) {
-        return authService.authorize(SERVICE_NAME, "deleteById", context).thenCompose(
+        return authService.authorize(EntityOperation.DELETE_BY_ID.methodName(), context).thenCompose(
                 un -> validateTenantAndComposeId(id, context)
                         .thenCompose(composedId -> crudServiceTemplate
                                 .deleteById(structure.getItemIndex(),
@@ -121,7 +121,7 @@ public class DefaultEntityService implements EntityService {
     @WithSpan
     @Override
     public CompletableFuture<Void> deleteByQuery(String query, EntityContext context) {
-        return authService.authorize(SERVICE_NAME, "deleteByQuery", context).thenCompose(
+        return authService.authorize(EntityOperation.DELETE_BY_QUERY.methodName(), context).thenCompose(
                 un -> validateTenant(context)
                         .thenCompose(unused -> crudServiceTemplate
                                 .deleteByQuery(structure.getItemIndex(),
@@ -132,7 +132,7 @@ public class DefaultEntityService implements EntityService {
     @WithSpan
     @Override
     public <T> CompletableFuture<Page<T>> findAll(Pageable pageable, Class<T> type, EntityContext context) {
-        return authService.authorize(SERVICE_NAME, "findAll", context).thenCompose(
+        return authService.authorize(EntityOperation.FIND_ALL.methodName(), context).thenCompose(
                 un -> validateTenant(context)
                         .thenCompose(unused -> crudServiceTemplate
                                 .search(structure.getItemIndex(),
@@ -145,7 +145,7 @@ public class DefaultEntityService implements EntityService {
     @WithSpan
     @Override
     public <T> CompletableFuture<T> findById(String id, Class<T> type, EntityContext context) {
-        return authService.authorize(SERVICE_NAME, "findById", context).thenCompose(
+        return authService.authorize(EntityOperation.FIND_BY_ID.methodName(), context).thenCompose(
                 un -> validateTenantAndComposeId(id, context).thenCompose(
                         composedId -> crudServiceTemplate
                                 .findById(structure.getItemIndex(), composedId, type,
@@ -155,7 +155,7 @@ public class DefaultEntityService implements EntityService {
     @WithSpan
     @Override
     public <T> CompletableFuture<List<T>> findByIds(List<String> ids, Class<T> type, EntityContext context) {
-        return authService.authorize(SERVICE_NAME, "findByIds", context).thenCompose(
+        return authService.authorize(EntityOperation.FIND_BY_IDS.methodName(), context).thenCompose(
                 un -> validateTenantAndComposeIds(ids, context)
                         .thenCompose(composedIds -> crudServiceTemplate
                                 .findByIds(structure.getItemIndex(), composedIds, type,
@@ -168,7 +168,7 @@ public class DefaultEntityService implements EntityService {
                                                      ParameterHolder parameterHolder,
                                                      Class<T> type,
                                                      EntityContext context) {
-        return authService.authorize(SERVICE_NAME, "namedQuery", context).thenCompose(
+        return authService.authorize(EntityOperation.NAMED_QUERY.methodName(), context).thenCompose(
                 un -> validateTenant(context)
                         .thenCompose(unused -> namedQueriesService.executeNamedQuery(structure,
                                                                                      queryName,
@@ -184,7 +184,7 @@ public class DefaultEntityService implements EntityService {
                                                          Pageable pageable,
                                                          Class<T> type,
                                                          EntityContext context) {
-        return authService.authorize(SERVICE_NAME, "namedQueryPage", context).thenCompose(
+        return authService.authorize(EntityOperation.NAMED_QUERY_PAGE.methodName(), context).thenCompose(
                 un -> validateTenant(context)
                         .thenCompose(unused -> namedQueriesService.executeNamedQueryPage(structure,
                                                                                          queryName,
@@ -196,7 +196,7 @@ public class DefaultEntityService implements EntityService {
 
     @Override
     public CompletableFuture<Void> syncIndex(EntityContext context) {
-        return authService.authorize(SERVICE_NAME, "syncIndex", context).thenCompose(
+        return authService.authorize(EntityOperation.SYNC_INDEX.methodName(), context).thenCompose(
                 un -> esAsyncClient.indices()
                                    .refresh(b -> b.index(structure.getItemIndex()))
                                    .thenApply(unused -> null));
@@ -206,7 +206,7 @@ public class DefaultEntityService implements EntityService {
     @SuppressWarnings("unchecked")
     @Override
     public <T> CompletableFuture<T> save(T entity, EntityContext context) {
-        return authService.authorize(SERVICE_NAME, "save", context).thenCompose(
+        return authService.authorize(EntityOperation.SAVE.methodName(), context).thenCompose(
                 un -> doPersist(entity, context, entityHolder -> {
 
                     String routing = (structure.getMultiTenancyType() == MultiTenancyType.SHARED)
@@ -245,7 +245,7 @@ public class DefaultEntityService implements EntityService {
     @WithSpan
     @Override
     public <T> CompletableFuture<Page<T>> search(String searchText, Pageable pageable, Class<T> type, EntityContext context) {
-        return authService.authorize(SERVICE_NAME, "search", context).thenCompose(
+        return authService.authorize(EntityOperation.SEARCH.methodName(), context).thenCompose(
                 un -> validateTenant(context)
                         .thenCompose(unused -> crudServiceTemplate
                                 .search(structure.getItemIndex(),
@@ -259,7 +259,7 @@ public class DefaultEntityService implements EntityService {
     @SuppressWarnings("unchecked")
     @Override
     public <T> CompletableFuture<T> update(T entity, EntityContext context) {
-        return authService.authorize(SERVICE_NAME, "update", context).thenCompose(
+        return authService.authorize(EntityOperation.UPDATE.methodName(), context).thenCompose(
                 un -> doPersist(entity, context, entityHolder -> {
 
                     String routing = (structure.getMultiTenancyType() == MultiTenancyType.SHARED)
