@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class PolicyAuthorizationServiceTest {
 
-    private PolicyAuthorizer authorizer = new MockPolicyAuthorizer();
+    private final PolicyAuthorizer authorizer = new MockPolicyAuthorizer();
 
     @Test
     public void testAuthorizeReadOperationWithNoFieldPolicies() {
