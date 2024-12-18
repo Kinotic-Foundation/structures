@@ -1,18 +1,16 @@
 package org.kinotic.structures.internal.api.services.impl;
 
 import org.kinotic.continuum.api.security.Participant;
+import org.kinotic.continuum.core.api.crud.Page;
+import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.structures.api.domain.DefaultEntityContext;
-import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.QueryParameter;
 import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.services.JsonEntitiesService;
-import org.kinotic.continuum.core.api.crud.Page;
-import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.structures.internal.api.services.sql.ListParameterHolder;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -101,8 +99,8 @@ public class DefaultJsonEntitiesService implements JsonEntitiesService {
     }
 
     @Override
-    public CompletableFuture<Void> syncIndex(String structureId) {
-        return defaultEntitiesService.syncIndex(structureId);
+    public CompletableFuture<Void> syncIndex(String structureId, Participant participant) {
+        return defaultEntitiesService.syncIndex(structureId, new DefaultEntityContext(participant));
     }
 
     @Override

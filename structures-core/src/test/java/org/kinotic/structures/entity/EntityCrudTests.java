@@ -86,6 +86,8 @@ public class EntityCrudTests extends ElasticsearchTestBase {
 
         Assertions.assertNotNull(holder);
 
+        entitiesService.syncIndex(holder.getStructure().getId(), context).join();
+
         StepVerifier.create(Mono.fromFuture(entitiesService.count(holder.getStructure().getId(), context)))
                 .expectNext(20L)
                 .as("Verifying Tenant 1 has 20 entities")
@@ -96,7 +98,7 @@ public class EntityCrudTests extends ElasticsearchTestBase {
                         context)))
                 .verifyComplete();
 
-        Thread.sleep(5000);
+        entitiesService.syncIndex(holder.getStructure().getId(), context).join();
 
         StepVerifier.create(Mono.fromFuture(entitiesService.count(holder.getStructure().getId(), context)))
                 .expectNext(18L)
@@ -309,7 +311,7 @@ public class EntityCrudTests extends ElasticsearchTestBase {
         Assertions.assertNotNull(holder2);
 
         // Make sure all data is indexed
-        entitiesService.syncIndex(holder1.getStructure().getId()).join();
+        entitiesService.syncIndex(holder1.getStructure().getId(), context1).join();
 
         // TODO: verify all data items as well, not just sizes
         Sort sort = Sort.by("firstName");
@@ -375,6 +377,9 @@ public class EntityCrudTests extends ElasticsearchTestBase {
                     .verifyComplete();
 
         // Second tenant
+
+        // Make sure all data is indexed
+        entitiesService.syncIndex(holder2.getStructure().getId(), context2).join();
 
         Assertions.assertNull(cursorRef.get(), "Cursor is not null");
 

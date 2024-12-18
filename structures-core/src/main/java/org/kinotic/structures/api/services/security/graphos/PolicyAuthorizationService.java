@@ -1,5 +1,7 @@
 package org.kinotic.structures.api.services.security.graphos;
 
+import org.kinotic.continuum.api.exceptions.AuthorizationException;
+import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
 import org.kinotic.structures.api.domain.SecurityContext;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.domain.idl.decorators.EntityServiceDecorator;
@@ -8,6 +10,14 @@ import org.kinotic.structures.api.domain.idl.decorators.EntityServiceDecoratorsD
 import org.kinotic.structures.api.domain.idl.decorators.PolicyDecorator;
 import org.kinotic.structures.api.services.security.AuthorizationService;
 import org.kinotic.structures.internal.api.services.impl.EntityOperation;
+import org.kinotic.structures.internal.api.services.impl.security.graphos.PolicyEvaluator;
+import org.kinotic.structures.internal.api.services.impl.security.graphos.PolicyEvaluatorWithOperations;
+import org.kinotic.structures.internal.api.services.impl.security.graphos.PolicyEvaluatorWithoutOperations;
+import org.kinotic.structures.internal.api.services.impl.security.graphos.SharedPolicyManager;
+import org.kinotic.structures.internal.idl.converters.common.DecoratedProperty;
+import org.kinotic.structures.internal.utils.StructuresUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -17,71 +27,93 @@ import java.util.concurrent.CompletableFuture;
 
 public class PolicyAuthorizationService implements AuthorizationService {
 
-    private final List<String> createPolicies = new ArrayList<>();
-    private final List<String> readPolicies = new ArrayList<>();
-    private final List<String> updatePolicies = new ArrayList<>();
-    private final List<String> deletePolicies = new ArrayList<>();
-
-    private final Map<EntityOperation, List<String>> operationPolicies = new HashMap<>();
+    private static final Logger log = LoggerFactory.getLogger(PolicyAuthorizationService.class);
+    private final Map<EntityOperation, PolicyEvaluator> operationEvaluators = new HashMap<>();
+    private final String structureId;
 
     public PolicyAuthorizationService(Structure structure,
                                       PolicyAuthorizer policyAuthorizer) {
 
+        this.structureId = StructuresUtil.structureNameToId(structure.getNamespace(), structure.getName());
+        ObjectC3Type entityDefinition = structure.getEntityDefinition();
+
+        // Get any Policies to apply to the Entity and its fields
+        PolicyDecorator entityPolicies = entityDefinition.findDecorator(PolicyDecorator.class);
+
+        Map<String, List<List<String>>> fieldPolicies = new HashMap<>();
+        for(DecoratedProperty property : structure.getDecoratedProperties()){
+            PolicyDecorator propertyPolicies = property.findDecorator(PolicyDecorator.class);
+            if(propertyPolicies != null){
+                fieldPolicies.put(property.getJsonPath(), propertyPolicies.getPolicies());
+            }
+        }
+
+        SharedPolicyManager sharedPolicyManager = new SharedPolicyManager(entityPolicies != null ? entityPolicies.getPolicies() : null,
+                                                                          fieldPolicies);
+        PolicyEvaluatorWithoutOperations sharedEvaluator = new PolicyEvaluatorWithoutOperations(policyAuthorizer, sharedPolicyManager);
+
         // Check if we have any policy decorators to apply to operations
-        EntityServiceDecoratorsDecorator decorators = structure.getEntityDefinition()
-                                                               .findDecorator(EntityServiceDecoratorsDecorator.class);
+        EntityServiceDecoratorsDecorator decorators = entityDefinition.findDecorator(EntityServiceDecoratorsDecorator.class);
 
         if(decorators != null){
             EntityServiceDecoratorsConfig config = decorators.getConfig();
 
-            createPolicies.addAll(extractPolicies(config.getAllCreate()));
-            readPolicies.addAll(extractPolicies(config.getAllRead()));
-            updatePolicies.addAll(extractPolicies(config.getAllUpdate()));
-            deletePolicies.addAll(extractPolicies(config.getAllDelete()));
-
-            operationPolicies.put(EntityOperation.BULK_SAVE, extractPolicies(config.getBulkSave()));
-            operationPolicies.put(EntityOperation.BULK_UPDATE, extractPolicies(config.getBulkUpdate()));
-            operationPolicies.put(EntityOperation.COUNT, extractPolicies(config.getCount()));
-            operationPolicies.put(EntityOperation.COUNT_BY_QUERY, extractPolicies(config.getCountByQuery()));
-            operationPolicies.put(EntityOperation.DELETE_BY_ID, extractPolicies(config.getDeleteById()));
-            operationPolicies.put(EntityOperation.DELETE_BY_QUERY, extractPolicies(config.getDeleteByQuery()));
-            operationPolicies.put(EntityOperation.FIND_ALL, extractPolicies(config.getFindAll()));
-            operationPolicies.put(EntityOperation.FIND_BY_ID, extractPolicies(config.getFindById()));
-            operationPolicies.put(EntityOperation.FIND_BY_IDS, extractPolicies(config.getFindByIds()));
-            operationPolicies.put(EntityOperation.SYNC_INDEX, extractPolicies(config.getSyncIndex()));
-            operationPolicies.put(EntityOperation.SAVE, extractPolicies(config.getSave()));
-            operationPolicies.put(EntityOperation.SEARCH, extractPolicies(config.getSearch()));
-            operationPolicies.put(EntityOperation.UPDATE, extractPolicies(config.getUpdate()));
+            Map<EntityOperation, List<EntityServiceDecorator>> operationDecorators = config.getOperationDecoratorMap();
+            for (Map.Entry<EntityOperation, List<EntityServiceDecorator>> entry : operationDecorators.entrySet()) {
+                List<List<String>> operationPolicies = extractPolicies(entry.getValue());
+                if(!operationPolicies.isEmpty()){
+                    operationEvaluators.put(entry.getKey(), new PolicyEvaluatorWithOperations(policyAuthorizer, sharedPolicyManager, operationPolicies));
+                }else{
+                    operationEvaluators.put(entry.getKey(), sharedEvaluator);
+                }
+            }
         }
-
     }
 
     @Override
     public CompletableFuture<Void> authorize(String action, SecurityContext securityContext) {
-        EntityOperation operation = EntityOperation.fromMethodName(action);
-        List<String> policies = operationPolicies.get(operation);
-        List<PolicyAuthorizationRequest> requests = new ArrayList<>();
-        for (String policy : policies) {
+        try {
+            EntityOperation operation = EntityOperation.fromMethodName(action);
+            PolicyEvaluator evaluator = operationEvaluators.get(operation);
+            if(evaluator != null){
+                return evaluator.evaluatePolicies(securityContext).thenCompose(result -> {
+                    if(!result.operationAllowed()){
+                        return CompletableFuture.failedFuture(new AuthorizationException("Operation %s not allowed.".formatted(operation)));
+                    } else if (!result.entityAllowed()) {
+                        return CompletableFuture.failedFuture(new AuthorizationException("Structure %s Entity access not allowed.".formatted(structureId)));
+                    } else {
+                        List<String> deniedFields = new ArrayList<>();
+                        for(Map.Entry<String, Boolean> fieldResult : result.fieldResults().entrySet()){
+                            if(!fieldResult.getValue()){
+                                deniedFields.add(fieldResult.getKey());
+                            }
+                        }
+                        if(!deniedFields.isEmpty()){
+                            return CompletableFuture.failedFuture(new AuthorizationException("Structure %s Fields %s access not allowed.".formatted(structureId, deniedFields)));
+                        }else{
+                            return CompletableFuture.completedFuture(null);
+                        }
 
+                    }
+                });
+            }else{
+                // This should never happen as long as the EntityOperation is being used properly by the EntityService implementation
+                log.error("No policy evaluator found for operation: {}.", operation);
+                return CompletableFuture.failedFuture(new IllegalArgumentException("No policy evaluator found for operation: " + operation));
+            }
+        } catch (Exception e) {
+            return CompletableFuture.failedFuture(e);
         }
-
-        return null;
     }
 
-    private List<String> extractPolicies(List<EntityServiceDecorator> decorators){
-        List<String> policies = new ArrayList<>();
+    private List<List<String>> extractPolicies(List<EntityServiceDecorator> decorators){
         for (EntityServiceDecorator decorator : decorators) {
             if(decorator instanceof PolicyDecorator policyDecorator) {
-                policies.addAll(extractLists(policyDecorator.getPolicies()));
+                return policyDecorator.getPolicies();
             }
         }
-        return policies;
+        return List.of();
     }
 
-    private List<String> extractLists(List<List<String>> policies){
-        return policies.stream()
-                       .flatMap(List::stream)
-                       .toList();
-    }
 
 }

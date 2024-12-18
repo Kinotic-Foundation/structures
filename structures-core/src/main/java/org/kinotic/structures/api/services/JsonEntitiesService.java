@@ -141,9 +141,11 @@ public interface JsonEntitiesService {
 
     /**
      * This operation makes all the recent writes immediately available for search.
+     * @param structureId     the id of the structure that this named query is defined for
+     * @param participant     the participant of the logged-in user
      * @return a {@link CompletableFuture} that will complete when the operation is complete
      */
-    CompletableFuture<Void> syncIndex(String structureId);
+    CompletableFuture<Void> syncIndex(String structureId, Participant participant);
 
     /**
      * Saves a given entity. Use the returned instance for further operations as the save operation might have changed the

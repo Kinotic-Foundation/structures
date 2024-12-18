@@ -75,7 +75,7 @@ public class NamedQueryTests extends ElasticsearchTestBase {
 
         // find last name to use
         List<Person> persons = holder2.getPersons();
-        String lastName = persons.get(0).getLastName();
+        String lastName = persons.getFirst().getLastName();
 
         // now count the number of people with that last name manually
         long count = persons.stream().filter(person -> person.getLastName().equals(lastName)).count();

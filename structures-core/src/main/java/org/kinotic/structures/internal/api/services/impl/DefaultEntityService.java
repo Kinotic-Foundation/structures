@@ -45,7 +45,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class DefaultEntityService implements EntityService {
 
-    private static final String SERVICE_NAME = "EntityService";
     private static final Logger log = LoggerFactory.getLogger(DefaultEntityService.class);
     private final AuthorizationService authService;
     private final CrudServiceTemplate crudServiceTemplate;
