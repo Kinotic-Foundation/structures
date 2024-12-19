@@ -76,12 +76,21 @@ public class PolicyAuthorizationService implements AuthorizationService {
             EntityOperation operation = EntityOperation.fromMethodName(action);
             PolicyEvaluator evaluator = operationEvaluators.get(operation);
             if(evaluator != null){
+
                 return evaluator.evaluatePolicies(securityContext).thenCompose(result -> {
+
+                    // Check if the operation is allowed i.e. findAll, save
                     if(!result.operationAllowed()){
+
                         return CompletableFuture.failedFuture(new AuthorizationException("Operation %s not allowed.".formatted(operation)));
-                    } else if (!result.entityAllowed()) {
+
+
+                    } else if (!result.entityAllowed()) { // Check if access to the entity is allowed
+
                         return CompletableFuture.failedFuture(new AuthorizationException("Structure %s Entity access not allowed.".formatted(structureId)));
-                    } else {
+
+                    } else { // Check if access to the individual fields are allowed
+
                         List<String> deniedFields = new ArrayList<>();
                         for(Map.Entry<String, Boolean> fieldResult : result.fieldResults().entrySet()){
                             if(!fieldResult.getValue()){

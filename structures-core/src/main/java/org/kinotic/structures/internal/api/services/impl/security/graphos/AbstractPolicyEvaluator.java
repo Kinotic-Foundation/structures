@@ -29,7 +29,7 @@ public abstract class AbstractPolicyEvaluator implements PolicyEvaluator {
 
         List<PolicyAuthorizationRequest> requests = new ArrayList<>(policyRequests.values());
 
-        return authorizer.verifyAuthorization(requests, securityContext)
+        return authorizer.authorize(requests, securityContext)
                          .thenApply(ignored -> {
 
                              Map<String, Boolean> fieldResults = evaluateFieldPolicies(policyRequests);

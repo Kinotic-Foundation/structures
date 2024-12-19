@@ -166,7 +166,7 @@ public class PolicyAuthorizationServiceTest {
 
     private static class MockPolicyAuthorizer implements PolicyAuthorizer {
         @Override
-        public CompletableFuture<Void> verifyAuthorization(List<PolicyAuthorizationRequest> requests, SecurityContext securityContext) {
+        public CompletableFuture<Void> authorize(List<PolicyAuthorizationRequest> requests, SecurityContext securityContext) {
             for (PolicyAuthorizationRequest request : requests) {
                 switch (request.policy()) {
                     case "policy1", "policy4", "policy5", "policy6" -> request.authorize(); // Authorized policies

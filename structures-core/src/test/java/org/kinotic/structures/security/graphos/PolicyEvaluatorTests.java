@@ -89,7 +89,7 @@ public class PolicyEvaluatorTests {
         // Update MockPolicyAuthorizer to authorize policy7 for this test
         PolicyAuthorizer updatedAuthorizer = new PolicyAuthorizer() {
             @Override
-            public CompletableFuture<Void> verifyAuthorization(List<PolicyAuthorizationRequest> requests, SecurityContext securityContext) {
+            public CompletableFuture<Void> authorize(List<PolicyAuthorizationRequest> requests, SecurityContext securityContext) {
                 for (PolicyAuthorizationRequest request : requests) {
                     if ("policy1".equals(request.policy()) ||
                             "policy3".equals(request.policy()) ||
@@ -163,7 +163,7 @@ public class PolicyEvaluatorTests {
     // Mock Implementation for PolicyAuthorizer
     private static class MockPolicyAuthorizer implements PolicyAuthorizer {
         @Override
-        public CompletableFuture<Void> verifyAuthorization(List<PolicyAuthorizationRequest> requests, SecurityContext securityContext) {
+        public CompletableFuture<Void> authorize(List<PolicyAuthorizationRequest> requests, SecurityContext securityContext) {
             for (PolicyAuthorizationRequest request : requests) {
                 // Authorize specific policies for testing
                 if ("policy1".equals(request.policy()) ||

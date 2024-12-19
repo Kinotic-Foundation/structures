@@ -10,6 +10,6 @@ import java.util.concurrent.CompletableFuture;
  */
 public interface PolicyAuthorizer {
 
-    CompletableFuture<Void> verifyAuthorization(List<PolicyAuthorizationRequest> requests, SecurityContext securityContext);
+    CompletableFuture<Void> authorize(List<PolicyAuthorizationRequest> requests, SecurityContext securityContext);
 
 }

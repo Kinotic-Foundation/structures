@@ -9,5 +9,10 @@ import java.util.concurrent.CompletableFuture;
  */
 public interface PolicyEvaluator {
 
+    /**
+     * Evaluate the policies with the given security context
+     * @param securityContext the security context that is active for this current operation
+     * @return a {@link CompletableFuture} that will complete with the {@link AuthorizationResult} of the evaluation
+     */
     CompletableFuture<AuthorizationResult> evaluatePolicies(SecurityContext securityContext);
 }
