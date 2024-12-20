@@ -1,5 +1,11 @@
 package org.kinotic.structures.internal.api.services.impl;
 
+import org.kinotic.structures.internal.api.services.EntityService;
+
+/**
+ * Represents an operation that can be performed on an entity.
+ * This list must be kept in sync with the list of operations in the {@link EntityService} interface
+ */
 public enum EntityOperation {
 
     BULK_SAVE("bulkSave"),

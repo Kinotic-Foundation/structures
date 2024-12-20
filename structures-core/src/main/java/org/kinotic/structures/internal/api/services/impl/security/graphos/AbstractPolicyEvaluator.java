@@ -36,10 +36,10 @@ public abstract class AbstractPolicyEvaluator implements PolicyEvaluator {
 
                              boolean operationAllowed = isOperationAllowed(policyRequests);
 
-                             boolean domainAllowed = sharedPolicyManager.getEntityExpression() == null
+                             boolean entityAllowed = sharedPolicyManager.getEntityExpression() == null
                                      || sharedPolicyManager.getEntityExpression().evaluate(policyRequests);
 
-                             return new AuthorizationResult(operationAllowed, domainAllowed, fieldResults);
+                             return new AuthorizationResult(operationAllowed, entityAllowed, fieldResults);
                          });
     }
 

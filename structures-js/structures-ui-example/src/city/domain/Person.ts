@@ -7,7 +7,6 @@ import {
     EntityServiceDecorators,
     $Role, $Policy,
     Policy,
-    Role
 } from '@kinotic/structures-api'
 import {Address} from './Address.js'
 
@@ -20,7 +19,6 @@ import {Address} from './Address.js'
     }
 )
 @Entity(MultiTenancyType.SHARED)
-@Role(['admin'])
 @Policy([['data:read']])
 export class Person {
 

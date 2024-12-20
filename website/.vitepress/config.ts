@@ -48,6 +48,7 @@ function sidebarGuide() {
       text: 'Details',
       items: [
         { text: 'Create a new Structure', link: '/guide/new-structure' },
+        { text: 'Apollo @policy Support', link: '/guide/graphos/overview' },
       ]
     }
   ]
