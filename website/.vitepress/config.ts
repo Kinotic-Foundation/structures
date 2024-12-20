@@ -48,10 +48,16 @@ function sidebarGuide() {
       text: 'Details',
       items: [
         { text: 'Create a new Structure', link: '/guide/new-structure' },
-        { text: 'Apollo @policy Support', link: '/guide/graphos/overview' },
+        { text: 'Apollo @policy Support',
+          link: '/guide/graphos/overview',
+          items: [
+            { text: 'Policy Decorators', link: '/guide/graphos/policy-decorators' },
+            { text: 'Policy Evaluation Flow', link: '/guide/graphos/policy-evaluation-flow' }
+          ]
+        }
       ]
     }
-  ]
+  ];
 }
 
 function sidebarReference() {
@@ -65,8 +71,11 @@ function sidebarReference() {
     {
       text: 'API',
       items: [
-        { text: 'Javadoc', link: '/reference/javadoc' }
+        { text: 'Javadoc', link: '/reference/javadoc' },
+        { text: 'PolicyAuthorizationService', link: '/reference/graphos/policy-authorization-service' },
+        { text: 'PolicyAuthorizer', link: '/reference/graphos/policy-authorizer' },
+        { text: 'PolicyAuthorizationRequest', link: '/reference/graphos/policy-authorization-request' }
       ]
     }
-  ]
+  ];
 }

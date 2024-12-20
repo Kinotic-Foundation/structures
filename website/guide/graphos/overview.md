@@ -28,6 +28,5 @@ The `PolicyAuthorizationService` in Structures provides seamless integration wit
 
 ## Next Steps
 
-- Learn about the [PolicyAuthorizationService](./policy-authorization-service).
 - Explore how to define [@Policy](./policy-decorators) in your Structures models.
 - Understand the [Policy Evaluation Flow](./policy-evaluation-flow) for runtime authorization.

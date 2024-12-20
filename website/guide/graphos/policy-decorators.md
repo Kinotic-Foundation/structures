@@ -47,8 +47,9 @@ The [`@EntityServiceDecorators`](./entity-service-decorators) decorator allows y
 )
 export class Person { ... }
 ```
+::: tip
 More information on the `@EntityServiceDecorators` decorator can be found [here](./entity-service-decorators).
-
+:::
 
 ## How Policies Translate to GraphQL
 
@@ -67,5 +68,5 @@ This ensures that policies are enforced consistently across the generated GraphQ
 
 ## Related Links
 
-- Learn about the [PolicyAuthorizationService](./policy-authorization-service) and its role in enforcing policies.
+- Learn about the [PolicyAuthorizationService](../../reference/graphos/policy-authorization-service) and its role in enforcing policies.
 - Explore the [Policy Evaluation Flow](./policy-evaluation-flow) to understand runtime policy processing.

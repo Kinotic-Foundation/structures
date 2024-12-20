@@ -57,8 +57,8 @@ The `PolicyAuthorizationService` orchestrates the evaluation flow by:
 - Using `PolicyEvaluator` to collect and evaluate policies.
 - Determining the final outcome based on the evaluation results.
 
-## Next Steps
+## Related Links
 
-- Learn about the [PolicyAuthorizationService](./policy-authorization-service) and its role in orchestrating policy evaluation.
+- Learn about the [PolicyAuthorizationService](../../reference/graphos/policy-authorization-service) and its role in orchestrating policy evaluation.
 - Explore how to define and use [Policy Decorators](./policy-decorators) in your models.
-- Review the [PolicyAuthorizer](./policy-authorizer) and its role in evaluating individual policies.
+- Review the [PolicyAuthorizer](../../reference/graphos/policy-authorizer) and its role in evaluating individual policies.
