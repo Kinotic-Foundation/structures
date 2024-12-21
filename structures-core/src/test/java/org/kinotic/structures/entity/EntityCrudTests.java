@@ -312,6 +312,7 @@ public class EntityCrudTests extends ElasticsearchTestBase {
 
         // Make sure all data is indexed
         entitiesService.syncIndex(holder1.getStructure().getId(), context1).join();
+        entitiesService.syncIndex(holder2.getStructure().getId(), context2).join();
 
         // TODO: verify all data items as well, not just sizes
         Sort sort = Sort.by("firstName");
@@ -377,9 +378,6 @@ public class EntityCrudTests extends ElasticsearchTestBase {
                     .verifyComplete();
 
         // Second tenant
-
-        // Make sure all data is indexed
-        entitiesService.syncIndex(holder2.getStructure().getId(), context2).join();
 
         Assertions.assertNull(cursorRef.get(), "Cursor is not null");
 
