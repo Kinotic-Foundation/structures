@@ -27,7 +27,7 @@ export class Initialize extends Command {
     }
 
     public async run(): Promise<void> {
-        const {args, flags} = await this.parse(Initialize)
+        const {flags} = await this.parse(Initialize)
 
         if(await isStructuresProject()){
             this.log(chalk.red('Error: ') + ' The working directory is already a Structures Project')
