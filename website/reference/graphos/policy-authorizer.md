@@ -75,4 +75,4 @@ The `PolicyAuthorizer` can be implemented in various ways, depending on the requ
 
 - Understand how [PolicyAuthorizationService](./policy-authorization-service) uses `PolicyAuthorizer` for runtime policy enforcement.
 - Explore the [PolicyAuthorizationRequest](./policy-authorization-request) and its role in defining individual policy evaluations.
-- Learn about [Policy Decorators](./policy-decorators) and how they define policies in Structures models.
+- Learn about [Policy Decorators](../../guide/graphos/policy-decorators) and how they define policies in Structures models.

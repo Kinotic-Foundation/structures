@@ -57,5 +57,5 @@ The `PolicyAuthorizationService` directly supports the new GraphOS `@policy` dir
 ## Related Links
 
 - Learn about the [PolicyAuthorizer](./policy-authorizer) used for evaluating individual policies.
-- Explore how to define [PolicyDecorators](./policy-decorators) in your Structures models.
-- Understand the [Policy Evaluation Flow](./policy-evaluation-flow) for runtime authorization.
+- Explore how to define [PolicyDecorators](../../guide/graphos/policy-decorators) in your Structures models.
+- Understand the [Policy Evaluation Flow](../../guide/graphos/policy-evaluation-flow) for runtime authorization.

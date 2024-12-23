@@ -52,5 +52,5 @@ For more details, see [PolicyAuthorizer](./policy-authorizer).
 ## Related Links
 
 - Explore the [PolicyAuthorizer](./policy-authorizer) and its role in evaluating policy requests.
-- Learn how to define and use [Policy Decorators](./policy-decorators) in your Structures models.
-- Review the [Policy Evaluation Flow](./policy-evaluation-flow) for a complete understanding of runtime policy processing.
+- Learn how to define and use [Policy Decorators](../../guide/graphos/policy-decorators) in your Structures models.
+- Review the [Policy Evaluation Flow](../../guide/graphos/policy-evaluation-flow) for a complete understanding of runtime policy processing.

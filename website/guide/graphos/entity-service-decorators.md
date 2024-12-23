@@ -104,6 +104,6 @@ export class Person {
 
 ## Related Links
 
-- Learn how [PolicyAuthorizationService](./policy-authorization-service) evaluates these policies during runtime.
+- Learn how [PolicyAuthorizationService](../../reference/graphos/policy-authorization-service) evaluates these policies during runtime.
 - Explore how to define and apply [Policy Decorators](./policy-decorators) in your models.
 - Understand the [Policy Evaluation Flow](./policy-evaluation-flow) for detailed insights into how policies are processed.
