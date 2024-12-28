@@ -14,7 +14,6 @@ import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.domain.idl.PageableC3Type;
 import org.kinotic.structures.api.services.EntitiesService;
 import org.kinotic.structures.internal.api.services.sql.MapParameterHolder;
-import org.kinotic.structures.internal.endpoints.graphql.GqlOperationExecutionFunction;
 import org.kinotic.structures.internal.endpoints.openapi.RoutingContextToEntityContextAdapter;
 import org.kinotic.structures.internal.utils.GqlUtils;
 
@@ -36,7 +35,7 @@ public class PagedQueryDataFetcher implements DataFetcher<CompletableFuture<Page
     private final String structureId;
 
     /**
-     * Creates a {@link GqlOperationExecutionFunction} that will execute a named query page and return the result as a {@link ExecutionResult}
+     * Creates a {@link DataFetcher} that will execute a named query page and return the result as a {@link ExecutionResult}
      * @param entitiesService the {@link EntitiesService} to use to execute the query
      * @param objectMapper the {@link ObjectMapper} to use to deserialize the input parameters
      * @param queryDefinition the {@link FunctionDefinition} for the query to execute

@@ -17,14 +17,6 @@ public interface GqlOperationDefinitionService {
     void evictCachesFor(Structure structure);
 
     /**
-     * Finds a {@link GqlOperationExecutionFunction} by its operation name
-     *
-     * @param operationName to find the {@link GqlOperationExecutionFunction} for
-     * @return the {@link GqlOperationExecutionFunction} or null if not found
-     */
-    GqlOperationExecutionFunction findOperationExecutionFunction(String operationName);
-
-    /**
      * Returns the built-in operations that are always available, such as findById, findAll, etc...
      * @return all the {@link GqlOperationDefinition} available
      */
