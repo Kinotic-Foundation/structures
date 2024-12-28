@@ -10,7 +10,9 @@ import org.kinotic.continuum.idl.api.schema.ParameterDefinition;
 import org.kinotic.structures.api.domain.idl.CursorPageC3Type;
 import org.kinotic.structures.api.domain.idl.PageC3Type;
 import org.kinotic.structures.api.domain.idl.PageableC3Type;
+import org.kinotic.structures.api.domain.idl.decorators.PolicyDecorator;
 import org.kinotic.structures.internal.idl.converters.graphql.GqlTypeHolder;
+import org.kinotic.structures.internal.utils.GqlUtils;
 
 import static graphql.schema.GraphQLArgument.newArgument;
 import static graphql.schema.GraphQLFieldDefinition.newFieldDefinition;
@@ -30,6 +32,11 @@ public class QueryGqlFieldDefinitionFunction implements GqlFieldDefinitionFuncti
     public GraphQLFieldDefinition apply(GqlFieldDefinitionData data) {
         GraphQLFieldDefinition.Builder builder
                 = newFieldDefinition().name(queryDefinition.getName() + data.getStructureName());
+
+        PolicyDecorator policyDecorator = queryDefinition.findDecorator(PolicyDecorator.class);
+        if(policyDecorator != null){
+            builder = builder.withDirective(GqlUtils.policy(policyDecorator.getPolicies()));
+        }
 
         // This is kinda a hack. The CLI will always just create a PageC3Type, but if a cursor is used it needs to explicitly defined for GQL
         GqlTypeHolder retTypeHolder;

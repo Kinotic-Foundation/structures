@@ -9,8 +9,14 @@ import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.continuum.idl.api.converter.IdlConverter;
 import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
 import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.api.domain.idl.decorators.EntityServiceDecorator;
+import org.kinotic.structures.api.domain.idl.decorators.EntityServiceDecoratorsDecorator;
+import org.kinotic.structures.internal.api.services.impl.EntityOperation;
 import org.kinotic.structures.internal.idl.converters.graphql.GqlConversionState;
 import org.kinotic.structures.internal.idl.converters.graphql.GqlTypeHolder;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  * Created by Navíd Mitchell 🤪 on 12/14/23.
@@ -24,10 +30,30 @@ public class GqlFieldDefinitionData {
      */
     private final IdlConverter<GqlTypeHolder, GqlConversionState> converter;
 
+    /**
+     * The {@link GraphQLNamedOutputType} for the {@link CursorPage} type containing the {@link ObjectC3Type} for the {@link Structure}
+     */
+    private final GraphQLNamedOutputType cursorPageResponseType;
+
+    /**
+     * The {@link GraphQLTypeReference} for the {@link Pageable} type used for all requests needing paging
+     */
+    private final GraphQLTypeReference cursorPageableReference;
+
+    /**
+     * The {@link EntityServiceDecorator} for each operation if provided by the {@link EntityServiceDecoratorsDecorator} for the {@link Structure#getEntityDefinition()} or an empty map
+     */
+    private final Map<EntityOperation, List<EntityServiceDecorator>> entityOperationsMap;
+
     /**s
      * The {@link GraphQLInputObjectType} that is created from the {@link ObjectC3Type} for the {@link Structure} or null if the {@link Structure}s does not have an input type
      */
     private final GraphQLInputObjectType inputType;
+
+    /**
+     * The {@link GraphQLTypeReference} for the {@link Pageable} type used for all requests needing paging
+     */
+    private final GraphQLTypeReference offsetPageableReference;
 
     /**
      * The {@link GraphQLObjectType} that is created from the {@link ObjectC3Type} for the {@link Structure}
@@ -38,21 +64,6 @@ public class GqlFieldDefinitionData {
      * The {@link GraphQLNamedOutputType} for the {@link Page} type containing the {@link ObjectC3Type} for the {@link Structure}
      */
     private final GraphQLNamedOutputType pageResponseType;
-
-    /**
-     * The {@link GraphQLNamedOutputType} for the {@link CursorPage} type containing the {@link ObjectC3Type} for the {@link Structure}
-     */
-    private final GraphQLNamedOutputType cursorPageResponseType;
-
-    /**
-     * The {@link GraphQLTypeReference} for the {@link Pageable} type used for all requests needing paging
-     */
-    private final GraphQLTypeReference offsetPageableReference;
-
-    /**
-     * The {@link GraphQLTypeReference} for the {@link Pageable} type used for all requests needing paging
-     */
-    private final GraphQLTypeReference cursorPageableReference;
 
     /**
      * The {@link Structure#getName()} (first letter capitalized) that the {@link GraphQLFieldDefinition} is for

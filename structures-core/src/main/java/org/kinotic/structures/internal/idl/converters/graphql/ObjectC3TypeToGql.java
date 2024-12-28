@@ -120,12 +120,13 @@ public class ObjectC3TypeToGql implements C3TypeConverter<GqlTypeHolder, ObjectC
                 }
             }
 
-            if(property.containsDecorator(PolicyDecorator.class)){
+            PolicyDecorator policyDecorator1 = property.findDecorator(PolicyDecorator.class);
+            if(policyDecorator1 != null){
 
                 outputBuilder.field(newFieldDefinition()
                                             .name(fieldName)
                                             .type(fieldValue.outputType())
-                                            .withDirective(GqlUtils.policy(property.findDecorator(PolicyDecorator.class).getPolicies())));
+                                            .withDirective(GqlUtils.policy(policyDecorator1.getPolicies())));
             }else{
 
                 outputBuilder.field(newFieldDefinition()

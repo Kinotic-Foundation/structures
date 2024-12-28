@@ -15,9 +15,12 @@ import org.apache.commons.text.WordUtils;
 import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.continuum.idl.api.converter.IdlConverter;
 import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.api.domain.idl.decorators.EntityServiceDecorator;
+import org.kinotic.structures.api.domain.idl.decorators.EntityServiceDecoratorsDecorator;
 import org.kinotic.structures.api.services.EntitiesService;
 import org.kinotic.structures.internal.api.services.StructureConversionService;
 import org.kinotic.structures.internal.api.services.StructureDAO;
+import org.kinotic.structures.internal.api.services.impl.EntityOperation;
 import org.kinotic.structures.internal.endpoints.graphql.datafetchers.EntitiesDataFetcher;
 import org.kinotic.structures.internal.endpoints.graphql.datafetchers.EntitiesTypeResolver;
 import org.kinotic.structures.internal.idl.converters.graphql.GqlConversionState;
@@ -28,6 +31,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -131,20 +135,30 @@ public class GqlSchemaHandlerCacheLoader implements AsyncCacheLoader<String, Gra
                             GraphQLNamedOutputType pageResponseType = GqlUtils.wrapTypeWithPage(graphQLTypeReference);
                             GraphQLNamedOutputType cursorPageResponseType = GqlUtils.wrapTypeWithCursorPage(graphQLTypeReference);
 
+
+                            EntityServiceDecoratorsDecorator esdDecorator = structure.getEntityDefinition()
+                                                                                     .findDecorator(EntityServiceDecoratorsDecorator.class);
+                            Map<EntityOperation, List<EntityServiceDecorator>> entityOperationsMap = Map.of();
+                            if(esdDecorator != null){
+                                entityOperationsMap = esdDecorator.getConfig().getOperationDecoratorMap();
+                            }
+
                             String structureName = WordUtils.capitalize(structure.getName());
-                            GqlFieldDefinitionData fieldDefinitionData = GqlFieldDefinitionData.builder()
-                                                                                               .converter(converter)
-                                                                                               .inputType(inputType)
-                                                                                               .outputType(outputType)
-                                                                                               .offsetPageableReference(
-                                                                                                       pageableReference)
-                                                                                               .cursorPageableReference(
-                                                                                                       cursorPageableReference)
-                                                                                               .pageResponseType(pageResponseType)
-                                                                                               .cursorPageResponseType(
-                                                                                                       cursorPageResponseType)
-                                                                                               .structureName(structureName)
-                                                                                               .build();
+                            GqlFieldDefinitionData fieldDefinitionData
+                                    = GqlFieldDefinitionData.builder()
+                                                            .converter(converter)
+                                                            .inputType(inputType)
+                                                            .outputType(outputType)
+                                                            .offsetPageableReference(
+                                                                    pageableReference)
+                                                            .cursorPageableReference(
+                                                                    cursorPageableReference)
+                                                            .pageResponseType(pageResponseType)
+                                                            .cursorPageResponseType(
+                                                                    cursorPageResponseType)
+                                                            .structureName(structureName)
+                                                            .entityOperationsMap(entityOperationsMap)
+                                                            .build();
 
                             // Add all graphQL operations to the schema
                             addOperations(fieldDefinitionData, codeRegistryBuilder, mutationBuilder, queryBuilder, structure);
