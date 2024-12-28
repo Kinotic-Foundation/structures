@@ -2,6 +2,7 @@ package org.kinotic.structures.internal.endpoints.graphql;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import graphql.language.OperationDefinition;
+import graphql.scalars.ExtendedScalars;
 import graphql.schema.GraphQLFieldDefinition;
 import org.apache.commons.text.WordUtils;
 import org.kinotic.continuum.core.api.crud.Pageable;
@@ -79,6 +80,21 @@ public class DefaultGqlOperationDefinitionService implements GqlOperationDefinit
                                           return builder.build();
                                       })
                                       .dataFetcherDefinitionFunction(structure -> new BulkSaveDataFetcher(structure.getId(), entitiesService))
+                                      .build(),
+
+                GqlOperationDefinition.builder()
+                                      .operationName(EntityOperation.COUNT.methodName())
+                                      .operationType(OperationDefinition.Operation.QUERY)
+                                      .fieldDefinitionFunction(args -> {
+
+                                          GraphQLFieldDefinition.Builder builder = newFieldDefinition()
+                                                  .name(EntityOperation.COUNT.methodName() + args.getStructureName())
+                                                  .type(ExtendedScalars.GraphQLLong);
+
+                                          builder = addPolicyIfPresent(builder, args.getEntityOperationsMap().get(EntityOperation.COUNT));
+                                          return builder.build();
+                                      })
+                                      .dataFetcherDefinitionFunction(structure -> new CountDataFetcher(structure.getId(), entitiesService))
                                       .build(),
 
                 GqlOperationDefinition.builder()
