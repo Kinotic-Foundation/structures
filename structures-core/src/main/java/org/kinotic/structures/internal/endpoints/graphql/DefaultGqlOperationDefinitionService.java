@@ -83,6 +83,23 @@ public class DefaultGqlOperationDefinitionService implements GqlOperationDefinit
                                       .build(),
 
                 GqlOperationDefinition.builder()
+                                      .operationName(EntityOperation.BULK_UPDATE.methodName())
+                                      .operationType(OperationDefinition.Operation.MUTATION)
+                                      .fieldDefinitionFunction(args -> {
+
+                                          GraphQLFieldDefinition.Builder builder = newFieldDefinition()
+                                                  .name(EntityOperation.BULK_UPDATE.methodName() + args.getStructureName())
+                                                  .type(GraphQLBoolean)
+                                                  .argument(newArgument().name("input")
+                                                                         .type(nonNull(list(nonNull(args.getInputType())))));
+
+                                          builder = addPolicyIfPresent(builder, args.getEntityOperationsMap().get(EntityOperation.BULK_UPDATE));
+                                          return builder.build();
+                                      })
+                                      .dataFetcherDefinitionFunction(structure -> new BulkUpdateDataFetcher(structure.getId(), entitiesService))
+                                      .build(),
+
+                GqlOperationDefinition.builder()
                                       .operationName(EntityOperation.COUNT.methodName())
                                       .operationType(OperationDefinition.Operation.QUERY)
                                       .fieldDefinitionFunction(args -> {
@@ -172,7 +189,7 @@ public class DefaultGqlOperationDefinitionService implements GqlOperationDefinit
 
                                           GraphQLFieldDefinition.Builder builder = newFieldDefinition()
                                                   .name(EntityOperation.SAVE.methodName() + args.getStructureName())
-                                                  .type(GraphQLID)
+                                                  .type(args.getOutputType())
                                                   .argument(newArgument().name("input")
                                                                          .type(nonNull(args.getInputType())));
 
@@ -218,6 +235,23 @@ public class DefaultGqlOperationDefinitionService implements GqlOperationDefinit
                                             return builder.build();
                                       })
                                       .dataFetcherDefinitionFunction(structure -> new SearchDataFetcher(structure.getId(), entitiesService, objectMapper))
+                                      .build(),
+
+                GqlOperationDefinition.builder()
+                                      .operationName(EntityOperation.UPDATE.methodName())
+                                      .operationType(OperationDefinition.Operation.MUTATION)
+                                      .fieldDefinitionFunction(args -> {
+
+                                          GraphQLFieldDefinition.Builder builder = newFieldDefinition()
+                                                  .name(EntityOperation.UPDATE.methodName() + args.getStructureName())
+                                                  .type(args.getOutputType())
+                                                  .argument(newArgument().name("input")
+                                                                         .type(nonNull(args.getInputType())));
+
+                                          builder = addPolicyIfPresent(builder, args.getEntityOperationsMap().get(EntityOperation.UPDATE));
+                                          return builder.build();
+                                      })
+                                      .dataFetcherDefinitionFunction(structure -> new UpdateDataFetcher(structure.getId(), entitiesService))
                                       .build()
         );
     }

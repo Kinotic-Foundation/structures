@@ -3,7 +3,6 @@ package org.kinotic.structures.internal.endpoints.graphql.datafetchers;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import io.vertx.ext.web.RoutingContext;
-import org.apache.commons.lang3.Validate;
 import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.services.EntitiesService;
 import org.kinotic.structures.internal.endpoints.openapi.RoutingContextToEntityContextAdapter;
@@ -35,10 +34,7 @@ public class BulkSaveDataFetcher implements DataFetcher<CompletableFuture<Boolea
 
         List<Map> entity = environment.getArgument("input");
 
-        return entitiesService
-                .bulkSave(structureId,
-                          entity,
-                          ec)
-                .thenApply(v -> true);
+        return entitiesService.bulkSave(structureId, entity, ec)
+                              .thenApply(v -> true);
     }
 }

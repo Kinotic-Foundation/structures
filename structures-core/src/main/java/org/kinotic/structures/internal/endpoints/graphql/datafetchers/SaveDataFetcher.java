@@ -33,8 +33,6 @@ public class SaveDataFetcher implements DataFetcher<CompletableFuture<Map>> {
 
         Map entity = environment.getArgument("input");
 
-        return entitiesService.save(structureId,
-                                    entity,
-                                    ec);
+        return entitiesService.save(structureId, entity, ec);
     }
 }
