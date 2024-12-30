@@ -11,9 +11,9 @@ export class GqlEnumToC3Type implements ITypeConverter<GraphQLType, C3Type, GqlC
             const enumC3Type = new EnumC3Type(value.name, conversionContext.state().namespace)
 
             const values = value.getValues()
-            values.forEach(enumValue => {
+            for (const enumValue of values) {
                 enumC3Type.addValue(enumValue.name)
-            })
+            }
 
             return enumC3Type
         }
