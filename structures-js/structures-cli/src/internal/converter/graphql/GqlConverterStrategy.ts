@@ -5,6 +5,7 @@ import {GraphQLType} from 'graphql/type/index.js'
 import {ITypeConverter} from '../ITypeConverter.js'
 import {GqlArrayToC3Type} from './GqlArrayToC3Type.js'
 import {GqlConversionState} from './GqlConversionState.js'
+import {GqlObjectToC3Type} from './GqlObjectToC3Type.js'
 import {GqlPrimitiveToC3Type} from './GqlPrimitiveToC3Type.js'
 
 export class GqlConverterStrategy implements IConverterStrategy<GraphQLType, C3Type, GqlConversionState> {
@@ -13,7 +14,8 @@ export class GqlConverterStrategy implements IConverterStrategy<GraphQLType, C3T
     private readonly _logger: Logger
     private readonly _typeConverters = [
         new GqlPrimitiveToC3Type(),
-        new GqlArrayToC3Type()
+        new GqlArrayToC3Type(),
+        new GqlObjectToC3Type()
     ]
 
 

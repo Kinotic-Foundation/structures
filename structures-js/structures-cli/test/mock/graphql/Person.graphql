@@ -1,0 +1,24 @@
+directive @entity(multiTenancyType: MultiTenancyType = NONE) on OBJECT
+
+enum MultiTenancyType {
+    NONE
+    SHARED
+}
+
+directive @id on FIELD_DEFINITION
+
+type Address {
+    street: String!
+    city: String!
+    state: String!
+    postalCode: String!
+}
+
+
+
+type Person @entity(multiTenancyType: SHARED) {
+    id: ID @id
+    firstName: String!
+    lastName: String!
+    address: Address
+}

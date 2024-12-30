@@ -322,7 +322,8 @@ export class CodeGenerationService {
 
     private createStatementMapper(entityInfo: EntityInfo,
                                   utilFunctionLocator: UtilFunctionLocator): StatementMapper{
-        const state = new StatementMapperConversionState(utilFunctionLocator)
+        const state = new StatementMapperConversionState(entityInfo.entity.namespace,
+                                                         utilFunctionLocator)
         state.entityConfiguration = entityInfo.entityConfiguration
 
         const conversionContext = createConversionContext(new StatementMapperConverterStrategy(state, this.logger))
