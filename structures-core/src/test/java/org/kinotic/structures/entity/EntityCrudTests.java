@@ -297,7 +297,7 @@ public class EntityCrudTests extends ElasticsearchTestBase {
     }
 
     @Test
-    public void testFindAllWithCursor(){
+    public void testFindAllWithCursor() throws InterruptedException{
 
         EntityContext context1 = new DefaultEntityContext(new DummyParticipant("tenant1", "user1"));
         EntityContext context2 = new DefaultEntityContext(new DummyParticipant("tenant2", "user2"));
@@ -313,6 +313,8 @@ public class EntityCrudTests extends ElasticsearchTestBase {
         // Make sure all data is indexed
         entitiesService.syncIndex(holder1.getStructure().getId(), context1).join();
         entitiesService.syncIndex(holder2.getStructure().getId(), context2).join();
+
+        Thread.sleep(5000);
 
         // TODO: verify all data items as well, not just sizes
         Sort sort = Sort.by("firstName");
