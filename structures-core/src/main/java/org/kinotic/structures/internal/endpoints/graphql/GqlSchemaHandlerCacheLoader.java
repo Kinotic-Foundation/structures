@@ -58,15 +58,25 @@ public class GqlSchemaHandlerCacheLoader implements AsyncCacheLoader<String, Gra
     private static final EntitiesTypeResolver ENTITIES_TYPE_RESOLVER = new EntitiesTypeResolver();
 
     private static final String FEDERATION_BASE = """
-            extend schema
-                @link(
-                    url: "https://specs.apollo.dev/federation/v2.9"
-                    import: [
-                        "@key",
-                        "@policy"
-                    ]
-                )
-            """;
+        extend schema
+            @link(
+                url: "https://specs.apollo.dev/federation/v2.9"
+                import: [
+                    "@key",
+                    "@policy"
+                ]
+            )
+        
+        directive @entity(multiTenancyType: MultiTenancyType = NONE) on OBJECT
+
+        enum MultiTenancyType {
+            NONE
+            SHARED
+        }
+
+        directive @id on FIELD_DEFINITION
+        
+        """;
 
     private final EntitiesService entitiesService;
     private final StructureDAO structureDAO;
