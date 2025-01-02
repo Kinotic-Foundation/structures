@@ -20,7 +20,7 @@ import org.kinotic.structures.api.domain.idl.decorators.EntityServiceDecoratorsD
 import org.kinotic.structures.api.services.EntitiesService;
 import org.kinotic.structures.internal.api.services.StructureConversionService;
 import org.kinotic.structures.internal.api.services.StructureDAO;
-import org.kinotic.structures.internal.api.services.impl.EntityOperation;
+import org.kinotic.structures.api.domain.EntityOperation;
 import org.kinotic.structures.internal.endpoints.graphql.datafetchers.EntitiesDataFetcher;
 import org.kinotic.structures.internal.endpoints.graphql.datafetchers.EntitiesTypeResolver;
 import org.kinotic.structures.internal.idl.converters.graphql.GqlConversionState;

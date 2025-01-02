@@ -7,10 +7,11 @@ import java.util.concurrent.CompletableFuture;
 /**
  * The {@link AuthorizationService} is responsible for authorizing a given action
  * This is a generic service that can be used to authorize any action
+ * Created by Navíd Mitchell 🤪on 12/31/24
  */
-public interface AuthorizationService {
+public interface AuthorizationService<T> {
 
-    CompletableFuture<Void> authorize(String action,
+    CompletableFuture<Void> authorize(T operationIdentifier,
                                       SecurityContext securityContext);
 
 }

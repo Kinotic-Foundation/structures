@@ -7,10 +7,33 @@ enum MultiTenancyType {
 
 directive @id on FIELD_DEFINITION
 
+type Car {
+    color: String!
+    make: String!
+    model: String!
+}
+
+type Motorcycle {
+    color: String!
+    make: String!
+    model: String!
+}
+
+union Vehicle = Car | Motorcycle
+
+enum State {
+    AZ
+    NM
+    CA
+    TX
+    NY
+    VA
+}
+
 type Address {
     street: String!
     city: String!
-    state: String!
+    state: State!
     postalCode: String!
 }
 
@@ -21,4 +44,5 @@ type Person @entity(multiTenancyType: SHARED) {
     firstName: String!
     lastName: String!
     address: Address
+    transportation: Vehicle
 }

@@ -5,7 +5,7 @@ import lombok.Locked;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.kinotic.structures.internal.api.services.EntityService;
-import org.kinotic.structures.internal.api.services.impl.EntityOperation;
+import org.kinotic.structures.api.domain.EntityOperation;
 
 import java.util.HashMap;
 import java.util.List;

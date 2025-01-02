@@ -9,13 +9,13 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * A PolicyEvaluator that supports operation policies
+ * A PolicyEvaluator that supports policies for a given operation as well as entity policies
  */
-public class PolicyEvaluatorWithOperations extends AbstractPolicyEvaluator {
+public class PolicyEvaluatorWithOperation extends AbstractPolicyEvaluator {
     private final PolicyExpression operationExpression;
     private final Set<String> operationPolicies = new HashSet<>();
 
-    public PolicyEvaluatorWithOperations(
+    public PolicyEvaluatorWithOperation(
             PolicyAuthorizer authorizer,
             SharedPolicyManager sharedPolicyManager,
             List<List<String>> operationPolicies) {

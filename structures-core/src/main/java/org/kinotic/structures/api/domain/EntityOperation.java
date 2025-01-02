@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.api.services.impl;
+package org.kinotic.structures.api.domain;
 
 import org.kinotic.structures.internal.api.services.EntityService;
 

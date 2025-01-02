@@ -7,13 +7,13 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * A PolicyEvaluator that does not evaluate operations
+ * A PolicyEvaluator that does not evaluate any operation
  * This is useful when a policy evaluator is only concerned with evaluating shared policies
  * and does not need to evaluate operation policies
  */
-public class PolicyEvaluatorWithoutOperations extends AbstractPolicyEvaluator {
+public class PolicyEvaluatorWithoutOperation extends AbstractPolicyEvaluator {
 
-    public PolicyEvaluatorWithoutOperations(PolicyAuthorizer authorizer, SharedPolicyManager sharedPolicyManager) {
+    public PolicyEvaluatorWithoutOperation(PolicyAuthorizer authorizer, SharedPolicyManager sharedPolicyManager) {
         super(authorizer, sharedPolicyManager);
     }
 

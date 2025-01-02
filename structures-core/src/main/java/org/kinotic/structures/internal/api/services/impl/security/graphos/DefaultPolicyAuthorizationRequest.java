@@ -2,7 +2,7 @@ package org.kinotic.structures.internal.api.services.impl.security.graphos;
 
 import org.kinotic.structures.api.services.security.graphos.PolicyAuthorizationRequest;
 
-class DefaultPolicyAuthorizationRequest implements PolicyAuthorizationRequest {
+public class DefaultPolicyAuthorizationRequest implements PolicyAuthorizationRequest {
     private final String policy;
     private boolean authorized = false;
 

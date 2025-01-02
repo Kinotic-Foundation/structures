@@ -5,9 +5,13 @@ import org.apache.commons.lang3.NotImplementedException;
 import org.kinotic.continuum.idl.api.schema.FunctionDefinition;
 import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.domain.NamedQueriesDefinition;
+import org.kinotic.structures.api.domain.NamedQueryOperation;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.domain.idl.decorators.QueryDecorator;
+import org.kinotic.structures.api.services.security.AuthorizationService;
+import org.kinotic.structures.api.services.security.AuthorizationServiceFactory;
 import org.kinotic.structures.internal.api.services.sql.executors.AggregateQueryExecutor;
+import org.kinotic.structures.internal.api.services.sql.executors.PreAuthorizationExecutor;
 import org.kinotic.structures.internal.api.services.sql.executors.QueryExecutor;
 import org.kinotic.structures.internal.utils.QueryUtils;
 import org.kinotic.structures.internal.utils.SqlQueryType;
@@ -22,6 +26,7 @@ public class DefaultQueryExecutorFactory implements QueryExecutorFactory {
 
     private final ElasticVertxClient elasticVertxClient;
     private final StructuresProperties structuresProperties;
+    private final AuthorizationServiceFactory authorizationServiceFactory;
 
     public QueryExecutor createQueryExecutor(Structure structure,
                                              String queryName,
@@ -46,7 +51,10 @@ public class DefaultQueryExecutorFactory implements QueryExecutorFactory {
 
         String[] statements = queryDecorator.getStatements().split(";");
         if(statements.length == 1){
-            return createQueryExecutorForStatement(structure, statements[0], namedQuery);
+            QueryExecutor queryExecutor = createQueryExecutorForStatement(structure, statements[0], namedQuery);
+            AuthorizationService<NamedQueryOperation> authorizationService =
+                    authorizationServiceFactory.createNamedQueryAuthorizationService(namedQuery).join();
+            return new PreAuthorizationExecutor(authorizationService, queryExecutor);
         }else{
             throw new IllegalArgumentException("Multiple statements not supported yet");
         }
@@ -57,23 +65,16 @@ public class DefaultQueryExecutorFactory implements QueryExecutorFactory {
                                                           FunctionDefinition namedQueryDefinition) {
         // naive approach to how we handle these queries, this will be improved as we do more R&D on advanced approaches
         SqlQueryType queryType = QueryUtils.determineQueryType(statement);
-        switch (queryType) {
-            case AGGREGATE:
-                return new AggregateQueryExecutor(structure,
-                                                  elasticVertxClient,
-                                                  namedQueryDefinition,
-                                                  statement,
-                                                  structuresProperties);
-            case DELETE:
-                throw new NotImplementedException("Delete not supported yet");
-            case INSERT:
-                throw new NotImplementedException("Insert not supported yet");
-            case SELECT:
-                throw new NotImplementedException("Select without aggregate not supported yet");
-            case UPDATE:
-                throw new NotImplementedException("Update not supported yet");
-            default:
-                throw new IllegalArgumentException("Unsupported query type " + queryType);
-        }
+        return switch (queryType) {
+            case AGGREGATE -> new AggregateQueryExecutor(structure,
+                                                         elasticVertxClient,
+                                                         namedQueryDefinition,
+                                                         statement,
+                                                         structuresProperties);
+            case DELETE -> throw new NotImplementedException("Delete not supported yet");
+            case INSERT -> throw new NotImplementedException("Insert not supported yet");
+            case SELECT -> throw new NotImplementedException("Select without aggregate not supported yet");
+            case UPDATE -> throw new NotImplementedException("Update not supported yet");
+        };
     }
 }

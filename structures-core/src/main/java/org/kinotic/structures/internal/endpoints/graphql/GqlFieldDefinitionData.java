@@ -11,7 +11,7 @@ import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.domain.idl.decorators.EntityServiceDecorator;
 import org.kinotic.structures.api.domain.idl.decorators.EntityServiceDecoratorsDecorator;
-import org.kinotic.structures.internal.api.services.impl.EntityOperation;
+import org.kinotic.structures.api.domain.EntityOperation;
 import org.kinotic.structures.internal.idl.converters.graphql.GqlConversionState;
 import org.kinotic.structures.internal.idl.converters.graphql.GqlTypeHolder;
 

@@ -5,9 +5,10 @@ import org.kinotic.structures.api.services.security.AuthorizationService;
 
 import java.util.concurrent.CompletableFuture;
 
-public class NoopAuthorizationService implements AuthorizationService {
+public class NoopAuthorizationService<T> implements AuthorizationService<T> {
+
     @Override
-    public CompletableFuture<Void> authorize(String action, SecurityContext securityContext) {
+    public CompletableFuture<Void> authorize(T operationIdentifier, SecurityContext securityContext) {
         return CompletableFuture.completedFuture(null);
     }
 }

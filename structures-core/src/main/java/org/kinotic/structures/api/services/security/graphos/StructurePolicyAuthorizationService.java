@@ -9,10 +9,10 @@ import org.kinotic.structures.api.domain.idl.decorators.EntityServiceDecoratorsC
 import org.kinotic.structures.api.domain.idl.decorators.EntityServiceDecoratorsDecorator;
 import org.kinotic.structures.api.domain.idl.decorators.PolicyDecorator;
 import org.kinotic.structures.api.services.security.AuthorizationService;
-import org.kinotic.structures.internal.api.services.impl.EntityOperation;
+import org.kinotic.structures.api.domain.EntityOperation;
 import org.kinotic.structures.internal.api.services.impl.security.graphos.PolicyEvaluator;
-import org.kinotic.structures.internal.api.services.impl.security.graphos.PolicyEvaluatorWithOperations;
-import org.kinotic.structures.internal.api.services.impl.security.graphos.PolicyEvaluatorWithoutOperations;
+import org.kinotic.structures.internal.api.services.impl.security.graphos.PolicyEvaluatorWithOperation;
+import org.kinotic.structures.internal.api.services.impl.security.graphos.PolicyEvaluatorWithoutOperation;
 import org.kinotic.structures.internal.api.services.impl.security.graphos.SharedPolicyManager;
 import org.kinotic.structures.internal.idl.converters.common.DecoratedProperty;
 import org.kinotic.structures.internal.utils.StructuresUtil;
@@ -25,14 +25,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-public class PolicyAuthorizationService implements AuthorizationService {
+public class StructurePolicyAuthorizationService implements AuthorizationService<EntityOperation> {
 
-    private static final Logger log = LoggerFactory.getLogger(PolicyAuthorizationService.class);
+    private static final Logger log = LoggerFactory.getLogger(StructurePolicyAuthorizationService.class);
     private final Map<EntityOperation, PolicyEvaluator> operationEvaluators = new HashMap<>();
     private final String structureId;
 
-    public PolicyAuthorizationService(Structure structure,
-                                      PolicyAuthorizer policyAuthorizer) {
+    public StructurePolicyAuthorizationService(Structure structure,
+                                               PolicyAuthorizer policyAuthorizer) {
 
         this.structureId = StructuresUtil.structureNameToId(structure.getNamespace(), structure.getName());
         ObjectC3Type entityDefinition = structure.getEntityDefinition();
@@ -50,7 +50,7 @@ public class PolicyAuthorizationService implements AuthorizationService {
 
         SharedPolicyManager sharedPolicyManager = new SharedPolicyManager(entityPolicies != null ? entityPolicies.getPolicies() : null,
                                                                           fieldPolicies);
-        PolicyEvaluatorWithoutOperations sharedEvaluator = new PolicyEvaluatorWithoutOperations(policyAuthorizer, sharedPolicyManager);
+        PolicyEvaluatorWithoutOperation sharedEvaluator = new PolicyEvaluatorWithoutOperation(policyAuthorizer, sharedPolicyManager);
 
         // Check if we have any policy decorators to apply to operations
         EntityServiceDecoratorsDecorator decorators = entityDefinition.findDecorator(EntityServiceDecoratorsDecorator.class);
@@ -62,7 +62,7 @@ public class PolicyAuthorizationService implements AuthorizationService {
             for (Map.Entry<EntityOperation, List<EntityServiceDecorator>> entry : operationDecorators.entrySet()) {
                 List<List<String>> operationPolicies = extractPolicies(entry.getValue());
                 if(!operationPolicies.isEmpty()){
-                    operationEvaluators.put(entry.getKey(), new PolicyEvaluatorWithOperations(policyAuthorizer, sharedPolicyManager, operationPolicies));
+                    operationEvaluators.put(entry.getKey(), new PolicyEvaluatorWithOperation(policyAuthorizer, sharedPolicyManager, operationPolicies));
                 }else{
                     operationEvaluators.put(entry.getKey(), sharedEvaluator);
                 }
@@ -71,9 +71,8 @@ public class PolicyAuthorizationService implements AuthorizationService {
     }
 
     @Override
-    public CompletableFuture<Void> authorize(String action, SecurityContext securityContext) {
+    public CompletableFuture<Void> authorize(EntityOperation operation, SecurityContext securityContext) {
         try {
-            EntityOperation operation = EntityOperation.fromMethodName(action);
             PolicyEvaluator evaluator = operationEvaluators.get(operation);
             if(evaluator != null){
 
@@ -83,7 +82,6 @@ public class PolicyAuthorizationService implements AuthorizationService {
                     if(!result.operationAllowed()){
 
                         return CompletableFuture.failedFuture(new AuthorizationException("Operation %s not allowed.".formatted(operation)));
-
 
                     } else if (!result.entityAllowed()) { // Check if access to the entity is allowed
 

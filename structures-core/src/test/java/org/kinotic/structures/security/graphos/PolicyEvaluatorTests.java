@@ -48,7 +48,7 @@ public class PolicyEvaluatorTests {
                 List.of("policy1", "policy2") // AND group
         );
 
-        PolicyEvaluator evaluator = new PolicyEvaluatorWithOperations(authorizer, sharedPolicyManager, operationPolicies);
+        PolicyEvaluator evaluator = new PolicyEvaluatorWithOperation(authorizer, sharedPolicyManager, operationPolicies);
 
         AuthorizationResult result = evaluator.evaluatePolicies(null).get();
 
@@ -68,7 +68,7 @@ public class PolicyEvaluatorTests {
 
         // Modify sharedPolicyManager to exclude domain policy
         SharedPolicyManager modifiedPolicyManager = new SharedPolicyManager(null, sharedPolicyManager.getFieldPolicies());
-        PolicyEvaluator evaluator = new PolicyEvaluatorWithOperations(authorizer, modifiedPolicyManager, operationPolicies);
+        PolicyEvaluator evaluator = new PolicyEvaluatorWithOperation(authorizer, modifiedPolicyManager, operationPolicies);
 
         AuthorizationResult result = evaluator.evaluatePolicies(null).get();
 
@@ -105,7 +105,7 @@ public class PolicyEvaluatorTests {
             }
         };
 
-        PolicyEvaluator evaluator = new PolicyEvaluatorWithOperations(updatedAuthorizer, sharedPolicyManager, operationPolicies);
+        PolicyEvaluator evaluator = new PolicyEvaluatorWithOperation(updatedAuthorizer, sharedPolicyManager, operationPolicies);
 
         AuthorizationResult result = evaluator.evaluatePolicies(null).get();
 
@@ -123,7 +123,7 @@ public class PolicyEvaluatorTests {
                 List.of("policy1", "policy3") // AND group
         );
 
-        PolicyEvaluator evaluator = new PolicyEvaluatorWithOperations(authorizer, sharedPolicyManager, operationPolicies);
+        PolicyEvaluator evaluator = new PolicyEvaluatorWithOperation(authorizer, sharedPolicyManager, operationPolicies);
 
         AuthorizationResult result = evaluator.evaluatePolicies(null).get();
 
@@ -137,7 +137,7 @@ public class PolicyEvaluatorTests {
 
     @Test
     public void testPolicyEvaluatorWithoutOperations() throws Exception {
-        PolicyEvaluator evaluator = new PolicyEvaluatorWithoutOperations(authorizer, sharedPolicyManager);
+        PolicyEvaluator evaluator = new PolicyEvaluatorWithoutOperation(authorizer, sharedPolicyManager);
 
         AuthorizationResult result = evaluator.evaluatePolicies(null).get();
 

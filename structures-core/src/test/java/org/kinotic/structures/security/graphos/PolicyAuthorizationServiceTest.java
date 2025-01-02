@@ -9,9 +9,9 @@ import org.kinotic.structures.api.domain.idl.decorators.EntityServiceDecoratorsC
 import org.kinotic.structures.api.domain.idl.decorators.EntityServiceDecoratorsDecorator;
 import org.kinotic.structures.api.domain.idl.decorators.PolicyDecorator;
 import org.kinotic.structures.api.services.security.graphos.PolicyAuthorizationRequest;
-import org.kinotic.structures.api.services.security.graphos.PolicyAuthorizationService;
+import org.kinotic.structures.api.services.security.graphos.StructurePolicyAuthorizationService;
 import org.kinotic.structures.api.services.security.graphos.PolicyAuthorizer;
-import org.kinotic.structures.internal.api.services.impl.EntityOperation;
+import org.kinotic.structures.api.domain.EntityOperation;
 import org.kinotic.structures.internal.idl.converters.common.DecoratedProperty;
 
 import java.util.List;
@@ -27,7 +27,7 @@ public class PolicyAuthorizationServiceTest {
     @Test
     public void testAuthorizeReadOperationWithNoFieldPolicies() {
         Structure structure = createStructureWithNoFieldPolicies();
-        PolicyAuthorizationService service = new PolicyAuthorizationService(structure, authorizer);
+        StructurePolicyAuthorizationService service = new StructurePolicyAuthorizationService(structure, authorizer);
 
         CompletableFuture<Void> result = service.authorize(EntityOperation.FIND_ALL.methodName(), null);
 
@@ -37,7 +37,7 @@ public class PolicyAuthorizationServiceTest {
     @Test
     public void testAuthorizeWriteOperationFails() {
         Structure structure = createStructureWithNoFieldPolicies();
-        PolicyAuthorizationService service = new PolicyAuthorizationService(structure, authorizer);
+        StructurePolicyAuthorizationService service = new StructurePolicyAuthorizationService(structure, authorizer);
 
         CompletableFuture<Void> result = service.authorize(EntityOperation.SAVE.methodName(), null);
 
@@ -49,7 +49,7 @@ public class PolicyAuthorizationServiceTest {
     @Test
     public void testAuthorizeReadFailsDueToFieldPolicy() {
         Structure structure = createStructureWithFieldPolicies();
-        PolicyAuthorizationService service = new PolicyAuthorizationService(structure, authorizer);
+        StructurePolicyAuthorizationService service = new StructurePolicyAuthorizationService(structure, authorizer);
 
         CompletableFuture<Void> result = service.authorize(EntityOperation.FIND_ALL.methodName(), null);
 
@@ -61,7 +61,7 @@ public class PolicyAuthorizationServiceTest {
     @Test
     public void testAuthorizeWriteFailsDueToOperationPolicy() {
         Structure structure = createStructureWithFieldPolicies();
-        PolicyAuthorizationService service = new PolicyAuthorizationService(structure, authorizer);
+        StructurePolicyAuthorizationService service = new StructurePolicyAuthorizationService(structure, authorizer);
 
         CompletableFuture<Void> result = service.authorize(EntityOperation.SAVE.methodName(), null);
 
@@ -73,7 +73,7 @@ public class PolicyAuthorizationServiceTest {
     @Test
     public void testUnknownOperation() {
         Structure structure = createStructureWithNoFieldPolicies();
-        PolicyAuthorizationService service = new PolicyAuthorizationService(structure, authorizer);
+        StructurePolicyAuthorizationService service = new StructurePolicyAuthorizationService(structure, authorizer);
 
         CompletableFuture<Void> result = service.authorize("nonExistentOperation", null);
 

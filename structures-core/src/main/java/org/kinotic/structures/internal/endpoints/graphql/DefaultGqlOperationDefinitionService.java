@@ -15,7 +15,7 @@ import org.kinotic.structures.api.domain.idl.decorators.PolicyDecorator;
 import org.kinotic.structures.api.domain.idl.decorators.QueryDecorator;
 import org.kinotic.structures.api.services.EntitiesService;
 import org.kinotic.structures.api.services.NamedQueriesService;
-import org.kinotic.structures.internal.api.services.impl.EntityOperation;
+import org.kinotic.structures.api.domain.EntityOperation;
 import org.kinotic.structures.internal.endpoints.graphql.datafetchers.*;
 import org.kinotic.structures.internal.utils.GqlUtils;
 import org.kinotic.structures.internal.utils.QueryUtils;

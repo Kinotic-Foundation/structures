@@ -114,7 +114,7 @@ public class DefaultNamedQueriesService extends AbstractCrudService<NamedQueries
                                         TermQuery.of(tq -> tq.field("structure").value(structure))._toQuery())
                         )
                 )).thenApply(page -> page.getContent() != null && !page.getContent().isEmpty()
-                ? page.getContent().get(0)
+                ? page.getContent().getFirst()
                 : null);
     }
 
