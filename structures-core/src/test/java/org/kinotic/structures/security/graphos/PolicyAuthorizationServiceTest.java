@@ -29,7 +29,7 @@ public class PolicyAuthorizationServiceTest {
         Structure structure = createStructureWithNoFieldPolicies();
         StructurePolicyAuthorizationService service = new StructurePolicyAuthorizationService(structure, authorizer);
 
-        CompletableFuture<Void> result = service.authorize(EntityOperation.FIND_ALL.methodName(), null);
+        CompletableFuture<Void> result = service.authorize(EntityOperation.FIND_ALL, null);
 
         assertDoesNotThrow(result::join); // Should pass since the READ operation policy is allowed
     }
@@ -39,7 +39,7 @@ public class PolicyAuthorizationServiceTest {
         Structure structure = createStructureWithNoFieldPolicies();
         StructurePolicyAuthorizationService service = new StructurePolicyAuthorizationService(structure, authorizer);
 
-        CompletableFuture<Void> result = service.authorize(EntityOperation.SAVE.methodName(), null);
+        CompletableFuture<Void> result = service.authorize(EntityOperation.SAVE, null);
 
         Throwable exception = assertThrows(CompletionException.class, result::join);
         assertInstanceOf(AuthorizationException.class, exception.getCause());
@@ -51,7 +51,7 @@ public class PolicyAuthorizationServiceTest {
         Structure structure = createStructureWithFieldPolicies();
         StructurePolicyAuthorizationService service = new StructurePolicyAuthorizationService(structure, authorizer);
 
-        CompletableFuture<Void> result = service.authorize(EntityOperation.FIND_ALL.methodName(), null);
+        CompletableFuture<Void> result = service.authorize(EntityOperation.FIND_ALL, null);
 
         Throwable exception = assertThrows(CompletionException.class, result::join);
         assertInstanceOf(AuthorizationException.class, exception.getCause());
@@ -63,23 +63,11 @@ public class PolicyAuthorizationServiceTest {
         Structure structure = createStructureWithFieldPolicies();
         StructurePolicyAuthorizationService service = new StructurePolicyAuthorizationService(structure, authorizer);
 
-        CompletableFuture<Void> result = service.authorize(EntityOperation.SAVE.methodName(), null);
+        CompletableFuture<Void> result = service.authorize(EntityOperation.SAVE, null);
 
         Throwable exception = assertThrows(CompletionException.class, result::join);
         assertInstanceOf(AuthorizationException.class, exception.getCause());
         assertTrue(exception.getCause().getMessage().contains("Operation SAVE not allowed."));
-    }
-
-    @Test
-    public void testUnknownOperation() {
-        Structure structure = createStructureWithNoFieldPolicies();
-        StructurePolicyAuthorizationService service = new StructurePolicyAuthorizationService(structure, authorizer);
-
-        CompletableFuture<Void> result = service.authorize("nonExistentOperation", null);
-
-        Throwable exception = assertThrows(CompletionException.class, result::join);
-        assertInstanceOf(IllegalArgumentException.class, exception.getCause());
-        assertEquals("No EntityOperation found for methodName: nonExistentOperation", exception.getCause().getMessage());
     }
 
     private Structure createStructureWithNoFieldPolicies() {

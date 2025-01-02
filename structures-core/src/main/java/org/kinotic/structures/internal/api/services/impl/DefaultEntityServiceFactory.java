@@ -85,7 +85,7 @@ public class DefaultEntityServiceFactory implements EntityServiceFactory {
             }
         }
 
-        return authServiceFactory.createAuthorizationService("EntityService", structure)
+        return authServiceFactory.createStructureAuthorizationService(structure)
                                  .thenApply(authService -> new DefaultEntityService(
                                          authService,
                                          crudServiceTemplate,
