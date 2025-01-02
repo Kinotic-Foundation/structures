@@ -219,6 +219,12 @@ export class CodeGenerationService {
                         const functionDefinition = new FunctionDefinition(methodName,
                                                                           [tsDecoratorToC3Decorator(queryDecorator)!])
 
+                        // TODO: add more generic decorator handling
+                        const policyDecorator = method.getDecorator('Policy')
+                        if(policyDecorator){
+                            functionDefinition.addDecorator(tsDecoratorToC3Decorator(policyDecorator)!)
+                        }
+
                         functionDefinition.returnType = this.createC3TypeForReturnType(method.getReturnType())
 
                         // Find page parameter if any and store all parameter names for later

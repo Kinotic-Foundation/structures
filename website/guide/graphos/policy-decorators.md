@@ -56,7 +56,6 @@ More information on the `@EntityServiceDecorators` decorator can be found [here]
 Policies defined with these decorators are automatically translated into GraphOS-compatible `@policy` directives in the GraphQL schema.
 
 - The policies applied at the entity and field levels in Structures directly map to corresponding `@policy` directives in GraphQL.
-  *** Example Here: Generated GraphQL schema with @policy directives ***
 
 This ensures that policies are enforced consistently across the generated GraphQL API.
 

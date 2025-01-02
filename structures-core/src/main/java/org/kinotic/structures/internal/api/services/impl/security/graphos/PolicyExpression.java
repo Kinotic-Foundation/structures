@@ -6,7 +6,7 @@ import org.kinotic.structures.api.services.security.graphos.PolicyAuthorizer;
 import java.util.Map;
 
 /**
- * Represents a GraphOS policy expression , i.e. [['entity:add', 'entity:delete'], ['entity:read', 'entity:update']]
+ * Represents a GraphOS policy expression , i.e. [['entity:add'], ['entity:update']]
  */
 public interface PolicyExpression {
 
