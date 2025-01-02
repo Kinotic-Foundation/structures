@@ -76,7 +76,7 @@ export function tsDecoratorToC3Decorator(decorator: Decorator): C3Decorator | nu
             const obj = parseExpressionToJs(argument);
             ret = {
                 type: 'PolicyDecorator',
-                policies: obj as [string[]],
+                policies: obj as string[][],
             } as PolicyDecorator;
         } else {
             throw new Error('Policy must have an array literal argument');
@@ -167,12 +167,16 @@ function parseExpressionToJs(expression: any): any {
 function convertCallExpressionToJs(expression: CallExpression): any {
     const text = expression.getText()
     if(text.startsWith('$Policy')){
-        if(expression.getArguments().length == 1){
-            const argument = expression.getArguments()[0];
+        if(expression.getArguments().length === 1){
+            const argument = expression.getArguments()[0]
             const obj = parseExpressionToJs(argument)
+            // Validate the parsed object structure
+            if (!Array.isArray(obj) || !obj.every(arr => Array.isArray(arr) && arr.every(item => typeof item === 'string'))) {
+                throw new Error('Policy must contain an array of string arrays (string[][])')
+            }
             return {
                 type: 'PolicyDecorator',
-                policies: obj as [string[]],
+                policies: obj as string[][], // Fixed type assertion
             } as PolicyDecorator
         }else {
             throw new Error('Policy must have an array literal argument')

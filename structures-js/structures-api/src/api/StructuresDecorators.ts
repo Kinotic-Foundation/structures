@@ -1,5 +1,4 @@
 import 'reflect-metadata'
-import {EntityServiceDecoratorsConfig} from '@/api/idl/decorators/EntityServiceDecoratorsDecorator'
 import {MultiTenancyType} from '@/api/idl/decorators/MultiTenancyType'
 import {PrecisionType} from '@/api/idl/decorators/PrecisionType'
 
@@ -78,7 +77,7 @@ export function NotNull(target: any, propertyKey: string) {
 }
 
 // @ts-ignore
-export function Policy(policies: [string[]]) {
+export function Policy(policies: string[][]) {
     // Definition below allows decorator to be used for class, method, or properties
     // @ts-ignore
     return function (target: any, propertyKey?: string, descriptor?: PropertyDescriptor) {

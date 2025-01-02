@@ -2,9 +2,9 @@ import {EntityServiceDecorator} from '@/api/idl/decorators/EntityServiceDecorato
 
 export class PolicyDecorator extends EntityServiceDecorator {
 
-    public policies: [string[]]
+    public policies: string[][]
 
-    constructor(policies: [string[]]) {
+    constructor(policies: string[][]) {
         super()
         this.type = 'PolicyDecorator'
         this.policies = policies
@@ -16,6 +16,6 @@ export class PolicyDecorator extends EntityServiceDecorator {
  * @param policies to be supplied
  */
 // @ts-ignore
-export function $Policy(policies: [string[]]): PolicyDecorator{
+export function $Policy(policies: string[][]): PolicyDecorator{
     return new PolicyDecorator(policies)
 }

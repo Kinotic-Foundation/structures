@@ -32,5 +32,5 @@
     "@kinotic/continuum-client": "^2.10.5"
   },
   "packageManager": "pnpm@9.14.4+sha512.c8180b3fbe4e4bca02c94234717896b5529740a6cbadf19fa78254270403ea2f27d4e1d46a08a0f56c89b63dc8ebfd3ee53326da720273794e6200fcf0d184ab",
-  "yalcSig": "36543027f4674bcd54b1130ad8a9d59c"
+  "yalcSig": "04dd8f8916e0e686a7e5eadb2e69e092"
 }

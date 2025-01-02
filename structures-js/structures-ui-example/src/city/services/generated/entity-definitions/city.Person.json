@@ -29,9 +29,11 @@
       "multiTenancyType": 1
     },
     {
-      "type": "RoleDecorator",
-      "roles": [
-        "admin"
+      "type": "PolicyDecorator",
+      "policies": [
+        [
+          "data:read"
+        ]
       ]
     }
   ],
