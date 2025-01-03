@@ -7,7 +7,7 @@
       "replaced": "^0.1.0"
     },
     "@kinotic/structures-api": {
-      "signature": "04dd8f8916e0e686a7e5eadb2e69e092",
+      "signature": "e9c10fa7445940497811c288506b772e",
       "file": true,
       "replaced": "^2.0.0"
     }
