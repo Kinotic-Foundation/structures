@@ -24,8 +24,11 @@ public abstract class ElasticsearchTestBase {
     protected TestHelper testHelper;
 
     static {
-        ELASTICSEARCH_CONTAINER = new ElasticsearchContainer("docker.elastic.co/elasticsearch/elasticsearch:7.17.10");
-        ELASTICSEARCH_CONTAINER.start();
+        ELASTICSEARCH_CONTAINER = new ElasticsearchContainer("docker.elastic.co/elasticsearch/elasticsearch:8.15.5");
+        ELASTICSEARCH_CONTAINER.withEnv("_JAVA_OPTIONS", "-XX:UseSVE=0")
+                               .withEnv("discovery.type", "single-node")
+                               .withEnv("xpack.security.enabled", "false")
+                               .start();
     }
 
 
@@ -45,9 +48,9 @@ public abstract class ElasticsearchTestBase {
     }
 
     protected StructureAndPersonHolder createAndVerify(int numberOfPeopleToCreate,
-                                                     boolean randomPeople,
-                                                     EntityContext entityContext,
-                                                     String structureSuffix){
+                                                       boolean randomPeople,
+                                                       EntityContext entityContext,
+                                                       String structureSuffix){
         StructureAndPersonHolder ret = new StructureAndPersonHolder();
 
         StepVerifier.create(testHelper.createPersonStructureAndEntities(numberOfPeopleToCreate,
