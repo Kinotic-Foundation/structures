@@ -24,10 +24,19 @@ public abstract class ElasticsearchTestBase {
     protected TestHelper testHelper;
 
     static {
+        String osName = System.getProperty("os.name");
+        String osArch = System.getProperty("os.arch");
+
         ELASTICSEARCH_CONTAINER = new ElasticsearchContainer("docker.elastic.co/elasticsearch/elasticsearch:8.15.5");
         ELASTICSEARCH_CONTAINER.withEnv("discovery.type", "single-node")
-                               .withEnv("xpack.security.enabled", "false")
-                               .start();
+                               .withEnv("xpack.security.enabled", "false");
+
+        // We need this until this is resolved https://github.com/elastic/elasticsearch/issues/118583
+        if(osName != null && osName.startsWith("Mac") && osArch != null && osArch.equals("aarch64")){
+            ELASTICSEARCH_CONTAINER.withEnv("_JAVA_OPTIONS", "-XX:UseSVE=0");
+        }
+
+        ELASTICSEARCH_CONTAINER.start();
     }
 
 
