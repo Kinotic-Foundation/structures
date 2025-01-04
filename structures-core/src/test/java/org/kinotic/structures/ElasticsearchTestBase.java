@@ -33,7 +33,7 @@ public abstract class ElasticsearchTestBase {
 
 
     @DynamicPropertySource
-    static void registerPgProperties(DynamicPropertyRegistry registry) {
+    static void registerElasticProperties(DynamicPropertyRegistry registry) {
         String[] parts = ELASTICSEARCH_CONTAINER.getHttpHostAddress().split(":");
         ElasticConnectionInfo connectionInfo = new ElasticConnectionInfo(parts[0], Integer.parseInt(parts[1]), "http");
         registry.add("spring.data.elasticsearch.cluster-nodes", ELASTICSEARCH_CONTAINER::getHttpHostAddress);
