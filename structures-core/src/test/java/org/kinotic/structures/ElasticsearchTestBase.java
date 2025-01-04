@@ -25,8 +25,7 @@ public abstract class ElasticsearchTestBase {
 
     static {
         ELASTICSEARCH_CONTAINER = new ElasticsearchContainer("docker.elastic.co/elasticsearch/elasticsearch:8.15.5");
-        ELASTICSEARCH_CONTAINER.withEnv("_JAVA_OPTIONS", "-XX:UseSVE=0")
-                               .withEnv("discovery.type", "single-node")
+        ELASTICSEARCH_CONTAINER.withEnv("discovery.type", "single-node")
                                .withEnv("xpack.security.enabled", "false")
                                .start();
     }
