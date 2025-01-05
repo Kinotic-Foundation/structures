@@ -19,7 +19,7 @@
     ],
     "dependencies": {
         "@inquirer/prompts": "^7.2.1",
-        "@kinotic/continuum-client": "^2.10.7",
+        "@kinotic/continuum-client": "^2.11.0",
         "@kinotic/continuum-idl": "^2.0.2",
         "@kinotic/structures-api": "^3.0.1",
         "@oclif/core": "^4.2.0",

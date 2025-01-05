@@ -1,6 +1,5 @@
 {
   "name": "structures-frontend-next",
-  "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
@@ -9,15 +8,21 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@kinotic/continuum-client": "^2.11.0",
+    "@kinotic/continuum-idl": "^2.0.2",
+    "@kinotic/structures-api": "^3.0.1",
     "@primevue/themes": "^4.2.5",
+    "keycloak-js": "^26.0.7",
     "primeicons": "^7.0.0",
     "primevue": "^4.2.5",
     "tailwindcss-primeui": "^0.3.4",
     "vue": "^3.5.13",
+    "vue-facing-decorator": "^3.0.4",
     "vue-router": "4"
   },
   "devDependencies": {
     "@primevue/auto-import-resolver": "^4.2.5",
+    "@types/node": "^22.10.5",
     "@vitejs/plugin-vue": "^5.2.1",
     "@vue/tsconfig": "^0.7.0",
     "autoprefixer": "^10.4.20",

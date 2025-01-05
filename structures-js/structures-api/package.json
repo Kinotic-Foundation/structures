@@ -35,7 +35,7 @@
     "docker-compose": "^1.1.0",
     "testcontainers": "^10.16.0",
     "typescript": "^5.7.2",
-    "vite": "^6.0.7",
+    "vite": "^5.4.11",
     "vite-plugin-dts": "^4.4.0",
     "vite-plugin-externalize-deps": "^0.8.0",
     "vitest": "^2.1.8",
