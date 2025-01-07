@@ -1,11 +1,9 @@
-import {C3Type, PropertyDefinition} from '@kinotic/continuum-idl'
+import {PropertyDefinition} from '@kinotic/continuum-idl'
 import {FunctionDeclaration} from 'ts-morph'
-import {
-    CalculatedPropertyConfiguration,
-    EntityConfiguration,
-    OverrideConfiguration,
-    TransformConfiguration
-} from '../../state/StructuresProject.js'
+import {CalculatedPropertyConfiguration} from '../../config/CalculatedPropertyConfiguration.js'
+import {EntityConfiguration} from '../../config/EntityConfiguration.js'
+import {OverrideConfiguration} from '../../config/OverrideConfiguration.js'
+import {TransformConfiguration} from '../../config/TransformConfiguration.js'
 import {UtilFunctionLocator} from '../../UtilFunctionLocator.js'
 
 export class BaseConversionState {
