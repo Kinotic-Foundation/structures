@@ -122,9 +122,10 @@ public class MapUpsertPreProcessor implements UpsertPreProcessor<Map<Object, Obj
             }
         }
 
-        return new EntityHolder(id,
-                                context.getParticipant().getTenantId(),
+        return new EntityHolder(entity,
+                                id,
                                 structure.getMultiTenancyType(),
-                                entity);
+                                context.getParticipant().getTenantId()
+        );
     }
 }

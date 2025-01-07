@@ -164,10 +164,11 @@ public class RawJsonUpsertPreProcessor implements UpsertPreProcessor<RawJson, Ra
                         // This is the end of the object, so we store the object
                         jsonGenerator.writeEndObject();
                         jsonGenerator.flush();
-                        ret.add(new EntityHolder(currentId,
-                                                 context.getParticipant().getTenantId(),
+                        ret.add(new EntityHolder(new RawJson(outputStream.toByteArray()),
+                                                 currentId,
                                                  structure.getMultiTenancyType(),
-                                                 new RawJson(outputStream.toByteArray())));
+                                                 context.getParticipant().getTenantId()
+                        ));
                         outputStream.reset();
                         currentId = null;
                         currentTenantId = null;
