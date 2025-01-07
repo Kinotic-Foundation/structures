@@ -49,6 +49,8 @@ public class MapUpsertPreProcessor implements UpsertPreProcessor<Map<Object, Obj
         // FIXME: validate structure Object definition on save to ensure an ID field is present and not on a nested field
         if(idFieldPreProcessor == null) {
             log.warn("No id field preprocessor found for structure: {}", structure);
+        }else if(idFieldPreProcessor.getLeft().contains(".")){ // ids are not allowed to be nested
+            log.warn("Id field preprocessor found for structure: {} but it is nested: {}", structure, idFieldPreProcessor.getLeft());
         }
     }
 
@@ -57,7 +59,6 @@ public class MapUpsertPreProcessor implements UpsertPreProcessor<Map<Object, Obj
     public CompletableFuture<EntityHolder> process(Map<Object, Object> entity,
                                                    EntityContext context) {
         try {
-            // ids are not allowed to be nested
             // FIXME: once the FIXME in the constructor is resolved, this check should be unnecessary
             //        We do this here since there is no way to return an error to the user from the constructor
             if(idFieldPreProcessor != null && !idFieldPreProcessor.getLeft().contains(".")){
@@ -75,7 +76,6 @@ public class MapUpsertPreProcessor implements UpsertPreProcessor<Map<Object, Obj
     public CompletableFuture<List<EntityHolder>> processArray(List<Map<Object, Object>> entities,
                                                               EntityContext context) {
         try {
-            // ids are not allowed to be nested
             // FIXME: once the FIXME in the constructor is resolved, this check should be unnecessary
             //        We do this here since there is no way to return an error to the user from the constructor
             if(idFieldPreProcessor != null && !idFieldPreProcessor.getLeft().contains(".")){
@@ -122,7 +122,6 @@ public class MapUpsertPreProcessor implements UpsertPreProcessor<Map<Object, Obj
             }
         }
 
-        // if this is the id we add the special _id field for elasticsearch to use
         return new EntityHolder(id,
                                 context.getParticipant().getTenantId(),
                                 structure.getMultiTenancyType(),
