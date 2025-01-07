@@ -314,7 +314,7 @@ public class EntityCrudTests extends ElasticsearchTestBase {
         entitiesService.syncIndex(holder1.getStructure().getId(), context1).join();
         entitiesService.syncIndex(holder2.getStructure().getId(), context2).join();
 
-        Thread.sleep(10000); // TODO: why does this still fail without a sleep? Sync index should be ensuring data is indexed.
+        Thread.sleep(30000); // TODO: why does this still fail without a sleep? Sync index should be ensuring data is indexed.
 
         // TODO: verify all data items as well, not just sizes
         Sort sort = Sort.by("firstName");
