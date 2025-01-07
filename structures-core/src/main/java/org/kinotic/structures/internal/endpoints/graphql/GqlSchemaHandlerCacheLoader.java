@@ -60,7 +60,7 @@ public class GqlSchemaHandlerCacheLoader implements AsyncCacheLoader<String, Gra
     private static final String FEDERATION_BASE = """
         extend schema
             @link(
-                url: "https://specs.apollo.dev/federation/v2.9"
+                url: "https://specs.apollo.dev/federation/v2.6"
                 import: [
                     "@key",
                     "@policy"
