@@ -46,12 +46,6 @@ public class MapUpsertPreProcessor implements UpsertPreProcessor<Map<Object, Obj
                 break;
             }
         }
-        // FIXME: validate structure Object definition on save to ensure an ID field is present and not on a nested field
-        if(idFieldPreProcessor == null) {
-            log.warn("No id field preprocessor found for structure: {}", structure);
-        }else if(idFieldPreProcessor.getLeft().contains(".")){ // ids are not allowed to be nested
-            log.warn("Id field preprocessor found for structure: {} but it is nested: {}", structure, idFieldPreProcessor.getLeft());
-        }
     }
 
     @WithSpan
@@ -59,13 +53,7 @@ public class MapUpsertPreProcessor implements UpsertPreProcessor<Map<Object, Obj
     public CompletableFuture<EntityHolder> process(Map<Object, Object> entity,
                                                    EntityContext context) {
         try {
-            // FIXME: once the FIXME in the constructor is resolved, this check should be unnecessary
-            //        We do this here since there is no way to return an error to the user from the constructor
-            if(idFieldPreProcessor != null && !idFieldPreProcessor.getLeft().contains(".")){
-                return CompletableFuture.completedFuture(preProcessData(entity, context));
-            }else{
-                return CompletableFuture.failedFuture(new IllegalStateException("No id field found"));
-            }
+            return CompletableFuture.completedFuture(preProcessData(entity, context));
         } catch (Exception e) {
             return CompletableFuture.failedFuture(e);
         }
@@ -76,17 +64,11 @@ public class MapUpsertPreProcessor implements UpsertPreProcessor<Map<Object, Obj
     public CompletableFuture<List<EntityHolder>> processArray(List<Map<Object, Object>> entities,
                                                               EntityContext context) {
         try {
-            // FIXME: once the FIXME in the constructor is resolved, this check should be unnecessary
-            //        We do this here since there is no way to return an error to the user from the constructor
-            if(idFieldPreProcessor != null && !idFieldPreProcessor.getLeft().contains(".")){
-                List<EntityHolder> entityHolders = new ArrayList<>();
-                for(Map<Object, Object> entity : entities) {
-                    entityHolders.add(preProcessData(entity, context));
-                }
-                return CompletableFuture.completedFuture(entityHolders);
-            }else{
-                return CompletableFuture.failedFuture(new IllegalStateException("No id field found"));
+            List<EntityHolder> entityHolders = new ArrayList<>();
+            for(Map<Object, Object> entity : entities) {
+                entityHolders.add(preProcessData(entity, context));
             }
+            return CompletableFuture.completedFuture(entityHolders);
         } catch (Exception e) {
             return CompletableFuture.failedFuture(e);
         }
