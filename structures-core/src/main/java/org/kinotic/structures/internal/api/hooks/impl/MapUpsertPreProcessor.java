@@ -26,7 +26,6 @@ import java.util.concurrent.CompletableFuture;
  */
 public class MapUpsertPreProcessor implements UpsertPreProcessor<Map<Object, Object>, List<Map<Object, Object>>> {
 
-    private static final Logger log = LoggerFactory.getLogger(MapUpsertPreProcessor.class);
     private final Structure structure;
     private final StructuresProperties structuresProperties;
     private Pair<String, DecoratorLogic> idFieldPreProcessor = null;
