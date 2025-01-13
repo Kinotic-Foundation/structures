@@ -57,6 +57,7 @@ public class GqlSchemaHandlerCacheLoader implements AsyncCacheLoader<String, Gra
     private static final Logger log = LoggerFactory.getLogger(GqlSchemaHandlerCacheLoader.class);
     private static final EntitiesTypeResolver ENTITIES_TYPE_RESOLVER = new EntitiesTypeResolver();
 
+    // Versions supported by the Apollo router are defined here https://www.apollographql.com/docs/graphos/reference/federation/versions
     private static final String FEDERATION_BASE = """
         extend schema
             @link(
@@ -84,7 +85,7 @@ public class GqlSchemaHandlerCacheLoader implements AsyncCacheLoader<String, Gra
     private final GqlOperationDefinitionService gqlOperationDefinitionService;
 
     @Override
-    public CompletableFuture<GraphQLHandler> asyncLoad(String key, Executor executor) throws Exception {
+    public CompletableFuture<GraphQLHandler> asyncLoad(String key, Executor executor) {
         long now = System.nanoTime();
         return createGraphQlSchema(key, executor)
                 .thenCompose(schema -> {
