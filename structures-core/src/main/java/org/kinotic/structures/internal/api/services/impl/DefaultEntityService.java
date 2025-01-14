@@ -90,8 +90,8 @@ public class DefaultEntityService implements EntityService {
         return authService.authorize(EntityOperation.COUNT, context)
                           .thenCompose(un -> validateTenant(context)
                                   .thenCompose(unused -> crudServiceTemplate
-                                .count(structure.getItemIndex(),
-                                       builder -> readPreProcessor.beforeCount(structure, null, builder, context))));
+                                          .count(structure.getItemIndex(),
+                                                 builder -> readPreProcessor.beforeCount(structure, null, builder, context))));
     }
 
     @WithSpan
@@ -167,11 +167,11 @@ public class DefaultEntityService implements EntityService {
                                                      Class<T> type,
                                                      EntityContext context) {
         return validateTenant(context)
-                        .thenCompose(unused -> namedQueriesService.executeNamedQuery(structure,
-                                                                                     queryName,
-                                                                                     parameterHolder,
-                                                                                     type,
-                                                                                     context));
+                .thenCompose(unused -> namedQueriesService.executeNamedQuery(structure,
+                                                                             queryName,
+                                                                             parameterHolder,
+                                                                             type,
+                                                                             context));
     }
 
     @WithSpan
@@ -182,19 +182,20 @@ public class DefaultEntityService implements EntityService {
                                                          Class<T> type,
                                                          EntityContext context) {
         return validateTenant(context)
-                        .thenCompose(unused -> namedQueriesService.executeNamedQueryPage(structure,
-                                                                                         queryName,
-                                                                                         parameterHolder,
-                                                                                         pageable,
-                                                                                         type,
-                                                                                         context));
+                .thenCompose(unused -> namedQueriesService.executeNamedQueryPage(structure,
+                                                                                 queryName,
+                                                                                 parameterHolder,
+                                                                                 pageable,
+                                                                                 type,
+                                                                                 context));
     }
 
     @Override
     public CompletableFuture<Void> syncIndex(EntityContext context) {
         return authService.authorize(EntityOperation.SYNC_INDEX, context).thenCompose(
                 un -> esAsyncClient.indices()
-                                   .refresh(b -> b.index(structure.getItemIndex()))
+                                   .refresh(b -> b.index(structure.getItemIndex())
+                                                  .allowNoIndices(false))
                                    .thenApply(unused -> null));
     }
 

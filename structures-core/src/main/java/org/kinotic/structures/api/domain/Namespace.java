@@ -28,9 +28,6 @@ public class Namespace implements Identifiable<String> {
     @Field(type=FieldType.Date)
     private Date updated = null;
 
-    @Field(type = FieldType.Boolean)
-    private boolean federatedGraphQl = false;
-
     public Namespace(String id, String description) {
         this.id = id;
         this.description = description;
