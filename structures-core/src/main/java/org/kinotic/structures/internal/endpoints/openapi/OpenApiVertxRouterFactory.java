@@ -356,6 +356,17 @@ public class OpenApiVertxRouterFactory {
 
               });
 
+        // Sync Structure
+        router.get(apiBasePath + ":structureNamespace/:structureName/sync")
+              .handler(ctx -> {
+
+                  String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
+
+                  VertxCompletableFuture.from(vertx, entitiesService.syncIndex(structureId,
+                                                                               new RoutingContextToEntityContextAdapter(ctx)))
+                                        .handle(new NoValueHandler(ctx));
+              });
+
         return router;
     }
 
