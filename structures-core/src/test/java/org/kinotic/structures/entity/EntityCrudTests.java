@@ -219,6 +219,9 @@ public class EntityCrudTests extends ElasticsearchTestBase {
 
         Assertions.assertNotNull(holder2);
 
+        entitiesService.syncIndex(holder1.getStructure().getId(), context1).join();
+        entitiesService.syncIndex(holder2.getStructure().getId(), context2).join();
+
         StepVerifier.create(Mono.fromFuture(entitiesService.count(holder1.getStructure().getId(), context1)))
                     .expectNext(10L)
                     .as("Verifying Tenant 1 has 10 entities")
@@ -243,6 +246,9 @@ public class EntityCrudTests extends ElasticsearchTestBase {
         StructureAndPersonHolder holder2 = createAndVerify(20, false, context2, "_testCountByQuery");
 
         Assertions.assertNotNull(holder2);
+
+        entitiesService.syncIndex(holder1.getStructure().getId(), context1).join();
+        entitiesService.syncIndex(holder2.getStructure().getId(), context2).join();
 
         StepVerifier.create(Mono.fromFuture(entitiesService.countByQuery(holder1.getStructure().getId(), "lastName: Z*", context1)))
                 .expectNext(2L)
@@ -275,6 +281,9 @@ public class EntityCrudTests extends ElasticsearchTestBase {
         StructureAndPersonHolder holder2 = createAndVerify(20, true, context2, "_testAll");
 
         Assertions.assertNotNull(holder2);
+
+        entitiesService.syncIndex(holder1.getStructure().getId(), context1).join();
+        entitiesService.syncIndex(holder2.getStructure().getId(), context2).join();
 
         // TODO: verify all data items as well, not just sizes
         StepVerifier.create(Mono.fromFuture(entitiesService.findAll(holder1.getStructure().getId(),
@@ -475,6 +484,9 @@ public class EntityCrudTests extends ElasticsearchTestBase {
 
         Assertions.assertNotNull(holder2);
 
+        entitiesService.syncIndex(holder1.getStructure().getId(), context1).join();
+        entitiesService.syncIndex(holder2.getStructure().getId(), context2).join();
+
         // TODO: verify all data items as well, not just sizes
         StepVerifier.create(Mono.fromFuture(entitiesService.search(holder1.getStructure().getId(),
                                                                    "lastName: Z*",
@@ -523,6 +535,9 @@ public class EntityCrudTests extends ElasticsearchTestBase {
         }
 
         contextMap.forEach((context, holder) -> {
+
+            entitiesService.syncIndex(holder.getStructure().getId(), context).join();
+
             StepVerifier.create(Mono.fromFuture(entitiesService.search(holder.getStructure().getId(),
                             "lastName: *",
                             Pageable.ofSize(20), // make sure page size is larger than number of entities
@@ -582,6 +597,8 @@ public class EntityCrudTests extends ElasticsearchTestBase {
 
         Assertions.assertEquals(car.getId(), result.getId(), "Car id does not match");
 
+        entitiesService.syncIndex(structure.getId(), entityContext).join();
+
         Page<RawJson> page = entitiesService.findAll(structure.getId(), Pageable.ofSize(10), RawJson.class, entityContext).join();
 
         Assertions.assertEquals(1, page.getTotalElements(), "Wrong number of entities");
@@ -601,6 +618,8 @@ public class EntityCrudTests extends ElasticsearchTestBase {
         Car result2 = testHelper.updateCarAsRawJson(car, structure, entityContext).join();
 
         Assertions.assertEquals(car.getId(), result2.getId(), "Car id does not match after partial update");
+
+        entitiesService.syncIndex(structure.getId(), entityContext).join();
 
         Page<RawJson> page2 = entitiesService.findAll(structure.getId(), Pageable.ofSize(10), RawJson.class, entityContext).join();
 

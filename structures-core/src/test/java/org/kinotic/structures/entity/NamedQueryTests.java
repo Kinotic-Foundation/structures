@@ -67,6 +67,9 @@ public class NamedQueryTests extends ElasticsearchTestBase {
 
         Assertions.assertNotNull(holder2);
 
+        entitiesService.syncIndex(holder1.getStructure().getId(), context1).join();
+        entitiesService.syncIndex(holder2.getStructure().getId(), context2).join();
+
         FunctionDefinition countPeopleByLastNameDefinition = createCountByLastName(holder2.getStructure());
         NamedQueriesDefinition namedQueriesDefinition = createNamedQuery(holder2.getStructure(), List.of(countPeopleByLastNameDefinition));
         StepVerifier.create(Mono.fromFuture(() -> namedQueriesService.save(namedQueriesDefinition)))
