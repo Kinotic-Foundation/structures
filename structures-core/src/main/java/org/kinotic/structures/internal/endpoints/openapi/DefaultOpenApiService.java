@@ -261,7 +261,7 @@ public class DefaultOpenApiService implements OpenApiService {
                                                   structure,
                                                   -1);
         syncPathItem.get(syncOperation);
-        paths.put(basePath + lowercaseNamespace + "/" + lowercaseName + "/sync", syncPathItem);
+        paths.put(basePath + lowercaseNamespace + "/" + lowercaseName + "/util/sync", syncPathItem);
 
 
         // Update Operation
