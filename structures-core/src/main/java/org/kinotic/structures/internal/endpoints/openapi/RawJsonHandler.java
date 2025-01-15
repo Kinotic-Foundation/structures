@@ -19,9 +19,15 @@ class RawJsonHandler implements BiFunction<RawJson, Throwable, Void> {
     @Override
     public Void apply(RawJson rawJson, Throwable throwable) {
         if (throwable == null) {
-            context.response().putHeader("Content-Type", "application/json");
-            context.response().setStatusCode(200);
-            context.response().end(Buffer.buffer(rawJson.data()));
+            if(rawJson != null) {
+                context.response().putHeader("Content-Type", "application/json");
+                context.response().setStatusCode(200);
+                context.response().end(Buffer.buffer(rawJson.data()));
+            }else{
+                // No data so send Not Found
+                context.response().setStatusCode(404);
+                context.response().end();
+            }
         } else {
             VertxWebUtil.writeException(context, throwable);
         }

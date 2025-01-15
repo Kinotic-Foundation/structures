@@ -3,7 +3,7 @@ package org.kinotic.structures.internal.endpoints;
 import io.vertx.ext.healthchecks.HealthChecks;
 import org.kinotic.continuum.api.security.SecurityService;
 import org.kinotic.structures.api.config.StructuresProperties;
-import org.kinotic.structures.internal.endpoints.graphql.GqlExecutionService;
+import org.kinotic.structures.internal.endpoints.graphql.DelegatingGqlHandler;
 import org.kinotic.structures.internal.endpoints.graphql.GqlVerticle;
 import org.kinotic.structures.internal.endpoints.openapi.OpenApiVerticle;
 import org.kinotic.structures.internal.endpoints.openapi.OpenApiVertxRouterFactory;
@@ -25,7 +25,7 @@ public class StructuresVerticleFactory {
     private final OpenApiVertxRouterFactory openApiVertxRouterFactory;
 
     // Gql Deps
-    private final GqlExecutionService gqlExecutionService;
+    private final DelegatingGqlHandler delegatingGqlHandler;
 
     // Web Server Deps
     private final HealthChecks healthChecks;
@@ -33,18 +33,18 @@ public class StructuresVerticleFactory {
 
     public StructuresVerticleFactory(OpenApiVertxRouterFactory openApiVertxRouterFactory,
                                      StructuresProperties properties,
-                                     GqlExecutionService gqlExecutionService,
+                                     DelegatingGqlHandler delegatingGqlHandler,
                                      HealthChecks healthChecks,
                                      @Autowired(required = false) SecurityService securityService) {
         this.openApiVertxRouterFactory = openApiVertxRouterFactory;
         this.properties = properties;
         this.securityService = securityService;
-        this.gqlExecutionService = gqlExecutionService;
+        this.delegatingGqlHandler = delegatingGqlHandler;
         this.healthChecks = healthChecks;
     }
 
     public GqlVerticle createGqlVerticle(){
-        return new GqlVerticle(gqlExecutionService, properties, securityService);
+        return new GqlVerticle(delegatingGqlHandler, properties, securityService);
     }
 
     public OpenApiVerticle createOpenApiVerticle(){

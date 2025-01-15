@@ -241,17 +241,27 @@ public class DefaultOpenApiService implements OpenApiService {
 
 
         // Save Operation
-        Operation createOperation = createOperation("Save "+structureName,
+        Operation saveOperation = createOperation("Save "+structureName,
                                                     "Saves " + structureName + " entities.",
                                                     "save"+structureName,
                                                     structure,
                                                     1);
-        createOperation.requestBody(structureRequestBody);
+        saveOperation.requestBody(structureRequestBody);
 
-        structurePathItem.post(createOperation);
+        structurePathItem.post(saveOperation);
 
         // add the path item for all paths like basePath/structureNamespace/structureName/
         paths.put(basePath + lowercaseNamespace + "/" + lowercaseName, structurePathItem);
+
+        // Sync Index operation
+        PathItem syncPathItem = new PathItem();
+        Operation syncOperation = createOperation("Sync " + structureName,
+                                                  "Makes recent updates immediately available for search.",
+                                                  "sync"+structureName,
+                                                  structure,
+                                                  -1);
+        syncPathItem.get(syncOperation);
+        paths.put(basePath + lowercaseNamespace + "/" + lowercaseName + "/util/sync", syncPathItem);
 
 
         // Update Operation

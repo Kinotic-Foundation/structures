@@ -7,8 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A no-op type resolver that always returns null
- * This is used since we do not actually use the GraphQL api to execute operations, only to define and parse the schema.
+ * A no-op type resolver that always returns null.
  * And Type Resolvers are required to be defined for interfaces and unions.
  * Created by Navíd Mitchell 🤪 on 2/4/24.
  */

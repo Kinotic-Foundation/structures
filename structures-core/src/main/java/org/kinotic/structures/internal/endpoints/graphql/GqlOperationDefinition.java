@@ -30,11 +30,6 @@ public class GqlOperationDefinition {
     private final OperationDefinition.Operation operationType;
 
     /**
-     * The function that will execute this operation
-     */
-    private final GqlOperationExecutionFunction operationExecutionFunction;
-
-    /**
      * The function that will define the {@link GraphQLFieldDefinition} for this operation
      */
     private final GqlFieldDefinitionFunction fieldDefinitionFunction;
@@ -42,6 +37,6 @@ public class GqlOperationDefinition {
     /**
      * The function that will define the {@link DataFetcher} for this operation
      */
-    private final Function<Structure, DataFetcher> dataFetcherDefinitionFunction;
+    private final Function<Structure, DataFetcher<?>> dataFetcherDefinitionFunction;
 
 }

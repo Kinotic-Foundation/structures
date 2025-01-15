@@ -46,6 +46,18 @@
         {
           "type": "Query",
           "statements": "select count(firstName) as count, lastName from \"struct_city.person\" where lastName = ? group by lastName"
+        },
+        {
+          "type": "PolicyDecorator",
+          "policies": [
+            [
+              "person:read"
+            ],
+            [
+              "person:write",
+              "person:update"
+            ]
+          ]
         }
       ],
       "returnType": {

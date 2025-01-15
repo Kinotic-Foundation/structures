@@ -44,7 +44,7 @@ public interface StructureService extends IdentifiableCrudService<Structure, Str
     CompletableFuture<Long> countForNamespace(String namespace);
 
     /**
-     * Publishes the structure with the given id.
+     * Publishes thed structure with the given id.
      * This will make the structure available for use to read and write items for.
      * @param structureId the id of the structure to publish
      * @return a future that will complete when the structure has been published

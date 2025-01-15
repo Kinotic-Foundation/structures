@@ -67,6 +67,9 @@ public class NamedQueryTests extends ElasticsearchTestBase {
 
         Assertions.assertNotNull(holder2);
 
+        entitiesService.syncIndex(holder1.getStructure().getId(), context1).join();
+        entitiesService.syncIndex(holder2.getStructure().getId(), context2).join();
+
         FunctionDefinition countPeopleByLastNameDefinition = createCountByLastName(holder2.getStructure());
         NamedQueriesDefinition namedQueriesDefinition = createNamedQuery(holder2.getStructure(), List.of(countPeopleByLastNameDefinition));
         StepVerifier.create(Mono.fromFuture(() -> namedQueriesService.save(namedQueriesDefinition)))
@@ -75,7 +78,7 @@ public class NamedQueryTests extends ElasticsearchTestBase {
 
         // find last name to use
         List<Person> persons = holder2.getPersons();
-        String lastName = persons.get(0).getLastName();
+        String lastName = persons.getFirst().getLastName();
 
         // now count the number of people with that last name manually
         long count = persons.stream().filter(person -> person.getLastName().equals(lastName)).count();

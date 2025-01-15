@@ -142,6 +142,12 @@ public class DefaultEntitiesService implements EntitiesService {
                                                                                context));
     }
 
+    @Override
+    public CompletableFuture<Void> syncIndex(String structureId, EntityContext context) {
+        return cache.get(structureId)
+                    .thenCompose(entityService -> entityService.syncIndex(context));
+    }
+
     @WithSpan
     @Override
     public <T> CompletableFuture<T> save(@SpanAttribute("structureId") String structureId, T entity, EntityContext context) {

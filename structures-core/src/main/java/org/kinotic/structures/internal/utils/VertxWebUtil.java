@@ -120,27 +120,42 @@ public class VertxWebUtil {
 
     public static Handler<RoutingContext> createExceptionConvertingFailureHandler(){
         return ctx -> {
-            Throwable failure = ctx.failure();
-            if(failure != null){
-                writeException(ctx, failure);
-            }
+            writeException(ctx, ctx.failure());
         };
     }
 
     public static void writeException(RoutingContext context, Throwable throwable){
         HttpServerResponse response = context.response();
-        if(throwable instanceof IllegalArgumentException) {
-            response.setStatusCode(400);
-        }else if(throwable instanceof NullPointerException){
-            response.setStatusCode(400);
-        } else {
-            response.setStatusCode(500);
+        String errorMessage;
+        int statusCode = context.statusCode();
+
+        if(throwable != null){
+
+            errorMessage = throwable.getMessage();
+
+            if(statusCode == -1){
+                if (throwable instanceof IllegalArgumentException) {
+                    statusCode = 400;
+                } else if (throwable instanceof NullPointerException) {
+                    statusCode = 400;
+                } else {
+                    statusCode = 500;
+                }
+            }
+            log.debug("Error processing web request. Status Code ({})", statusCode, throwable);
+        }else{
+
+            if(statusCode == -1){
+                statusCode = 500;
+            }
+            errorMessage = "Server Error";
+
+            log.warn("Unknown exception occurred processing web request. Status Code ({})", statusCode);
         }
-
-        log.warn("Error processing request", throwable);
-
+        String jsonString = new JsonObject().put("error", errorMessage).encode();
+        response.setStatusCode(statusCode);
         response.putHeader("Content-Type", "application/json");
-        response.end(new JsonObject().put("error", throwable.getMessage()).encode());
+        response.end(jsonString);
     }
 
 }

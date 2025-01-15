@@ -6,8 +6,6 @@ import {BaseConversionState} from '../common/BaseConversionState.js'
  */
 export class TypescriptConversionState extends BaseConversionState{
 
-    private readonly _namespace: string
-
     /**
      * Contains a stack of object names for objects being processed.
      */
@@ -23,12 +21,7 @@ export class TypescriptConversionState extends BaseConversionState{
 
     constructor(namespace: string,
                 utilFunctionLocator: UtilFunctionLocator | null) {
-        super(utilFunctionLocator)
-        this._namespace = namespace
-    }
-
-    get namespace(): string {
-        return this._namespace
+        super(namespace, utilFunctionLocator)
     }
 
 }

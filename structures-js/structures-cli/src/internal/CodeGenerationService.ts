@@ -199,6 +199,7 @@ export class CodeGenerationService {
 
         const namedQueries: FunctionDefinition[] = []
         this.tsMorphProject.addSourceFileAtPath(entityServicePath)
+
         const entityServiceSource = this.tsMorphProject.getSourceFile(entityServicePath)
 
         // Currently we only support named queries when added to the generated entity service class
@@ -217,6 +218,12 @@ export class CodeGenerationService {
                         const methodName = method.getName()
                         const functionDefinition = new FunctionDefinition(methodName,
                                                                           [tsDecoratorToC3Decorator(queryDecorator)!])
+
+                        // TODO: add more generic decorator handling
+                        const policyDecorator = method.getDecorator('Policy')
+                        if(policyDecorator){
+                            functionDefinition.addDecorator(tsDecoratorToC3Decorator(policyDecorator)!)
+                        }
 
                         functionDefinition.returnType = this.createC3TypeForReturnType(method.getReturnType())
 
@@ -321,7 +328,8 @@ export class CodeGenerationService {
 
     private createStatementMapper(entityInfo: EntityInfo,
                                   utilFunctionLocator: UtilFunctionLocator): StatementMapper{
-        const state = new StatementMapperConversionState(utilFunctionLocator)
+        const state = new StatementMapperConversionState(entityInfo.entity.namespace,
+                                                         utilFunctionLocator)
         state.entityConfiguration = entityInfo.entityConfiguration
 
         const conversionContext = createConversionContext(new StatementMapperConverterStrategy(state, this.logger))

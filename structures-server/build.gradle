@@ -2,15 +2,11 @@ plugins {
 	id 'org.kinotic.java-application-conventions'
 }
 
-ext {
-
-}
-
 dependencies {
 	implementation project(':structures-core')
 
 	// Additional Continuum Dependencies
-	implementation "org.kinotic:continuum-gateway:${continuumVersion}"
+	implementation "org.kinotic:continuum-gateway"
 
 	implementation 'com.github.ben-manes.caffeine:caffeine'
 
@@ -25,4 +21,6 @@ test {
 	useJUnitPlatform()
 }
 
-tasks.findByName('processResources').dependsOn ":structures-frontend:copyDist"
+tasks.named('processResources'){
+	dependsOn ":structures-frontend:copyDist"
+}

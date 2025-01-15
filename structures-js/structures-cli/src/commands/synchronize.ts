@@ -82,7 +82,7 @@ export class Synchronize extends Command {
                                                      }
                                                  })
 
-                    this.log(`Synchronization Complete For namespace: ${namespaceConfig.namespaceName}`, flags.verbose)
+                    this.log(`Synchronization Complete For namespace: ${namespaceConfig.namespaceName}`)
 
                 } catch (e) {
                     if (e instanceof Error) {

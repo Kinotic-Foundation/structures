@@ -36,7 +36,6 @@ public class StructuresEndpointInitializer {
 
     @PostConstruct
     public void init(){
-        // If production deploy one verticle of each per core
         int numToDeploy = continuumProperties.getMaxNumberOfCoresToUse();
         log.info("{} Cores will be used for Structures Endpoints", numToDeploy);
         DeploymentOptions options = new DeploymentOptions().setInstances(numToDeploy);
@@ -76,15 +75,20 @@ public class StructuresEndpointInitializer {
 
     @EventListener
     public void onApplicationReadyEvent(ApplicationReadyEvent event) {
-        log.info("Rest API listening on port " + properties.getOpenApiPort());
-        log.info("OpenApi Json available at http://localhost:" + properties.getOpenApiPort() + "/api-docs/[STRUCTURE NAMESPACE]/openapi.json");
-        log.info("GraphQL listening on port " + properties.getGraphqlPort());
-        log.info("GraphQL available at http://localhost:" + properties.getGraphqlPort() + properties.getGraphqlPath()+"[STRUCTURE NAMESPACE]/");
+        log.info("Rest API listening on port {}", properties.getOpenApiPort());
+        log.info("OpenApi Json available at http://localhost:{}/api-docs/[STRUCTURE NAMESPACE]/openapi.json",
+                 properties.getOpenApiPort());
+        log.info("GraphQL listening on port {}", properties.getGraphqlPort());
+        log.info("GraphQL available at http://localhost:{}{}[STRUCTURE NAMESPACE]/",
+                 properties.getGraphqlPort(),
+                 properties.getGraphqlPath());
         if(properties.isEnableStaticFileServer()) {
-            log.info("Web Server listening on port " + properties.getWebServerPort());
-            log.info("Web Server available at http://localhost:" + properties.getWebServerPort() + "/");
+            log.info("Web Server listening on port {}", properties.getWebServerPort());
+            log.info("Web Server available at http://localhost:{}/", properties.getWebServerPort());
         }
-        log.info("Health checks available at http://localhost:" + properties.getWebServerPort() + properties.getHealthCheckPath());
+        log.info("Health checks available at http://localhost:{}{}",
+                 properties.getWebServerPort(),
+                 properties.getHealthCheckPath());
     }
 
 }

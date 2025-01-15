@@ -4,18 +4,21 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import graphql.ExecutionResult;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
+import io.vertx.ext.web.RoutingContext;
 import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.continuum.idl.api.schema.FunctionDefinition;
 import org.kinotic.continuum.idl.api.schema.ParameterDefinition;
+import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.domain.idl.PageableC3Type;
 import org.kinotic.structures.api.services.EntitiesService;
 import org.kinotic.structures.internal.api.services.sql.MapParameterHolder;
-import org.kinotic.structures.internal.endpoints.graphql.GqlOperationExecutionFunction;
+import org.kinotic.structures.internal.endpoints.openapi.RoutingContextToEntityContextAdapter;
 import org.kinotic.structures.internal.utils.GqlUtils;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -32,7 +35,7 @@ public class PagedQueryDataFetcher implements DataFetcher<CompletableFuture<Page
     private final String structureId;
 
     /**
-     * Creates a {@link GqlOperationExecutionFunction} that will execute a named query page and return the result as a {@link ExecutionResult}
+     * Creates a {@link DataFetcher} that will execute a named query page and return the result as a {@link ExecutionResult}
      * @param entitiesService the {@link EntitiesService} to use to execute the query
      * @param objectMapper the {@link ObjectMapper} to use to deserialize the input parameters
      * @param queryDefinition the {@link FunctionDefinition} for the query to execute
@@ -62,6 +65,10 @@ public class PagedQueryDataFetcher implements DataFetcher<CompletableFuture<Page
 
     @Override
     public CompletableFuture<Page<Map>> get(DataFetchingEnvironment environment) throws Exception {
+        RoutingContext rc = environment.getGraphQlContext().get(RoutingContext.class);
+        Objects.requireNonNull(rc);
+        EntityContext ec = new RoutingContextToEntityContextAdapter(rc);
+
         Pageable pageable;
         if(pageableName != null) {
             pageable = GqlUtils.parseVariable(environment.getArguments(),
@@ -76,6 +83,6 @@ public class PagedQueryDataFetcher implements DataFetcher<CompletableFuture<Page
                                               new MapParameterHolder(environment.getArguments()),
                                               pageable,
                                               Map.class,
-                                              environment.getLocalContext());
+                                              ec);
     }
 }

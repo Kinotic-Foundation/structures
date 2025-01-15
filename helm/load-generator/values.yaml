@@ -1,0 +1,53 @@
+# Default values for load-generator.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+structures:
+  useSsl: false
+  host: 127.0.0.1
+  port: 58503
+
+loadGenerator:
+  image:
+    tag: latest
+    pullPolicy: IfNotPresent
+  config:
+    maxConcurrentRequests: 25
+    maxRequestsPerSecond: 1000
+    testName: bulkLoadMedium
+    beginTenantIdNumber: 1
+    numberOfTenants: 1000
+
+# The number of jobs to run in parallel
+parallelism: 1
+
+selectorLabels:
+  jobgroup: structures-load-generator
+
+# This is for setting Kubernetes Annotations to a Pod.
+# For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+podAnnotations: {}
+# This is for setting Kubernetes Labels to a Pod.
+# For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+podLabels: {}
+
+securityContext:
+  allowPrivilegeEscalation: false
+  privileged: false
+  readOnlyRootFilesystem: true
+  runAsGroup: 999
+  runAsNonRoot: true
+  runAsUser: 999
+  seccompProfile:
+    type: RuntimeDefault
+  capabilities:
+    drop:
+    - ALL
+
+resources:
+   limits:
+     memory: 512Mi
+   requests:
+     cpu: 100m
+     memory: 128Mi
+

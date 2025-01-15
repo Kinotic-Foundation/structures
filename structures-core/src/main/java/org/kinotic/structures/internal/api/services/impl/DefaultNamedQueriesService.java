@@ -39,11 +39,11 @@ public class DefaultNamedQueriesService extends AbstractCrudService<NamedQueries
                                       ReactiveElasticsearchOperations esOperations,
                                       CrudServiceTemplate crudServiceTemplate,
                                       QueryExecutorFactory queryExecutorFactory) {
-            super("named_query_service_definition",
-                  NamedQueriesDefinition.class,
-                  esAsyncClient,
-                  esOperations,
-                  crudServiceTemplate);
+        super("named_query_service_definition",
+              NamedQueriesDefinition.class,
+              esAsyncClient,
+              esOperations,
+              crudServiceTemplate);
 
         cache = Caffeine.newBuilder()
                         .expireAfterAccess(20, TimeUnit.HOURS)
@@ -58,8 +58,8 @@ public class DefaultNamedQueriesService extends AbstractCrudService<NamedQueries
                                             + key.getQueryName());
 
                                     QueryExecutor ret = queryExecutorFactory.createQueryExecutor(key.getStructure(),
-                                                                                    key.getQueryName(),
-                                                                                    namedQueriesDefinition);
+                                                                                                 key.getQueryName(),
+                                                                                                 namedQueriesDefinition);
 
                                     // Track the cache key so, we can invalidate it when the named query is updated
                                     cacheKeyTracker.compute(namedQueriesDefinition.getId(), (s, cacheKeys) -> {
@@ -114,8 +114,8 @@ public class DefaultNamedQueriesService extends AbstractCrudService<NamedQueries
                                         TermQuery.of(tq -> tq.field("structure").value(structure))._toQuery())
                         )
                 )).thenApply(page -> page.getContent() != null && !page.getContent().isEmpty()
-                        ? page.getContent().get(0)
-                        : null);
+                ? page.getContent().getFirst()
+                : null);
     }
 
     @Override

@@ -3,12 +3,16 @@ package org.kinotic.structures.internal.endpoints.graphql.datafetchers;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
+import io.vertx.ext.web.RoutingContext;
 import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
+import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.services.EntitiesService;
+import org.kinotic.structures.internal.endpoints.openapi.RoutingContextToEntityContextAdapter;
 import org.kinotic.structures.internal.utils.GqlUtils;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -31,15 +35,21 @@ public class SearchDataFetcher implements DataFetcher<CompletableFuture<Page<Map
 
     @Override
     public CompletableFuture<Page<Map>> get(DataFetchingEnvironment environment) throws Exception {
+        RoutingContext rc = environment.getGraphQlContext().get(RoutingContext.class);
+        Objects.requireNonNull(rc);
+        EntityContext ec = new RoutingContextToEntityContextAdapter(rc);
+
         Pageable pageable =  GqlUtils.parseVariable(environment.getArguments(),
                                                     "pageable",
                                                     Pageable.class,
                                                     objectMapper);
+
         String searchText = environment.getArgument("searchText");
+
         return entitiesService.search(structureId,
                                       searchText,
                                       pageable,
                                       Map.class,
-                                      environment.getLocalContext());
+                                      ec);
     }
 }

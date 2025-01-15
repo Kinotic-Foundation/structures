@@ -14,6 +14,7 @@ hero:
       text: View on GitHub
       link: https://github.com/Kinotic-Foundation/structures
 
+
 features:
   - title: Schema Evolution
     details: Structures supports schema evolution, allowing developers to modify data schemas over time without requiring significant changes to their application code. This feature simplifies the process of managing complex data structures and enables developers to evolve their data models to meet changing business requirements.

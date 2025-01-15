@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.kinotic.continuum.api.security.SecurityService;
 import org.kinotic.continuum.gateway.api.security.AuthenticationHandler;
 import org.kinotic.structures.api.config.StructuresProperties;
+import org.kinotic.structures.internal.utils.VertxWebUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,7 +24,7 @@ public class GqlVerticle extends AbstractVerticle {
     public static final String NAMESPACE_PATH_PARAMETER = "structureNamespace";
 
     private static final Logger log = LoggerFactory.getLogger(GqlVerticle.class);
-    private final GqlExecutionService gqlExecutionService;
+    private final DelegatingGqlHandler gqlHandler;
     private final StructuresProperties properties;
     private final SecurityService securityService;
     private HttpServer server;
@@ -37,8 +38,11 @@ public class GqlVerticle extends AbstractVerticle {
 
         Router router = Router.router(vertx);
 
+        router.route().failureHandler(VertxWebUtil.createExceptionConvertingFailureHandler());
+
         CorsHandler corsHandler = CorsHandler.create(properties.getCorsAllowedOriginPattern())
                                              .allowedHeaders(properties.getCorsAllowedHeaders());
+
         if(properties.getCorsAllowCredentials() != null){
             corsHandler.allowCredentials(properties.getCorsAllowCredentials());
         }
@@ -55,17 +59,18 @@ public class GqlVerticle extends AbstractVerticle {
               .produces("application/json")
               .handler(BodyHandler.create(false)
                                   .setBodyLimit(properties.getMaxHttpBodySize()))
-              .handler(new GqlHandler(gqlExecutionService));
+              .handler(gqlHandler);
 
         // Begin listening for requests
-        server.requestHandler(router).listen(properties.getGraphqlPort(), ar -> {
-            if (ar.succeeded()) {
-                log.info("GraphQL Started Listener on Thread "+Thread.currentThread().getName());
-                startPromise.complete();
-            } else {
-                startPromise.fail(ar.cause());
-            }
-        });
+        server.requestHandler(router)
+              .listen(properties.getGraphqlPort(), ar -> {
+                  if (ar.succeeded()) {
+                      log.info("GraphQL Started Listener on Thread {}", Thread.currentThread().getName());
+                      startPromise.complete();
+                  } else {
+                      startPromise.fail(ar.cause());
+                  }
+              });
     }
 
     @Override

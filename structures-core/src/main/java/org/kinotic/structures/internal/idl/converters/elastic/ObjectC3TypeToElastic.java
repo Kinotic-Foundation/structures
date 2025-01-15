@@ -53,8 +53,7 @@ public class ObjectC3TypeToElastic implements C3TypeConverter<Property, ObjectC3
 
                 if(property.containsDecorator(NestedDecorator.class)) {
 
-                    if (type instanceof ArrayC3Type) {
-                        ArrayC3Type arrayC3Type = (ArrayC3Type) type;
+                    if (type instanceof ArrayC3Type arrayC3Type) {
                         if (!(arrayC3Type.getContains() instanceof ObjectC3Type)) {
                             throw new IllegalArgumentException("Nested decorator can only be applied to Arrays of Objects");
                         }

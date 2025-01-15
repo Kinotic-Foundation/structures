@@ -10,7 +10,9 @@ import org.kinotic.continuum.idl.api.schema.ParameterDefinition;
 import org.kinotic.structures.api.domain.idl.CursorPageC3Type;
 import org.kinotic.structures.api.domain.idl.PageC3Type;
 import org.kinotic.structures.api.domain.idl.PageableC3Type;
+import org.kinotic.structures.api.domain.idl.decorators.PolicyDecorator;
 import org.kinotic.structures.internal.idl.converters.graphql.GqlTypeHolder;
+import org.kinotic.structures.internal.utils.GqlUtils;
 
 import static graphql.schema.GraphQLArgument.newArgument;
 import static graphql.schema.GraphQLFieldDefinition.newFieldDefinition;
@@ -31,25 +33,28 @@ public class QueryGqlFieldDefinitionFunction implements GqlFieldDefinitionFuncti
         GraphQLFieldDefinition.Builder builder
                 = newFieldDefinition().name(queryDefinition.getName() + data.getStructureName());
 
+        PolicyDecorator policyDecorator = queryDefinition.findDecorator(PolicyDecorator.class);
+        if(policyDecorator != null){
+            builder = builder.withDirective(GqlUtils.policy(policyDecorator.getPolicies()));
+        }
+
         // This is kinda a hack. The CLI will always just create a PageC3Type, but if a cursor is used it needs to explicitly defined for GQL
         GqlTypeHolder retTypeHolder;
         if(shouldUseCursorPageable &&
-                (queryDefinition.getReturnType() instanceof PageC3Type)){
+                (queryDefinition.getReturnType() instanceof PageC3Type pageC3Type)){
 
-            PageC3Type pageC3Type = (PageC3Type) queryDefinition.getReturnType();
             CursorPageC3Type cursorPageC3Type = new CursorPageC3Type(pageC3Type.getContentType());
 
             retTypeHolder = data.getConverter().convert(cursorPageC3Type);
         }else{
             retTypeHolder = data.getConverter().convert(queryDefinition.getReturnType());
         }
-        GraphQLOutputType outputType = retTypeHolder.getOutputType();
+        GraphQLOutputType outputType = retTypeHolder.outputType();
 
 
         // If the return type is an array we need to wrap in notNull objs.
         // The converter does not do this since this is not specified with a NotNull decorator
-        if(outputType instanceof GraphQLList){
-            GraphQLList list = (GraphQLList) outputType;
+        if(outputType instanceof GraphQLList list){
             outputType = GraphQLList.list(nonNull(list.getWrappedType()));
             outputType = nonNull(outputType);
         }
@@ -60,7 +65,7 @@ public class QueryGqlFieldDefinitionFunction implements GqlFieldDefinitionFuncti
             GraphQLInputType inputType;
             if(!(parameter.getType() instanceof PageableC3Type)) {
                 GqlTypeHolder paramType = data.getConverter().convert(parameter.getType());
-                inputType = paramType.getInputType();
+                inputType = paramType.inputType();
             }else{
                 if(shouldUseCursorPageable){
                     inputType = data.getCursorPageableReference();

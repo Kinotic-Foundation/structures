@@ -4,14 +4,14 @@ import {IConversionContext} from './IConversionContext.js'
 /**
  * {@link ITypeConverter} are the base interface for converting a specific type to another specific type.
  */
-export class SpecificTypesConverter<T, R, S, MATCH_VALUE> implements ITypeConverter<T, R, S> {
+export abstract class SpecificTypesConverter<T, R, S, MATCH_VALUE> implements ITypeConverter<T, R, S> {
 
     private readonly matchValueExtractor: (arg: T) => MATCH_VALUE
     private typeConverterFunctions: Map<MATCH_VALUE, ((type: T, context: IConversionContext<T, R, S>) => R)>
 
 
-    constructor(matchValueExtractor: (arg: T) => MATCH_VALUE,
-                typeConverterFunctions: Map<MATCH_VALUE, ((type: T, context: IConversionContext<T, R, S>) => R)>) {
+    protected constructor(matchValueExtractor: (arg: T) => MATCH_VALUE,
+                          typeConverterFunctions: Map<MATCH_VALUE, ((type: T, context: IConversionContext<T, R, S>) => R)>) {
         this.matchValueExtractor = matchValueExtractor
         this.typeConverterFunctions = typeConverterFunctions
     }

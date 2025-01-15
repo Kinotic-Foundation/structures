@@ -47,10 +47,10 @@ public class TemporarySecurityService implements SecurityService {
     public CompletableFuture<Participant> authenticate(Map<String, String> authenticationInfo) {
         if(authenticationInfo.containsKey("login") && Objects.equals(authenticationInfo.get("login"), "admin")
             && authenticationInfo.containsKey("passcode") && Objects.equals(authenticationInfo.get("passcode"), PASSWORD)){
-            if(log.isDebugEnabled()){
-                log.debug("Successfully authenticated user: {}", participant.getId());
-            }
-            return CompletableFuture.completedFuture(participant);
+            log.debug("Successfully authenticated user with continuum credentials");
+
+            return CompletableFuture.completedFuture(createParticipant(authenticationInfo.get("tenantId")));
+
         }else if (authenticationInfo.containsKey("authorization")){
             String authorizationHeader = authenticationInfo.get("authorization");
             // Header looks something like
@@ -61,23 +61,31 @@ public class TemporarySecurityService implements SecurityService {
                 String[] creds = credentials.split(":", 2);
                 if (creds.length == 2) {
                     if (creds[0].equals("admin") && creds[1].equals(PASSWORD)) {
-                        if(log.isDebugEnabled()){
-                            log.debug("Successfully authenticated user: {}", participant.getId());
-                        }
-                        return CompletableFuture.completedFuture(participant);
+
+                        log.debug("Successfully authenticated user with basic auth");
+
+                        return CompletableFuture.completedFuture(createParticipant(authenticationInfo.get("tenantId")));
                     }else{
-                        if(log.isDebugEnabled()){
-                            log.debug("Failed to authenticate user: {}", authenticationInfo.get("login"));
-                        }
+                        log.debug("Failed to authenticate user: {}", authenticationInfo.get("login"));
                     }
                 }
             }else{
-                if(log.isDebugEnabled()){
-                    log.debug("Only Basic Auth is supported. Received {}", authorizationHeader);
-                }
+                log.debug("Only Basic Auth is supported. Received {}", authorizationHeader);
             }
         }
 
         return CompletableFuture.failedFuture(new AuthenticationException("username/password pair provided was not correct."));
+    }
+
+    private Participant createParticipant(String tenantId){
+        if(tenantId != null){
+            return new DefaultParticipant(tenantId,
+                                          "admin",
+                                          Map.of(ParticipantConstants.PARTICIPANT_TYPE_METADATA_KEY,
+                                                 ParticipantConstants.PARTICIPANT_TYPE_USER),
+                                          List.of("ADMIN"));
+        }else{
+            return participant;
+        }
     }
 }

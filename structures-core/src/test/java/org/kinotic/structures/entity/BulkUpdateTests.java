@@ -79,8 +79,9 @@ public class BulkUpdateTests extends ElasticsearchTestBase {
 
         Assertions.assertNotNull(holder2);
 
-        // We have to wait since bulk updates are not queryable until they are indexed
-        Thread.sleep(5000);
+        // Sync Index since bulk updates are not queryable until they are indexed
+        entitiesService.syncIndex(holder1.getStructure().getId(), context1).join();
+        entitiesService.syncIndex(holder2.getStructure().getId(), context2).join();
 
         // TODO: verify all data items as well, not just sizes
         StepVerifier.create(Mono.fromFuture(entitiesService.findAll(holder1.getStructure().getId(),
@@ -92,7 +93,7 @@ public class BulkUpdateTests extends ElasticsearchTestBase {
                     .as("Verifying Tenant 1 has "+numberOfPeopleToCreate+" entities")
                     .verifyComplete();
 
-        StepVerifier.create(Mono.fromFuture(entitiesService.findAll(holder1.getStructure().getId(),
+        StepVerifier.create(Mono.fromFuture(entitiesService.findAll(holder2.getStructure().getId(),
                                                                     Pageable.ofSize(numberOfPeopleToCreate * 2), // make sure page size is larger than number of entities
                                                                     RawJson.class,
                                                                     context2)))
@@ -131,8 +132,8 @@ public class BulkUpdateTests extends ElasticsearchTestBase {
 
         testHelper.bulkSaveCarsAsRawJson(cars, structure, entityContext).join();
 
-        // We have to wait since bulk updates are not queryable until they are indexed
-        Thread.sleep(5000);
+        // Sync Index since bulk updates are not queryable until they are indexed
+        entitiesService.syncIndex(structure.getId(), entityContext).join();
 
         Page<RawJson> page = entitiesService.findAll(structure.getId(), Pageable.ofSize(10), RawJson.class, entityContext).join();
 
@@ -168,8 +169,8 @@ public class BulkUpdateTests extends ElasticsearchTestBase {
 
         testHelper.bulkUpdateCarsAsRawJson(cars, structure, entityContext).join();
 
-        // We have to wait since bulk updates are not queryable until they are indexed
-        Thread.sleep(5000);
+        // Sync Index since bulk updates are not queryable until they are indexed
+        entitiesService.syncIndex(structure.getId(), entityContext).join();
 
         Page<RawJson> page = entitiesService.findAll(structure.getId(), Pageable.ofSize(10), RawJson.class, entityContext).join();
 

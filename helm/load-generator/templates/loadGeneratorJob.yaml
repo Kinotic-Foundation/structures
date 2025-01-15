@@ -1,0 +1,56 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "load-generator.fullname" . }}
+  labels:
+    {{- include "load-generator.labels" . | nindent 4 }}
+spec:
+  parallelism: {{ .Values.parallelism }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "load-generator.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "kinotic/structures-load-generator:{{ .Values.loadGenerator.image.tag }}"
+          imagePullPolicy: {{ .Values.loadGenerator.image.pullPolicy }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          env:
+            - name: KUBE_NODE
+              valueFrom:
+                  fieldRef:
+                    fieldPath: status.hostIP
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://$(KUBE_NODE):4317
+            - name: OTEL_EXPORTER_TYPE
+              value: OTLP
+            - name: STRUCTURES_USE_SSL
+              value: "{{ .Values.structures.useSsl }}"
+            - name: STRUCTURES_HOST
+              value: "{{ .Values.structures.host }}"
+          {{- if .Values.structures.port }}
+            - name: STRUCTURES_PORT
+              value: "{{ .Values.structures.port }}"
+          {{- end }}
+            - name: MAX_CONCURRENT_REQUESTS
+              value: "{{ .Values.loadGenerator.config.maxConcurrentRequests }}"
+            - name: MAX_REQUESTS_PER_SECOND
+              value: "{{ .Values.loadGenerator.config.maxRequestsPerSecond }}"
+            - name: TEST_NAME
+              value: "{{ .Values.loadGenerator.config.testName }}"
+            - name: BEGIN_TENANT_ID_NUMBER
+              value: "{{ .Values.loadGenerator.config.beginTenantIdNumber }}"
+            - name: NUMBER_OF_TENANTS
+              value: "{{ .Values.loadGenerator.config.numberOfTenants }}"

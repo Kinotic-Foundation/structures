@@ -11,6 +11,10 @@ sourceCompatibility = '21'
 repositories {
     // Use Maven Central for resolving dependencies.
     mavenCentral()
+
+    maven {
+        url = uri('https://s01.oss.sonatype.org/content/repositories/snapshots/')
+    }
 }
 
 dependencyManagement {
@@ -19,11 +23,21 @@ dependencyManagement {
     }
     dependencies {
         dependency "co.elastic.clients:elasticsearch-java:${elasticClientVersion}"
+
+        dependency "com.github.ben-manes.caffeine:caffeine:${caffeineVersion}"
+        dependency "com.github.rworsnop:vertx-beans:${vertxBeansVersion}"
+
         dependency "com.graphql-java:graphql-java:${graphQlJavaVersion}"
+
+        dependency "io.vertx:vertx-web:${vertxVersion}"
+        dependency "io.vertx:vertx-web-graphql:${vertxVersion}"
+        dependency "io.vertx:vertx-web-client:${vertxVersion}"
+        dependency "io.vertx:vertx-health-check:${vertxVersion}"
+
+        dependency "me.escoffier.vertx:vertx-completable-future:${vertxCompletableFutureVersion}"
+
         dependency "org.apache.commons:commons-compress:${commonsCompressVersion}"
-        dependency "org.elasticsearch:elasticsearch:${elasticClientVersion}"
-        dependency "org.elasticsearch.client:elasticsearch-rest-client:${elasticClientVersion}"
-        dependency "org.elasticsearch.client:elasticsearch-rest-high-level-client:${elasticClientVersion}"
+
         dependency "org.apache.lucene:lucene-analyzers-common:${luceneVersion}"
         dependency "org.apache.lucene:lucene-backwards-codecs:${luceneVersion}"
         dependency "org.apache.lucene:lucene-core:${luceneVersion}"
@@ -37,6 +51,16 @@ dependencyManagement {
         dependency "org.apache.lucene:lucene-sandbox:${luceneVersion}"
         dependency "org.apache.lucene:lucene-spatial:${luceneVersion}"
         dependency "org.apache.lucene:lucene-suggest:${luceneVersion}"
+
+        dependency "org.elasticsearch:elasticsearch:${elasticClientVersion}"
+        dependency "org.elasticsearch.client:elasticsearch-rest-client:${elasticClientVersion}"
+        dependency "org.elasticsearch.client:elasticsearch-rest-high-level-client:${elasticClientVersion}"
+
+        dependency "org.kinotic:continuum-core:${continuumVersion}"
+        dependency "org.kinotic:continuum-core-vertx:${continuumVersion}"
+        dependency "org.kinotic:continuum-gateway:${continuumVersion}"
+        dependency "org.kinotic:continuum-idl:${continuumVersion}"
+
         // must be overridden for the elastic client
         dependency 'jakarta.json:jakarta.json-api:2.0.1'
     }

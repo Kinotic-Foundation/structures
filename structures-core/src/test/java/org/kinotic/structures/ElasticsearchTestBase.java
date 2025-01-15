@@ -24,13 +24,24 @@ public abstract class ElasticsearchTestBase {
     protected TestHelper testHelper;
 
     static {
-        ELASTICSEARCH_CONTAINER = new ElasticsearchContainer("docker.elastic.co/elasticsearch/elasticsearch:7.17.10");
+        String osName = System.getProperty("os.name");
+        String osArch = System.getProperty("os.arch");
+
+        ELASTICSEARCH_CONTAINER = new ElasticsearchContainer("docker.elastic.co/elasticsearch/elasticsearch:8.15.5");
+        ELASTICSEARCH_CONTAINER.withEnv("discovery.type", "single-node")
+                               .withEnv("xpack.security.enabled", "false");
+
+        // We need this until this is resolved https://github.com/elastic/elasticsearch/issues/118583
+        if(osName != null && osName.startsWith("Mac") && osArch != null && osArch.equals("aarch64")){
+            ELASTICSEARCH_CONTAINER.withEnv("_JAVA_OPTIONS", "-XX:UseSVE=0");
+        }
+
         ELASTICSEARCH_CONTAINER.start();
     }
 
 
     @DynamicPropertySource
-    static void registerPgProperties(DynamicPropertyRegistry registry) {
+    static void registerElasticProperties(DynamicPropertyRegistry registry) {
         String[] parts = ELASTICSEARCH_CONTAINER.getHttpHostAddress().split(":");
         ElasticConnectionInfo connectionInfo = new ElasticConnectionInfo(parts[0], Integer.parseInt(parts[1]), "http");
         registry.add("spring.data.elasticsearch.cluster-nodes", ELASTICSEARCH_CONTAINER::getHttpHostAddress);
@@ -45,9 +56,9 @@ public abstract class ElasticsearchTestBase {
     }
 
     protected StructureAndPersonHolder createAndVerify(int numberOfPeopleToCreate,
-                                                     boolean randomPeople,
-                                                     EntityContext entityContext,
-                                                     String structureSuffix){
+                                                       boolean randomPeople,
+                                                       EntityContext entityContext,
+                                                       String structureSuffix){
         StructureAndPersonHolder ret = new StructureAndPersonHolder();
 
         StepVerifier.create(testHelper.createPersonStructureAndEntities(numberOfPeopleToCreate,

@@ -145,6 +145,14 @@ public interface EntitiesService {
                                                   EntityContext context);
 
     /**
+     * This operation makes all the recent writes immediately available for search.
+     * @param structureId the id of the structure to sync the index for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * @param context     the context for this operation
+     * @return a {@link CompletableFuture} that will complete when the operation is complete
+     */
+    CompletableFuture<Void> syncIndex(String structureId, EntityContext context);
+
+    /**
      * Saves a given entity. This will override all data if there is an existing entity with the same id.
      * Use the returned instance for further operations as the save operation might have changed the entity instance.
      *

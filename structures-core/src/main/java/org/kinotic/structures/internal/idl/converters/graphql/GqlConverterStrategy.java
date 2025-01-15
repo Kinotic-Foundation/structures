@@ -69,8 +69,8 @@ public class GqlConverterStrategy implements IdlConverterStrategy<GqlTypeHolder,
                      // input type can be null in some cases such as a Union type.
                      // This can create a paradigm mismatch between OpenApi and GraphQL, but we cannot do anything about it.
                      // For now, we will not create an input type for these cases.
-                     return new GqlTypeHolder(typeHolder.getInputType() != null ? GraphQLList.list(typeHolder.getInputType()) : null,
-                                              GraphQLList.list(typeHolder.getOutputType()));
+                     return new GqlTypeHolder(typeHolder.inputType() != null ? GraphQLList.list(typeHolder.inputType()) : null,
+                                              GraphQLList.list(typeHolder.outputType()));
                  });
         converters = new LinkedHashSet<>(List.of(container, new ObjectC3TypeToGql(), new UnionC3TypeToGql(), new CursorPageC3TypeToGql(), new PageC3TypeToGql()));
     }

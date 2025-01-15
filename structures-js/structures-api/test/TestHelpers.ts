@@ -1,7 +1,7 @@
 import delay from 'delay'
 // @ts-ignore for some reason intellij is complaining about this even though esModuleInterop is enabled
 import path from 'node:path'
-import {v2 as compose} from 'docker-compose'
+import * as compose from 'docker-compose'
 import {Continuum, Direction, Order, Pageable} from '@kinotic/continuum-client'
 import {
     ObjectC3Type,
@@ -23,14 +23,14 @@ const composeFilePath = '../../'
 
 export async function initStructuresServer(): Promise<void> {
     try {
-        // const resolvedPath = path.resolve(composeFilePath)
-        //
-        // await compose.pullAll({cwd: resolvedPath, log: true})
-        //
-        // await compose.upAll({
-        //     cwd: resolvedPath,
-        //     log: true
-        // })
+        const resolvedPath = path.resolve(composeFilePath)
+
+        await compose.pullAll({cwd: resolvedPath, log: true})
+
+        await compose.upAll({
+            cwd: resolvedPath,
+            log: true
+        })
 
         await Continuum.connect({
             host:'127.0.0.1',
@@ -49,7 +49,7 @@ export async function shutdownStructuresServer(): Promise<void> {
     try {
         await Continuum.disconnect()
 
-       // await compose.down({cwd: path.resolve(composeFilePath), log: true})
+       await compose.down({cwd: path.resolve(composeFilePath), log: true})
     } catch (e) {
         console.error(e)
         throw e

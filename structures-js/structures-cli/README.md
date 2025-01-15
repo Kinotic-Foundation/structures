@@ -12,7 +12,7 @@ $ npm install -g @kinotic/structures-cli
 $ structures COMMAND
 running command...
 $ structures (--version)
-@kinotic/structures-cli/2.1.1 darwin-x64 node-v18.17.0
+@kinotic/structures-cli/2.1.2 darwin-arm64 node-v22.11.0
 $ structures --help [COMMAND]
 USAGE
   $ structures COMMAND
@@ -43,7 +43,7 @@ USAGE
 
 ## `structures autocomplete [SHELL]`
 
-display autocomplete installation instructions
+Display autocomplete installation instructions.
 
 ```
 USAGE
@@ -56,7 +56,7 @@ FLAGS
   -r, --refresh-cache  Refresh cache (ignores displaying instructions)
 
 DESCRIPTION
-  display autocomplete installation instructions
+  Display autocomplete installation instructions.
 
 EXAMPLES
   $ structures autocomplete
@@ -70,7 +70,7 @@ EXAMPLES
   $ structures autocomplete --refresh-cache
 ```
 
-_See code: [@oclif/plugin-autocomplete](https://github.com/oclif/plugin-autocomplete/blob/v2.3.3/src/commands/autocomplete/index.ts)_
+_See code: [@oclif/plugin-autocomplete](https://github.com/oclif/plugin-autocomplete/blob/v3.2.16/src/commands/autocomplete/index.ts)_
 
 ## `structures gen [NAMESPACE]`
 
@@ -128,28 +128,27 @@ EXAMPLES
   $ structures gen my.namespace -v
 ```
 
-_See code: [src/commands/generate.ts](https://github.com/Kinotic-Foundation/structures/blob/v2.1.1/src/commands/generate.ts)_
+_See code: [src/commands/generate.ts](https://github.com/Kinotic-Foundation/structures/blob/v2.1.2/src/commands/generate.ts)_
 
 ## `structures help [COMMAND]`
 
-display help for structures
+Display help for structures.
 
 ```
 USAGE
-  $ structures help [COMMAND] [--json] [--all]
+  $ structures help [COMMAND...] [-n]
 
 ARGUMENTS
-  COMMAND  command to show help for
+  COMMAND...  Command to show help for.
 
 FLAGS
-  --all   see all commands in CLI
-  --json  Format output as json.
+  -n, --nested-commands  Include all nested commands in the output.
 
 DESCRIPTION
-  display help for structures
+  Display help for structures.
 ```
 
-_See code: [@oclif/plugin-help](https://github.com/oclif/plugin-help/blob/v5.0.0/src/commands/help.ts)_
+_See code: [@oclif/plugin-help](https://github.com/oclif/plugin-help/blob/v6.0.21/src/commands/help.ts)_
 
 ## `structures init`
 
@@ -205,7 +204,7 @@ EXAMPLES
   $ structures init -n my.namespace -e path/to/entities -g path/to/services
 ```
 
-_See code: [src/commands/initialize.ts](https://github.com/Kinotic-Foundation/structures/blob/v2.1.1/src/commands/initialize.ts)_
+_See code: [src/commands/initialize.ts](https://github.com/Kinotic-Foundation/structures/blob/v2.1.2/src/commands/initialize.ts)_
 
 ## `structures plugins`
 
@@ -228,7 +227,7 @@ EXAMPLES
   $ structures plugins
 ```
 
-_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v5.0.14/src/commands/plugins/index.ts)_
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v5.4.24/src/commands/plugins/index.ts)_
 
 ## `structures plugins add PLUGIN`
 
@@ -253,7 +252,7 @@ GLOBAL FLAGS
 DESCRIPTION
   Installs a plugin into structures.
 
-  Uses bundled npm executable to install plugins into /Users/navid/.local/share/structures
+  Uses npm to install plugins.
 
   Installation of a user-installed plugin will override a core plugin.
 
@@ -302,7 +301,7 @@ EXAMPLES
   $ structures plugins inspect myplugin
 ```
 
-_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v5.0.14/src/commands/plugins/inspect.ts)_
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v5.4.24/src/commands/plugins/inspect.ts)_
 
 ## `structures plugins install PLUGIN`
 
@@ -327,7 +326,7 @@ GLOBAL FLAGS
 DESCRIPTION
   Installs a plugin into structures.
 
-  Uses bundled npm executable to install plugins into /Users/navid/.local/share/structures
+  Uses npm to install plugins.
 
   Installation of a user-installed plugin will override a core plugin.
 
@@ -351,7 +350,7 @@ EXAMPLES
     $ structures plugins install someuser/someplugin
 ```
 
-_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v5.0.14/src/commands/plugins/install.ts)_
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v5.4.24/src/commands/plugins/install.ts)_
 
 ## `structures plugins link PATH`
 
@@ -371,6 +370,7 @@ FLAGS
 
 DESCRIPTION
   Links a plugin into the CLI for development.
+
   Installation of a linked plugin will override a user-installed or core plugin.
 
   e.g. If you have a user-installed or core plugin that has a 'hello' command, installing a linked plugin with a 'hello'
@@ -381,7 +381,7 @@ EXAMPLES
   $ structures plugins link myplugin
 ```
 
-_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v5.0.14/src/commands/plugins/link.ts)_
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v5.4.24/src/commands/plugins/link.ts)_
 
 ## `structures plugins remove [PLUGIN]`
 
@@ -422,7 +422,7 @@ FLAGS
   --reinstall  Reinstall all plugins after uninstalling.
 ```
 
-_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v5.0.14/src/commands/plugins/reset.ts)_
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v5.4.24/src/commands/plugins/reset.ts)_
 
 ## `structures plugins uninstall [PLUGIN]`
 
@@ -450,7 +450,7 @@ EXAMPLES
   $ structures plugins uninstall myplugin
 ```
 
-_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v5.0.14/src/commands/plugins/uninstall.ts)_
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v5.4.24/src/commands/plugins/uninstall.ts)_
 
 ## `structures plugins unlink [PLUGIN]`
 
@@ -494,7 +494,7 @@ DESCRIPTION
   Update installed plugins.
 ```
 
-_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v5.0.14/src/commands/plugins/update.ts)_
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v5.4.24/src/commands/plugins/update.ts)_
 
 ## `structures sync [NAMESPACE]`
 
@@ -562,7 +562,7 @@ EXAMPLES
   $ structures sync my.namespace -p -v -s http://localhost:9090
 ```
 
-_See code: [src/commands/synchronize.ts](https://github.com/Kinotic-Foundation/structures/blob/v2.1.1/src/commands/synchronize.ts)_
+_See code: [src/commands/synchronize.ts](https://github.com/Kinotic-Foundation/structures/blob/v2.1.2/src/commands/synchronize.ts)_
 
 ## `structures update [CHANNEL]`
 
@@ -570,10 +570,11 @@ update the structures CLI
 
 ```
 USAGE
-  $ structures update [CHANNEL] [-a] [--force] [-i | -v <value>]
+  $ structures update [CHANNEL] [--force |  | [-a | -v <value> | -i]] [-b ]
 
 FLAGS
   -a, --available        See available versions.
+  -b, --verbose          Show more details about the available versions.
   -i, --interactive      Interactively select version to install. This is ignored if a channel is provided.
   -v, --version=<value>  Install a specific version.
       --force            Force a re-download of the requested version.
@@ -599,5 +600,5 @@ EXAMPLES
     $ structures update --available
 ```
 
-_See code: [@oclif/plugin-update](https://github.com/oclif/plugin-update/blob/v4.2.7/src/commands/update.ts)_
+_See code: [@oclif/plugin-update](https://github.com/oclif/plugin-update/blob/v4.6.21/src/commands/update.ts)_
 <!-- commandsstop -->

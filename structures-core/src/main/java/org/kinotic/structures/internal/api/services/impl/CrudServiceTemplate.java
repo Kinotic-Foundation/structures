@@ -94,7 +94,6 @@ public class CrudServiceTemplate {
                                                             builder.settings(s -> s
                                                                     .numberOfShards("3")
                                                                     .numberOfReplicas("2")
-                                                                    .refreshInterval(t -> t.time("1s"))
                                                                     .store(st -> st.type(StorageType.Fs))
                                                             );
 
@@ -191,7 +190,7 @@ public class CrudServiceTemplate {
                 (JsonEndpoint<GetRequest, GetResponse<T>, ErrorResponse>) GetRequest._ENDPOINT;
 
         endpoint = new EndpointWithResponseMapperAttr<>(endpoint,
-                                                        "co.elastic.clients:Deserializer:_global.get.TDocument",
+                                                        "co.elastic.clients:Deserializer:_global.get.Response.TDocument",
                                                         deserializer);
 
         GetRequest.Builder builder = new GetRequest.Builder();
@@ -255,7 +254,7 @@ public class CrudServiceTemplate {
                 (JsonEndpoint<MgetRequest, MgetResponse<T>, ErrorResponse>) MgetRequest._ENDPOINT;
 
         endpoint = new EndpointWithResponseMapperAttr<>(endpoint,
-                "co.elastic.clients:Deserializer:_global.mget.TDocument",
+                "co.elastic.clients:Deserializer:_global.mget.Response.TDocument",
                 deserializer);
 
         MgetRequest.Builder builder = new MgetRequest.Builder();
@@ -341,7 +340,7 @@ public class CrudServiceTemplate {
         JsonEndpoint<SearchRequest, SearchResponse<T>, ErrorResponse> endpoint =
                 (JsonEndpoint<SearchRequest, SearchResponse<T>, ErrorResponse>) SearchRequest._ENDPOINT;
         endpoint = new EndpointWithResponseMapperAttr<>(endpoint,
-                                                        "co.elastic.clients:Deserializer:_global.search.TDocument",
+                                                        "co.elastic.clients:Deserializer:_global.search.Response.TDocument",
                                                         getDeserializer(type));
 
         SearchRequest.Builder builder = new SearchRequest.Builder();

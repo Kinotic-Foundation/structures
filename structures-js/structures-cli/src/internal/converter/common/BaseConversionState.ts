@@ -14,6 +14,7 @@ export class BaseConversionState {
     private readonly useFullJsonPathForCalculatedProperties: boolean
     private _entityConfiguration: EntityConfiguration | undefined = undefined
     private _exclusionMap: Map<string, void> | null = null
+    private readonly _namespace: string
     private _overridesMap: Map<string, OverrideConfiguration> | null = null
     private _transformsMap: Map<string, TransformConfiguration> | null = null
     private _calculatedPropertiesMap: Map<string, CalculatedPropertyConfiguration[]> | null = null
@@ -24,8 +25,10 @@ export class BaseConversionState {
      * @param utilFunctionLocator used to locate util functions
      * @param useFullJsonPathForCalculatedProperties
      */
-    constructor(utilFunctionLocator: UtilFunctionLocator | null,
+    constructor(namespace: string,
+                utilFunctionLocator: UtilFunctionLocator | null,
                 useFullJsonPathForCalculatedProperties = false) {
+        this._namespace = namespace
         this.utilFunctionLocator = utilFunctionLocator
         this.useFullJsonPathForCalculatedProperties = useFullJsonPathForCalculatedProperties
     }
@@ -82,6 +85,10 @@ export class BaseConversionState {
             this._transformsMap = null
             this._calculatedPropertiesMap = null
         }
+    }
+
+    get namespace(): string {
+        return this._namespace
     }
 
     shouldExclude(jsonPath: string): boolean {

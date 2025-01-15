@@ -49,6 +49,12 @@ public class DefaultEntityContext implements EntityContext {
     }
 
     @Override
+    public EntityContext putAll(Map<String, Object> value) {
+        getData().putAll(value);
+        return this;
+    }
+
+    @Override
     @SuppressWarnings("unchecked")
     public <T> T get(String key) {
         Object obj = getData().get(key);

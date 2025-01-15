@@ -26,7 +26,7 @@ public class PageC3TypeToGql implements C3TypeConverter<GqlTypeHolder, PageC3Typ
         // This is safe to assume because pageC3Type.getContentType() is an ObjectC3Type
         ret = ret.toBuilder()
                  .inputType(null) // page types are always output only
-                 .outputType(nonNull(GqlUtils.wrapTypeWithPage((GraphQLNamedOutputType)ret.getOutputType())))
+                 .outputType(nonNull(GqlUtils.wrapTypeWithPage((GraphQLNamedOutputType)ret.outputType())))
                  .build();
         return ret;
     }

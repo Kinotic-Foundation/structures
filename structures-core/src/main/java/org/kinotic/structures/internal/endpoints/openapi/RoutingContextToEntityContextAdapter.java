@@ -51,6 +51,14 @@ public class RoutingContextToEntityContextAdapter implements EntityContext {
     }
 
     @Override
+    public EntityContext putAll(Map<String, Object> value) {
+        for(Map.Entry<String, Object> entry : value.entrySet()){
+            routingContext.put(entry.getKey(), entry.getValue());
+        }
+        return null;
+    }
+
+    @Override
     public <T> T remove(String key) {
         return routingContext.remove(key);
     }

@@ -20,16 +20,20 @@ export class UnionToC3Type implements ITypeConverter<Type, C3Type, TypescriptCon
         const stringLiterals: string[] = []
 
         // Unions are interesting because there are unions that are not invalid but not a union when it comes to C3
-        // For example: string | undefined | null
+        // For example:
+        // string | undefined | null
         // This is not a union in C3 because it is not a union of objects
 
-        // Another example: let var?: string
+        // Another example:
+        // let var?: string
         // Which provides the union types of string | undefined
 
-        // Another example: let var?: MyEnum
+        // Another example:
+        // let var?: MyEnum
         // Which provides the union types of undefined | MyEnum.FIRST | MyEnum.SECOND ect..
 
-        // Another example: let var?: boolean
+        // Another example:
+        // let var?: boolean
         // Which provides the union types of undefined | true | false
 
         value.getUnionTypes().forEach((unionType: Type) => {

@@ -38,18 +38,22 @@ public class StructuresJacksonConfig {
     public SimpleModule structuresJacksonModule(ApplicationContext applicationContext){
         SimpleModule ret = new SimpleModule("StructuresModule", Version.unknownVersion());
 
-        Set<MetadataReader> decoratorMetas = MetaUtil.findClassesWithSuperClass(applicationContext,
-                                                                                List.of("org.kinotic.structures.api.domain.idl.decorators"),
-                                                                                C3Decorator.class.getName());
+        Set<MetadataReader> decoratorMetas = MetaUtil.findClassesAssignableToType(applicationContext,
+                                                                                  List.of("org.kinotic.structures.api.domain.idl.decorators"),
+                                                                                  C3Decorator.class);
         // Register all C3Decorator's with Jackson
         for(MetadataReader decoratorMeta : decoratorMetas){
-            try {
-                Pair<Class<?>, String> decoratorInfo = getDecoratorInfo(decoratorMeta);
 
-                ret.registerSubtypes(new NamedType(decoratorInfo.getLeft(), decoratorInfo.getRight()));
+            if(!decoratorMeta.getClassMetadata().isAbstract()) {
+                try {
+                    Pair<Class<?>, String> decoratorInfo = getDecoratorInfo(decoratorMeta);
 
-            } catch (NoSuchFieldException e) {
-                log.warn(decoratorMeta.getClassMetadata().getClassName() + " Could not be mapped. A public static final field named 'type' must exist on the class.");
+                    ret.registerSubtypes(new NamedType(decoratorInfo.getLeft(), decoratorInfo.getRight()));
+
+                } catch (NoSuchFieldException e) {
+                    log.warn("{} Could not be mapped. A public static final field named 'type' must exist on the class.",
+                             decoratorMeta.getClassMetadata().getClassName());
+                }
             }
         }
         // register additional needed types

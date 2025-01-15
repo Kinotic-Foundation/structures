@@ -29,8 +29,7 @@ public class UnionC3TypeToGql implements C3TypeConverter<GqlTypeHolder, UnionC3T
 
         for(ObjectC3Type objectC3Type : c3Type.getTypes()){
             GqlTypeHolder typeHolder = conversionContext.convert(objectC3Type);
-            if(typeHolder.getOutputType() instanceof GraphQLObjectType){
-                GraphQLObjectType objectType = (GraphQLObjectType) typeHolder.getOutputType();
+            if(typeHolder.outputType() instanceof GraphQLObjectType objectType){
                 String objectTypeName = objectType.getName();
 
                 conversionContext.state().getReferencedTypes().put(objectTypeName, objectType);
@@ -48,7 +47,11 @@ public class UnionC3TypeToGql implements C3TypeConverter<GqlTypeHolder, UnionC3T
             conversionContext.state().getUnionTypes().put(unionType.getName(),
                                                           Pair.of(unionType, new DiscriminatorTypeResolver(discriminatorDecorator.getPropertyName())));
         }else{
-            //  we set a no op resolver and if this is an Object property that has a Discriminator that will take precedence
+            // we set a no op resolver, and if this is an Object property that has a Discriminator, that will take precedence
+            // TODO: this is pretty much an error condition. Currently we just log a warning when the NoOpTypeResolver is called..
+            //       this is probably not what the user wants.
+            //       We should probably keep a list of problems with the schema somewhere so the user can see them.
+            //       Since this only affects graphql and the user may not care.
             conversionContext.state().getUnionTypes().put(unionType.getName(),
                                                           Pair.of(unionType, new NoOpTypeResolver()));
         }

@@ -3,10 +3,6 @@ plugins {
 	id 'io.freefair.lombok'
 }
 
-ext {
-
-}
-
 dependencies {
 	implementation "io.opentelemetry.instrumentation:opentelemetry-instrumentation-annotations:${otelAnnotationsVersion}"
 
@@ -18,23 +14,23 @@ dependencies {
 	implementation 'org.reactivestreams:reactive-streams'
 	implementation 'io.projectreactor:reactor-core'
 
-	implementation "io.vertx:vertx-web:${vertxVersion}"
-	implementation "io.vertx:vertx-web-graphql:${vertxVersion}"
-	implementation "io.vertx:vertx-web-client:${vertxVersion}"
-	implementation "io.vertx:vertx-health-check:${vertxVersion}"
-	implementation "com.github.rworsnop:vertx-beans:${vertxBeansVersion}"
-	implementation "me.escoffier.vertx:vertx-completable-future:${vertxCompletableFutureVersion}"
+	implementation "io.vertx:vertx-web"
+	implementation "io.vertx:vertx-web-graphql"
+	implementation "io.vertx:vertx-web-client"
+	implementation "io.vertx:vertx-health-check"
+	implementation "com.github.rworsnop:vertx-beans"
+	implementation "me.escoffier.vertx:vertx-completable-future"
 
-	implementation "org.kinotic:continuum-core:${continuumVersion}"
-	implementation "org.kinotic:continuum-core-vertx:${continuumVersion}"
-	implementation "org.kinotic:continuum-gateway:${continuumVersion}"
-	implementation "org.kinotic:continuum-idl:${continuumVersion}"
+	implementation "org.kinotic:continuum-core"
+	implementation "org.kinotic:continuum-core-vertx"
+	implementation "org.kinotic:continuum-gateway"
+	implementation "org.kinotic:continuum-idl"
 
 	implementation 'com.fasterxml.jackson.core:jackson-annotations'
 	implementation 'com.fasterxml.jackson.core:jackson-core'
 	implementation 'com.fasterxml.jackson.core:jackson-databind'
 
-	implementation "com.github.ben-manes.caffeine:caffeine:${caffeineVersion}"
+	implementation "com.github.ben-manes.caffeine:caffeine"
 
 	implementation "com.graphql-java:graphql-java"
 	implementation "com.apollographql.federation:federation-graphql-java-support:${graphQlFederationJvmVersion}"

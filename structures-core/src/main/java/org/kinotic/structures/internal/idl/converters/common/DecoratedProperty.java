@@ -23,4 +23,18 @@ public class DecoratedProperty {
 
     private List<C3Decorator> decorators;
 
+    public <T extends C3Decorator> T findDecorator(Class<T> clazz){
+        T ret = null;
+        if(getDecorators() != null){
+            for (C3Decorator decorator : getDecorators()){
+                if(clazz.isAssignableFrom(decorator.getClass())){
+                    //noinspection unchecked
+                    ret = (T) decorator;
+                    break;
+                }
+            }
+        }
+        return ret;
+    }
+
 }

@@ -5,6 +5,11 @@
       "signature": "25c7412dd59ede4b4a316c8e08423c48",
       "link": true,
       "replaced": "^0.1.0"
+    },
+    "@kinotic/structures-api": {
+      "signature": "e9c10fa7445940497811c288506b772e",
+      "file": true,
+      "replaced": "^2.0.0"
     }
   }
 }

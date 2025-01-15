@@ -3,7 +3,7 @@ name: Build and Deploy Structures Website
 on:
   push:
     branches:
-      - main
+      - develop
     paths:
       - 'website/**'
 
@@ -13,25 +13,33 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+        with:
+          version: 9
+          run_install: false
 
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 22
+          cache: 'pnpm'
+          cache-dependency-path: "./website/pnpm-lock.yaml"
 
       - name: Install dependencies
         run: |
           cd website
-          yarn install
+          pnpm install
 
       - name: Build Structures site
         run: |
           cd website
-          yarn docs:build
+          pnpm docs:build
 
       - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: website/.vitepress/dist

@@ -11,6 +11,10 @@ import {
     IServiceRegistry
 } from '@kinotic/continuum-client'
 
+export interface EntityContext {
+    [key: string]: any;
+}
+
 export interface IEntitiesService {
 
     /**
@@ -76,8 +80,8 @@ export interface IEntitiesService {
 
     /**
      * Returns a single {@link Page} of entities meeting the paging restriction provided in the {@link Pageable} object.
-     * @param structureId
-     * @param pageable
+     * @param structureId the id of the structure to save the entity for
+     * @param pageable the page settings to be used
      */
     findAllSinglePage<T>(structureId: string, pageable: Pageable): Promise<Page<T>>
 
@@ -157,8 +161,8 @@ export interface IEntitiesService {
 
     /**
      * Updates a given entity. This will only override the fields that are present in the given entity.
-     * If any fields are not present in the given entity data they will not be changed.
-     * If the entity does not exist it will be created.
+     * If any fields are not present in the given entity data, they will not be changed.
+     * If the entity does not exist, it will be created.
      * Use the returned instance for further operations as the save operation might have changed the entity instance.
      *
      * @param structureId the id of the structure to update the entity for

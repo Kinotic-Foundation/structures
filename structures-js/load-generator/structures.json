@@ -1,0 +1,14 @@
+{
+  "namespaces": [
+    {
+      "namespaceName": "load-testing",
+      "entitiesPaths": [
+        "src/entity/domain"
+      ],
+      "generatedPath": "src/entity/services",
+      "validate": false
+    }
+  ],
+  "defaultNamespaceName": "load-testing",
+  "fileExtensionForImports": ".js"
+}

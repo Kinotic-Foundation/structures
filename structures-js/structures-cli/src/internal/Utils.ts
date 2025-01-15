@@ -7,18 +7,17 @@ import {
     IEvent,
     ParticipantConstants
 } from '@kinotic/continuum-client'
-import {C3Type, ComplexC3Type, FunctionDefinition, ObjectC3Type} from '@kinotic/continuum-idl'
+import {C3Type, FunctionDefinition, ObjectC3Type} from '@kinotic/continuum-idl'
 import {EntityDecorator} from '@kinotic/structures-api'
 import fs from 'fs'
 import fsPromises from 'fs/promises'
-import inquirer from 'inquirer'
+import { confirm } from '@inquirer/prompts'
 import open from 'open'
 import pTimeout from 'p-timeout'
 import path from 'path'
 import {IndentationText, Node, Project} from 'ts-morph'
 import {v4 as uuidv4} from 'uuid'
 import {createConversionContext} from './converter/IConversionContext.js'
-import {tsDecoratorToC3Decorator} from './converter/typescript/ConverterUtils.js'
 import {TypescriptConversionState} from './converter/typescript/TypescriptConversionState.js'
 import {TypescriptConverterStrategy} from './converter/typescript/TypescriptConverterStrategy.js'
 import {Logger} from './Logger.js'
@@ -101,28 +100,17 @@ export async function connectAndUpgradeSession(server: string, logger: Logger): 
             logger.log('Authenticate your account at:')
             logger.log(url)
 
-            const answers = inquirer.prompt({
-                type: 'confirm',
-                name: 'confirm',
+            const answer = await confirm({
                 message: 'Open in browser?',
                 default: true,
             })
-            answers.then((value: any) => {
-                if(value?.confirm){
-                    open(url)
-                }else{
-                    logger.log('Browser will not be opened. You must authenticate your account before continuing.')
-                }
-            }, (reason: any) => {
-                // noop, since canceling the promise throws an error
-            })
+            if(answer) {
+                await open(url)
+            }else{
+                logger.log('Browser will not be opened. You must authenticate your account before continuing.')
+            }
 
             const sessionId = await receiveSessionId(scope)
-
-            // We got session id we don't care about the prompt anymore
-            // This happens if the user opens the url in the browser and authenticates
-            // @ts-ignore
-            answers.ui.close()
 
             await Continuum.disconnect()
 
@@ -282,18 +270,15 @@ export function convertAllEntities(config: ConversionConfiguration): EntityInfo[
 
                             if (c3Type != null) {
 
-                                // TODO; this seems like it is only needed if we are going to add this to the entities array
-                                if(c3Type instanceof ComplexC3Type) {
-                                    if (decorator) {
-                                        c3Type.addDecorator(tsDecoratorToC3Decorator(decorator)!)
-                                    } else if (entityConfig) {
+                                if (c3Type instanceof ObjectC3Type) {
+
+                                    // External object, need to manually add the MultiTenancyType
+                                    if (entityConfig) {
                                         const entityDecorator = new EntityDecorator()
                                         entityDecorator.multiTenancyType = entityConfig.multiTenancyType
                                         c3Type.addDecorator(entityDecorator)
                                     }
-                                }
 
-                                if (c3Type instanceof ObjectC3Type) {
                                     entities.push({
                                                       exportedFromFile: declaration.getSourceFile().getFilePath(),
                                                       defaultExport: declaration.isDefaultExport(),
