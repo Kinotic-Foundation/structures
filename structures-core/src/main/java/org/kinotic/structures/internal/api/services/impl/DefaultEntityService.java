@@ -218,7 +218,8 @@ public class DefaultEntityService implements EntityService {
                                                     .routing(routing)
                                                     .index(structure.getItemIndex())
                                                     .id(entityHolder.getDocumentId())
-                                                    .document(binaryData))
+                                                    .document(binaryData)
+                                                    .refresh(Refresh.True))
                                             .thenApply(indexResponse -> {
                                                 context.put(EntityContextConstants.ENTITY_ID_KEY, entityHolder.id());
                                                 return (T) rawEntity;
@@ -228,7 +229,8 @@ public class DefaultEntityService implements EntityService {
                                                     .routing(routing)
                                                     .index(structure.getItemIndex())
                                                     .id(entityHolder.getDocumentId())
-                                                    .document(entityHolder.entity()))
+                                                    .document(entityHolder.entity())
+                                                    .refresh(Refresh.True))
                                             .thenApply(indexResponse -> {
                                                 context.put(EntityContextConstants.ENTITY_ID_KEY, entityHolder.id());
                                                 return (T) entityHolder.entity();
