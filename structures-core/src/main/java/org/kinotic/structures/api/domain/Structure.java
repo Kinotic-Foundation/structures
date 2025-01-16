@@ -31,6 +31,7 @@ import org.kinotic.structures.internal.idl.converters.common.DecoratedProperty;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.*;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -75,7 +76,7 @@ public class Structure implements Identifiable<String> {
     private String itemIndex = null; // do not ever set, system managed
 
     @Field(type = FieldType.Flattened)
-    private List<DecoratedProperty> decoratedProperties = null; // do not ever set, system managed
+    private List<DecoratedProperty> decoratedProperties = new ArrayList<>(); // do not ever set, system managed
 
     @Override
     public boolean equals(Object o) {
