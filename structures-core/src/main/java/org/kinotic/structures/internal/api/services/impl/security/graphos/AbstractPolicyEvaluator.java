@@ -24,23 +24,30 @@ public abstract class AbstractPolicyEvaluator implements PolicyEvaluator {
         Set<String> allPolicies = new HashSet<>(sharedPolicyManager.getSharedPolicies());
         addOperationPolicies(allPolicies);
 
-        Map<String, PolicyAuthorizationRequest> policyRequests = allPolicies.stream()
-                                                                            .collect(Collectors.toMap(policy -> policy, DefaultPolicyAuthorizationRequest::new));
+        // no need to call authorizer if there are no policies to evaluate
+        if (allPolicies.isEmpty()) {
 
-        List<PolicyAuthorizationRequest> requests = new ArrayList<>(policyRequests.values());
+            return CompletableFuture.completedFuture(new AuthorizationResult(true, true, Collections.emptyMap()));
 
-        return authorizer.authorize(requests, securityContext)
-                         .thenApply(ignored -> {
+        }else {
+            Map<String, PolicyAuthorizationRequest> policyRequests = allPolicies.stream()
+                                                                                .collect(Collectors.toMap(policy -> policy,
+                                                                                                          DefaultPolicyAuthorizationRequest::new));
+            List<PolicyAuthorizationRequest> requests = new ArrayList<>(policyRequests.values());
 
-                             Map<String, Boolean> fieldResults = evaluateFieldPolicies(policyRequests);
+            return authorizer.authorize(requests, securityContext)
+                             .thenApply(ignored -> {
 
-                             boolean operationAllowed = isOperationAllowed(policyRequests);
+                                 Map<String, Boolean> fieldResults = evaluateFieldPolicies(policyRequests);
 
-                             boolean entityAllowed = sharedPolicyManager.getEntityExpression() == null
-                                     || sharedPolicyManager.getEntityExpression().evaluate(policyRequests);
+                                 boolean operationAllowed = isOperationAllowed(policyRequests);
 
-                             return new AuthorizationResult(operationAllowed, entityAllowed, fieldResults);
-                         });
+                                 boolean entityAllowed = sharedPolicyManager.getEntityExpression() == null
+                                         || sharedPolicyManager.getEntityExpression().evaluate(policyRequests);
+
+                                 return new AuthorizationResult(operationAllowed, entityAllowed, fieldResults);
+                             });
+        }
     }
 
     private Map<String, Boolean> evaluateFieldPolicies(Map<String, PolicyAuthorizationRequest> policyRequests) {

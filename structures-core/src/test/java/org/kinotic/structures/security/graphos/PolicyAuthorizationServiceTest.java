@@ -25,6 +25,58 @@ public class PolicyAuthorizationServiceTest {
     private final PolicyAuthorizer authorizer = new MockPolicyAuthorizer();
 
     @Test
+    public void testAuthorizeWithNoPoliciesOnStructure() {
+        Structure structure = new Structure();
+        structure.setNamespace("testNamespace");
+        structure.setName("testName");
+
+        ObjectC3Type entityDefinition = new ObjectC3Type();
+        structure.setEntityDefinition(entityDefinition);
+
+        StructurePolicyAuthorizationService service = new StructurePolicyAuthorizationService(structure, authorizer);
+
+        CompletableFuture<Void> result = service.authorize(EntityOperation.FIND_ALL, null);
+
+        assertDoesNotThrow(result::join); // Should pass since there are no policies
+    }
+
+    @Test
+    public void testAuthorizeWithEntityOnlyPolicies(){
+        Structure structure = new Structure();
+        structure.setNamespace("testNamespace");
+        structure.setName("testName");
+
+        ObjectC3Type entityDefinition = new ObjectC3Type();
+        entityDefinition.addDecorator(new PolicyDecorator().setPolicies(List.of(List.of("policy1"))));
+        structure.setEntityDefinition(entityDefinition);
+
+        StructurePolicyAuthorizationService service = new StructurePolicyAuthorizationService(structure, authorizer);
+
+        CompletableFuture<Void> result = service.authorize(EntityOperation.FIND_ALL, null);
+
+        assertDoesNotThrow(result::join); // Should pass since the READ operation policy is allowed
+    }
+
+    @Test
+    public void testAuthorizeDeniedWithEntityOnlyPolicies(){
+        Structure structure = new Structure();
+        structure.setNamespace("testNamespace");
+        structure.setName("testName");
+
+        ObjectC3Type entityDefinition = new ObjectC3Type();
+        entityDefinition.addDecorator(new PolicyDecorator().setPolicies(List.of(List.of("policy2"))));
+        structure.setEntityDefinition(entityDefinition);
+
+        StructurePolicyAuthorizationService service = new StructurePolicyAuthorizationService(structure, authorizer);
+
+        CompletableFuture<Void> result = service.authorize(EntityOperation.FIND_ALL, null);
+
+        Throwable exception = assertThrows(CompletionException.class, result::join);
+        assertInstanceOf(AuthorizationException.class, exception.getCause());
+        assertTrue(exception.getCause().getMessage().endsWith("Entity access not allowed.")); // Fails due to policy2
+    }
+
+    @Test
     public void testAuthorizeReadOperationWithNoFieldPolicies() {
         Structure structure = createStructureWithNoFieldPolicies();
         StructurePolicyAuthorizationService service = new StructurePolicyAuthorizationService(structure, authorizer);
