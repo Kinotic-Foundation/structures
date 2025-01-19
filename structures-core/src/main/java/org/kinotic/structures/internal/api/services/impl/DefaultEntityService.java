@@ -65,7 +65,7 @@ public class DefaultEntityService implements EntityService {
                                     entityHolder -> BulkOperation.of(b -> b
                                             .index(idx -> idx.index(structure.getItemIndex())
                                                              .id(entityHolder.getDocumentId())
-                                                             .document(entityHolder.getEntity())
+                                                             .document(entityHolder.entity())
                                             ))));
     }
 
@@ -78,7 +78,7 @@ public class DefaultEntityService implements EntityService {
                                             .update(u -> u
                                                     .index(structure.getItemIndex())
                                                     .id(entityHolder.getDocumentId())
-                                                    .action(upB -> upB.doc(entityHolder.getEntity())
+                                                    .action(upB -> upB.doc(entityHolder.entity())
                                                                       .docAsUpsert(true)
                                                                       .detectNoop(true))
                                             ))));
@@ -90,8 +90,8 @@ public class DefaultEntityService implements EntityService {
         return authService.authorize(EntityOperation.COUNT, context)
                           .thenCompose(un -> validateTenant(context)
                                   .thenCompose(unused -> crudServiceTemplate
-                                .count(structure.getItemIndex(),
-                                       builder -> readPreProcessor.beforeCount(structure, null, builder, context))));
+                                          .count(structure.getItemIndex(),
+                                                 builder -> readPreProcessor.beforeCount(structure, null, builder, context))));
     }
 
     @WithSpan
@@ -167,11 +167,11 @@ public class DefaultEntityService implements EntityService {
                                                      Class<T> type,
                                                      EntityContext context) {
         return validateTenant(context)
-                        .thenCompose(unused -> namedQueriesService.executeNamedQuery(structure,
-                                                                                     queryName,
-                                                                                     parameterHolder,
-                                                                                     type,
-                                                                                     context));
+                .thenCompose(unused -> namedQueriesService.executeNamedQuery(structure,
+                                                                             queryName,
+                                                                             parameterHolder,
+                                                                             type,
+                                                                             context));
     }
 
     @WithSpan
@@ -182,19 +182,20 @@ public class DefaultEntityService implements EntityService {
                                                          Class<T> type,
                                                          EntityContext context) {
         return validateTenant(context)
-                        .thenCompose(unused -> namedQueriesService.executeNamedQueryPage(structure,
-                                                                                         queryName,
-                                                                                         parameterHolder,
-                                                                                         pageable,
-                                                                                         type,
-                                                                                         context));
+                .thenCompose(unused -> namedQueriesService.executeNamedQueryPage(structure,
+                                                                                 queryName,
+                                                                                 parameterHolder,
+                                                                                 pageable,
+                                                                                 type,
+                                                                                 context));
     }
 
     @Override
     public CompletableFuture<Void> syncIndex(EntityContext context) {
         return authService.authorize(EntityOperation.SYNC_INDEX, context).thenCompose(
                 un -> esAsyncClient.indices()
-                                   .refresh(b -> b.index(structure.getItemIndex()))
+                                   .refresh(b -> b.index(structure.getItemIndex())
+                                                  .allowNoIndices(false))
                                    .thenApply(unused -> null));
     }
 
@@ -211,7 +212,7 @@ public class DefaultEntityService implements EntityService {
 
                     // This is a bit of a hack since the BinaryData type does not work properly to retrieve complex objects, but does work to store them.
                     // https://github.com/elastic/elasticsearch-java/issues/574
-                    if(entityHolder.getEntity() instanceof RawJson rawEntity){
+                    if(entityHolder.entity() instanceof RawJson rawEntity){
                         BinaryData binaryData = BinaryData.of(rawEntity.data(), ContentType.APPLICATION_JSON);
                         return esAsyncClient.index(i -> i
                                                     .routing(routing)
@@ -220,7 +221,7 @@ public class DefaultEntityService implements EntityService {
                                                     .document(binaryData)
                                                     .refresh(Refresh.True))
                                             .thenApply(indexResponse -> {
-                                                context.put(EntityContextConstants.ENTITY_ID_KEY, entityHolder.getId());
+                                                context.put(EntityContextConstants.ENTITY_ID_KEY, entityHolder.id());
                                                 return (T) rawEntity;
                                             });
                     }else{
@@ -228,11 +229,11 @@ public class DefaultEntityService implements EntityService {
                                                     .routing(routing)
                                                     .index(structure.getItemIndex())
                                                     .id(entityHolder.getDocumentId())
-                                                    .document(entityHolder.getEntity())
+                                                    .document(entityHolder.entity())
                                                     .refresh(Refresh.True))
                                             .thenApply(indexResponse -> {
-                                                context.put(EntityContextConstants.ENTITY_ID_KEY, entityHolder.getId());
-                                                return (T) entityHolder.getEntity();
+                                                context.put(EntityContextConstants.ENTITY_ID_KEY, entityHolder.id());
+                                                return (T) entityHolder.entity();
                                             });
                     }
                 }));
@@ -266,12 +267,12 @@ public class DefaultEntityService implements EntityService {
                                                 .routing(routing)
                                                 .index(structure.getItemIndex())
                                                 .id(entityHolder.getDocumentId())
-                                                .doc(entityHolder.getEntity())
+                                                .doc(entityHolder.entity())
                                                 .docAsUpsert(true)
-                                                .refresh(Refresh.True)), entityHolder.getEntity().getClass())
+                                                .refresh(Refresh.True)), entityHolder.entity().getClass())
                                         .thenApply(updateResponse -> {
-                                            context.put(EntityContextConstants.ENTITY_ID_KEY, entityHolder.getId());
-                                            return (T) entityHolder.getEntity();
+                                            context.put(EntityContextConstants.ENTITY_ID_KEY, entityHolder.id());
+                                            return (T) entityHolder.entity();
                                         });
                 }));
     }
@@ -353,7 +354,7 @@ public class DefaultEntityService implements EntityService {
                             List<BulkOperation> bulkOperations = new ArrayList<>(list.size());
                             for(EntityHolder entityHolder : list){
 
-                                if(entityHolder.getId() == null || entityHolder.getId().isEmpty()){
+                                if(entityHolder.id() == null || entityHolder.id().isEmpty()){
                                     return CompletableFuture.failedFuture(new IllegalArgumentException("All Entities must have an id"));
                                 }
 
@@ -395,12 +396,12 @@ public class DefaultEntityService implements EntityService {
                         .process(entity, context)
                         .thenCompose(entityHolder -> {
 
-                            if(entityHolder.getId() == null || entityHolder.getId().isEmpty()){
+                            if(entityHolder.id() == null || entityHolder.id().isEmpty()){
                                 return CompletableFuture.failedFuture(new IllegalArgumentException("Entity must have an id"));
                             }
 
                             return persistLogic.apply(entityHolder)
-                                               .thenApply(response -> entityHolder.getEntity());
+                                               .thenApply(response -> entityHolder.entity());
                         }));
     }
 

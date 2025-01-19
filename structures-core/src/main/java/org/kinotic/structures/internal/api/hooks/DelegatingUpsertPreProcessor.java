@@ -35,6 +35,7 @@ public class DelegatingUpsertPreProcessor implements UpsertPreProcessor<Object, 
                                                                   structure,
                                                                   fieldPreProcessors);
         mapUpsertPreProcessor = new MapUpsertPreProcessor(structure,
+                                                          structuresProperties,
                                                           fieldPreProcessors);
         pojoUpsertPreProcessor = new PojoUpsertPreProcessor();
     }

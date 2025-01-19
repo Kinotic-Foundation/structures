@@ -5,6 +5,8 @@ import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.commons.lang3.Validate;
+import org.kinotic.continuum.api.exceptions.AuthenticationException;
+import org.kinotic.continuum.api.exceptions.AuthorizationException;
 import org.kinotic.continuum.core.api.crud.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -138,6 +140,10 @@ public class VertxWebUtil {
                     statusCode = 400;
                 } else if (throwable instanceof NullPointerException) {
                     statusCode = 400;
+                } else if(throwable instanceof AuthenticationException){
+                    statusCode = 401;
+                } else if (throwable instanceof AuthorizationException) {
+                    statusCode = 403;
                 } else {
                     statusCode = 500;
                 }

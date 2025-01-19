@@ -29,6 +29,7 @@ public class StructurePolicyAuthorizationService implements AuthorizationService
 
     private static final Logger log = LoggerFactory.getLogger(StructurePolicyAuthorizationService.class);
     private final Map<EntityOperation, PolicyEvaluator> operationEvaluators = new HashMap<>();
+    private final PolicyEvaluatorWithoutOperation sharedEvaluator;
     private final String structureId;
 
     public StructurePolicyAuthorizationService(Structure structure,
@@ -50,7 +51,7 @@ public class StructurePolicyAuthorizationService implements AuthorizationService
 
         SharedPolicyManager sharedPolicyManager = new SharedPolicyManager(entityPolicies != null ? entityPolicies.getPolicies() : null,
                                                                           fieldPolicies);
-        PolicyEvaluatorWithoutOperation sharedEvaluator = new PolicyEvaluatorWithoutOperation(policyAuthorizer, sharedPolicyManager);
+        sharedEvaluator = new PolicyEvaluatorWithoutOperation(policyAuthorizer, sharedPolicyManager);
 
         // Check if we have any policy decorators to apply to operations
         EntityServiceDecoratorsDecorator decorators = entityDefinition.findDecorator(EntityServiceDecoratorsDecorator.class);
@@ -63,8 +64,6 @@ public class StructurePolicyAuthorizationService implements AuthorizationService
                 List<List<String>> operationPolicies = extractPolicies(entry.getValue());
                 if(!operationPolicies.isEmpty()){
                     operationEvaluators.put(entry.getKey(), new PolicyEvaluatorWithOperation(policyAuthorizer, sharedPolicyManager, operationPolicies));
-                }else{
-                    operationEvaluators.put(entry.getKey(), sharedEvaluator);
                 }
             }
         }
@@ -74,40 +73,39 @@ public class StructurePolicyAuthorizationService implements AuthorizationService
     public CompletableFuture<Void> authorize(EntityOperation operation, SecurityContext securityContext) {
         try {
             PolicyEvaluator evaluator = operationEvaluators.get(operation);
-            if(evaluator != null){
-
-                return evaluator.evaluatePolicies(securityContext).thenCompose(result -> {
-
-                    // Check if the operation is allowed i.e. findAll, save
-                    if(!result.operationAllowed()){
-
-                        return CompletableFuture.failedFuture(new AuthorizationException("Operation %s not allowed.".formatted(operation)));
-
-                    } else if (!result.entityAllowed()) { // Check if access to the entity is allowed
-
-                        return CompletableFuture.failedFuture(new AuthorizationException("Structure %s Entity access not allowed.".formatted(structureId)));
-
-                    } else { // Check if access to the individual fields are allowed
-
-                        List<String> deniedFields = new ArrayList<>();
-                        for(Map.Entry<String, Boolean> fieldResult : result.fieldResults().entrySet()){
-                            if(!fieldResult.getValue()){
-                                deniedFields.add(fieldResult.getKey());
-                            }
-                        }
-                        if(!deniedFields.isEmpty()){
-                            return CompletableFuture.failedFuture(new AuthorizationException("Structure %s Fields %s access not allowed.".formatted(structureId, deniedFields)));
-                        }else{
-                            return CompletableFuture.completedFuture(null);
-                        }
-
-                    }
-                });
-            }else{
-                // This should never happen as long as the EntityOperation is being used properly by the EntityService implementation
-                log.error("No policy evaluator found for operation: {}.", operation);
-                return CompletableFuture.failedFuture(new IllegalArgumentException("No policy evaluator found for operation: " + operation));
+            // if no operation policy use the
+            if(evaluator == null) {
+                evaluator = sharedEvaluator;
             }
+
+            return evaluator.evaluatePolicies(securityContext).thenCompose(result -> {
+
+                // Check if the operation is allowed i.e. findAll, save
+                if(!result.operationAllowed()){
+
+                    return CompletableFuture.failedFuture(new AuthorizationException("Operation %s not allowed.".formatted(operation)));
+
+                } else if (!result.entityAllowed()) { // Check if access to the entity is allowed
+
+                    return CompletableFuture.failedFuture(new AuthorizationException("Structure %s Entity access not allowed.".formatted(structureId)));
+
+                } else { // Check if access to the individual fields are allowed
+
+                    List<String> deniedFields = new ArrayList<>();
+                    for(Map.Entry<String, Boolean> fieldResult : result.fieldResults().entrySet()){
+                        if(!fieldResult.getValue()){
+                            deniedFields.add(fieldResult.getKey());
+                        }
+                    }
+                    if(!deniedFields.isEmpty()){
+                        return CompletableFuture.failedFuture(new AuthorizationException("Structure %s Fields %s access not allowed.".formatted(structureId, deniedFields)));
+                    }else{
+                        return CompletableFuture.completedFuture(null);
+                    }
+
+                }
+            });
+
         } catch (Exception e) {
             return CompletableFuture.failedFuture(e);
         }

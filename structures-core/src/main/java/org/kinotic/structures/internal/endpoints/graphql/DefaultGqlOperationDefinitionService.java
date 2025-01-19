@@ -237,6 +237,23 @@ public class DefaultGqlOperationDefinitionService implements GqlOperationDefinit
                                       .dataFetcherDefinitionFunction(structure -> new SearchDataFetcher(structure.getId(), entitiesService, objectMapper))
                                       .build(),
 
+
+                GqlOperationDefinition.builder()
+                                      .operationName("sync")
+                                      .operationType(OperationDefinition.Operation.MUTATION)
+                                      .fieldDefinitionFunction(args -> {
+
+                                          GraphQLFieldDefinition.Builder builder = newFieldDefinition()
+                                                  .name("sync" + args.getStructureName())
+                                                  .type(GraphQLID);
+
+                                          builder = addPolicyIfPresent(builder, args.getEntityOperationsMap().get(EntityOperation.SYNC_INDEX));
+                                          return builder.build();
+                                      })
+                                      .dataFetcherDefinitionFunction(structure -> new SyncIndexDataFetcher(structure.getId(), entitiesService))
+                                      .build(),
+
+
                 GqlOperationDefinition.builder()
                                       .operationName(EntityOperation.UPDATE.methodName())
                                       .operationType(OperationDefinition.Operation.MUTATION)
