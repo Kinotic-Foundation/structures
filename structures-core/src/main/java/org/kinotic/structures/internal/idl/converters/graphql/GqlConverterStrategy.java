@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Set;
 
 import static graphql.Scalars.*;
+import static graphql.schema.GraphQLTypeReference.typeRef;
 
 /**
  * Created by Navíd Mitchell 🤪 on 5/14/23.
@@ -50,14 +51,17 @@ public class GqlConverterStrategy implements IdlConverterStrategy<GqlTypeHolder,
                  // Enum type
                  .addConverter(EnumC3Type.class, (c3Type, context) -> {
                      GraphQLEnumType.Builder builder = GraphQLEnumType.newEnum();
-                     builder.name(c3Type.getName());
+                     String enumTypeName = c3Type.getName();
+                     builder.name(enumTypeName);
 
                      for (String value : c3Type.getValues()) {
                          builder.value(value);
                      }
 
                      GraphQLEnumType type = builder.build();
-                     return new GqlTypeHolder(type, type);
+                     context.state().getReferencedTypes().put(enumTypeName, type);
+
+                     return new GqlTypeHolder(typeRef(enumTypeName), typeRef(enumTypeName));
                  })
                  // Array type
                  .addConverter(ArrayC3Type.class, (c3Type, context) -> {
@@ -72,7 +76,11 @@ public class GqlConverterStrategy implements IdlConverterStrategy<GqlTypeHolder,
                      return new GqlTypeHolder(typeHolder.inputType() != null ? GraphQLList.list(typeHolder.inputType()) : null,
                                               GraphQLList.list(typeHolder.outputType()));
                  });
-        converters = new LinkedHashSet<>(List.of(container, new ObjectC3TypeToGql(), new UnionC3TypeToGql(), new CursorPageC3TypeToGql(), new PageC3TypeToGql()));
+        converters = new LinkedHashSet<>(List.of(container,
+                                                 new ObjectC3TypeToGql(),
+                                                 new UnionC3TypeToGql(),
+                                                 new CursorPageC3TypeToGql(),
+                                                 new PageC3TypeToGql()));
     }
 
     @Override
