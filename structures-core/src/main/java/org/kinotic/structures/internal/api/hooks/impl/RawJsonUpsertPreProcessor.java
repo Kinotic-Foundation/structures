@@ -6,6 +6,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.async.ByteArrayFeeder;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.util.TokenBuffer;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
 import org.kinotic.continuum.idl.api.schema.decorators.C3Decorator;
 import org.kinotic.structures.api.config.StructuresProperties;
@@ -27,7 +28,7 @@ import java.util.concurrent.CompletableFuture;
 /**
  * Created by Navíd Mitchell 🤪 on 5/5/23.
  */
-public class RawJsonUpsertPreProcessor implements UpsertPreProcessor<RawJson, RawJson> {
+public class RawJsonUpsertPreProcessor implements UpsertPreProcessor<TokenBuffer, TokenBuffer, RawJson> {
 
     private final StructuresProperties structuresProperties;
     private final ObjectMapper objectMapper;
@@ -53,18 +54,13 @@ public class RawJsonUpsertPreProcessor implements UpsertPreProcessor<RawJson, Ra
      * @param context the context of the entity
      * @return a new {@link RawJson} with the appropriate decorators applied
      */
-    private CompletableFuture<List<EntityHolder>> doProcess(RawJson json, EntityContext context, boolean processArray){
+    private CompletableFuture<List<EntityHolder<RawJson>>> doProcess(TokenBuffer json, EntityContext context, boolean processArray){
         Deque<String> jsonPathStack = new ArrayDeque<>();
-        byte[] bytes = json.data();
-        List<EntityHolder> ret = new ArrayList<>();
+        List<EntityHolder<RawJson>> ret = new ArrayList<>();
         int objectDepth = 0;
         int arrayDepth = 0;
 
-        try(JsonParser jsonParser = objectMapper.createNonBlockingByteArrayParser()) {
-            ByteArrayFeeder feeder = (ByteArrayFeeder) jsonParser.getNonBlockingInputFeeder();
-            feeder.feedInput(bytes, 0, bytes.length);
-            feeder.endOfInput();
-
+        try(JsonParser jsonParser = json.asParser()) {
             String currentId = null;
             String currentTenantId = null;
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
@@ -163,10 +159,11 @@ public class RawJsonUpsertPreProcessor implements UpsertPreProcessor<RawJson, Ra
                         // This is the end of the object, so we store the object
                         jsonGenerator.writeEndObject();
                         jsonGenerator.flush();
-                        ret.add(new EntityHolder(new RawJson(outputStream.toByteArray()),
+                        ret.add(new EntityHolder<>(new RawJson(outputStream.toByteArray()),
                                                  currentId,
                                                  structure.getMultiTenancyType(),
-                                                 context.getParticipant().getTenantId()
+                                                 context.getParticipant().getTenantId(),
+                                                   null
                         ));
                         outputStream.reset();
                         currentId = null;
@@ -222,7 +219,7 @@ public class RawJsonUpsertPreProcessor implements UpsertPreProcessor<RawJson, Ra
 
     @WithSpan
     @Override
-    public CompletableFuture<EntityHolder> process(RawJson entity, EntityContext context) {
+    public CompletableFuture<EntityHolder<RawJson>> process(TokenBuffer entity, EntityContext context) {
         return doProcess(entity, context, false).thenApply(list -> {
             if(list.size() != 1){
                 throw new IllegalStateException("Expected exactly one entity to be returned");
@@ -233,7 +230,7 @@ public class RawJsonUpsertPreProcessor implements UpsertPreProcessor<RawJson, Ra
 
     @WithSpan
     @Override
-    public CompletableFuture<List<EntityHolder>> processArray(RawJson entities, EntityContext context) {
+    public CompletableFuture<List<EntityHolder<RawJson>>> processArray(TokenBuffer entities, EntityContext context) {
         return doProcess(entities, context, true);
     }
 

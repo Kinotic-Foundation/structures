@@ -1,5 +1,6 @@
 package org.kinotic.structures.api.services;
 
+import com.fasterxml.jackson.databind.util.TokenBuffer;
 import org.kinotic.continuum.api.annotations.Publish;
 import org.kinotic.continuum.api.security.Participant;
 import org.kinotic.continuum.core.api.crud.Page;
@@ -27,7 +28,7 @@ public interface JsonEntitiesService {
      * @param participant the participant of the logged-in user
      * @return {@link CompletableFuture} that will complete when all entities have been saved
      */
-    CompletableFuture<Void> bulkSave(String structureId, RawJson entities, Participant participant);
+    CompletableFuture<Void> bulkSave(String structureId, TokenBuffer entities, Participant participant);
 
     /**
      * Saves all given entities.
@@ -37,7 +38,7 @@ public interface JsonEntitiesService {
      * @param participant the participant of the logged-in user
      * @return {@link CompletableFuture} that will complete when all entities have been saved
      */
-    CompletableFuture<Void> bulkUpdate(String structureId, RawJson entities, Participant participant);
+    CompletableFuture<Void> bulkUpdate(String structureId, TokenBuffer entities, Participant participant);
 
     /**
      * Returns the number of entities available.
@@ -156,7 +157,7 @@ public interface JsonEntitiesService {
      * @param participant the participant of the logged-in user
      * @return {@link CompletableFuture} emitting the saved entity
      */
-    CompletableFuture<RawJson> save(String structureId, RawJson entity, Participant participant);
+    CompletableFuture<RawJson> save(String structureId, TokenBuffer entity, Participant participant);
 
     /**
      * Returns a {@link Page} of entities matching the search text and paging restriction provided in the {@code Pageable} object.
@@ -181,6 +182,6 @@ public interface JsonEntitiesService {
      * @param participant the participant of the logged-in user
      * @return {@link CompletableFuture} emitting the saved entity
      */
-    CompletableFuture<RawJson> update(String structureId, RawJson entity, Participant participant);
+    CompletableFuture<RawJson> update(String structureId, TokenBuffer entity, Participant participant);
 
 }

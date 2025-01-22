@@ -1,5 +1,6 @@
 package org.kinotic.structures.internal.api.services.impl;
 
+import com.fasterxml.jackson.databind.util.TokenBuffer;
 import org.kinotic.continuum.api.security.Participant;
 import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
@@ -26,12 +27,12 @@ public class DefaultJsonEntitiesService implements JsonEntitiesService {
     }
 
     @Override
-    public CompletableFuture<Void> bulkSave(String structureId, RawJson entities, Participant participant) {
+    public CompletableFuture<Void> bulkSave(String structureId, TokenBuffer entities, Participant participant) {
         return defaultEntitiesService.bulkSave(structureId, entities, new DefaultEntityContext(participant));
     }
 
     @Override
-    public CompletableFuture<Void> bulkUpdate(String structureId, RawJson entities, Participant participant) {
+    public CompletableFuture<Void> bulkUpdate(String structureId, TokenBuffer entities, Participant participant) {
         return defaultEntitiesService.bulkUpdate(structureId, entities, new DefaultEntityContext(participant));
     }
 
@@ -104,7 +105,7 @@ public class DefaultJsonEntitiesService implements JsonEntitiesService {
     }
 
     @Override
-    public CompletableFuture<RawJson> save(String structureId, RawJson entity, Participant participant) {
+    public CompletableFuture<RawJson> save(String structureId, TokenBuffer entity, Participant participant) {
         return defaultEntitiesService.save(structureId, entity, new DefaultEntityContext(participant));
     }
 
@@ -117,7 +118,7 @@ public class DefaultJsonEntitiesService implements JsonEntitiesService {
     }
 
     @Override
-    public CompletableFuture<RawJson> update(String structureId, RawJson entity, Participant participant) {
+    public CompletableFuture<RawJson> update(String structureId, TokenBuffer entity, Participant participant) {
         return defaultEntitiesService.update(structureId, entity, new DefaultEntityContext(participant));
     }
 

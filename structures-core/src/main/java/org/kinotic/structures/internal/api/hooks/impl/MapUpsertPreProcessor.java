@@ -24,7 +24,7 @@ import java.util.concurrent.CompletableFuture;
 /**
  * Created by Navíd Mitchell 🤪 on 6/7/23.
  */
-public class MapUpsertPreProcessor implements UpsertPreProcessor<Map<Object, Object>, List<Map<Object, Object>>> {
+public class MapUpsertPreProcessor implements UpsertPreProcessor<Map<Object, Object>, List<Map<Object, Object>>, Map<Object, Object>> {
 
     private final Structure structure;
     private final StructuresProperties structuresProperties;
@@ -49,7 +49,7 @@ public class MapUpsertPreProcessor implements UpsertPreProcessor<Map<Object, Obj
 
     @WithSpan
     @Override
-    public CompletableFuture<EntityHolder> process(Map<Object, Object> entity,
+    public CompletableFuture<EntityHolder<Map<Object, Object>>> process(Map<Object, Object> entity,
                                                    EntityContext context) {
         try {
             return CompletableFuture.completedFuture(preProcessData(entity, context));
@@ -60,10 +60,10 @@ public class MapUpsertPreProcessor implements UpsertPreProcessor<Map<Object, Obj
 
     @WithSpan
     @Override
-    public CompletableFuture<List<EntityHolder>> processArray(List<Map<Object, Object>> entities,
+    public CompletableFuture<List<EntityHolder<Map<Object, Object>>>> processArray(List<Map<Object, Object>> entities,
                                                               EntityContext context) {
         try {
-            List<EntityHolder> entityHolders = new ArrayList<>();
+            List<EntityHolder<Map<Object, Object>>> entityHolders = new ArrayList<>();
             for(Map<Object, Object> entity : entities) {
                 entityHolders.add(preProcessData(entity, context));
             }
@@ -73,7 +73,7 @@ public class MapUpsertPreProcessor implements UpsertPreProcessor<Map<Object, Obj
         }
     }
 
-    private EntityHolder preProcessData(Map<Object, Object> entity, EntityContext context) {
+    private EntityHolder<Map<Object, Object>> preProcessData(Map<Object, Object> entity, EntityContext context) {
         String fieldName = idFieldPreProcessor.getLeft();
         Object fieldValue = entity.get(fieldName);
         DecoratorLogic decoratorLogic = idFieldPreProcessor.getRight();
@@ -103,10 +103,11 @@ public class MapUpsertPreProcessor implements UpsertPreProcessor<Map<Object, Obj
             }
         }
 
-        return new EntityHolder(entity,
+        return new EntityHolder<>(entity,
                                 id,
                                 structure.getMultiTenancyType(),
-                                context.getParticipant().getTenantId()
+                                context.getParticipant().getTenantId(),
+                                null
         );
     }
 }

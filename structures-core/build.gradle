@@ -21,6 +21,8 @@ dependencies {
 	implementation "com.github.rworsnop:vertx-beans"
 	implementation "me.escoffier.vertx:vertx-completable-future"
 
+	implementation 'org.apache.ignite:ignite-core'
+
 	implementation "org.kinotic:continuum-core"
 	implementation "org.kinotic:continuum-core-vertx"
 	implementation "org.kinotic:continuum-gateway"

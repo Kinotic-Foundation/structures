@@ -25,6 +25,7 @@ import org.kinotic.structures.api.services.NamedQueriesService;
 import org.kinotic.structures.api.services.security.AuthorizationService;
 import org.kinotic.structures.internal.api.hooks.DelegatingUpsertPreProcessor;
 import org.kinotic.structures.internal.api.hooks.ReadPreProcessor;
+import org.kinotic.structures.internal.api.services.ElasticVersion;
 import org.kinotic.structures.internal.api.services.EntityContextConstants;
 import org.kinotic.structures.internal.api.services.EntityHolder;
 import org.kinotic.structures.internal.api.services.EntityService;
@@ -63,9 +64,19 @@ public class DefaultEntityService implements EntityService {
         return authService.authorize(EntityOperation.BULK_SAVE, context).thenCompose(
                 un -> doBulkPersist(entities, context,
                                     entityHolder -> BulkOperation.of(b -> b
-                                            .index(idx -> idx.index(structure.getItemIndex())
-                                                             .id(entityHolder.getDocumentId())
-                                                             .document(entityHolder.entity())
+                                            .index(i -> {
+                                                       i.index(structure.getItemIndex())
+                                                        .id(entityHolder.getDocumentId())
+                                                        .document(entityHolder.entity());
+
+                                                       ElasticVersion elasticVersion = entityHolder.getElasticVersionIfPresent();
+                                                       if(elasticVersion != null) {
+                                                           i.ifPrimaryTerm(elasticVersion.primaryTerm())
+                                                            .ifSeqNo(elasticVersion.seqNo());
+                                                       }
+
+                                                       return i;
+                                                   }
                                             ))));
     }
 
@@ -75,12 +86,21 @@ public class DefaultEntityService implements EntityService {
         return authService.authorize(EntityOperation.BULK_UPDATE, context).thenCompose(
                 un -> doBulkPersist(entities, context,
                                     entityHolder -> BulkOperation.of(b -> b
-                                            .update(u -> u
-                                                    .index(structure.getItemIndex())
-                                                    .id(entityHolder.getDocumentId())
-                                                    .action(upB -> upB.doc(entityHolder.entity())
-                                                                      .docAsUpsert(true)
-                                                                      .detectNoop(true))
+                                            .update(u -> {
+                                                        u.index(structure.getItemIndex())
+                                                         .id(entityHolder.getDocumentId())
+                                                         .action(upB -> upB.doc(entityHolder.entity())
+                                                                           .docAsUpsert(true)
+                                                                           .detectNoop(true));
+
+                                                        ElasticVersion elasticVersion = entityHolder.getElasticVersionIfPresent();
+                                                        if(elasticVersion != null) {
+                                                            u.ifPrimaryTerm(elasticVersion.primaryTerm())
+                                                             .ifSeqNo(elasticVersion.seqNo());
+                                                        }
+
+                                                        return u;
+                                                    }
                                             ))));
     }
 
@@ -204,38 +224,38 @@ public class DefaultEntityService implements EntityService {
     @Override
     public <T> CompletableFuture<T> save(T entity, EntityContext context) {
         return authService.authorize(EntityOperation.SAVE, context).thenCompose(
-                un -> doPersist(entity, context, entityHolder -> {
+                un -> doPrePersist(entity, context, entityHolder -> {
 
                     String routing = (structure.getMultiTenancyType() == MultiTenancyType.SHARED)
                             ? context.getParticipant().getTenantId()
                             : null;
 
-                    // This is a bit of a hack since the BinaryData type does not work properly to retrieve complex objects, but does work to store them.
-                    // https://github.com/elastic/elasticsearch-java/issues/574
-                    if(entityHolder.entity() instanceof RawJson rawEntity){
-                        BinaryData binaryData = BinaryData.of(rawEntity.data(), ContentType.APPLICATION_JSON);
-                        return esAsyncClient.index(i -> i
-                                                    .routing(routing)
-                                                    .index(structure.getItemIndex())
-                                                    .id(entityHolder.getDocumentId())
-                                                    .document(binaryData)
-                                                    .refresh(Refresh.True))
-                                            .thenApply(indexResponse -> {
-                                                context.put(EntityContextConstants.ENTITY_ID_KEY, entityHolder.id());
-                                                return (T) rawEntity;
-                                            });
-                    }else{
-                        return esAsyncClient.index(i -> i
-                                                    .routing(routing)
-                                                    .index(structure.getItemIndex())
-                                                    .id(entityHolder.getDocumentId())
-                                                    .document(entityHolder.entity())
-                                                    .refresh(Refresh.True))
-                                            .thenApply(indexResponse -> {
-                                                context.put(EntityContextConstants.ENTITY_ID_KEY, entityHolder.id());
-                                                return (T) entityHolder.entity();
-                                            });
-                    }
+                    return esAsyncClient.index(i -> {
+                        i.routing(routing)
+                         .index(structure.getItemIndex())
+                         .id(entityHolder.getDocumentId())
+                         .refresh(Refresh.True);
+
+                        // This is a bit of a hack since the BinaryData type does not work properly to retrieve complex objects, but does work to store them.
+                        // https://github.com/elastic/elasticsearch-java/issues/574
+                        if(entityHolder.entity() instanceof RawJson rawEntity) {
+                            BinaryData binaryData = BinaryData.of(rawEntity.data(), ContentType.APPLICATION_JSON);
+                            i.document(binaryData);
+                        }else{
+                            i.document(entityHolder.entity());
+                        }
+
+                        ElasticVersion elasticVersion = entityHolder.getElasticVersionIfPresent();
+                        if(elasticVersion != null) {
+                            i.ifPrimaryTerm(elasticVersion.primaryTerm())
+                             .ifSeqNo(elasticVersion.seqNo());
+                        }
+
+                        return i;
+                    }).thenApply(indexResponse -> {
+                        context.put(EntityContextConstants.ENTITY_ID_KEY, entityHolder.id());
+                        return (T) entityHolder.entity();
+                    });
                 }));
     }
 
@@ -257,19 +277,29 @@ public class DefaultEntityService implements EntityService {
     @Override
     public <T> CompletableFuture<T> update(T entity, EntityContext context) {
         return authService.authorize(EntityOperation.UPDATE, context).thenCompose(
-                un -> doPersist(entity, context, entityHolder -> {
+                un -> doPrePersist(entity, context, entityHolder -> {
 
                     String routing = (structure.getMultiTenancyType() == MultiTenancyType.SHARED)
                             ? context.getParticipant().getTenantId()
                             : null;
 
-                    return esAsyncClient.update(UpdateRequest.of(u -> u
-                                                .routing(routing)
-                                                .index(structure.getItemIndex())
-                                                .id(entityHolder.getDocumentId())
-                                                .doc(entityHolder.entity())
-                                                .docAsUpsert(true)
-                                                .refresh(Refresh.True)), entityHolder.entity().getClass())
+                    UpdateRequest<?,?> request = UpdateRequest.of(u -> {
+                        u.routing(routing)
+                         .index(structure.getItemIndex())
+                         .id(entityHolder.getDocumentId())
+                         .doc(entityHolder.entity())
+                         .docAsUpsert(true)
+                         .refresh(Refresh.True);
+
+                        ElasticVersion elasticVersion = entityHolder.getElasticVersionIfPresent();
+                        if(elasticVersion != null) {
+                            u.ifPrimaryTerm(elasticVersion.primaryTerm())
+                             .ifSeqNo(elasticVersion.seqNo());
+                        }
+                        return u;
+                    });
+
+                    return esAsyncClient.update(request, entityHolder.entity().getClass())
                                         .thenApply(updateResponse -> {
                                             context.put(EntityContextConstants.ENTITY_ID_KEY, entityHolder.id());
                                             return (T) entityHolder.entity();
@@ -388,9 +418,9 @@ public class DefaultEntityService implements EntityService {
 
     @WithSpan
     @SuppressWarnings("unchecked")
-    private <T> CompletableFuture<T> doPersist(T entity,
-                                               EntityContext context,
-                                               Function<EntityHolder, CompletableFuture<T>> persistLogic){
+    private <T> CompletableFuture<T> doPrePersist(T entity,
+                                                  EntityContext context,
+                                                  Function<EntityHolder, CompletableFuture<T>> persistLogic){
         return validateTenant(context)
                 .thenCompose(unused -> (CompletableFuture<T>) delegatingUpsertPreProcessor
                         .process(entity, context)
