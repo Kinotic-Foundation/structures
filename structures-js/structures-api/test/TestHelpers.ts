@@ -21,10 +21,7 @@ export async function initContinuumClient(): Promise<void> {
         const container = (globalThis as any).environment.getContainer('structures-server-e2e')
         const host: string = container.getHost()
 
-        (await container.logs())
-        .on("data", (line: string) => console.log(line))
-        .on("err", (line: string) => console.error(line))
-        .on("end", () => console.log("Stream closed"))
+        console.log('Connecting to continuum at ' + host)
 
         await Continuum.connect({
             host:host,
