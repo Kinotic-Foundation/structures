@@ -7,17 +7,17 @@ services:
       elasticsearch:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl --silent --fail structures-server-e2e:9090/health || exit 1"]
+      test: ["CMD-SHELL", "curl --silent --fail localhost:9090/health || exit 1"]
       interval: 300s
       timeout: 10s
       retries: 3
       start_period: 90s
     ports:
-      - "0.0.0.0:9090:9090" # UI PORT
-      - "0.0.0.0:4000:4000" # GraphQL Port
-      - "0.0.0.0:8080:8080" # OpenAPI Port
-      - "0.0.0.0:58503:58503" # Continuum Stomp Port
-      - "0.0.0.0:58504:58504" # Continuum REST Port
+      - "9090:9090" # UI PORT
+      - "4000:4000" # GraphQL Port
+      - "8080:8080" # OpenAPI Port
+      - "58503:58503" # Continuum Stomp Port
+      - "58504:58504" # Continuum REST Port
     environment:
       SPRING_PROFILES_ACTIVE: production
       STRUCTURES_INDEX_PREFIX: struct_

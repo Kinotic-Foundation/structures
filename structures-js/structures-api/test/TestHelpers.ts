@@ -22,7 +22,7 @@ import {Person} from './domain/Person.js'
 export async function initContinuumClient(): Promise<void> {
     try {
         await Continuum.connect({
-            host:'structures-server-e2e',
+            host:'localhost',
             port:58503,
             connectHeaders:{login: 'admin', passcode: 'structures'}
         })
