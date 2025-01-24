@@ -12,7 +12,7 @@ node {
 
     // Version of node to download and install (only used if download is true)
     // It will be unpacked in the workDir
-    version = "22"
+    version = "22.13.1"
 
     // Version of Pnpm to use
     // Any Pnpm task first installs Pnpm in the pnpmWorkDir
@@ -48,15 +48,7 @@ task pnpmBuild(type: PnpmTask) {
     mustRunAfter 'pnpmInstall'
 }
 
-task cleanFrontend {
-    dependsOn 'deleteDist'
+task pnpmTest(type: PnpmTask) {
+    args = ['test']
+    mustRunAfter 'pnpmInstall'
 }
-
-task buildFrontend {
-    dependsOn 'pnpmInstall'
-    dependsOn 'pnpmBuild'
-}
-
-tasks.findByName('build').dependsOn 'buildFrontend'
-
-tasks.findByName('clean').dependsOn 'cleanFrontend'

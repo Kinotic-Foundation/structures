@@ -2,7 +2,7 @@ include:
   - compose.ek-stack.yml
 services:
   structures-server:
-    image: kinotic/structures-server:3.0.1
+    image: kinotic/structures-server:3.1.3
     depends_on:
       elasticsearch:
         condition: service_healthy

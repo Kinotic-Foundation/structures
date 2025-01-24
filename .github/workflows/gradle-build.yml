@@ -1,4 +1,4 @@
-name: Build and Publish to Maven
+name: Build and Publish
 
 on:
   push:
@@ -12,8 +12,8 @@ on:
 
 jobs:
   gradle_build_and_publish:
+    name: Build And Publish Java Code
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -44,3 +44,8 @@ jobs:
         env:
           DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
           DOCKER_HUB_PASSWORD: ${{ secrets.DOCKER_HUB_PASSWORD }}
+
+      - name: Run E2E Tests
+        run: |
+          cd structures-js/structures-api
+          ./gradlew pnpmTest

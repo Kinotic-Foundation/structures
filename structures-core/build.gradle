@@ -3,6 +3,14 @@ plugins {
 	id 'io.freefair.lombok'
 }
 
+// Define configuration for AspectJ agent
+configurations {
+	agent {
+		canBeResolved = true
+		canBeConsumed = true
+	}
+}
+
 dependencies {
 	implementation "io.opentelemetry.instrumentation:opentelemetry-instrumentation-annotations:${otelAnnotationsVersion}"
 
@@ -40,6 +48,12 @@ dependencies {
 	implementation "io.swagger.core.v3:swagger-core:${swaggerCoreVersion}"
 
 	annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+
+	// Add aspectj weaver dependency for use during tests
+	agent "org.aspectj:aspectjweaver:$aspectJVersion"
+
+	testImplementation platform("io.qameta.allure:allure-bom:$allureVersion")
+	testImplementation "io.qameta.allure:allure-junit5"
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation "org.testcontainers:testcontainers:${testContainersVersion}"
 	testImplementation "org.testcontainers:elasticsearch:${testContainersVersion}"
@@ -48,4 +62,5 @@ dependencies {
 
 test {
 	useJUnitPlatform()
+	jvmArgs = [ "-javaagent:${configurations.agent.singleFile}" ]
 }

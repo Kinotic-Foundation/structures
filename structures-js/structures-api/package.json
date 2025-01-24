@@ -28,13 +28,13 @@
     "reflect-metadata": "^0.2.2"
   },
   "devDependencies": {
-    "@types/node": "^22.10.4",
-    "@types/ws": "^8.5.13",
+    "@types/node": "^22.10.10",
+    "@types/ws": "^8.5.14",
     "@vitest/coverage-v8": "^2.1.8",
     "delay": "^6.0.0",
     "docker-compose": "^1.1.0",
-    "testcontainers": "^10.16.0",
-    "typescript": "^5.7.2",
+    "testcontainers": "^10.17.1",
+    "typescript": "^5.7.3",
     "vite": "^5.4.11",
     "vite-plugin-dts": "^4.4.0",
     "vite-plugin-externalize-deps": "^0.8.0",
@@ -44,5 +44,5 @@
   "peerDependencies": {
     "@kinotic/continuum-client": "^2.10.7"
   },
-  "packageManager": "pnpm@9.15.2"
+  "packageManager": "pnpm@9.15.4"
 }
