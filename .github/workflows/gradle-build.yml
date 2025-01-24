@@ -46,6 +46,8 @@ jobs:
 #          DOCKER_HUB_PASSWORD: ${{ secrets.DOCKER_HUB_PASSWORD }}
 
       - name: Run E2E Tests
+        env:
+          DEBUG: "testcontainers*"
         run: |
           cd structures-js/structures-api
           ./gradlew pnpmInstall
