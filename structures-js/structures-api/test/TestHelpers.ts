@@ -4,9 +4,6 @@ import {
     ObjectC3Type,
     StringC3Type
 } from '@kinotic/continuum-idl'
-import {
-    StartedDockerComposeEnvironment
-} from 'testcontainers'
 import {expect} from 'vitest'
 import {IterablePage} from '@kinotic/continuum-client'
 import {
@@ -21,9 +18,14 @@ import {Person} from './domain/Person.js'
 
 export async function initContinuumClient(): Promise<void> {
     try {
-        const host: string = (globalThis as any).environment
-                                                .getContainer('structures-server-e2e')
-                                                .getHost()
+        const container = (globalThis as any).environment.getContainer('structures-server-e2e')
+        const host: string = container.getHost()
+
+        (await container.logs())
+        .on("data", (line: string) => console.log(line))
+        .on("err", (line: string) => console.error(line))
+        .on("end", () => console.log("Stream closed"))
+
         await Continuum.connect({
             host:host,
             port:58503,
