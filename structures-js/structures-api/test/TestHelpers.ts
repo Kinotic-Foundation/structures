@@ -19,7 +19,7 @@ import {
 } from '../src'
 import {Person} from './domain/Person.js'
 
-const composeFilePath = '../../'
+const composeFilePath = '.'
 
 export async function initStructuresServer(): Promise<void> {
     try {
