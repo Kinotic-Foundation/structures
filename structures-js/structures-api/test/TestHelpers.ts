@@ -1,12 +1,12 @@
 import delay from 'delay'
-// @ts-ignore for some reason intellij is complaining about this even though esModuleInterop is enabled
-import path from 'node:path'
-import * as compose from 'docker-compose'
 import {Continuum, Direction, Order, Pageable} from '@kinotic/continuum-client'
 import {
     ObjectC3Type,
     StringC3Type
 } from '@kinotic/continuum-idl'
+import {
+    StartedDockerComposeEnvironment
+} from 'testcontainers'
 import {expect} from 'vitest'
 import {IterablePage} from '@kinotic/continuum-client'
 import {
@@ -21,8 +21,11 @@ import {Person} from './domain/Person.js'
 
 export async function initContinuumClient(): Promise<void> {
     try {
+        const host: string = (globalThis as any).environment
+                                                .getContainer('structures-server-e2e')
+                                                .getHost()
         await Continuum.connect({
-            host:'localhost',
+            host:host,
             port:58503,
             connectHeaders:{login: 'admin', passcode: 'structures'}
         })
