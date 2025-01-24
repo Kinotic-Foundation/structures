@@ -30,9 +30,6 @@ importers:
       delay:
         specifier: ^6.0.0
         version: 6.0.0
-      docker-compose:
-        specifier: ^1.1.0
-        version: 1.1.0
       testcontainers:
         specifier: ^10.17.1
         version: 10.17.1
@@ -749,10 +746,6 @@ packages:
 
   docker-compose@0.24.8:
     resolution: {integrity: sha512-plizRs/Vf15H+GCVxq2EUvyPK7ei9b/cVesHvjnX4xaXjM9spHe2Ytq0BitndFgvTJ3E3NljPNUEl7BAN43iZw==}
-    engines: {node: '>= 6.0.0'}
-
-  docker-compose@1.1.0:
-    resolution: {integrity: sha512-VrkQJNafPQ5d6bGULW0P6KqcxSkv3ZU5Wn2wQA19oB71o7+55vQ9ogFe2MMeNbK+jc9rrKVy280DnHO5JLMWOQ==}
     engines: {node: '>= 6.0.0'}
 
   docker-modem@3.0.8:
@@ -2088,10 +2081,6 @@ snapshots:
   delay@6.0.0: {}
 
   docker-compose@0.24.8:
-    dependencies:
-      yaml: 2.3.1
-
-  docker-compose@1.1.0:
     dependencies:
       yaml: 2.3.1
 

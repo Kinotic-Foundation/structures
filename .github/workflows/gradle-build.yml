@@ -45,11 +45,6 @@ jobs:
 #          DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
 #          DOCKER_HUB_PASSWORD: ${{ secrets.DOCKER_HUB_PASSWORD }}
 
-      - name: Run docker-compose
-        uses: hoverkraft-tech/compose-action@v2.0.1
-        with:
-          compose-file: "./structures-js/structures-api/compose.yml"
-
       - name: Run E2E Tests
         run: |
           cd structures-js/structures-api

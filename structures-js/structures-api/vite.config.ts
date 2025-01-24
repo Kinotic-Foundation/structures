@@ -20,7 +20,7 @@ export default defineConfig({
         },
     },
     plugins: [externalizeDeps(), dts()],
-    // test: {
-    //     globalSetup: './test/setup.ts',
-    // },
+    test: {
+        globalSetup: './test/setup.ts',
+    },
 })
