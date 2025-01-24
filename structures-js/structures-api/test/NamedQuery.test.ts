@@ -7,8 +7,8 @@ import {
     createPersonStructureIfNotExist,
     createTestPeopleAndVerify, deleteStructure,
     generateRandomString,
-    initStructuresServer,
-    shutdownStructuresServer,
+    initContinuumClient,
+    shutdownContinuumClient,
 } from './TestHelpers.js'
 import {Person} from './domain/Person.js'
 import {Page, Pageable} from '@kinotic/continuum-client'
@@ -24,11 +24,11 @@ interface LocalTestContext {
 describe('NamedQueryTest', () => {
 
     beforeAll(async () => {
-        await initStructuresServer()
+        await initContinuumClient()
     }, 300000)
 
     afterAll(async () => {
-        await shutdownStructuresServer()
+        await shutdownContinuumClient()
     }, 60000)
 
     beforeEach<LocalTestContext>(async (context) => {

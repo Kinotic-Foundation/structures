@@ -8,8 +8,8 @@ import {
     createTestPerson,
     deleteStructure,
     generateRandomString,
-    initStructuresServer,
-    shutdownStructuresServer,
+    initContinuumClient,
+    shutdownContinuumClient,
     logFailure, findAndVerifyPeopleWithOffsetPaging
 } from './TestHelpers.js'
 import {Person} from './domain/Person.js'
@@ -27,11 +27,11 @@ interface LocalTestContext {
 describe('EntityServiceTest', () => {
 
     beforeAll(async () => {
-        await initStructuresServer()
+        await initContinuumClient()
     }, 300000)
 
     afterAll(async () => {
-        await shutdownStructuresServer()
+        await shutdownContinuumClient()
     }, 60000)
 
     beforeEach<LocalTestContext>(async (context) => {

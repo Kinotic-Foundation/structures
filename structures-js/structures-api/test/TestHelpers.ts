@@ -19,19 +19,8 @@ import {
 } from '../src'
 import {Person} from './domain/Person.js'
 
-const composeFilePath = '.'
-
-export async function initStructuresServer(): Promise<void> {
+export async function initContinuumClient(): Promise<void> {
     try {
-        const resolvedPath = path.resolve(composeFilePath)
-
-        await compose.pullAll({cwd: resolvedPath, log: true})
-
-        await compose.upAll({
-            cwd: resolvedPath,
-            log: true
-        })
-
         await Continuum.connect({
             host:'127.0.0.1',
             port:58503,
@@ -45,11 +34,9 @@ export async function initStructuresServer(): Promise<void> {
     }
 }
 
-export async function shutdownStructuresServer(): Promise<void> {
+export async function shutdownContinuumClient(): Promise<void> {
     try {
         await Continuum.disconnect()
-
-       await compose.down({cwd: path.resolve(composeFilePath), log: true})
     } catch (e) {
         console.error(e)
         throw e
