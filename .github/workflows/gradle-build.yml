@@ -48,4 +48,5 @@ jobs:
       - name: Run E2E Tests
         run: |
           cd structures-js/structures-api
+          ./gradlew pnpmInstall
           ./gradlew pnpmTest

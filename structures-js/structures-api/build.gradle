@@ -50,5 +50,4 @@ task pnpmBuild(type: PnpmTask) {
 
 task pnpmTest(type: PnpmTask) {
     args = ['test']
-    mustRunAfter 'pnpmInstall'
 }
