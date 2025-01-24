@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletionException;
 
 /**
  * Created by Navíd Mitchell 🤪 on 6/1/23.
@@ -131,6 +132,12 @@ public class VertxWebUtil {
         int statusCode = context.statusCode();
 
         if(throwable != null){
+
+            if(throwable instanceof CompletionException){
+                if(throwable.getCause() != null) {
+                    throwable = throwable.getCause();
+                }
+            }
 
             errorMessage = throwable.getMessage();
 
