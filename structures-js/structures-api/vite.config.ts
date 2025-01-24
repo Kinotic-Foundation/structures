@@ -21,6 +21,6 @@ export default defineConfig({
     },
     plugins: [externalizeDeps(), dts()],
     test: {
-        // vitest options here
+        globalSetup: './test/setup.ts',
     },
 })
