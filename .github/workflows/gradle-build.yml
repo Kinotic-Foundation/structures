@@ -100,8 +100,16 @@ jobs:
           sha: ${{github.event.pull_request.head.sha || github.sha}}
           target_url: https://kinotic-foundation.github.io/structures/allure/${{ github.run_number }}
 
-      - name: Check any Builds failed
+      - name: Check If Failure
         if: ${{ steps.gradle_build.outcome == 'failure' || steps.run_e2e_tests.outcome == 'failure' }}
         run: |
-          echo "Build or unit tests failed."
+          if [ "${{ steps.gradle_build.outcome }}" == "failure" ]; then
+            echo "Gradle Build failed."
+          fi
+
+          if [ "${{ steps.run_e2e_tests.outcome }}" == "failure" ]; then
+            echo "E2E Tests failed."
+          fi
+
+          # Optionally mark the job as failed
           exit 1
