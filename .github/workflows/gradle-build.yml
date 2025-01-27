@@ -19,16 +19,6 @@ jobs:
 
       - name: Checkout code
         uses: actions/checkout@v4
-#      - uses: dorny/paths-filter@v3
-#        id: filter
-#        with:
-#          predicate-quantifier: 'every'
-#          filters: |
-#            java:
-#              - '**'
-#              - '!structures-js/**'
-#            js:
-#              - 'structures-js/**'
 
       - name: Set up JDK
         uses: actions/setup-java@v4
@@ -62,6 +52,7 @@ jobs:
           DOCKER_HUB_PASSWORD: ${{ secrets.DOCKER_HUB_PASSWORD }}
 
       - name: Run E2E Tests
+        id: run_e2e_tests
         continue-on-error: true
         run: |
           cd structures-js/structures-api
@@ -108,3 +99,9 @@ jobs:
           state: 'success'
           sha: ${{github.event.pull_request.head.sha || github.sha}}
           target_url: https://kinotic-foundation.github.io/structures/allure/${{ github.run_number }}
+
+      - name: Check any Builds failed
+        if: ${{ steps.gradle_build.outcome == 'failure' || steps.run_e2e_tests.outcome == 'failure' }}
+        run: |
+          echo "Build or unit tests failed."
+          exit 1
