@@ -28,6 +28,6 @@ export async function setup(project: TestProject) {
 // Run once after all tests
 export async function teardown() {
     console.log('Shutting down Structures...')
-    await environment.down()
+    await environment?.down()
     console.log('Structures shut down.')
 }
