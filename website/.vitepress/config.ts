@@ -31,6 +31,10 @@ function nav() {
       text: 'Reference',
       link: '/reference/structures-config',
       activeMatch: '/reference/'
+    },
+    {
+      text: 'Test Status',
+      link: 'https://kinotic-foundation.github.io/structures/allure' // Fully qualified URL
     }
   ]
 }

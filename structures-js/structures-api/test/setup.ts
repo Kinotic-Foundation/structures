@@ -11,9 +11,9 @@ export async function setup(project: TestProject) {
 
     const resolvedPath = path.resolve('../../')
     environment = await new DockerComposeEnvironment(resolvedPath, ['compose.yml', 'compose.es-transient.yml'])
-        .withWaitStrategy('elasticsearch', Wait.forHttp('/_cluster/health', 9200))
+        .withWaitStrategy('structures-elasticsearch', Wait.forHttp('/_cluster/health', 9200))
         .withWaitStrategy('structures-server', Wait.forHttp('/health', 9090))
-        .up(['elasticsearch', 'structures-server'])
+        .up(['structures-elasticsearch', 'structures-server'])
 
     const container = environment.getContainer('structures-server')
 

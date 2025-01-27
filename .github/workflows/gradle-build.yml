@@ -7,7 +7,6 @@ on:
       - main
       - 2.x
     paths-ignore:
-      - 'structures-js/**'
       - 'website/**'
 
 jobs:
@@ -17,6 +16,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+#      - uses: dorny/paths-filter@v3
+#        id: filter
+#        with:
+#          filters: |
+#            java:
+#              - 'backend/**'
+#            js:
+#              - 'frontend/**'
 
       - name: Set up JDK
         uses: actions/setup-java@v4
