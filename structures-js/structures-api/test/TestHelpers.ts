@@ -15,6 +15,7 @@ import {
     IEntityService
 } from '../src'
 import {Person} from './domain/Person.js'
+import {inject} from 'vitest'
 
 export async function initContinuumClient(): Promise<void> {
     try {
