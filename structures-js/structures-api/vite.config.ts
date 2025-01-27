@@ -22,5 +22,15 @@ export default defineConfig({
     plugins: [externalizeDeps(), dts()],
     test: {
         globalSetup: './test/setup.ts',
+        setupFiles: ["allure-vitest/setup"],
+        reporters: [
+            "verbose",
+            [
+                "allure-vitest/reporter",
+                {
+                    resultsDir: "allure-results",
+                },
+            ],
+        ],
     },
 })

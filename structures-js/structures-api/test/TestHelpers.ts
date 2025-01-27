@@ -18,14 +18,16 @@ import {Person} from './domain/Person.js'
 
 export async function initContinuumClient(): Promise<void> {
     try {
-        const container = (globalThis as any).environment.getContainer('structures-server-e2e')
-        const host: string = container.getHost()
+        // @ts-ignore
+        const host = inject('STRUCTURES_HOST')
+        // @ts-ignore
+        const port = inject('STRUCTURES_PORT')
 
         console.log('Connecting to continuum at ' + host)
 
         await Continuum.connect({
             host:host,
-            port:58503,
+            port:port,
             connectHeaders:{login: 'admin', passcode: 'structures'}
         })
 

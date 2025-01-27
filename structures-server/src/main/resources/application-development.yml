@@ -8,9 +8,13 @@ continuum:
 logging:
   level:
     org:
-      kinotic: TRACE
+      kinotic: WARN
     io:
-      vertx: DEBUG
+      vertx: WARN
+      netty:
+        util: DEBUG
+        buffer: DEBUG
+
 
 structures:
   initializeWithSampleData: true

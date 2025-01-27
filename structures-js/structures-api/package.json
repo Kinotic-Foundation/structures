@@ -31,6 +31,8 @@
     "@types/node": "^22.10.10",
     "@types/ws": "^8.5.14",
     "@vitest/coverage-v8": "^2.1.8",
+    "@vitest/runner": "^3.0.4",
+    "allure-vitest": "^3.0.9",
     "delay": "^6.0.0",
     "testcontainers": "^10.17.1",
     "typescript": "^5.7.3",

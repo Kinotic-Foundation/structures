@@ -1,18 +1,26 @@
 // @ts-ignore for some reason intellij is complaining about this even though esModuleInterop is enabled
 import path from 'node:path'
-import {DockerComposeEnvironment, Wait} from 'testcontainers'
+import {StartedDockerComposeEnvironment, DockerComposeEnvironment, Wait} from 'testcontainers'
+import {TestProject} from 'vitest/node.js'
 
-const composeFilePath = '.'
+let environment: StartedDockerComposeEnvironment
 
 // Run once before all tests
-export async function setup() {
+export async function setup(project: TestProject) {
     console.log('Starting Structures...')
-    const resolvedPath = path.resolve(composeFilePath)
 
-    globalThis.environment = await new DockerComposeEnvironment('.', 'compose.yml')
-        .withWaitStrategy('structures-elasticsearch-e2e', Wait.forHttp('/_cluster/health', 9200))
-        .withWaitStrategy('structures-server-e2e', Wait.forHttp('/health', 9090))
-        .up()
+    const resolvedPath = path.resolve('../../')
+    environment = await new DockerComposeEnvironment(resolvedPath, ['compose.yml', 'compose.es-transient.yml'])
+        .withWaitStrategy('elasticsearch', Wait.forHttp('/_cluster/health', 9200))
+        .withWaitStrategy('structures-server', Wait.forHttp('/health', 9090))
+        .up(['elasticsearch', 'structures-server'])
+
+    const container = environment.getContainer('structures-server')
+
+    // @ts-ignore
+    project.provide('STRUCTURES_HOST', container.getHost())
+    // @ts-ignore
+    project.provide('STRUCTURES_PORT', container.getMappedPort(58503))
 
     console.log('Structures started.')
 }
@@ -20,6 +28,6 @@ export async function setup() {
 // Run once after all tests
 export async function teardown() {
     console.log('Shutting down Structures...')
-    await globalThis.environment?.down()
+    await environment.down()
     console.log('Structures shut down.')
 }

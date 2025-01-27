@@ -1,0 +1,3 @@
+services:
+  structures-elasticsearch:
+    volumes: !reset []
