@@ -19,11 +19,13 @@ jobs:
 #      - uses: dorny/paths-filter@v3
 #        id: filter
 #        with:
+#          predicate-quantifier: 'every'
 #          filters: |
 #            java:
-#              - 'backend/**'
+#              - '**'
+#              - '!structures-js/**'
 #            js:
-#              - 'frontend/**'
+#              - 'structures-js/**'
 
       - name: Set up JDK
         uses: actions/setup-java@v4
@@ -37,6 +39,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Build with Gradle
+        if: steps.filter.outputs.java == 'true'
         run: ./gradlew build
 
       - name: Publish to Maven Central

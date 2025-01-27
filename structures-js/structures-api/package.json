@@ -21,7 +21,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "test": "vitest run --coverage"
+    "test": "vitest run"
   },
   "dependencies": {
     "@kinotic/continuum-idl": "^2.0.2",
