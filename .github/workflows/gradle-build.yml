@@ -12,7 +12,7 @@ on:
 
 jobs:
   gradle_build_and_publish:
-    name: Build And Publish Java Code
+    name: Build and Publish
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -83,3 +83,13 @@ jobs:
           publish_dir: allure-history
           publish_branch: gh-pages
           keep_files: true
+
+      - name: Add status to Commit
+        uses: guibranco/github-status-action-v2@v1.1.13
+        with:
+          authToken: ${{ secrets.GITHUB_TOKEN }}
+          context: 'Test Report'
+          description: 'Passed'
+          state: 'success'
+          sha: ${{github.event.pull_request.head.sha || github.sha}}
+          target_url: https://kinotic-foundation.github.io/structures/allure/${{ github.run_number }}
