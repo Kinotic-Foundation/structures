@@ -1,18 +1,16 @@
 import {FunctionDefinition, LongC3Type, ObjectC3Type, ArrayC3Type, StringC3Type} from '@kinotic/continuum-idl'
 import {describe, it, expect, beforeAll, afterAll, beforeEach, afterEach} from 'vitest'
 import { WebSocket } from 'ws'
-import {PageableC3Type} from '../src/api/idl/PageableC3Type.js'
-import {PageC3Type} from '../src/api/idl/PageC3Type.js'
+import {PageableC3Type, PageC3Type, IEntityService, Structures, Structure, QueryDecorator, NamedQueriesDefinition} from '@kinotic/structures-api'
 import {
     createPersonStructureIfNotExist,
-    createTestPeopleAndVerify, deleteStructure,
+    createTestPeopleAndVerify,
     generateRandomString,
     initContinuumClient,
     shutdownContinuumClient,
 } from './TestHelpers.js'
 import {Person} from './domain/Person.js'
 import {Page, Pageable} from '@kinotic/continuum-client'
-import {IEntityService, Structures, Structure, QueryDecorator, NamedQueriesDefinition} from '../src'
 
 Object.assign(global, { WebSocket})
 

@@ -55,7 +55,7 @@ jobs:
         id: run_e2e_tests
         continue-on-error: true
         run: |
-          cd structures-js/structures-api
+          cd structures-js/structures-e2e
           ./gradlew pnpmInstall
           ./gradlew pnpmTest
 

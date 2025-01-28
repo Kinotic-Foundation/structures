@@ -14,7 +14,7 @@ import {
 } from './TestHelpers.js'
 import {Person} from './domain/Person.js'
 import {Page, Pageable, Order, Direction} from '@kinotic/continuum-client'
-import {IEntityService, Structures, Structure} from '../src'
+import {IEntityService, Structures, Structure} from '@kinotic/structures-api'
 import delay from 'delay'
 
 Object.assign(global, { WebSocket})
