@@ -144,7 +144,7 @@ describe('NamedQueryTest', () => {
          await namedQueriesService.save(namedQueriesDefinition)
 
          const pageable = Pageable.createWithCursor(null, 10)
-         const personPage: Page<Person> = await entityService.namedQueryPage('countPeopleByLastName',
+         const personPage: Page<Person> = await entityService.namedQueryPage('countPeopleByLastNamePage',
                                                                              [],
                                                                              pageable)
          console.log(personPage)
