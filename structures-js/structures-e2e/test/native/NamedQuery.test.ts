@@ -5,11 +5,12 @@ import {PageableC3Type, PageC3Type, IEntityService, Structures, Structure, Query
 import {
     createPersonStructureIfNotExist,
     createTestPeopleAndVerify,
+    deleteStructure,
     generateRandomString,
     initContinuumClient,
     shutdownContinuumClient,
-} from './TestHelpers.js'
-import {Person} from './domain/Person.js'
+} from '../TestHelpers.js'
+import {Person} from '../domain/Person.js'
 import {Page, Pageable} from '@kinotic/continuum-client'
 
 Object.assign(global, { WebSocket})
@@ -37,7 +38,7 @@ describe('NamedQueryTest', () => {
     })
 
     afterEach<LocalTestContext>(async (context) => {
-       // await expect(deleteStructure(context.structure.id)).resolves.toBeUndefined()
+       await expect(deleteStructure(context.structure.id)).resolves.toBeUndefined()
     })
 
 

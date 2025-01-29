@@ -11,8 +11,8 @@ import {
     initContinuumClient,
     shutdownContinuumClient,
     logFailure, findAndVerifyPeopleWithOffsetPaging
-} from './TestHelpers.js'
-import {Person} from './domain/Person.js'
+} from '../TestHelpers.js'
+import {Person} from '../domain/Person.js'
 import {Page, Pageable, Order, Direction} from '@kinotic/continuum-client'
 import {IEntityService, Structures, Structure} from '@kinotic/structures-api'
 import delay from 'delay'
