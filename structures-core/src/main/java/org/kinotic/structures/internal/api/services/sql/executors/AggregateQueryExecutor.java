@@ -70,7 +70,7 @@ public class AggregateQueryExecutor extends AbstractQueryExecutor {
             Pair<List<Object>, QueryOptions> pair = QueryUtils.extractOrderedParameterList(parameterHolder, parameterNames);
             paramsToUse = pair.getLeft();
             options = pair.getRight();
-        }else if(parameterHolder != null){
+        }else if(parameterHolder != null && !parameterHolder.isEmpty()){
             throw new IllegalArgumentException("This query does not support any parameters");
         }
 

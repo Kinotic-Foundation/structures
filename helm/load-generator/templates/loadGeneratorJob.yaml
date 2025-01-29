@@ -33,9 +33,9 @@ spec:
                   fieldRef:
                     fieldPath: status.hostIP
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
-              value: http://$(KUBE_NODE):4317
+              value: {{ .Values.otel.endpoint }}
             - name: OTEL_EXPORTER_TYPE
-              value: OTLP
+              value: {{ .Values.otel.type }}
             - name: STRUCTURES_USE_SSL
               value: "{{ .Values.structures.useSsl }}"
             - name: STRUCTURES_HOST

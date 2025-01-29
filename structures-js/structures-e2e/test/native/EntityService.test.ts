@@ -8,13 +8,13 @@ import {
     createTestPerson,
     deleteStructure,
     generateRandomString,
-    initStructuresServer,
-    shutdownStructuresServer,
+    initContinuumClient,
+    shutdownContinuumClient,
     logFailure, findAndVerifyPeopleWithOffsetPaging
-} from './TestHelpers.js'
-import {Person} from './domain/Person.js'
+} from '../TestHelpers.js'
+import {Person} from '../domain/Person.js'
 import {Page, Pageable, Order, Direction} from '@kinotic/continuum-client'
-import {IEntityService, Structures, Structure} from '../src'
+import {IEntityService, Structures, Structure} from '@kinotic/structures-api'
 import delay from 'delay'
 
 Object.assign(global, { WebSocket})
@@ -27,11 +27,11 @@ interface LocalTestContext {
 describe('EntityServiceTest', () => {
 
     beforeAll(async () => {
-        await initStructuresServer()
+        await initContinuumClient()
     }, 300000)
 
     afterAll(async () => {
-        await shutdownStructuresServer()
+        await shutdownContinuumClient()
     }, 60000)
 
     beforeEach<LocalTestContext>(async (context) => {

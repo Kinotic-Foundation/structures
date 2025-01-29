@@ -39,10 +39,9 @@ public class QueryUtils {
         List<Object> parameters = new ArrayList<>(parameterNames.size());
         QueryOptions.QueryOptionsBuilder queryOptionsBuilder = QueryOptions.builder();
 
-        if(parameterHolder instanceof ListParameterHolder) {
+        if(parameterHolder instanceof ListParameterHolder listParameterHolder) {
 
-            List<QueryParameter> queryParameters
-                    = ((ListParameterHolder) parameterHolder).getParameters();
+            List<QueryParameter> queryParameters = listParameterHolder.getParameters();
 
             // for now, we will just return the parameters in the order they are in the list.
             // We may need to use the parameterNames list to reorder them.
@@ -52,10 +51,9 @@ public class QueryUtils {
                     parameters.add(queryParameter.getValue());
                 }
             }
-        }else if(parameterHolder instanceof MapParameterHolder){
+        }else if(parameterHolder instanceof MapParameterHolder mapParameterHolder){
 
-            Map<String, Object> queryParameters
-                    = ((MapParameterHolder) parameterHolder).getParameters();
+            Map<String, Object> queryParameters = mapParameterHolder.getParameters();
 
             for(String key : parameterNames){
                 Object value = queryParameters.get(key);

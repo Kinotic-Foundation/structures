@@ -1,4 +1,4 @@
-name: Build and Publish to Maven
+name: Build and Publish
 
 on:
   push:
@@ -7,14 +7,16 @@ on:
       - main
       - 2.x
     paths-ignore:
-      - 'structures-js/**'
       - 'website/**'
 
 jobs:
   gradle_build_and_publish:
+    name: Build and Publish
     runs-on: ubuntu-latest
-
     steps:
+      - name: Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.12.1
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -30,9 +32,12 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Build with Gradle
+        id: gradle_build
+        continue-on-error: true
         run: ./gradlew build
 
       - name: Publish to Maven Central
+        if: ${{ steps.gradle_build.outcome == 'success' }}
         # We must -Psigning.gnupg.executable=gpg since setup-java provides gpg2 as gpg
         run: ./gradlew publish -Psigning.gnupg.executable=gpg -Psigning.gnupg.keyName="${{ secrets.GPG_KEY_ID }}" -Psigning.gnupg.passphrase="${{ secrets.GPG_KEY_PASS }}"
         env:
@@ -40,7 +45,71 @@ jobs:
           MAVEN_PASSWORD: ${{ secrets.MAVEN_TOKEN_PASSWORD }}
 
       - name: Publish to Docker Hub
+        if: ${{ steps.gradle_build.outcome == 'success' }}
         run: ./gradlew bootBuildImage --publishImage
         env:
           DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
           DOCKER_HUB_PASSWORD: ${{ secrets.DOCKER_HUB_PASSWORD }}
+
+      - name: Run E2E Tests
+        id: run_e2e_tests
+        continue-on-error: true
+        run: |
+          cd structures-js/structures-e2e
+          ./gradlew pnpmInstall
+          ./gradlew pnpmTest
+
+      - name: Merge Test Results
+        run: |
+          mkdir -p allure-results
+          cp -r */build/allure-results/* allure-results/
+          cp -r structures-js/*/allure-results/* allure-results/
+
+      - name: Get Allure history
+        uses: actions/checkout@v4
+        continue-on-error: true
+        with:
+          ref: gh-pages
+          path: gh-pages
+
+      - name: Generate Allure report
+        uses: simple-elf/allure-report-action@v1.11
+        id: allure-report
+        with:
+          allure_results: allure-results
+          gh_pages: gh-pages
+          subfolder: allure
+          allure_report: allure-report
+          allure_history: allure-history
+
+      - name: Deploy report to Github Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: allure-history
+          publish_branch: gh-pages
+          keep_files: true
+
+      - name: Add status to Commit
+        uses: guibranco/github-status-action-v2@v1.1.13
+        with:
+          authToken: ${{ secrets.GITHUB_TOKEN }}
+          context: 'Test Report'
+          description: 'Passed'
+          state: 'success'
+          sha: ${{github.event.pull_request.head.sha || github.sha}}
+          target_url: https://kinotic-foundation.github.io/structures/allure/${{ github.run_number }}
+
+      - name: Check If Failure
+        if: ${{ steps.gradle_build.outcome == 'failure' || steps.run_e2e_tests.outcome == 'failure' }}
+        run: |
+          if [ "${{ steps.gradle_build.outcome }}" == "failure" ]; then
+            echo "Gradle Build failed."
+          fi
+
+          if [ "${{ steps.run_e2e_tests.outcome }}" == "failure" ]; then
+            echo "E2E Tests failed."
+          fi
+
+          # Optionally mark the job as failed
+          exit 1

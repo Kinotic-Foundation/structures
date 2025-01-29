@@ -3,9 +3,6 @@ continuum:
   discovery: sharedfs
   debug: false
 
-continuum-gateway:
-  dataDir: /tmp/work
-
 logging:
   level:
     org:
