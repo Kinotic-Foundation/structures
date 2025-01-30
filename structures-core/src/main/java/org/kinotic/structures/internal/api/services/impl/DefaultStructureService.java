@@ -100,7 +100,7 @@ public class DefaultStructureService implements StructureService {
                     // TODO: how to ensure structures namespace name match the C3Type name
                     // Should we just use the Structures one?
 
-                    structure.setMultiTenancyType(result.getMultiTenancyType());
+                    structure.setMultiTenancyType(result.multiTenancyType());
 
                     return  structureDAO.save(structure);
                 });
@@ -164,7 +164,7 @@ public class DefaultStructureService implements StructureService {
                             .createIndex(structure.getItemIndex(), true, indexBuilder -> {
 
                                 indexBuilder.mappings(m -> m.dynamic(DynamicMapping.Strict)
-                                                            .properties(result.getObjectProperty().properties()));
+                                                            .properties(result.objectProperty().properties()));
 
                             })
                             .thenCompose(createIndexResponse -> {
@@ -172,7 +172,7 @@ public class DefaultStructureService implements StructureService {
                                 structure.setPublished(true);
                                 structure.setPublishedTimestamp(new Date());
                                 structure.setUpdated(structure.getPublishedTimestamp());
-                                structure.setDecoratedProperties(result.getDecoratedProperties());
+                                structure.setDecoratedProperties(result.decoratedProperties());
 
                                 return structureDAO.save(structure)
                                                    .thenApply(structure1 -> {
@@ -219,7 +219,7 @@ public class DefaultStructureService implements StructureService {
 
                     // TODO: how to ensure structures namespace name match the C3Type name
                     // Should we just use the Structures one?
-                    structure.setMultiTenancyType(conversionResult.getMultiTenancyType());
+                    structure.setMultiTenancyType(conversionResult.multiTenancyType());
 
                     if(structure.isPublished()) {
                         // FIXME: how to best handle an operation where the mapping completes but the save fails.
@@ -230,10 +230,10 @@ public class DefaultStructureService implements StructureService {
                         return crudServiceTemplate
                                 .updateIndexMapping(structure.getItemIndex(),
                                                     mappingBuilder -> mappingBuilder.dynamic(DynamicMapping.Strict)
-                                                                                    .properties(conversionResult.getObjectProperty()
+                                                                                    .properties(conversionResult.objectProperty()
                                                                                                                 .properties()))
                                 .thenCompose(v -> {
-                                    structure.setDecoratedProperties(conversionResult.getDecoratedProperties());
+                                    structure.setDecoratedProperties(conversionResult.decoratedProperties());
                                     return structureDAO.save(structure)
                                                        .thenApply(structure1 -> {
                                                            cacheEvictionService.evictCachesFor(structure1);
