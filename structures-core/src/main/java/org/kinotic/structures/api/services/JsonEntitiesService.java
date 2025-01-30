@@ -157,7 +157,7 @@ public interface JsonEntitiesService {
      * @param participant the participant of the logged-in user
      * @return {@link CompletableFuture} emitting the saved entity
      */
-    CompletableFuture<RawJson> save(String structureId, TokenBuffer entity, Participant participant);
+    CompletableFuture<TokenBuffer> save(String structureId, TokenBuffer entity, Participant participant);
 
     /**
      * Returns a {@link Page} of entities matching the search text and paging restriction provided in the {@code Pageable} object.
@@ -182,6 +182,6 @@ public interface JsonEntitiesService {
      * @param participant the participant of the logged-in user
      * @return {@link CompletableFuture} emitting the saved entity
      */
-    CompletableFuture<RawJson> update(String structureId, TokenBuffer entity, Participant participant);
+    CompletableFuture<TokenBuffer> update(String structureId, TokenBuffer entity, Participant participant);
 
 }

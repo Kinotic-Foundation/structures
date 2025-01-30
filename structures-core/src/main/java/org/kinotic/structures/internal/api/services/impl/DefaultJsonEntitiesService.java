@@ -105,7 +105,7 @@ public class DefaultJsonEntitiesService implements JsonEntitiesService {
     }
 
     @Override
-    public CompletableFuture<RawJson> save(String structureId, TokenBuffer entity, Participant participant) {
+    public CompletableFuture<TokenBuffer> save(String structureId, TokenBuffer entity, Participant participant) {
         return defaultEntitiesService.save(structureId, entity, new DefaultEntityContext(participant));
     }
 
@@ -118,7 +118,7 @@ public class DefaultJsonEntitiesService implements JsonEntitiesService {
     }
 
     @Override
-    public CompletableFuture<RawJson> update(String structureId, TokenBuffer entity, Participant participant) {
+    public CompletableFuture<TokenBuffer> update(String structureId, TokenBuffer entity, Participant participant) {
         return defaultEntitiesService.update(structureId, entity, new DefaultEntityContext(participant));
     }
 

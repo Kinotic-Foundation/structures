@@ -10,6 +10,7 @@ import co.elastic.clients.util.BinaryData;
 import co.elastic.clients.util.ContentType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
+import io.vertx.ext.web.client.WebClient;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.NotImplementedException;
 import org.kinotic.continuum.core.api.crud.CursorPage;
@@ -234,16 +235,8 @@ public class DefaultEntityService implements EntityService {
                         i.routing(routing)
                          .index(structure.getItemIndex())
                          .id(entityHolder.getDocumentId())
+                         .document(entityHolder.entity())
                          .refresh(Refresh.True);
-
-                        // This is a bit of a hack since the BinaryData type does not work properly to retrieve complex objects, but does work to store them.
-                        // https://github.com/elastic/elasticsearch-java/issues/574
-                        if(entityHolder.entity() instanceof RawJson rawEntity) {
-                            BinaryData binaryData = BinaryData.of(rawEntity.data(), ContentType.APPLICATION_JSON);
-                            i.document(binaryData);
-                        }else{
-                            i.document(entityHolder.entity());
-                        }
 
                         ElasticVersion elasticVersion = entityHolder.getElasticVersionIfPresent();
                         if(elasticVersion != null) {
@@ -368,7 +361,7 @@ public class DefaultEntityService implements EntityService {
     @WithSpan
     private <T> CompletableFuture<Void> doBulkPersist(T entities,
                                                       EntityContext context,
-                                                      Function<EntityHolder, BulkOperation> persistLogic){
+                                                      Function<EntityHolder<?>, BulkOperation> persistLogic){
         return validateTenant(context)
                 .thenCompose(unused -> delegatingUpsertPreProcessor
                         .processArray(entities, context)
@@ -382,7 +375,7 @@ public class DefaultEntityService implements EntityService {
                             br.routing(routing);
 
                             List<BulkOperation> bulkOperations = new ArrayList<>(list.size());
-                            for(EntityHolder entityHolder : list){
+                            for(EntityHolder<?> entityHolder : list){
 
                                 if(entityHolder.id() == null || entityHolder.id().isEmpty()){
                                     return CompletableFuture.failedFuture(new IllegalArgumentException("All Entities must have an id"));
@@ -420,7 +413,7 @@ public class DefaultEntityService implements EntityService {
     @SuppressWarnings("unchecked")
     private <T> CompletableFuture<T> doPrePersist(T entity,
                                                   EntityContext context,
-                                                  Function<EntityHolder, CompletableFuture<T>> persistLogic){
+                                                  Function<EntityHolder<?>, CompletableFuture<T>> persistLogic){
         return validateTenant(context)
                 .thenCompose(unused -> (CompletableFuture<T>) delegatingUpsertPreProcessor
                         .process(entity, context)
