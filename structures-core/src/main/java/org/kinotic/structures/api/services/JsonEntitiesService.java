@@ -87,7 +87,7 @@ public interface JsonEntitiesService {
      * @param participant the participant of the logged-in user
      * @return a page of entities
      */
-    CompletableFuture<Page<RawJson>> findAll(String structureId, Pageable pageable, Participant participant);
+    CompletableFuture<Page<Object>> findAll(String structureId, Pageable pageable, Participant participant);
 
     /**
      * Retrieves an entity by its id.
@@ -97,7 +97,7 @@ public interface JsonEntitiesService {
      * @param participant the participant of the logged-in user
      * @return {@link CompletableFuture} with the entity with the given id or {@link CompletableFuture} emitting null if none found
      */
-    CompletableFuture<RawJson> findById(String structureId, String id, Participant participant);
+    CompletableFuture<Object> findById(String structureId, String id, Participant participant);
 
     /**
      * Retrieves a list of entities by their id.
@@ -107,7 +107,7 @@ public interface JsonEntitiesService {
      * @param participant the participant of the logged-in user
      * @return {@link CompletableFuture} with the list of matched entities with the given ids or {@link CompletableFuture} emitting an empty list if none found
      */
-    CompletableFuture<List<RawJson>> findByIds(String structureId, List<String> ids, Participant participant);
+    CompletableFuture<List<Object>> findByIds(String structureId, List<String> ids, Participant participant);
 
     /**
      * Executes a named query.
@@ -170,7 +170,7 @@ public interface JsonEntitiesService {
      * @param participant the participant of the logged-in user
      * @return a {@link CompletableFuture} of a page of entities
      */
-    CompletableFuture<Page<RawJson>> search(String structureId, String searchText, Pageable pageable, Participant participant);
+    CompletableFuture<Page<Object>> search(String structureId, String searchText, Pageable pageable, Participant participant);
 
     /**
      * Updates a given entity. This will only override the fields that are present in the given entity.

@@ -9,6 +9,7 @@ import co.elastic.clients.elasticsearch.core.bulk.BulkResponseItem;
 import co.elastic.clients.util.BinaryData;
 import co.elastic.clients.util.ContentType;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.util.TokenBuffer;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
 import io.vertx.ext.web.client.WebClient;
 import lombok.RequiredArgsConstructor;
@@ -17,10 +18,7 @@ import org.kinotic.continuum.core.api.crud.CursorPage;
 import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.structures.api.config.StructuresProperties;
-import org.kinotic.structures.api.domain.EntityContext;
-import org.kinotic.structures.api.domain.EntityOperation;
-import org.kinotic.structures.api.domain.RawJson;
-import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.api.domain.*;
 import org.kinotic.structures.api.domain.idl.decorators.MultiTenancyType;
 import org.kinotic.structures.api.services.NamedQueriesService;
 import org.kinotic.structures.api.services.security.AuthorizationService;
@@ -39,6 +37,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -75,7 +74,6 @@ public class DefaultEntityService implements EntityService {
                                                            i.ifPrimaryTerm(elasticVersion.primaryTerm())
                                                             .ifSeqNo(elasticVersion.seqNo());
                                                        }
-
                                                        return i;
                                                    }
                                             ))));
@@ -99,7 +97,6 @@ public class DefaultEntityService implements EntityService {
                                                             u.ifPrimaryTerm(elasticVersion.primaryTerm())
                                                              .ifSeqNo(elasticVersion.seqNo());
                                                         }
-
                                                         return u;
                                                     }
                                             ))));
@@ -150,35 +147,90 @@ public class DefaultEntityService implements EntityService {
 
     @WithSpan
     @Override
-    public <T> CompletableFuture<Page<T>> findAll(Pageable pageable, Class<T> type, EntityContext context) {
+    public CompletableFuture<Page<Object>> findAll(Pageable pageable, Class<?> preferredType, EntityContext context) {
         return authService.authorize(EntityOperation.FIND_ALL, context).thenCompose(
                 un -> validateTenant(context)
-                        .thenCompose(unused -> crudServiceTemplate
-                                .search(structure.getItemIndex(),
-                                        pageable,
-                                        type,
-                                        builder -> readPreProcessor.beforeFindAll(structure, builder, context))
-                                .thenApply(createParanoidCheck(type, context, "Find All"))));
+                        .thenCompose(unused -> {
+
+                            TypeHolder typeRef = new TypeHolder();
+                            typeRef.type = preferredType;
+
+                            if(structure.isOptimisticLockingEnabled()){
+                                if(RawJson.class.isAssignableFrom(preferredType)){
+                                    typeRef.type = Map.class;
+                                }
+
+                                return crudServiceTemplate
+                                        .search(structure.getItemIndex(),
+                                                pageable,
+                                                typeRef.type,
+                                                builder -> readPreProcessor.beforeFindAll(structure, builder, context),
+                                                hit -> updateVersionForEntity(hit.source(), hit.seqNo(), hit.primaryTerm()));
+
+                            } else {
+                                return crudServiceTemplate
+                                        .search(structure.getItemIndex(),
+                                                pageable,
+                                                typeRef.type,
+                                                builder -> readPreProcessor.beforeFindAll(structure, builder, context),
+                                                hit -> (Object) hit.source());
+                            }
+                        }));
     }
 
     @WithSpan
     @Override
-    public <T> CompletableFuture<T> findById(String id, Class<T> type, EntityContext context) {
+    public CompletableFuture<Object> findById(String id, Class<?> preferredType, EntityContext context) {
         return authService.authorize(EntityOperation.FIND_BY_ID, context).thenCompose(
                 un -> validateTenantAndComposeId(id, context).thenCompose(
-                        composedId -> crudServiceTemplate
-                                .findById(structure.getItemIndex(), composedId, type,
-                                          builder -> readPreProcessor.beforeFindById(structure, builder, context))));
+                        composedId -> {
+
+                            TypeHolder typeRef = new TypeHolder();
+                            typeRef.type = preferredType;
+
+                            if(structure.isOptimisticLockingEnabled()) {
+                                if (RawJson.class.isAssignableFrom(preferredType)) {
+                                    typeRef.type = Map.class;
+                                }
+                                return crudServiceTemplate
+                                        .findById(structure.getItemIndex(), composedId, typeRef.type,
+                                                  builder -> readPreProcessor.beforeFindById(structure, builder, context),
+                                                  result -> updateVersionForEntity(result.source(), result.seqNo(), result.primaryTerm()));
+
+                            }else{
+                                return crudServiceTemplate
+                                        .findById(structure.getItemIndex(), composedId, typeRef.type,
+                                                  builder -> readPreProcessor.beforeFindById(structure, builder, context),
+                                                  result -> (Object) result.source());
+                            }
+                        }));
     }
 
     @WithSpan
     @Override
-    public <T> CompletableFuture<List<T>> findByIds(List<String> ids, Class<T> type, EntityContext context) {
+    public CompletableFuture<List<Object>> findByIds(List<String> ids, Class<?> preferredType, EntityContext context) {
         return authService.authorize(EntityOperation.FIND_BY_IDS, context).thenCompose(
                 un -> validateTenantAndComposeIds(ids, context)
-                        .thenCompose(composedIds -> crudServiceTemplate
-                                .findByIds(structure.getItemIndex(), composedIds, type,
-                                           builder -> readPreProcessor.beforeFindByIds(structure, builder, context))));
+                        .thenCompose(composedIds -> {
+
+                            TypeHolder typeRef = new TypeHolder();
+                            typeRef.type = preferredType;
+
+                            if(structure.isOptimisticLockingEnabled()) {
+                                if (RawJson.class.isAssignableFrom(preferredType)) {
+                                    typeRef.type = Map.class;
+                                }
+                                return crudServiceTemplate
+                                        .findByIds(structure.getItemIndex(), composedIds, typeRef.type,
+                                                   builder -> readPreProcessor.beforeFindByIds(structure, builder, context),
+                                                   result -> updateVersionForEntity(result.source(), result.seqNo(), result.primaryTerm()));
+                            } else {
+                                return crudServiceTemplate
+                                        .findByIds(structure.getItemIndex(), composedIds, typeRef.type,
+                                                   builder -> readPreProcessor.beforeFindByIds(structure, builder, context),
+                                                   result -> (Object) result.source());
+                            }
+                        }));
     }
 
     @WithSpan
@@ -254,15 +306,39 @@ public class DefaultEntityService implements EntityService {
 
     @WithSpan
     @Override
-    public <T> CompletableFuture<Page<T>> search(String searchText, Pageable pageable, Class<T> type, EntityContext context) {
+    public CompletableFuture<Page<Object>> search(String searchText, Pageable pageable, Class<?> preferredType, EntityContext context) {
         return authService.authorize(EntityOperation.SEARCH, context).thenCompose(
                 un -> validateTenant(context)
-                        .thenCompose(unused -> crudServiceTemplate
-                                .search(structure.getItemIndex(),
-                                        pageable,
-                                        type,
-                                        builder -> readPreProcessor.beforeSearch(structure, searchText, builder, context))
-                                .thenApply(createParanoidCheck(type, context, "Search"))));
+                        .thenCompose(unused -> {
+
+                            TypeHolder typeRef = new TypeHolder();
+                            typeRef.type = preferredType;
+
+                            if(structure.isOptimisticLockingEnabled()) {
+                                if (RawJson.class.isAssignableFrom(preferredType)) {
+                                    typeRef.type = Map.class;
+                                }
+                                return crudServiceTemplate
+                                        .search(structure.getItemIndex(),
+                                                pageable,
+                                                typeRef.type,
+                                                builder -> readPreProcessor.beforeSearch(structure,
+                                                                                         searchText,
+                                                                                         builder,
+                                                                                         context),
+                                                hit -> updateVersionForEntity(hit.source(), hit.seqNo(), hit.primaryTerm()));
+                            }else {
+                                return crudServiceTemplate
+                                        .search(structure.getItemIndex(),
+                                                pageable,
+                                                typeRef.type,
+                                                builder -> readPreProcessor.beforeSearch(structure,
+                                                                                         searchText,
+                                                                                         builder,
+                                                                                         context),
+                                                hit -> (Object) hit.source());
+                            }
+                        }));
     }
 
     @WithSpan
@@ -298,64 +374,6 @@ public class DefaultEntityService implements EntityService {
                                             return (T) entityHolder.entity();
                                         });
                 }));
-    }
-
-    @WithSpan
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    private <T> Function<Page<T>, Page<T>> createParanoidCheck(Class<T> type, EntityContext context, String what){
-        return page -> {
-            // This is a temporary bit of code to make sure multi tenancy is working properly
-            if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
-                List<Object> result = new ArrayList<>(page.getContent().size());
-                if(RawJson.class.isAssignableFrom(type)){
-                    for(RawJson rawJson : (List<RawJson>)page.getContent()){
-                        try {
-                            Map converted = objectMapper.readValue(rawJson.data(), Map.class);
-                            String tenant = (String) converted.get(structuresProperties.getTenantIdFieldName());
-                            if(tenant != null && tenant.equals(context.getParticipant().getTenantId())){
-                                // We have to make sure tenant id is not in output, this is a bit of a hack, as long as we need the paranoid check
-                                converted.remove(structuresProperties.getTenantIdFieldName());
-                                result.add(RawJson.from(objectMapper.writeValueAsBytes(converted)));
-                            }else{
-                                log.error("{} Multi tenancy is not working properly for structure: {} and tenant: {}\nData:\n{}",
-                                          what,
-                                          structure,
-                                          context.getParticipant().getTenantId(),
-                                          converted);
-                            }
-                        } catch (IOException e) {
-                            throw new IllegalStateException("RawJson could not be deserialized for sanity check",e);
-                        }
-                    }
-                }else if(Map.class.isAssignableFrom(type)){
-                    List<Map> content = (List<Map>)page.getContent();
-                    for(Map map : content){
-                        String tenant = (String) map.get(structuresProperties.getTenantIdFieldName());
-                        if(tenant != null && tenant.equals(context.getParticipant().getTenantId())){
-                            // We have to make sure tenant id is not in output, this is a bit of a hack, as long as we need the paranoid check
-                            map.remove(structuresProperties.getTenantIdFieldName());
-                            result.add(map);
-                        }else{
-                            log.error("Multi tenancy is not working properly for structure: {} and tenant: {}\nData:\n{}",
-                                      structure,
-                                      context.getParticipant().getTenantId(),
-                                      map);
-                        }
-                    }
-                }else{
-                    throw new NotImplementedException("Pojo Multi tenancy check is not implemented yet");
-                }
-
-                if(page instanceof CursorPage){
-                    return (Page<T>) new CursorPage<>(result, ((CursorPage) page).getCursor(), page.getTotalElements());
-                }else{
-                    return (Page<T>) new Page<>(result, page.getTotalElements());
-                }
-
-            }else{
-                return page;
-            }
-        };
     }
 
     @WithSpan
@@ -428,6 +446,17 @@ public class DefaultEntityService implements EntityService {
                         }));
     }
 
+    private <T> T updateVersionForEntity(T entity, Long seqNo, Long primaryTerm){
+        if(entity instanceof TokenBuffer buffer){
+
+        }else if(entity instanceof Map map) {
+            map.put(structure.getVersionFieldName(), seqNo + ":" + primaryTerm);
+        }else{
+            throw new IllegalArgumentException("Pojo Not Supported for Version");
+        }
+        return entity;
+    }
+
     @WithSpan
     private CompletableFuture<Void> validateTenant(final EntityContext context){
         if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
@@ -469,6 +498,10 @@ public class DefaultEntityService implements EntityService {
                     }
                     return ret;
                 });
+    }
+
+    private static class TypeHolder {
+        public Class<?> type;
     }
 
 }

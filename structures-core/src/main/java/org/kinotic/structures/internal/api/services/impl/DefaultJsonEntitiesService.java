@@ -57,19 +57,19 @@ public class DefaultJsonEntitiesService implements JsonEntitiesService {
     }
 
     @Override
-    public CompletableFuture<Page<RawJson>> findAll(String structureId,
-                                                    Pageable pageable,
-                                                    Participant participant) {
+    public CompletableFuture<Page<Object>> findAll(String structureId,
+                                                        Pageable pageable,
+                                                        Participant participant) {
         return defaultEntitiesService.findAll(structureId, pageable, RawJson.class, new DefaultEntityContext(participant));
     }
 
     @Override
-    public CompletableFuture<RawJson> findById(String structureId, String id, Participant participant) {
+    public CompletableFuture<Object> findById(String structureId, String id, Participant participant) {
         return defaultEntitiesService.findById(structureId, id, RawJson.class, new DefaultEntityContext(participant));
     }
 
     @Override
-    public CompletableFuture<List<RawJson>> findByIds(String structureId, List<String> ids, Participant participant) {
+    public CompletableFuture<List<Object>> findByIds(String structureId, List<String> ids, Participant participant) {
         return defaultEntitiesService.findByIds(structureId, ids, RawJson.class, new DefaultEntityContext(participant));
     }
 
@@ -110,10 +110,10 @@ public class DefaultJsonEntitiesService implements JsonEntitiesService {
     }
 
     @Override
-    public CompletableFuture<Page<RawJson>> search(String structureId,
-                                                   String searchText,
-                                                   Pageable pageable,
-                                                   Participant participant) {
+    public CompletableFuture<Page<Object>> search(String structureId,
+                                                       String searchText,
+                                                       Pageable pageable,
+                                                       Participant participant) {
         return defaultEntitiesService.search(structureId, searchText, pageable, RawJson.class, new DefaultEntityContext(participant));
     }
 

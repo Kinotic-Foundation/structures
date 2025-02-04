@@ -46,7 +46,7 @@ public class EntitiesDataFetcher implements DataFetcher<CompletableFuture<List<M
                                                      id,
                                                      Map.class,
                                                      ec)
-                                           .thenApply(entity -> new EntityMap(entity, typename)));
+                                           .thenApply(entity -> new EntityMap((Map<String, Object>)entity, typename)));
             }
 
             return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))

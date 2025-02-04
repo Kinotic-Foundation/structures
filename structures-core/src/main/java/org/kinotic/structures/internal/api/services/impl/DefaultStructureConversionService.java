@@ -53,14 +53,17 @@ public class DefaultStructureConversionService implements StructureConversionSer
             throw new IllegalStateException("EntityDefinition must be an object");
         }
 
-        validateEntityDefinition(state);
+        String versionFieldName = validateEntityDefinition(state);
 
-        return new ElasticConversionResult(state.getDecoratedProperties(), state.getMultiTenancyType(), ret);
+        return new ElasticConversionResult(state.getDecoratedProperties(),
+                                           state.getMultiTenancyType(),
+                                           ret,
+                                           versionFieldName);
     }
 
-    private static void validateEntityDefinition(ElasticConversionState state) {
+    private static String validateEntityDefinition(ElasticConversionState state) {
         boolean idFieldFound = false;
-        boolean versionFieldFound = false;
+        String versionFieldName = null;
 
         for(DecoratedProperty prop : state.getDecoratedProperties()){
             if(prop.getDecorators() != null){
@@ -81,7 +84,7 @@ public class DefaultStructureConversionService implements StructureConversionSer
 
                     } else if (decorator instanceof VersionDecorator) {
 
-                        if(versionFieldFound){
+                        if(versionFieldName != null){
                             throw new IllegalArgumentException("Only one Version field can be defined for the EntityDefinition");
                         }
 
@@ -89,7 +92,7 @@ public class DefaultStructureConversionService implements StructureConversionSer
                             throw new IllegalArgumentException("Version field cannot be nested");
                         }
 
-                        versionFieldFound = true;
+                        versionFieldName = prop.getJsonPath();
                     }
                 }
             }
@@ -98,6 +101,8 @@ public class DefaultStructureConversionService implements StructureConversionSer
         if(!idFieldFound){
             throw new IllegalArgumentException("An Id field must be defined for the EntityDefinition");
         }
+
+        return versionFieldName;
     }
 
     @Override

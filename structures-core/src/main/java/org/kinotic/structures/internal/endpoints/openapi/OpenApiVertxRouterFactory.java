@@ -149,7 +149,7 @@ public class OpenApiVertxRouterFactory {
                                                                               id,
                                                                               RawJson.class,
                                                                               new RoutingContextToEntityContextAdapter(ctx)))
-                                        .handle(new RawJsonHandler(ctx))
+                                        .handle(new ValueToJsonHandler<>(ctx, objectMapper, true))
                                         .exceptionally(throwable -> {
                                             VertxWebUtil.writeException(ctx, throwable);
                                             return null;
@@ -271,7 +271,6 @@ public class OpenApiVertxRouterFactory {
                   }
               });
 
-        // TODO: discuss with Nick if we should keep the consumes handler
         // Named Query Page
         router.post(apiBasePath + ":structureNamespace/:structureName/named-query-page/:queryName")
               .produces("application/json")
@@ -384,7 +383,7 @@ public class OpenApiVertxRouterFactory {
                   VertxCompletableFuture.from(vertx, entitiesService.update(structureId,
                                                                             new RawJson(ctx.body().buffer().getBytes()),
                                                                             new RoutingContextToEntityContextAdapter(ctx)))
-                                        .handle(new RawJsonHandler(ctx))
+                                        .handle(new ValueToJsonHandler<>(ctx, objectMapper))
                                         .exceptionally(throwable -> {
                                             VertxWebUtil.writeException(ctx, throwable);
                                             return null;
@@ -404,7 +403,7 @@ public class OpenApiVertxRouterFactory {
                   VertxCompletableFuture.from(vertx, entitiesService.save(structureId,
                                                                           new RawJson(ctx.body().buffer().getBytes()),
                                                                           new RoutingContextToEntityContextAdapter(ctx)))
-                                        .handle(new RawJsonHandler(ctx))
+                                        .handle(new ValueToJsonHandler<>(ctx, objectMapper))
                                         .exceptionally(throwable -> {
                                             VertxWebUtil.writeException(ctx, throwable);
                                             return null;

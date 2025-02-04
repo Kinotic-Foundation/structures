@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 /**
  * Created by Navíd Mitchell 🤪 on 5/10/23.
@@ -153,10 +154,10 @@ public class CrudServiceTemplate {
         });
     }
 
+
     /**
      * Finds a document by id. Also allows for customization of the {@link GetRequest}.
      *
-     * @param <T>             type of the document to return
      * @param indexName       name of the index to search
      * @param id              of the document to return
      * @param type            of the document to return
@@ -166,9 +167,8 @@ public class CrudServiceTemplate {
     public <T> CompletableFuture<T> findById(String indexName,
                                              String id,
                                              Class<T> type,
-                                             Consumer<GetRequest.Builder> builderConsumer) {
-        return this.findById(indexName, id, getDeserializer(type), builderConsumer)
-                   .thenApply(GetResult::source);
+                                             Consumer<GetRequest.Builder> builderConsumer){
+        return findById(indexName, id, type, builderConsumer, null);
     }
 
     /**
@@ -176,22 +176,24 @@ public class CrudServiceTemplate {
      *
      * @param indexName       name of the index to search
      * @param id              of the document to return
-     * @param deserializer    to use to deserialize the document
+     * @param type            of the document to return
      * @param builderConsumer to customize the {@link GetRequest}, or null if no customization is needed
-     * @param <T>             type of the document to return
+     * @param resultMapper to map the {@link GetResult} to the desired type or null if the source should be returned directly
      * @return a {@link CompletableFuture} that will complete with the document
      */
-    public <T> CompletableFuture<GetResponse<T>> findById(String indexName,
-                                                          String id,
-                                                          JsonpDeserializer<T> deserializer,
-                                                          Consumer<GetRequest.Builder> builderConsumer) {
+    public <T, R> CompletableFuture<R> findById(String indexName,
+                                                String id,
+                                                Class<T> type,
+                                                Consumer<GetRequest.Builder> builderConsumer,
+                                                Function<GetResult<T>, R> resultMapper) {
+
         //noinspection unchecked
         JsonEndpoint<GetRequest, GetResponse<T>, ErrorResponse> endpoint =
                 (JsonEndpoint<GetRequest, GetResponse<T>, ErrorResponse>) GetRequest._ENDPOINT;
 
         endpoint = new EndpointWithResponseMapperAttr<>(endpoint,
                                                         "co.elastic.clients:Deserializer:_global.get.Response.TDocument",
-                                                        deserializer);
+                                                        getDeserializer(type));
 
         GetRequest.Builder builder = new GetRequest.Builder();
 
@@ -202,13 +204,23 @@ public class CrudServiceTemplate {
 
         //noinspection resource
         return esAsyncClient._transport()
-                            .performRequestAsync(builder.build(), endpoint, esAsyncClient._transportOptions());
+                            .performRequestAsync(builder.build(),
+                                                 endpoint,
+                                                 esAsyncClient._transportOptions())
+                            .thenApply(tGetResponse -> {
+                                if(resultMapper != null) {
+                                    return resultMapper.apply(tGetResponse);
+                                }else{
+                                    //noinspection unchecked
+                                    return (R)tGetResponse.source();
+                                }
+                            });
     }
+
 
     /**
      * Finds a list document by their id. Also allows for customization of the {@link MgetRequest}.
      *
-     * @param <T>             type of the document to return
      * @param indexName       name of the index to search
      * @param ids             of the documents to return
      * @param type            of the document to return
@@ -218,44 +230,33 @@ public class CrudServiceTemplate {
     public <T> CompletableFuture<List<T>> findByIds(String indexName,
                                                     List<String> ids,
                                                     Class<T> type,
-                                                    Consumer<MgetRequest.Builder> builderConsumer) {
-        return this.findByIds(indexName, ids, getDeserializer(type), builderConsumer)
-                .thenApply(response -> {
-
-                    List<MultiGetResponseItem<T>> recordsResponse = response.docs();
-                    ArrayList<T> content = new ArrayList<>();
-
-                    for (MultiGetResponseItem<T> hit : recordsResponse) {
-                        if(hit.isResult() && hit.result().found()){
-                            content.add(hit.result().source());
-                        }
-                    }
-
-                    return content;
-                });
+                                                    Consumer<MgetRequest.Builder> builderConsumer){
+        return findByIds(indexName, ids, type, builderConsumer, null);
     }
 
     /**
-     * Finds a list of document by their ids. Also allows for customization of the {@link MgetRequest}.
+     * Finds a list document by their id. Also allows for customization of the {@link MgetRequest}.
      *
      * @param indexName       name of the index to search
-     * @param ids             ids of the documents to return
-     * @param deserializer    to use to deserialize the document
+     * @param ids             of the documents to return
+     * @param type            of the document to return
      * @param builderConsumer to customize the {@link GetRequest}, or null if no customization is needed
-     * @param <T>             type of the document to return
-     * @return a {@link CompletableFuture} that will complete with the document
+     * @param resultMapper to map the {@link GetResult} to the desired type or null if the source should be returned directly
+     * @return a {@link CompletableFuture} that will complete with the documents requested
      */
-    public <T> CompletableFuture<MgetResponse<T>> findByIds(String indexName,
-                                                            List<String> ids,
-                                                            JsonpDeserializer<T> deserializer,
-                                                            Consumer<MgetRequest.Builder> builderConsumer) {
-        //noinspection unchecked
+    public <T, R> CompletableFuture<List<R>> findByIds(String indexName,
+                                                       List<String> ids,
+                                                       Class<T> type,
+                                                       Consumer<MgetRequest.Builder> builderConsumer,
+                                                       Function<GetResult<T>, R> resultMapper) {
+
+        @SuppressWarnings("unchecked")
         JsonEndpoint<MgetRequest, MgetResponse<T>, ErrorResponse> endpoint =
                 (JsonEndpoint<MgetRequest, MgetResponse<T>, ErrorResponse>) MgetRequest._ENDPOINT;
 
         endpoint = new EndpointWithResponseMapperAttr<>(endpoint,
-                "co.elastic.clients:Deserializer:_global.mget.Response.TDocument",
-                deserializer);
+                                                        "co.elastic.clients:Deserializer:_global.mget.Response.TDocument",
+                                                        getDeserializer(type));
 
         MgetRequest.Builder builder = new MgetRequest.Builder();
 
@@ -266,7 +267,30 @@ public class CrudServiceTemplate {
 
         //noinspection resource
         return esAsyncClient._transport()
-                .performRequestAsync(builder.build(), endpoint, esAsyncClient._transportOptions());
+                            .performRequestAsync(builder.build(),
+                                                 endpoint,
+                                                 esAsyncClient._transportOptions())
+                            .thenApply(response -> {
+
+                                List<MultiGetResponseItem<T>> recordsResponse = response.docs();
+                                ArrayList<R> content = new ArrayList<>();
+
+                                if(resultMapper != null) {
+                                    for (MultiGetResponseItem<T> hit : recordsResponse) {
+                                        if (hit.isResult() && hit.result().found()) {
+                                            content.add(resultMapper.apply(hit.result()));
+                                        }
+                                    }
+                                }else{
+                                    for (MultiGetResponseItem<T> hit : recordsResponse) {
+                                        if(hit.isResult() && hit.result().found()){
+                                            //noinspection unchecked
+                                            content.add((R)hit.result().source());
+                                        }
+                                    }
+                                }
+                                return content;
+                            });
     }
 
     /**
@@ -284,18 +308,47 @@ public class CrudServiceTemplate {
     public <T> CompletableFuture<Page<T>> search(String indexName,
                                                  Pageable pageable,
                                                  Class<T> type,
-                                                 Consumer<SearchRequest.Builder> builderConsumer) {
+                                                 Consumer<SearchRequest.Builder> builderConsumer){
+        return search(indexName, pageable, type, builderConsumer, null);
+    }
+
+    /**
+     * Provides base functionality to get a {@link Page} of documents from elasticsearch. With the ability to customize the {@link SearchRequest}.
+     * NOTE: not all customizations are supported, only the ones that make sense for a {@link Page} of documents.
+     * For example aggregations are not supported.
+     * This is meant to be used internally by implementors.
+     *
+     * @param indexName       name of the index to search
+     * @param pageable        to use for the search
+     * @param type            of the documents to return
+     * @param builderConsumer to customize the {@link SearchRequest}, or null if no customization is needed
+     * @param hitMapper       to map the {@link Hit} to the desired type or null if the source should be returned directly
+     * @return a {@link CompletableFuture} that will complete with a {@link Page} of documents
+     */
+    public <T,R> CompletableFuture<Page<R>> search(String indexName,
+                                                   Pageable pageable,
+                                                   Class<T> type,
+                                                   Consumer<SearchRequest.Builder> builderConsumer,
+                                                   Function<Hit<T>, R> hitMapper) {
 
         return searchFullResponse(indexName, pageable, type, builderConsumer)
                 .thenApply(response -> {
 
                     HitsMetadata<T> hitsMetadata = response.hits();
-                    List<T> content = new ArrayList<>(hitsMetadata.hits().size());
+                    List<R> content = new ArrayList<>(hitsMetadata.hits().size());
                     List<FieldValue> lastSort = null;
 
-                    for (Hit<T> hit : hitsMetadata.hits()) {
-                        content.add(hit.source());
-                        lastSort = hit.sort();
+                    if(hitMapper != null) {
+                        for (Hit<T> hit : hitsMetadata.hits()) {
+                            content.add(hitMapper.apply(hit));
+                            lastSort = hit.sort();
+                        }
+                    }else {
+                        for (Hit<T> hit : hitsMetadata.hits()) {
+                            //noinspection unchecked
+                            content.add((R)hit.source());
+                            lastSort = hit.sort();
+                        }
                     }
 
                     if(pageable instanceof CursorPageable) {
@@ -328,10 +381,10 @@ public class CrudServiceTemplate {
      * @param builderConsumer to customize the {@link SearchRequest}, or null if no customization is needed
      * @return a {@link CompletableFuture} that will complete with a {@link SearchResponse} of documents
      */
-    public <T> CompletableFuture<SearchResponse<T>> searchFullResponse(String indexName,
-                                                                       Pageable pageable,
-                                                                       Class<T> type,
-                                                                       Consumer<SearchRequest.Builder> builderConsumer) {
+    private <T> CompletableFuture<SearchResponse<T>> searchFullResponse(String indexName,
+                                                                        Pageable pageable,
+                                                                        Class<T> type,
+                                                                        Consumer<SearchRequest.Builder> builderConsumer) {
 
         Validate.notNull(indexName, "indexName cannot be null");
         Validate.notNull(pageable, "pageable cannot be null");

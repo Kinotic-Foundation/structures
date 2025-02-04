@@ -15,7 +15,7 @@ import java.util.concurrent.CompletableFuture;
  * Created by Navíd Mitchell 🤪 on 4/17/23.
  */
 @SuppressWarnings("rawtypes")
-public class FindByIdDataFetcher implements DataFetcher<CompletableFuture<Map>> {
+public class FindByIdDataFetcher implements DataFetcher<CompletableFuture<Object>> {
 
         private final String structureId;
         private final EntitiesService entitiesService;
@@ -26,7 +26,7 @@ public class FindByIdDataFetcher implements DataFetcher<CompletableFuture<Map>> 
         }
 
         @Override
-        public CompletableFuture<Map> get(DataFetchingEnvironment environment) throws Exception {
+        public CompletableFuture<Object> get(DataFetchingEnvironment environment) throws Exception {
             RoutingContext rc = environment.getGraphQlContext().get(RoutingContext.class);
             Objects.requireNonNull(rc);
             EntityContext ec = new RoutingContextToEntityContextAdapter(rc);

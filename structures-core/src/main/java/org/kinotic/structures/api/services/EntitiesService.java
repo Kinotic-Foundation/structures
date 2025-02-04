@@ -80,35 +80,35 @@ public interface EntitiesService {
     /**
      * Returns a {@link Page} of entities meeting the paging restriction provided in the {@code Pageable} object.
      *
-     * @param structureId the id of the structure to find the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
-     * @param pageable    the page settings to be used
-     * @param type        the type of the entity
-     * @param context     the context for this operation
+     * @param structureId   the id of the structure to find the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * @param pageable      the page settings to be used
+     * @param preferredType the return type to use if possible
+     * @param context       the context for this operation
      * @return a page of entities
      */
-    <T> CompletableFuture<Page<T>> findAll(String structureId, Pageable pageable, Class<T> type, EntityContext context);
+    CompletableFuture<Page<Object>> findAll(String structureId, Pageable pageable, Class<?> preferredType, EntityContext context);
 
     /**
      * Retrieves an entity by its id.
      *
-     * @param structureId the id of the structure to find the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
-     * @param id          must not be {@literal null}
-     * @param type        the type of the entity
-     * @param context     the context for this operation
+     * @param structureId   the id of the structure to find the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * @param id            must not be {@literal null}
+     * @param preferredType the return type to use if possible
+     * @param context       the context for this operation
      * @return {@link CompletableFuture} with the entity with the given id or {@link CompletableFuture} emitting null if none found
      */
-    <T> CompletableFuture<T> findById(String structureId, String id, Class<T> type, EntityContext context);
+    CompletableFuture<Object> findById(String structureId, String id, Class<?> preferredType, EntityContext context);
 
     /**
      * Retrieves a list of entities by their id.
      *
-     * @param structureId the id of the structure to find the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
-     * @param ids         must not be {@literal null}
-     * @param type        the type of the entity
-     * @param context     the context for this operation
+     * @param structureId   the id of the structure to find the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * @param ids           must not be {@literal null}
+     * @param preferredType the return type to use if possible
+     * @param context       the context for this operation
      * @return {@link CompletableFuture} with the list of matched entities with the given ids or {@link CompletableFuture} emitting an empty list if none found
      */
-    <T> CompletableFuture<List<T>> findByIds(String structureId, List<String> ids, Class<T> type, EntityContext context);
+    CompletableFuture<List<Object>> findByIds(String structureId, List<String> ids, Class<?> preferredType, EntityContext context);
 
     /**
      * Executes a named query.
@@ -168,14 +168,14 @@ public interface EntitiesService {
      * <p>
      * You can find more information about the search syntax <a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html#query-string-syntax">here</a>
      *
-     * @param structureId the id of the structure to search. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
-     * @param searchText  the text to search for entitiess
-     * @param pageable    the page settings to be used
-     * @param type        the type of the entity
-     * @param context     the context for this operation
+     * @param structureId   the id of the structure to search. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * @param searchText    the text to search for entitiess
+     * @param pageable      the page settings to be used
+     * @param preferredType the return type to use if possible
+     * @param context       the context for this operation
      * @return a {@link CompletableFuture} of a page of entities
      */
-    <T> CompletableFuture<Page<T>> search(String structureId, String searchText, Pageable pageable, Class<T> type, EntityContext context);
+    CompletableFuture<Page<Object>> search(String structureId, String searchText, Pageable pageable, Class<?> preferredType, EntityContext context);
 
     /**
      * Updates a given entity. This will only override the fields that are present in the given entity.

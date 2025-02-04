@@ -4,6 +4,7 @@ import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import co.elastic.clients.elasticsearch._types.mapping.DynamicMapping;
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
+import org.kinotic.continuum.idl.api.schema.C3Type;
 import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.StructureService;
@@ -85,7 +86,9 @@ public class DefaultStructureService implements StructureService {
                                 "Structure Namespace+Name must be unique, '" + logicalIndexName + "' already exists."));
                     }
 
-                    // new structure
+                    // TODO: how to ensure structures namespace name match the C3Type name
+                    // Should we just use the Structures one?
+
                     structure.setId(logicalIndexName);
                     structure.setCreated(new Date());
                     structure.setUpdated(structure.getCreated());
@@ -94,13 +97,11 @@ public class DefaultStructureService implements StructureService {
                                                                     .trim()
                                                                     .toLowerCase() + logicalIndexName);
 
-                    // Try and create ES mapping to make sure IDL is valid
                     ElasticConversionResult result = structureConversionService.convertToElasticMapping(structure);
 
-                    // TODO: how to ensure structures namespace name match the C3Type name
-                    // Should we just use the Structures one?
-
+                    structure.setDecoratedProperties(result.decoratedProperties());
                     structure.setMultiTenancyType(result.multiTenancyType());
+                    structure.setVersionFieldName(result.versionFieldName());
 
                     return  structureDAO.save(structure);
                 });
@@ -172,7 +173,6 @@ public class DefaultStructureService implements StructureService {
                                 structure.setPublished(true);
                                 structure.setPublishedTimestamp(new Date());
                                 structure.setUpdated(structure.getPublishedTimestamp());
-                                structure.setDecoratedProperties(result.decoratedProperties());
 
                                 return structureDAO.save(structure)
                                                    .thenApply(structure1 -> {
@@ -203,8 +203,10 @@ public class DefaultStructureService implements StructureService {
                         return CompletableFuture.failedFuture(new IllegalArgumentException("Structure cannot be found for id: " + structure.getId()));
                     }
 
+                    // TODO: how to ensure structures namespace name match the C3Type name
+                    // Should we just use the Structures one?
+
                     // FIXME: handle namespace/name changes
-                    // updating an existing structure, reconcile the differences
                     structure.setUpdated(new Date());
                     structure.setCreated(existingStructure.getCreated());
                     structure.setName(existingStructure.getName());
@@ -212,14 +214,13 @@ public class DefaultStructureService implements StructureService {
                     structure.setItemIndex(existingStructure.getItemIndex());
                     structure.setPublished(existingStructure.isPublished());
                     structure.setPublishedTimestamp(existingStructure.getPublishedTimestamp());
-                    structure.setDecoratedProperties(null);
 
-                    // Try and create ES mapping to make sure IDL is valid
-                    ElasticConversionResult conversionResult = structureConversionService.convertToElasticMapping(structure);
 
-                    // TODO: how to ensure structures namespace name match the C3Type name
-                    // Should we just use the Structures one?
-                    structure.setMultiTenancyType(conversionResult.multiTenancyType());
+                    ElasticConversionResult result = structureConversionService.convertToElasticMapping(structure);
+
+                    structure.setDecoratedProperties(result.decoratedProperties());
+                    structure.setMultiTenancyType(result.multiTenancyType());
+                    structure.setVersionFieldName(result.versionFieldName());
 
                     if(structure.isPublished()) {
                         // FIXME: how to best handle an operation where the mapping completes but the save fails.
@@ -230,16 +231,14 @@ public class DefaultStructureService implements StructureService {
                         return crudServiceTemplate
                                 .updateIndexMapping(structure.getItemIndex(),
                                                     mappingBuilder -> mappingBuilder.dynamic(DynamicMapping.Strict)
-                                                                                    .properties(conversionResult.objectProperty()
-                                                                                                                .properties()))
-                                .thenCompose(v -> {
-                                    structure.setDecoratedProperties(conversionResult.decoratedProperties());
-                                    return structureDAO.save(structure)
-                                                       .thenApply(structure1 -> {
-                                                           cacheEvictionService.evictCachesFor(structure1);
-                                                           return structure1;
-                                                       });
-                                });
+                                                                                    .properties(result.objectProperty()
+                                                                                                      .properties()))
+                                .thenCompose(v -> structureDAO
+                                        .save(structure)
+                                        .thenApply(structure1 -> {
+                                            cacheEvictionService.evictCachesFor(structure1);
+                                            return structure1;
+                                        }));
                     }else{
                         return structureDAO.save(structure);
                     }

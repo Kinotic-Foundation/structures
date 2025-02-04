@@ -67,7 +67,7 @@ public class DefaultEntitiesService implements EntitiesService {
     @Override
     public CompletableFuture<Long> countByQuery(@SpanAttribute("structureId") String structureId, String query, EntityContext context) {
         return cache.get(structureId)
-                .thenCompose(entityService -> entityService.countByQuery(query, context));
+                    .thenCompose(entityService -> entityService.countByQuery(query, context));
     }
 
     @WithSpan
@@ -81,7 +81,7 @@ public class DefaultEntitiesService implements EntitiesService {
     @Override
     public CompletableFuture<Void> deleteByQuery(@SpanAttribute("structureId") String structureId, String query, EntityContext context) {
         return cache.get(structureId)
-                .thenCompose(entityService -> entityService.deleteByQuery(query, context));
+                    .thenCompose(entityService -> entityService.deleteByQuery(query, context));
     }
 
     @WithSpan
@@ -93,26 +93,26 @@ public class DefaultEntitiesService implements EntitiesService {
 
     @WithSpan
     @Override
-    public <T> CompletableFuture<Page<T>> findAll(@SpanAttribute("structureId") String structureId,
-                                                  Pageable pageable,
-                                                  Class<T> type,
-                                                  EntityContext context) {
+    public CompletableFuture<Page<Object>> findAll(@SpanAttribute("structureId") String structureId,
+                                                   Pageable pageable,
+                                                   Class<?> preferredType,
+                                                   EntityContext context) {
         return cache.get(structureId)
-                    .thenCompose(entityService -> entityService.findAll(pageable, type, context));
+                    .thenCompose(entityService -> entityService.findAll(pageable, preferredType, context));
     }
 
     @WithSpan
     @Override
-    public <T> CompletableFuture<T> findById(@SpanAttribute("structureId") String structureId, String id, Class<T> type, EntityContext context) {
+    public CompletableFuture<Object> findById(@SpanAttribute("structureId") String structureId, String id, Class<?> preferredType, EntityContext context) {
         return cache.get(structureId)
-                    .thenCompose(entityService -> entityService.findById(id, type, context));
+                    .thenCompose(entityService -> entityService.findById(id, preferredType, context));
     }
 
     @WithSpan
     @Override
-    public <T> CompletableFuture<List<T>> findByIds(@SpanAttribute("structureId") String structureId, List<String> ids, Class<T> type, EntityContext context) {
+    public CompletableFuture<List<Object>> findByIds(@SpanAttribute("structureId") String structureId, List<String> ids, Class<?> preferredType, EntityContext context) {
         return cache.get(structureId)
-                .thenCompose(entityService -> entityService.findByIds(ids, type, context));
+                    .thenCompose(entityService -> entityService.findByIds(ids, preferredType, context));
     }
 
     @WithSpan
@@ -157,13 +157,13 @@ public class DefaultEntitiesService implements EntitiesService {
 
     @WithSpan
     @Override
-    public <T> CompletableFuture<Page<T>> search(@SpanAttribute("structureId") String structureId,
-                                                 String searchText,
-                                                 Pageable pageable,
-                                                 Class<T> type,
-                                                 EntityContext context) {
+    public CompletableFuture<Page<Object>> search(@SpanAttribute("structureId") String structureId,
+                                                  String searchText,
+                                                  Pageable pageable,
+                                                  Class<?> preferredType,
+                                                  EntityContext context) {
         return cache.get(structureId)
-                    .thenCompose(entityService -> entityService.search(searchText, pageable, type, context));
+                    .thenCompose(entityService -> entityService.search(searchText, pageable, preferredType, context));
     }
 
     @WithSpan

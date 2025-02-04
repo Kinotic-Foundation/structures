@@ -72,32 +72,32 @@ public interface EntityService {
     /**
      * Returns a {@link Page} of entities meeting the paging restriction provided in the {@link Pageable} object.
      *
-     * @param pageable the page settings to be used
-     * @param type     the type of the entity
-     * @param context  the context for this operation
+     * @param pageable      the page settings to be used
+     * @param preferredType the return type to use if possible
+     * @param context       the context for this operation
      * @return a page of entities
      */
-    <T> CompletableFuture<Page<T>> findAll(Pageable pageable, Class<T> type, EntityContext context);
+    CompletableFuture<Page<Object>> findAll(Pageable pageable, Class<?> preferredType, EntityContext context);
 
     /**
      * Retrieves an entity by its id.
      *
-     * @param id      must not be {@literal null}
-     * @param type    the type of the entity
-     * @param context the context for this operation
+     * @param id            id to search for must not be {@literal null}
+     * @param preferredType the return type to use if possible
+     * @param context       the context for this operation
      * @return {@link CompletableFuture} emitting the entity with the given id or {@link CompletableFuture} emitting null if none found
      */
-    <T> CompletableFuture<T> findById(String id, Class<T> type, EntityContext context);
+    CompletableFuture<Object> findById(String id, Class<?> preferredType, EntityContext context);
 
     /**
      * Retrieves a list of entities by their id.
      *
-     * @param ids         must not be {@literal null}
-     * @param type        the type of the entity
-     * @param context     the context for this operation
+     * @param ids           ids to search for must not be {@literal null}
+     * @param preferredType the return type to use if possible
+     * @param context       the context for this operation
      * @return {@link CompletableFuture} with the list of matched entities with the given ids or {@link CompletableFuture} emitting null if none found
      */
-    <T> CompletableFuture<List<T>> findByIds(List<String> ids, Class<T> type, EntityContext context);
+    CompletableFuture<List<Object>> findByIds(List<String> ids, Class<?> preferredType, EntityContext context);
 
     /**
      * Executes a named query.
@@ -149,13 +149,13 @@ public interface EntityService {
     /**
      * Returns a {@link Page} of entities matching the search text and paging restriction provided in the {@link Pageable} object.
      *
-     * @param searchText the text to search for entities for
-     * @param pageable   the page settings to be used
-     * @param type       the type of the entity
-     * @param context    the context for this operation
+     * @param searchText    the text to search for entities for
+     * @param pageable      the page settings to be used
+     * @param preferredType the return type to use if possible
+     * @param context       the context for this operation
      * @return a page of entities
      */
-    <T> CompletableFuture<Page<T>> search(String searchText, Pageable pageable, Class<T> type, EntityContext context);
+    CompletableFuture<Page<Object>> search(String searchText, Pageable pageable, Class<?> preferredType, EntityContext context);
 
     /**
      * Updates a given entity. This will only override the fields that are present in the given entity.

@@ -123,6 +123,8 @@ public class RawJsonUpsertPreProcessor implements UpsertPreProcessor<TokenBuffer
 
                         }else if(objectDepth == 1 && decorator instanceof VersionDecorator){
 
+                            // We exclude the version field from the data to be persisted
+
                             if(currentVersion != null){ // should never happen, because the structure is validated when published
                                 throw new IllegalArgumentException("Found multiple version fields in entity");
                             }
@@ -158,6 +160,10 @@ public class RawJsonUpsertPreProcessor implements UpsertPreProcessor<TokenBuffer
 
                         if(currentId == null){
                             throw new IllegalArgumentException("Could not find id for entity");
+                        }
+
+                        if(structure.isOptimisticLockingEnabled() && currentVersion == null){
+                            throw new IllegalArgumentException("Could not find version for entity");
                         }
 
                         // if this is a multi tenant structure add the tenant if necessary

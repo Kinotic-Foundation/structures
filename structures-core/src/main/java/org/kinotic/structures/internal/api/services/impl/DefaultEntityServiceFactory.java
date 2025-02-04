@@ -79,7 +79,6 @@ public class DefaultEntityServiceFactory implements EntityServiceFactory {
                 UpsertFieldPreProcessor<C3Decorator, Object, Object> processor =
                         (UpsertFieldPreProcessor<C3Decorator, Object, Object>)upsertFieldPreProcessors.get(decorator.getClass().getName());
                 if(processor != null){
-                    // FIXME: without validation the last implementation will win, should we allow multiple per field?
                     fieldPreProcessors.put(decoratedProperty.getJsonPath(), new DecoratorLogic(decorator, processor));
                 }
             }

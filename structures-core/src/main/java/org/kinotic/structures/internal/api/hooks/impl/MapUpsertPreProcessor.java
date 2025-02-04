@@ -14,8 +14,6 @@ import org.kinotic.structures.internal.api.hooks.DecoratorLogic;
 import org.kinotic.structures.internal.api.hooks.UpsertFieldPreProcessor;
 import org.kinotic.structures.internal.api.hooks.UpsertPreProcessor;
 import org.kinotic.structures.internal.api.services.EntityHolder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,7 +28,7 @@ public class MapUpsertPreProcessor implements UpsertPreProcessor<Map<Object, Obj
     private final Structure structure;
     private final StructuresProperties structuresProperties;
     private Pair<String, DecoratorLogic> idFieldPreProcessor = null;
-    private String versionFiledName = null;
+    private String versionFieldName = null;
 
     public MapUpsertPreProcessor(Structure structure,
                                  StructuresProperties structuresProperties,
@@ -48,7 +46,7 @@ public class MapUpsertPreProcessor implements UpsertPreProcessor<Map<Object, Obj
 
             }else if(decorator instanceof VersionDecorator) {
 
-                versionFiledName = entry.getKey();
+                versionFieldName = entry.getKey();
             }
         }
     }
@@ -109,11 +107,12 @@ public class MapUpsertPreProcessor implements UpsertPreProcessor<Map<Object, Obj
             }
         }
 
-        // now set version field if expected
+        // now extract version field if expected
         String version = null;
-        if(versionFiledName != null) {
-            if(entity.containsKey(versionFiledName)) {
-                version = (String) entity.get(versionFiledName);
+        if(structure.isOptimisticLockingEnabled()) {
+            if(entity.containsKey(versionFieldName)) {
+                version = (String) entity.get(versionFieldName);
+                entity.remove(versionFieldName);
             }else{
                 throw new IllegalArgumentException("No version field found in Entity");
             }
