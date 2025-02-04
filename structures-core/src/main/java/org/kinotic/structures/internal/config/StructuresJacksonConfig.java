@@ -8,13 +8,11 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import org.apache.commons.lang3.tuple.Pair;
 import org.kinotic.continuum.idl.api.schema.decorators.C3Decorator;
 import org.kinotic.continuum.internal.utils.MetaUtil;
+import org.kinotic.structures.api.domain.FastestType;
 import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.domain.idl.PageC3Type;
 import org.kinotic.structures.api.domain.idl.PageableC3Type;
-import org.kinotic.structures.internal.serializer.FieldValueDeserializer;
-import org.kinotic.structures.internal.serializer.FieldValueSerializer;
-import org.kinotic.structures.internal.serializer.RawJsonDeserializer;
-import org.kinotic.structures.internal.serializer.RawJsonSerializer;
+import org.kinotic.structures.internal.serializer.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
@@ -66,6 +64,8 @@ public class StructuresJacksonConfig {
 
         ret.addDeserializer(FieldValue.class, new FieldValueDeserializer());
         ret.addSerializer(FieldValue.class, new FieldValueSerializer());
+
+        ret.addSerializer(FastestType.class, new FastestTypeSerializer());
 
         return ret;
     }

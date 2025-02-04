@@ -42,11 +42,12 @@ public class EntitiesDataFetcher implements DataFetcher<CompletableFuture<List<M
                 String typename = (String) representation.get("__typename");
                 String id = (String) representation.get("id");
                 String structureId = StructuresUtil.structureNameToId(namespace, typename);
+                //noinspection unchecked
                 futures.add(entitiesService.findById(structureId,
                                                      id,
                                                      Map.class,
                                                      ec)
-                                           .thenApply(entity -> new EntityMap((Map<String, Object>)entity, typename)));
+                                           .thenApply(entity -> new EntityMap(entity, typename)));
             }
 
             return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))

@@ -182,10 +182,10 @@ public class CrudServiceTemplate {
      * @return a {@link CompletableFuture} that will complete with the document
      */
     public <T, R> CompletableFuture<R> findById(String indexName,
-                                                String id,
-                                                Class<T> type,
-                                                Consumer<GetRequest.Builder> builderConsumer,
-                                                Function<GetResult<T>, R> resultMapper) {
+                                             String id,
+                                             Class<T> type,
+                                             Consumer<GetRequest.Builder> builderConsumer,
+                                             Function<GetResult<T>, R> resultMapper) {
 
         //noinspection unchecked
         JsonEndpoint<GetRequest, GetResponse<T>, ErrorResponse> endpoint =
@@ -207,14 +207,14 @@ public class CrudServiceTemplate {
                             .performRequestAsync(builder.build(),
                                                  endpoint,
                                                  esAsyncClient._transportOptions())
-                            .thenApply(tGetResponse -> {
-                                if(resultMapper != null) {
-                                    return resultMapper.apply(tGetResponse);
-                                }else{
-                                    //noinspection unchecked
-                                    return (R)tGetResponse.source();
-                                }
-                            });
+                   .thenApply(tGetResponse -> {
+                          if(resultMapper != null) {
+                            return resultMapper.apply(tGetResponse);
+                          }else{
+                              //noinspection unchecked
+                              return (R)tGetResponse.source();
+                          }
+                   });
     }
 
 
@@ -245,10 +245,10 @@ public class CrudServiceTemplate {
      * @return a {@link CompletableFuture} that will complete with the documents requested
      */
     public <T, R> CompletableFuture<List<R>> findByIds(String indexName,
-                                                       List<String> ids,
-                                                       Class<T> type,
-                                                       Consumer<MgetRequest.Builder> builderConsumer,
-                                                       Function<GetResult<T>, R> resultMapper) {
+                                                    List<String> ids,
+                                                    Class<T> type,
+                                                    Consumer<MgetRequest.Builder> builderConsumer,
+                                                    Function<GetResult<T>, R> resultMapper) {
 
         @SuppressWarnings("unchecked")
         JsonEndpoint<MgetRequest, MgetResponse<T>, ErrorResponse> endpoint =
@@ -270,27 +270,27 @@ public class CrudServiceTemplate {
                             .performRequestAsync(builder.build(),
                                                  endpoint,
                                                  esAsyncClient._transportOptions())
-                            .thenApply(response -> {
+                .thenApply(response -> {
 
-                                List<MultiGetResponseItem<T>> recordsResponse = response.docs();
-                                ArrayList<R> content = new ArrayList<>();
+                    List<MultiGetResponseItem<T>> recordsResponse = response.docs();
+                    ArrayList<R> content = new ArrayList<>();
 
-                                if(resultMapper != null) {
-                                    for (MultiGetResponseItem<T> hit : recordsResponse) {
-                                        if (hit.isResult() && hit.result().found()) {
-                                            content.add(resultMapper.apply(hit.result()));
-                                        }
-                                    }
-                                }else{
-                                    for (MultiGetResponseItem<T> hit : recordsResponse) {
-                                        if(hit.isResult() && hit.result().found()){
-                                            //noinspection unchecked
-                                            content.add((R)hit.result().source());
-                                        }
-                                    }
-                                }
-                                return content;
-                            });
+                    if(resultMapper != null) {
+                        for (MultiGetResponseItem<T> hit : recordsResponse) {
+                            if (hit.isResult() && hit.result().found()) {
+                                content.add(resultMapper.apply(hit.result()));
+                            }
+                        }
+                    }else{
+                        for (MultiGetResponseItem<T> hit : recordsResponse) {
+                            if(hit.isResult() && hit.result().found()){
+                                //noinspection unchecked
+                                content.add((R)hit.result().source());
+                            }
+                        }
+                    }
+                    return content;
+                });
     }
 
     /**
@@ -326,10 +326,10 @@ public class CrudServiceTemplate {
      * @return a {@link CompletableFuture} that will complete with a {@link Page} of documents
      */
     public <T,R> CompletableFuture<Page<R>> search(String indexName,
-                                                   Pageable pageable,
-                                                   Class<T> type,
-                                                   Consumer<SearchRequest.Builder> builderConsumer,
-                                                   Function<Hit<T>, R> hitMapper) {
+                                                 Pageable pageable,
+                                                 Class<T> type,
+                                                 Consumer<SearchRequest.Builder> builderConsumer,
+                                                 Function<Hit<T>, R> hitMapper) {
 
         return searchFullResponse(indexName, pageable, type, builderConsumer)
                 .thenApply(response -> {
@@ -382,9 +382,9 @@ public class CrudServiceTemplate {
      * @return a {@link CompletableFuture} that will complete with a {@link SearchResponse} of documents
      */
     private <T> CompletableFuture<SearchResponse<T>> searchFullResponse(String indexName,
-                                                                        Pageable pageable,
-                                                                        Class<T> type,
-                                                                        Consumer<SearchRequest.Builder> builderConsumer) {
+                                                                       Pageable pageable,
+                                                                       Class<T> type,
+                                                                       Consumer<SearchRequest.Builder> builderConsumer) {
 
         Validate.notNull(indexName, "indexName cannot be null");
         Validate.notNull(pageable, "pageable cannot be null");

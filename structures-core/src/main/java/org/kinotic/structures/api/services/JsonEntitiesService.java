@@ -6,6 +6,7 @@ import org.kinotic.continuum.api.security.Participant;
 import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.continuum.idl.api.schema.FunctionDefinition;
+import org.kinotic.structures.api.domain.FastestType;
 import org.kinotic.structures.api.domain.QueryParameter;
 import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.domain.Structure;
@@ -87,7 +88,7 @@ public interface JsonEntitiesService {
      * @param participant the participant of the logged-in user
      * @return a page of entities
      */
-    CompletableFuture<Page<Object>> findAll(String structureId, Pageable pageable, Participant participant);
+    CompletableFuture<Page<FastestType>> findAll(String structureId, Pageable pageable, Participant participant);
 
     /**
      * Retrieves an entity by its id.
@@ -97,7 +98,7 @@ public interface JsonEntitiesService {
      * @param participant the participant of the logged-in user
      * @return {@link CompletableFuture} with the entity with the given id or {@link CompletableFuture} emitting null if none found
      */
-    CompletableFuture<Object> findById(String structureId, String id, Participant participant);
+    CompletableFuture<FastestType> findById(String structureId, String id, Participant participant);
 
     /**
      * Retrieves a list of entities by their id.
@@ -107,7 +108,7 @@ public interface JsonEntitiesService {
      * @param participant the participant of the logged-in user
      * @return {@link CompletableFuture} with the list of matched entities with the given ids or {@link CompletableFuture} emitting an empty list if none found
      */
-    CompletableFuture<List<Object>> findByIds(String structureId, List<String> ids, Participant participant);
+    CompletableFuture<List<FastestType>> findByIds(String structureId, List<String> ids, Participant participant);
 
     /**
      * Executes a named query.
@@ -170,7 +171,7 @@ public interface JsonEntitiesService {
      * @param participant the participant of the logged-in user
      * @return a {@link CompletableFuture} of a page of entities
      */
-    CompletableFuture<Page<Object>> search(String structureId, String searchText, Pageable pageable, Participant participant);
+    CompletableFuture<Page<FastestType>> search(String structureId, String searchText, Pageable pageable, Participant participant);
 
     /**
      * Updates a given entity. This will only override the fields that are present in the given entity.

@@ -5,6 +5,7 @@ import org.kinotic.continuum.api.security.Participant;
 import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.structures.api.domain.DefaultEntityContext;
+import org.kinotic.structures.api.domain.FastestType;
 import org.kinotic.structures.api.domain.QueryParameter;
 import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.services.JsonEntitiesService;
@@ -57,20 +58,20 @@ public class DefaultJsonEntitiesService implements JsonEntitiesService {
     }
 
     @Override
-    public CompletableFuture<Page<Object>> findAll(String structureId,
+    public CompletableFuture<Page<FastestType>> findAll(String structureId,
                                                         Pageable pageable,
                                                         Participant participant) {
-        return defaultEntitiesService.findAll(structureId, pageable, RawJson.class, new DefaultEntityContext(participant));
+        return defaultEntitiesService.findAll(structureId, pageable, FastestType.class, new DefaultEntityContext(participant));
     }
 
     @Override
-    public CompletableFuture<Object> findById(String structureId, String id, Participant participant) {
-        return defaultEntitiesService.findById(structureId, id, RawJson.class, new DefaultEntityContext(participant));
+    public CompletableFuture<FastestType> findById(String structureId, String id, Participant participant) {
+        return defaultEntitiesService.findById(structureId, id, FastestType.class, new DefaultEntityContext(participant));
     }
 
     @Override
-    public CompletableFuture<List<Object>> findByIds(String structureId, List<String> ids, Participant participant) {
-        return defaultEntitiesService.findByIds(structureId, ids, RawJson.class, new DefaultEntityContext(participant));
+    public CompletableFuture<List<FastestType>> findByIds(String structureId, List<String> ids, Participant participant) {
+        return defaultEntitiesService.findByIds(structureId, ids, FastestType.class, new DefaultEntityContext(participant));
     }
 
     @Override
@@ -110,11 +111,11 @@ public class DefaultJsonEntitiesService implements JsonEntitiesService {
     }
 
     @Override
-    public CompletableFuture<Page<Object>> search(String structureId,
+    public CompletableFuture<Page<FastestType>> search(String structureId,
                                                        String searchText,
                                                        Pageable pageable,
                                                        Participant participant) {
-        return defaultEntitiesService.search(structureId, searchText, pageable, RawJson.class, new DefaultEntityContext(participant));
+        return defaultEntitiesService.search(structureId, searchText, pageable, FastestType.class, new DefaultEntityContext(participant));
     }
 
     @Override
