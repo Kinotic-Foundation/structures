@@ -376,7 +376,8 @@ public class DefaultEntityService implements EntityService {
                                                                                              builder,
                                                                                              context),
                                                     hit -> (T) new FastestType(updateVersionForEntity(hit.source(),
-                                                                                                      hit.primaryTerm(), hit.seqNo()
+                                                                                                      hit.primaryTerm(),
+                                                                                                      hit.seqNo()
                                                     )));
                                 }else{
                                     //noinspection unchecked
@@ -515,7 +516,6 @@ public class DefaultEntityService implements EntityService {
     }
 
     @WithSpan
-    @SuppressWarnings("unchecked")
     private <T> CompletableFuture<T> doPrePersist(T entity,
                                                   EntityContext context,
                                                   Function<EntityHolder<?>, CompletableFuture<T>> persistLogic){

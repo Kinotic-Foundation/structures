@@ -5,9 +5,11 @@ import com.fasterxml.jackson.databind.util.TokenBuffer;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.domain.EntityContext;
+import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.internal.api.hooks.impl.MapUpsertPreProcessor;
 import org.kinotic.structures.internal.api.hooks.impl.PojoUpsertPreProcessor;
+import org.kinotic.structures.internal.api.hooks.impl.RawJsonUpsertPreProcessor;
 import org.kinotic.structures.internal.api.hooks.impl.TokenBufferUpsertPreProcessor;
 import org.kinotic.structures.internal.api.services.EntityHolder;
 
@@ -22,6 +24,7 @@ import java.util.concurrent.CompletableFuture;
 public class DelegatingUpsertPreProcessor implements UpsertPreProcessor<Object, Object, Object> {
 
     private final TokenBufferUpsertPreProcessor tokenBufferUpsertPreProcessor;
+    private final RawJsonUpsertPreProcessor rawJsonUpsertPreProcessor;
     private final MapUpsertPreProcessor mapUpsertPreProcessor;
     private final PojoUpsertPreProcessor pojoUpsertPreProcessor;
 
@@ -34,6 +37,12 @@ public class DelegatingUpsertPreProcessor implements UpsertPreProcessor<Object, 
                                                                           objectMapper,
                                                                           structure,
                                                                           fieldPreProcessors);
+
+        rawJsonUpsertPreProcessor = new RawJsonUpsertPreProcessor(structuresProperties,
+                                                                  objectMapper,
+                                                                  structure,
+                                                                  fieldPreProcessors);
+
         mapUpsertPreProcessor = new MapUpsertPreProcessor(structure,
                                                           structuresProperties,
                                                           fieldPreProcessors);
@@ -44,10 +53,11 @@ public class DelegatingUpsertPreProcessor implements UpsertPreProcessor<Object, 
     @Override
     public CompletableFuture<EntityHolder<Object>> process(Object entity, EntityContext context) {
         Validate.notNull(entity, "entity must not be null");
-
         Object ret;
         if(entity instanceof TokenBuffer) {
             ret = tokenBufferUpsertPreProcessor.process((TokenBuffer) entity, context);
+        }else if (entity instanceof RawJson){
+            ret = rawJsonUpsertPreProcessor.process((RawJson) entity, context);
         } else if(entity instanceof Map) {
             ret = mapUpsertPreProcessor.process((Map<Object, Object>) entity, context);
         } else {
@@ -64,6 +74,8 @@ public class DelegatingUpsertPreProcessor implements UpsertPreProcessor<Object, 
         Object ret;
         if(entities instanceof TokenBuffer) {
             ret = tokenBufferUpsertPreProcessor.processArray((TokenBuffer) entities, context);
+        } else if (entities instanceof RawJson) {
+            ret = rawJsonUpsertPreProcessor.processArray((RawJson) entities, context);
         } else if(entities instanceof List<?> list) {
             if(!list.isEmpty()){
                 Object first = list.getFirst();
