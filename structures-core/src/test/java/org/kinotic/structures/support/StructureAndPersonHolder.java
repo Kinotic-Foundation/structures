@@ -31,7 +31,7 @@ public class StructureAndPersonHolder {
     }
 
     public Person getFirstPerson(){
-        return persons.get(0);
+        return persons.getFirst();
     }
 
 }

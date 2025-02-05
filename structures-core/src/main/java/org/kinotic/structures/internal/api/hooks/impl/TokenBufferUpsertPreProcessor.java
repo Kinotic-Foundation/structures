@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.JsonEncoding;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
-import com.fasterxml.jackson.core.async.ByteArrayFeeder;
+import com.fasterxml.jackson.core.util.ByteArrayBuilder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.util.TokenBuffer;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
@@ -22,14 +22,13 @@ import org.kinotic.structures.internal.api.hooks.UpsertFieldPreProcessor;
 import org.kinotic.structures.internal.api.hooks.UpsertPreProcessor;
 import org.kinotic.structures.internal.api.services.EntityHolder;
 
-import java.io.ByteArrayOutputStream;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 /**
  * Created by Navíd Mitchell 🤪 on 5/5/23.
  */
-public class RawJsonUpsertPreProcessor implements UpsertPreProcessor<TokenBuffer, TokenBuffer, RawJson> {
+public class TokenBufferUpsertPreProcessor implements UpsertPreProcessor<TokenBuffer, TokenBuffer, RawJson> {
 
     private final StructuresProperties structuresProperties;
     private final ObjectMapper objectMapper;
@@ -38,10 +37,10 @@ public class RawJsonUpsertPreProcessor implements UpsertPreProcessor<TokenBuffer
     private final Map<String, DecoratorLogic> fieldPreProcessors;
 
 
-    public RawJsonUpsertPreProcessor(StructuresProperties structuresProperties,
-                                     ObjectMapper objectMapper,
-                                     Structure structure,
-                                     Map<String, DecoratorLogic> fieldPreProcessors) {
+    public TokenBufferUpsertPreProcessor(StructuresProperties structuresProperties,
+                                         ObjectMapper objectMapper,
+                                         Structure structure,
+                                         Map<String, DecoratorLogic> fieldPreProcessors) {
         this.structuresProperties = structuresProperties;
         this.objectMapper = objectMapper;
         this.structure = structure;
@@ -65,8 +64,8 @@ public class RawJsonUpsertPreProcessor implements UpsertPreProcessor<TokenBuffer
             String currentId = null;
             String currentTenantId = null;
             String currentVersion = null;
-            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-            JsonGenerator jsonGenerator = objectMapper.getFactory().createGenerator(outputStream, JsonEncoding.UTF8);
+            ByteArrayBuilder byteArrayBuilder = new ByteArrayBuilder();
+            JsonGenerator jsonGenerator = objectMapper.getFactory().createGenerator(byteArrayBuilder, JsonEncoding.UTF8);
 
             while (jsonParser.nextToken() != null) {
 
@@ -176,13 +175,13 @@ public class RawJsonUpsertPreProcessor implements UpsertPreProcessor<TokenBuffer
                         // This is the end of the object, so we store the object
                         jsonGenerator.writeEndObject();
                         jsonGenerator.flush();
-                        ret.add(new EntityHolder<>(new RawJson(outputStream.toByteArray()),
+                        ret.add(new EntityHolder<>(new RawJson(byteArrayBuilder.toByteArray()),
                                                    currentId,
                                                    structure.getMultiTenancyType(),
                                                    context.getParticipant().getTenantId(),
                                                    currentVersion
                         ));
-                        outputStream.reset();
+                        byteArrayBuilder.reset();
                         currentId = null;
                         currentTenantId = null;
                     }else{

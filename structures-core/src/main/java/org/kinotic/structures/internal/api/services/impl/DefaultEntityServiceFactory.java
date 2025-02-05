@@ -96,8 +96,7 @@ public class DefaultEntityServiceFactory implements EntityServiceFactory {
                                          namedQueriesService,
                                          objectMapper,
                                          readPreProcessor,
-                                         structure,
-                                         structuresProperties));
+                                         structure));
     }
 
 }

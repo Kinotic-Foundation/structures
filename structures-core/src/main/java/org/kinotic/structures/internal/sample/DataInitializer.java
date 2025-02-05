@@ -2,6 +2,7 @@ package org.kinotic.structures.internal.sample;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.util.TokenBuffer;
 import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.domain.DefaultEntityContext;
 import org.kinotic.structures.api.domain.RawJson;
@@ -12,6 +13,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import jakarta.annotation.PostConstruct;
+
+import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -65,14 +68,15 @@ public class DataInitializer {
                                                  String participantId){
         return testDataService.createRandomTestPeople(numberOfPeopleToCreate)
                               .thenCompose(people -> {
-                                  byte[] jsonData;
+                                  TokenBuffer tokenBuffer = new TokenBuffer(objectMapper, false);
                                   try {
-                                      jsonData = objectMapper.writeValueAsBytes(people);
-                                  } catch (JsonProcessingException e) {
+                                      tokenBuffer.writeObject(people);
+                                  } catch (IOException e) {
                                       return CompletableFuture.failedFuture(e);
                                   }
+
                                   return entitiesService.bulkSave(structure.getId(),
-                                                                  RawJson.from(jsonData),
+                                                                  tokenBuffer,
                                                                   new DefaultEntityContext(new DummyParticipant(tenantId,
                                                                                                                 participantId)));
                               });

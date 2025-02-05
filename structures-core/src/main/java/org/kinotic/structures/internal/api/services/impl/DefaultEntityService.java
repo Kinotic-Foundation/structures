@@ -3,6 +3,7 @@ package org.kinotic.structures.internal.api.services.impl;
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import co.elastic.clients.elasticsearch._types.Refresh;
 import co.elastic.clients.elasticsearch.core.BulkRequest;
+import co.elastic.clients.elasticsearch.core.IndexResponse;
 import co.elastic.clients.elasticsearch.core.UpdateRequest;
 import co.elastic.clients.elasticsearch.core.bulk.BulkOperation;
 import co.elastic.clients.elasticsearch.core.bulk.BulkResponseItem;
@@ -27,6 +28,7 @@ import org.kinotic.structures.internal.api.services.sql.ParameterHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -40,7 +42,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class DefaultEntityService implements EntityService {
 
-    private static final Logger log = LoggerFactory.getLogger(DefaultEntityService.class);
     private final AuthorizationService<EntityOperation> authService;
     private final CrudServiceTemplate crudServiceTemplate;
     private final DelegatingUpsertPreProcessor delegatingUpsertPreProcessor;
@@ -49,7 +50,6 @@ public class DefaultEntityService implements EntityService {
     private final ObjectMapper objectMapper;
     private final ReadPreProcessor readPreProcessor;
     private final Structure structure;
-    private final StructuresProperties structuresProperties;
 
     @WithSpan
     @Override
@@ -324,51 +324,36 @@ public class DefaultEntityService implements EntityService {
                                                                                  context));
     }
 
-    @Override
-    public CompletableFuture<Void> syncIndex(EntityContext context) {
-        return authService.authorize(EntityOperation.SYNC_INDEX, context).thenCompose(
-                un -> esAsyncClient.indices()
-                                   .refresh(b -> b.index(structure.getItemIndex())
-                                                  .allowNoIndices(false))
-                                   .thenApply(unused -> null));
-    }
-
     @WithSpan
     @SuppressWarnings("unchecked")
     @Override
     public <T> CompletableFuture<T> save(T entity, EntityContext context) {
-        return authService.authorize(EntityOperation.SAVE, context).thenCompose(
-                un -> doPrePersist(entity, context, entityHolder -> {
+        return authService.authorize(EntityOperation.SAVE, context)
+                          .thenCompose(un -> doPrePersist(entity, context, entityHolder -> {
 
-                    String routing = (structure.getMultiTenancyType() == MultiTenancyType.SHARED)
-                            ? context.getParticipant().getTenantId()
-                            : null;
+                              String routing = (structure.getMultiTenancyType() == MultiTenancyType.SHARED)
+                                      ? context.getParticipant().getTenantId()
+                                      : null;
 
-                    return esAsyncClient.index(i -> {
-                        i.routing(routing)
-                         .index(structure.getItemIndex())
-                         .id(entityHolder.getDocumentId())
-                         .document(entityHolder.entity())
-                         .refresh(Refresh.True);
+                              return esAsyncClient.index(i -> {
+                                  i.routing(routing)
+                                   .index(structure.getItemIndex())
+                                   .id(entityHolder.getDocumentId())
+                                   .document(entityHolder.entity())
+                                   .refresh(Refresh.True);
 
-                        ElasticVersion elasticVersion = entityHolder.getElasticVersionIfPresent();
-                        if(elasticVersion != null) {
-                            i.ifPrimaryTerm(elasticVersion.primaryTerm())
-                             .ifSeqNo(elasticVersion.seqNo());
-                        }
+                                  ElasticVersion elasticVersion = entityHolder.getElasticVersionIfPresent();
+                                  if(elasticVersion != null) {
+                                      i.ifPrimaryTerm(elasticVersion.primaryTerm())
+                                       .ifSeqNo(elasticVersion.seqNo());
+                                  }
 
-                        return i;
-                    }).thenApply(indexResponse -> {
-
-                        if(structure.isOptimisticLockingEnabled()){
-                            return (T) updateVersionForEntity(entityHolder.entity(),
-                                                              indexResponse.primaryTerm(), indexResponse.seqNo()
-                            );
-                        }else{
-                            return (T) entityHolder.entity();
-                        }
-                    });
-                }));
+                                  return i;
+                              }).thenApply(indexResponse -> postProcessSaveOrUpdate(entity,
+                                                                                entityHolder,
+                                                                                indexResponse.primaryTerm(),
+                                                                                indexResponse.seqNo()));
+                          }));
     }
 
     @WithSpan
@@ -434,6 +419,15 @@ public class DefaultEntityService implements EntityService {
                         }));
     }
 
+    @Override
+    public CompletableFuture<Void> syncIndex(EntityContext context) {
+        return authService.authorize(EntityOperation.SYNC_INDEX, context).thenCompose(
+                un -> esAsyncClient.indices()
+                                   .refresh(b -> b.index(structure.getItemIndex())
+                                                  .allowNoIndices(false))
+                                   .thenApply(unused -> null));
+    }
+
     @WithSpan
     @SuppressWarnings("unchecked")
     @Override
@@ -462,17 +456,10 @@ public class DefaultEntityService implements EntityService {
                     });
 
                     return esAsyncClient.update(request, entityHolder.entity().getClass())
-                                        .thenApply(updateResponse -> {
-
-                                            if(structure.isOptimisticLockingEnabled()){
-                                                return (T) updateVersionForEntity(entityHolder.entity(),
-                                                                                  updateResponse.primaryTerm(),
-                                                                                  updateResponse.seqNo()
-                                                );
-                                            }else{
-                                                return (T) entityHolder.entity();
-                                            }
-                                        });
+                                        .thenApply(updateResponse -> postProcessSaveOrUpdate(entity,
+                                                                                             entityHolder,
+                                                                                             updateResponse.primaryTerm(),
+                                                                                             updateResponse.seqNo()));
                 }));
     }
 
@@ -533,7 +520,7 @@ public class DefaultEntityService implements EntityService {
                                                   EntityContext context,
                                                   Function<EntityHolder<?>, CompletableFuture<T>> persistLogic){
         return validateTenant(context)
-                .thenCompose(unused -> (CompletableFuture<T>) delegatingUpsertPreProcessor
+                .thenCompose(unused -> delegatingUpsertPreProcessor
                         .process(entity, context)
                         .thenCompose(entityHolder -> {
 
@@ -541,14 +528,44 @@ public class DefaultEntityService implements EntityService {
                                 return CompletableFuture.failedFuture(new IllegalArgumentException("Entity must have an id"));
                             }
 
-                            return persistLogic.apply(entityHolder)
-                                               .thenApply(response -> entityHolder.entity());
+                            return persistLogic.apply(entityHolder);
                         }));
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> T postProcessSaveOrUpdate(T entity, EntityHolder<?> entityHolder, Long primaryTerm, Long seqNo) {
+        if(structure.isOptimisticLockingEnabled()){
+            return (T) updateVersionForEntity(entityHolder.entity(),
+                                              primaryTerm,
+                                              seqNo,
+                                              entity instanceof TokenBuffer
+                                                      && entityHolder.entity() instanceof RawJson
+            );
+        }else{
+            // All token buffers received will be converted to RawJson in the upsert preprocessor
+            if(entity instanceof TokenBuffer
+                    && entityHolder.entity() instanceof RawJson json){
+                try {
+                    ObjectNode node = (ObjectNode) objectMapper.readTree(json.data());
+                    TokenBuffer buffer = new TokenBuffer(objectMapper, false);
+                    objectMapper.writeValue(buffer, node);
+                    return (T) buffer;
+                } catch (IOException e) {
+                    throw new IllegalStateException(e);
+                }
+            }else {
+                return (T) entityHolder.entity();
+            }
+        }
+    }
+
+    private <T> T updateVersionForEntity(T entity, Long primaryTerm, Long seqNo){
+        return updateVersionForEntity(entity, primaryTerm, seqNo, false);
     }
 
     @WithSpan
     @SuppressWarnings({"rawtypes", "unchecked"})
-    private <T> T updateVersionForEntity(T entity, Long primaryTerm, Long seqNo){
+    private <T> T updateVersionForEntity(T entity, Long primaryTerm, Long seqNo, boolean convertRawJsonToTokenBuffer){
         String versionValue =  primaryTerm + ":" + seqNo;
 
         if (entity instanceof TokenBuffer buffer) {
@@ -569,12 +586,23 @@ public class DefaultEntityService implements EntityService {
         } else if (entity instanceof Map map) {
             map.put(structure.getVersionFieldName(), versionValue);
         } else if (entity instanceof RawJson rawJson) {
+
             try {
                 ObjectNode node = (ObjectNode) objectMapper.readTree(rawJson.data());
                 node.put(structure.getVersionFieldName(), versionValue);
 
-                byte[] updatedData = objectMapper.writeValueAsBytes(node);
-                return (T) new RawJson(updatedData);
+                // All token buffers passed to save or update will receive a RawJson object do to how the upsert pre processor works
+                // So we convert if need be
+                if(convertRawJsonToTokenBuffer){
+
+                    TokenBuffer updatedBuffer = new TokenBuffer(objectMapper, false);
+                    objectMapper.writeValue(updatedBuffer, node);
+                    return (T) updatedBuffer;
+                }else{
+
+                    byte[] updatedData = objectMapper.writeValueAsBytes(node);
+                    return (T) new RawJson(updatedData);
+                }
             } catch (Exception e) {
                 throw new IllegalStateException("Failed to update version in RawJson", e);
             }
