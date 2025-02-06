@@ -21,6 +21,8 @@ dependencies {
 	implementation "com.github.rworsnop:vertx-beans"
 	implementation "me.escoffier.vertx:vertx-completable-future"
 
+	implementation 'org.apache.ignite:ignite-core'
+
 	implementation "org.kinotic:continuum-core"
 	implementation "org.kinotic:continuum-core-vertx"
 	implementation "org.kinotic:continuum-gateway"
@@ -40,12 +42,9 @@ dependencies {
 	implementation "io.swagger.core.v3:swagger-core:${swaggerCoreVersion}"
 
 	annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation "org.testcontainers:testcontainers:${testContainersVersion}"
 	testImplementation "org.testcontainers:elasticsearch:${testContainersVersion}"
 	testImplementation 'io.projectreactor:reactor-test'
-}
-
-test {
-	useJUnitPlatform()
 }

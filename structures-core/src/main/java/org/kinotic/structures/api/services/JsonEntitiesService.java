@@ -1,10 +1,12 @@
 package org.kinotic.structures.api.services;
 
+import com.fasterxml.jackson.databind.util.TokenBuffer;
 import org.kinotic.continuum.api.annotations.Publish;
 import org.kinotic.continuum.api.security.Participant;
 import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.continuum.idl.api.schema.FunctionDefinition;
+import org.kinotic.structures.api.domain.FastestType;
 import org.kinotic.structures.api.domain.QueryParameter;
 import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.domain.Structure;
@@ -27,7 +29,7 @@ public interface JsonEntitiesService {
      * @param participant the participant of the logged-in user
      * @return {@link CompletableFuture} that will complete when all entities have been saved
      */
-    CompletableFuture<Void> bulkSave(String structureId, RawJson entities, Participant participant);
+    CompletableFuture<Void> bulkSave(String structureId, TokenBuffer entities, Participant participant);
 
     /**
      * Saves all given entities.
@@ -37,7 +39,7 @@ public interface JsonEntitiesService {
      * @param participant the participant of the logged-in user
      * @return {@link CompletableFuture} that will complete when all entities have been saved
      */
-    CompletableFuture<Void> bulkUpdate(String structureId, RawJson entities, Participant participant);
+    CompletableFuture<Void> bulkUpdate(String structureId, TokenBuffer entities, Participant participant);
 
     /**
      * Returns the number of entities available.
@@ -86,7 +88,7 @@ public interface JsonEntitiesService {
      * @param participant the participant of the logged-in user
      * @return a page of entities
      */
-    CompletableFuture<Page<RawJson>> findAll(String structureId, Pageable pageable, Participant participant);
+    CompletableFuture<Page<FastestType>> findAll(String structureId, Pageable pageable, Participant participant);
 
     /**
      * Retrieves an entity by its id.
@@ -96,7 +98,7 @@ public interface JsonEntitiesService {
      * @param participant the participant of the logged-in user
      * @return {@link CompletableFuture} with the entity with the given id or {@link CompletableFuture} emitting null if none found
      */
-    CompletableFuture<RawJson> findById(String structureId, String id, Participant participant);
+    CompletableFuture<FastestType> findById(String structureId, String id, Participant participant);
 
     /**
      * Retrieves a list of entities by their id.
@@ -106,7 +108,7 @@ public interface JsonEntitiesService {
      * @param participant the participant of the logged-in user
      * @return {@link CompletableFuture} with the list of matched entities with the given ids or {@link CompletableFuture} emitting an empty list if none found
      */
-    CompletableFuture<List<RawJson>> findByIds(String structureId, List<String> ids, Participant participant);
+    CompletableFuture<List<FastestType>> findByIds(String structureId, List<String> ids, Participant participant);
 
     /**
      * Executes a named query.
@@ -140,14 +142,6 @@ public interface JsonEntitiesService {
                                                     Participant participant);
 
     /**
-     * This operation makes all the recent writes immediately available for search.
-     * @param structureId     the id of the structure that this named query is defined for
-     * @param participant     the participant of the logged-in user
-     * @return a {@link CompletableFuture} that will complete when the operation is complete
-     */
-    CompletableFuture<Void> syncIndex(String structureId, Participant participant);
-
-    /**
      * Saves a given entity. Use the returned instance for further operations as the save operation might have changed the
      * entity instance completely.
      *
@@ -156,7 +150,7 @@ public interface JsonEntitiesService {
      * @param participant the participant of the logged-in user
      * @return {@link CompletableFuture} emitting the saved entity
      */
-    CompletableFuture<RawJson> save(String structureId, RawJson entity, Participant participant);
+    CompletableFuture<TokenBuffer> save(String structureId, TokenBuffer entity, Participant participant);
 
     /**
      * Returns a {@link Page} of entities matching the search text and paging restriction provided in the {@code Pageable} object.
@@ -169,7 +163,15 @@ public interface JsonEntitiesService {
      * @param participant the participant of the logged-in user
      * @return a {@link CompletableFuture} of a page of entities
      */
-    CompletableFuture<Page<RawJson>> search(String structureId, String searchText, Pageable pageable, Participant participant);
+    CompletableFuture<Page<FastestType>> search(String structureId, String searchText, Pageable pageable, Participant participant);
+
+    /**
+     * This operation makes all the recent writes immediately available for search.
+     * @param structureId the id of the structure to sync the index for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * @param participant     the participant of the logged-in user
+     * @return a {@link CompletableFuture} that will complete when the operation is complete
+     */
+    CompletableFuture<Void> syncIndex(String structureId, Participant participant);
 
     /**
      * Updates a given entity. This will only override the fields that are present in the given entity.
@@ -181,6 +183,6 @@ public interface JsonEntitiesService {
      * @param participant the participant of the logged-in user
      * @return {@link CompletableFuture} emitting the saved entity
      */
-    CompletableFuture<RawJson> update(String structureId, RawJson entity, Participant participant);
+    CompletableFuture<TokenBuffer> update(String structureId, TokenBuffer entity, Participant participant);
 
 }

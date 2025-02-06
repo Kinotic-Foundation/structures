@@ -4,7 +4,7 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   title: "Structures",
   description: "Structures is an open-source framework for data storage and retrieval, supporting schema evolution, data management, and providing a user-friendly GUI and OpenAPI interface.",
-  base: '/structures/',
+  base: '/structures/website/',
   themeConfig: {
     // https://vitepress.vuejs.org/reference/default-theme-config
     nav: nav(),
@@ -31,6 +31,10 @@ function nav() {
       text: 'Reference',
       link: '/reference/structures-config',
       activeMatch: '/reference/'
+    },
+    {
+      text: 'Test Status',
+      link: 'https://kinotic-foundation.github.io/structures/allure' // Fully qualified URL
     }
   ]
 }

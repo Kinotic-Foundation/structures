@@ -1,18 +1,17 @@
 import {FunctionDefinition, LongC3Type, ObjectC3Type, ArrayC3Type, StringC3Type} from '@kinotic/continuum-idl'
 import {describe, it, expect, beforeAll, afterAll, beforeEach, afterEach} from 'vitest'
 import { WebSocket } from 'ws'
-import {PageableC3Type} from '../src/api/idl/PageableC3Type.js'
-import {PageC3Type} from '../src/api/idl/PageC3Type.js'
+import {PageableC3Type, PageC3Type, IEntityService, Structures, Structure, QueryDecorator, NamedQueriesDefinition} from '@kinotic/structures-api'
 import {
     createPersonStructureIfNotExist,
-    createTestPeopleAndVerify, deleteStructure,
+    createTestPeopleAndVerify,
+    deleteStructure,
     generateRandomString,
-    initStructuresServer,
-    shutdownStructuresServer,
-} from './TestHelpers.js'
-import {Person} from './domain/Person.js'
+    initContinuumClient,
+    shutdownContinuumClient,
+} from '../TestHelpers.js'
+import {Person} from '../domain/Person.js'
 import {Page, Pageable} from '@kinotic/continuum-client'
-import {IEntityService, Structures, Structure, QueryDecorator, NamedQueriesDefinition} from '../src'
 
 Object.assign(global, { WebSocket})
 
@@ -24,11 +23,11 @@ interface LocalTestContext {
 describe('NamedQueryTest', () => {
 
     beforeAll(async () => {
-        await initStructuresServer()
+        await initContinuumClient()
     }, 300000)
 
     afterAll(async () => {
-        await shutdownStructuresServer()
+        await shutdownContinuumClient()
     }, 60000)
 
     beforeEach<LocalTestContext>(async (context) => {
@@ -39,7 +38,7 @@ describe('NamedQueryTest', () => {
     })
 
     afterEach<LocalTestContext>(async (context) => {
-       // await expect(deleteStructure(context.structure.id)).resolves.toBeUndefined()
+       await expect(deleteStructure(context.structure.id as string)).resolves.toBeUndefined()
     })
 
 
@@ -52,7 +51,7 @@ describe('NamedQueryTest', () => {
          const page: Page<Person> = await entityService.findAll(Pageable.create(0, 10))
          expect(page).toBeDefined()
          expect(page.totalElements).toBe(100)
-         expect(page.content.length).toBe(10)
+         expect(page.content?.length).toBe(10)
 
          const structureId = entityService.structureId
 
@@ -87,7 +86,7 @@ describe('NamedQueryTest', () => {
              const page: Page<Person> = await entityService.findAll(Pageable.create(0, 10))
              expect(page).toBeDefined()
              expect(page.totalElements).toBe(100)
-             expect(page.content.length).toBe(10)
+             expect(page.content?.length).toBe(10)
 
              const structureId = entityService.structureId
 
@@ -123,7 +122,7 @@ describe('NamedQueryTest', () => {
          const page: Page<Person> = await entityService.findAll(Pageable.create(0, 10))
          expect(page).toBeDefined()
          expect(page.totalElements).toBe(100)
-         expect(page.content.length).toBe(10)
+         expect(page.content?.length).toBe(10)
 
          const structureId = entityService.structureId
          const query = new QueryDecorator(`SELECT COUNT(firstName) as count, lastName FROM "struct_${structureId}" GROUP BY lastName`)
@@ -144,7 +143,7 @@ describe('NamedQueryTest', () => {
          await namedQueriesService.save(namedQueriesDefinition)
 
          const pageable = Pageable.createWithCursor(null, 10)
-         const personPage: Page<Person> = await entityService.namedQueryPage('countPeopleByLastName',
+         const personPage: Page<Person> = await entityService.namedQueryPage('countPeopleByLastNamePage',
                                                                              [],
                                                                              pageable)
          console.log(personPage)
@@ -160,7 +159,7 @@ describe('NamedQueryTest', () => {
              const page: Page<Person> = await entityService.findAll(Pageable.create(0, 10))
              expect(page).toBeDefined()
              expect(page.totalElements).toBe(100)
-             expect(page.content.length).toBe(10)
+             expect(page.content?.length).toBe(10)
 
              const structureId = entityService.structureId
              const namedQueriesService = Structures.getNamedQueriesService()

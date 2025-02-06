@@ -44,6 +44,20 @@ export class LoadTaskGeneratorFactory {
                                                          loadTestConfig.numberOfTenants,
                                                          peopleGenFactory)
 
+        }else if(loadTestConfig.testName === 'bulkLoadLarge') {
+
+            const peopleGenFactory: ITaskGeneratorFactory<TenantId>
+                      = (tenantId) => {
+                return new SaveTaskGenerator(
+                    this.createConnectionInfo(tenantId, structuresConfig),
+                    5000,
+                    50000)
+            }
+
+            return new MultiTenantTaskGeneratorDelegator(loadTestConfig.beginTenantIdNumber,
+                                                         loadTestConfig.numberOfTenants,
+                                                         peopleGenFactory)
+
         }else if(loadTestConfig.testName === 'search') {
 
             const peopleGenFactory: ITaskGeneratorFactory<TenantId>

@@ -1,0 +1,38 @@
+{
+  "name": "structures-e2e",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc -b && vite build",
+    "test": "vitest run",
+    "ui-test": "vitest --ui --coverage.enabled=true --mode development"
+  },
+  "dependencies": {
+    "@kinotic/continuum-client": "^2.11.0",
+    "@kinotic/continuum-idl": "^2.0.2",
+    "@kinotic/structures-api": "^3.2.0",
+    "reflect-metadata": "^0.2.2",
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {
+    "@faker-js/faker": "^9.4.0",
+    "@kinotic/structures-cli": "^2.2.0",
+    "@types/node": "^22.10.10",
+    "@types/ws": "^8.5.14",
+    "@vitejs/plugin-vue": "^5.2.1",
+    "@vitest/coverage-v8": "3.0.4",
+    "@vitest/runner": "^3.0.4",
+    "@vitest/ui": "^3.0.4",
+    "@vue/tsconfig": "^0.7.0",
+    "allure-vitest": "^3.0.9",
+    "delay": "^6.0.0",
+    "testcontainers": "^10.17.2",
+    "tslib": "^2.8.1",
+    "typescript": "~5.6.2",
+    "vite": "^6.0.5",
+    "vitest": "^3.0.4",
+    "vue-tsc": "^2.2.0",
+    "ws": "^8.18.0"
+  }
+}

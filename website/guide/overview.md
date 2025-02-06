@@ -38,5 +38,5 @@ We welcome contributions to Structures from the community. To contribute, please
 
 ## License
 
-Structures is released under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).
+Structures is released under the [Elastic License 2.0](https://www.elastic.co/licensing/elastic-license).
 

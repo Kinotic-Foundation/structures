@@ -1,7 +1,9 @@
 package org.kinotic.structures.support;
 
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.util.TokenBuffer;
 import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.domain.Structure;
@@ -31,36 +33,36 @@ public class TestHelper {
     private EntitiesService entitiesService;
 
     public CompletableFuture<Void> bulkUpdateCarsAsRawJson(List<Car> cars, Structure structure, EntityContext entityContext){
-        byte[] jsonData;
+        TokenBuffer tokenBuffer = new TokenBuffer(objectMapper, false);
         try {
-            jsonData = objectMapper.writeValueAsBytes(cars);
-        } catch (JsonProcessingException e) {
-            return CompletableFuture.failedFuture(new IllegalStateException(e));
+            tokenBuffer.writeObject(cars);
+        } catch (IOException e) {
+            return CompletableFuture.failedFuture(e);
         }
-        return entitiesService.bulkUpdate(structure.getId(), RawJson.from(jsonData), entityContext);
+        return entitiesService.bulkUpdate(structure.getId(), tokenBuffer, entityContext);
     }
 
     public CompletableFuture<Void> bulkSaveCarsAsRawJson(List<Car> cars, Structure structure, EntityContext entityContext){
-        byte[] jsonData;
+        TokenBuffer tokenBuffer = new TokenBuffer(objectMapper, false);
         try {
-            jsonData = objectMapper.writeValueAsBytes(cars);
-        } catch (JsonProcessingException e) {
-            return CompletableFuture.failedFuture(new IllegalStateException(e));
+            tokenBuffer.writeObject(cars);
+        } catch (IOException e) {
+            return CompletableFuture.failedFuture(e);
         }
-        return entitiesService.bulkSave(structure.getId(), RawJson.from(jsonData), entityContext);
+        return entitiesService.bulkSave(structure.getId(), tokenBuffer, entityContext);
     }
 
     public CompletableFuture<Car> saveCarAsRawJson(Car car, Structure structure, EntityContext entityContext){
-        byte[] jsonData;
+        TokenBuffer tokenBuffer = new TokenBuffer(objectMapper, false);
         try {
-            jsonData = objectMapper.writeValueAsBytes(car);
-        } catch (JsonProcessingException e) {
-            return CompletableFuture.failedFuture(new IllegalStateException(e));
+            tokenBuffer.writeObject(car);
+        } catch (IOException e) {
+            return CompletableFuture.failedFuture(e);
         }
-        return entitiesService.save(structure.getId(), RawJson.from(jsonData), entityContext)
-                              .thenApply(entity -> {
-                                  try {
-                                      return objectMapper.readValue(entity.data(), Car.class);
+        return entitiesService.save(structure.getId(), tokenBuffer, entityContext)
+                              .thenApply(saved -> {
+                                  try (JsonParser parser = saved.asParser()) {
+                                      return objectMapper.readValue(parser, Car.class);
                                   } catch (IOException e) {
                                       throw new IllegalStateException(e);
                                   }
@@ -69,17 +71,17 @@ public class TestHelper {
 
 
     public CompletableFuture<Car> updateCarAsRawJson(Car car, Structure structure, EntityContext entityContext){
-        byte[] jsonData;
+        TokenBuffer tokenBuffer = new TokenBuffer(objectMapper, false);
         try {
-            jsonData = objectMapper.writeValueAsBytes(car);
-        } catch (Exception e) {
-            return CompletableFuture.failedFuture(new IllegalStateException(e));
+            tokenBuffer.writeObject(car);
+        } catch (IOException e) {
+            return CompletableFuture.failedFuture(e);
         }
 
-        return entitiesService.update(structure.getId(), RawJson.from(jsonData), entityContext)
-                              .thenApply(entity -> {
-                                  try {
-                                      return objectMapper.readValue(jsonData, Car.class);
+        return entitiesService.update(structure.getId(), tokenBuffer, entityContext)
+                              .thenApply(saved -> {
+                                  try (JsonParser parser = saved.asParser()) {
+                                      return objectMapper.readValue(parser, Car.class);
                                   } catch (IOException e) {
                                       throw new IllegalStateException(e);
                                   }
@@ -105,20 +107,20 @@ public class TestHelper {
                                                  Structure structure = pair.getLeft();
                                                  List<CompletableFuture<Person>> completableFutures = new ArrayList<>();
                                                  for(Person person : people){
-                                                     byte[] jsonData;
+                                                     TokenBuffer tokenBuffer = new TokenBuffer(objectMapper, false);
                                                      try {
-                                                         jsonData = objectMapper.writeValueAsBytes(person);
-                                                     } catch (JsonProcessingException e) {
+                                                         tokenBuffer.writeObject(person);
+                                                     } catch (IOException e) {
                                                          return CompletableFuture.failedFuture(e);
                                                      }
                                                      completableFutures.add(entitiesService.save(structure.getId(),
-                                                                                                 RawJson.from(jsonData),
+                                                                                                 tokenBuffer,
                                                                                                  entityContext)
                                                                                            .thenCompose(saved -> {
-                                                                                               try {
-                                                                                                   Person savedPerson = objectMapper.readValue(saved.data(),
-                                                                                                                                               Person.class);
-                                                                                                   return CompletableFuture.completedFuture(savedPerson);
+                                                                                               try (JsonParser parser = saved.asParser()) {
+                                                                                                   Person deserializedPerson = objectMapper.readValue(parser,
+                                                                                                                                                      Person.class);
+                                                                                                   return CompletableFuture.completedFuture(deserializedPerson);
                                                                                                } catch (IOException e) {
                                                                                                    return CompletableFuture.failedFuture(e);
                                                                                                }
@@ -145,14 +147,15 @@ public class TestHelper {
                 .thenCompose(pair -> createTestPeopleWithCorrectMethod(numberOfPeopleToCreate, randomPeople)
                                              .thenCompose(people -> {
                                                  Structure structure = pair.getLeft();
-                                                 byte[] jsonData;
+                                                 TokenBuffer tokenBuffer = new TokenBuffer(objectMapper, false);
                                                  try {
-                                                     jsonData = objectMapper.writeValueAsBytes(people);
-                                                 } catch (JsonProcessingException e) {
+                                                     tokenBuffer.writeObject(people);
+                                                 } catch (IOException e) {
                                                      return CompletableFuture.failedFuture(e);
                                                  }
+
                                                  return entitiesService.bulkSave(structure.getId(),
-                                                                                 RawJson.from(jsonData),
+                                                                                 tokenBuffer,
                                                                                  entityContext)
                                                          .thenCompose(unused -> CompletableFuture
                                                                  .completedFuture(new StructureAndPersonHolder(

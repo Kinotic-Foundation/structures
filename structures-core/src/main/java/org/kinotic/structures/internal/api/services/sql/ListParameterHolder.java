@@ -15,4 +15,8 @@ public class ListParameterHolder implements ParameterHolder {
 
     private final List<QueryParameter> parameters;
 
+    @Override
+    public boolean isEmpty() {
+        return parameters == null || parameters.isEmpty();
+    }
 }

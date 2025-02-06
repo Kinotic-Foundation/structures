@@ -1,6 +1,9 @@
 package org.kinotic.structures.internal.api.services.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCluster;
+import org.apache.ignite.IgniteCompute;
 import org.kinotic.structures.api.domain.NamedQueriesDefinition;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.EntitiesService;

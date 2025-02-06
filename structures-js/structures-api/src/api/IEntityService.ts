@@ -134,6 +134,12 @@ export interface IEntityService<T> {
     search(searchText: string, pageable: Pageable): Promise<IterablePage<T>>;
 
     /**
+     * This operation makes all the recent writes immediately available for search.
+     * @return a Promise that resolves when the operation is complete
+     */
+    syncIndex(): Promise<void>
+
+    /**
      * Updates a given entity. This will only override the fields that are present in the given entity.
      * If any fields are not present in the given entity data they will not be changed.
      * If the entity does not exist it will be created.
@@ -221,6 +227,10 @@ export class EntityService<T> implements IEntityService<T>{
 
     public search(searchText: string, pageable: Pageable): Promise<IterablePage<T>>{
         return this.entitiesService.search(this.structureId, searchText, pageable)
+    }
+
+    public async syncIndex(): Promise<void> {
+        return this.entitiesService.syncIndex(this.structureId)
     }
 
     public async update(entity: T): Promise<T>{

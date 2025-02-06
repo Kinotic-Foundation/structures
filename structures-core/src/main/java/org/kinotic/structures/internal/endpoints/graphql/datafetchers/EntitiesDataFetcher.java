@@ -42,6 +42,7 @@ public class EntitiesDataFetcher implements DataFetcher<CompletableFuture<List<M
                 String typename = (String) representation.get("__typename");
                 String id = (String) representation.get("id");
                 String structureId = StructuresUtil.structureNameToId(namespace, typename);
+                //noinspection unchecked
                 futures.add(entitiesService.findById(structureId,
                                                      id,
                                                      Map.class,

@@ -141,3 +141,7 @@ export function Text(target: any, propertyKey: string) {
     Reflect.defineMetadata(StructuresDecorator.Text, {}, target, propertyKey)
 }
 
+// @ts-ignore
+export function Version(target: any, propertyKey: string) {
+
+}

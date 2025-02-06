@@ -11,24 +11,15 @@ import java.util.List;
 /**
  * This is the result produced by the {@link StructureConversionService}
  * Created by Navíd Mitchell 🤪 on 5/11/23.
+ *
+ * @param decoratedProperties A list of all {@link DecoratedProperty} that were found during the conversion process
+ * @param multiTenancyType    The {@link MultiTenancyType} of the converted structure
+ * @param objectProperty      The root object property that represents the converted C3Type
+ * @param versionFieldName    The name of the field that will be used for optimistic locking or null if optimistic locking is not enabled
  */
-@Getter
-@RequiredArgsConstructor
-public class ElasticConversionResult {
-
-    /**
-     * A list of all {@link DecoratedProperty} that were found during the conversion process
-     */
-    private final List<DecoratedProperty> decoratedProperties;
-
-    /**
-     * The {@link MultiTenancyType} of the converted structure
-     */
-    private final MultiTenancyType multiTenancyType;
-
-    /**
-     * The root object property that represents the converted C3Type
-     */
-    private final ObjectProperty objectProperty;
+public record ElasticConversionResult(List<DecoratedProperty> decoratedProperties,
+                                      MultiTenancyType multiTenancyType,
+                                      ObjectProperty objectProperty,
+                                      String versionFieldName) {
 
 }
