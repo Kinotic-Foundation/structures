@@ -15,7 +15,8 @@ public record EntityHolder<T>(T entity, String id, MultiTenancyType multiTenancy
     }
 
     public ElasticVersion getElasticVersionIfPresent() {
-        if (version == null) {
+        // For the first save we allow null or empty string for version
+        if (version == null || version.isEmpty()) {
             return null;
         }
         String[] parts = version.split(":");

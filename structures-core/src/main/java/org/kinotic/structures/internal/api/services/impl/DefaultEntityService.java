@@ -79,16 +79,25 @@ public class DefaultEntityService implements EntityService {
                 un -> doBulkPersist(entities, context,
                                     entityHolder -> BulkOperation.of(b -> b
                                             .update(u -> {
-                                                        u.index(structure.getItemIndex())
-                                                         .id(entityHolder.getDocumentId())
-                                                         .action(upB -> upB.doc(entityHolder.entity())
-                                                                           .docAsUpsert(true)
-                                                                           .detectNoop(true));
 
                                                         ElasticVersion elasticVersion = entityHolder.getElasticVersionIfPresent();
+                                                        u.index(structure.getItemIndex())
+                                                         .id(entityHolder.getDocumentId())
+                                                         .action(upB -> {
+                                                             upB.doc(entityHolder.entity())
+                                                                .detectNoop(true);
+
+                                                             if(elasticVersion == null){
+                                                                 upB.docAsUpsert(true);
+                                                             }
+                                                             return upB;
+                                                         });
+
                                                         if(elasticVersion != null) {
                                                             u.ifPrimaryTerm(elasticVersion.primaryTerm())
                                                              .ifSeqNo(elasticVersion.seqNo());
+                                                        } else if (structure.isOptimisticLockingEnabled()) {
+                                                            throw new IllegalArgumentException("A Version must be provided when calling update");
                                                         }
                                                         return u;
                                                     }
@@ -350,9 +359,9 @@ public class DefaultEntityService implements EntityService {
 
                                   return i;
                               }).thenApply(indexResponse -> postProcessSaveOrUpdate(entity,
-                                                                                entityHolder,
-                                                                                indexResponse.primaryTerm(),
-                                                                                indexResponse.seqNo()));
+                                                                                    entityHolder,
+                                                                                    indexResponse.primaryTerm(),
+                                                                                    indexResponse.seqNo()));
                           }));
     }
 
@@ -430,7 +439,6 @@ public class DefaultEntityService implements EntityService {
     }
 
     @WithSpan
-    @SuppressWarnings("unchecked")
     @Override
     public <T> CompletableFuture<T> update(T entity, EntityContext context) {
         return authService.authorize(EntityOperation.UPDATE, context).thenCompose(
@@ -445,13 +453,18 @@ public class DefaultEntityService implements EntityService {
                          .index(structure.getItemIndex())
                          .id(entityHolder.getDocumentId())
                          .doc(entityHolder.entity())
-                         .docAsUpsert(true)
                          .refresh(Refresh.True);
 
                         ElasticVersion elasticVersion = entityHolder.getElasticVersionIfPresent();
                         if(elasticVersion != null) {
+
                             u.ifPrimaryTerm(elasticVersion.primaryTerm())
                              .ifSeqNo(elasticVersion.seqNo());
+
+                        } else if (structure.isOptimisticLockingEnabled()) {
+                            throw new IllegalArgumentException("A Version must be provided when calling update");
+                        }else{
+                            u.docAsUpsert(true);
                         }
                         return u;
                     });
@@ -534,6 +547,9 @@ public class DefaultEntityService implements EntityService {
 
     @SuppressWarnings("unchecked")
     private <T> T postProcessSaveOrUpdate(T entity, EntityHolder<?> entityHolder, Long primaryTerm, Long seqNo) {
+        // All token buffers received will be converted to RawJson in the upsert preprocessor
+        // This is done since it uses less memory for bulk operations
+        // So we convert those cases back to a TokenBuffer before returning
         if(structure.isOptimisticLockingEnabled()){
             return (T) updateVersionForEntity(entityHolder.entity(),
                                               primaryTerm,
@@ -542,7 +558,6 @@ public class DefaultEntityService implements EntityService {
                                                       && entityHolder.entity() instanceof RawJson
             );
         }else{
-            // All token buffers received will be converted to RawJson in the upsert preprocessor
             if(entity instanceof TokenBuffer
                     && entityHolder.entity() instanceof RawJson json){
                 try {

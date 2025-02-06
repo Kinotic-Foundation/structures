@@ -66,6 +66,7 @@ public abstract class AbstractJsonUpsertPreProcessor<T> implements UpsertPreProc
             String currentId = null;
             String currentTenantId = null;
             String currentVersion = null;
+            boolean versionFound = false;
             ByteArrayBuilder byteArrayBuilder = new ByteArrayBuilder();
             JsonGenerator jsonGenerator = objectMapper.getFactory().createGenerator(byteArrayBuilder, JsonEncoding.UTF8);
 
@@ -97,11 +98,14 @@ public abstract class AbstractJsonUpsertPreProcessor<T> implements UpsertPreProc
                         Object input = objectMapper.readValue(jsonParser, preProcessor.supportsFieldType());
                         Object value = preProcessor.process(structure, fieldName, decorator, input, context);
 
-                        if(value != null) {
-                            jsonGenerator.writeFieldName(fieldName);
-                            jsonGenerator.writeObject(value);
-                        }else{
-                            jsonGenerator.writeNullField(fieldName);
+                        // We exclude the version field from the data to be persisted
+                        if(!(decorator instanceof VersionDecorator)) {
+                            if (value != null) {
+                                jsonGenerator.writeFieldName(fieldName);
+                                jsonGenerator.writeObject(value);
+                            } else {
+                                jsonGenerator.writeNullField(fieldName);
+                            }
                         }
 
                         // I feel like the logic below is getting kinda dumb since the knowledge of certain decorators is hardcoded
@@ -124,13 +128,13 @@ public abstract class AbstractJsonUpsertPreProcessor<T> implements UpsertPreProc
 
                         }else if(objectDepth == 1 && decorator instanceof VersionDecorator){
 
-                            // We exclude the version field from the data to be persisted
-
-                            if(currentVersion != null){ // should never happen, because the structure is validated when published
+                            if(versionFound){ // should never happen, because the structure is validated when published
                                 throw new IllegalArgumentException("Found multiple version fields in entity");
                             }
 
+
                             currentVersion = (String) value;
+                            versionFound = true;
                         }
                     }else{
                         // Check if this is the tenant id if MultiTenancyType.SHARED is enabled
@@ -163,7 +167,7 @@ public abstract class AbstractJsonUpsertPreProcessor<T> implements UpsertPreProc
                             throw new IllegalArgumentException("Could not find id for entity");
                         }
 
-                        if(structure.isOptimisticLockingEnabled() && currentVersion == null){
+                        if(structure.isOptimisticLockingEnabled() && !versionFound){
                             throw new IllegalArgumentException("Could not find version for entity");
                         }
 
