@@ -38,7 +38,7 @@ describe('NamedQueryTest', () => {
     })
 
     afterEach<LocalTestContext>(async (context) => {
-       await expect(deleteStructure(context.structure.id)).resolves.toBeUndefined()
+       await expect(deleteStructure(context.structure.id as string)).resolves.toBeUndefined()
     })
 
 
@@ -51,7 +51,7 @@ describe('NamedQueryTest', () => {
          const page: Page<Person> = await entityService.findAll(Pageable.create(0, 10))
          expect(page).toBeDefined()
          expect(page.totalElements).toBe(100)
-         expect(page.content.length).toBe(10)
+         expect(page.content?.length).toBe(10)
 
          const structureId = entityService.structureId
 
@@ -86,7 +86,7 @@ describe('NamedQueryTest', () => {
              const page: Page<Person> = await entityService.findAll(Pageable.create(0, 10))
              expect(page).toBeDefined()
              expect(page.totalElements).toBe(100)
-             expect(page.content.length).toBe(10)
+             expect(page.content?.length).toBe(10)
 
              const structureId = entityService.structureId
 
@@ -122,7 +122,7 @@ describe('NamedQueryTest', () => {
          const page: Page<Person> = await entityService.findAll(Pageable.create(0, 10))
          expect(page).toBeDefined()
          expect(page.totalElements).toBe(100)
-         expect(page.content.length).toBe(10)
+         expect(page.content?.length).toBe(10)
 
          const structureId = entityService.structureId
          const query = new QueryDecorator(`SELECT COUNT(firstName) as count, lastName FROM "struct_${structureId}" GROUP BY lastName`)
@@ -159,7 +159,7 @@ describe('NamedQueryTest', () => {
              const page: Page<Person> = await entityService.findAll(Pageable.create(0, 10))
              expect(page).toBeDefined()
              expect(page.totalElements).toBe(100)
-             expect(page.content.length).toBe(10)
+             expect(page.content?.length).toBe(10)
 
              const structureId = entityService.structureId
              const namedQueriesService = Structures.getNamedQueriesService()

@@ -11,7 +11,7 @@ import java.util.concurrent.CompletableFuture;
  *
  * Created by Navíd Mitchell 🤪 on 5/5/23.
  */
-public interface UpsertPreProcessor<T, ARRAY_TYPE> {
+public interface UpsertPreProcessor<T, ARRAY_TYPE, ENTITY_TYPE> {
 
     /**
      * Processes a single entity before it is upserted.
@@ -20,7 +20,7 @@ public interface UpsertPreProcessor<T, ARRAY_TYPE> {
      * @param context the context for this operation
      * @return {@link CompletableFuture} emitting the processed entity
      */
-    CompletableFuture<EntityHolder> process(T entity, EntityContext context);
+    CompletableFuture<EntityHolder<ENTITY_TYPE>> process(T entity, EntityContext context);
 
     /**
      * Processes an array of entities before they are upserted.
@@ -29,6 +29,6 @@ public interface UpsertPreProcessor<T, ARRAY_TYPE> {
      * @param context the context for this operation
      * @return {@link CompletableFuture} emitting the processed entities
      */
-    CompletableFuture<List<EntityHolder>> processArray(ARRAY_TYPE entities, EntityContext context);
+    CompletableFuture<List<EntityHolder<ENTITY_TYPE>>> processArray(ARRAY_TYPE entities, EntityContext context);
 
 }

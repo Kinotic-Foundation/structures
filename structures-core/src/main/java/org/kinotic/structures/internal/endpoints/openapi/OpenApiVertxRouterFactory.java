@@ -20,6 +20,7 @@ import org.kinotic.continuum.api.security.SecurityService;
 import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.continuum.gateway.api.security.AuthenticationHandler;
 import org.kinotic.structures.api.config.StructuresProperties;
+import org.kinotic.structures.api.domain.FastestType;
 import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.services.EntitiesService;
 import org.kinotic.structures.internal.api.services.sql.MapParameterHolder;
@@ -126,7 +127,7 @@ public class OpenApiVertxRouterFactory {
 
                   VertxCompletableFuture.from(vertx, entitiesService.findAll(structureId,
                                                                              pageable,
-                                                                             RawJson.class,
+                                                                             FastestType.class,
                                                                              new RoutingContextToEntityContextAdapter(ctx)))
                                         .handle(new ValueToJsonHandler<>(ctx, objectMapper))
                                         .exceptionally(throwable -> {
@@ -147,9 +148,9 @@ public class OpenApiVertxRouterFactory {
 
                   VertxCompletableFuture.from(vertx, entitiesService.findById(structureId,
                                                                               id,
-                                                                              RawJson.class,
+                                                                              FastestType.class,
                                                                               new RoutingContextToEntityContextAdapter(ctx)))
-                                        .handle(new RawJsonHandler(ctx))
+                                        .handle(new ValueToJsonHandler<>(ctx, objectMapper, true))
                                         .exceptionally(throwable -> {
                                             VertxWebUtil.writeException(ctx, throwable);
                                             return null;
@@ -228,7 +229,7 @@ public class OpenApiVertxRouterFactory {
 
                       VertxCompletableFuture.from(vertx, entitiesService.findByIds(structureId,
                                                                                    ids,
-                                                                                   RawJson.class,
+                                                                                   FastestType.class,
                                                                                    new RoutingContextToEntityContextAdapter(ctx)))
                                             .handle(new ValueToJsonHandler<>(ctx, objectMapper))
                                             .exceptionally(throwable -> {
@@ -271,7 +272,6 @@ public class OpenApiVertxRouterFactory {
                   }
               });
 
-        // TODO: discuss with Nick if we should keep the consumes handler
         // Named Query Page
         router.post(apiBasePath + ":structureNamespace/:structureName/named-query-page/:queryName")
               .produces("application/json")
@@ -323,7 +323,7 @@ public class OpenApiVertxRouterFactory {
                   VertxCompletableFuture.from(vertx, entitiesService.search(structureId,
                                                                             searchString,
                                                                             pageable,
-                                                                            RawJson.class,
+                                                                            FastestType.class,
                                                                             new RoutingContextToEntityContextAdapter(ctx)))
                                         .handle(new ValueToJsonHandler<>(ctx, objectMapper))
                                         .exceptionally(throwable -> {
@@ -384,7 +384,7 @@ public class OpenApiVertxRouterFactory {
                   VertxCompletableFuture.from(vertx, entitiesService.update(structureId,
                                                                             new RawJson(ctx.body().buffer().getBytes()),
                                                                             new RoutingContextToEntityContextAdapter(ctx)))
-                                        .handle(new RawJsonHandler(ctx))
+                                        .handle(new ValueToJsonHandler<>(ctx, objectMapper))
                                         .exceptionally(throwable -> {
                                             VertxWebUtil.writeException(ctx, throwable);
                                             return null;
@@ -404,7 +404,7 @@ public class OpenApiVertxRouterFactory {
                   VertxCompletableFuture.from(vertx, entitiesService.save(structureId,
                                                                           new RawJson(ctx.body().buffer().getBytes()),
                                                                           new RoutingContextToEntityContextAdapter(ctx)))
-                                        .handle(new RawJsonHandler(ctx))
+                                        .handle(new ValueToJsonHandler<>(ctx, objectMapper))
                                         .exceptionally(throwable -> {
                                             VertxWebUtil.writeException(ctx, throwable);
                                             return null;

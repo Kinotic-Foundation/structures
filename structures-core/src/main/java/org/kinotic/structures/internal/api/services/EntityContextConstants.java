@@ -5,8 +5,6 @@ package org.kinotic.structures.internal.api.services;
  */
 public class EntityContextConstants {
 
-    public static final String ENTITY_ID_KEY = "entityId";
-
     /**
      * The key for the multi tenant selection in the context. The value should be a list of tenantIds.
      */

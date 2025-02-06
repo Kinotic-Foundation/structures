@@ -107,7 +107,7 @@ public class GqlSchemaHandlerCacheLoader implements AsyncCacheLoader<String, Gra
                                                                  String namespace,
                                                                  Executor executor) {
         return structureDAO
-                .findAllPublishedForNamespace(namespace, Pageable.ofSize(100))
+                .findAllPublishedForNamespace(namespace, Pageable.ofSize(500))
                 .thenComposeAsync(structuresPage -> {
                     if(structuresPage.getTotalElements() > 0) {
                         log.debug("Creating GraphQL Schema for namespace: {}", namespace);
@@ -160,13 +160,10 @@ public class GqlSchemaHandlerCacheLoader implements AsyncCacheLoader<String, Gra
                                                             .converter(converter)
                                                             .inputType(inputType)
                                                             .outputType(outputType)
-                                                            .offsetPageableReference(
-                                                                    pageableReference)
-                                                            .cursorPageableReference(
-                                                                    cursorPageableReference)
+                                                            .offsetPageableReference(pageableReference)
+                                                            .cursorPageableReference(cursorPageableReference)
                                                             .pageResponseType(pageResponseType)
-                                                            .cursorPageResponseType(
-                                                                    cursorPageResponseType)
+                                                            .cursorPageResponseType(cursorPageResponseType)
                                                             .structureName(structureName)
                                                             .entityOperationsMap(entityOperationsMap)
                                                             .build();

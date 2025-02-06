@@ -21,7 +21,7 @@ public class RawJsonDeserializer extends JsonDeserializer<RawJson> {
     }
 
     @Override
-    public RawJson deserialize(JsonParser jsonParser, DeserializationContext ctxt) throws IOException, JacksonException {
+    public RawJson deserialize(JsonParser jsonParser, DeserializationContext ctxt) throws IOException {
         return RawJson.from(jsonParser, objectMapper);
     }
 

@@ -11,15 +11,15 @@ import java.util.concurrent.CompletableFuture;
 /**
  * Created by Navíd Mitchell 🤪 on 6/7/23.
  */
-public class PojoUpsertPreProcessor implements UpsertPreProcessor<Object, List<Object>> {
+public class PojoUpsertPreProcessor implements UpsertPreProcessor<Object, List<Object>, Object> {
 
     @Override
-    public CompletableFuture<EntityHolder> process(Object entity, EntityContext context) {
+    public CompletableFuture<EntityHolder<Object>> process(Object entity, EntityContext context) {
         throw new NotImplementedException("Pojo upsert is not implemented yet");
     }
 
     @Override
-    public CompletableFuture<List<EntityHolder>> processArray(List<Object> entities, EntityContext context) {
+    public CompletableFuture<List<EntityHolder<Object>>> processArray(List<Object> entities, EntityContext context) {
         throw new NotImplementedException("Pojo upsert is not implemented yet");
     }
 }

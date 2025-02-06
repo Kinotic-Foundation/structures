@@ -3,29 +3,25 @@ package org.kinotic.structures.internal.api.services.impl;
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import co.elastic.clients.elasticsearch._types.Refresh;
 import co.elastic.clients.elasticsearch.core.BulkRequest;
+import co.elastic.clients.elasticsearch.core.IndexResponse;
 import co.elastic.clients.elasticsearch.core.UpdateRequest;
 import co.elastic.clients.elasticsearch.core.bulk.BulkOperation;
 import co.elastic.clients.elasticsearch.core.bulk.BulkResponseItem;
-import co.elastic.clients.util.BinaryData;
-import co.elastic.clients.util.ContentType;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.util.TokenBuffer;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
 import lombok.RequiredArgsConstructor;
-import org.apache.commons.lang3.NotImplementedException;
-import org.kinotic.continuum.core.api.crud.CursorPage;
 import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.structures.api.config.StructuresProperties;
-import org.kinotic.structures.api.domain.EntityContext;
-import org.kinotic.structures.api.domain.EntityOperation;
-import org.kinotic.structures.api.domain.RawJson;
-import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.api.domain.*;
 import org.kinotic.structures.api.domain.idl.decorators.MultiTenancyType;
 import org.kinotic.structures.api.services.NamedQueriesService;
 import org.kinotic.structures.api.services.security.AuthorizationService;
 import org.kinotic.structures.internal.api.hooks.DelegatingUpsertPreProcessor;
 import org.kinotic.structures.internal.api.hooks.ReadPreProcessor;
-import org.kinotic.structures.internal.api.services.EntityContextConstants;
+import org.kinotic.structures.internal.api.services.ElasticVersion;
 import org.kinotic.structures.internal.api.services.EntityHolder;
 import org.kinotic.structures.internal.api.services.EntityService;
 import org.kinotic.structures.internal.api.services.sql.ParameterHolder;
@@ -46,7 +42,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class DefaultEntityService implements EntityService {
 
-    private static final Logger log = LoggerFactory.getLogger(DefaultEntityService.class);
     private final AuthorizationService<EntityOperation> authService;
     private final CrudServiceTemplate crudServiceTemplate;
     private final DelegatingUpsertPreProcessor delegatingUpsertPreProcessor;
@@ -55,7 +50,6 @@ public class DefaultEntityService implements EntityService {
     private final ObjectMapper objectMapper;
     private final ReadPreProcessor readPreProcessor;
     private final Structure structure;
-    private final StructuresProperties structuresProperties;
 
     @WithSpan
     @Override
@@ -63,9 +57,18 @@ public class DefaultEntityService implements EntityService {
         return authService.authorize(EntityOperation.BULK_SAVE, context).thenCompose(
                 un -> doBulkPersist(entities, context,
                                     entityHolder -> BulkOperation.of(b -> b
-                                            .index(idx -> idx.index(structure.getItemIndex())
-                                                             .id(entityHolder.getDocumentId())
-                                                             .document(entityHolder.entity())
+                                            .index(i -> {
+                                                       i.index(structure.getItemIndex())
+                                                        .id(entityHolder.getDocumentId())
+                                                        .document(entityHolder.entity());
+
+                                                       ElasticVersion elasticVersion = entityHolder.getElasticVersionIfPresent();
+                                                       if(elasticVersion != null) {
+                                                           i.ifPrimaryTerm(elasticVersion.primaryTerm())
+                                                            .ifSeqNo(elasticVersion.seqNo());
+                                                       }
+                                                       return i;
+                                                   }
                                             ))));
     }
 
@@ -75,12 +78,29 @@ public class DefaultEntityService implements EntityService {
         return authService.authorize(EntityOperation.BULK_UPDATE, context).thenCompose(
                 un -> doBulkPersist(entities, context,
                                     entityHolder -> BulkOperation.of(b -> b
-                                            .update(u -> u
-                                                    .index(structure.getItemIndex())
-                                                    .id(entityHolder.getDocumentId())
-                                                    .action(upB -> upB.doc(entityHolder.entity())
-                                                                      .docAsUpsert(true)
-                                                                      .detectNoop(true))
+                                            .update(u -> {
+
+                                                        ElasticVersion elasticVersion = entityHolder.getElasticVersionIfPresent();
+                                                        u.index(structure.getItemIndex())
+                                                         .id(entityHolder.getDocumentId())
+                                                         .action(upB -> {
+                                                             upB.doc(entityHolder.entity())
+                                                                .detectNoop(true);
+
+                                                             if(elasticVersion == null){
+                                                                 upB.docAsUpsert(true);
+                                                             }
+                                                             return upB;
+                                                         });
+
+                                                        if(elasticVersion != null) {
+                                                            u.ifPrimaryTerm(elasticVersion.primaryTerm())
+                                                             .ifSeqNo(elasticVersion.seqNo());
+                                                        } else if (structure.isOptimisticLockingEnabled()) {
+                                                            throw new IllegalArgumentException("A Version must be provided when calling update");
+                                                        }
+                                                        return u;
+                                                    }
                                             ))));
     }
 
@@ -132,12 +152,51 @@ public class DefaultEntityService implements EntityService {
     public <T> CompletableFuture<Page<T>> findAll(Pageable pageable, Class<T> type, EntityContext context) {
         return authService.authorize(EntityOperation.FIND_ALL, context).thenCompose(
                 un -> validateTenant(context)
-                        .thenCompose(unused -> crudServiceTemplate
-                                .search(structure.getItemIndex(),
-                                        pageable,
-                                        type,
-                                        builder -> readPreProcessor.beforeFindAll(structure, builder, context))
-                                .thenApply(createParanoidCheck(type, context, "Find All"))));
+                        .thenCompose(unused -> {
+
+                            if(FastestType.class.isAssignableFrom(type)){
+
+                                if(structure.isOptimisticLockingEnabled()){
+                                    //noinspection unchecked
+                                    return crudServiceTemplate
+                                            .search(structure.getItemIndex(),
+                                                    pageable,
+                                                    Map.class,
+                                                    builder -> readPreProcessor.beforeFindAll(structure, builder, context),
+                                                    hit -> (T) new FastestType(updateVersionForEntity(hit.source(),
+                                                                                                      hit.primaryTerm(),
+                                                                                                      hit.seqNo()
+                                                    )));
+                                }else{
+                                    //noinspection unchecked
+                                    return crudServiceTemplate
+                                            .search(structure.getItemIndex(),
+                                                    pageable,
+                                                    RawJson.class,
+                                                    builder -> readPreProcessor.beforeFindAll(structure, builder, context),
+                                                    hit -> (T) new FastestType(hit.source()));
+                                }
+                            }else{
+
+                                if(structure.isOptimisticLockingEnabled()){
+                                    return crudServiceTemplate
+                                            .search(structure.getItemIndex(),
+                                                    pageable,
+                                                    type,
+                                                    builder -> readPreProcessor.beforeFindAll(structure, builder, context),
+                                                    hit -> updateVersionForEntity(hit.source(),
+                                                                                  hit.primaryTerm(),
+                                                                                  hit.seqNo()
+                                                    ));
+                                }else{
+                                    return crudServiceTemplate
+                                            .search(structure.getItemIndex(),
+                                                    pageable,
+                                                    type,
+                                                    builder -> readPreProcessor.beforeFindAll(structure, builder, context));
+                                }
+                            }
+                        }));
     }
 
     @WithSpan
@@ -145,9 +204,51 @@ public class DefaultEntityService implements EntityService {
     public <T> CompletableFuture<T> findById(String id, Class<T> type, EntityContext context) {
         return authService.authorize(EntityOperation.FIND_BY_ID, context).thenCompose(
                 un -> validateTenantAndComposeId(id, context).thenCompose(
-                        composedId -> crudServiceTemplate
-                                .findById(structure.getItemIndex(), composedId, type,
-                                          builder -> readPreProcessor.beforeFindById(structure, builder, context))));
+                        composedId -> {
+
+                            if(FastestType.class.isAssignableFrom(type)){
+
+                                if(structure.isOptimisticLockingEnabled()){
+                                    //noinspection unchecked
+                                    return crudServiceTemplate
+                                            .findById(structure.getItemIndex(),
+                                                      composedId,
+                                                      Map.class,
+                                                      builder -> readPreProcessor.beforeFindById(structure, builder, context),
+                                                      result -> (T) new FastestType(updateVersionForEntity(result.source(),
+                                                                                                           result.primaryTerm(),
+                                                                                                           result.seqNo()
+                                                      )));
+                                }else{
+                                    //noinspection unchecked
+                                    return crudServiceTemplate
+                                            .findById(structure.getItemIndex(),
+                                                      composedId,
+                                                      RawJson.class,
+                                                      builder -> readPreProcessor.beforeFindById(structure, builder, context),
+                                                      result -> (T) new FastestType(result.source()));
+                                }
+                            }else{
+
+                                if(structure.isOptimisticLockingEnabled()){
+                                    return crudServiceTemplate
+                                            .findById(structure.getItemIndex(),
+                                                      composedId,
+                                                      type,
+                                                      builder -> readPreProcessor.beforeFindById(structure, builder, context),
+                                                      result -> updateVersionForEntity(result.source(),
+                                                                                       result.primaryTerm(),
+                                                                                       result.seqNo()
+                                                      ));
+                                }else{
+                                    return crudServiceTemplate
+                                            .findById(structure.getItemIndex(),
+                                                      composedId,
+                                                      type,
+                                                      builder -> readPreProcessor.beforeFindById(structure, builder, context));
+                                }
+                            }
+                        }));
     }
 
     @WithSpan
@@ -155,9 +256,51 @@ public class DefaultEntityService implements EntityService {
     public <T> CompletableFuture<List<T>> findByIds(List<String> ids, Class<T> type, EntityContext context) {
         return authService.authorize(EntityOperation.FIND_BY_IDS, context).thenCompose(
                 un -> validateTenantAndComposeIds(ids, context)
-                        .thenCompose(composedIds -> crudServiceTemplate
-                                .findByIds(structure.getItemIndex(), composedIds, type,
-                                           builder -> readPreProcessor.beforeFindByIds(structure, builder, context))));
+                        .thenCompose(composedIds -> {
+
+                            if(FastestType.class.isAssignableFrom(type)){
+
+                                if(structure.isOptimisticLockingEnabled()){
+                                    //noinspection unchecked
+                                    return crudServiceTemplate
+                                            .findByIds(structure.getItemIndex(),
+                                                       composedIds,
+                                                       Map.class,
+                                                       builder -> readPreProcessor.beforeFindByIds(structure, builder, context),
+                                                       result -> (T) new FastestType(updateVersionForEntity(result.source(),
+                                                                                                            result.primaryTerm(),
+                                                                                                            result.seqNo()
+                                                       )));
+                                }else{
+                                    //noinspection unchecked
+                                    return crudServiceTemplate
+                                            .findByIds(structure.getItemIndex(),
+                                                       composedIds,
+                                                       RawJson.class,
+                                                       builder -> readPreProcessor.beforeFindByIds(structure, builder, context),
+                                                       result -> (T) new FastestType(result.source()));
+                                }
+                            }else{
+
+                                if(structure.isOptimisticLockingEnabled()){
+                                    return crudServiceTemplate
+                                            .findByIds(structure.getItemIndex(),
+                                                       composedIds,
+                                                       type,
+                                                       builder -> readPreProcessor.beforeFindByIds(structure, builder, context),
+                                                       result -> updateVersionForEntity(result.source(),
+                                                                                        result.primaryTerm(),
+                                                                                        result.seqNo()
+                                                       ));
+                                }else{
+                                    return crudServiceTemplate
+                                            .findByIds(structure.getItemIndex(),
+                                                       composedIds,
+                                                       type,
+                                                       builder -> readPreProcessor.beforeFindByIds(structure, builder, context));
+                                }
+                            }
+                        }));
     }
 
     @WithSpan
@@ -190,6 +333,102 @@ public class DefaultEntityService implements EntityService {
                                                                                  context));
     }
 
+    @WithSpan
+    @SuppressWarnings("unchecked")
+    @Override
+    public <T> CompletableFuture<T> save(T entity, EntityContext context) {
+        return authService.authorize(EntityOperation.SAVE, context)
+                          .thenCompose(un -> doPrePersist(entity, context, entityHolder -> {
+
+                              String routing = (structure.getMultiTenancyType() == MultiTenancyType.SHARED)
+                                      ? context.getParticipant().getTenantId()
+                                      : null;
+
+                              return esAsyncClient.index(i -> {
+                                  i.routing(routing)
+                                   .index(structure.getItemIndex())
+                                   .id(entityHolder.getDocumentId())
+                                   .document(entityHolder.entity())
+                                   .refresh(Refresh.True);
+
+                                  ElasticVersion elasticVersion = entityHolder.getElasticVersionIfPresent();
+                                  if(elasticVersion != null) {
+                                      i.ifPrimaryTerm(elasticVersion.primaryTerm())
+                                       .ifSeqNo(elasticVersion.seqNo());
+                                  }
+
+                                  return i;
+                              }).thenApply(indexResponse -> postProcessSaveOrUpdate(entity,
+                                                                                    entityHolder,
+                                                                                    indexResponse.primaryTerm(),
+                                                                                    indexResponse.seqNo()));
+                          }));
+    }
+
+    @WithSpan
+    @Override
+    public <T> CompletableFuture<Page<T>> search(String searchText, Pageable pageable, Class<T> type, EntityContext context) {
+        return authService.authorize(EntityOperation.SEARCH, context).thenCompose(
+                un -> validateTenant(context)
+                        .thenCompose(unused -> {
+
+                            if(FastestType.class.isAssignableFrom(type)){
+
+                                if(structure.isOptimisticLockingEnabled()){
+                                    //noinspection unchecked
+                                    return crudServiceTemplate
+                                            .search(structure.getItemIndex(),
+                                                    pageable,
+                                                    Map.class,
+                                                    builder -> readPreProcessor.beforeSearch(structure,
+                                                                                             searchText,
+                                                                                             builder,
+                                                                                             context),
+                                                    hit -> (T) new FastestType(updateVersionForEntity(hit.source(),
+                                                                                                      hit.primaryTerm(),
+                                                                                                      hit.seqNo()
+                                                    )));
+                                }else{
+                                    //noinspection unchecked
+                                    return crudServiceTemplate
+                                            .search(structure.getItemIndex(),
+                                                    pageable,
+                                                    RawJson.class,
+                                                    builder -> readPreProcessor.beforeSearch(structure,
+                                                                                             searchText,
+                                                                                             builder,
+                                                                                             context),
+                                                    hit -> (T) new FastestType(hit.source()));
+                                }
+                            }else{
+
+                                if(structure.isOptimisticLockingEnabled()){
+                                    return crudServiceTemplate
+                                            .search(structure.getItemIndex(),
+                                                    pageable,
+                                                    type,
+                                                    builder -> readPreProcessor.beforeSearch(structure,
+                                                                                             searchText,
+                                                                                             builder,
+                                                                                             context),
+                                                    hit -> updateVersionForEntity(hit.source(),
+                                                                                  hit.primaryTerm(),
+                                                                                  hit.seqNo()
+                                                    ));
+                                }else{
+                                    return crudServiceTemplate
+                                            .search(structure.getItemIndex(),
+                                                    pageable,
+                                                    type,
+                                                    builder -> readPreProcessor.beforeSearch(structure,
+                                                                                             searchText,
+                                                                                             builder,
+                                                                                             context));
+                                }
+                            }
+                        }));
+    }
+
     @Override
     public CompletableFuture<Void> syncIndex(EntityContext context) {
         return authService.authorize(EntityOperation.SYNC_INDEX, context).thenCompose(
@@ -200,145 +439,48 @@ public class DefaultEntityService implements EntityService {
     }
 
     @WithSpan
-    @SuppressWarnings("unchecked")
-    @Override
-    public <T> CompletableFuture<T> save(T entity, EntityContext context) {
-        return authService.authorize(EntityOperation.SAVE, context).thenCompose(
-                un -> doPersist(entity, context, entityHolder -> {
-
-                    String routing = (structure.getMultiTenancyType() == MultiTenancyType.SHARED)
-                            ? context.getParticipant().getTenantId()
-                            : null;
-
-                    // This is a bit of a hack since the BinaryData type does not work properly to retrieve complex objects, but does work to store them.
-                    // https://github.com/elastic/elasticsearch-java/issues/574
-                    if(entityHolder.entity() instanceof RawJson rawEntity){
-                        BinaryData binaryData = BinaryData.of(rawEntity.data(), ContentType.APPLICATION_JSON);
-                        return esAsyncClient.index(i -> i
-                                                    .routing(routing)
-                                                    .index(structure.getItemIndex())
-                                                    .id(entityHolder.getDocumentId())
-                                                    .document(binaryData)
-                                                    .refresh(Refresh.True))
-                                            .thenApply(indexResponse -> {
-                                                context.put(EntityContextConstants.ENTITY_ID_KEY, entityHolder.id());
-                                                return (T) rawEntity;
-                                            });
-                    }else{
-                        return esAsyncClient.index(i -> i
-                                                    .routing(routing)
-                                                    .index(structure.getItemIndex())
-                                                    .id(entityHolder.getDocumentId())
-                                                    .document(entityHolder.entity())
-                                                    .refresh(Refresh.True))
-                                            .thenApply(indexResponse -> {
-                                                context.put(EntityContextConstants.ENTITY_ID_KEY, entityHolder.id());
-                                                return (T) entityHolder.entity();
-                                            });
-                    }
-                }));
-    }
-
-    @WithSpan
-    @Override
-    public <T> CompletableFuture<Page<T>> search(String searchText, Pageable pageable, Class<T> type, EntityContext context) {
-        return authService.authorize(EntityOperation.SEARCH, context).thenCompose(
-                un -> validateTenant(context)
-                        .thenCompose(unused -> crudServiceTemplate
-                                .search(structure.getItemIndex(),
-                                        pageable,
-                                        type,
-                                        builder -> readPreProcessor.beforeSearch(structure, searchText, builder, context))
-                                .thenApply(createParanoidCheck(type, context, "Search"))));
-    }
-
-    @WithSpan
-    @SuppressWarnings("unchecked")
     @Override
     public <T> CompletableFuture<T> update(T entity, EntityContext context) {
         return authService.authorize(EntityOperation.UPDATE, context).thenCompose(
-                un -> doPersist(entity, context, entityHolder -> {
+                un -> doPrePersist(entity, context, entityHolder -> {
 
                     String routing = (structure.getMultiTenancyType() == MultiTenancyType.SHARED)
                             ? context.getParticipant().getTenantId()
                             : null;
 
-                    return esAsyncClient.update(UpdateRequest.of(u -> u
-                                                .routing(routing)
-                                                .index(structure.getItemIndex())
-                                                .id(entityHolder.getDocumentId())
-                                                .doc(entityHolder.entity())
-                                                .docAsUpsert(true)
-                                                .refresh(Refresh.True)), entityHolder.entity().getClass())
-                                        .thenApply(updateResponse -> {
-                                            context.put(EntityContextConstants.ENTITY_ID_KEY, entityHolder.id());
-                                            return (T) entityHolder.entity();
-                                        });
-                }));
-    }
+                    UpdateRequest<?,?> request = UpdateRequest.of(u -> {
+                        u.routing(routing)
+                         .index(structure.getItemIndex())
+                         .id(entityHolder.getDocumentId())
+                         .doc(entityHolder.entity())
+                         .refresh(Refresh.True);
 
-    @WithSpan
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    private <T> Function<Page<T>, Page<T>> createParanoidCheck(Class<T> type, EntityContext context, String what){
-        return page -> {
-            // This is a temporary bit of code to make sure multi tenancy is working properly
-            if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
-                List<Object> result = new ArrayList<>(page.getContent().size());
-                if(RawJson.class.isAssignableFrom(type)){
-                    for(RawJson rawJson : (List<RawJson>)page.getContent()){
-                        try {
-                            Map converted = objectMapper.readValue(rawJson.data(), Map.class);
-                            String tenant = (String) converted.get(structuresProperties.getTenantIdFieldName());
-                            if(tenant != null && tenant.equals(context.getParticipant().getTenantId())){
-                                // We have to make sure tenant id is not in output, this is a bit of a hack, as long as we need the paranoid check
-                                converted.remove(structuresProperties.getTenantIdFieldName());
-                                result.add(RawJson.from(objectMapper.writeValueAsBytes(converted)));
-                            }else{
-                                log.error("{} Multi tenancy is not working properly for structure: {} and tenant: {}\nData:\n{}",
-                                          what,
-                                          structure,
-                                          context.getParticipant().getTenantId(),
-                                          converted);
-                            }
-                        } catch (IOException e) {
-                            throw new IllegalStateException("RawJson could not be deserialized for sanity check",e);
-                        }
-                    }
-                }else if(Map.class.isAssignableFrom(type)){
-                    List<Map> content = (List<Map>)page.getContent();
-                    for(Map map : content){
-                        String tenant = (String) map.get(structuresProperties.getTenantIdFieldName());
-                        if(tenant != null && tenant.equals(context.getParticipant().getTenantId())){
-                            // We have to make sure tenant id is not in output, this is a bit of a hack, as long as we need the paranoid check
-                            map.remove(structuresProperties.getTenantIdFieldName());
-                            result.add(map);
+                        ElasticVersion elasticVersion = entityHolder.getElasticVersionIfPresent();
+                        if(elasticVersion != null) {
+
+                            u.ifPrimaryTerm(elasticVersion.primaryTerm())
+                             .ifSeqNo(elasticVersion.seqNo());
+
+                        } else if (structure.isOptimisticLockingEnabled()) {
+                            throw new IllegalArgumentException("A Version must be provided when calling update");
                         }else{
-                            log.error("Multi tenancy is not working properly for structure: {} and tenant: {}\nData:\n{}",
-                                      structure,
-                                      context.getParticipant().getTenantId(),
-                                      map);
+                            u.docAsUpsert(true);
                         }
-                    }
-                }else{
-                    throw new NotImplementedException("Pojo Multi tenancy check is not implemented yet");
-                }
+                        return u;
+                    });
 
-                if(page instanceof CursorPage){
-                    return (Page<T>) new CursorPage<>(result, ((CursorPage) page).getCursor(), page.getTotalElements());
-                }else{
-                    return (Page<T>) new Page<>(result, page.getTotalElements());
-                }
-
-            }else{
-                return page;
-            }
-        };
+                    return esAsyncClient.update(request, entityHolder.entity().getClass())
+                                        .thenApply(updateResponse -> postProcessSaveOrUpdate(entity,
+                                                                                             entityHolder,
+                                                                                             updateResponse.primaryTerm(),
+                                                                                             updateResponse.seqNo()));
+                }));
     }
 
     @WithSpan
     private <T> CompletableFuture<Void> doBulkPersist(T entities,
                                                       EntityContext context,
-                                                      Function<EntityHolder, BulkOperation> persistLogic){
+                                                      Function<EntityHolder<?>, BulkOperation> persistLogic){
         return validateTenant(context)
                 .thenCompose(unused -> delegatingUpsertPreProcessor
                         .processArray(entities, context)
@@ -352,7 +494,7 @@ public class DefaultEntityService implements EntityService {
                             br.routing(routing);
 
                             List<BulkOperation> bulkOperations = new ArrayList<>(list.size());
-                            for(EntityHolder entityHolder : list){
+                            for(EntityHolder<?> entityHolder : list){
 
                                 if(entityHolder.id() == null || entityHolder.id().isEmpty()){
                                     return CompletableFuture.failedFuture(new IllegalArgumentException("All Entities must have an id"));
@@ -387,12 +529,11 @@ public class DefaultEntityService implements EntityService {
     }
 
     @WithSpan
-    @SuppressWarnings("unchecked")
-    private <T> CompletableFuture<T> doPersist(T entity,
-                                               EntityContext context,
-                                               Function<EntityHolder, CompletableFuture<T>> persistLogic){
+    private <T> CompletableFuture<T> doPrePersist(T entity,
+                                                  EntityContext context,
+                                                  Function<EntityHolder<?>, CompletableFuture<T>> persistLogic){
         return validateTenant(context)
-                .thenCompose(unused -> (CompletableFuture<T>) delegatingUpsertPreProcessor
+                .thenCompose(unused -> delegatingUpsertPreProcessor
                         .process(entity, context)
                         .thenCompose(entityHolder -> {
 
@@ -400,9 +541,90 @@ public class DefaultEntityService implements EntityService {
                                 return CompletableFuture.failedFuture(new IllegalArgumentException("Entity must have an id"));
                             }
 
-                            return persistLogic.apply(entityHolder)
-                                               .thenApply(response -> entityHolder.entity());
+                            return persistLogic.apply(entityHolder);
                         }));
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> T postProcessSaveOrUpdate(T entity, EntityHolder<?> entityHolder, Long primaryTerm, Long seqNo) {
+        // All token buffers received will be converted to RawJson in the upsert preprocessor
+        // This is done since it uses less memory for bulk operations
+        // So we convert those cases back to a TokenBuffer before returning
+        if(structure.isOptimisticLockingEnabled()){
+            return (T) updateVersionForEntity(entityHolder.entity(),
+                                              primaryTerm,
+                                              seqNo,
+                                              entity instanceof TokenBuffer
+                                                      && entityHolder.entity() instanceof RawJson
+            );
+        }else{
+            if(entity instanceof TokenBuffer
+                    && entityHolder.entity() instanceof RawJson json){
+                try {
+                    ObjectNode node = (ObjectNode) objectMapper.readTree(json.data());
+                    TokenBuffer buffer = new TokenBuffer(objectMapper, false);
+                    objectMapper.writeValue(buffer, node);
+                    return (T) buffer;
+                } catch (IOException e) {
+                    throw new IllegalStateException(e);
+                }
+            }else {
+                return (T) entityHolder.entity();
+            }
+        }
+    }
+
+    private <T> T updateVersionForEntity(T entity, Long primaryTerm, Long seqNo){
+        return updateVersionForEntity(entity, primaryTerm, seqNo, false);
+    }
+
+    @WithSpan
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private <T> T updateVersionForEntity(T entity, Long primaryTerm, Long seqNo, boolean convertRawJsonToTokenBuffer){
+        String versionValue =  primaryTerm + ":" + seqNo;
+
+        if (entity instanceof TokenBuffer buffer) {
+            try {
+                // Convert TokenBuffer to JSON tree
+                ObjectNode node = objectMapper.readTree(buffer.asParser(objectMapper));
+
+                node.put(structure.getVersionFieldName(), versionValue);
+
+                // Serialize back to TokenBuffer
+                TokenBuffer updatedBuffer = new TokenBuffer(objectMapper, false);
+                objectMapper.writeValue(updatedBuffer, node);
+
+                return (T) updatedBuffer;
+            } catch (Exception e) {
+                throw new IllegalStateException("Failed to update version in TokenBuffer", e);
+            }
+        } else if (entity instanceof Map map) {
+            map.put(structure.getVersionFieldName(), versionValue);
+        } else if (entity instanceof RawJson rawJson) {
+
+            try {
+                ObjectNode node = (ObjectNode) objectMapper.readTree(rawJson.data());
+                node.put(structure.getVersionFieldName(), versionValue);
+
+                // All token buffers passed to save or update will receive a RawJson object do to how the upsert pre processor works
+                // So we convert if need be
+                if(convertRawJsonToTokenBuffer){
+
+                    TokenBuffer updatedBuffer = new TokenBuffer(objectMapper, false);
+                    objectMapper.writeValue(updatedBuffer, node);
+                    return (T) updatedBuffer;
+                }else{
+
+                    byte[] updatedData = objectMapper.writeValueAsBytes(node);
+                    return (T) new RawJson(updatedData);
+                }
+            } catch (Exception e) {
+                throw new IllegalStateException("Failed to update version in RawJson", e);
+            }
+        } else {
+            throw new IllegalArgumentException("Pojo Not Supported for Version");
+        }
+        return entity;
     }
 
     @WithSpan
