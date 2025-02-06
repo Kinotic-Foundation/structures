@@ -81,6 +81,10 @@ public class ReadPreProcessor {
         if(queryBuilder != null){
             builder.query(queryBuilder.build());
         }
+
+        if(structure.isOptimisticLockingEnabled()){
+            builder.seqNoPrimaryTerm(true);
+        }
     }
 
     public void beforeFindById(Structure structure,
@@ -123,6 +127,10 @@ public class ReadPreProcessor {
         addSourceFilter(structure, builder, context);
 
         builder.query(queryBuilder.build());
+
+        if(structure.isOptimisticLockingEnabled()){
+            builder.seqNoPrimaryTerm(true);
+        }
     }
 
     public Query.Builder createQueryWithTenantLogic(Structure structure, EntityContext context, Consumer<String> routingConsumer) {

@@ -1,9 +1,14 @@
+import {Page, Pageable} from '@kinotic/continuum-client'
 import {IEntityService, Structure, Structures} from '@kinotic/structures-api'
+import delay from 'delay'
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it} from 'vitest'
 import {WebSocket} from 'ws'
+import {Person} from '../domain/Person.js'
 import {Vehicle} from '../domain/Vehicle.js'
 import {
-    createTestVehicle,
+    createTestPeople,
+    createTestPeopleAndVerify,
+    createTestVehicle, createTestVehicles,
     createVehicleStructureIfNotExist,
     deleteStructure,
     generateRandomString,
@@ -87,6 +92,42 @@ describe('VersionedTests', () => {
             }
 
             await expect(entityService.deleteById(savedVehicle.id)).resolves.toBeNull()
+        })
+
+    it<LocalTestContext>('Test Bulk CRUD',
+        async ({entityService}) => {
+            // Create Vehicles
+            const vehicles: Vehicle[] = createTestVehicles(100)
+            await expect(entityService.bulkSave(vehicles)).resolves.toBeNull()
+
+            await expect(entityService.syncIndex()).resolves.toBeDefined()
+
+            await expect(entityService.count()).resolves.toBe(100)
+
+            const page: Page<Vehicle> = await entityService.findAll(Pageable.create(0, 10))
+            expect(page).toBeDefined()
+            expect(page.totalElements).toBe(100)
+            expect(page.content).toBeDefined()
+            if(page.content) {
+                expect(page.content.length).toBe(10)
+
+                // Update the first 10 people
+                for (let vehicle of page.content) {
+                    expect(vehicle.version).toBeDefined()
+                    vehicle.color = 'CLEAR'
+                }
+
+                await expect(entityService.bulkUpdate(page.content)).resolves.toBeNull()
+            }
+            await expect(entityService.syncIndex()).resolves.toBeDefined()
+
+            // Search for all the people
+            const searchPage: Page<Vehicle> = await entityService.search('color:CLEAR',Pageable.create(0, 10))
+            expect(searchPage).toBeDefined()
+            expect(searchPage.totalElements).toBe(10)
+            expect(searchPage.content).toBeDefined()
+            // @ts-ignore
+            expect(searchPage.content.length).toBe(10)
         })
 
 })

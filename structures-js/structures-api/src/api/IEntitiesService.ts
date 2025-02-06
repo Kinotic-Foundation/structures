@@ -160,6 +160,13 @@ export interface IEntitiesService {
     searchSinglePage<T>(structureId: string, searchText: string, pageable: Pageable): Promise<Page<T>>
 
     /**
+     * This operation makes all the recent writes immediately available for search.
+     * @param structureId the id of the structure to sync the index for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * @return a Promise that resolves when the operation is complete
+     */
+    syncIndex(structureId: string): Promise<void>
+
+    /**
      * Updates a given entity. This will only override the fields that are present in the given entity.
      * If any fields are not present in the given entity data, they will not be changed.
      * If the entity does not exist, it will be created.
@@ -254,6 +261,10 @@ export class EntitiesService implements IEntitiesService {
 
     public async searchSinglePage<T>(structureId: string, searchText: string, pageable: Pageable): Promise<Page<T>> {
         return this.serviceProxy.invoke('search', [structureId, searchText, pageable])
+    }
+
+    public async syncIndex(structureId: string): Promise<void> {
+        return this.serviceProxy.invoke('syncIndex', [structureId])
     }
 
     public update<T>(structureId: string, entity: T): Promise<T>{

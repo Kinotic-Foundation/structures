@@ -142,14 +142,6 @@ public interface JsonEntitiesService {
                                                     Participant participant);
 
     /**
-     * This operation makes all the recent writes immediately available for search.
-     * @param structureId     the id of the structure that this named query is defined for
-     * @param participant     the participant of the logged-in user
-     * @return a {@link CompletableFuture} that will complete when the operation is complete
-     */
-    CompletableFuture<Void> syncIndex(String structureId, Participant participant);
-
-    /**
      * Saves a given entity. Use the returned instance for further operations as the save operation might have changed the
      * entity instance completely.
      *
@@ -172,6 +164,14 @@ public interface JsonEntitiesService {
      * @return a {@link CompletableFuture} of a page of entities
      */
     CompletableFuture<Page<FastestType>> search(String structureId, String searchText, Pageable pageable, Participant participant);
+
+    /**
+     * This operation makes all the recent writes immediately available for search.
+     * @param structureId the id of the structure to sync the index for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * @param participant     the participant of the logged-in user
+     * @return a {@link CompletableFuture} that will complete when the operation is complete
+     */
+    CompletableFuture<Void> syncIndex(String structureId, Participant participant);
 
     /**
      * Updates a given entity. This will only override the fields that are present in the given entity.
