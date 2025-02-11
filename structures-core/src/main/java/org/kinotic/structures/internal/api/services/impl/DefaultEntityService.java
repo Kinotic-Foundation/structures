@@ -107,8 +107,8 @@ public class DefaultEntityService implements EntityService {
     @WithSpan
     @Override
     public CompletableFuture<Long> count(EntityContext context) {
-        return authService.authorize(EntityOperation.COUNT, context)
-                          .thenCompose(un -> validateTenant(context)
+        return authService.authorize(EntityOperation.COUNT, context).thenCompose(
+                un -> validateTenant(context)
                                   .thenCompose(unused -> crudServiceTemplate
                                           .count(structure.getItemIndex(),
                                                  builder -> readPreProcessor.beforeCount(structure, null, builder, context))));
@@ -334,7 +334,6 @@ public class DefaultEntityService implements EntityService {
     }
 
     @WithSpan
-    @SuppressWarnings("unchecked")
     @Override
     public <T> CompletableFuture<T> save(T entity, EntityContext context) {
         return authService.authorize(EntityOperation.SAVE, context)

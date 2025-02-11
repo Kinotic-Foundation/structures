@@ -7,7 +7,7 @@ import java.util.Map;
  * Holds information for all "Entity" related operations.
  * Created by Navíd Mitchell 🤪 on 6/7/23.
  */
-public interface EntityContext extends SecurityContext{
+public interface EntityContext extends SecurityContext {
 
     /**
      * If defined, this will restrict the response to only include the fields listed here.

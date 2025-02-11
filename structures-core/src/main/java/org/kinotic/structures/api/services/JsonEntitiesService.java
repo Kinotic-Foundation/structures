@@ -124,7 +124,6 @@ public interface JsonEntitiesService {
                                                 List<QueryParameter> queryParameters,
                                                 Participant participant);
 
-
     /**
      * Executes a named query and returns a {@link Page} of results.
      *
