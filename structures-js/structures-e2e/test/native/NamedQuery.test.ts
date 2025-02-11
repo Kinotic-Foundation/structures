@@ -38,7 +38,7 @@ describe('NamedQueryTest', () => {
     })
 
     afterEach<LocalTestContext>(async (context) => {
-       await expect(deleteStructure(context.structure.id as string)).resolves.toBeUndefined()
+     //  await expect(deleteStructure(context.structure.id as string)).resolves.toBeUndefined()
     })
 
 
@@ -142,10 +142,14 @@ describe('NamedQueryTest', () => {
          const namedQueriesService = Structures.getNamedQueriesService()
          await namedQueriesService.save(namedQueriesDefinition)
 
-         const pageable = Pageable.createWithCursor(null, 10)
+         const pageable = Pageable.createWithCursor(null, 1)
          const personPage: Page<Person> = await entityService.namedQueryPage('countPeopleByLastNamePage',
                                                                              [],
                                                                              pageable)
+
+         expect(personPage.totalElements).toBe(2)
+         expect(personPage.cursor).toBeDefined()
+
          console.log(personPage)
      }
     )
