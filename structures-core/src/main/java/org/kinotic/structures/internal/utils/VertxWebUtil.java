@@ -43,11 +43,13 @@ public class VertxWebUtil {
      * @return a {@link Pageable}
      */
     public static Pageable getPageableOrDefaultOffsetPageable(RoutingContext ctx){
-       Pageable ret = getPageableIfExits(ctx ,true, OffsetPageable.class);
-         if(ret == null){
-              ret = Pageable.create(0, 25, null);
-         }
-         return ret;
+        Pageable ret = getPageableIfExits(ctx ,true, OffsetPageable.class);
+        if(ret == null){
+            String sizeString = ctx.request().getParam("size");
+            int size = (sizeString != null && !sizeString.isEmpty()) ? Integer.parseInt(sizeString) : 25;
+            ret = Pageable.create(0, size, null);
+        }
+        return ret;
     }
 
     /**
@@ -58,7 +60,9 @@ public class VertxWebUtil {
     public static Pageable getPageableOrDefaultCursorPageable(RoutingContext ctx){
         Pageable ret = getPageableIfExits(ctx ,true, CursorPageable.class);
         if(ret == null){
-            ret = Pageable.create(null, 25, null);
+            String sizeString = ctx.request().getParam("size");
+            int size = (sizeString != null && !sizeString.isEmpty()) ? Integer.parseInt(sizeString) : 25;
+            ret = Pageable.create(null, size, null);
         }
         return ret;
     }
