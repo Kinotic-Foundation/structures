@@ -71,7 +71,7 @@ describe('NamedQueryTest', () => {
 
          const result: any[] = await entityService.namedQuery('countAllPeople', [])
          expect(result).toBeDefined()
-         expect(result.length).toBe(1)
+         expect(result).toHaveLength(1)
          const peopleCount = result[0]
          expect(peopleCount.count).toBe(100)
      }
@@ -107,9 +107,13 @@ describe('NamedQueryTest', () => {
              const namedQueriesService = Structures.getNamedQueriesService()
              await namedQueriesService.save(namedQueriesDefinition)
 
-             const persons: Person[] = await entityService.namedQuery('countPeopleByLastNameWithLastName',
+             const countResult: any = await entityService.namedQuery('countPeopleByLastNameWithLastName',
                                                                                  [{key: 'lastName', value: 'Doe'}])
-             console.log(persons)
+
+             expect(countResult).toBeDefined()
+             expect(countResult).toHaveLength(1)
+             expect(countResult[0]).toBeDefined()
+             expect(countResult[0].count).toBe(50)
          }
     )
 
@@ -160,8 +164,6 @@ describe('NamedQueryTest', () => {
                                                                               Pageable.createWithCursor(personPage2.cursor as string, 1))
          expect(personPage3.cursor).toBeNull()
          expect(personPage3.content).toHaveLength(0)
-
-         console.log(personPage)
      }
     )
 
