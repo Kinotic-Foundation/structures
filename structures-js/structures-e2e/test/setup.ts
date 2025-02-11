@@ -28,6 +28,7 @@ export async function setup(project: TestProject) {
         environment = await new DockerComposeEnvironment(resolvedPath, files)
             .withWaitStrategy('structures-elasticsearch', Wait.forHttp('/_cluster/health', 9200))
             .withWaitStrategy('structures-server', Wait.forHttp('/health', 9090))
+            .withEnvironmentFile(path.resolve('../../', 'gradle.properties'))
             .up(['structures-elasticsearch', 'structures-server'])
 
         const container = environment.getContainer('structures-server')

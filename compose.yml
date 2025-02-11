@@ -3,7 +3,7 @@ include:
 services:
   structures-server:
     container_name: structures-server
-    image: kinotic/structures-server:3.3.0-SNAPSHOT
+    image: kinotic/structures-server:${structuresVersion:-latest}
     depends_on:
       structures-elasticsearch:
         condition: service_healthy
