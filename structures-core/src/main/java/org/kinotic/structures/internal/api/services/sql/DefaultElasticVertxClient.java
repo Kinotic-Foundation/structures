@@ -10,6 +10,7 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
@@ -102,6 +103,7 @@ public class DefaultElasticVertxClient implements ElasticVertxClient {
         webClient.close();
     }
 
+    @WithSpan
     @Override
     public <T> CompletableFuture<Page<T>> querySql(String statement,
                                                    List<?> parameters,
@@ -186,6 +188,7 @@ public class DefaultElasticVertxClient implements ElasticVertxClient {
         return fut;
     }
 
+    @WithSpan
     @Override
     public CompletableFuture<TranslateResponse> translateSql(String statement,
                                                              List<?> parameters){
@@ -235,6 +238,7 @@ public class DefaultElasticVertxClient implements ElasticVertxClient {
         return new IllegalArgumentException("SQL " + cause.type() + " " + cause.reason());
     }
 
+    @WithSpan
     private Page<Map<String, Object>> processBufferToMap(Buffer buffer, String cursorProvided) throws Exception {
         ElasticSQLResponse response = objectMapper.readValue(buffer.getBytes(), ElasticSQLResponse.class);
         List<ElasticColumn> elasticColumns = getElasticColumns(response, cursorProvided);
@@ -260,6 +264,7 @@ public class DefaultElasticVertxClient implements ElasticVertxClient {
         return new CursorPage<>(ret, response.getCursor(), null);
     }
 
+    @WithSpan
     private List<ElasticColumn> getElasticColumns(ElasticSQLResponse response, String cursorProvided) {
         List<ElasticColumn> elasticColumns;
         if(cursorProvided != null){
@@ -273,6 +278,7 @@ public class DefaultElasticVertxClient implements ElasticVertxClient {
         return elasticColumns;
     }
 
+    @WithSpan
     private Page<RawJson> processBufferToRawJson(Buffer buffer, String cursorProvided) throws Exception {
         ElasticSQLResponse response = objectMapper.readValue(buffer.getBytes(), ElasticSQLResponse.class);
         List<ElasticColumn> elasticColumns = getElasticColumns(response, cursorProvided);
