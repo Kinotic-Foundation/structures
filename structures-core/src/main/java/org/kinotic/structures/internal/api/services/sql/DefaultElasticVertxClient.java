@@ -8,6 +8,8 @@ import co.elastic.clients.json.SimpleJsonpMapper;
 import com.fasterxml.jackson.core.JsonEncoding;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
@@ -17,6 +19,7 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.apache.commons.lang3.Validate;
+import org.apache.commons.lang3.mutable.MutableObject;
 import org.kinotic.continuum.core.api.crud.CursorPage;
 import org.kinotic.continuum.core.api.crud.CursorPageable;
 import org.kinotic.continuum.core.api.crud.Page;
@@ -39,6 +42,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Provides access to ElasticSearch via Vertx.
@@ -53,6 +57,11 @@ public class DefaultElasticVertxClient implements ElasticVertxClient {
     private final HttpRequest<Buffer> sqlTranslateRequest;
     private final Vertx vertx;
     private final WebClient webClient;
+    private final Cache<String, List<ElasticColumn>> columnsCache = Caffeine.newBuilder()
+                                                                            .expireAfterAccess(20, TimeUnit.MINUTES)
+                                                                            .maximumSize(20_000)
+                                                                            .build();
+
 
     public DefaultElasticVertxClient(ObjectMapper objectMapper,
                                      StructuresProperties structuresProperties,
@@ -85,6 +94,7 @@ public class DefaultElasticVertxClient implements ElasticVertxClient {
         }
 
         sqlTranslateRequest = sqlQueryRequest.copy().uri("/_sql/translate");
+
     }
 
     @PreDestroy
@@ -101,13 +111,16 @@ public class DefaultElasticVertxClient implements ElasticVertxClient {
                                                    Class<T> type) {
         JsonObject json = new JsonObject();
         boolean foundCursor = false;
+        MutableObject<String> cursorProvided = new MutableObject<>(null);
         if(pageable != null){
             if(pageable instanceof CursorPageable cursorPageable){
                 if(cursorPageable.getCursor() != null) {
                     foundCursor = true;
+                    cursorProvided.setValue(cursorPageable.getCursor());
                     json.put("cursor", cursorPageable.getCursor());
+                }else{
+                    json.put("fetch_size", pageable.getPageSize());
                 }
-                json.put("fetch_size", pageable.getPageSize());
             }else{
                 throw new IllegalArgumentException("Only CursorPageable is supported for queries containing Aggregations.");
             }
@@ -149,16 +162,16 @@ public class DefaultElasticVertxClient implements ElasticVertxClient {
                     if (RawJson.class.isAssignableFrom(type)) {
                         try {
                             //noinspection unchecked
-                            fut.complete((Page<T>) processBufferToRawJson(buffer));
+                            fut.complete((Page<T>) processBufferToRawJson(buffer, cursorProvided.getValue()));
                         } catch (Exception e) {
-                            fut.completeExceptionally(new IllegalStateException("Failed to process buffer to raw json", e));
+                            fut.completeExceptionally(e);
                         }
                     } else if (Map.class.isAssignableFrom(type)) {
                         try {
                             //noinspection unchecked
-                            fut.complete((Page<T>) processBufferToMap(buffer));
+                            fut.complete((Page<T>) processBufferToMap(buffer, cursorProvided.getValue()));
                         } catch (Exception e) {
-                            fut.completeExceptionally(new IllegalStateException("Failed to process buffer to map", e));
+                            fut.completeExceptionally(e);
                         }
                     } else {
                         fut.completeExceptionally(new IllegalArgumentException("Type: " + type.getName() + " is not supported at this time"));
@@ -222,9 +235,9 @@ public class DefaultElasticVertxClient implements ElasticVertxClient {
         return new IllegalArgumentException("SQL " + cause.type() + " " + cause.reason());
     }
 
-    private Page<Map<String, Object>> processBufferToMap(Buffer buffer) throws Exception {
+    private Page<Map<String, Object>> processBufferToMap(Buffer buffer, String cursorProvided) throws Exception {
         ElasticSQLResponse response = objectMapper.readValue(buffer.getBytes(), ElasticSQLResponse.class);
-        List<ElasticColumn> elasticColumns = response.getColumns();
+        List<ElasticColumn> elasticColumns = getElasticColumns(response, cursorProvided);
         List<Map<String,Object>> ret = new ArrayList<>(response.getRows().size());
 
         for(List<Object> row : response.getRows()){
@@ -235,12 +248,34 @@ public class DefaultElasticVertxClient implements ElasticVertxClient {
             }
             ret.add(obj);
         }
+        // now store columns in cache
+        if(response.getCursor() != null){
+            columnsCache.put(response.getCursor(), elasticColumns);
+        }
+
+        // We only allow each to be used once
+        if(cursorProvided != null){
+            columnsCache.invalidate(cursorProvided);
+        }
         return new CursorPage<>(ret, response.getCursor(), null);
     }
 
-    private Page<RawJson> processBufferToRawJson(Buffer buffer) throws Exception {
+    private List<ElasticColumn> getElasticColumns(ElasticSQLResponse response, String cursorProvided) {
+        List<ElasticColumn> elasticColumns;
+        if(cursorProvided != null){
+            elasticColumns = columnsCache.getIfPresent(cursorProvided);
+            if(elasticColumns == null){
+                throw new IllegalStateException("Cursor has expired");
+            }
+        }else{
+            elasticColumns = response.getColumns();
+        }
+        return elasticColumns;
+    }
+
+    private Page<RawJson> processBufferToRawJson(Buffer buffer, String cursorProvided) throws Exception {
         ElasticSQLResponse response = objectMapper.readValue(buffer.getBytes(), ElasticSQLResponse.class);
-        List<ElasticColumn> elasticColumns = response.getColumns();
+        List<ElasticColumn> elasticColumns = getElasticColumns(response, cursorProvided);
         List<RawJson> ret = new ArrayList<>(response.getRows().size());
 
         for(List<Object> row : response.getRows()){
@@ -257,6 +292,19 @@ public class DefaultElasticVertxClient implements ElasticVertxClient {
             jsonGenerator.flush();
             ret.add(new RawJson(outputStream.toByteArray()));
         }
+
+        // now store columns in cache
+        if(response.getCursor() != null){
+            columnsCache.put(response.getCursor(), elasticColumns);
+        }
+
+        // We only allow each to be used once
+        if(cursorProvided != null){
+            columnsCache.invalidate(cursorProvided);
+        }
+
         return new CursorPage<>(ret, response.getCursor(), null);
     }
+
+
 }
