@@ -73,11 +73,6 @@ public class DefaultElasticVertxClient implements ElasticVertxClient {
         WebClientOptions options = new WebClientOptions()
                 .setConnectTimeout((int) structuresProperties.getElasticConnectionTimeout().toMillis());
 
-        // Looks like there is a bug in vertx required user agent to manually be set
-        // Caused by: java.lang.IncompatibleClassChangeError: Method 'io.vertx.core.MultiMap io.vertx.core.http.HttpHeaders.set(java.lang.CharSequence, java.lang.CharSequence)' must be Methodref constant
-        // options.setUserAgent("Structures-WebClient");
-
-
         this.webClient = WebClient.create(vertx, options);
 
         Validate.notEmpty(structuresProperties.getElasticConnections(), "No Elastic connections defined");

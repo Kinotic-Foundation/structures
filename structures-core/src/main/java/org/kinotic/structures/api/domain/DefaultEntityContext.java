@@ -27,6 +27,8 @@ public class DefaultEntityContext implements EntityContext {
 
     private Map<String, Object> data;
 
+    private List<String> tenantSelection;
+
     public DefaultEntityContext(Participant participant,
                                 List<String> includedFieldsFilter) {
         this.participant = participant;
@@ -41,6 +43,7 @@ public class DefaultEntityContext implements EntityContext {
     public boolean hasIncludedFieldsFilter() {
         return includedFieldsFilter != null;
     }
+
 
     @Override
     public EntityContext put(String key, Object obj) {

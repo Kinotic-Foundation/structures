@@ -85,6 +85,13 @@ public class Structure implements Identifiable<String> {
     @Field(type = FieldType.Keyword)
     private String versionFieldName = null; // do not ever set, system managed
 
+    /**
+     * The name of the field that will be used to hold the tenant id for an entity.
+     * If this is set then Structures will provide "Admin" services to access Entities for multiple tenants.
+     */
+    @Field(type = FieldType.Keyword)
+    private String tenantIdFieldName = null; // do not ever set, system managed
+
 
     @Override
     public boolean equals(Object o) {
@@ -104,6 +111,10 @@ public class Structure implements Identifiable<String> {
 
     public boolean isOptimisticLockingEnabled(){
         return versionFieldName != null;
+    }
+
+    public boolean isMultiTenantSelectionEnabled() {
+        return tenantIdFieldName != null;
     }
 
     @Override
