@@ -2,16 +2,11 @@ package org.kinotic.structures.internal.api.hooks;
 
 import co.elastic.clients.elasticsearch._types.FieldValue;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
-import co.elastic.clients.elasticsearch._types.query_dsl.TermsQuery;
-import co.elastic.clients.elasticsearch._types.query_dsl.TermsQueryField;
 import co.elastic.clients.elasticsearch.core.*;
-import co.elastic.clients.util.ObjectBuilder;
 import org.kinotic.structures.api.config.StructuresProperties;
-import org.kinotic.structures.api.domain.idl.decorators.MultiTenancyType;
 import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.Structure;
-import org.kinotic.structures.internal.api.services.EntityContextConstants;
-import org.kinotic.structures.internal.api.services.impl.CrudServiceTemplate;
+import org.kinotic.structures.api.domain.idl.decorators.MultiTenancyType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -19,7 +14,6 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 /**
  * Keeps track of all read operations pre-processors for a given structure.
@@ -54,7 +48,11 @@ public class ReadPreProcessor {
 
         // add multi tenancy filters if needed
         if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
-            builder.routing(context.getParticipant().getTenantId());
+            if(context.hasTenantSelection()){
+                builder.routing(context.getTenantSelection().getFirst());
+            }else{
+                builder.routing(context.getParticipant().getTenantId());
+            }
         }
     }
 
@@ -87,6 +85,7 @@ public class ReadPreProcessor {
         }
     }
 
+    // FIXME: Multitenancy selection, should we duplicate or use the context
     public void beforeFindById(Structure structure,
                                GetRequest.Builder builder,
                                EntityContext context){
@@ -102,6 +101,8 @@ public class ReadPreProcessor {
         }
     }
 
+    // FIXME: Multitenancy selection, this needs to be changed completely, we should be provide routing per id for the mget request.
+    //        This may need to go away all together
     public void beforeFindByIds(Structure structure,
                                 MgetRequest.Builder builder,
                                 EntityContext context){
@@ -138,11 +139,10 @@ public class ReadPreProcessor {
         // add multi tenancy filters if needed
         if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
 
-            List<String> multiTenantSelection = context.get(EntityContextConstants.MULTI_TENANT_SELECTION_KEY);
-
-            if(multiTenantSelection != null && !multiTenantSelection.isEmpty()) {
-
-                log.info("Find All Multi tenant selection provided. Received {} tenants", multiTenantSelection.size());
+            // Check if multiple tenants are selected if not use the logged-in user's tenant
+            if(context.hasTenantSelection()) {
+                List<String> multiTenantSelection = context.getTenantSelection();
+                log.trace("Find All Multi tenant selection provided. Received {} tenants", multiTenantSelection.size());
                 // We do not add routing since the data could be spread across multiple shards
                 queryBuilder = new Query.Builder();
                 queryBuilder.bool(b -> b.filter(qb -> {
@@ -172,10 +172,9 @@ public class ReadPreProcessor {
             // add multi tenancy filters if needed
             if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
 
-                List<String> multiTenantSelection = context.get(EntityContextConstants.MULTI_TENANT_SELECTION_KEY);
-
-                if(multiTenantSelection != null && !multiTenantSelection.isEmpty()) {
-
+                // Check if multiple tenants are selected if not use the logged-in user's tenant
+                if(context.hasTenantSelection()) {
+                    List<String> multiTenantSelection = context.getTenantSelection();
                     log.info("Search Multi tenant selection provided. Received {} tenants", multiTenantSelection.size());
 
                     queryBuilder

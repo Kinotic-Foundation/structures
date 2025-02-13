@@ -3,7 +3,6 @@ package org.kinotic.structures.internal.api.services.impl;
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import co.elastic.clients.elasticsearch._types.Refresh;
 import co.elastic.clients.elasticsearch.core.BulkRequest;
-import co.elastic.clients.elasticsearch.core.IndexResponse;
 import co.elastic.clients.elasticsearch.core.UpdateRequest;
 import co.elastic.clients.elasticsearch.core.bulk.BulkOperation;
 import co.elastic.clients.elasticsearch.core.bulk.BulkResponseItem;
@@ -14,7 +13,6 @@ import io.opentelemetry.instrumentation.annotations.WithSpan;
 import lombok.RequiredArgsConstructor;
 import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
-import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.domain.*;
 import org.kinotic.structures.api.domain.idl.decorators.MultiTenancyType;
 import org.kinotic.structures.api.services.NamedQueriesService;
@@ -25,8 +23,6 @@ import org.kinotic.structures.internal.api.services.ElasticVersion;
 import org.kinotic.structures.internal.api.services.EntityHolder;
 import org.kinotic.structures.internal.api.services.EntityService;
 import org.kinotic.structures.internal.api.services.sql.ParameterHolder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -109,9 +105,9 @@ public class DefaultEntityService implements EntityService {
     public CompletableFuture<Long> count(EntityContext context) {
         return authService.authorize(EntityOperation.COUNT, context).thenCompose(
                 un -> validateTenant(context)
-                                  .thenCompose(unused -> crudServiceTemplate
-                                          .count(structure.getItemIndex(),
-                                                 builder -> readPreProcessor.beforeCount(structure, null, builder, context))));
+                        .thenCompose(unused -> crudServiceTemplate
+                                .count(structure.getItemIndex(),
+                                       builder -> readPreProcessor.beforeCount(structure, null, builder, context))));
     }
 
     @WithSpan
@@ -134,6 +130,11 @@ public class DefaultEntityService implements EntityService {
                                             composedId,
                                             builder -> readPreProcessor.beforeDelete(structure, builder, context))
                                 .thenApply(deleteResponse -> null)));
+    }
+
+    @Override
+    public CompletableFuture<Void> deleteById(TenantSpecificId id, EntityContext context) {
+        return null;
     }
 
     @WithSpan
@@ -251,6 +252,11 @@ public class DefaultEntityService implements EntityService {
                         }));
     }
 
+    @Override
+    public <T> CompletableFuture<T> findById(TenantSpecificId id, Class<T> type, EntityContext context) {
+        return null;
+    }
+
     @WithSpan
     @Override
     public <T> CompletableFuture<List<T>> findByIds(List<String> ids, Class<T> type, EntityContext context) {
@@ -301,6 +307,11 @@ public class DefaultEntityService implements EntityService {
                                 }
                             }
                         }));
+    }
+
+    @Override
+    public <T> CompletableFuture<List<T>> findByIdsWithTenant(List<TenantSpecificId> ids, Class<T> type, EntityContext context) {
+        return null;
     }
 
     @WithSpan
@@ -630,7 +641,24 @@ public class DefaultEntityService implements EntityService {
     private CompletableFuture<Void> validateTenant(final EntityContext context){
         if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
             if(context.getParticipant() != null && context.getParticipant().getTenantId() != null) {
-                return CompletableFuture.completedFuture(null);
+
+                // Check if tenant selection is trying to be used but not enabled
+                if (context.getTenantSelection() != null
+                        && !context.getTenantSelection().isEmpty()
+                        && !structure.isMultiTenantSelectionEnabled()) {
+
+                    return CompletableFuture.failedFuture(new IllegalArgumentException(
+                            "Multitenant access for this Structure %s is not enabled".formatted(structure.getName())));
+                } else {
+                    return CompletableFuture.completedFuture(null);
+                }
+            }else if(context.getTenantSelection() != null
+                     && !context.getTenantSelection().isEmpty()){
+                // This check is here since continuum will allow any published service to be called.
+                // So someone could call the admin service even though it is not enabled for this Structure
+                // Multitenant access can only be enabled if MultiTenancyType.SHARED
+                return CompletableFuture.failedFuture(new IllegalArgumentException(
+                        "Multitenant access for this Structure %s is not enabled".formatted(structure.getName())));
             }else{
                 return CompletableFuture.failedFuture(new IllegalArgumentException("TenantId is required when MultiTenancyType is SHARED"));
             }
@@ -645,7 +673,15 @@ public class DefaultEntityService implements EntityService {
                 .thenApply(unused -> {
                     String ret;
                     if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
-                        String tenantId = context.getParticipant().getTenantId();
+                        String tenantId;
+                        if(context.getTenantSelection() != null && !context.getTenantSelection().isEmpty()){
+                            if(context.getTenantSelection().size() > 1){
+                                throw new IllegalArgumentException("Only a single TenantId can be provided on this request");
+                            }
+                            tenantId = context.getTenantSelection().getFirst();
+                        }else{
+                            tenantId = context.getParticipant().getTenantId();
+                        }
                         ret = tenantId + "-" + id;
                     }else{
                         ret = id;

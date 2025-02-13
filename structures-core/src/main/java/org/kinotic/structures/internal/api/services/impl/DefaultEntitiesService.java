@@ -8,6 +8,7 @@ import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.api.domain.TenantSpecificId;
 import org.kinotic.structures.api.services.EntitiesService;
 import org.kinotic.structures.internal.api.services.EntityService;
 import org.kinotic.structures.internal.api.services.sql.ParameterHolder;
@@ -77,6 +78,12 @@ public class DefaultEntitiesService implements EntitiesService {
                 .thenCompose(entityService -> entityService.deleteById(id, context));
     }
 
+    @Override
+    public CompletableFuture<Void> deleteById(String structureId, TenantSpecificId id, EntityContext context) {
+        return entityServiceCache.get(structureId)
+                .thenCompose(entityService -> entityService.deleteById(id, context));
+    }
+
     @WithSpan
     @Override
     public CompletableFuture<Void> deleteByQuery(@SpanAttribute("structureId") String structureId,
@@ -111,6 +118,12 @@ public class DefaultEntitiesService implements EntitiesService {
                 .thenCompose(entityService -> entityService.findById(id, type, context));
     }
 
+    @Override
+    public <T> CompletableFuture<T> findById(String structureId, TenantSpecificId id, Class<T> type, EntityContext context) {
+        return entityServiceCache.get(structureId)
+                .thenCompose(entityService -> entityService.findById(id, type, context));
+    }
+
     @WithSpan
     @Override
     public <T> CompletableFuture<List<T>> findByIds(@SpanAttribute("structureId") String structureId,
@@ -119,6 +132,15 @@ public class DefaultEntitiesService implements EntitiesService {
                                                     EntityContext context) {
         return entityServiceCache.get(structureId)
                 .thenCompose(entityService -> entityService.findByIds(ids, type, context));
+    }
+
+    @Override
+    public <T> CompletableFuture<List<T>> findByIdsWithTenant(String structureId,
+                                                              List<TenantSpecificId> ids,
+                                                              Class<T> type,
+                                                              EntityContext context) {
+        return entityServiceCache.get(structureId)
+                .thenCompose(entityService -> entityService.findByIdsWithTenant(ids, type, context));
     }
 
     @WithSpan

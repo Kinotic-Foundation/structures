@@ -59,7 +59,7 @@ public class DefaultElasticVertxClient implements ElasticVertxClient {
     private final Vertx vertx;
     private final WebClient webClient;
     private final Cache<String, List<ElasticColumn>> columnsCache = Caffeine.newBuilder()
-                                                                            .expireAfterAccess(20, TimeUnit.MINUTES)
+                                                                            .expireAfterAccess(35, TimeUnit.MINUTES)
                                                                             .maximumSize(20_000)
                                                                             .build();
 
