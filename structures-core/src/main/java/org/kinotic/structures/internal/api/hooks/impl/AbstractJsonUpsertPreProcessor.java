@@ -204,6 +204,7 @@ public abstract class AbstractJsonUpsertPreProcessor<T> implements UpsertPreProc
                         byteArrayBuilder.reset();
                         currentId = null;
                         currentTenantId = null;
+                        currentVersion = null;
                         versionFound = false;
                     }else{
                         if(!shouldSkipToken(token, jsonParser.currentValue(), arrayDepth, processArray)){
