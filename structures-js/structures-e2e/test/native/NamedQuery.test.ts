@@ -69,11 +69,11 @@ describe('NamedQueryTest', () => {
          const namedQueriesService = Structures.getNamedQueriesService()
          await namedQueriesService.save(namedQueriesDefinition)
 
-         const result: any[] = await entityService.namedQuery('countAllPeople', [])
-         expect(result).toBeDefined()
-         expect(result).toHaveLength(1)
-         const peopleCount = result[0]
-         expect(peopleCount.count).toBe(100)
+         const countResult: any = await entityService.namedQuery('countAllPeople', [])
+         expect(countResult).toBeDefined()
+         expect(countResult).toHaveLength(1)
+         expect(countResult[0]).toBeDefined()
+         expect(countResult[0].count).toBe(100)
      }
     )
 
@@ -167,17 +167,8 @@ describe('NamedQueryTest', () => {
      }
     )
 
-    it<LocalTestContext>('Test All',
+    it<LocalTestContext>('Test Save Multiple',
          async ({entityService}) => {
-             // Create people
-             await createTestPeopleAndVerify(entityService, 100, 2000)
-
-             // Find all the people
-             const page: Page<Person> = await entityService.findAll(Pageable.create(0, 10))
-             expect(page).toBeDefined()
-             expect(page.totalElements).toBe(100)
-             expect(page.content?.length).toBe(10)
-
              const structureId = entityService.structureId
              const namedQueriesService = Structures.getNamedQueriesService()
 

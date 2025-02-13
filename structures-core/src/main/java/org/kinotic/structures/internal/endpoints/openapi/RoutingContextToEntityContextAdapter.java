@@ -14,6 +14,7 @@ import java.util.Map;
 public class RoutingContextToEntityContextAdapter implements EntityContext {
 
     private final RoutingContext routingContext;
+    private List<String> tenantSelection;
 
     public RoutingContextToEntityContextAdapter(RoutingContext routingContext) {
         this.routingContext = routingContext;
@@ -42,6 +43,17 @@ public class RoutingContextToEntityContextAdapter implements EntityContext {
     @Override
     public boolean hasIncludedFieldsFilter() {
         return false;
+    }
+
+    @Override
+    public List<String> getTenantSelection() {
+        return tenantSelection;
+    }
+
+    @Override
+    public RoutingContextToEntityContextAdapter setTenantSelection(List<String> tenantSelection) {
+        this.tenantSelection = tenantSelection;
+        return this;
     }
 
     @Override
