@@ -6,8 +6,6 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.util.ByteArrayBuilder;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.util.TokenBuffer;
-import io.opentelemetry.instrumentation.annotations.WithSpan;
 import org.kinotic.continuum.idl.api.schema.decorators.C3Decorator;
 import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.domain.EntityContext;
@@ -190,6 +188,7 @@ public abstract class AbstractJsonUpsertPreProcessor<T> implements UpsertPreProc
                         byteArrayBuilder.reset();
                         currentId = null;
                         currentTenantId = null;
+                        currentVersion = null;
                         versionFound = false;
                     }else{
                         if(!shouldSkipToken(token, jsonParser.currentValue(), arrayDepth, processArray)){
