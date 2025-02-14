@@ -1,6 +1,7 @@
 package org.kinotic.structures.internal.api.services.impl;
 
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
+import co.elastic.clients.elasticsearch._types.OpType;
 import co.elastic.clients.elasticsearch._types.Refresh;
 import co.elastic.clients.elasticsearch.core.BulkRequest;
 import co.elastic.clients.elasticsearch.core.UpdateRequest;
@@ -52,20 +53,25 @@ public class DefaultEntityService implements EntityService {
     public <T> CompletableFuture<Void> bulkSave(T entities, EntityContext context) {
         return authService.authorize(EntityOperation.BULK_SAVE, context).thenCompose(
                 un -> doBulkPersist(entities, context,
-                                    entityHolder -> BulkOperation.of(b -> b
-                                            .index(i -> {
-                                                       i.index(structure.getItemIndex())
-                                                        .id(entityHolder.getDocumentId())
-                                                        .document(entityHolder.entity());
+                                    entityHolder -> BulkOperation.of(b -> {
 
-                                                       ElasticVersion elasticVersion = entityHolder.getElasticVersionIfPresent();
-                                                       if(elasticVersion != null) {
-                                                           i.ifPrimaryTerm(elasticVersion.primaryTerm())
-                                                            .ifSeqNo(elasticVersion.seqNo());
-                                                       }
-                                                       return i;
-                                                   }
-                                            ))));
+                                        // When optimistic locking is enabled we require save to only create a document if it does not exist
+                                        // We do this since there is no way to set an initial primary_term / seq_no combination
+                                        if(structure.isOptimisticLockingEnabled()){
+                                            if(entityHolder.isElasticVersionPresent()){
+                                                throw new IllegalArgumentException("Version must be not be set when calling bulkSave");
+                                            }
+                                            return b.create(c ->
+                                                                    c.index(structure.getItemIndex())
+                                                                     .id(entityHolder.getDocumentId())
+                                                                     .document(entityHolder.entity()));
+                                        }else{
+                                            return b.index(i ->
+                                                                   i.index(structure.getItemIndex())
+                                                                    .id(entityHolder.getDocumentId())
+                                                                    .document(entityHolder.entity()));
+                                        }
+                                    })));
     }
 
     @WithSpan
@@ -361,10 +367,13 @@ public class DefaultEntityService implements EntityService {
                                    .document(entityHolder.entity())
                                    .refresh(Refresh.True);
 
-                                  ElasticVersion elasticVersion = entityHolder.getElasticVersionIfPresent();
-                                  if(elasticVersion != null) {
-                                      i.ifPrimaryTerm(elasticVersion.primaryTerm())
-                                       .ifSeqNo(elasticVersion.seqNo());
+                                  // When optimistic locking is enabled we require save to only create a document if it does not exist
+                                  // We do this since there is no way to set an initial primary_term / seq_no combination
+                                  if(structure.isOptimisticLockingEnabled()){
+                                      if(entityHolder.isElasticVersionPresent()){
+                                          throw new IllegalArgumentException("Version must be not be set when calling save");
+                                      }
+                                      i.opType(OpType.Create);
                                   }
 
                                   return i;
