@@ -1,7 +1,5 @@
 package org.kinotic.structures.internal.api.services;
 
-import lombok.Getter;
-import lombok.experimental.Accessors;
 import org.kinotic.structures.api.domain.idl.decorators.MultiTenancyType;
 
 /**
@@ -14,9 +12,13 @@ public record EntityHolder<T>(T entity, String id, MultiTenancyType multiTenancy
         return multiTenancyType == MultiTenancyType.SHARED ? tenantId + "-" + id : id;
     }
 
+    public boolean isElasticVersionPresent(){
+        // For the initial save we require a null or empty string
+        return version != null && !version.isEmpty();
+    }
+
     public ElasticVersion getElasticVersionIfPresent() {
-        // For the first save we allow null or empty string for version
-        if (version == null || version.isEmpty()) {
+        if (!isElasticVersionPresent()) {
             return null;
         }
         String[] parts = version.split(":");
