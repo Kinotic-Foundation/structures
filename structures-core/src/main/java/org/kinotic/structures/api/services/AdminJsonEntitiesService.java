@@ -1,6 +1,5 @@
 package org.kinotic.structures.api.services;
 
-import com.fasterxml.jackson.databind.util.TokenBuffer;
 import org.kinotic.continuum.api.annotations.Publish;
 import org.kinotic.continuum.api.security.Participant;
 import org.kinotic.continuum.core.api.crud.Page;
@@ -19,26 +18,6 @@ import java.util.concurrent.CompletableFuture;
  */
 @Publish
 public interface AdminJsonEntitiesService {
-
-    /**
-     * Updates all given entities, this gives an opportunity to perform partial updates of the data structure.
-     *
-     * @param structureId the id of the structure to save the entities for
-     * @param entities    all the entities to save
-     * @param participant the participant of the logged-in user
-     * @return {@link CompletableFuture} that will complete when all entities have been saved
-     */
-    CompletableFuture<Void> bulkSave(String structureId, TokenBuffer entities, Participant participant);
-
-    /**
-     * Saves all given entities.
-     *
-     * @param structureId the id of the structure to update the entities for
-     * @param entities    all the entities to save
-     * @param participant the participant of the logged-in user
-     * @return {@link CompletableFuture} that will complete when all entities have been saved
-     */
-    CompletableFuture<Void> bulkUpdate(String structureId, TokenBuffer entities, Participant participant);
 
     /**
      * Returns the number of entities available.
@@ -114,17 +93,6 @@ public interface AdminJsonEntitiesService {
     CompletableFuture<List<FastestType>> findByIds(String structureId, List<TenantSpecificId> ids, Participant participant);
 
     /**
-     * Saves a given entity. Use the returned instance for further operations as the save operation might have changed the
-     * entity instance completely.
-     *
-     * @param structureId the id of the structure to save the entity for
-     * @param entity      must not be {@literal null}
-     * @param participant the participant of the logged-in user
-     * @return {@link CompletableFuture} emitting the saved entity
-     */
-    CompletableFuture<TokenBuffer> save(String structureId, TokenBuffer entity, Participant participant);
-
-    /**
      * Returns a {@link Page} of entities matching the search text and paging restriction provided in the {@code Pageable} object.
      * <p>
      * You can find more information about the search syntax <a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html#query-string-syntax">here</a>
@@ -138,16 +106,5 @@ public interface AdminJsonEntitiesService {
      */
     CompletableFuture<Page<FastestType>> search(String structureId, String searchText, Pageable pageable, List<String> tenantSelection, Participant participant);
 
-    /**
-     * Updates a given entity. This will only override the fields that are present in the given entity.
-     * If any fields are not present in the given entity data they will not be changed.
-     * If the entity does not exist it will be created.
-     *
-     * @param structureId the id of the structure to update the entity for
-     * @param entity      must not be {@literal null}
-     * @param participant the participant of the logged-in user
-     * @return {@link CompletableFuture} emitting the saved entity
-     */
-    CompletableFuture<TokenBuffer> update(String structureId, TokenBuffer entity, Participant participant);
 
 }

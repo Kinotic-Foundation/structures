@@ -22,9 +22,8 @@ import java.util.concurrent.CompletableFuture;
 
 /**
  * This class was created to make the extraction of needed data as performant as possible
- * since elasticsearch already expects json there is not need to convert to a java object.
+ * since elasticsearch already expects json there is not a need to convert to a java object.
  * For this reason the code below is a single loop limiting allocations as much as possible.
- *
  * Created by Navíd Mitchell 🤪 on 5/5/23.
  */
 public abstract class AbstractJsonUpsertPreProcessor<T> implements UpsertPreProcessor<T, T, RawJson> {
@@ -146,7 +145,7 @@ public abstract class AbstractJsonUpsertPreProcessor<T> implements UpsertPreProc
                     }else{
                         // Check if this is the tenant id if MultiTenancyType.SHARED is enabled
                         if(structure.getMultiTenancyType() == MultiTenancyType.SHARED
-                                && !structure.isMultiTenantSelectionEnabled()
+                                && !structure.isMultiTenantSelectionEnabled() // FIXME: does this make sense?
                                 && currentJsonPath.equals(structuresProperties.getTenantIdFieldName())){
 
                             // since the tenant id field is already present check its value to make sure it is null
@@ -188,8 +187,9 @@ public abstract class AbstractJsonUpsertPreProcessor<T> implements UpsertPreProc
                         // If this is a multi tenant structure and multi tenant selection is not enabled, add the tenant if necessary
                         if(structure.getMultiTenancyType() == MultiTenancyType.SHARED
                                 && currentTenantId == null){
+                            currentTenantId = context.getParticipant().getTenantId();
                             jsonGenerator.writeFieldName(structuresProperties.getTenantIdFieldName());
-                            jsonGenerator.writeString(context.getParticipant().getTenantId());
+                            jsonGenerator.writeString(currentTenantId);
                         }
 
                         // This is the end of the object, so we store the object
@@ -198,7 +198,7 @@ public abstract class AbstractJsonUpsertPreProcessor<T> implements UpsertPreProc
                         ret.add(new EntityHolder<>(new RawJson(byteArrayBuilder.toByteArray()),
                                                    currentId,
                                                    structure.getMultiTenancyType(),
-                                                   context.getParticipant().getTenantId(),
+                                                   currentTenantId,
                                                    currentVersion
                         ));
                         byteArrayBuilder.reset();
