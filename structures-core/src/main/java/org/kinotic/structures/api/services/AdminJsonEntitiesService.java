@@ -55,11 +55,11 @@ public interface AdminJsonEntitiesService {
      *
      * @param structureId the id of the structure to delete the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
      * @param query       the query used to filter records to delete, must not be {@literal null}
-     * @param tenant      the tenant to delete the entity for
+     * @param tenantSelection the list of tenants to use when deleting entities by the given query
      * @param participant the participant of the logged-in user
      * @return {@link CompletableFuture} emitting when delete is complete
      */
-    CompletableFuture<Void> deleteByQuery(String structureId, String query, String tenant, Participant participant);
+    CompletableFuture<Void> deleteByQuery(String structureId, String query, List<String> tenantSelection, Participant participant);
 
     /**
      * Returns a {@link Page} of entities meeting the paging restriction provided in the {@code Pageable} object.
