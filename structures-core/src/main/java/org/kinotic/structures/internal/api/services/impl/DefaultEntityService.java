@@ -55,21 +55,29 @@ public class DefaultEntityService implements EntityService {
                 un -> doBulkPersist(entities, context,
                                     entityHolder -> BulkOperation.of(b -> {
 
-                                        // When optimistic locking is enabled we require save to only create a document if it does not exist
+                                        // When optimistic locking is enabled and no version is present we use create
                                         // We do this since there is no way to set an initial primary_term / seq_no combination
-                                        if(structure.isOptimisticLockingEnabled()){
-                                            if(entityHolder.isElasticVersionPresent()){
-                                                throw new IllegalArgumentException("Version must be not be set when calling bulkSave");
-                                            }
+                                        ElasticVersion elasticVersion = entityHolder.getElasticVersionIfPresent();
+                                        if(structure.isOptimisticLockingEnabled()
+                                                && elasticVersion == null){
+
                                             return b.create(c ->
                                                                     c.index(structure.getItemIndex())
                                                                      .id(entityHolder.getDocumentId())
                                                                      .document(entityHolder.entity()));
                                         }else{
-                                            return b.index(i ->
-                                                                   i.index(structure.getItemIndex())
-                                                                    .id(entityHolder.getDocumentId())
-                                                                    .document(entityHolder.entity()));
+                                            return b.index(i -> {
+                                                i.index(structure.getItemIndex())
+                                                 .id(entityHolder.getDocumentId())
+                                                 .document(entityHolder.entity());
+
+                                                if(structure.isOptimisticLockingEnabled()
+                                                        && elasticVersion != null){
+                                                    i.ifPrimaryTerm(elasticVersion.primaryTerm());
+                                                    i.ifSeqNo(elasticVersion.seqNo());
+                                                }
+                                                return i;
+                                            });
                                         }
                                     })));
     }
@@ -95,7 +103,9 @@ public class DefaultEntityService implements EntityService {
                                                              return upB;
                                                          });
 
-                                                        if(elasticVersion != null) {
+                                                        if(structure.isOptimisticLockingEnabled()
+                                                                && elasticVersion != null) {
+
                                                             u.ifPrimaryTerm(elasticVersion.primaryTerm())
                                                              .ifSeqNo(elasticVersion.seqNo());
                                                         } else if (structure.isOptimisticLockingEnabled()) {
@@ -367,13 +377,19 @@ public class DefaultEntityService implements EntityService {
                                    .document(entityHolder.entity())
                                    .refresh(Refresh.True);
 
-                                  // When optimistic locking is enabled we require save to only create a document if it does not exist
+                                  // When optimistic locking is enabled and no version is present we use create
                                   // We do this since there is no way to set an initial primary_term / seq_no combination
-                                  if(structure.isOptimisticLockingEnabled()){
-                                      if(entityHolder.isElasticVersionPresent()){
-                                          throw new IllegalArgumentException("Version must be not be set when calling save");
-                                      }
+                                  ElasticVersion elasticVersion = entityHolder.getElasticVersionIfPresent();
+                                  if(structure.isOptimisticLockingEnabled()
+                                          && elasticVersion == null){
+
                                       i.opType(OpType.Create);
+
+                                  }else if(structure.isOptimisticLockingEnabled()
+                                          && elasticVersion != null){
+
+                                      i.ifPrimaryTerm(elasticVersion.primaryTerm());
+                                      i.ifSeqNo(elasticVersion.seqNo());
                                   }
 
                                   return i;
@@ -475,7 +491,8 @@ public class DefaultEntityService implements EntityService {
                          .refresh(Refresh.True);
 
                         ElasticVersion elasticVersion = entityHolder.getElasticVersionIfPresent();
-                        if(elasticVersion != null) {
+                        if(structure.isOptimisticLockingEnabled()
+                                && elasticVersion != null) {
 
                             u.ifPrimaryTerm(elasticVersion.primaryTerm())
                              .ifSeqNo(elasticVersion.seqNo());
