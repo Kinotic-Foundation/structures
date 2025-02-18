@@ -65,12 +65,12 @@ public interface AdminJsonEntitiesService {
      * Returns a {@link Page} of entities meeting the paging restriction provided in the {@code Pageable} object.
      *
      * @param structureId the id of the structure to find the entity for
-     * @param pageable    the page settings to be used
      * @param tenantSelection the list of tenants to use when retrieving the entity records
+     * @param pageable    the page settings to be used
      * @param participant the participant of the logged-in user
      * @return a page of entities
      */
-    CompletableFuture<Page<FastestType>> findAll(String structureId, Pageable pageable, List<String> tenantSelection, Participant participant);
+    CompletableFuture<Page<FastestType>> findAll(String structureId, List<String> tenantSelection, Pageable pageable, Participant participant);
 
     /**
      * Retrieves an entity by its id.
@@ -99,12 +99,12 @@ public interface AdminJsonEntitiesService {
      *
      * @param structureId the id of the structure to search
      * @param searchText  the text to search for entities for
-     * @param pageable    the page settings to be used
      * @param tenantSelection the list of tenants to use when retrieving the entity records
+     * @param pageable    the page settings to be used
      * @param participant the participant of the logged-in user
      * @return a {@link CompletableFuture} of a page of entities
      */
-    CompletableFuture<Page<FastestType>> search(String structureId, String searchText, Pageable pageable, List<String> tenantSelection, Participant participant);
+    CompletableFuture<Page<FastestType>> search(String structureId, String searchText, List<String> tenantSelection, Pageable pageable, Participant participant);
 
 
 }

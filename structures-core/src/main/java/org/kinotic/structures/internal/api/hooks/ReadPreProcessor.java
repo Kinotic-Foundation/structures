@@ -175,7 +175,7 @@ public class ReadPreProcessor {
                 // Check if multiple tenants are selected if not use the logged-in user's tenant
                 if(context.hasTenantSelection()) {
                     List<String> multiTenantSelection = context.getTenantSelection();
-                    log.info("Search Multi tenant selection provided. Received {} tenants", multiTenantSelection.size());
+                    log.trace("Search Multi tenant selection provided. Received {} tenants", multiTenantSelection.size());
 
                     queryBuilder
                             .bool(b -> b.must(must -> must.queryString(qs -> qs.query(searchText).analyzeWildcard(true)))

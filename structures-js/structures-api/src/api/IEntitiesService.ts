@@ -1,19 +1,13 @@
 import {QueryParameter} from '@/api/domain/QueryParameter'
-import {FindAllIterablePage} from '@/internal/api/domain/FindAllIterablePage'
-import {NamedQueryIterablePage} from '@/internal/api/domain/NamedQueryIterablePage.js'
-import {SearchIterablePage} from '@/internal/api/domain/SearchIterablePage'
 import {
     Continuum,
     IServiceProxy,
     Page,
     Pageable,
     IterablePage,
-    IServiceRegistry
+    ContinuumSingleton
 } from '@kinotic/continuum-client'
-
-export interface EntityContext {
-    [key: string]: any;
-}
+import {FunctionalIterablePage} from '@kinotic/continuum-client/dist/src/core/api/crud/FunctionalIterablePage.js'
 
 export interface IEntitiesService {
 
@@ -185,9 +179,9 @@ export class EntitiesService implements IEntitiesService {
 
     protected serviceProxy: IServiceProxy
 
-     constructor(serviceRegistry?: IServiceRegistry) {
+     constructor(continuum?: ContinuumSingleton) {
         const service = 'org.kinotic.structures.api.services.JsonEntitiesService'
-        this.serviceProxy = serviceRegistry?.serviceProxy(service) || Continuum.serviceProxy(service)
+        this.serviceProxy = continuum?.serviceRegistry?.serviceProxy(service) || Continuum.serviceProxy(service)
     }
 
     public bulkSave<T>(structureId: string, entities: T[]): Promise<void>{
@@ -216,7 +210,8 @@ export class EntitiesService implements IEntitiesService {
 
     public async findAll<T>(structureId: string, pageable: Pageable): Promise<IterablePage<T>> {
         const page: Page<T> = await this.findAllSinglePage(structureId, pageable)
-        return new FindAllIterablePage(this, pageable, page, structureId)
+        return new FunctionalIterablePage(pageable, page,
+                                          (pageable: Pageable) => this.findAllSinglePage(structureId, pageable))
     }
 
     public async findAllSinglePage<T>(structureId: string, pageable: Pageable): Promise<Page<T>> {
@@ -240,13 +235,14 @@ export class EntitiesService implements IEntitiesService {
                                    parameters: QueryParameter[],
                                    pageable: Pageable): Promise<IterablePage<T>> {
         const page: Page<T> = await this.namedQuerySinglePage(structureId, queryName, parameters, pageable)
-        return new NamedQueryIterablePage(this, pageable, page, parameters, queryName, structureId)
+        return new FunctionalIterablePage(pageable, page,
+                                          (pageable: Pageable) => this.namedQuerySinglePage(structureId, queryName, parameters, pageable))
     }
 
     public namedQuerySinglePage<T>(structureId: string,
                                    queryName: string,
                                    parameters: QueryParameter[],
-                                   pageable: Pageable): Promise<Page<T>> {
+                                   pageable: Pageable): Promise<Page<T  >> {
         return this.serviceProxy.invoke('namedQueryPage', [structureId, queryName, parameters, pageable])
     }
 
@@ -256,7 +252,8 @@ export class EntitiesService implements IEntitiesService {
 
     public async search<T>(structureId: string, searchText: string, pageable: Pageable): Promise<IterablePage<T>> {
         const page: Page<T> = await this.searchSinglePage(structureId, searchText, pageable)
-        return new SearchIterablePage(this, pageable, page, searchText, structureId)
+        return new FunctionalIterablePage(pageable, page,
+                                          (pageable: Pageable) => this.searchSinglePage(structureId, searchText, pageable))
     }
 
     public async searchSinglePage<T>(structureId: string, searchText: string, pageable: Pageable): Promise<Page<T>> {

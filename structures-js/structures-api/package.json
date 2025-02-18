@@ -44,7 +44,6 @@
     "ws": "^8.18.0"
   },
   "peerDependencies": {
-    "@kinotic/continuum-client": "^2.10.7"
-  },
-  "packageManager": "pnpm@9.15.4"
+    "@kinotic/continuum-client": "^2.12.0"
+  }
 }
