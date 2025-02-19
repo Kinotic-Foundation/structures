@@ -241,6 +241,8 @@ public abstract class AbstractJsonUpsertPreProcessor<T> implements UpsertPreProc
 
             jsonGenerator.flush();
 
+            // We always blow away tenant selection on save/update since the only tenants that mater are the ones in the data
+            // This is a sanity check, in case somehow it was already provided. We want to make sure auth services see the correct list.
             if(structure.isMultiTenantSelectionEnabled()){
                 context.setTenantSelection(tenantsSelected);
             }

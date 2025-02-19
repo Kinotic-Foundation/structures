@@ -56,10 +56,14 @@ public class MapUpsertPreProcessor implements UpsertPreProcessor<Map<Object, Obj
     public CompletableFuture<EntityHolder<Map<Object, Object>>> process(Map<Object, Object> entity,
                                                                         EntityContext context) {
         try {
+            // We always blow away tenant selection on save/update since the only tenants that mater are the ones in the data
+            // This is a sanity check, in case somehow it was already provided. We want to make sure auth services see the correct list.
             if(structure.isMultiTenantSelectionEnabled()){
                 context.setTenantSelection(new ArrayList<>());
             }
+
             return CompletableFuture.completedFuture(preProcessData(entity, context));
+
         } catch (Exception e) {
             return CompletableFuture.failedFuture(e);
         }
@@ -70,6 +74,8 @@ public class MapUpsertPreProcessor implements UpsertPreProcessor<Map<Object, Obj
     public CompletableFuture<List<EntityHolder<Map<Object, Object>>>> processArray(List<Map<Object, Object>> entities,
                                                                                    EntityContext context) {
         try {
+            // We always blow away tenant selection on save/update since the only tenants that mater are the ones in the data
+            // This is a sanity check, in case somehow it was already provided. We want to make sure auth services see the correct list.
             if(structure.isMultiTenantSelectionEnabled()){
                 context.setTenantSelection(new ArrayList<>());
             }

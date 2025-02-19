@@ -4,6 +4,7 @@ import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import co.elastic.clients.elasticsearch._types.OpType;
 import co.elastic.clients.elasticsearch._types.Refresh;
 import co.elastic.clients.elasticsearch.core.BulkRequest;
+import co.elastic.clients.elasticsearch.core.BulkResponse;
 import co.elastic.clients.elasticsearch.core.UpdateRequest;
 import co.elastic.clients.elasticsearch.core.bulk.BulkOperation;
 import co.elastic.clients.elasticsearch.core.bulk.BulkResponseItem;
@@ -52,69 +53,71 @@ public class DefaultEntityService implements EntityService {
     @WithSpan
     @Override
     public <T> CompletableFuture<Void> bulkSave(T entities, EntityContext context) {
-        return authService.authorize(EntityOperation.BULK_SAVE, context).thenCompose(
-                un -> doBulkPersist(entities, context,
-                                    entityHolder -> BulkOperation.of(b -> {
+        return doPersistBulk(entities,
+                             EntityOperation.BULK_SAVE,
+                             context,
+                             entityHolder -> BulkOperation.of(b -> {
 
-                                        // When optimistic locking is enabled and no version is present we use create
-                                        // We do this since there is no way to set an initial primary_term / seq_no combination
-                                        ElasticVersion elasticVersion = entityHolder.getElasticVersionIfPresent();
-                                        if(structure.isOptimisticLockingEnabled()
-                                                && elasticVersion == null){
+                                 // When optimistic locking is enabled and no version is present we use create
+                                 // We do this since there is no way to set an initial primary_term / seq_no combination
+                                 ElasticVersion elasticVersion = entityHolder.getElasticVersionIfPresent();
+                                 if(structure.isOptimisticLockingEnabled()
+                                         && elasticVersion == null){
 
-                                            return b.create(c ->
-                                                                    c.index(structure.getItemIndex())
-                                                                     .id(entityHolder.getDocumentId())
-                                                                     .document(entityHolder.entity()));
-                                        }else{
-                                            return b.index(i -> {
-                                                i.index(structure.getItemIndex())
-                                                 .id(entityHolder.getDocumentId())
-                                                 .document(entityHolder.entity());
+                                     return b.create(c ->
+                                                             c.index(structure.getItemIndex())
+                                                              .id(entityHolder.getDocumentId())
+                                                              .document(entityHolder.entity()));
+                                 }else{
+                                     return b.index(i -> {
+                                         i.index(structure.getItemIndex())
+                                          .id(entityHolder.getDocumentId())
+                                          .document(entityHolder.entity());
 
-                                                if(structure.isOptimisticLockingEnabled()
-                                                        && elasticVersion != null){
-                                                    i.ifPrimaryTerm(elasticVersion.primaryTerm());
-                                                    i.ifSeqNo(elasticVersion.seqNo());
-                                                }
-                                                return i;
-                                            });
-                                        }
-                                    })));
+                                         if(structure.isOptimisticLockingEnabled()
+                                                 && elasticVersion != null){
+                                             i.ifPrimaryTerm(elasticVersion.primaryTerm());
+                                             i.ifSeqNo(elasticVersion.seqNo());
+                                         }
+                                         return i;
+                                     });
+                                 }
+                             }));
     }
 
     @WithSpan
     @Override
     public <T> CompletableFuture<Void> bulkUpdate(T entities, EntityContext context) {
-        return authService.authorize(EntityOperation.BULK_UPDATE, context).thenCompose(
-                un -> doBulkPersist(entities, context,
-                                    entityHolder -> BulkOperation.of(b -> b
-                                            .update(u -> {
+        return doPersistBulk(entities,
+                             EntityOperation.BULK_UPDATE,
+                             context,
+                             entityHolder -> BulkOperation.of(b -> b
+                                     .update(u -> {
 
-                                                        ElasticVersion elasticVersion = entityHolder.getElasticVersionIfPresent();
-                                                        u.index(structure.getItemIndex())
-                                                         .id(entityHolder.getDocumentId())
-                                                         .action(upB -> {
-                                                             upB.doc(entityHolder.entity())
-                                                                .detectNoop(true);
+                                                 ElasticVersion elasticVersion = entityHolder.getElasticVersionIfPresent();
+                                                 u.index(structure.getItemIndex())
+                                                  .id(entityHolder.getDocumentId())
+                                                  .action(upB -> {
+                                                      upB.doc(entityHolder.entity())
+                                                         .detectNoop(true);
 
-                                                             if(elasticVersion == null){
-                                                                 upB.docAsUpsert(true);
-                                                             }
-                                                             return upB;
-                                                         });
+                                                      if(elasticVersion == null){
+                                                          upB.docAsUpsert(true);
+                                                      }
+                                                      return upB;
+                                                  });
 
-                                                        if(structure.isOptimisticLockingEnabled()
-                                                                && elasticVersion != null) {
+                                                 if(structure.isOptimisticLockingEnabled()
+                                                         && elasticVersion != null) {
 
-                                                            u.ifPrimaryTerm(elasticVersion.primaryTerm())
-                                                             .ifSeqNo(elasticVersion.seqNo());
-                                                        } else if (structure.isOptimisticLockingEnabled()) {
-                                                            throw new IllegalArgumentException("A Version must be provided when calling update");
-                                                        }
-                                                        return u;
-                                                    }
-                                            ))));
+                                                     u.ifPrimaryTerm(elasticVersion.primaryTerm())
+                                                      .ifSeqNo(elasticVersion.seqNo());
+                                                 } else if (structure.isOptimisticLockingEnabled()) {
+                                                     throw new IllegalArgumentException("A Version must be provided when calling update");
+                                                 }
+                                                 return u;
+                                             }
+                                     )));
     }
 
     @WithSpan
@@ -122,7 +125,7 @@ public class DefaultEntityService implements EntityService {
     public CompletableFuture<Long> count(EntityContext context) {
         return validateContext(context)
                 .thenCompose(un -> authService.authorize(EntityOperation.COUNT, context))
-                .thenCompose(unused -> crudServiceTemplate
+                .thenCompose(un -> crudServiceTemplate
                         .count(structure.getItemIndex(),
                                builder -> readPreProcessor.beforeCount(structure, null, builder, context)));
     }
@@ -132,7 +135,7 @@ public class DefaultEntityService implements EntityService {
     public CompletableFuture<Long> countByQuery(String query, EntityContext context) {
         return validateContext(context)
                 .thenCompose(un -> authService.authorize(EntityOperation.COUNT_BY_QUERY, context))
-                .thenCompose(unused -> crudServiceTemplate
+                .thenCompose(un -> crudServiceTemplate
                         .count(structure.getItemIndex(),
                                builder -> readPreProcessor.beforeCount(structure, query, builder, context)));
     }
@@ -142,7 +145,7 @@ public class DefaultEntityService implements EntityService {
     public CompletableFuture<Void> deleteById(String id, EntityContext context) {
         return validateContext(context)
                 .thenCompose(un -> authService.authorize(EntityOperation.DELETE_BY_ID, context))
-                .thenApply(v -> composeId(id, context))
+                .thenApply(un -> composeId(id, context))
                 .thenCompose(composedId -> crudServiceTemplate
                         .deleteById(structure.getItemIndex(),
                                     composedId,
@@ -158,7 +161,7 @@ public class DefaultEntityService implements EntityService {
 
         return validateContext(context)
                 .thenCompose(un -> authService.authorize(EntityOperation.DELETE_BY_ID, context))
-                .thenApply(v -> composeId(id))
+                .thenApply(un -> composeId(id))
                 .thenCompose(composedId -> crudServiceTemplate
                         .deleteById(structure.getItemIndex(),
                                     composedId,
@@ -171,7 +174,7 @@ public class DefaultEntityService implements EntityService {
     public CompletableFuture<Void> deleteByQuery(String query, EntityContext context) {
         return validateContext(context)
                 .thenCompose(un -> authService.authorize(EntityOperation.DELETE_BY_QUERY, context))
-                .thenCompose(unused -> crudServiceTemplate
+                .thenCompose(un -> crudServiceTemplate
                         .deleteByQuery(structure.getItemIndex(),
                                        builder -> readPreProcessor.beforeDeleteByQuery(structure, query, builder, context))
                         .thenApply(deleteResponse -> null));
@@ -182,7 +185,7 @@ public class DefaultEntityService implements EntityService {
     public <T> CompletableFuture<Page<T>> findAll(Pageable pageable, Class<T> type, EntityContext context) {
         return validateContext(context)
                 .thenCompose(un -> authService.authorize(EntityOperation.FIND_ALL, context))
-                .thenCompose(unused -> {
+                .thenCompose(un -> {
 
                     if(FastestType.class.isAssignableFrom(type)){
 
@@ -234,7 +237,7 @@ public class DefaultEntityService implements EntityService {
     public <T> CompletableFuture<T> findById(String id, Class<T> type, EntityContext context) {
         return validateContext(context)
                 .thenCompose(un -> authService.authorize(EntityOperation.FIND_BY_ID, context))
-                .thenApply(v -> composeId(id, context))
+                .thenApply(un -> composeId(id, context))
                 .thenCompose(composedId -> doFindById(composedId, type, context));
     }
 
@@ -246,7 +249,7 @@ public class DefaultEntityService implements EntityService {
 
         return validateContext(context)
                 .thenCompose(un -> authService.authorize(EntityOperation.FIND_BY_ID, context))
-                .thenApply(v -> composeId(id))
+                .thenApply(un -> composeId(id))
                 .thenCompose(composedId -> doFindById(composedId, type, context));
     }
 
@@ -255,51 +258,8 @@ public class DefaultEntityService implements EntityService {
     public <T> CompletableFuture<List<T>> findByIds(List<String> ids, Class<T> type, EntityContext context) {
         return validateContext(context)
                 .thenCompose(un -> authService.authorize(EntityOperation.FIND_BY_IDS, context))
-                .thenApply(v -> composeIds(ids, context))
+                .thenApply(un -> composeIds(ids, context))
                 .thenCompose(composedIds -> doFindByIds(composedIds, type, context));
-    }
-
-    private <T> CompletableFuture<List<T>> doFindByIds(List<MultiGetOperation> composedIds,
-                                                       Class<T> type,
-                                                       EntityContext context) {
-        if(FastestType.class.isAssignableFrom(type)){
-            if(structure.isOptimisticLockingEnabled()){
-                //noinspection unchecked
-                return crudServiceTemplate
-                        .multiGet(composedIds,
-                                  Map.class,
-                                  builder -> readPreProcessor.beforeFindByIds(builder, context),
-                                  result -> (T) new FastestType(updateVersionForEntity(result.source(),
-                                                                                       result.primaryTerm(),
-                                                                                       result.seqNo()
-                                  )));
-            }else{
-                //noinspection unchecked
-                return crudServiceTemplate
-                        .multiGet(composedIds,
-                                  RawJson.class,
-                                  builder -> readPreProcessor.beforeFindByIds(builder, context),
-                                  result -> (T) new FastestType(result.source()));
-            }
-        }else{
-
-            if(structure.isOptimisticLockingEnabled()){
-                return crudServiceTemplate
-                        .multiGet(composedIds,
-                                  type,
-                                  builder -> readPreProcessor.beforeFindByIds(builder, context),
-                                  result -> updateVersionForEntity(result.source(),
-                                                                   result.primaryTerm(),
-                                                                   result.seqNo()
-                                  ));
-            }else{
-                return crudServiceTemplate
-                        .multiGet(composedIds,
-                                  type,
-                                  builder -> readPreProcessor.beforeFindByIds(builder, context),
-                                  null);
-            }
-        }
     }
 
     @WithSpan
@@ -346,41 +306,43 @@ public class DefaultEntityService implements EntityService {
     @WithSpan
     @Override
     public <T> CompletableFuture<T> save(T entity, EntityContext context) {
-        return authService.authorize(EntityOperation.SAVE, context)
-                          .thenCompose(un -> doPrePersist(entity, context, entityHolder -> {
+        return doPersist(entity,
+                         EntityOperation.SAVE,
+                         context,
+                         entityHolder -> {
 
-                              String routing = (structure.getMultiTenancyType() == MultiTenancyType.SHARED)
-                                      ? context.getParticipant().getTenantId()
-                                      : null;
+                             String routing = (structure.getMultiTenancyType() == MultiTenancyType.SHARED)
+                                     ? context.getParticipant().getTenantId()
+                                     : null;
 
-                              return esAsyncClient.index(i -> {
-                                  i.routing(routing)
-                                   .index(structure.getItemIndex())
-                                   .id(entityHolder.getDocumentId())
-                                   .document(entityHolder.entity())
-                                   .refresh(Refresh.True);
+                             return esAsyncClient.index(i -> {
+                                 i.routing(routing)
+                                  .index(structure.getItemIndex())
+                                  .id(entityHolder.getDocumentId())
+                                  .document(entityHolder.entity())
+                                  .refresh(Refresh.True);
 
-                                  // When optimistic locking is enabled and no version is present we use create
-                                  // We do this since there is no way to set an initial primary_term / seq_no combination
-                                  ElasticVersion elasticVersion = entityHolder.getElasticVersionIfPresent();
-                                  if(structure.isOptimisticLockingEnabled()
-                                          && elasticVersion == null){
+                                 // When optimistic locking is enabled and no version is present we use create
+                                 // We do this since there is no way to set an initial primary_term / seq_no combination
+                                 ElasticVersion elasticVersion = entityHolder.getElasticVersionIfPresent();
+                                 if(structure.isOptimisticLockingEnabled()
+                                         && elasticVersion == null){
 
-                                      i.opType(OpType.Create);
+                                     i.opType(OpType.Create);
 
-                                  }else if(structure.isOptimisticLockingEnabled()
-                                          && elasticVersion != null){
+                                 }else if(structure.isOptimisticLockingEnabled()
+                                         && elasticVersion != null){
 
-                                      i.ifPrimaryTerm(elasticVersion.primaryTerm());
-                                      i.ifSeqNo(elasticVersion.seqNo());
-                                  }
+                                     i.ifPrimaryTerm(elasticVersion.primaryTerm());
+                                     i.ifSeqNo(elasticVersion.seqNo());
+                                 }
 
-                                  return i;
-                              }).thenApply(indexResponse -> postProcessSaveOrUpdate(entity,
-                                                                                    entityHolder,
-                                                                                    indexResponse.primaryTerm(),
-                                                                                    indexResponse.seqNo()));
-                          }));
+                                 return i;
+                             }).thenApply(indexResponse -> postProcessSaveOrUpdate(entity,
+                                                                                   entityHolder,
+                                                                                   indexResponse.primaryTerm(),
+                                                                                   indexResponse.seqNo()));
+                         });
     }
 
     @WithSpan
@@ -388,7 +350,7 @@ public class DefaultEntityService implements EntityService {
     public <T> CompletableFuture<Page<T>> search(String searchText, Pageable pageable, Class<T> type, EntityContext context) {
         return validateContext(context)
                 .thenCompose(un -> authService.authorize(EntityOperation.SEARCH, context))
-                .thenCompose(unused -> {
+                .thenCompose(un -> {
 
                     if(FastestType.class.isAssignableFrom(type)){
 
@@ -458,92 +420,77 @@ public class DefaultEntityService implements EntityService {
     @WithSpan
     @Override
     public <T> CompletableFuture<T> update(T entity, EntityContext context) {
-        return authService.authorize(EntityOperation.UPDATE, context).thenCompose(
-                un -> doPrePersist(entity, context, entityHolder -> {
+        return doPersist(entity,
+                         EntityOperation.UPDATE,
+                         context,
+                         entityHolder -> {
 
-                    String routing = (structure.getMultiTenancyType() == MultiTenancyType.SHARED)
-                            ? context.getParticipant().getTenantId()
-                            : null;
+                             String routing = (structure.getMultiTenancyType() == MultiTenancyType.SHARED)
+                                     ? context.getParticipant().getTenantId()
+                                     : null;
 
-                    UpdateRequest<?,?> request = UpdateRequest.of(u -> {
-                        u.routing(routing)
-                         .index(structure.getItemIndex())
-                         .id(entityHolder.getDocumentId())
-                         .doc(entityHolder.entity())
-                         .refresh(Refresh.True);
+                             UpdateRequest<?,?> request = UpdateRequest.of(u -> {
+                                 u.routing(routing)
+                                  .index(structure.getItemIndex())
+                                  .id(entityHolder.getDocumentId())
+                                  .doc(entityHolder.entity())
+                                  .refresh(Refresh.True);
 
-                        ElasticVersion elasticVersion = entityHolder.getElasticVersionIfPresent();
-                        if(structure.isOptimisticLockingEnabled()
-                                && elasticVersion != null) {
+                                 ElasticVersion elasticVersion = entityHolder.getElasticVersionIfPresent();
+                                 if(structure.isOptimisticLockingEnabled()
+                                         && elasticVersion != null) {
 
-                            u.ifPrimaryTerm(elasticVersion.primaryTerm())
-                             .ifSeqNo(elasticVersion.seqNo());
+                                     u.ifPrimaryTerm(elasticVersion.primaryTerm())
+                                      .ifSeqNo(elasticVersion.seqNo());
 
-                        } else if (structure.isOptimisticLockingEnabled()) {
-                            throw new IllegalArgumentException("A Version must be provided when calling update");
-                        }else{
-                            u.docAsUpsert(true);
-                        }
-                        return u;
-                    });
+                                 } else if (structure.isOptimisticLockingEnabled()) {
+                                     throw new IllegalArgumentException("A Version must be provided when calling update");
+                                 }else{
+                                     u.docAsUpsert(true);
+                                 }
+                                 return u;
+                             });
 
-                    return esAsyncClient.update(request, entityHolder.entity().getClass())
-                                        .thenApply(updateResponse -> postProcessSaveOrUpdate(entity,
-                                                                                             entityHolder,
-                                                                                             updateResponse.primaryTerm(),
-                                                                                             updateResponse.seqNo()));
-                }));
+                             return esAsyncClient.update(request, entityHolder.entity().getClass())
+                                                 .thenApply(updateResponse -> postProcessSaveOrUpdate(entity,
+                                                                                                      entityHolder,
+                                                                                                      updateResponse.primaryTerm(),
+                                                                                                      updateResponse.seqNo()));
+                         });
     }
 
-    @WithSpan
-    private <T> CompletableFuture<Void> doBulkPersist(T entities,
-                                                      EntityContext context,
-                                                      Function<EntityHolder<?>, BulkOperation> persistLogic){
-        return validateContext(context)
-                .thenCompose(unused -> delegatingUpsertPreProcessor
-                        .processArray(entities, context)
-                        .thenCompose(list -> {
+    private String composeId(final String id, final EntityContext context){
+        String ret;
+        if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
+            String tenantId = context.getParticipant().getTenantId();
+            ret = tenantId + "-" + id;
+        }else{
+            ret = id;
+        }
+        return ret;
+    }
 
-                            String routing = (structure.getMultiTenancyType() == MultiTenancyType.SHARED)
-                                    ? context.getParticipant().getTenantId()
-                                    : null;
+    private String composeId(final TenantSpecificId id){
+        return id.getTenantId() + "-" + id.getEntityId();
+    }
 
-                            BulkRequest.Builder br = new BulkRequest.Builder();
-                            br.routing(routing);
+    private List<MultiGetOperation> composeIds(final List<String> ids, final EntityContext context){
+        List<MultiGetOperation> ret = new ArrayList<>(ids.size());
+        boolean multiTenancyShared = structure.getMultiTenancyType() == MultiTenancyType.SHARED;
 
-                            List<BulkOperation> bulkOperations = new ArrayList<>(list.size());
-                            for(EntityHolder<?> entityHolder : list){
-
-                                if(entityHolder.id() == null || entityHolder.id().isEmpty()){
-                                    return CompletableFuture.failedFuture(new IllegalArgumentException("All Entities must have an id"));
-                                }
-
-                                bulkOperations.add(persistLogic.apply(entityHolder));
-                            }
-
-                            if(bulkOperations.isEmpty()){
-                                return CompletableFuture.failedFuture(new IllegalArgumentException("No items found to create bulk request for"));
-                            }
-
-                            br.operations(bulkOperations);
-
-                            return esAsyncClient.bulk(br.build()).thenCompose(bulkResponse -> {
-                                if(bulkResponse.errors()){
-                                    StringBuilder builder = new StringBuilder();
-                                    for(BulkResponseItem item : bulkResponse.items()){
-                                        if(item.error() != null){
-                                            if(builder.indexOf(item.error().reason()) == -1){
-                                                builder.append(item.error().reason()).append("\n");
-                                            }
-                                        }
-                                    }
-                                    return CompletableFuture.failedFuture(new IllegalArgumentException("Bulk save failed with errors:\n"+builder));
-                                }else{
-                                    return CompletableFuture.completedFuture(bulkResponse);
-                                }
-                            });
-
-                        })).thenApply(unused -> null);
+        String tenantId = context.getParticipant().getTenantId();
+        for (String id : ids){
+            MultiGetOperation.Builder builder =  new MultiGetOperation.Builder();
+            builder.index(structure.getItemIndex());
+            if(multiTenancyShared){
+                builder.id(tenantId + "-" + id)
+                       .routing(tenantId);
+            }else{
+                builder.id(id);
+            }
+            ret.add(builder.build());
+        }
+        return ret;
     }
 
     @WithSpan
@@ -592,21 +539,136 @@ public class DefaultEntityService implements EntityService {
         }
     }
 
+    private <T> CompletableFuture<List<T>> doFindByIds(List<MultiGetOperation> composedIds,
+                                                       Class<T> type,
+                                                       EntityContext context) {
+        if(FastestType.class.isAssignableFrom(type)){
+            if(structure.isOptimisticLockingEnabled()){
+                //noinspection unchecked
+                return crudServiceTemplate
+                        .multiGet(composedIds,
+                                  Map.class,
+                                  builder -> readPreProcessor.beforeFindByIds(builder, context),
+                                  result -> (T) new FastestType(updateVersionForEntity(result.source(),
+                                                                                       result.primaryTerm(),
+                                                                                       result.seqNo()
+                                  )));
+            }else{
+                //noinspection unchecked
+                return crudServiceTemplate
+                        .multiGet(composedIds,
+                                  RawJson.class,
+                                  builder -> readPreProcessor.beforeFindByIds(builder, context),
+                                  result -> (T) new FastestType(result.source()));
+            }
+        }else{
+
+            if(structure.isOptimisticLockingEnabled()){
+                return crudServiceTemplate
+                        .multiGet(composedIds,
+                                  type,
+                                  builder -> readPreProcessor.beforeFindByIds(builder, context),
+                                  result -> updateVersionForEntity(result.source(),
+                                                                   result.primaryTerm(),
+                                                                   result.seqNo()
+                                  ));
+            }else{
+                return crudServiceTemplate
+                        .multiGet(composedIds,
+                                  type,
+                                  builder -> readPreProcessor.beforeFindByIds(builder, context),
+                                  null);
+            }
+        }
+    }
+
     @WithSpan
-    private <T> CompletableFuture<T> doPrePersist(T entity,
-                                                  EntityContext context,
-                                                  Function<EntityHolder<?>, CompletableFuture<T>> persistLogic){
-        return validateContext(context)
-                .thenCompose(unused -> delegatingUpsertPreProcessor
-                        .process(entity, context)
-                        .thenCompose(entityHolder -> {
+    private <T> CompletableFuture<T> doPersist(T entity,
+                                               EntityOperation operation,
+                                               EntityContext context,
+                                               Function<EntityHolder<?>, CompletableFuture<T>> persistLogic){
 
-                            if(entityHolder.id() == null || entityHolder.id().isEmpty()){
-                                return CompletableFuture.failedFuture(new IllegalArgumentException("Entity must have an id"));
-                            }
+        // We do this since ideally processing data before auth is not ideal
+        // However, in the case of Multi-tenant access we must extract tenant ids prior to calling auth
+        if(structure.isMultiTenantSelectionEnabled()){
 
-                            return persistLogic.apply(entityHolder);
-                        }));
+            return validateContext(context)
+                    .thenCompose(un -> delegatingUpsertPreProcessor.process(entity, context))
+                    .thenCompose(entityHolder ->
+                                         authService.authorize(operation, context)
+                                                    .thenCompose(un -> persistLogic.apply(entityHolder)));
+        }else{
+            return validateContext(context)
+                    .thenCompose(un -> authService.authorize(operation, context))
+                    .thenCompose(un -> delegatingUpsertPreProcessor.process(entity, context))
+                    .thenCompose(persistLogic);
+        }
+    }
+
+    @WithSpan
+    private <T> CompletableFuture<Void> doPersistBulk(T entities,
+                                                      EntityOperation operation,
+                                                      EntityContext context,
+                                                      Function<EntityHolder<?>, BulkOperation> persistLogic){
+        // We do this since ideally processing data before auth is not ideal
+        // However, in the case of Multi-tenant access we must extract tenant ids prior to calling auth
+        if(structure.isMultiTenantSelectionEnabled()){
+
+            return validateContext(context)
+                    .thenCompose(un -> delegatingUpsertPreProcessor.processArray(entities, context))
+                    .thenCompose(entityList ->
+                                         authService.authorize(operation, context)
+                                                    .thenCompose(un -> doPersistBulkLogic(entityList, context, persistLogic)))
+                    .thenApply(unused -> null);
+        }else {
+            return validateContext(context)
+                    .thenCompose(un -> authService.authorize(operation, context))
+                    .thenCompose(un -> delegatingUpsertPreProcessor.processArray(entities, context))
+                    .thenCompose(list -> doPersistBulkLogic(list, context, persistLogic))
+                    .thenApply(un -> null);
+        }
+    }
+
+    private CompletableFuture<BulkResponse> doPersistBulkLogic(List<EntityHolder<Object>> list, EntityContext context,
+                                                               Function<EntityHolder<?>, BulkOperation> persistLogic) {
+        String routing = (structure.getMultiTenancyType() == MultiTenancyType.SHARED)
+                ? context.getParticipant().getTenantId()
+                : null;
+
+        BulkRequest.Builder br = new BulkRequest.Builder();
+        br.routing(routing);
+
+        List<BulkOperation> bulkOperations = new ArrayList<>(list.size());
+        for(EntityHolder<?> entityHolder : list){
+
+            if(entityHolder.id() == null || entityHolder.id().isEmpty()){
+                return CompletableFuture.failedFuture(new IllegalArgumentException("All Entities must have an id"));
+            }
+
+            bulkOperations.add(persistLogic.apply(entityHolder));
+        }
+
+        if(bulkOperations.isEmpty()){
+            return CompletableFuture.failedFuture(new IllegalArgumentException("No items found to create bulk request for"));
+        }
+
+        br.operations(bulkOperations);
+
+        return esAsyncClient.bulk(br.build()).thenCompose(bulkResponse -> {
+            if (bulkResponse.errors()) {
+                StringBuilder builder = new StringBuilder();
+                for (BulkResponseItem item : bulkResponse.items()) {
+                    if (item.error() != null) {
+                        if (builder.indexOf(item.error().reason()) == -1) {
+                            builder.append(item.error().reason()).append("\n");
+                        }
+                    }
+                }
+                return CompletableFuture.failedFuture(new IllegalArgumentException("Bulk save failed with errors:\n" + builder));
+            } else {
+                return CompletableFuture.completedFuture(bulkResponse);
+            }
+        });
     }
 
     @SuppressWarnings("unchecked")
@@ -692,6 +754,7 @@ public class DefaultEntityService implements EntityService {
         return entity;
     }
 
+    // FIXME: This logic doesn't seem as clean as it used to be, for find/search operations it makes sense, for others such as save/update borderline redundant?
     private CompletableFuture<Void> validateContext(final EntityContext context){
         if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
             if(context.getParticipant() != null && context.getParticipant().getTenantId() != null) {
@@ -721,43 +784,9 @@ public class DefaultEntityService implements EntityService {
         }
     }
 
-    private String composeId(final String id, final EntityContext context){
-        String ret;
-        if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
-            String tenantId = context.getParticipant().getTenantId();
-            ret = tenantId + "-" + id;
-        }else{
-            ret = id;
-        }
-        return ret;
-    }
-
-    private String composeId(final TenantSpecificId id){
-        return id.getTenantId() + "-" + id.getEntityId();
-    }
-
-    private List<MultiGetOperation> composeIds(final List<String> ids, final EntityContext context){
-        List<MultiGetOperation> ret = new ArrayList<>(ids.size());
-        boolean multiTenancyShared = structure.getMultiTenancyType() == MultiTenancyType.SHARED;
-
-        String tenantId = context.getParticipant().getTenantId();
-        for (String id : ids){
-            MultiGetOperation.Builder builder =  new MultiGetOperation.Builder();
-            builder.index(structure.getItemIndex());
-            if(multiTenancyShared){
-                builder.id(tenantId + "-" + id)
-                       .routing(tenantId);
-            }else{
-                builder.id(id);
-            }
-            ret.add(builder.build());
-        }
-        return ret;
-    }
-
     private CompletableFuture<List<MultiGetOperation>> validate_ComposeIds_AddTenantsToContext(final List<TenantSpecificId> ids, EntityContext entityContext){
         if(structure.getMultiTenancyType() == MultiTenancyType.SHARED
-            && structure.isMultiTenantSelectionEnabled()){
+                && structure.isMultiTenantSelectionEnabled()){
 
             List<MultiGetOperation> ret = new ArrayList<>(ids.size());
             List<String> tenants = new ArrayList<>(ids.size());
