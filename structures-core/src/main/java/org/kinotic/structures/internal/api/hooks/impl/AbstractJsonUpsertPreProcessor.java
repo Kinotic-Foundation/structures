@@ -57,6 +57,8 @@ public abstract class AbstractJsonUpsertPreProcessor<T> implements UpsertPreProc
     private CompletableFuture<List<EntityHolder<RawJson>>> doProcess(T json, EntityContext context, boolean processArray){
         Deque<String> jsonPathStack = new ArrayDeque<>();
         List<EntityHolder<RawJson>> ret = new ArrayList<>();
+        List<String> tenantsSelected = new ArrayList<>();
+
         int objectDepth = 0;
         int arrayDepth = 0;
 
@@ -126,7 +128,7 @@ public abstract class AbstractJsonUpsertPreProcessor<T> implements UpsertPreProc
                         }else if(objectDepth == 1 && decorator instanceof VersionDecorator){
 
                             if(versionFound){ // should never happen, because the structure is validated when published
-                                throw new IllegalArgumentException("Found multiple version fields in entity");
+                                throw new IllegalArgumentException("Found multiple Version fields in entity");
                             }
 
                             currentVersion = (String) value;
@@ -137,15 +139,17 @@ public abstract class AbstractJsonUpsertPreProcessor<T> implements UpsertPreProc
                             if(currentTenantId != null){ // should never happen, because the structure is validated when published
                                 throw new IllegalArgumentException("Found multiple id fields in entity");
                             }
-
-                            // FIXME: should we throw an error if the tenantId field is null or use the participant id?
+                            // field exists but is null so we can throw early
+                            if(value == null){
+                                throw new IllegalArgumentException("Tenant Id field cannot be null");
+                            }
 
                             currentTenantId = (String) value;
                         }
                     }else{
                         // Check if this is the tenant id if MultiTenancyType.SHARED is enabled
                         if(structure.getMultiTenancyType() == MultiTenancyType.SHARED
-                                && !structure.isMultiTenantSelectionEnabled() // FIXME: does this make sense?
+                                && !structure.isMultiTenantSelectionEnabled() // just in case there is a field with the same name as the configured prop
                                 && currentJsonPath.equals(structuresProperties.getTenantIdFieldName())){
 
                             // since the tenant id field is already present check its value to make sure it is null
@@ -179,9 +183,12 @@ public abstract class AbstractJsonUpsertPreProcessor<T> implements UpsertPreProc
                         }
 
                         // If this is enabled a tenant id should always be present in the data
-                        // FIXME: should we throw an error if the tenantId field is null or use the participant id?
                         if(structure.isMultiTenantSelectionEnabled() && currentTenantId == null){
+
                             throw new IllegalArgumentException("Could not find TenantId for entity");
+
+                        } else if (structure.isMultiTenantSelectionEnabled() && currentTenantId != null) {
+                            tenantsSelected.add(currentTenantId);
                         }
 
                         // If this is a multi tenant structure and multi tenant selection is not enabled, add the tenant if necessary
@@ -233,6 +240,10 @@ public abstract class AbstractJsonUpsertPreProcessor<T> implements UpsertPreProc
             }
 
             jsonGenerator.flush();
+
+            if(structure.isMultiTenantSelectionEnabled()){
+                context.setTenantSelection(tenantsSelected);
+            }
 
             return CompletableFuture.completedFuture(ret);
 

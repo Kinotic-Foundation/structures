@@ -9,7 +9,16 @@ import org.kinotic.structures.api.domain.idl.decorators.MultiTenancyType;
 public record EntityHolder<T>(T entity, String id, MultiTenancyType multiTenancyType, String tenantId, String version) {
 
     public String getDocumentId() {
-        return multiTenancyType == MultiTenancyType.SHARED ? tenantId + "-" + id : id;
+        String ret;
+        if(multiTenancyType == MultiTenancyType.SHARED){
+            if(tenantId == null || tenantId.isEmpty()){
+                throw new IllegalArgumentException("TenantId must be defined for shared multi tenancy");
+            }
+            ret = tenantId + "-" + id;
+        } else {
+            ret = id;
+        }
+        return ret;
     }
 
     public boolean isElasticVersionPresent(){

@@ -56,6 +56,9 @@ public class MapUpsertPreProcessor implements UpsertPreProcessor<Map<Object, Obj
     public CompletableFuture<EntityHolder<Map<Object, Object>>> process(Map<Object, Object> entity,
                                                                         EntityContext context) {
         try {
+            if(structure.isMultiTenantSelectionEnabled()){
+                context.setTenantSelection(new ArrayList<>());
+            }
             return CompletableFuture.completedFuture(preProcessData(entity, context));
         } catch (Exception e) {
             return CompletableFuture.failedFuture(e);
@@ -67,6 +70,10 @@ public class MapUpsertPreProcessor implements UpsertPreProcessor<Map<Object, Obj
     public CompletableFuture<List<EntityHolder<Map<Object, Object>>>> processArray(List<Map<Object, Object>> entities,
                                                                                    EntityContext context) {
         try {
+            if(structure.isMultiTenantSelectionEnabled()){
+                context.setTenantSelection(new ArrayList<>());
+            }
+
             List<EntityHolder<Map<Object, Object>>> entityHolders = new ArrayList<>();
             for(Map<Object, Object> entity : entities) {
                 entityHolders.add(preProcessData(entity, context));
@@ -78,6 +85,7 @@ public class MapUpsertPreProcessor implements UpsertPreProcessor<Map<Object, Obj
     }
 
     private EntityHolder<Map<Object, Object>> preProcessData(Map<Object, Object> entity, EntityContext context) {
+        String tenantId;
         String idFieldName = idFieldPreProcessor.getLeft();
         Object idFieldValue = entity.get(idFieldName);
         DecoratorLogic decoratorLogic = idFieldPreProcessor.getRight();
@@ -92,19 +100,35 @@ public class MapUpsertPreProcessor implements UpsertPreProcessor<Map<Object, Obj
             throw new IllegalArgumentException("Id field cannot be null or blank");
         }
 
-        // entity data gets id without tenant
+        // we just always put the id back into the entity to simplify the logic
         entity.put(idFieldName, id);
 
         // now verify the tenant id is set properly
         if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
-            String existingTenantId = (String) entity.get(structuresProperties.getTenantIdFieldName());
 
-            if(existingTenantId != null && !existingTenantId.equals(context.getParticipant().getTenantId())){
-                throw new IllegalArgumentException("Tenant Id invalid for logged in participant");
+            if(structure.isMultiTenantSelectionEnabled()){
 
-            }else if(existingTenantId == null){
-                entity.put(structuresProperties.getTenantIdFieldName(), context.getParticipant().getTenantId());
+                tenantId = (String) entity.get(structure.getTenantIdFieldName());
+                if(tenantId == null){
+                    throw new IllegalArgumentException("Tenant Id field cannot be null");
+                }
+
+                context.getTenantSelection().add(tenantId);
+
+            } else {
+
+                tenantId = (String) entity.get(structuresProperties.getTenantIdFieldName());
+
+                if (tenantId != null && !tenantId.equals(context.getParticipant().getTenantId())) {
+                    throw new IllegalArgumentException("Tenant Id invalid for logged in participant");
+
+                } else if (tenantId == null) {
+                    tenantId = context.getParticipant().getTenantId();
+                    entity.put(structuresProperties.getTenantIdFieldName(), tenantId);
+                }
             }
+        }else {
+            tenantId = null;
         }
 
         // now extract version field if expected
@@ -121,7 +145,7 @@ public class MapUpsertPreProcessor implements UpsertPreProcessor<Map<Object, Obj
         return new EntityHolder<>(entity,
                                   id,
                                   structure.getMultiTenancyType(),
-                                  context.getParticipant().getTenantId(),
+                                  tenantId,
                                   version
         );
     }
