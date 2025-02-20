@@ -5,7 +5,7 @@ import {
     Page,
     Pageable,
     IterablePage,
-    ContinuumSingleton
+    IServiceRegistry
 } from '@kinotic/continuum-client'
 import {FunctionalIterablePage} from '@kinotic/continuum-client/dist/src/core/api/crud/FunctionalIterablePage.js'
 
@@ -179,9 +179,9 @@ export class EntitiesService implements IEntitiesService {
 
     protected serviceProxy: IServiceProxy
 
-     constructor(continuum?: ContinuumSingleton) {
+     constructor(serviceRegistry?: IServiceRegistry) {
         const service = 'org.kinotic.structures.api.services.JsonEntitiesService'
-        this.serviceProxy = continuum?.serviceRegistry?.serviceProxy(service) || Continuum.serviceProxy(service)
+        this.serviceProxy = serviceRegistry?.serviceProxy(service) || Continuum.serviceProxy(service)
     }
 
     public bulkSave<T>(structureId: string, entities: T[]): Promise<void>{
