@@ -106,8 +106,15 @@ public class ReadPreProcessor {
     }
 
 
-    public void beforeFindByIds(MgetRequest.Builder builder,
+    public void beforeFindByIds(Structure structure,
+                                MgetRequest.Builder builder,
                                 EntityContext context){
+
+        if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
+            if(!context.hasTenantSelection()){
+                builder.sourceExcludes(structuresProperties.getTenantIdFieldName());
+            }
+        }
 
         if(context.hasIncludedFieldsFilter()){
             builder.sourceIncludes(context.getIncludedFieldsFilter());

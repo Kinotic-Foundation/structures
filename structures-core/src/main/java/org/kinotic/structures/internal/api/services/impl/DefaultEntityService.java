@@ -444,10 +444,11 @@ public class DefaultEntityService implements EntityService {
                              });
 
                              return esAsyncClient.update(request, entityHolder.entity().getClass())
-                                                 .thenApply(updateResponse -> postProcessSaveOrUpdate(entity,
-                                                                                                      entityHolder,
-                                                                                                      updateResponse.primaryTerm(),
-                                                                                                      updateResponse.seqNo()));
+                                                 .thenApply(updateResponse ->
+                                                                    postProcessSaveOrUpdate(entity,
+                                                                                            entityHolder,
+                                                                                            updateResponse.primaryTerm(),
+                                                                                            updateResponse.seqNo()));
                          });
     }
 
@@ -539,7 +540,7 @@ public class DefaultEntityService implements EntityService {
                 return crudServiceTemplate
                         .multiGet(composedIds,
                                   Map.class,
-                                  builder -> readPreProcessor.beforeFindByIds(builder, context),
+                                  builder -> readPreProcessor.beforeFindByIds(structure, builder, context),
                                   result -> (T) new FastestType(updateVersionForEntity(result.source(),
                                                                                        result.primaryTerm(),
                                                                                        result.seqNo()
@@ -549,7 +550,7 @@ public class DefaultEntityService implements EntityService {
                 return crudServiceTemplate
                         .multiGet(composedIds,
                                   RawJson.class,
-                                  builder -> readPreProcessor.beforeFindByIds(builder, context),
+                                  builder -> readPreProcessor.beforeFindByIds(structure, builder, context),
                                   result -> (T) new FastestType(result.source()));
             }
         }else{
@@ -558,7 +559,7 @@ public class DefaultEntityService implements EntityService {
                 return crudServiceTemplate
                         .multiGet(composedIds,
                                   type,
-                                  builder -> readPreProcessor.beforeFindByIds(builder, context),
+                                  builder -> readPreProcessor.beforeFindByIds(structure, builder, context),
                                   result -> updateVersionForEntity(result.source(),
                                                                    result.primaryTerm(),
                                                                    result.seqNo()
@@ -567,7 +568,7 @@ public class DefaultEntityService implements EntityService {
                 return crudServiceTemplate
                         .multiGet(composedIds,
                                   type,
-                                  builder -> readPreProcessor.beforeFindByIds(builder, context),
+                                  builder -> readPreProcessor.beforeFindByIds(structure, builder, context),
                                   null);
             }
         }
@@ -732,7 +733,6 @@ public class DefaultEntityService implements EntityService {
         return entity;
     }
 
-    // FIXME: This logic doesn't seem as clean as it used to be, for find/search operations it makes sense, for others such as save/update borderline redundant?
     private CompletableFuture<Void> validateContext(final EntityContext context){
         if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
             if(context.getParticipant() != null && context.getParticipant().getTenantId() != null) {
@@ -766,20 +766,26 @@ public class DefaultEntityService implements EntityService {
         if(structure.getMultiTenancyType() == MultiTenancyType.SHARED
                 && structure.isMultiTenantSelectionEnabled()){
 
-            List<MultiGetOperation> ret = new ArrayList<>(ids.size());
-            List<String> tenants = new ArrayList<>(ids.size());
-            for(TenantSpecificId id : ids){
-                MultiGetOperation.Builder builder = new MultiGetOperation.Builder();
-                builder.index(structure.getItemIndex())
-                       .id(id.getTenantId() + "-" + id.getEntityId())
-                       .routing(id.getTenantId());
+            if(entityContext.getParticipant() != null && entityContext.getParticipant().getTenantId() != null) {
 
-                ret.add(builder.build());
-                tenants.add(id.getTenantId());
+                List<MultiGetOperation> ret = new ArrayList<>(ids.size());
+                List<String> tenants = new ArrayList<>(ids.size());
+                for (TenantSpecificId id : ids) {
+                    MultiGetOperation.Builder builder = new MultiGetOperation.Builder();
+                    builder.index(structure.getItemIndex())
+                           .id(id.getTenantId() + "-" + id.getEntityId())
+                           .routing(id.getTenantId());
+
+                    ret.add(builder.build());
+                    tenants.add(id.getTenantId());
+                }
+
+                entityContext.setTenantSelection(tenants);
+                return CompletableFuture.completedFuture(ret);
+
+            }else{
+                return CompletableFuture.failedFuture(new IllegalArgumentException("Participant with a TenantId is required when MultiTenancyType is SHARED"));
             }
-
-            entityContext.setTenantSelection(tenants);
-            return CompletableFuture.completedFuture(ret);
         }else{
             return CompletableFuture.failedFuture(
                     new IllegalArgumentException("Multi-tenant access for this Structure %s is not enabled".formatted(structure.getName()))
