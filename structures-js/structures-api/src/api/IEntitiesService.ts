@@ -5,9 +5,9 @@ import {
     Page,
     Pageable,
     IterablePage,
-    IServiceRegistry
+    IServiceRegistry,
+    FunctionalIterablePage
 } from '@kinotic/continuum-client'
-import {FunctionalIterablePage} from '@kinotic/continuum-client/dist/src/core/api/crud/FunctionalIterablePage.js'
 
 export interface IEntitiesService {
 

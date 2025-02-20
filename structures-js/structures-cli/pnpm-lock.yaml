@@ -12,14 +12,14 @@ importers:
         specifier: ^7.2.1
         version: 7.2.1(@types/node@22.10.4)
       '@kinotic/continuum-client':
-        specifier: ^2.11.0
-        version: 2.11.0
+        specifier: ^2.12.1
+        version: 2.12.1
       '@kinotic/continuum-idl':
         specifier: ^2.0.2
         version: 2.0.2
       '@kinotic/structures-api':
-        specifier: ^3.2.0
-        version: 3.2.0(@kinotic/continuum-client@2.11.0)
+        specifier: ^3.3.0-beta.1
+        version: 3.3.0-beta.1(@kinotic/continuum-client@2.12.1)
       '@oclif/core':
         specifier: ^4.2.0
         version: 4.2.0
@@ -609,16 +609,16 @@ packages:
     resolution: {integrity: sha512-O8jcjabXaleOG9DQ0+ARXWZBTfnP4WNAqzuiJK7ll44AmxGKv/J2M4TPjxjY3znBCfvBXFzucm1twdyFybFqEA==}
     engines: {node: '>=12'}
 
-  '@kinotic/continuum-client@2.11.0':
-    resolution: {integrity: sha512-hW5U4axaOxPfzD+odZLe1ah9mTNCs/AGYfn7MZSjyUdPg2TRMu2jKgsw+icR0uNPVReorDNXCSVHNMo7jjf62g==}
+  '@kinotic/continuum-client@2.12.1':
+    resolution: {integrity: sha512-tiQdeZBEwT/UAZO1JQscu+T/tB89TB/SICMmTiBCx6D/idjYY+nAX8e+pKHTDd2J47Lg4rRB9QBQ+K0vDnkm7g==}
 
   '@kinotic/continuum-idl@2.0.2':
     resolution: {integrity: sha512-UoXNWArw2M7FWmRCeiF6IsUNnSaGkRZix/Gl2L+HvmMGFnukpoZU0/v9pjRYDUBTa76+lBJa/Ir5dmrmtxdbTQ==}
 
-  '@kinotic/structures-api@3.2.0':
-    resolution: {integrity: sha512-pXzGd/flTAD9Kk4NVcDENOMcU4xx0SUfjAN+/wv5Jr8VDeqPhoNyHVcA56xE16iKqd4JHMaX9Fnkm7qKtND4BQ==}
+  '@kinotic/structures-api@3.3.0-beta.1':
+    resolution: {integrity: sha512-FXM4Soie/F9C5g6l9+sXZQlK+FRTeY9k7Hw8sC+ZP/4vNYeqEMF8ibaM2OoK5/ZLwh487iNSxFvTIjrtVoyvFQ==}
     peerDependencies:
-      '@kinotic/continuum-client': ^2.10.7
+      '@kinotic/continuum-client': ^2.12.1
 
   '@nodelib/fs.scandir@2.1.5':
     resolution: {integrity: sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==}
@@ -4291,7 +4291,7 @@ snapshots:
       wrap-ansi: 8.1.0
       wrap-ansi-cjs: wrap-ansi@7.0.0
 
-  '@kinotic/continuum-client@2.11.0':
+  '@kinotic/continuum-client@2.12.1':
     dependencies:
       '@opentelemetry/api': 1.9.0
       '@opentelemetry/resources': 1.30.0(@opentelemetry/api@1.9.0)
@@ -4306,9 +4306,9 @@ snapshots:
 
   '@kinotic/continuum-idl@2.0.2': {}
 
-  '@kinotic/structures-api@3.2.0(@kinotic/continuum-client@2.11.0)':
+  '@kinotic/structures-api@3.3.0-beta.1(@kinotic/continuum-client@2.12.1)':
     dependencies:
-      '@kinotic/continuum-client': 2.11.0
+      '@kinotic/continuum-client': 2.12.1
       '@kinotic/continuum-idl': 2.0.2
       reflect-metadata: 0.2.2
 

@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@kinotic/continuum-client':
-        specifier: ^2.12.0
-        version: 2.12.0
+        specifier: ^2.12.1
+        version: 2.12.1
       '@kinotic/continuum-idl':
         specifier: ^2.0.2
         version: 2.0.2
@@ -248,8 +248,8 @@ packages:
   '@jridgewell/trace-mapping@0.3.25':
     resolution: {integrity: sha512-vNk6aEwybGtawWmy/PzwnGDOjCkLWSD2wqvjGGAgOAwCGWySYXfYoxt00IJkTF+8Lb57DwOb3Aa0o9CApepiYQ==}
 
-  '@kinotic/continuum-client@2.12.0':
-    resolution: {integrity: sha512-NxA+cC717BtzeffYQXFoX0+Mem3mziiJPWRGBvhH8AOvAs/qCqDFWUCoVTHvnT0+f17fjq1WcR87CVHlD1ckDw==}
+  '@kinotic/continuum-client@2.12.1':
+    resolution: {integrity: sha512-tiQdeZBEwT/UAZO1JQscu+T/tB89TB/SICMmTiBCx6D/idjYY+nAX8e+pKHTDd2J47Lg4rRB9QBQ+K0vDnkm7g==}
 
   '@kinotic/continuum-idl@2.0.2':
     resolution: {integrity: sha512-UoXNWArw2M7FWmRCeiF6IsUNnSaGkRZix/Gl2L+HvmMGFnukpoZU0/v9pjRYDUBTa76+lBJa/Ir5dmrmtxdbTQ==}
@@ -1335,7 +1335,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.1
       '@jridgewell/sourcemap-codec': 1.5.0
 
-  '@kinotic/continuum-client@2.12.0':
+  '@kinotic/continuum-client@2.12.1':
     dependencies:
       '@opentelemetry/api': 1.9.0
       '@opentelemetry/resources': 1.30.0(@opentelemetry/api@1.9.0)

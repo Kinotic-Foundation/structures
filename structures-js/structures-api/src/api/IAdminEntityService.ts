@@ -138,11 +138,11 @@ export class AdminEntityService<T> implements IAdminEntityService<T>{
 
     public constructor(structureNamespace: string,
                        structureName: string,
-                       entitiesService?: IAdminEntitiesService) {
+                       adminEntitiesService?: IAdminEntitiesService) {
         this.structureNamespace = structureNamespace
         this.structureName = structureName
         this.structureId = (structureNamespace + '.' + structureName).toLowerCase()
-        this.adminEntitiesService = entitiesService || AdminEntitiesServiceSingleton
+        this.adminEntitiesService = adminEntitiesService || AdminEntitiesServiceSingleton
     }
 
     public count(tenantSelection: TenantSelection): Promise<number>{
