@@ -57,7 +57,6 @@ public class DefaultEntityService implements EntityService {
                              EntityOperation.BULK_SAVE,
                              context,
                              entityHolder -> BulkOperation.of(b -> {
-
                                  // When optimistic locking is enabled and no version is present we use create
                                  // We do this since there is no way to set an initial primary_term / seq_no combination
                                  ElasticVersion elasticVersion = entityHolder.getElasticVersionIfPresent();
@@ -67,11 +66,13 @@ public class DefaultEntityService implements EntityService {
                                      return b.create(c ->
                                                              c.index(structure.getItemIndex())
                                                               .id(entityHolder.getDocumentId())
+                                                              .routing(entityHolder.tenantId())
                                                               .document(entityHolder.entity()));
                                  }else{
                                      return b.index(i -> {
                                          i.index(structure.getItemIndex())
                                           .id(entityHolder.getDocumentId())
+                                          .routing(entityHolder.tenantId())
                                           .document(entityHolder.entity());
 
                                          if(structure.isOptimisticLockingEnabled()
@@ -97,6 +98,7 @@ public class DefaultEntityService implements EntityService {
                                                  ElasticVersion elasticVersion = entityHolder.getElasticVersionIfPresent();
                                                  u.index(structure.getItemIndex())
                                                   .id(entityHolder.getDocumentId())
+                                                  .routing(entityHolder.tenantId())
                                                   .action(upB -> {
                                                       upB.doc(entityHolder.entity())
                                                          .detectNoop(true);
@@ -309,40 +311,33 @@ public class DefaultEntityService implements EntityService {
         return doPersist(entity,
                          EntityOperation.SAVE,
                          context,
-                         entityHolder -> {
+                         entityHolder -> esAsyncClient.index(i -> {
+                             i.routing(entityHolder.tenantId())
+                              .index(structure.getItemIndex())
+                              .id(entityHolder.getDocumentId())
+                              .document(entityHolder.entity())
+                              .refresh(Refresh.True);
 
-                             String routing = (structure.getMultiTenancyType() == MultiTenancyType.SHARED)
-                                     ? context.getParticipant().getTenantId()
-                                     : null;
+                             // When optimistic locking is enabled and no version is present we use create
+                             // We do this since there is no way to set an initial primary_term / seq_no combination
+                             ElasticVersion elasticVersion = entityHolder.getElasticVersionIfPresent();
+                             if(structure.isOptimisticLockingEnabled()
+                                     && elasticVersion == null){
 
-                             return esAsyncClient.index(i -> {
-                                 i.routing(routing)
-                                  .index(structure.getItemIndex())
-                                  .id(entityHolder.getDocumentId())
-                                  .document(entityHolder.entity())
-                                  .refresh(Refresh.True);
+                                 i.opType(OpType.Create);
 
-                                 // When optimistic locking is enabled and no version is present we use create
-                                 // We do this since there is no way to set an initial primary_term / seq_no combination
-                                 ElasticVersion elasticVersion = entityHolder.getElasticVersionIfPresent();
-                                 if(structure.isOptimisticLockingEnabled()
-                                         && elasticVersion == null){
+                             }else if(structure.isOptimisticLockingEnabled()
+                                     && elasticVersion != null){
 
-                                     i.opType(OpType.Create);
+                                 i.ifPrimaryTerm(elasticVersion.primaryTerm());
+                                 i.ifSeqNo(elasticVersion.seqNo());
+                             }
 
-                                 }else if(structure.isOptimisticLockingEnabled()
-                                         && elasticVersion != null){
-
-                                     i.ifPrimaryTerm(elasticVersion.primaryTerm());
-                                     i.ifSeqNo(elasticVersion.seqNo());
-                                 }
-
-                                 return i;
-                             }).thenApply(indexResponse -> postProcessSaveOrUpdate(entity,
-                                                                                   entityHolder,
-                                                                                   indexResponse.primaryTerm(),
-                                                                                   indexResponse.seqNo()));
-                         });
+                             return i;
+                         }).thenApply(indexResponse -> postProcessSaveOrUpdate(entity,
+                                                                               entityHolder,
+                                                                               indexResponse.primaryTerm(),
+                                                                               indexResponse.seqNo())));
     }
 
     @WithSpan
@@ -426,12 +421,8 @@ public class DefaultEntityService implements EntityService {
                          context,
                          entityHolder -> {
 
-                             String routing = (structure.getMultiTenancyType() == MultiTenancyType.SHARED)
-                                     ? context.getParticipant().getTenantId()
-                                     : null;
-
                              UpdateRequest<?,?> request = UpdateRequest.of(u -> {
-                                 u.routing(routing)
+                                 u.routing(entityHolder.tenantId())
                                   .index(structure.getItemIndex())
                                   .id(entityHolder.getDocumentId())
                                   .doc(entityHolder.entity())
@@ -628,12 +619,8 @@ public class DefaultEntityService implements EntityService {
 
     private CompletableFuture<BulkResponse> doPersistBulkLogic(List<EntityHolder<Object>> list, EntityContext context,
                                                                Function<EntityHolder<?>, BulkOperation> persistLogic) {
-        String routing = (structure.getMultiTenancyType() == MultiTenancyType.SHARED)
-                ? context.getParticipant().getTenantId()
-                : null;
 
         BulkRequest.Builder br = new BulkRequest.Builder();
-        br.routing(routing);
 
         List<BulkOperation> bulkOperations = new ArrayList<>(list.size());
         for(EntityHolder<?> entityHolder : list){
