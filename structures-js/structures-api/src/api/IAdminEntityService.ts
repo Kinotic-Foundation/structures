@@ -1,3 +1,4 @@
+import {QueryParameter} from '@/api/domain/QueryParameter.js'
 import {TenantSpecificId} from '@/api/domain/TenantSpecificId.js'
 import {AdminEntitiesServiceSingleton, IAdminEntitiesService, TenantSelection} from '@/api/IAdminEntitiesService.js'
 import {Page, Pageable, IterablePage} from '@kinotic/continuum-client'
@@ -87,6 +88,29 @@ export interface IAdminEntityService<T> {
      */
     findByIds(ids: TenantSpecificId[]): Promise<T[]>;
 
+    /**
+     * Executes a named query.
+     * @param queryName the name of the function that defines the query
+     * @param queryParameters to pass to the query
+     * @param tenantSelection the list of tenants to use when retrieving the entity records
+     * @returns Promise with the result of the query
+     */
+    namedQuery<U>(queryName: string,
+                  queryParameters: QueryParameter[],
+                  tenantSelection: TenantSelection): Promise<U>
+
+    /**
+     * Executes a named query and returns a Page of results.
+     * @param queryName the name of the function that defines the query
+     * @param queryParameters to pass to the query
+     * @param tenantSelection the list of tenants to use when retrieving the entity records
+     * @param pageable the page settings to be used
+     * @returns Promise with the result of the query
+     */
+    namedQueryPage<U>(queryName: string,
+                      queryParameters: QueryParameter[],
+                      tenantSelection: TenantSelection,
+                      pageable: Pageable): Promise<IterablePage<U>>
 
     /**
      * Returns a {@link Page} of entities matching the search text and paging restriction provided in the {@link Pageable} object.
@@ -147,6 +171,19 @@ export class AdminEntityService<T> implements IAdminEntityService<T>{
 
     public findByIds(ids: TenantSpecificId[]): Promise<T[]>{
         return this.adminEntitiesService.findByIds(this.structureId, ids)
+    }
+
+    public namedQuery<U>(queryName: string,
+                         queryParameters: QueryParameter[],
+                         tenantSelection: TenantSelection): Promise<U> {
+        return this.adminEntitiesService.namedQuery(this.structureId, queryName, queryParameters, tenantSelection)
+    }
+
+    public namedQueryPage<U>(queryName: string,
+                             queryParameters: QueryParameter[],
+                             tenantSelection: TenantSelection,
+                             pageable: Pageable): Promise<IterablePage<U>> {
+        return this.adminEntitiesService.namedQueryPage(this.structureId, queryName, queryParameters, tenantSelection, pageable)
     }
 
     public search(searchText: string, tenantSelection: TenantSelection, pageable: Pageable): Promise<IterablePage<T>>{

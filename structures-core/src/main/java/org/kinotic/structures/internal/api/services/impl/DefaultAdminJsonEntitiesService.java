@@ -4,11 +4,10 @@ import lombok.RequiredArgsConstructor;
 import org.kinotic.continuum.api.security.Participant;
 import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
-import org.kinotic.structures.api.domain.DefaultEntityContext;
-import org.kinotic.structures.api.domain.FastestType;
-import org.kinotic.structures.api.domain.TenantSpecificId;
+import org.kinotic.structures.api.domain.*;
 import org.kinotic.structures.api.services.AdminJsonEntitiesService;
 import org.kinotic.structures.api.services.EntitiesService;
+import org.kinotic.structures.internal.api.services.sql.ListParameterHolder;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -87,6 +86,36 @@ public class DefaultAdminJsonEntitiesService implements AdminJsonEntitiesService
                                                    ids,
                                                    FastestType.class,
                                                    new DefaultEntityContext(participant));
+    }
+
+    @Override
+    public CompletableFuture<List<RawJson>> namedQuery(String structureId,
+                                                       String queryName,
+                                                       List<QueryParameter> queryParameters,
+                                                       List<String> tenantSelection,
+                                                       Participant participant) {
+        return entitiesService.namedQuery(structureId,
+                                          queryName,
+                                          new ListParameterHolder(queryParameters),
+                                          RawJson.class,
+                                          new DefaultEntityContext(participant)
+                                                  .setTenantSelection(tenantSelection));
+    }
+
+    @Override
+    public CompletableFuture<Page<RawJson>> namedQueryPage(String structureId,
+                                                           String queryName,
+                                                           List<QueryParameter> queryParameters,
+                                                           List<String> tenantSelection,
+                                                           Pageable pageable,
+                                                           Participant participant) {
+        return entitiesService.namedQueryPage(structureId,
+                                              queryName,
+                                              new ListParameterHolder(queryParameters),
+                                              pageable,
+                                              RawJson.class,
+                                              new DefaultEntityContext(participant)
+                                                      .setTenantSelection(tenantSelection));
     }
 
     @Override

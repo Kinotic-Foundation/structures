@@ -4,9 +4,8 @@ import org.kinotic.continuum.api.annotations.Publish;
 import org.kinotic.continuum.api.security.Participant;
 import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
-import org.kinotic.structures.api.domain.FastestType;
-import org.kinotic.structures.api.domain.Structure;
-import org.kinotic.structures.api.domain.TenantSpecificId;
+import org.kinotic.continuum.idl.api.schema.FunctionDefinition;
+import org.kinotic.structures.api.domain.*;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -91,6 +90,40 @@ public interface AdminJsonEntitiesService {
      * @return {@link CompletableFuture} with the list of matched entities with the given ids or {@link CompletableFuture} emitting an empty list if none found
      */
     CompletableFuture<List<FastestType>> findByIds(String structureId, List<TenantSpecificId> ids, Participant participant);
+
+    /**
+     * Executes a named query.
+     *
+     * @param structureId     the id of the structure that this named query is defined for
+     * @param queryName       the name of {@link FunctionDefinition} that defines the query
+     * @param queryParameters the parameters to pass to the query
+     * @param tenantSelection the list of tenants to use when retrieving the entity records
+     * @param participant     the participant of the logged-in user
+     * @return {@link CompletableFuture} with the result of the query
+     */
+    CompletableFuture<List<RawJson>> namedQuery(String structureId,
+                                                String queryName,
+                                                List<QueryParameter> queryParameters,
+                                                List<String> tenantSelection,
+                                                Participant participant);
+
+    /**
+     * Executes a named query and returns a {@link Page} of results.
+     *
+     * @param structureId     the id of the structure that this named query is defined for
+     * @param queryName       the name of {@link FunctionDefinition} that defines the query
+     * @param queryParameters the parameters to pass to the query
+     * @param tenantSelection the list of tenants to use when retrieving the entity records
+     * @param pageable        the page settings to be useds
+     * @param participant     the participant of the logged-in user
+     * @return {@link CompletableFuture} with the result of the query
+     */
+    CompletableFuture<Page<RawJson>> namedQueryPage(String structureId,
+                                                    String queryName,
+                                                    List<QueryParameter> queryParameters,
+                                                    List<String> tenantSelection,
+                                                    Pageable pageable,
+                                                    Participant participant);
 
     /**
      * Returns a {@link Page} of entities matching the search text and paging restriction provided in the {@code Pageable} object.

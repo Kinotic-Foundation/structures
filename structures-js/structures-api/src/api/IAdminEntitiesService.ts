@@ -1,3 +1,4 @@
+import {QueryParameter} from '@/api/domain/QueryParameter.js'
 import {TenantSpecificId} from '@/api/domain/TenantSpecificId.js'
 import {
     Continuum,
@@ -63,14 +64,6 @@ export interface IAdminEntitiesService {
     findAll<T>(structureId: string, tenantSelection: TenantSelection, pageable: Pageable): Promise<IterablePage<T>>
 
     /**
-     * Returns a single {@link Page} of entities meeting the paging restriction provided in the {@link Pageable} object.
-     * @param structureId the id of the structure to save the entity for
-     * @param tenantSelection the list of tenants to use when retrieving the entity records
-     * @param pageable the page settings to be used
-     */
-    findAllSinglePage<T>(structureId: string, tenantSelection: TenantSelection, pageable: Pageable): Promise<Page<T>>
-
-    /**
      * Retrieves an entity by its id.
      *
      * @param structureId the id of the structure to save the entity for
@@ -90,6 +83,33 @@ export interface IAdminEntitiesService {
      */
     findByIds<T>(structureId: string, ids: TenantSpecificId[]): Promise<T[]>
 
+    /**
+     * Executes a named query.
+     * @param structureId the id of the structure that this named query is defined for
+     * @param queryName the name of the function that defines the query
+     * @param parameters to pass to the query
+     * @param tenantSelection the list of tenants to use when retrieving the entity records
+     * @returns Promise with the result of the query
+     */
+    namedQuery<T>(structureId: string,
+                  queryName: string,
+                  parameters: QueryParameter[],
+                  tenantSelection: TenantSelection): Promise<T>
+
+    /**
+     * Executes a named query and returns a Page of results.
+     * @param structureId the id of the structure that this named query is defined for
+     * @param queryName the name of the function that defines the query
+     * @param parameters to pass to the query
+     * @param tenantSelection the list of tenants to use when retrieving the entity records
+     * @param pageable the page settings to be used
+     * @returns Promise with the result of the query
+     */
+    namedQueryPage<T>(structureId: string,
+                      queryName: string,
+                      parameters: QueryParameter[],
+                      tenantSelection: TenantSelection,
+                      pageable: Pageable): Promise<IterablePage<T>>
 
     /**
      * Returns a {@link IterablePage} of entities matching the search text and paging restriction provided in the {@link Pageable} object.
@@ -103,19 +123,6 @@ export interface IAdminEntitiesService {
      * @return a page of entities
      */
     search<T>(structureId: string, searchText: string, tenantSelection: TenantSelection, pageable: Pageable): Promise<IterablePage<T>>
-
-    /**
-     * Returns a single {@link Page} of entities matching the search text and paging restriction provided in the {@link Pageable} object.
-     * <p>
-     * You can find more information about the search syntax <a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html#query-string-syntax">here</a>
-     *
-     * @param structureId the id of the structure to save the entity for
-     * @param searchText  the text to search for entities for
-     * @param tenantSelection the list of tenants to use when retrieving the entity records
-     * @param pageable    the page settings to be used
-     * @return a page of entities
-     */
-    searchSinglePage<T>(structureId: string, searchText: string, tenantSelection: TenantSelection, pageable: Pageable): Promise<Page<T>>
 
 }
 
@@ -162,13 +169,48 @@ export class AdminEntitiesService implements IAdminEntitiesService {
         return this.serviceProxy.invoke('findByIds', [structureId, ids])
     }
 
-    public async search<T>(structureId: string, searchText: string, tenantSelection: TenantSelection, pageable: Pageable): Promise<IterablePage<T>> {
+    public namedQuery<T>(structureId: string,
+                         queryName: string,
+                         parameters: QueryParameter[],
+                         tenantSelection: TenantSelection): Promise<T> {
+        return this.serviceProxy.invoke('namedQuery', [structureId, queryName, parameters, tenantSelection])
+    }
+
+    public async namedQueryPage<T>(structureId: string,
+                                   queryName: string,
+                                   parameters: QueryParameter[],
+                                   tenantSelection: TenantSelection,
+                                   pageable: Pageable): Promise<IterablePage<T>> {
+        const page: Page<T> = await this.namedQuerySinglePage(structureId, queryName, parameters, tenantSelection, pageable)
+        return new FunctionalIterablePage(pageable, page,
+                                          (pageable: Pageable) => this.namedQuerySinglePage(structureId,
+                                                                                            queryName,
+                                                                                            parameters,
+                                                                                            tenantSelection,
+                                                                                            pageable))
+    }
+
+    public namedQuerySinglePage<T>(structureId: string,
+                                   queryName: string,
+                                   parameters: QueryParameter[],
+                                   tenantSelection: TenantSelection,
+                                   pageable: Pageable): Promise<Page<T  >> {
+        return this.serviceProxy.invoke('namedQueryPage', [structureId, queryName, parameters, tenantSelection, pageable])
+    }
+
+    public async search<T>(structureId: string,
+                           searchText: string,
+                           tenantSelection: TenantSelection,
+                           pageable: Pageable): Promise<IterablePage<T>> {
         const page: Page<T> = await this.searchSinglePage(structureId, searchText, tenantSelection, pageable)
         return new FunctionalIterablePage(pageable, page,
                                           (pageable: Pageable) => this.searchSinglePage(structureId, searchText, tenantSelection, pageable))
     }
 
-    public async searchSinglePage<T>(structureId: string, searchText: string, tenantSelection: TenantSelection, pageable: Pageable): Promise<Page<T>> {
+    public async searchSinglePage<T>(structureId: string,
+                                     searchText: string,
+                                     tenantSelection: TenantSelection,
+                                     pageable: Pageable): Promise<Page<T>> {
         return this.serviceProxy.invoke('search', [structureId, searchText, tenantSelection, pageable])
     }
 }
