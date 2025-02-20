@@ -357,11 +357,7 @@ public class DefaultOpenApiService implements OpenApiService {
 
         // Request body for save operations
         Schema<?> refSchema = new Schema<>().$ref(Components.COMPONENTS_SCHEMAS_REF + structure.getName());
-        RequestBody structureRequestBody = new RequestBody()
-                .description("The "+structureName+" to save")
-                .content(new Content().addMediaType("application/json",
-                                                    new MediaType().schema(refSchema)));
-
+        RequestBody structureRequestBody = OpenApiUtils.createJsonRequest(refSchema, "The "+structureName+" to save");
 
         // Find All Operation
         Operation getAllOperation = createOperation("Find all "+structureName +" entities",
@@ -380,8 +376,8 @@ public class DefaultOpenApiService implements OpenApiService {
                                                   "Saves " + structureName + " entities.",
                                                   "save"+structureName,
                                                   structure,
-                                                  1);
-        saveOperation.requestBody(structureRequestBody);
+                                                  1)
+                .requestBody(structureRequestBody);
 
         structurePathItem.post(saveOperation);
 
@@ -405,8 +401,8 @@ public class DefaultOpenApiService implements OpenApiService {
                                                     "Updates " + structureName + " entities.",
                                                     "update"+structureName,
                                                     structure,
-                                                    1);
-        updateOperation.requestBody(structureRequestBody);
+                                                    1)
+                .requestBody(structureRequestBody);
         updatePathItem.post(updateOperation);
         paths.put(basePath + lowercaseNamespace + "/" + lowercaseName + "/update", updatePathItem);
 
