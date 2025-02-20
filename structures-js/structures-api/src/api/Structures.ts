@@ -1,3 +1,4 @@
+import {AdminEntityService, IAdminEntityService} from '@/api/IAdminEntityService.js'
 import {INamedQueriesService, NamedQueriesService} from '@/api/INamedQueriesService'
 import {IEntitiesService, EntitiesService} from '@/api/IEntitiesService'
 import {IStructureService, StructureService} from '@/api/IStructureService'
@@ -27,8 +28,12 @@ export namespace Structures {
         return NAMED_QUERIES_SERVICE
     }
 
-    export function createEntityService(structureNamespace: string, structureName: string): IEntityService<any> {
+    export function createEntityService<T>(structureNamespace: string, structureName: string): IEntityService<T> {
         return new EntityService(structureNamespace, structureName)
+    }
+
+    export function createAdminEntityService<T>(structureNamespace: string, structureName: string): IAdminEntityService<T>{
+        return new AdminEntityService(structureNamespace, structureName);
     }
 
 }

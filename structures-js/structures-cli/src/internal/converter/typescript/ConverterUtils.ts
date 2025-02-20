@@ -12,11 +12,17 @@ import {
     EntityDecorator,
     FlattenedDecorator,
     IdDecorator,
-    MultiTenancyType, NestedDecorator,
+    MultiTenancyType,
+    NestedDecorator,
     TextDecorator,
     DiscriminatorDecorator,
     QueryDecorator,
-    EntityServiceDecoratorsDecorator, EntityServiceDecoratorsConfig, PolicyDecorator, RoleDecorator, VersionDecorator
+    EntityServiceDecoratorsDecorator,
+    EntityServiceDecoratorsConfig,
+    PolicyDecorator,
+    RoleDecorator,
+    VersionDecorator,
+    TenantIdDecorator
 } from '@kinotic/structures-api'
 import {Decorator, SyntaxKind, ObjectLiteralExpression, CallExpression} from 'ts-morph'
 
@@ -101,6 +107,8 @@ export function tsDecoratorToC3Decorator(decorator: Decorator): C3Decorator | nu
         } else {
             throw new Error('Role must have an array literal argument')
         }
+    } else if (decorator.getName() === 'TenantId') {
+        ret = new TenantIdDecorator()
     } else if (decorator.getName() === 'Text') {
         ret = new TextDecorator()
     } else if (decorator.getName() === 'Version') {

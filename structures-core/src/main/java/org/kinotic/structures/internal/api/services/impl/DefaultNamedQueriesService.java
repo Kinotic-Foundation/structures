@@ -90,6 +90,7 @@ public class DefaultNamedQueriesService extends AbstractCrudService<NamedQueries
                                                             ParameterHolder parameterHolder,
                                                             Class<T> type,
                                                             EntityContext context) {
+        // Authorization happens in the QueryExecutor so we don't need an additional cache to hold the NamedQueryAuthorizationService
         return cache.get(new CacheKey(queryName, structure))
                     .thenCompose(queryExecutor -> queryExecutor.execute(parameterHolder, type, context));
     }
@@ -101,6 +102,7 @@ public class DefaultNamedQueriesService extends AbstractCrudService<NamedQueries
                                                                 Pageable pageable,
                                                                 Class<T> type,
                                                                 EntityContext context) {
+        // Authorization happens in the QueryExecutor so we don't need an additional cache to hold the NamedQueryAuthorizationService
         return cache.get(new CacheKey(queryName, structure))
                     .thenCompose(queryExecutor -> queryExecutor.executePage(parameterHolder, pageable, type, context));
     }

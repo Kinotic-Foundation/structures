@@ -18,6 +18,7 @@ import java.util.function.Consumer;
 /**
  * Keeps track of all read operations pre-processors for a given structure.
  * This allows for the logic path to only call the pre-processors that are needed for a given operation and structure.
+ * WARNING: This class does not validate any of the security or expected constraints defined for Structures. This is meant to be used after those operations are performed.
  * Created by Navíd Mitchell 🤪on 6/13/23.
  */
 @Component
@@ -85,15 +86,18 @@ public class ReadPreProcessor {
         }
     }
 
-    // FIXME: Multitenancy selection, should we duplicate or use the context
     public void beforeFindById(Structure structure,
                                GetRequest.Builder builder,
                                EntityContext context){
 
         // add multi tenancy filters if needed
         if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
-            builder.routing(context.getParticipant().getTenantId());
-            builder.sourceExcludes(structuresProperties.getTenantIdFieldName());
+            if(context.hasTenantSelection()){
+                builder.routing(context.getTenantSelection().getFirst());
+            }else{
+                builder.routing(context.getParticipant().getTenantId());
+                builder.sourceExcludes(structuresProperties.getTenantIdFieldName());
+            }
         }
 
         if(context.hasIncludedFieldsFilter()){
@@ -101,16 +105,15 @@ public class ReadPreProcessor {
         }
     }
 
-    // FIXME: Multitenancy selection, this needs to be changed completely, we should be provide routing per id for the mget request.
-    //        This may need to go away all together
+
     public void beforeFindByIds(Structure structure,
                                 MgetRequest.Builder builder,
                                 EntityContext context){
 
-        // add multi tenancy filters if needed
         if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
-            builder.routing(context.getParticipant().getTenantId());
-            builder.sourceExcludes(structuresProperties.getTenantIdFieldName());
+            if(!context.hasTenantSelection()){
+                builder.sourceExcludes(structuresProperties.getTenantIdFieldName());
+            }
         }
 
         if(context.hasIncludedFieldsFilter()){
@@ -143,11 +146,12 @@ public class ReadPreProcessor {
             if(context.hasTenantSelection()) {
                 List<String> multiTenantSelection = context.getTenantSelection();
                 log.trace("Find All Multi tenant selection provided. Received {} tenants", multiTenantSelection.size());
+
                 // We do not add routing since the data could be spread across multiple shards
                 queryBuilder = new Query.Builder();
                 queryBuilder.bool(b -> b.filter(qb -> {
                             List<FieldValue> fieldValues = new ArrayList<>(multiTenantSelection.size());
-                            return qb.terms(tsq -> tsq.field(structuresProperties.getTenantIdFieldName())
+                            return qb.terms(tsq -> tsq.field(structure.getTenantIdFieldName())
                                                .terms(tqf-> tqf.value(fieldValues)));
                         }));
             }else{
@@ -175,13 +179,14 @@ public class ReadPreProcessor {
                 // Check if multiple tenants are selected if not use the logged-in user's tenant
                 if(context.hasTenantSelection()) {
                     List<String> multiTenantSelection = context.getTenantSelection();
-                    log.info("Search Multi tenant selection provided. Received {} tenants", multiTenantSelection.size());
+                    log.trace("Search Multi tenant selection provided. Received {} tenants", multiTenantSelection.size());
 
+                    // We do not add routing since the data could be spread across multiple shards
                     queryBuilder
                             .bool(b -> b.must(must -> must.queryString(qs -> qs.query(searchText).analyzeWildcard(true)))
                                         .filter(qb -> {
                                             List<FieldValue> fieldValues = new ArrayList<>(multiTenantSelection.size());
-                                            return qb.terms(tsq -> tsq.field(structuresProperties.getTenantIdFieldName())
+                                            return qb.terms(tsq -> tsq.field(structure.getTenantIdFieldName())
                                                                       .terms(tqf-> tqf.value(fieldValues)));
                                         }));
 
