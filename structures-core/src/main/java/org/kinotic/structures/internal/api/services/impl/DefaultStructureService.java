@@ -90,6 +90,7 @@ public class DefaultStructureService implements StructureService {
                     structure.setDecoratedProperties(result.decoratedProperties());
                     structure.setMultiTenancyType(result.multiTenancyType());
                     structure.setVersionFieldName(result.versionFieldName());
+                    structure.setTenantIdFieldName(result.tenantIdFieldName());
 
                     return  structureDAO.save(structure);
                 });
@@ -209,6 +210,8 @@ public class DefaultStructureService implements StructureService {
                     structure.setDecoratedProperties(result.decoratedProperties());
                     structure.setMultiTenancyType(result.multiTenancyType());
                     structure.setVersionFieldName(result.versionFieldName());
+                    // FIXME: make sure this did not change in an unsupported fashion
+                    structure.setTenantIdFieldName(result.tenantIdFieldName());
 
                     if(structure.isPublished()) {
                         // FIXME: how to best handle an operation where the mapping completes but the save fails.

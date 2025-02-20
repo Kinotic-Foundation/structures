@@ -108,12 +108,13 @@ public class DefaultOpenApiService implements OpenApiService {
                         if(schema instanceof ObjectSchema){
 
                             components.addSchemas(structure.getName(), schema);
-                            // Add path items for the structure
-                            addDefaultPathItems(paths, structure);
 
                             if(structure.isMultiTenantSelectionEnabled()){
                                 addAdminPathItems(paths, structure);
                             }
+
+                            // Add path items for the structure
+                            addDefaultPathItems(paths, structure);
 
                         }else{
                             log.error("Structure {} EntityDefinition did not convert to an OpenAPI ObjectSchema",
@@ -138,22 +139,18 @@ public class DefaultOpenApiService implements OpenApiService {
 
                     // Add TenantSpecificId schema
                     ObjectSchema tenantSpecificIdSchema = new ObjectSchema();
-                    tenantSpecificIdSchema.description("A special Id that is used with Multi-tenant access endpoints");
-                    tenantSpecificIdSchema.addProperty("entityId", new StringSchema())
-                                          .description("The id for the Structure Entity");
-                    tenantSpecificIdSchema.addProperty("tenantId", new StringSchema())
-                                          .description("The tenant id for the Structure Entity");
+                    tenantSpecificIdSchema.description("A special Id that is used with Multi-tenant access endpoints")
+                                          .addProperty("entityId", new StringSchema().description("The id for the entity"))
+                                          .addProperty("tenantId", new StringSchema().description("The tenant id for the entity"));
                     components.addSchemas("TenantSpecificId", tenantSpecificIdSchema);
 
                     // Add Query with tenant selection schema
                     ObjectSchema queryWithTenantSelectionSchema = new ObjectSchema();
-                    queryWithTenantSelectionSchema.description("A special Query object that is used with Multi-tenant access endpoints");
-                    queryWithTenantSelectionSchema.addProperty("query", new StringSchema())
-                                                  .description("The query text to be used for the operation");
-                    ArraySchema tenantsListSchema = new ArraySchema();
-                    tenantsListSchema.items(new StringSchema());
-                    queryWithTenantSelectionSchema.addProperty("tenantSelection", tenantsListSchema)
-                                                  .description("The list of tenants to use when executing the Query operation");
+                    queryWithTenantSelectionSchema.description("A special Query object that is used with Multi-tenant access endpoints")
+                                                  .addProperty("query", new StringSchema()
+                                                          .description("The query text to be used for the operation"))
+                                                  .addProperty("tenantSelection",
+                                                               OpenApiUtils.createStringArraySchema("The list of tenants to use when executing the Query operation"));
                     components.addSchemas("QueryWithTenantSelection", queryWithTenantSelectionSchema);
 
                     openAPI.setPaths(paths);
@@ -218,7 +215,7 @@ public class DefaultOpenApiService implements OpenApiService {
 
         // Find by Ids Operation
         PathItem findByIdsPathItem = new PathItem();
-        Operation findByIdsOperation = createOperation("Find "+structureName +" entities by ids",
+        Operation findByIdsOperation = createOperation("Admin Find "+structureName +" entities by ids",
                                                        "Find " + structureName + " entities by their ids.",
                                                        "find"+structureName+"ByIdsAdmin",
                                                        structure,

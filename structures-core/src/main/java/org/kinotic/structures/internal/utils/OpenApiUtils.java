@@ -83,6 +83,13 @@ public class OpenApiUtils {
         return pageSchema;
     }
 
+    public static ArraySchema createStringArraySchema(String description){
+        ArraySchema arraySchema = new ArraySchema();
+        arraySchema.items(new StringSchema());
+        arraySchema.description(description);
+        return arraySchema;
+    }
+
     public static Parameter createPathParameter(String name,
                                                 String description){
         return new Parameter().name(name)
