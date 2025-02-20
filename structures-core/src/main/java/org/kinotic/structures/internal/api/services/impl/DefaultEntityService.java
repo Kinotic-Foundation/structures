@@ -159,7 +159,7 @@ public class DefaultEntityService implements EntityService {
     @Override
     public CompletableFuture<Void> deleteById(TenantSpecificId id, EntityContext context) {
         // We set the tenant selection so validation below will know that a tenant specific operation is being used
-        context.setTenantSelection(List.of(id.getTenantId()));
+        context.setTenantSelection(List.of(id.tenantId()));
 
         return validateContext(context)
                 .thenCompose(un -> authService.authorize(EntityOperation.DELETE_BY_ID, context))
@@ -247,7 +247,7 @@ public class DefaultEntityService implements EntityService {
     @Override
     public <T> CompletableFuture<T> findById(TenantSpecificId id, Class<T> type, EntityContext context) {
         // We set the tenant selection so validation below will know that a tenant specific operation is being used
-        context.setTenantSelection(List.of(id.getTenantId()));
+        context.setTenantSelection(List.of(id.tenantId()));
 
         return validateContext(context)
                 .thenCompose(un -> authService.authorize(EntityOperation.FIND_BY_ID, context))
@@ -464,7 +464,7 @@ public class DefaultEntityService implements EntityService {
     }
 
     private String composeId(final TenantSpecificId id){
-        return id.getTenantId() + "-" + id.getEntityId();
+        return id.tenantId() + "-" + id.entityId();
     }
 
     private List<MultiGetOperation> composeIds(final List<String> ids, final EntityContext context){
@@ -773,11 +773,11 @@ public class DefaultEntityService implements EntityService {
                 for (TenantSpecificId id : ids) {
                     MultiGetOperation.Builder builder = new MultiGetOperation.Builder();
                     builder.index(structure.getItemIndex())
-                           .id(id.getTenantId() + "-" + id.getEntityId())
-                           .routing(id.getTenantId());
+                           .id(id.tenantId() + "-" + id.entityId())
+                           .routing(id.tenantId());
 
                     ret.add(builder.build());
-                    tenants.add(id.getTenantId());
+                    tenants.add(id.tenantId());
                 }
 
                 entityContext.setTenantSelection(tenants);

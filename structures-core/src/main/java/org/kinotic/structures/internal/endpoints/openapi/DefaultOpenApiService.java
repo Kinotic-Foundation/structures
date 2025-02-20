@@ -475,8 +475,7 @@ public class DefaultOpenApiService implements OpenApiService {
                 Schema<?> schema = converter.convert(parameter.getType());
 
                 // if this is an object we create a reference schema
-                if(parameter.getType() instanceof ComplexC3Type){
-                    ComplexC3Type complexField = (ComplexC3Type) parameter.getType();
+                if(parameter.getType() instanceof ComplexC3Type complexField){
                     components.addSchemas(complexField.getName(), schema);
                     schema = new Schema<>().$ref("#/components/schemas/"+complexField.getName());
                 }

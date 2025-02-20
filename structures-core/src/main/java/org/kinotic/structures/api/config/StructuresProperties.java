@@ -86,6 +86,8 @@ public class StructuresProperties {
 
     private String openApiPath = "/api/";
 
+    private String openApiAdminPath = "/admin/api/";
+
     private String openApiServerUrl = "http://localhost:8080";
 
     private int graphqlPort = 4000;
@@ -125,6 +127,17 @@ public class StructuresProperties {
     public boolean hasElasticUsernameAndPassword(){
         return elasticUsername != null && !elasticUsername.isBlank() && elasticPassword != null && !elasticPassword.isBlank();
     }
+
+    public StructuresProperties setOpenApiAdminPath(String path){
+        Validate.notBlank(path, "openApiAdminPath must not be blank");
+        if(path.endsWith("/")){
+            this.openApiAdminPath = path;
+        }else{
+            this.openApiAdminPath = path + "/";
+        }
+        return this;
+    }
+
 
     public StructuresProperties setOpenApiPath(String path){
         Validate.notBlank(path, "openApiPath must not be blank");
