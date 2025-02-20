@@ -1,5 +1,6 @@
 package org.kinotic.structures.internal.api.services;
 
+import org.apache.commons.lang3.Validate;
 import org.kinotic.structures.api.domain.idl.decorators.MultiTenancyType;
 
 /**
@@ -8,12 +9,18 @@ import org.kinotic.structures.api.domain.idl.decorators.MultiTenancyType;
  */
 public record EntityHolder<T>(T entity, String id, MultiTenancyType multiTenancyType, String tenantId, String version) {
 
+    public EntityHolder {
+        Validate.notNull(entity, "entity cannot be null");
+        Validate.notBlank(id, "id cannot be null or blank");
+        Validate.notNull(multiTenancyType, "multiTenancyType cannot be null");
+        if(multiTenancyType == MultiTenancyType.SHARED) {
+           Validate.notBlank(tenantId, "tenantId cannot be null or blank for shared multi tenancy");
+        }
+    }
+
     public String getDocumentId() {
         String ret;
         if(multiTenancyType == MultiTenancyType.SHARED){
-            if(tenantId == null || tenantId.isEmpty()){
-                throw new IllegalArgumentException("TenantId must be defined for shared multi tenancy");
-            }
             ret = tenantId + "-" + id;
         } else {
             ret = id;

@@ -175,17 +175,17 @@ public abstract class AbstractJsonUpsertPreProcessor<T> implements UpsertPreProc
                     if(token == JsonToken.END_OBJECT && objectDepth == 1){
 
                         if(currentId == null){
-                            throw new IllegalArgumentException("Could not find id for entity");
+                            throw new IllegalArgumentException("Could not find id for Entity");
                         }
 
                         if(structure.isOptimisticLockingEnabled() && !versionFound){
-                            throw new IllegalArgumentException("Could not find version for entity");
+                            throw new IllegalArgumentException("Could not find version for Entity");
                         }
 
                         // If this is enabled a tenant id should always be present in the data
                         if(structure.isMultiTenantSelectionEnabled() && currentTenantId == null){
 
-                            throw new IllegalArgumentException("Could not find TenantId for entity");
+                            throw new IllegalArgumentException("Could not find TenantId for Entity");
 
                         } else if (structure.isMultiTenantSelectionEnabled() && currentTenantId != null) {
                             tenantsSelected.add(currentTenantId);

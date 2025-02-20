@@ -409,6 +409,7 @@ public class DefaultEntityService implements EntityService {
                 });
     }
 
+    @WithSpan
     @Override
     public CompletableFuture<Void> syncIndex(EntityContext context) {
         return authService.authorize(EntityOperation.SYNC_INDEX, context)
@@ -493,7 +494,6 @@ public class DefaultEntityService implements EntityService {
         return ret;
     }
 
-    @WithSpan
     private <T> CompletableFuture<T> doFindById(String id, Class<T> type, EntityContext context) {
         if(FastestType.class.isAssignableFrom(type)){
 
@@ -582,12 +582,10 @@ public class DefaultEntityService implements EntityService {
         }
     }
 
-    @WithSpan
     private <T> CompletableFuture<T> doPersist(T entity,
                                                EntityOperation operation,
                                                EntityContext context,
                                                Function<EntityHolder<?>, CompletableFuture<T>> persistLogic){
-
         // We do this since ideally processing data before auth is not ideal
         // However, in the case of Multi-tenant access we must extract tenant ids prior to calling auth
         if(structure.isMultiTenantSelectionEnabled()){
@@ -605,7 +603,6 @@ public class DefaultEntityService implements EntityService {
         }
     }
 
-    @WithSpan
     private <T> CompletableFuture<Void> doPersistBulk(T entities,
                                                       EntityOperation operation,
                                                       EntityContext context,
@@ -640,11 +637,6 @@ public class DefaultEntityService implements EntityService {
 
         List<BulkOperation> bulkOperations = new ArrayList<>(list.size());
         for(EntityHolder<?> entityHolder : list){
-
-            if(entityHolder.id() == null || entityHolder.id().isEmpty()){
-                return CompletableFuture.failedFuture(new IllegalArgumentException("All Entities must have an id"));
-            }
-
             bulkOperations.add(persistLogic.apply(entityHolder));
         }
 
@@ -704,7 +696,6 @@ public class DefaultEntityService implements EntityService {
         return updateVersionForEntity(entity, primaryTerm, seqNo, false);
     }
 
-    @WithSpan
     @SuppressWarnings({"rawtypes", "unchecked"})
     private <T> T updateVersionForEntity(T entity, Long primaryTerm, Long seqNo, boolean convertRawJsonToTokenBuffer){
         String versionValue =  primaryTerm + ":" + seqNo;

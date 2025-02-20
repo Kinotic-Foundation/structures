@@ -103,7 +103,7 @@ public class MapUpsertPreProcessor implements UpsertPreProcessor<Map<Object, Obj
 
         // make sure the id is not null before appending to it
         if(id == null || id.isBlank()){
-            throw new IllegalArgumentException("Id field cannot be null or blank");
+            throw new IllegalArgumentException("Could not find id for Entity");
         }
 
         // we just always put the id back into the entity to simplify the logic
@@ -116,7 +116,7 @@ public class MapUpsertPreProcessor implements UpsertPreProcessor<Map<Object, Obj
 
                 tenantId = (String) entity.get(structure.getTenantIdFieldName());
                 if(tenantId == null){
-                    throw new IllegalArgumentException("Tenant Id field cannot be null");
+                    throw new IllegalArgumentException("Could not find TenantId for Entity");
                 }
 
                 context.getTenantSelection().add(tenantId);
@@ -144,7 +144,7 @@ public class MapUpsertPreProcessor implements UpsertPreProcessor<Map<Object, Obj
                 version = (String) entity.get(versionFieldName);
                 entity.remove(versionFieldName);
             }else{
-                throw new IllegalArgumentException("No version field found in Entity");
+                throw new IllegalArgumentException("Could not find version for Entity");
             }
         }
 
