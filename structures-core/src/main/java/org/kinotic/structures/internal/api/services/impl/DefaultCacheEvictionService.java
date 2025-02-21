@@ -5,7 +5,6 @@ import org.apache.commons.lang3.Validate;
 import org.kinotic.structures.api.domain.NamedQueriesDefinition;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.EntitiesService;
-import org.kinotic.structures.api.services.NamedQueriesService;
 import org.kinotic.structures.internal.api.services.CacheEvictionService;
 import org.kinotic.structures.internal.api.services.StructureDAO;
 import org.kinotic.structures.internal.endpoints.graphql.DelegatingGqlHandler;
@@ -23,7 +22,6 @@ public class DefaultCacheEvictionService implements CacheEvictionService {
     private final DelegatingGqlHandler delegatingGqlHandler;
     private final EntitiesService entitiesService;
     private final GqlOperationDefinitionService gqlOperationDefinitionService;
-    private final NamedQueriesService namedQueriesService;
     private final StructureDAO structureDAO;
 
     @Override
@@ -36,7 +34,6 @@ public class DefaultCacheEvictionService implements CacheEvictionService {
 
     @Override
     public void evictCachesFor(NamedQueriesDefinition namedQueriesDefinition) {
-        namedQueriesService.evictCachesFor(namedQueriesDefinition);
         String structureId = StructuresUtil.structureNameToId(namedQueriesDefinition.getNamespace(), namedQueriesDefinition.getStructure());
         structureDAO.findById(structureId)
                     .thenAccept(structure -> {

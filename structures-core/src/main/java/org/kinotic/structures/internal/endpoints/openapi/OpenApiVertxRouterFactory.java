@@ -139,11 +139,11 @@ public class OpenApiVertxRouterFactory {
 
         addDeleteRoutes(router, bodyHandler, true);
 
-        addRetrievalRoutes(router, bodyHandler, true);
+        addReadRoutes(router, bodyHandler, true);
 
         addDeleteRoutes(router, bodyHandler, false);
 
-        addRetrievalRoutes(router, bodyHandler, false);
+        addReadRoutes(router, bodyHandler, false);
 
         addNamedQueryRoutes(router, bodyHandler);
 
@@ -383,7 +383,7 @@ public class OpenApiVertxRouterFactory {
               });
     }
 
-    private void addRetrievalRoutes(Router router, BodyHandler bodyHandler, boolean admin) {
+    private void addReadRoutes(Router router, BodyHandler bodyHandler, boolean admin) {
         String basePath = (admin ? adminApiBasePath : apiBasePath);
 
         // Find all entities

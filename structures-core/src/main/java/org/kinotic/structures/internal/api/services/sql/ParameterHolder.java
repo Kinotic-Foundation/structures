@@ -6,6 +6,8 @@ package org.kinotic.structures.internal.api.services.sql;
  */
 public interface ParameterHolder {
 
+
+
     /**
      * @return true if this holder contains no parameters
      */
