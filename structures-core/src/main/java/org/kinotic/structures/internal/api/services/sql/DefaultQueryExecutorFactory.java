@@ -14,7 +14,6 @@ import org.kinotic.structures.internal.api.services.sql.executors.AggregateQuery
 import org.kinotic.structures.internal.api.services.sql.executors.PreAuthorizationExecutor;
 import org.kinotic.structures.internal.api.services.sql.executors.QueryExecutor;
 import org.kinotic.structures.internal.utils.QueryUtils;
-import org.kinotic.structures.internal.utils.SqlQueryType;
 import org.springframework.stereotype.Component;
 
 /**

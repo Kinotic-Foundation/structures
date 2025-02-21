@@ -14,7 +14,7 @@ export class TypescriptConverterStrategy implements IConverterStrategy<Type, C3T
 
     private readonly _initialState: (() => TypescriptConversionState) | TypescriptConversionState
     private readonly _logger: Logger
-    // The order here is important!
+    // CAUTION: The order here is important!
     // Arrays are considered objects but objects are not arrays. So the Array converter must come before the "ObjectLike" converter
     // Enums ar considered unions but unions are not enums. So the enum converter must come before the union converter
     private readonly _typeConverters = [new PrimitiveToC3Type(),

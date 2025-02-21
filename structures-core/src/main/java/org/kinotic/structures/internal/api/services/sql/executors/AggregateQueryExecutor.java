@@ -42,6 +42,7 @@ public class AggregateQueryExecutor extends AbstractQueryExecutor {
         this.structuresProperties = structuresProperties;
 
         if(!namedQueryDefinition.getParameters().isEmpty()){
+            // TODO: A place where pre processing would be helpful
             for(ParameterDefinition definition : namedQueryDefinition.getParameters()) {
                 if(!(definition.getType() instanceof PageableC3Type)){
                     parameterNames.add(definition.getName());

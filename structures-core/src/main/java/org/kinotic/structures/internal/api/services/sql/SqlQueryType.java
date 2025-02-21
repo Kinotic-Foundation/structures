@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.utils;
+package org.kinotic.structures.internal.api.services.sql;
 
 /**
  * Created by Navíd Mitchell 🤪 on 5/23/24.

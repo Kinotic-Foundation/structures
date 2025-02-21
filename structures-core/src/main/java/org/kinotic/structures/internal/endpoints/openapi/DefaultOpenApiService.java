@@ -29,7 +29,7 @@ import org.kinotic.structures.internal.config.OpenApiSecurityType;
 import org.kinotic.structures.internal.idl.converters.openapi.OpenApiConversionState;
 import org.kinotic.structures.internal.utils.OpenApiUtils;
 import org.kinotic.structures.internal.utils.QueryUtils;
-import org.kinotic.structures.internal.utils.SqlQueryType;
+import org.kinotic.structures.internal.api.services.sql.SqlQueryType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;

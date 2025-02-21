@@ -131,7 +131,6 @@ public class DefaultNamedQueriesService extends AbstractCrudService<NamedQueries
                     });
     }
 
-
     @Override
     public CompletableFuture<Page<NamedQueriesDefinition>> search(String searchText, Pageable pageable) {
         return crudServiceTemplate.search(indexName,

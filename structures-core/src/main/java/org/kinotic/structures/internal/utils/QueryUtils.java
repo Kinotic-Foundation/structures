@@ -3,10 +3,7 @@ package org.kinotic.structures.internal.utils;
 import org.apache.commons.lang3.Validate;
 import org.apache.commons.lang3.tuple.Pair;
 import org.kinotic.structures.api.domain.QueryParameter;
-import org.kinotic.structures.internal.api.services.sql.ListParameterHolder;
-import org.kinotic.structures.internal.api.services.sql.MapParameterHolder;
-import org.kinotic.structures.internal.api.services.sql.ParameterHolder;
-import org.kinotic.structures.internal.api.services.sql.QueryOptions;
+import org.kinotic.structures.internal.api.services.sql.*;
 
 import java.util.ArrayList;
 import java.util.HashMap;
