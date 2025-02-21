@@ -145,19 +145,10 @@ public class NamedQueryGqlOperationDefinitionCacheLoader implements AsyncCacheLo
     }
 
     private static OperationDefinition.Operation getGqlOperationType(SqlQueryType queryType) {
-        OperationDefinition.Operation operation = null;
-        switch (queryType) {
-            case AGGREGATE:
-            case SELECT:
-                operation = OperationDefinition.Operation.QUERY;
-                break;
-            case DELETE:
-            case INSERT:
-            case UPDATE:
-                operation = OperationDefinition.Operation.MUTATION;
-                break;
-        }
-        return operation;
+        return switch (queryType) {
+            case AGGREGATE, SELECT -> OperationDefinition.Operation.QUERY;
+            case DELETE, INSERT, UPDATE -> OperationDefinition.Operation.MUTATION;
+        };
     }
 
 

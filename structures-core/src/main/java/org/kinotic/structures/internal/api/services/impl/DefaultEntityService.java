@@ -607,18 +607,18 @@ public class DefaultEntityService implements EntityService {
                     .thenCompose(un -> delegatingUpsertPreProcessor.processArray(entities, context))
                     .thenCompose(entityList ->
                                          authService.authorize(operation, context)
-                                                    .thenCompose(un -> doPersistBulkLogic(entityList, context, persistLogic)))
+                                                    .thenCompose(un -> doPersistBulkLogic(entityList, persistLogic)))
                     .thenApply(unused -> null);
         }else {
             return validateContext(context)
                     .thenCompose(un -> authService.authorize(operation, context))
                     .thenCompose(un -> delegatingUpsertPreProcessor.processArray(entities, context))
-                    .thenCompose(list -> doPersistBulkLogic(list, context, persistLogic))
+                    .thenCompose(list -> doPersistBulkLogic(list, persistLogic))
                     .thenApply(un -> null);
         }
     }
 
-    private CompletableFuture<BulkResponse> doPersistBulkLogic(List<EntityHolder<Object>> list, EntityContext context,
+    private CompletableFuture<BulkResponse> doPersistBulkLogic(List<EntityHolder<Object>> list,
                                                                Function<EntityHolder<?>, BulkOperation> persistLogic) {
 
         BulkRequest.Builder br = new BulkRequest.Builder();
