@@ -41,7 +41,7 @@
         {
           "name": "tenantSelection",
           "type": {
-            "type": "array",
+            "type": "TenantSelection",
             "contains": {
               "type": "string"
             }

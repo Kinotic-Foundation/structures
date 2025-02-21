@@ -88,27 +88,23 @@ export interface IAdminEntitiesService {
      * @param structureId the id of the structure that this named query is defined for
      * @param queryName the name of the function that defines the query
      * @param parameters to pass to the query
-     * @param tenantSelection the list of tenants to use when retrieving the entity records
      * @returns Promise with the result of the query
      */
     namedQuery<T>(structureId: string,
                   queryName: string,
-                  parameters: QueryParameter[],
-                  tenantSelection: TenantSelection): Promise<T>
+                  parameters: QueryParameter[]): Promise<T>
 
     /**
      * Executes a named query and returns a Page of results.
      * @param structureId the id of the structure that this named query is defined for
      * @param queryName the name of the function that defines the query
      * @param parameters to pass to the query
-     * @param tenantSelection the list of tenants to use when retrieving the entity records
      * @param pageable the page settings to be used
      * @returns Promise with the result of the query
      */
     namedQueryPage<T>(structureId: string,
                       queryName: string,
                       parameters: QueryParameter[],
-                      tenantSelection: TenantSelection,
                       pageable: Pageable): Promise<IterablePage<T>>
 
     /**
@@ -171,31 +167,27 @@ export class AdminEntitiesService implements IAdminEntitiesService {
 
     public namedQuery<T>(structureId: string,
                          queryName: string,
-                         parameters: QueryParameter[],
-                         tenantSelection: TenantSelection): Promise<T> {
-        return this.serviceProxy.invoke('namedQuery', [structureId, queryName, parameters, tenantSelection])
+                         parameters: QueryParameter[]): Promise<T> {
+        return this.serviceProxy.invoke('namedQuery', [structureId, queryName, parameters])
     }
 
     public async namedQueryPage<T>(structureId: string,
                                    queryName: string,
                                    parameters: QueryParameter[],
-                                   tenantSelection: TenantSelection,
                                    pageable: Pageable): Promise<IterablePage<T>> {
-        const page: Page<T> = await this.namedQuerySinglePage(structureId, queryName, parameters, tenantSelection, pageable)
+        const page: Page<T> = await this.namedQuerySinglePage(structureId, queryName, parameters, pageable)
         return new FunctionalIterablePage(pageable, page,
                                           (pageable: Pageable) => this.namedQuerySinglePage(structureId,
                                                                                             queryName,
                                                                                             parameters,
-                                                                                            tenantSelection,
                                                                                             pageable))
     }
 
     public namedQuerySinglePage<T>(structureId: string,
                                    queryName: string,
                                    parameters: QueryParameter[],
-                                   tenantSelection: TenantSelection,
                                    pageable: Pageable): Promise<Page<T  >> {
-        return this.serviceProxy.invoke('namedQueryPage', [structureId, queryName, parameters, tenantSelection, pageable])
+        return this.serviceProxy.invoke('namedQueryPage', [structureId, queryName, parameters, pageable])
     }
 
     public async search<T>(structureId: string,

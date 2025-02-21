@@ -13,15 +13,6 @@ import { IConversionContext } from './IConversionContext.js'
 export interface ITypeConverter<T, R, S> {
 
     /**
-     * Checks if the given value is supported by this converter
-     *
-     * @param value to check if supported
-     * @param conversionState the state of the conversion, that is contained in the {@link IConversionContext}
-     * @return true if this converter can convert the type false if not
-     */
-    supports(value: T, conversionState: S): boolean
-
-    /**
      * Converts the given value to the specified return type.
      * @param value to convert
      * @param conversionContext the context to use for conversion
@@ -29,5 +20,14 @@ export interface ITypeConverter<T, R, S> {
      */
     convert(value: T,
             conversionContext: IConversionContext<T, R, S>): R
+
+    /**
+     * Checks if the given value is supported by this converter
+     *
+     * @param value to check if supported
+     * @param conversionState the state of the conversion, that is contained in the {@link IConversionContext}
+     * @return true if this converter can convert the type false if not
+     */
+    supports(value: T, conversionState: S): boolean
 
 }

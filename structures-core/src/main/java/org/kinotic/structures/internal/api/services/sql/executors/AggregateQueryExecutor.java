@@ -68,6 +68,7 @@ public class AggregateQueryExecutor extends AbstractQueryExecutor {
         List<Object> paramsToUse = null;
         QueryOptions options = null;
         if(!parameterNames.isEmpty()){
+            // TODO: here we can return an object that contains the query parameters and the QueryOptions, Pageable, TenantSelection, and other special params
             Pair<List<Object>, QueryOptions> pair = QueryUtils.extractOrderedParameterList(parameterHolder, parameterNames);
             paramsToUse = pair.getLeft();
             options = pair.getRight();
