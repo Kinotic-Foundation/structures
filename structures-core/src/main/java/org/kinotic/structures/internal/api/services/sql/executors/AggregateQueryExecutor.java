@@ -2,20 +2,13 @@ package org.kinotic.structures.internal.api.services.sql.executors;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import org.apache.commons.lang3.tuple.Pair;
 import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
-import org.kinotic.continuum.idl.api.schema.FunctionDefinition;
-import org.kinotic.continuum.idl.api.schema.ParameterDefinition;
 import org.kinotic.structures.api.config.StructuresProperties;
-import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.Structure;
-import org.kinotic.structures.api.domain.idl.PageableC3Type;
 import org.kinotic.structures.api.domain.idl.decorators.MultiTenancyType;
-import org.kinotic.structures.internal.api.services.sql.ElasticVertxClient;
-import org.kinotic.structures.internal.api.services.sql.ParameterHolder;
-import org.kinotic.structures.internal.api.services.sql.QueryOptions;
-import org.kinotic.structures.internal.utils.QueryUtils;
+import org.kinotic.structures.internal.api.services.sql.elasticsearch.ElasticVertxClient;
+import org.kinotic.structures.internal.api.services.sql.QueryContext;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,7 +26,6 @@ public class AggregateQueryExecutor extends AbstractQueryExecutor {
 
     public AggregateQueryExecutor(Structure structure,
                                   ElasticVertxClient elasticVertxClient,
-                                  FunctionDefinition namedQueryDefinition,
                                   String statement,
                                   StructuresProperties structuresProperties) {
         super(structure);
@@ -41,74 +33,87 @@ public class AggregateQueryExecutor extends AbstractQueryExecutor {
         this.statement = statement;
         this.structuresProperties = structuresProperties;
 
-        if(!namedQueryDefinition.getParameters().isEmpty()){
-            for(ParameterDefinition definition : namedQueryDefinition.getParameters()) {
-                if(!(definition.getType() instanceof PageableC3Type)){
-                    parameterNames.add(definition.getName());
-                }
-            }
-        }
     }
 
     @Override
-    public <T> CompletableFuture<List<T>> execute(ParameterHolder parameterHolder,
-                                                  Class<T> type,
-                                                  EntityContext context) {
+    public <T> CompletableFuture<List<T>> execute(QueryContext context, Class<T> type) {
 
-        return executePage(parameterHolder,null, type, context)
+        return executePage(context, null, type)
                                  .thenApply(Page::getContent);
     }
 
     @Override
-    public <T> CompletableFuture<Page<T>> executePage(ParameterHolder parameterHolder,
+    public <T> CompletableFuture<Page<T>> executePage(QueryContext context,
                                                       Pageable pageable,
-                                                      Class<T> type,
-                                                      EntityContext context) {
-        List<Object> paramsToUse = null;
-        QueryOptions options = null;
-        if(!parameterNames.isEmpty()){
-            Pair<List<Object>, QueryOptions> pair = QueryUtils.extractOrderedParameterList(parameterHolder, parameterNames);
-            paramsToUse = pair.getLeft();
-            options = pair.getRight();
-        }else if(parameterHolder != null && !parameterHolder.isEmpty()){
-            throw new IllegalArgumentException("This query does not support any parameters");
-        }
-
+                                                      Class<T> type) {
         JsonObject filter = createFilterIfNeeded(context);
 
-        return elasticVertxClient.querySql(statement, paramsToUse, filter, options, pageable, type);
+        return elasticVertxClient.querySql(statement,
+                                           context.getQueryParameters(),
+                                           filter,
+                                           context.getQueryOptions(),
+                                           pageable,
+                                           type);
     }
 
-    private JsonObject createFilterIfNeeded(EntityContext context) {
+    private JsonObject createFilterIfNeeded(QueryContext context) {
         JsonObject filter = null;
         // add multi tenancy filters if needed
         if(structure.getMultiTenancyType() == MultiTenancyType.SHARED) {
-            // Filter must fit the Query DSL format, and look like the following
-            //     "bool":{
-            //         "filter":[
-            //         {
-            //             "term":{
-            //             "structuresTenantId":{
-            //                 "value":"kinotic"
-            //             }
-            //         }
-            //         },
-            //         {
-            //             "terms": {
-            //             "_routing": ["kinotic"]
-            //         }
-            //         }
-            //       ]
-            //     }
-            String tenantId = context.getParticipant().getTenantId();
-            filter = new JsonObject().put("bool", new JsonObject()
-                    .put("filter", new JsonArray()
-                            .add(new JsonObject().put("term", new JsonObject()
-                                    .put(structuresProperties.getTenantIdFieldName(), new JsonObject()
-                                            .put("value", tenantId))))
-                            .add(new JsonObject().put("terms", new JsonObject()
-                                    .put("_routing", new JsonArray().add(tenantId))))
-                    ));
+
+            if(structure.isMultiTenantSelectionEnabled() && context.getEntityContext().hasTenantSelection()){
+
+                // Filter must fit the Query DSL format, and look like the following
+                //     "bool":{
+                //         "filter":[
+                //         {
+                //             "terms":{
+                //                  "tenantId": ["tenant1", "tenant2", "tenant3"]
+                //              }
+                //         },
+                //       ]
+                //     }
+
+                JsonArray tenants = new JsonArray(context.getEntityContext().getTenantSelection());
+                filter = new JsonObject().put("bool", new JsonObject()
+                        .put("filter", new JsonArray()
+                                .add(new JsonObject().put("terms", new JsonObject()
+                                        .put(structure.getTenantIdFieldName(), tenants)))
+                        ));
+
+            }else if(!structure.isMultiTenantSelectionEnabled() && context.getEntityContext().hasTenantSelection()){
+                throw new IllegalArgumentException("Tenant selection is not supported for this structure");
+            }else{
+
+                // Filter must fit the Query DSL format, and look like the following
+                //     "bool":{
+                //         "filter":[
+                //         {
+                //             "term":{
+                //                  "structuresTenantId":{
+                //                      "value":"kinotic"
+                //                  }
+                //             }
+                //         },
+                //         {
+                //             "terms": {
+                //                  "_routing": ["kinotic"]
+                //              }
+                //         }
+                //       ]
+                //     }
+
+                String tenantId = context.getEntityContext().getParticipant().getTenantId();
+                filter = new JsonObject().put("bool", new JsonObject()
+                        .put("filter", new JsonArray()
+                                .add(new JsonObject().put("term", new JsonObject()
+                                        .put(structuresProperties.getTenantIdFieldName(), new JsonObject()
+                                                .put("value", tenantId))))
+                                .add(new JsonObject().put("terms", new JsonObject()
+                                        .put("_routing", new JsonArray().add(tenantId))))
+                        ));
+            }
+
         }
         return filter;
     }

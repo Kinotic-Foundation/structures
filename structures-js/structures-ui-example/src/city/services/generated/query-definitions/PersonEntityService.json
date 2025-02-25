@@ -37,6 +37,15 @@
           "type": {
             "type": "string"
           }
+        },
+        {
+          "name": "tenantSelection",
+          "type": {
+            "type": "TenantSelection",
+            "contains": {
+              "type": "string"
+            }
+          }
         }
       ]
     },

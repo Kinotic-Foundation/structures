@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.api.services.sql;
+package org.kinotic.structures.internal.api.services.sql.elasticsearch;
 
 import co.elastic.clients.elasticsearch._types.ErrorCause;
 import co.elastic.clients.elasticsearch._types.ErrorResponse;
@@ -26,9 +26,8 @@ import org.kinotic.continuum.core.api.crud.CursorPageable;
 import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.structures.api.config.StructuresProperties;
+import org.kinotic.structures.api.domain.QueryOptions;
 import org.kinotic.structures.api.domain.RawJson;
-import org.kinotic.structures.internal.api.services.sql.executors.ElasticColumn;
-import org.kinotic.structures.internal.api.services.sql.executors.ElasticSQLResponse;
 import org.kinotic.structures.api.config.ElasticConnectionInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

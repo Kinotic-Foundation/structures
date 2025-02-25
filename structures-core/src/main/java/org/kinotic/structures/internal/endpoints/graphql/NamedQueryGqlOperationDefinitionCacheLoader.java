@@ -18,7 +18,7 @@ import org.kinotic.structures.internal.api.services.StructureDAO;
 import org.kinotic.structures.internal.endpoints.graphql.datafetchers.PagedQueryDataFetcher;
 import org.kinotic.structures.internal.endpoints.graphql.datafetchers.QueryDataFetcher;
 import org.kinotic.structures.internal.utils.QueryUtils;
-import org.kinotic.structures.internal.utils.SqlQueryType;
+import org.kinotic.structures.internal.api.services.sql.SqlQueryType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -145,19 +145,10 @@ public class NamedQueryGqlOperationDefinitionCacheLoader implements AsyncCacheLo
     }
 
     private static OperationDefinition.Operation getGqlOperationType(SqlQueryType queryType) {
-        OperationDefinition.Operation operation = null;
-        switch (queryType) {
-            case AGGREGATE:
-            case SELECT:
-                operation = OperationDefinition.Operation.QUERY;
-                break;
-            case DELETE:
-            case INSERT:
-            case UPDATE:
-                operation = OperationDefinition.Operation.MUTATION;
-                break;
-        }
-        return operation;
+        return switch (queryType) {
+            case AGGREGATE, SELECT -> OperationDefinition.Operation.QUERY;
+            case DELETE, INSERT, UPDATE -> OperationDefinition.Operation.MUTATION;
+        };
     }
 
 

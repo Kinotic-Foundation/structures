@@ -15,6 +15,7 @@ import org.kinotic.structures.api.domain.NamedQueriesDefinition;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.NamedQueriesService;
 import org.kinotic.structures.internal.api.services.sql.ParameterHolder;
+import org.kinotic.structures.internal.api.services.sql.QueryContext;
 import org.kinotic.structures.internal.api.services.sql.QueryExecutorFactory;
 import org.kinotic.structures.internal.api.services.sql.executors.QueryExecutor;
 import org.springframework.data.elasticsearch.core.ReactiveElasticsearchOperations;
@@ -35,9 +36,9 @@ public class DefaultNamedQueriesService extends AbstractCrudService<NamedQueries
     private final AsyncLoadingCache<CacheKey, QueryExecutor> cache;
     private final ConcurrentHashMap<String, List<CacheKey>> cacheKeyTracker = new ConcurrentHashMap<>();
 
-    public DefaultNamedQueriesService(ElasticsearchAsyncClient esAsyncClient,
+    public DefaultNamedQueriesService(CrudServiceTemplate crudServiceTemplate,
+                                      ElasticsearchAsyncClient esAsyncClient,
                                       ReactiveElasticsearchOperations esOperations,
-                                      CrudServiceTemplate crudServiceTemplate,
                                       QueryExecutorFactory queryExecutorFactory) {
         super("named_query_service_definition",
               NamedQueriesDefinition.class,
@@ -92,7 +93,7 @@ public class DefaultNamedQueriesService extends AbstractCrudService<NamedQueries
                                                             EntityContext context) {
         // Authorization happens in the QueryExecutor so we don't need an additional cache to hold the NamedQueryAuthorizationService
         return cache.get(new CacheKey(queryName, structure))
-                    .thenCompose(queryExecutor -> queryExecutor.execute(parameterHolder, type, context));
+                    .thenCompose(queryExecutor -> queryExecutor.execute(new QueryContext(context, parameterHolder), type));
     }
 
     @Override
@@ -104,7 +105,7 @@ public class DefaultNamedQueriesService extends AbstractCrudService<NamedQueries
                                                                 EntityContext context) {
         // Authorization happens in the QueryExecutor so we don't need an additional cache to hold the NamedQueryAuthorizationService
         return cache.get(new CacheKey(queryName, structure))
-                    .thenCompose(queryExecutor -> queryExecutor.executePage(parameterHolder, pageable, type, context));
+                    .thenCompose(queryExecutor -> queryExecutor.executePage(new QueryContext(context, parameterHolder), pageable, type));
     }
 
     @Override
@@ -127,10 +128,10 @@ public class DefaultNamedQueriesService extends AbstractCrudService<NamedQueries
         return super.save(entity)
                     .thenApply(namedQueriesDefinition -> {
                         evictCachesFor(namedQueriesDefinition);
+                        //cacheEvictionService.evictCachesFor(namedQueriesDefinition);
                         return namedQueriesDefinition;
                     });
     }
-
 
     @Override
     public CompletableFuture<Page<NamedQueriesDefinition>> search(String searchText, Pageable pageable) {

@@ -68,6 +68,17 @@
       }
     },
     {
+      "name": "tenantId",
+      "decorators": [
+        {
+          "type": "TenantIdDecorator"
+        }
+      ],
+      "type": {
+        "type": "string"
+      }
+    },
+    {
       "name": "age",
       "type": {
         "type": "short"
