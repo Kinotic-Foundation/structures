@@ -14,7 +14,6 @@ import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.NamedQueriesDefinition;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.NamedQueriesService;
-import org.kinotic.structures.internal.api.services.CacheEvictionService;
 import org.kinotic.structures.internal.api.services.sql.ParameterHolder;
 import org.kinotic.structures.internal.api.services.sql.QueryContext;
 import org.kinotic.structures.internal.api.services.sql.QueryExecutorFactory;
@@ -36,10 +35,8 @@ public class DefaultNamedQueriesService extends AbstractCrudService<NamedQueries
 
     private final AsyncLoadingCache<CacheKey, QueryExecutor> cache;
     private final ConcurrentHashMap<String, List<CacheKey>> cacheKeyTracker = new ConcurrentHashMap<>();
-    private final CacheEvictionService cacheEvictionService;
 
-    public DefaultNamedQueriesService(CacheEvictionService cacheEvictionService,
-                                      CrudServiceTemplate crudServiceTemplate,
+    public DefaultNamedQueriesService(CrudServiceTemplate crudServiceTemplate,
                                       ElasticsearchAsyncClient esAsyncClient,
                                       ReactiveElasticsearchOperations esOperations,
                                       QueryExecutorFactory queryExecutorFactory) {
@@ -48,8 +45,6 @@ public class DefaultNamedQueriesService extends AbstractCrudService<NamedQueries
               esAsyncClient,
               esOperations,
               crudServiceTemplate);
-
-        this.cacheEvictionService = cacheEvictionService;
 
         cache = Caffeine.newBuilder()
                         .expireAfterAccess(20, TimeUnit.HOURS)
@@ -133,7 +128,7 @@ public class DefaultNamedQueriesService extends AbstractCrudService<NamedQueries
         return super.save(entity)
                     .thenApply(namedQueriesDefinition -> {
                         evictCachesFor(namedQueriesDefinition);
-                        cacheEvictionService.evictCachesFor(namedQueriesDefinition);
+                        //cacheEvictionService.evictCachesFor(namedQueriesDefinition);
                         return namedQueriesDefinition;
                     });
     }
