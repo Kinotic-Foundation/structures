@@ -10,7 +10,9 @@ import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.domain.idl.decorators.QueryDecorator;
 import org.kinotic.structures.api.services.security.AuthorizationService;
 import org.kinotic.structures.api.services.security.AuthorizationServiceFactory;
+import org.kinotic.structures.internal.api.services.sql.elasticsearch.ElasticVertxClient;
 import org.kinotic.structures.internal.api.services.sql.executors.AggregateQueryExecutor;
+import org.kinotic.structures.internal.api.services.sql.executors.ParameterProcessorExecutor;
 import org.kinotic.structures.internal.api.services.sql.executors.PreAuthorizationExecutor;
 import org.kinotic.structures.internal.api.services.sql.executors.QueryExecutor;
 import org.kinotic.structures.internal.utils.QueryUtils;
@@ -53,7 +55,9 @@ public class DefaultQueryExecutorFactory implements QueryExecutorFactory {
             QueryExecutor queryExecutor = createQueryExecutorForStatement(structure, statements[0], namedQuery);
             AuthorizationService<NamedQueryOperation> authorizationService =
                     authorizationServiceFactory.createNamedQueryAuthorizationService(namedQuery).join();
-            return new PreAuthorizationExecutor(authorizationService, queryExecutor);
+            return new ParameterProcessorExecutor(structure,
+                    namedQuery,
+                    new PreAuthorizationExecutor(authorizationService, queryExecutor));
         }else{
             throw new IllegalArgumentException("Multiple statements not supported yet");
         }
@@ -67,7 +71,6 @@ public class DefaultQueryExecutorFactory implements QueryExecutorFactory {
         return switch (queryType) {
             case AGGREGATE -> new AggregateQueryExecutor(structure,
                                                          elasticVertxClient,
-                                                         namedQueryDefinition,
                                                          statement,
                                                          structuresProperties);
             case DELETE -> throw new NotImplementedException("Delete not supported yet");

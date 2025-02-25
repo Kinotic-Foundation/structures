@@ -198,7 +198,7 @@ public class DefaultOpenApiService implements OpenApiService {
         byTenantAndIdPathItem.delete(deleteOperation);
 
         // add the path item to the paths
-        paths.put(basePath + lowercaseNamespace + "/" + lowercaseName + "/{tenantId/{id}", byTenantAndIdPathItem);
+        paths.put(basePath + lowercaseNamespace + "/" + lowercaseName + "/{tenantId}/{id}", byTenantAndIdPathItem);
 
 
         // Operation for delete by query

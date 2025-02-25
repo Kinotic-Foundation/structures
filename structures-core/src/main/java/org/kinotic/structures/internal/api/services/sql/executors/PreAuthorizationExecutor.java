@@ -3,10 +3,9 @@ package org.kinotic.structures.internal.api.services.sql.executors;
 import lombok.RequiredArgsConstructor;
 import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
-import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.NamedQueryOperation;
 import org.kinotic.structures.api.services.security.AuthorizationService;
-import org.kinotic.structures.internal.api.services.sql.ParameterHolder;
+import org.kinotic.structures.internal.api.services.sql.QueryContext;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -21,22 +20,21 @@ public class PreAuthorizationExecutor implements QueryExecutor{
     private final QueryExecutor delegate;
 
     @Override
-    public <T> CompletableFuture<List<T>> execute(ParameterHolder parameterHolder, Class<T> type, EntityContext context) {
-        return authorizationService.authorize(NamedQueryOperation.EXECUTE, context)
-                                   .thenCompose(v -> delegate.execute(parameterHolder,
-                                                                           type,
-                                                                           context));
+    public <T> CompletableFuture<List<T>> execute(QueryContext context, Class<T> type) {
+        return authorizationService.authorize(NamedQueryOperation.EXECUTE, context.getEntityContext())
+                                   .thenCompose(v -> delegate.execute(
+                                           context, type
+                                   ));
     }
 
     @Override
-    public <T> CompletableFuture<Page<T>> executePage(ParameterHolder parameterHolder,
+    public <T> CompletableFuture<Page<T>> executePage(QueryContext context,
                                                       Pageable pageable,
-                                                      Class<T> type,
-                                                      EntityContext context) {
-        return authorizationService.authorize(NamedQueryOperation.EXECUTE_PAGE, context)
-                                   .thenCompose(v -> delegate.executePage(parameterHolder,
-                                                                               pageable,
-                                                                               type,
-                                                                               context));
+                                                      Class<T> type) {
+        return authorizationService.authorize(NamedQueryOperation.EXECUTE_PAGE, context.getEntityContext())
+                                   .thenCompose(v -> delegate.executePage(
+                                           context, pageable,
+                                           type
+                                   ));
     }
 }

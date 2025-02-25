@@ -1,11 +1,9 @@
-package org.kinotic.structures.internal.api.services.sql.executors;
+package org.kinotic.structures.internal.api.services.sql.elasticsearch;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-
-import java.util.List;
 
 /**
  * Created by Navíd Mitchell 🤪 on 4/30/24.
@@ -14,11 +12,9 @@ import java.util.List;
 @Getter
 @Setter
 @Accessors(chain = true)
-public class ElasticSQLResponse {
+public class ElasticColumn {
 
-    private List<ElasticColumn> columns;
+    private String name;
+    private String type;
 
-    private List<List<Object>> rows;
-
-    private String cursor;
 }

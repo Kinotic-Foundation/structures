@@ -16,6 +16,7 @@ import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.NamedQueriesService;
 import org.kinotic.structures.internal.api.services.CacheEvictionService;
 import org.kinotic.structures.internal.api.services.sql.ParameterHolder;
+import org.kinotic.structures.internal.api.services.sql.QueryContext;
 import org.kinotic.structures.internal.api.services.sql.QueryExecutorFactory;
 import org.kinotic.structures.internal.api.services.sql.executors.QueryExecutor;
 import org.springframework.data.elasticsearch.core.ReactiveElasticsearchOperations;
@@ -97,7 +98,7 @@ public class DefaultNamedQueriesService extends AbstractCrudService<NamedQueries
                                                             EntityContext context) {
         // Authorization happens in the QueryExecutor so we don't need an additional cache to hold the NamedQueryAuthorizationService
         return cache.get(new CacheKey(queryName, structure))
-                    .thenCompose(queryExecutor -> queryExecutor.execute(parameterHolder, type, context));
+                    .thenCompose(queryExecutor -> queryExecutor.execute(new QueryContext(context, parameterHolder), type));
     }
 
     @Override
@@ -109,7 +110,7 @@ public class DefaultNamedQueriesService extends AbstractCrudService<NamedQueries
                                                                 EntityContext context) {
         // Authorization happens in the QueryExecutor so we don't need an additional cache to hold the NamedQueryAuthorizationService
         return cache.get(new CacheKey(queryName, structure))
-                    .thenCompose(queryExecutor -> queryExecutor.executePage(parameterHolder, pageable, type, context));
+                    .thenCompose(queryExecutor -> queryExecutor.executePage(new QueryContext(context, parameterHolder), pageable, type));
     }
 
     @Override
