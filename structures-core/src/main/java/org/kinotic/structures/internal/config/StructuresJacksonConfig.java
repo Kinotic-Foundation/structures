@@ -12,6 +12,7 @@ import org.kinotic.structures.api.domain.FastestType;
 import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.domain.idl.PageC3Type;
 import org.kinotic.structures.api.domain.idl.PageableC3Type;
+import org.kinotic.structures.api.domain.idl.QueryOptionsC3Type;
 import org.kinotic.structures.api.domain.idl.TenantSelectionC3Type;
 import org.kinotic.structures.internal.serializer.*;
 import org.slf4j.Logger;
@@ -59,6 +60,7 @@ public class StructuresJacksonConfig {
         ret.registerSubtypes(new NamedType(PageableC3Type.class, "pageable"));
         ret.registerSubtypes(new NamedType(PageC3Type.class, "page"));
         ret.registerSubtypes(new NamedType(TenantSelectionC3Type.class, "tenantSelection"));
+        ret.registerSubtypes(new NamedType(QueryOptionsC3Type.class, "queryOptions"));
 
         // register internal serializer deserializers
         ret.addDeserializer(RawJson.class, new RawJsonDeserializer(new ObjectMapper()));
