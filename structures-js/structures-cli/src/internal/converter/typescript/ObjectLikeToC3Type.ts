@@ -5,6 +5,7 @@ import {TypescriptConversionState} from './TypescriptConversionState.js'
 import {IConversionContext} from '../IConversionContext.js'
 import {ITypeConverter} from '../ITypeConverter.js'
 import {tsDecoratorToC3Decorator, convertPrecisionToC3Type} from './ConverterUtils.js'
+import {TenantIdDecorator} from '@kinotic/structures-api'
 
 /**
  * Converts a typescript Class, Interface, or Type to a C3Type
@@ -149,6 +150,12 @@ export class ObjectLikeToC3Type implements ITypeConverter<Type, C3Type, Typescri
                     if (decorator.getName() !== 'Precision') {
                         const c3Decorator = tsDecoratorToC3Decorator(decorator)
                         if(c3Decorator) {
+
+                            if(c3Decorator instanceof TenantIdDecorator){
+                                conversionContext.state().multiTenantSelectionEnabled = true
+
+                            }
+
                             if (!propertyDefinition.containsDecorator(c3Decorator)) {
                                 propertyDefinition.addDecorator(c3Decorator)
                             }

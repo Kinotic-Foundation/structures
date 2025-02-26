@@ -83,36 +83,35 @@ public class ParameterProcessorExecutor extends AbstractQueryExecutor {
         return queryMetadataBuilder.build();
     }
 
-    private boolean extractSpecialParameterIfApplicable(String property,
-                                                        Object value,
-                                                        QueryContext context) {
+    // TODO: add performance improvements for using the index when using a list.
+    //       and for the map extract special params then the rest.
+    //       This way we do not do a bunch of string comparisons during the query request
+    private void addPropertyToContext(String property,
+                                      Object value,
+                                      QueryContext context) {
         if(property.equals(queryMetadata.getTenantSelectionParameterName())) {
             //noinspection unchecked
             context.getEntityContext().setTenantSelection((List<String>) value);
-            return true;
         }else if(property.equals(queryMetadata.getQueryOptionsParameterName())) {
             context.setQueryOptions((QueryOptions) value);
-            return true;
         }else if(property.toLowerCase().equals(timeZoneOptionName)){
             if(context.getQueryOptions() == null){
                 context.setQueryOptions(new QueryOptions());
             }
             context.getQueryOptions().setTimeZone((String)value);
-            return true;
         }else if(property.toLowerCase().equals(requestTimeoutOptionName)){
             if(context.getQueryOptions() == null){
                 context.setQueryOptions(new QueryOptions());
             }
             context.getQueryOptions().setRequestTimeout((Integer)value);
-            return true;
         }else if(property.toLowerCase().equals(pageTimeoutOptionName)){
             if(context.getQueryOptions() == null){
                 context.setQueryOptions(new QueryOptions());
             }
             context.getQueryOptions().setPageTimeout((String)value);
-            return true;
+        }else{
+            context.getQueryParameters().add(value);
         }
-        return false;
     }
 
     private void processQueryContext(QueryContext context){
@@ -128,9 +127,7 @@ public class ParameterProcessorExecutor extends AbstractQueryExecutor {
                 // We may need to use the parameterNames list to reorder them.
                 // So far the javascript client provides the order of the parameters in the list is the same as the order of the parameterNames list
                 for (QueryParameter queryParameter : queryParameters) {
-                    if(!extractSpecialParameterIfApplicable(queryParameter.getKey(), queryParameter.getValue(), context)){
-                        context.getQueryParameters().add(queryParameter.getValue());
-                    }
+                    addPropertyToContext(queryParameter.getKey(), queryParameter.getValue(), context);
                 }
             }else if(parameterHolder instanceof MapParameterHolder mapParameterHolder){
 
@@ -139,9 +136,7 @@ public class ParameterProcessorExecutor extends AbstractQueryExecutor {
                 for(String key : queryMetadata.getQueryParameterNames()){
                     Object value = queryParameters.get(key);
                     if(value != null){
-                        if(!extractSpecialParameterIfApplicable(key, value, context)){
-                            context.getQueryParameters().add(value);
-                        }
+                        addPropertyToContext(key, value, context);
                     }else{
                         throw new IllegalArgumentException("Parameter " + key + " is missing from expected parameters");
                     }
