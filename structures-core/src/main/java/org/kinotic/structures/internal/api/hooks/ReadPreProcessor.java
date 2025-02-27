@@ -145,15 +145,16 @@ public class ReadPreProcessor {
             // Check if multiple tenants are selected if not use the logged-in user's tenant
             if(context.hasTenantSelection()) {
                 List<String> multiTenantSelection = context.getTenantSelection();
+                List<FieldValue> fieldValues = new ArrayList<>(multiTenantSelection.size());
+                for(String tenantId : multiTenantSelection){
+                    fieldValues.add(FieldValue.of(tenantId));
+                }
                 log.trace("Find All Multi tenant selection provided. Received {} tenants", multiTenantSelection.size());
 
                 // We do not add routing since the data could be spread across multiple shards
                 queryBuilder = new Query.Builder();
-                queryBuilder.bool(b -> b.filter(qb -> {
-                            List<FieldValue> fieldValues = new ArrayList<>(multiTenantSelection.size());
-                            return qb.terms(tsq -> tsq.field(structure.getTenantIdFieldName())
-                                               .terms(tqf-> tqf.value(fieldValues)));
-                        }));
+                queryBuilder.bool(b -> b.filter(qb -> qb.terms(tsq -> tsq.field(structure.getTenantIdFieldName())
+                                                                         .terms(tqf-> tqf.value(fieldValues)))));
             }else{
 
                 routingConsumer.accept(context.getParticipant().getTenantId());
@@ -179,16 +180,17 @@ public class ReadPreProcessor {
                 // Check if multiple tenants are selected if not use the logged-in user's tenant
                 if(context.hasTenantSelection()) {
                     List<String> multiTenantSelection = context.getTenantSelection();
+                    List<FieldValue> fieldValues = new ArrayList<>(multiTenantSelection.size());
+                    for(String tenantId : multiTenantSelection){
+                        fieldValues.add(FieldValue.of(tenantId));
+                    }
                     log.trace("Search Multi tenant selection provided. Received {} tenants", multiTenantSelection.size());
 
                     // We do not add routing since the data could be spread across multiple shards
                     queryBuilder
                             .bool(b -> b.must(must -> must.queryString(qs -> qs.query(searchText).analyzeWildcard(true)))
-                                        .filter(qb -> {
-                                            List<FieldValue> fieldValues = new ArrayList<>(multiTenantSelection.size());
-                                            return qb.terms(tsq -> tsq.field(structure.getTenantIdFieldName())
-                                                                      .terms(tqf-> tqf.value(fieldValues)));
-                                        }));
+                                        .filter(qb -> qb.terms(tsq -> tsq.field(structure.getTenantIdFieldName())
+                                                                         .terms(tqf-> tqf.value(fieldValues)))));
 
                 }else{
 
