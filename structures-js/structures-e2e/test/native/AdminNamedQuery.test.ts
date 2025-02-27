@@ -1,4 +1,5 @@
 import {AdminEntityService, IAdminEntityService, IEntityService, Structure, Structures} from '@kinotic/structures-api'
+import * as allure from 'allure-js-commons'
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it} from 'vitest'
 import {WebSocket} from 'ws'
 import {PersonWithTenant} from '../domain/PersonWithTenant.js'
@@ -24,6 +25,7 @@ interface LocalTestContext {
 describe('Admin Named Query Tests', () => {
 
     beforeAll(async () => {
+        await allure.parentSuite('End To End Tests')
         await initContinuumClient()
     }, 300000)
 

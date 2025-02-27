@@ -21,6 +21,7 @@ import {
     logFailure,
     shutdownContinuumClient,
 } from '../TestHelpers.js'
+import * as allure from "allure-js-commons";
 
 Object.assign(global, { WebSocket})
 
@@ -33,6 +34,7 @@ interface LocalTestContext {
 describe('Admin EntityService Tests', () => {
 
     beforeAll(async () => {
+        await allure.parentSuite('End To End Tests')
         await initContinuumClient()
     }, 300000)
 
@@ -50,10 +52,11 @@ describe('Admin EntityService Tests', () => {
     })
 
     afterEach<LocalTestContext>(async (context) => {
-       await expect(deleteStructure(context.structure.id as string)).resolves.toBeUndefined()
+        await expect(deleteStructure(context.structure.id as string)).resolves.toBeUndefined()
     })
 
-    it<LocalTestContext>('Test Basic CRUD',
+    it<LocalTestContext>(
+        'Test Basic CRUD',
         async ({entityService, adminEntityService}) => {
             // Create a person
             const person = createTestPersonWithTenant(1, 'tenant01')
@@ -97,7 +100,8 @@ describe('Admin EntityService Tests', () => {
         }
     )
 
-    it<LocalTestContext>('Test FindByIds ',
+    it<LocalTestContext>(
+        'Test FindByIds ',
         async ({entityService, adminEntityService}) => {
             await createTestPeopleWithTenantAndVerify(adminEntityService, entityService, 'tenant01', 100)
             await createTestPeopleWithTenantAndVerify(adminEntityService, entityService, 'tenant02', 100)
@@ -109,11 +113,11 @@ describe('Admin EntityService Tests', () => {
             let elementsFound = 0
             let peopleIds: TenantSpecificId[] = []
             const pageable = Pageable.createWithCursor(null,
-                10,
-                { orders: [
-                        new Order('firstName', Direction.ASC),
-                        new Order('id', Direction.ASC)
-                    ] })
+                                                       10,
+                                                       { orders: [
+                                                               new Order('firstName', Direction.ASC),
+                                                               new Order('id', Direction.ASC)
+                                                           ] })
             const pageOne = await adminEntityService.findAll(['tenant01'], pageable)
             for await(const page of pageOne){
                 expect(page).toBeDefined()
@@ -142,7 +146,8 @@ describe('Admin EntityService Tests', () => {
         }
     )
 
-    it<LocalTestContext>('Test FindByIds and None Found ',
+    it<LocalTestContext>(
+        'Test FindByIds and None Found ',
         async ({entityService, adminEntityService}) => {
             await createTestPeopleWithTenantAndVerify(adminEntityService, entityService, 'tenant01', 50)
             await createTestPeopleWithTenantAndVerify(adminEntityService, entityService, 'tenant02', 50)
@@ -151,11 +156,11 @@ describe('Admin EntityService Tests', () => {
             let elementsFound = 0
             let peopleIds: TenantSpecificId[] = []
             const pageable = Pageable.createWithCursor(null,
-                10,
-                { orders: [
-                        new Order('firstName', Direction.ASC),
-                        new Order('id', Direction.ASC)
-                    ] })
+                                                       10,
+                                                       { orders: [
+                                                               new Order('firstName', Direction.ASC),
+                                                               new Order('id', Direction.ASC)
+                                                           ] })
             const pageOne = await adminEntityService.findAll(['tenant01'], pageable)
             for await(const page of pageOne){
                 expect(page).toBeDefined()
@@ -181,13 +186,14 @@ describe('Admin EntityService Tests', () => {
         }
     )
 
-    it<LocalTestContext>('Test CountByQuery',
+    it<LocalTestContext>(
+        'Test CountByQuery',
         async ({entityService, adminEntityService}) => {
             await createTestPeopleWithTenantAndVerify(adminEntityService, entityService, 'tenant01', 100)
             await createTestPeopleWithTenantAndVerify(adminEntityService, entityService, 'tenant02', 100)
 
             expect(await adminEntityService.countByQuery("lastName: Doe", ['tenant01']),
-                'Should have 50 Entities when using Admin countByQuery tenant01').toBe(50)
+                   'Should have 50 Entities when using Admin countByQuery tenant01').toBe(50)
 
             expect(await adminEntityService.countByQuery("lastName: Doe", ['tenant02']),
                    'Should have 50 Entities when using Admin countByQuery tenant02').toBe(50)
@@ -198,7 +204,8 @@ describe('Admin EntityService Tests', () => {
         }
     )
 
-    it<LocalTestContext>('Test CountByQuery and DeleteByQuery',
+    it<LocalTestContext>(
+        'Test CountByQuery and DeleteByQuery',
         async ({entityService, adminEntityService}) => {
             await createTestPeopleWithTenantAndVerify(adminEntityService, entityService, 'tenant01', 100)
             await createTestPeopleWithTenantAndVerify(adminEntityService, entityService, 'tenant02', 100)
@@ -220,7 +227,8 @@ describe('Admin EntityService Tests', () => {
         }
     )
 
-    it<LocalTestContext>('Test Bulk CRUD',
+    it<LocalTestContext>(
+        'Test Bulk CRUD',
         async ({entityService, adminEntityService}) => {
             // Create people
             await createTestPeopleWithTenantAndVerify(adminEntityService, entityService, 'tenant01', 100)

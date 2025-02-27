@@ -37,6 +37,8 @@ export async function setup(project: TestProject) {
         project.provide('STRUCTURES_HOST', container.getHost())
         // @ts-ignore
         project.provide('STRUCTURES_PORT', container.getMappedPort(58503))
+        // @ts-ignore
+        project.provide('STRUCTURES_OPENAPI_PORT', container.getMappedPort(8080))
 
         console.log('Structures started.')
     }else{
@@ -44,6 +46,8 @@ export async function setup(project: TestProject) {
         project.provide('STRUCTURES_HOST', '127.0.0.1')
         // @ts-ignore
         project.provide('STRUCTURES_PORT', 58503)
+        // @ts-ignore
+        project.provide('STRUCTURES_OPENAPI_PORT', 8080)
         console.log('Skipping Structures setup because VITE_USE_STRUCTURES_DOCKER is false')
     }
 }

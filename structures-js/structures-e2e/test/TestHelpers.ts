@@ -20,6 +20,7 @@ import {
 } from '@kinotic/structures-api'
 import {Person} from './domain/Person.js'
 import {inject} from 'vitest'
+// @ts-ignore
 import path from 'path'
 import {PersonWithTenant} from './domain/PersonWithTenant.js'
 import {Cat, Dog} from './domain/Pet.js'
@@ -102,15 +103,19 @@ export async function createSchema(suffix: string, entityName: string): Promise<
                                      schemas.set(entityInfo.entity.name, result)
                                  })
     }
-    const ret = structuredClone(schemas.get(entityName))
-    if(ret) {
-        ret.entityDefinition.name = entityName + suffix
-        ret.namedQueriesDefinition.id = (namespace + '.' + entityName + suffix).toLowerCase()
-        ret.namedQueriesDefinition.structure = entityName + suffix
-        replaceAllQueryPlaceholdersWithName(entityName + suffix, ret.namedQueriesDefinition.namedQueries)
-    }else{
-        throw new Error('Could not copy schema')
+    const result = schemas.get(entityName)
+    if(!result){
+        throw new Error('Could not find Entity ' + entityName)
     }
+    const ret = structuredClone(result)
+    if(!ret){
+        throw new Error('Could not copy schema for ' + entityName)
+    }
+
+    ret.entityDefinition.name = entityName + suffix
+    ret.namedQueriesDefinition.id = (namespace + '.' + entityName + suffix).toLowerCase()
+    ret.namedQueriesDefinition.structure = entityName + suffix
+    replaceAllQueryPlaceholdersWithName(entityName + suffix, ret.namedQueriesDefinition.namedQueries)
     return ret
 }
 
@@ -125,6 +130,7 @@ function replaceAllQueryPlaceholdersWithName(structureName: string, functionDefi
             for (const decorator of functionDefinition.decorators) {
                 if (decorator.type === 'Query') {
                     const queryDecorator = decorator as QueryDecorator
+                    // @ts-ignore stupid intellij error for replaceAll
                     queryDecorator.statements = queryDecorator.statements.replaceAll('PLACEHOLDER', structureName.toLowerCase())
                 }
             }
