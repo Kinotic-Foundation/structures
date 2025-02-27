@@ -24,7 +24,7 @@ interface LocalTestContext {
     entityService: IEntityService<Person>
 }
 
-describe('EntityServiceTest', () => {
+describe('EntityService Tests', () => {
 
     beforeAll(async () => {
         await allure.parentSuite('End To End Tests')

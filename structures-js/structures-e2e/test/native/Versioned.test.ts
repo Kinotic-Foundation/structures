@@ -22,7 +22,7 @@ interface LocalTestContext {
     entityService: IEntityService<Vehicle>
 }
 
-describe('VersionedTests', () => {
+describe('Versioned Tests', () => {
 
     beforeAll(async () => {
         await allure.parentSuite('End To End Tests')

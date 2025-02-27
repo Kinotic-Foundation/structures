@@ -30,7 +30,7 @@ interface LocalTestContext {
     entityService: IEntityService<PersonWithTenant>
 }
 
-describe('AdminEntityServiceTest', () => {
+describe('Admin EntityService Tests', () => {
 
     beforeAll(async () => {
         await allure.parentSuite('End To End Tests')

@@ -1,12 +1,11 @@
-import {ad} from '@faker-js/faker/dist/airline-D6ksJFwG.js'
 import {faker} from '@faker-js/faker/locale/en'
 import {CodeGenerationService} from '@kinotic/structures-cli/dist/internal/CodeGenerationService.js'
 import {ConsoleLogger} from '@kinotic/structures-cli/dist/internal/Logger.js'
 import {NamespaceConfiguration} from '@kinotic/structures-cli/dist/internal/state/StructuresProject.js'
-import delay from 'delay'
 import {Continuum, Direction, Order, Pageable} from '@kinotic/continuum-client'
 import {
-    ObjectC3Type
+    ObjectC3Type,
+    FunctionDefinition
 } from '@kinotic/continuum-idl'
 import {randomUUID} from 'node:crypto'
 import {expect} from 'vitest'
@@ -14,7 +13,9 @@ import {IterablePage} from '@kinotic/continuum-client'
 import {
     Structures,
     Structure,
-    IEntityService, IAdminEntityService
+    IEntityService,
+    IAdminEntityService,
+    NamedQueriesDefinition
 } from '@kinotic/structures-api'
 import {Person} from './domain/Person.js'
 import {inject} from 'vitest'
@@ -23,7 +24,12 @@ import {PersonWithTenant} from './domain/PersonWithTenant.js'
 import {Cat, Dog} from './domain/Pet.js'
 import {Vehicle, Wheel} from './domain/Vehicle.js'
 
-let schemas: Map<string, ObjectC3Type> = new Map<string, ObjectC3Type>()
+
+type SchemaCreationResult ={
+    entityDefinition: ObjectC3Type
+    namedQueriesDefinition: NamedQueriesDefinition
+}
+let schemas: Map<string, SchemaCreationResult> = new Map<string, SchemaCreationResult>()
 
 export async function initContinuumClient(): Promise<void> {
     try {
@@ -56,34 +62,50 @@ export async function shutdownContinuumClient(): Promise<void> {
     }
 }
 
-export async function createPersonSchema(suffix: string, withTenant: boolean = false): Promise<ObjectC3Type> {
+export async function createPersonSchema(suffix: string, withTenant: boolean = false): Promise<SchemaCreationResult> {
     return createSchema(suffix, 'Person'+(withTenant ? 'WithTenant' : ''))
 }
 
-export async function createVehicleSchema(suffix: string): Promise<ObjectC3Type> {
+export async function createVehicleSchema(suffix: string): Promise<SchemaCreationResult> {
     return createSchema(suffix, 'Vehicle')
 }
 
-export async function createSchema(suffix: string, entityName: string): Promise<ObjectC3Type> {
+export async function createSchema(suffix: string, entityName: string): Promise<SchemaCreationResult> {
+    const namespace = 'structures.api.tests'
     if(!schemas.has(entityName)){
-        const codeGenerationService = new CodeGenerationService('structures.api.tests',
+        const codeGenerationService = new CodeGenerationService(namespace,
                                                                 '.js',
                                                                 new ConsoleLogger())
         const namespaceConfig: NamespaceConfiguration = new NamespaceConfiguration()
-        namespaceConfig.namespaceName = 'structures.api.tests'
+        namespaceConfig.namespaceName = namespace
         namespaceConfig.validate = false
         namespaceConfig.entitiesPaths = [path.resolve(__dirname, './domain')]
         namespaceConfig.generatedPath = path.resolve(__dirname, './services')
         await codeGenerationService
             .generateAllEntities(namespaceConfig,
                                  false,
-                                 async (entityInfo) =>{
-                                     schemas.set(entityInfo.entity.name, entityInfo.entity)
+                                 async (entityInfo, serviceInfos) =>{
+                                    // combine named queries from generated services
+                                     const namedQueries: FunctionDefinition[] = []
+                                     for(let serviceInfo of serviceInfos){
+                                            namedQueries.push(...serviceInfo.namedQueries)
+                                     }
+                                     const id = (namespace + '.' + entityName).toLowerCase()
+                                    const result: SchemaCreationResult = {
+                                        entityDefinition: entityInfo.entity,
+                                        namedQueriesDefinition: new NamedQueriesDefinition(id,
+                                                                                           namespace,
+                                                                                           entityName,
+                                                                                           namedQueries)
+                                    }
+                                     schemas.set(entityInfo.entity.name, result)
                                  })
     }
     const ret = structuredClone(schemas.get(entityName))
     if(ret) {
-        ret.name = entityName+suffix
+        ret.entityDefinition.name = entityName + suffix
+        ret.namedQueriesDefinition.id = (namespace + '.' + entityName + suffix).toLowerCase()
+        ret.namedQueriesDefinition.structure = entityName + suffix
     }else{
         throw new Error('Could not copy schema')
     }
@@ -100,10 +122,10 @@ export async function createPersonStructureIfNotExist(suffix: string, withTenant
 }
 
 export async function createPersonStructure(suffix: string, withTenant: boolean = false): Promise<Structure>{
-    const schema: ObjectC3Type = await createPersonSchema(suffix, withTenant)
+    const {entityDefinition} = await createPersonSchema(suffix, withTenant)
     const personStructure = new Structure('structures.api.tests',
                                           'Person' + (withTenant ? 'WithTenant' : '') + suffix,
-                                          schema,
+                                          entityDefinition,
                                           'Tracks people that are going to mars')
 
     await Structures.getNamespaceService().createNamespaceIfNotExist('structures.api.tests', 'Sample Data Namespace')
@@ -129,10 +151,10 @@ export async function createVehicleStructureIfNotExist(suffix: string): Promise<
 }
 
 export async function createVehicleStructure(suffix: string): Promise<Structure>{
-    const schema: ObjectC3Type = await createVehicleSchema(suffix)
+    const {entityDefinition} = await createVehicleSchema(suffix)
     const vehicleStructure = new Structure('structures.api.tests',
                                            'Vehicle' + suffix,
-                                           schema,
+                                           entityDefinition,
                                            'Some form of transportation')
 
     await Structures.getNamespaceService().createNamespaceIfNotExist('structures.api.tests', 'Sample Data Namespace')
