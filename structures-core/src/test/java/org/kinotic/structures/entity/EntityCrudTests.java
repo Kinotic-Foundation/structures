@@ -68,6 +68,7 @@ public class EntityCrudTests extends ElasticsearchTestBase {
 
     @Test
     public void testCreateAndDeleteItem() {
+
         StructureAndPersonHolder holder = createAndVerify();
 
         Assertions.assertNotNull(holder);

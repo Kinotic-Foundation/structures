@@ -1,12 +1,11 @@
-import {ArrayC3Type, FunctionDefinition, LongC3Type, ObjectC3Type, StringC3Type} from '@kinotic/continuum-idl'
 import {AdminEntityService, IAdminEntityService, IEntityService, Structure, Structures} from '@kinotic/structures-api'
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it} from 'vitest'
-import {Page, Pageable} from '@kinotic/continuum-client'
 import {WebSocket} from 'ws'
-import {Person} from '../domain/Person.js'
 import {PersonWithTenant} from '../domain/PersonWithTenant.js'
 import {
-    createPersonStructureIfNotExist, createSchema, createTestPeopleWithTenantAndVerify,
+    createPersonStructureIfNotExist,
+    createSchema,
+    createTestPeopleWithTenantAndVerify,
     deleteStructure,
     generateRandomString,
     initContinuumClient,
