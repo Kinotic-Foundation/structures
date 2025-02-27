@@ -1,8 +1,17 @@
-import {FunctionDefinition, LongC3Type, ObjectC3Type, ArrayC3Type, StringC3Type} from '@kinotic/continuum-idl'
-import * as allure from 'allure-js-commons'
-import {describe, it, expect, beforeAll, afterAll, beforeEach, afterEach} from 'vitest'
-import { WebSocket } from 'ws'
-import {PageableC3Type, PageC3Type, IEntityService, Structures, Structure, QueryDecorator, NamedQueriesDefinition} from '@kinotic/structures-api'
+import {Page, Pageable} from '@kinotic/continuum-client'
+import {ArrayC3Type, FunctionDefinition, LongC3Type, ObjectC3Type, StringC3Type} from '@kinotic/continuum-idl'
+import {
+    IEntityService,
+    NamedQueriesDefinition,
+    PageableC3Type,
+    PageC3Type,
+    QueryDecorator,
+    Structure,
+    Structures
+} from '@kinotic/structures-api'
+import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it} from 'vitest'
+import {WebSocket} from 'ws'
+import {Person} from '../domain/Person.js'
 import {
     createPersonStructureIfNotExist,
     createTestPeopleAndVerify,
@@ -11,8 +20,6 @@ import {
     initContinuumClient,
     shutdownContinuumClient,
 } from '../TestHelpers.js'
-import {Person} from '../domain/Person.js'
-import {Page, Pageable} from '@kinotic/continuum-client'
 
 Object.assign(global, { WebSocket})
 
@@ -24,8 +31,6 @@ interface LocalTestContext {
 describe('Named Query Tests', () => {
 
     beforeAll(async () => {
-        await allure.parentSuite('End To End Tests')
-        await allure.suite('Native Typescript Client')
         await initContinuumClient()
     }, 300000)
 
@@ -49,12 +54,6 @@ describe('Named Query Tests', () => {
      async ({entityService}) => {
          // Create people
          await createTestPeopleAndVerify(entityService, 100)
-
-         // Find all the people
-         const page: Page<Person> = await entityService.findAll(Pageable.create(0, 10))
-         expect(page).toBeDefined()
-         expect(page.totalElements).toBe(100)
-         expect(page.content?.length).toBe(10)
 
          const structureId = entityService.structureId
 
@@ -84,12 +83,6 @@ describe('Named Query Tests', () => {
          async ({entityService}) => {
              // Create people
              await createTestPeopleAndVerify(entityService, 100)
-
-             // Find all the people
-             const page: Page<Person> = await entityService.findAll(Pageable.create(0, 10))
-             expect(page).toBeDefined()
-             expect(page.totalElements).toBe(100)
-             expect(page.content?.length).toBe(10)
 
              const structureId = entityService.structureId
 
@@ -124,12 +117,6 @@ describe('Named Query Tests', () => {
      async ({entityService}) => {
          // Create people
          await createTestPeopleAndVerify(entityService, 100)
-
-         // Find all the people
-         const page: Page<Person> = await entityService.findAll(Pageable.create(0, 10))
-         expect(page).toBeDefined()
-         expect(page.totalElements).toBe(100)
-         expect(page.content?.length).toBe(10)
 
          const structureId = entityService.structureId
          const query = new QueryDecorator(`SELECT COUNT(firstName) as count, lastName FROM "struct_${structureId}" GROUP BY lastName`)

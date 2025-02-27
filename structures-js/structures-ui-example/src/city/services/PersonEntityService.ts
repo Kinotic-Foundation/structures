@@ -1,5 +1,5 @@
 import {IterablePage, Pageable} from '@kinotic/continuum-client'
-import {IEntitiesService, Query, Policy, type TenantSelection} from '@kinotic/structures-api'
+import {IEntitiesService, Query, Policy} from '@kinotic/structures-api'
 import { BasePersonEntityService } from './generated/BasePersonEntityService.js'
 
 export class CityCount {

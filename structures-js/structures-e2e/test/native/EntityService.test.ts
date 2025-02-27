@@ -1,21 +1,21 @@
-import * as allure from 'allure-js-commons'
-import {describe, it, expect, beforeAll, afterAll, beforeEach, afterEach} from 'vitest'
-import { WebSocket } from 'ws'
+import {Direction, Order, Page, Pageable} from '@kinotic/continuum-client'
+import {IEntityService, Structure, Structures} from '@kinotic/structures-api'
+import delay from 'delay'
+import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it} from 'vitest'
+import {WebSocket} from 'ws'
+import {Person} from '../domain/Person.js'
 import {
     createPersonStructureIfNotExist,
-    findAndVerifyPeopleWithCursorPaging,
     createTestPeopleAndVerify,
     createTestPerson,
     deleteStructure,
+    findAndVerifyPeopleWithCursorPaging,
+    findAndVerifyPeopleWithOffsetPaging,
     generateRandomString,
     initContinuumClient,
-    shutdownContinuumClient,
-    logFailure, findAndVerifyPeopleWithOffsetPaging
+    logFailure,
+    shutdownContinuumClient
 } from '../TestHelpers.js'
-import {Person} from '../domain/Person.js'
-import {Page, Pageable, Order, Direction} from '@kinotic/continuum-client'
-import {IEntityService, Structures, Structure} from '@kinotic/structures-api'
-import delay from 'delay'
 
 Object.assign(global, { WebSocket})
 
@@ -27,8 +27,6 @@ interface LocalTestContext {
 describe('EntityService Tests', () => {
 
     beforeAll(async () => {
-        await allure.parentSuite('End To End Tests')
-        await allure.suite('Native Typescript Client')
         await initContinuumClient()
     }, 300000)
 
@@ -47,7 +45,8 @@ describe('EntityService Tests', () => {
         await expect(deleteStructure(context.structure.id as string)).resolves.toBeUndefined()
     })
 
-    it<LocalTestContext>('Test Basic CRUD',
+    it<LocalTestContext>(
+        'Test Basic CRUD',
         async ({entityService}) => {
             // Create a person
             const person = createTestPerson()
@@ -83,7 +82,8 @@ describe('EntityService Tests', () => {
         }
     )
 
-    it<LocalTestContext>('Test FindByIds ',
+    it<LocalTestContext>(
+        'Test FindByIds ',
         async ({entityService}) => {
             await createTestPeopleAndVerify(entityService, 100)
 
@@ -119,7 +119,8 @@ describe('EntityService Tests', () => {
         }
     )
 
-    it<LocalTestContext>('Test FindByIds and None Found ',
+    it<LocalTestContext>(
+        'Test FindByIds and None Found ',
         async ({entityService}) => {
             await createTestPeopleAndVerify(entityService, 50)
 
@@ -156,7 +157,8 @@ describe('EntityService Tests', () => {
         }
     )
 
-    it<LocalTestContext>('Test CountByQuery',
+    it<LocalTestContext>(
+        'Test CountByQuery',
         async ({entityService}) => {
             await createTestPeopleAndVerify(entityService, 100)
 
@@ -166,7 +168,8 @@ describe('EntityService Tests', () => {
         }
     )
 
-    it<LocalTestContext>('Test CountByQuery and DeleteByQuery',
+    it<LocalTestContext>(
+        'Test CountByQuery and DeleteByQuery',
         async ({entityService}) => {
             await createTestPeopleAndVerify(entityService, 100)
 
@@ -179,7 +182,8 @@ describe('EntityService Tests', () => {
         }
     )
 
-    it<LocalTestContext>('Test Cursor Based Paging',
+    it<LocalTestContext>(
+        'Test Cursor Based Paging',
          async ({entityService}) => {
              await createTestPeopleAndVerify(entityService, 100)
 
@@ -208,7 +212,8 @@ describe('EntityService Tests', () => {
          }
     )
 
-    it<LocalTestContext>('Test Cursor Based Paging With Iterator',
+    it<LocalTestContext>(
+        'Test Cursor Based Paging With Iterator',
          async ({entityService}) => {
              // Create people
              await createTestPeopleAndVerify(entityService, 100)
@@ -218,7 +223,8 @@ describe('EntityService Tests', () => {
          }
     )
 
-    it<LocalTestContext>('Test Cursor Based Paging With Iterator Uneven Pages',
+    it<LocalTestContext>(
+        'Test Cursor Based Paging With Iterator Uneven Pages',
          async ({entityService}) => {
              // Create people
              await createTestPeopleAndVerify(entityService, 29)
@@ -228,7 +234,8 @@ describe('EntityService Tests', () => {
          }
     )
 
-    it<LocalTestContext>('Test Cursor Based Paging With Iterator Single Page',
+    it<LocalTestContext>(
+        'Test Cursor Based Paging With Iterator Single Page',
          async ({entityService}) => {
              // Create people
              await createTestPeopleAndVerify(entityService, 9)
@@ -238,14 +245,16 @@ describe('EntityService Tests', () => {
          }
     )
 
-    it<LocalTestContext>('Test Cursor Based Paging With Iterator No Data',
+    it<LocalTestContext>(
+        'Test Cursor Based Paging With Iterator No Data',
          async ({entityService}) => {
              // Find all the people
              await findAndVerifyPeopleWithCursorPaging(entityService, 0)
          }
     )
 
-    it<LocalTestContext>('Test Offset Based Paging With Iterator',
+    it<LocalTestContext>(
+        'Test Offset Based Paging With Iterator',
          async ({entityService}) => {
              // Create people
              await createTestPeopleAndVerify(entityService, 100)
@@ -255,7 +264,8 @@ describe('EntityService Tests', () => {
          }
     )
 
-    it<LocalTestContext>('Test Offset Based Paging With Iterator Uneven Pages',
+    it<LocalTestContext>(
+        'Test Offset Based Paging With Iterator Uneven Pages',
          async ({entityService}) => {
              // Create people
              await createTestPeopleAndVerify(entityService, 29)
@@ -265,7 +275,8 @@ describe('EntityService Tests', () => {
          }
     )
 
-    it<LocalTestContext>('Test Offset Based Paging With Iterator Single Page',
+    it<LocalTestContext>(
+        'Test Offset Based Paging With Iterator Single Page',
          async ({entityService}) => {
              // Create people
              await createTestPeopleAndVerify(entityService, 9)
@@ -275,14 +286,16 @@ describe('EntityService Tests', () => {
          }
     )
 
-    it<LocalTestContext>('Test Offset Based Paging With Iterator No Data',
+    it<LocalTestContext>(
+        'Test Offset Based Paging With Iterator No Data',
          async ({entityService}) => {
              // Find all the people
              await findAndVerifyPeopleWithOffsetPaging(entityService, 0)
          }
     )
 
-    it<LocalTestContext>('Test Bulk CRUD',
+    it<LocalTestContext>(
+        'Test Bulk CRUD',
         async ({entityService}) => {
             // Create people
             await createTestPeopleAndVerify(entityService, 100)

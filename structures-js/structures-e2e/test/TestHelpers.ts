@@ -15,7 +15,8 @@ import {
     Structure,
     IEntityService,
     IAdminEntityService,
-    NamedQueriesDefinition
+    NamedQueriesDefinition,
+    QueryDecorator
 } from '@kinotic/structures-api'
 import {Person} from './domain/Person.js'
 import {inject} from 'vitest'
@@ -106,10 +107,29 @@ export async function createSchema(suffix: string, entityName: string): Promise<
         ret.entityDefinition.name = entityName + suffix
         ret.namedQueriesDefinition.id = (namespace + '.' + entityName + suffix).toLowerCase()
         ret.namedQueriesDefinition.structure = entityName + suffix
+        replaceAllQueryPlaceholdersWithName(entityName + suffix, ret.namedQueriesDefinition.namedQueries)
     }else{
         throw new Error('Could not copy schema')
     }
     return ret
+}
+
+/**
+ * This replaces the PLACEHOLDER string in all @Query decorators applied to the given function definitions
+ * @param structureName to replace the PLACEHOLDER with
+ * @param functionDefinitions all of the {@link FunctionDefinition}s to replace the PLACEHOLDER in
+ */
+function replaceAllQueryPlaceholdersWithName(structureName: string, functionDefinitions: FunctionDefinition[]){
+    for(const functionDefinition of functionDefinitions){
+        if(functionDefinition.decorators) {
+            for (const decorator of functionDefinition.decorators) {
+                if (decorator.type === 'Query') {
+                    const queryDecorator = decorator as QueryDecorator
+                    queryDecorator.statements = queryDecorator.statements.replaceAll('PLACEHOLDER', structureName.toLowerCase())
+                }
+            }
+        }
+    }
 }
 
 export async function createPersonStructureIfNotExist(suffix: string, withTenant: boolean = false): Promise<Structure>{

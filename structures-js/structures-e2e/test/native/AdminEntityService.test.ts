@@ -1,26 +1,26 @@
-import {describe, it, expect, beforeAll, afterAll, beforeEach, afterEach} from 'vitest'
-import { WebSocket } from 'ws'
+import {Direction, Order, Page, Pageable, Sort} from '@kinotic/continuum-client'
+import {
+    AdminEntityService,
+    IAdminEntityService,
+    IEntityService,
+    Structure,
+    Structures,
+    TenantSpecificId
+} from '@kinotic/structures-api'
+import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it} from 'vitest'
+import {WebSocket} from 'ws'
+import {Person} from '../domain/Person.js'
 import {PersonWithTenant} from '../domain/PersonWithTenant.js'
 import {
     createPersonStructureIfNotExist,
     createTestPeopleWithTenantAndVerify,
+    createTestPersonWithTenant,
     deleteStructure,
     generateRandomString,
     initContinuumClient,
+    logFailure,
     shutdownContinuumClient,
-    logFailure, createTestPersonWithTenant,
 } from '../TestHelpers.js'
-import {Person} from '../domain/Person.js'
-import {Page, Pageable, Order, Direction, Sort} from '@kinotic/continuum-client'
-import {
-    IAdminEntityService,
-    AdminEntityService,
-    IEntityService,
-    Structures,
-    Structure,
-    TenantSpecificId
-} from '@kinotic/structures-api'
-import * as allure from "allure-js-commons"
 
 Object.assign(global, { WebSocket})
 
@@ -33,8 +33,6 @@ interface LocalTestContext {
 describe('Admin EntityService Tests', () => {
 
     beforeAll(async () => {
-        await allure.parentSuite('End To End Tests')
-        await allure.suite('Native Typescript Client')
         await initContinuumClient()
     }, 300000)
 
