@@ -1,3 +1,4 @@
+import * as allure from 'allure-js-commons'
 import {describe, it, expect, beforeAll, afterAll, beforeEach, afterEach} from 'vitest'
 import { WebSocket } from 'ws'
 import {
@@ -26,6 +27,8 @@ interface LocalTestContext {
 describe('EntityServiceTest', () => {
 
     beforeAll(async () => {
+        await allure.parentSuite('End To End Tests')
+        await allure.suite('Native Typescript Client')
         await initContinuumClient()
     }, 300000)
 

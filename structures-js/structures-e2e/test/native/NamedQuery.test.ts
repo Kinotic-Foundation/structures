@@ -1,4 +1,5 @@
 import {FunctionDefinition, LongC3Type, ObjectC3Type, ArrayC3Type, StringC3Type} from '@kinotic/continuum-idl'
+import * as allure from 'allure-js-commons'
 import {describe, it, expect, beforeAll, afterAll, beforeEach, afterEach} from 'vitest'
 import { WebSocket } from 'ws'
 import {PageableC3Type, PageC3Type, IEntityService, Structures, Structure, QueryDecorator, NamedQueriesDefinition} from '@kinotic/structures-api'
@@ -23,6 +24,8 @@ interface LocalTestContext {
 describe('NamedQueryTest', () => {
 
     beforeAll(async () => {
+        await allure.parentSuite('End To End Tests')
+        await allure.suite('Native Typescript Client')
         await initContinuumClient()
     }, 300000)
 

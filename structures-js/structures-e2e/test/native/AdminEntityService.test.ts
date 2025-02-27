@@ -20,6 +20,7 @@ import {
     Structure,
     TenantSpecificId
 } from '@kinotic/structures-api'
+import * as allure from "allure-js-commons"
 
 Object.assign(global, { WebSocket})
 
@@ -32,6 +33,8 @@ interface LocalTestContext {
 describe('AdminEntityServiceTest', () => {
 
     beforeAll(async () => {
+        await allure.parentSuite('End To End Tests')
+        await allure.suite('Native Typescript Client')
         await initContinuumClient()
     }, 300000)
 
@@ -224,6 +227,7 @@ describe('AdminEntityServiceTest', () => {
             // Create people
             await createTestPeopleWithTenantAndVerify(adminEntityService, entityService, 'tenant01', 100)
             await createTestPeopleWithTenantAndVerify(adminEntityService, entityService, 'tenant02', 100)
+            await createTestPeopleWithTenantAndVerify(adminEntityService, entityService, 'tenant03', 100)
 
             // Find all the people ordered by name so we change only John Doe users
             const sort: Sort = new Sort()
