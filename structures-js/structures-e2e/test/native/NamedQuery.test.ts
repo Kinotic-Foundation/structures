@@ -45,7 +45,7 @@ describe('NamedQueryTest', () => {
     it<LocalTestContext>('Aggregate Test',
      async ({entityService}) => {
          // Create people
-         await createTestPeopleAndVerify(entityService, 100, 2000)
+         await createTestPeopleAndVerify(entityService, 100)
 
          // Find all the people
          const page: Page<Person> = await entityService.findAll(Pageable.create(0, 10))
@@ -80,7 +80,7 @@ describe('NamedQueryTest', () => {
     it<LocalTestContext>('Aggregate With Parameter Test',
          async ({entityService}) => {
              // Create people
-             await createTestPeopleAndVerify(entityService, 100, 2000)
+             await createTestPeopleAndVerify(entityService, 100)
 
              // Find all the people
              const page: Page<Person> = await entityService.findAll(Pageable.create(0, 10))
@@ -120,7 +120,7 @@ describe('NamedQueryTest', () => {
     it<LocalTestContext>('Aggregate Pageable Test',
      async ({entityService}) => {
          // Create people
-         await createTestPeopleAndVerify(entityService, 100, 2000)
+         await createTestPeopleAndVerify(entityService, 100)
 
          // Find all the people
          const page: Page<Person> = await entityService.findAll(Pageable.create(0, 10))
