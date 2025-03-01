@@ -22,10 +22,11 @@ interface LocalTestContext {
     entityService: IEntityService<Vehicle>
 }
 
-describe('Versioned Tests', () => {
+describe('End To End Tests', () => {
 
     beforeAll(async () => {
-        await allure.parentSuite('End To End Tests')
+        await allure.suite('Typescript Client')
+        await allure.subSuite('Versioned Tests')
         await initContinuumClient()
     }, 300000)
 

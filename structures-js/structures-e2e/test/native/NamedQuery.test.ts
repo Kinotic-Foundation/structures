@@ -29,10 +29,11 @@ interface LocalTestContext {
     entityService: IEntityService<Person>
 }
 
-describe('Named Query Tests', () => {
+describe('End To End Tests', () => {
 
     beforeAll(async () => {
-        await allure.parentSuite('End To End Tests')
+        await allure.suite('Typescript Client')
+        await allure.subSuite('Named Query Tests')
         await initContinuumClient()
     }, 300000)
 
