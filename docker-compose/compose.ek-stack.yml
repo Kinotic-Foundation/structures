@@ -13,7 +13,8 @@ services:
       retries: 3
       start_period: 60s
     ports:
-      - "9200:9200" # allow local kibana or curl usage
+      - "9200:9200"  # Elasticsearch HTTP API
+      - "9300:9300"  # Elasticsearch transport
     stdin_open: true
     tty: true
     deploy:
@@ -38,3 +39,5 @@ services:
           memory: 1G
     ports:
       - "5601:5601"
+    volumes:
+      - ./kibana.yml:/usr/share/kibana/config/kibana.yml
