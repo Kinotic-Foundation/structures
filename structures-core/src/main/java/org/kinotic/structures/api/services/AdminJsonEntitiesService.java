@@ -139,5 +139,4 @@ public interface AdminJsonEntitiesService {
      */
     CompletableFuture<Page<FastestType>> search(String structureId, String searchText, List<String> tenantSelection, Pageable pageable, Participant participant);
 
-
 }

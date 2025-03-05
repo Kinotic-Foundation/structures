@@ -1,0 +1,32 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+exporters:
+  otlp:
+    endpoint: "jaeger:4317"  # For traces
+    tls:
+      insecure: true
+  loki:
+    endpoint: "http://loki:3100/loki/api/v1/push"  # For logs
+    tls:
+      insecure: true
+  prometheus:
+    endpoint: "prometheus:9090"  # For metrics
+    namespace: "otel"
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      exporters: [otlp]
+    logs:
+      receivers: [otlp]
+      exporters: [loki]
+    metrics:
+      receivers: [otlp]
+      exporters: [prometheus]
