@@ -11,13 +11,14 @@ exporters:
     endpoint: "jaeger:4317"  # For traces
     tls:
       insecure: true
-  loki:
-    endpoint: "http://loki:3100/loki/api/v1/push"  # For logs
+  otlphttp:  # For logs to Loki
+    endpoint: "http://loki:3100/otlp"  # Corrected endpoint
     tls:
       insecure: true
-  prometheus:
-    endpoint: "prometheus:9090"  # For metrics
-    namespace: "otel"
+  prometheusremotewrite:
+    endpoint: "http://prometheus:9090/api/v1/write"  # For metrics
+    tls:
+      insecure: true
 
 service:
   pipelines:
@@ -26,7 +27,7 @@ service:
       exporters: [otlp]
     logs:
       receivers: [otlp]
-      exporters: [loki]
+      exporters: [otlphttp]
     metrics:
       receivers: [otlp]
-      exporters: [prometheus]
+      exporters: [prometheusremotewrite]

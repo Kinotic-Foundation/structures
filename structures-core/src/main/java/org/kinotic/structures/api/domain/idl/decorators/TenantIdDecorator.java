@@ -10,7 +10,7 @@ import java.util.List;
  * Denotes the field that will hold the tenant id to use as the Multi Tenant discriminator field
  * Created By Navíd Mitchell 🤪on 2/12/25
  */
-public class TenantIdDecorator extends C3Decorator {
+public final class TenantIdDecorator extends C3Decorator {
 
     @JsonIgnore
     public static final String type = "TenantIdDecorator";

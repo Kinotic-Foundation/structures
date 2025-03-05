@@ -4,11 +4,9 @@ include:
 services:
   structures-server:
     container_name: structures-server
-    image: kinotic/structures-server:${structuresVersion:-latest}
+    image: kinotic/structures-server:${structuresVersion:-3.3.0-SNAPSHOT}
     depends_on:
       structures-elasticsearch:
-        condition: service_healthy
-      otel-collector:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl --silent --fail 127.0.0.1:9090/health || exit 1"]
