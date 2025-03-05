@@ -33,7 +33,6 @@ dependencyManagement {
         dependency "co.elastic.clients:elasticsearch-java:${elasticClientVersion}"
 
         dependency "com.github.ben-manes.caffeine:caffeine:${caffeineVersion}"
-        dependency "com.github.rworsnop:vertx-beans:${vertxBeansVersion}"
 
         dependency "com.graphql-java:graphql-java:${graphQlJavaVersion}"
 
