@@ -2,6 +2,6 @@ global:
   scrape_interval: 15s
 
 scrape_configs:
-  - job_name: 'prometheus'
+  - job_name: 'structures-server'
     static_configs:
-      - targets: ['localhost:9090']
+      - targets: ['otel-collector:8889']
