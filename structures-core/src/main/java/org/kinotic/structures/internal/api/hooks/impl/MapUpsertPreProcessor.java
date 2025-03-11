@@ -143,8 +143,6 @@ public class MapUpsertPreProcessor implements UpsertPreProcessor<Map<Object, Obj
             if(entity.containsKey(versionFieldName)) {
                 version = (String) entity.get(versionFieldName);
                 entity.remove(versionFieldName);
-            }else{
-                throw new IllegalArgumentException("Could not find version for Entity");
             }
         }
 

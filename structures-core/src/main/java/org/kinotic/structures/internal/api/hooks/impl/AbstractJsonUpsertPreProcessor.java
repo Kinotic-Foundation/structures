@@ -66,7 +66,6 @@ public abstract class AbstractJsonUpsertPreProcessor<T> implements UpsertPreProc
             String currentId = null;
             String currentTenantId = null;
             String currentVersion = null;
-            boolean versionFound = false;
             ByteArrayBuilder byteArrayBuilder = new ByteArrayBuilder();
             JsonGenerator jsonGenerator = objectMapper.getFactory().createGenerator(byteArrayBuilder, JsonEncoding.UTF8);
 
@@ -127,12 +126,11 @@ public abstract class AbstractJsonUpsertPreProcessor<T> implements UpsertPreProc
 
                         }else if(objectDepth == 1 && decorator instanceof VersionDecorator){
 
-                            if(versionFound){ // should never happen, because the structure is validated when published
+                            if(currentVersion != null){ // should never happen, because the structure is validated when published
                                 throw new IllegalArgumentException("Found multiple Version fields in entity");
                             }
 
                             currentVersion = (String) value;
-                            versionFound = true;
 
                         }else if(objectDepth == 1 && decorator instanceof TenantIdDecorator){
 
@@ -178,10 +176,6 @@ public abstract class AbstractJsonUpsertPreProcessor<T> implements UpsertPreProc
                             throw new IllegalArgumentException("Could not find id for Entity");
                         }
 
-                        if(structure.isOptimisticLockingEnabled() && !versionFound){
-                            throw new IllegalArgumentException("Could not find version for Entity");
-                        }
-
                         // If this is enabled a tenant id should always be present in the data
                         if(structure.isMultiTenantSelectionEnabled() && currentTenantId == null){
 
@@ -212,7 +206,6 @@ public abstract class AbstractJsonUpsertPreProcessor<T> implements UpsertPreProc
                         currentId = null;
                         currentTenantId = null;
                         currentVersion = null;
-                        versionFound = false;
                     }else{
                         if(!shouldSkipToken(token, jsonParser.currentValue(), arrayDepth, processArray)){
                             jsonGenerator.copyCurrentEvent(jsonParser);
