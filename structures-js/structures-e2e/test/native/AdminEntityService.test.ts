@@ -54,6 +54,7 @@ describe('End To End Tests', () => {
 
     afterEach<LocalTestContext>(async (context) => {
         await expect(deleteStructure(context.structure.id as string)).resolves.toBeUndefined()
+        await Structures.getNamespaceService().deleteById(context.structure.namespace)
     })
 
     it<LocalTestContext>(

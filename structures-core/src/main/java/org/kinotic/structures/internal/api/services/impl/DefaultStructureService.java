@@ -272,4 +272,9 @@ public class DefaultStructureService implements StructureService {
                 });
     }
 
+    @Override
+    public CompletableFuture<Void> syncIndex() {
+        return structureDAO.syncIndex();
+    }
+
 }

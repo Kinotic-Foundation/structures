@@ -534,10 +534,10 @@ public class OpenApiVertxRouterFactory {
                           List<TenantSpecificId> ids = this.objectMapper.readValue(ctx.body().buffer().getBytes(), tenantSpecificListType);
 
                           VertxCompletableFuture.from(vertx, entitiesService.findByIdsWithTenant(structureId,
-                                                                                       ids,
-                                                                                       FastestType.class,
-                                                                                       new RoutingContextToEntityContextAdapter(
-                                                                                               ctx)))
+                                                                                                 ids,
+                                                                                                 FastestType.class,
+                                                                                                 new RoutingContextToEntityContextAdapter(
+                                                                                                         ctx)))
                                                 .handle(new ValueToJsonHandler<>(ctx, objectMapper))
                                                 .exceptionally(throwable -> {
                                                     VertxWebUtil.writeException(ctx, throwable);

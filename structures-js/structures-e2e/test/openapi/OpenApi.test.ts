@@ -4,14 +4,12 @@ import {
     IEntityService,
     NamedQueriesDefinition,
     QueryDecorator,
-    Structure,
-    Structures
+    Structure, Structures,
 } from '@kinotic/structures-api'
 import * as allure from 'allure-js-commons'
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, inject, it} from 'vitest'
-import {PersonWithTenant} from '../domain/PersonWithTenant.js'
 import {
-    createPersonStructureIfNotExist, createTestPeopleAndVerify, createVehicleStructureIfNotExist, deleteStructure,
+    createPersonStructureIfNotExist, createSchema, createTestPeopleAndVerify, createVehicleStructureIfNotExist, deleteStructure,
     generateRandomString,
     initContinuumClient,
     shutdownContinuumClient
@@ -25,32 +23,36 @@ interface LocalTestContext {
     vehicleStructure: Structure
 }
 
+const suffix = '_openapi'
+
 describe('OpenApi Tests', () => {
+
+    let context: LocalTestContext = {} as LocalTestContext
 
     beforeAll(async () => {
         await allure.parentSuite('End To End Tests')
         await initContinuumClient()
-    }, 300000)
 
-    afterAll(async () => {
-        await shutdownContinuumClient()
-    }, 60000)
-
-    beforeEach<LocalTestContext>(async (context) => {
-        const suffix = generateRandomString(5)
         context.personStructure = await createPersonStructureIfNotExist(suffix)
         expect(context.personStructure).toBeDefined()
-        context.personWithTenantStructure = await createPersonStructureIfNotExist(suffix , true)
+        context.personWithTenantStructure = await createPersonStructureIfNotExist(suffix, true)
         expect(context.personWithTenantStructure).toBeDefined()
         context.vehicleStructure = await createVehicleStructureIfNotExist(suffix)
         expect(context.vehicleStructure).toBeDefined()
-    })
 
-    afterEach<LocalTestContext>(async (context) => {
-        await expect(deleteStructure(context.personStructure.id as string)).resolves.toBeUndefined()
-        await expect(deleteStructure(context.personWithTenantStructure.id as string)).resolves.toBeUndefined()
-        await expect(deleteStructure(context.vehicleStructure.id as string)).resolves.toBeUndefined()
-    })
+        // This wil get any NamedQueries defined in the EntityServices
+        const {namedQueriesDefinition} = await createSchema(suffix, 'PersonWithTenant')
+        const namedQueriesService = Structures.getNamedQueriesService()
+        await namedQueriesService.save(namedQueriesDefinition)
+    }, 300000)
+
+    afterAll(async () => {
+        // await shutdownContinuumClient()
+        // await expect(deleteStructure(context.personStructure.id as string)).resolves.toBeUndefined()
+        // await expect(deleteStructure(context.personWithTenantStructure.id as string)).resolves.toBeUndefined()
+        // await expect(deleteStructure(context.vehicleStructure.id as string)).resolves.toBeUndefined()
+    }, 60000)
+
 
     it<LocalTestContext>(
         'OpenApi Schema loads',

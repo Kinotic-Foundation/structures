@@ -64,16 +64,15 @@ export async function shutdownContinuumClient(): Promise<void> {
     }
 }
 
-export async function createPersonSchema(suffix: string, withTenant: boolean = false): Promise<SchemaCreationResult> {
-    return createSchema(suffix, 'Person'+(withTenant ? 'WithTenant' : ''))
+export async function createPersonSchema(namespace: string, withTenant: boolean = false): Promise<SchemaCreationResult> {
+    return createSchema(namespace, 'Person'+(withTenant ? 'WithTenant' : ''))
 }
 
-export async function createVehicleSchema(suffix: string): Promise<SchemaCreationResult> {
-    return createSchema(suffix, 'Vehicle')
+export async function createVehicleSchema(namespace: string): Promise<SchemaCreationResult> {
+    return createSchema(namespace, 'Vehicle')
 }
 
-export async function createSchema(suffix: string, entityName: string): Promise<SchemaCreationResult> {
-    const namespace = 'structures.api.tests'
+export async function createSchema(namespace: string, entityName: string): Promise<SchemaCreationResult> {
     if(!schemas.has(entityName)){
         const codeGenerationService = new CodeGenerationService(namespace,
                                                                 '.js',
@@ -112,49 +111,49 @@ export async function createSchema(suffix: string, entityName: string): Promise<
         throw new Error('Could not copy schema for ' + entityName)
     }
 
-    ret.entityDefinition.name = entityName + suffix
-    ret.namedQueriesDefinition.id = (namespace + '.' + entityName + suffix).toLowerCase()
-    ret.namedQueriesDefinition.structure = entityName + suffix
-    replaceAllQueryPlaceholdersWithName(entityName + suffix, ret.namedQueriesDefinition.namedQueries)
+    ret.entityDefinition.name = entityName
+    ret.namedQueriesDefinition.id = (namespace + '.' + entityName).toLowerCase()
+    ret.namedQueriesDefinition.structure = entityName
+    replaceAllQueryPlaceholdersWithId(namespace + '.' + entityName, ret.namedQueriesDefinition.namedQueries)
     return ret
 }
 
 /**
  * This replaces the PLACEHOLDER string in all @Query decorators applied to the given function definitions
- * @param structureName to replace the PLACEHOLDER with
+ * @param structureId to replace the PLACEHOLDER with
  * @param functionDefinitions all of the {@link FunctionDefinition}s to replace the PLACEHOLDER in
  */
-function replaceAllQueryPlaceholdersWithName(structureName: string, functionDefinitions: FunctionDefinition[]){
+function replaceAllQueryPlaceholdersWithId(structureId: string, functionDefinitions: FunctionDefinition[]){
     for(const functionDefinition of functionDefinitions){
         if(functionDefinition.decorators) {
             for (const decorator of functionDefinition.decorators) {
                 if (decorator.type === 'Query') {
                     const queryDecorator = decorator as QueryDecorator
                     // @ts-ignore stupid intellij error for replaceAll
-                    queryDecorator.statements = queryDecorator.statements.replaceAll('PLACEHOLDER', structureName.toLowerCase())
+                    queryDecorator.statements = queryDecorator.statements.replaceAll('PLACEHOLDER', structureId.toLowerCase())
                 }
             }
         }
     }
 }
 
-export async function createPersonStructureIfNotExist(suffix: string, withTenant: boolean = false): Promise<Structure>{
-    const structureId = 'structures.api.tests.person' + suffix
+export async function createPersonStructureIfNotExist(namespace: string, withTenant: boolean = false): Promise<Structure>{
+    const structureId = namespace + '.person'
     let structure = await Structures.getStructureService().findById(structureId)
     if(structure == null){
-        structure = await createPersonStructure(suffix, withTenant)
+        structure = await createPersonStructure(namespace, withTenant)
     }
     return structure
 }
 
-export async function createPersonStructure(suffix: string, withTenant: boolean = false): Promise<Structure>{
-    const {entityDefinition} = await createPersonSchema(suffix, withTenant)
-    const personStructure = new Structure('structures.api.tests',
-                                          'Person' + (withTenant ? 'WithTenant' : '') + suffix,
+export async function createPersonStructure(namespace: string, withTenant: boolean = false): Promise<Structure>{
+    const {entityDefinition} = await createPersonSchema(namespace, withTenant)
+    const personStructure = new Structure(namespace,
+                                          'Person' + (withTenant ? 'WithTenant' : ''),
                                           entityDefinition,
                                           'Tracks people that are going to mars')
 
-    await Structures.getNamespaceService().createNamespaceIfNotExist('structures.api.tests', 'Sample Data Namespace')
+    await Structures.getNamespaceService().createNamespaceIfNotExist(namespace, 'Sample Data Namespace')
 
     const savedStructure = await Structures.getStructureService().create(personStructure)
 
@@ -167,23 +166,23 @@ export async function createPersonStructure(suffix: string, withTenant: boolean 
     return savedStructure
 }
 
-export async function createVehicleStructureIfNotExist(suffix: string): Promise<Structure>{
-    const structureId = 'structures.api.tests.vehicle' + suffix
+export async function createVehicleStructureIfNotExist(namespace: string): Promise<Structure>{
+    const structureId = namespace + '.vehicle'
     let structure = await Structures.getStructureService().findById(structureId)
     if(structure == null){
-        structure = await createVehicleStructure(suffix)
+        structure = await createVehicleStructure(namespace)
     }
     return structure
 }
 
-export async function createVehicleStructure(suffix: string): Promise<Structure>{
-    const {entityDefinition} = await createVehicleSchema(suffix)
-    const vehicleStructure = new Structure('structures.api.tests',
-                                           'Vehicle' + suffix,
+export async function createVehicleStructure(namespace: string): Promise<Structure>{
+    const {entityDefinition} = await createVehicleSchema(namespace)
+    const vehicleStructure = new Structure(namespace,
+                                           'Vehicle',
                                            entityDefinition,
                                            'Some form of transportation')
 
-    await Structures.getNamespaceService().createNamespaceIfNotExist('structures.api.tests', 'Sample Data Namespace')
+    await Structures.getNamespaceService().createNamespaceIfNotExist(namespace, 'Sample Data Namespace')
 
     const savedStructure = await Structures.getStructureService().create(vehicleStructure)
 
@@ -337,7 +336,7 @@ export function createTestVehicle(): Vehicle {
 export function generateRandomString(length: number){
     let result = ''
     const characters =
-              'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+              'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
     const charactersLength = characters.length
     for (let i = 0; i < length; i++) {
         result += characters.charAt(Math.floor(Math.random() * charactersLength))

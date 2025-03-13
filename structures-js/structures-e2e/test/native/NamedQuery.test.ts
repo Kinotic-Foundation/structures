@@ -42,7 +42,7 @@ describe('End To End Tests', () => {
     }, 60000)
 
     beforeEach<LocalTestContext>(async (context) => {
-        context.structure = await createPersonStructureIfNotExist('_' + generateRandomString(5))
+        context.structure = await createPersonStructureIfNotExist(generateRandomString(5))
         expect(context.structure).toBeDefined()
         context.entityService = Structures.createEntityService(context.structure.namespace, context.structure.name)
         expect(context.entityService).toBeDefined()
@@ -50,6 +50,7 @@ describe('End To End Tests', () => {
 
     afterEach<LocalTestContext>(async (context) => {
         await expect(deleteStructure(context.structure.id as string)).resolves.toBeUndefined()
+        await Structures.getNamespaceService().deleteById(context.structure.namespace)
     })
 
 

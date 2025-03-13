@@ -2,6 +2,7 @@ import {Direction, Order, Page, Pageable} from '@kinotic/continuum-client'
 import {IEntityService, Structure, Structures} from '@kinotic/structures-api'
 import * as allure from 'allure-js-commons'
 import delay from 'delay'
+import {setTimeout} from 'node:timers/promises'
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it} from 'vitest'
 import {WebSocket} from 'ws'
 import {Person} from '../domain/Person.js'
@@ -38,7 +39,7 @@ describe('End To End Tests', () => {
     }, 60000)
 
     beforeEach<LocalTestContext>(async (context) => {
-        context.structure = await createPersonStructureIfNotExist(generateRandomString(5))
+        context.structure = await createPersonStructureIfNotExist(generateRandomString(10))
         expect(context.structure).toBeDefined()
         context.entityService = Structures.createEntityService(context.structure.namespace, context.structure.name)
         expect(context.entityService).toBeDefined()
@@ -46,6 +47,9 @@ describe('End To End Tests', () => {
 
     afterEach<LocalTestContext>(async (context) => {
         await expect(deleteStructure(context.structure.id as string)).resolves.toBeUndefined()
+        // next line waits for 2 seconds
+        await setTimeout(1000)
+        await Structures.getNamespaceService().deleteById(context.structure.namespace)
     })
 
     it<LocalTestContext>(
