@@ -27,7 +27,6 @@ import java.util.concurrent.CompletableFuture;
 
 public class StructurePolicyAuthorizationService implements AuthorizationService<EntityOperation> {
 
-    private static final Logger log = LoggerFactory.getLogger(StructurePolicyAuthorizationService.class);
     private final Map<EntityOperation, PolicyEvaluator> operationEvaluators = new HashMap<>();
     private final PolicyEvaluatorWithoutOperation sharedEvaluator;
     private final String structureId;

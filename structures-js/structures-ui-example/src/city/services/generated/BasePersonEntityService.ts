@@ -43,6 +43,7 @@ export class BasePersonEntityService extends EntityService<Person> {
       ret.firstName = entity.firstName
       ret.lastName = entity.lastName
       ret.birthDate = entity.birthDate
+      ret.tenantId = entity.tenantId
       ret.age = entity.age
       if (entity.address) {
         ret.address = (ret.address ? ret.address : {})

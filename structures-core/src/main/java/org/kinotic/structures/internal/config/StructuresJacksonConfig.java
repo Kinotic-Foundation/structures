@@ -4,14 +4,19 @@ import co.elastic.clients.elasticsearch._types.FieldValue;
 import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.fasterxml.jackson.databind.module.SimpleAbstractTypeResolver;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import org.apache.commons.lang3.tuple.Pair;
 import org.kinotic.continuum.idl.api.schema.decorators.C3Decorator;
 import org.kinotic.continuum.internal.utils.MetaUtil;
 import org.kinotic.structures.api.domain.FastestType;
 import org.kinotic.structures.api.domain.RawJson;
+import org.kinotic.structures.api.domain.TenantSpecificId;
 import org.kinotic.structures.api.domain.idl.PageC3Type;
 import org.kinotic.structures.api.domain.idl.PageableC3Type;
+import org.kinotic.structures.api.domain.idl.QueryOptionsC3Type;
+import org.kinotic.structures.api.domain.idl.TenantSelectionC3Type;
+import org.kinotic.structures.internal.api.services.DefaultTenantSpecificId;
 import org.kinotic.structures.internal.serializer.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,6 +62,8 @@ public class StructuresJacksonConfig {
         // register additional needed types
         ret.registerSubtypes(new NamedType(PageableC3Type.class, "pageable"));
         ret.registerSubtypes(new NamedType(PageC3Type.class, "page"));
+        ret.registerSubtypes(new NamedType(TenantSelectionC3Type.class, "tenantSelection"));
+        ret.registerSubtypes(new NamedType(QueryOptionsC3Type.class, "queryOptions"));
 
         // register internal serializer deserializers
         ret.addDeserializer(RawJson.class, new RawJsonDeserializer(new ObjectMapper()));
@@ -66,6 +73,11 @@ public class StructuresJacksonConfig {
         ret.addSerializer(FieldValue.class, new FieldValueSerializer());
 
         ret.addSerializer(FastestType.class, new FastestTypeSerializer());
+
+        SimpleAbstractTypeResolver resolver = new SimpleAbstractTypeResolver();
+        resolver.addMapping(TenantSpecificId.class, DefaultTenantSpecificId.class);
+
+        ret.setAbstractTypes(resolver);
 
         return ret;
     }

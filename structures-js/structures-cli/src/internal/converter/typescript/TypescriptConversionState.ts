@@ -19,6 +19,12 @@ export class TypescriptConversionState extends BaseConversionState{
      */
     public shouldAddSourcePathToMetadata: boolean = true
 
+    /**
+     * Boolean to indicate if multi-tenant selection is enabled.
+     * This is done by adding a {@link TenantId} decorator to the entity.
+     */
+    public multiTenantSelectionEnabled: boolean = false
+
     constructor(namespace: string,
                 utilFunctionLocator: UtilFunctionLocator | null) {
         super(namespace, utilFunctionLocator)

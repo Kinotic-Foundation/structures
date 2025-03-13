@@ -9,19 +9,19 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@faker-js/faker": "^8.4.1",
-    "@kinotic/continuum-client": "^2.10.3",
-    "@kinotic/continuum-idl": "^2.0.0",
-    "@kinotic/structures-api": "file:.yalc/@kinotic/structures-api",
-    "@types/uuid": "^9.0.8",
-    "uuid": "^10.0.0",
-    "vue": "^3.4.27"
+    "@faker-js/faker": "^9.5.0",
+    "@kinotic/continuum-client": "^2.12.1",
+    "@kinotic/continuum-idl": "^2.0.2",
+    "@kinotic/structures-api": "3.3.0-beta.8",
+    "@types/uuid": "^10.0.0",
+    "uuid": "^11.1.0",
+    "vue": "^3.5.13"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^5.0.5",
-    "typescript": "^5.4.5",
-    "vite": "^5.2.13",
-    "vue-tsc": "^2.0.21"
+    "@vitejs/plugin-vue": "^5.2.1",
+    "typescript": "^5.7.3",
+    "vite": "^6.1.1",
+    "vue-tsc": "^2.2.2"
   },
-  "packageManager": "pnpm@9.14.4+sha512.c8180b3fbe4e4bca02c94234717896b5529740a6cbadf19fa78254270403ea2f27d4e1d46a08a0f56c89b63dc8ebfd3ee53326da720273794e6200fcf0d184ab"
+  "packageManager": "pnpm@10.4.1"
 }

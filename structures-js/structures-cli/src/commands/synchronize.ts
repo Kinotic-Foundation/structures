@@ -62,25 +62,32 @@ export class Synchronize extends Command {
                     }
 
                     const codeGenerationService = new CodeGenerationService(namespaceConfig.namespaceName,
-                                                                                                 structuresProject.fileExtensionForImports,
-                                                                                                 this)
+                                                                            structuresProject.fileExtensionForImports,
+                                                                            this)
 
                     await codeGenerationService
-                            .generateAllEntities(namespaceConfig,
-                                                 flags.verbose || flags.dryRun,
-                                                 async (entityInfo, serviceInfo) =>{
-                                                     // We sync named queries first since currently the backend cache eviction logic is a little dumb
-                                                     // i.e. The cache eviction for the structure deletes the GraphQL schema
-                                                     //      This will evict the named query execution plan cache
-                                                     //      We want to make sure the GraphQL schema is updated after both these are updated and the structure below
-                                                     if(!flags.dryRun && serviceInfo.namedQueries.length > 0){
-                                                         await this.synchronizeNamedQueries(entityInfo.entity, serviceInfo.namedQueries)
-                                                     }
+                        .generateAllEntities(namespaceConfig,
+                                             flags.verbose || flags.dryRun,
+                                             async (entityInfo, services) =>{
 
-                                                     if(!flags.dryRun) {
-                                                         await this.synchronizeEntity(entityInfo.entity, flags.publish, flags.verbose)
-                                                     }
-                                                 })
+                                                 // combine named queries from generated services
+                                                 const namedQueries: FunctionDefinition[] = []
+                                                 for(let serviceInfo of services){
+                                                     namedQueries.push(...serviceInfo.namedQueries)
+                                                 }
+
+                                                 // We sync named queries first since currently the backend cache eviction logic is a little dumb
+                                                 // i.e. The cache eviction for the structure deletes the GraphQL schema
+                                                 //      This will evict the named query execution plan cache
+                                                 //      We want to make sure the GraphQL schema is updated after both these are updated and the structure below
+                                                 if(!flags.dryRun && namedQueries.length > 0){
+                                                     await this.synchronizeNamedQueries(entityInfo.entity, namedQueries)
+                                                 }
+
+                                                 if(!flags.dryRun) {
+                                                     await this.synchronizeEntity(entityInfo.entity, flags.publish, flags.verbose)
+                                                 }
+                                             })
 
                     this.log(`Synchronization Complete For namespace: ${namespaceConfig.namespaceName}`)
 

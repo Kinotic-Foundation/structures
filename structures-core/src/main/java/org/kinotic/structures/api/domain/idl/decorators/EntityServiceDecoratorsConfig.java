@@ -1,5 +1,6 @@
 package org.kinotic.structures.api.domain.idl.decorators;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.Locked;
 import lombok.Setter;
@@ -49,8 +50,10 @@ public class EntityServiceDecoratorsConfig{
     private List<EntityServiceDecorator> search = List.of();
     private List<EntityServiceDecorator> update = List.of();
 
+    @JsonIgnore
     private Map<EntityOperation, List<EntityServiceDecorator>> cachedOperationDecoratorMap;
 
+    @JsonIgnore
     @Locked
     public Map<EntityOperation, List<EntityServiceDecorator>> getOperationDecoratorMap() {
         if (cachedOperationDecoratorMap != null) {

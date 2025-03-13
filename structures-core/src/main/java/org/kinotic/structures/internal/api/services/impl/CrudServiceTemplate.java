@@ -7,6 +7,7 @@ import co.elastic.clients.elasticsearch._types.FieldValue;
 import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch.core.*;
 import co.elastic.clients.elasticsearch.core.get.GetResult;
+import co.elastic.clients.elasticsearch.core.mget.MultiGetOperation;
 import co.elastic.clients.elasticsearch.core.mget.MultiGetResponseItem;
 import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.elasticsearch.core.search.HitsMetadata;
@@ -182,10 +183,10 @@ public class CrudServiceTemplate {
      * @return a {@link CompletableFuture} that will complete with the document
      */
     public <T, R> CompletableFuture<R> findById(String indexName,
-                                             String id,
-                                             Class<T> type,
-                                             Consumer<GetRequest.Builder> builderConsumer,
-                                             Function<GetResult<T>, R> resultMapper) {
+                                                String id,
+                                                Class<T> type,
+                                                Consumer<GetRequest.Builder> builderConsumer,
+                                                Function<GetResult<T>, R> resultMapper) {
 
         //noinspection unchecked
         JsonEndpoint<GetRequest, GetResponse<T>, ErrorResponse> endpoint =
@@ -207,49 +208,28 @@ public class CrudServiceTemplate {
                             .performRequestAsync(builder.build(),
                                                  endpoint,
                                                  esAsyncClient._transportOptions())
-                   .thenApply(tGetResponse -> {
-                          if(resultMapper != null) {
-                            return resultMapper.apply(tGetResponse);
-                          }else{
-                              //noinspection unchecked
-                              return (R)tGetResponse.source();
-                          }
-                   });
-    }
-
-
-    /**
-     * Finds a list document by their id. Also allows for customization of the {@link MgetRequest}.
-     *
-     * @param indexName       name of the index to search
-     * @param ids             of the documents to return
-     * @param type            of the document to return
-     * @param builderConsumer to customize the {@link GetRequest}, or null if no customization is needed
-     * @return a {@link CompletableFuture} that will complete with the documents requested
-     */
-    public <T> CompletableFuture<List<T>> findByIds(String indexName,
-                                                    List<String> ids,
-                                                    Class<T> type,
-                                                    Consumer<MgetRequest.Builder> builderConsumer){
-        return findByIds(indexName, ids, type, builderConsumer, null);
+                            .thenApply(tGetResponse -> {
+                                if(resultMapper != null) {
+                                    return resultMapper.apply(tGetResponse);
+                                }else{
+                                    //noinspection unchecked
+                                    return (R)tGetResponse.source();
+                                }
+                            });
     }
 
     /**
-     * Finds a list document by their id. Also allows for customization of the {@link MgetRequest}.
-     *
-     * @param indexName       name of the index to search
-     * @param ids             of the documents to return
-     * @param type            of the document to return
-     * @param builderConsumer to customize the {@link GetRequest}, or null if no customization is needed
+     * Gets multiple documents for their {@link MultiGetOperation} objects. Also allows for customization of the {@link MgetRequest}.
+     * @param getOperations list of {@link MultiGetOperation} to get
+     * @param type of the document to return
+     * @param builderConsumer to customize the {@link MgetRequest}, or null if no customization is needed
      * @param resultMapper to map the {@link GetResult} to the desired type or null if the source should be returned directly
      * @return a {@link CompletableFuture} that will complete with the documents requested
      */
-    public <T, R> CompletableFuture<List<R>> findByIds(String indexName,
-                                                    List<String> ids,
-                                                    Class<T> type,
-                                                    Consumer<MgetRequest.Builder> builderConsumer,
-                                                    Function<GetResult<T>, R> resultMapper) {
-
+    public <T, R> CompletableFuture<List<R>> multiGet(List<MultiGetOperation> getOperations,
+                                                      Class<T> type,
+                                                      Consumer<MgetRequest.Builder> builderConsumer,
+                                                      Function<GetResult<T>, R> resultMapper){
         @SuppressWarnings("unchecked")
         JsonEndpoint<MgetRequest, MgetResponse<T>, ErrorResponse> endpoint =
                 (JsonEndpoint<MgetRequest, MgetResponse<T>, ErrorResponse>) MgetRequest._ENDPOINT;
@@ -259,8 +239,8 @@ public class CrudServiceTemplate {
                                                         getDeserializer(type));
 
         MgetRequest.Builder builder = new MgetRequest.Builder();
+        builder.docs(getOperations);
 
-        builder.index(indexName).ids(ids);
         if (builderConsumer != null) {
             builderConsumer.accept(builder);
         }
@@ -270,27 +250,27 @@ public class CrudServiceTemplate {
                             .performRequestAsync(builder.build(),
                                                  endpoint,
                                                  esAsyncClient._transportOptions())
-                .thenApply(response -> {
+                            .thenApply(response -> {
 
-                    List<MultiGetResponseItem<T>> recordsResponse = response.docs();
-                    ArrayList<R> content = new ArrayList<>();
+                                List<MultiGetResponseItem<T>> recordsResponse = response.docs();
+                                ArrayList<R> content = new ArrayList<>();
 
-                    if(resultMapper != null) {
-                        for (MultiGetResponseItem<T> hit : recordsResponse) {
-                            if (hit.isResult() && hit.result().found()) {
-                                content.add(resultMapper.apply(hit.result()));
-                            }
-                        }
-                    }else{
-                        for (MultiGetResponseItem<T> hit : recordsResponse) {
-                            if(hit.isResult() && hit.result().found()){
-                                //noinspection unchecked
-                                content.add((R)hit.result().source());
-                            }
-                        }
-                    }
-                    return content;
-                });
+                                if(resultMapper != null) {
+                                    for (MultiGetResponseItem<T> hit : recordsResponse) {
+                                        if (hit.isResult() && hit.result().found()) {
+                                            content.add(resultMapper.apply(hit.result()));
+                                        }
+                                    }
+                                }else{
+                                    for (MultiGetResponseItem<T> hit : recordsResponse) {
+                                        if(hit.isResult() && hit.result().found()){
+                                            //noinspection unchecked
+                                            content.add((R)hit.result().source());
+                                        }
+                                    }
+                                }
+                                return content;
+                            });
     }
 
     /**
@@ -326,10 +306,10 @@ public class CrudServiceTemplate {
      * @return a {@link CompletableFuture} that will complete with a {@link Page} of documents
      */
     public <T,R> CompletableFuture<Page<R>> search(String indexName,
-                                                 Pageable pageable,
-                                                 Class<T> type,
-                                                 Consumer<SearchRequest.Builder> builderConsumer,
-                                                 Function<Hit<T>, R> hitMapper) {
+                                                   Pageable pageable,
+                                                   Class<T> type,
+                                                   Consumer<SearchRequest.Builder> builderConsumer,
+                                                   Function<Hit<T>, R> hitMapper) {
 
         return searchFullResponse(indexName, pageable, type, builderConsumer)
                 .thenApply(response -> {
@@ -382,9 +362,9 @@ public class CrudServiceTemplate {
      * @return a {@link CompletableFuture} that will complete with a {@link SearchResponse} of documents
      */
     private <T> CompletableFuture<SearchResponse<T>> searchFullResponse(String indexName,
-                                                                       Pageable pageable,
-                                                                       Class<T> type,
-                                                                       Consumer<SearchRequest.Builder> builderConsumer) {
+                                                                        Pageable pageable,
+                                                                        Class<T> type,
+                                                                        Consumer<SearchRequest.Builder> builderConsumer) {
 
         Validate.notNull(indexName, "indexName cannot be null");
         Validate.notNull(pageable, "pageable cannot be null");

@@ -18,7 +18,6 @@ dependencies {
 	implementation "io.vertx:vertx-web-graphql"
 	implementation "io.vertx:vertx-web-client"
 	implementation "io.vertx:vertx-health-check"
-	implementation "com.github.rworsnop:vertx-beans"
 	implementation "me.escoffier.vertx:vertx-completable-future"
 
 	implementation 'org.apache.ignite:ignite-core'

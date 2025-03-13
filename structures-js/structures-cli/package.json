@@ -1,6 +1,6 @@
 {
     "name": "@kinotic/structures-cli",
-    "version": "2.2.0",
+    "version": "3.3.0",
     "description": "Structures CLI provides the ability to interact with the Structures Server",
     "author": "Kinotic Developers",
     "bin": {
@@ -19,9 +19,9 @@
     ],
     "dependencies": {
         "@inquirer/prompts": "^7.2.1",
-        "@kinotic/continuum-client": "^2.11.0",
+        "@kinotic/continuum-client": "^2.12.1",
         "@kinotic/continuum-idl": "^2.0.2",
-        "@kinotic/structures-api": "^3.2.0",
+        "@kinotic/structures-api": "^3.3.0",
         "@oclif/core": "^4.2.0",
         "@oclif/plugin-autocomplete": "^3.2.16",
         "@oclif/plugin-help": "^6",
@@ -94,9 +94,5 @@
     "keywords": [
         "oclif"
     ],
-    "types": "dist/index.d.ts",
-    "volta": {
-        "node": "18.17.0"
-    },
-    "packageManager": "pnpm@9.15.2"
+    "types": "dist/index.d.ts"
 }

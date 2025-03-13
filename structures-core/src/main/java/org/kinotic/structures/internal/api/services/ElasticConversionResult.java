@@ -16,10 +16,12 @@ import java.util.List;
  * @param multiTenancyType    The {@link MultiTenancyType} of the converted structure
  * @param objectProperty      The root object property that represents the converted C3Type
  * @param versionFieldName    The name of the field that will be used for optimistic locking or null if optimistic locking is not enabled
+ * @param tenantIdFieldName   The name of the field that will be used to hold the tenant id for an entity
  */
 public record ElasticConversionResult(List<DecoratedProperty> decoratedProperties,
                                       MultiTenancyType multiTenancyType,
                                       ObjectProperty objectProperty,
-                                      String versionFieldName) {
+                                      String versionFieldName,
+                                      String tenantIdFieldName) {
 
 }

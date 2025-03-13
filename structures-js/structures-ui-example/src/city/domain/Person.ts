@@ -6,7 +6,7 @@ import {
     PrecisionType,
     EntityServiceDecorators,
     $Role, $Policy,
-    Policy,
+    Policy, TenantId,
 } from '@kinotic/structures-api'
 import {Address} from './Address.js'
 
@@ -30,6 +30,9 @@ export class Person {
     public lastName!: string
 
     public birthDate!: Date
+
+    @TenantId
+    public tenantId!: string
 
     @Precision(PrecisionType.SHORT)
     public age?: number

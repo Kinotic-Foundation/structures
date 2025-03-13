@@ -4,7 +4,9 @@ import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import co.elastic.clients.elasticsearch._types.mapping.DynamicMapping;
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
-import org.kinotic.continuum.idl.api.schema.C3Type;
+import lombok.RequiredArgsConstructor;
+import org.kinotic.continuum.core.api.crud.Page;
+import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.StructureService;
@@ -13,8 +15,6 @@ import org.kinotic.structures.internal.api.services.ElasticConversionResult;
 import org.kinotic.structures.internal.api.services.StructureConversionService;
 import org.kinotic.structures.internal.api.services.StructureDAO;
 import org.kinotic.structures.internal.utils.StructuresUtil;
-import org.kinotic.continuum.core.api.crud.Page;
-import org.kinotic.continuum.core.api.crud.Pageable;
 import org.springframework.stereotype.Component;
 
 import java.util.Date;
@@ -22,6 +22,7 @@ import java.util.concurrent.CompletableFuture;
 
 
 @Component
+@RequiredArgsConstructor
 public class DefaultStructureService implements StructureService {
 
     private final CacheEvictionService cacheEvictionService;
@@ -31,19 +32,6 @@ public class DefaultStructureService implements StructureService {
     private final StructureDAO structureDAO;
     private final StructuresProperties structuresProperties;
 
-    public DefaultStructureService(StructuresProperties structuresProperties,
-                                   StructureConversionService structureConversionService,
-                                   CacheEvictionService cacheEvictionService,
-                                   StructureDAO structureDAO,
-                                   ElasticsearchAsyncClient esAsyncClient,
-                                   CrudServiceTemplate crudServiceTemplate) {
-        this.structuresProperties = structuresProperties;
-        this.structureConversionService = structureConversionService;
-        this.cacheEvictionService = cacheEvictionService;
-        this.structureDAO = structureDAO;
-        this.esAsyncClient = esAsyncClient;
-        this.crudServiceTemplate = crudServiceTemplate;
-    }
 
     @WithSpan
     @Override
@@ -102,6 +90,7 @@ public class DefaultStructureService implements StructureService {
                     structure.setDecoratedProperties(result.decoratedProperties());
                     structure.setMultiTenancyType(result.multiTenancyType());
                     structure.setVersionFieldName(result.versionFieldName());
+                    structure.setTenantIdFieldName(result.tenantIdFieldName());
 
                     return  structureDAO.save(structure);
                 });
@@ -221,6 +210,8 @@ public class DefaultStructureService implements StructureService {
                     structure.setDecoratedProperties(result.decoratedProperties());
                     structure.setMultiTenancyType(result.multiTenancyType());
                     structure.setVersionFieldName(result.versionFieldName());
+                    // FIXME: make sure this did not change in an unsupported fashion
+                    structure.setTenantIdFieldName(result.tenantIdFieldName());
 
                     if(structure.isPublished()) {
                         // FIXME: how to best handle an operation where the mapping completes but the save fails.

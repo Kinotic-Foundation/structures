@@ -1,0 +1,33 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+exporters:
+  otlp:
+    endpoint: "jaeger:4317"  # For traces
+    tls:
+      insecure: true
+  otlphttp:  # For logs to Loki
+    endpoint: "http://loki:3100/otlp"  # Corrected endpoint
+    tls:
+      insecure: true
+  prometheus:
+    endpoint: "0.0.0.0:8889"  # Collector exposes metrics here
+    resource_to_telemetry_conversion:
+      enabled: true  # Converts resource attributes to labels
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      exporters: [otlp]
+    logs:
+      receivers: [otlp]
+      exporters: [otlphttp]
+    metrics:
+      receivers: [otlp]
+      exporters: [prometheus]

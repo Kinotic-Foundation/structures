@@ -1,16 +1,17 @@
-import {Direction, Order, Page, Pageable} from '@kinotic/continuum-client'
+import {Page, Pageable} from '@kinotic/continuum-client'
 import {IEntityService, Structure, Structures} from '@kinotic/structures-api'
-import delay from 'delay'
+import * as allure from 'allure-js-commons'
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it} from 'vitest'
 import {WebSocket} from 'ws'
 import {Vehicle} from '../domain/Vehicle.js'
 import {
-    createTestPeopleAndVerify,
-    createTestVehicle, createTestVehicles,
+    createTestVehicle,
+    createTestVehicles,
     createVehicleStructureIfNotExist,
     deleteStructure,
     generateRandomString,
-    initContinuumClient, logFailure,
+    initContinuumClient,
+    logFailure,
     shutdownContinuumClient
 } from '../TestHelpers.js'
 
@@ -21,9 +22,11 @@ interface LocalTestContext {
     entityService: IEntityService<Vehicle>
 }
 
-describe('VersionedTests', () => {
+describe('End To End Tests', () => {
 
     beforeAll(async () => {
+        await allure.suite('Typescript Client')
+        await allure.subSuite('Versioned Tests')
         await initContinuumClient()
     }, 300000)
 

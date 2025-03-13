@@ -8,7 +8,7 @@ continuum:
 logging:
   level:
     org:
-      kinotic: INFO
+      kinotic: TRACE
     io:
       vertx: WARN
       netty:

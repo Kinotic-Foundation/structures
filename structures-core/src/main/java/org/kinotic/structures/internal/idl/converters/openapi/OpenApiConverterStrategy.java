@@ -51,28 +51,13 @@ public class OpenApiConverterStrategy implements IdlConverterStrategy<Schema<?>,
                      StringSchema stringSchema = new StringSchema();
                      stringSchema.setEnum(c3Type.getValues());
                      return stringSchema;
-                 })
-                 // Array Type
-                 .addConverter(ArrayC3Type.class, (c3Type, context) ->{
-                     // byte arrays are a special case per the open api spec
-                     // https://swagger.io/docs/specification/data-models/data-types/#string
-                     if(c3Type.getContains() instanceof ByteC3Type){
-                         return new StringSchema().format("binary");
-                     } else {
-
-                         Schema<?> schema = context.convert(c3Type.getContains());
-
-                         if(c3Type.getContains() instanceof ObjectC3Type){
-                             ObjectC3Type objectC3Type = (ObjectC3Type) c3Type.getContains();
-                             context.state().addReferencedSchema(objectC3Type.getName(), schema);
-                             schema = new Schema<>().$ref("#/components/schemas/"+objectC3Type.getName());
-                         }
-
-                         return new ArraySchema().items(schema);
-                     }
                  });
 
-        converters = new LinkedHashSet<>(List.of(container, new ObjectC3TypeToOpenApi(), new UnionC3TypeToOpenApi(), new PageC3TypeToOpenApi()));
+        converters = new LinkedHashSet<>(List.of(container,
+                                                 new ArrayC3TypeTpOpenApi(),
+                                                 new ObjectC3TypeToOpenApi(),
+                                                 new UnionC3TypeToOpenApi(),
+                                                 new PageC3TypeToOpenApi()));
     }
 
     public OpenApiConverterStrategy(StructuresProperties structuresProperties) {

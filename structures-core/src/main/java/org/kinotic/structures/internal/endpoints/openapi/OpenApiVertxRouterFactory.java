@@ -5,24 +5,25 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
-import io.opentelemetry.instrumentation.annotations.WithSpan;
 import io.swagger.v3.core.util.ObjectMapperFactory;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.ext.web.RequestBody;
+import io.vertx.ext.web.Route;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.CorsHandler;
-import lombok.RequiredArgsConstructor;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.continuum.api.security.SecurityService;
 import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.continuum.gateway.api.security.AuthenticationHandler;
 import org.kinotic.structures.api.config.StructuresProperties;
-import org.kinotic.structures.api.domain.FastestType;
-import org.kinotic.structures.api.domain.RawJson;
+import org.kinotic.structures.api.domain.*;
 import org.kinotic.structures.api.services.EntitiesService;
+import org.kinotic.structures.internal.api.services.DefaultTenantSpecificId;
 import org.kinotic.structures.internal.api.services.sql.MapParameterHolder;
 import org.kinotic.structures.internal.api.services.sql.ParameterHolder;
 import org.kinotic.structures.internal.utils.VertxWebUtil;
@@ -36,22 +37,63 @@ import java.util.function.Function;
 /**
  * Created by Navíd Mitchell 🤪 on 5/6/24.
  */
-@RequiredArgsConstructor
 @Component
 public class OpenApiVertxRouterFactory {
 
+    private static final ObjectMapper openApiMapper;
+
+    static {
+        // Specific serializers are added to the ObjectMapper by the swagger implementation
+        openApiMapper = ObjectMapperFactory.createJson();
+    }
+
+    private final String adminApiBasePath;
+    private final String apiBasePath;
     private final EntitiesService entitiesService;
     private final ObjectMapper objectMapper;
     private final OpenApiService openApiService;
     private final StructuresProperties properties;
     private final SecurityService securityService;
+    private final JavaType stringListType;
+    private final JavaType tenantSpecificListType;
     private final Vertx vertx;
 
-    private static ObjectMapper openApiMapper;
+    public OpenApiVertxRouterFactory(EntitiesService entitiesService,
+                                     ObjectMapper objectMapper,
+                                     OpenApiService openApiService,
+                                     StructuresProperties properties,
+                                     SecurityService securityService,
+                                     Vertx vertx) {
+        this.entitiesService = entitiesService;
+        this.objectMapper = objectMapper;
+        this.openApiService = openApiService;
+        this.properties = properties;
+        this.securityService = securityService;
+        this.vertx = vertx;
 
-    @WithSpan
+        apiBasePath = properties.getOpenApiPath();
+        adminApiBasePath = properties.getOpenApiAdminPath();
+
+        TypeFactory typeFactory = this.objectMapper.getTypeFactory();
+        stringListType = typeFactory.constructCollectionType(List.class, String.class);
+
+        tenantSpecificListType = typeFactory.constructCollectionType(List.class, DefaultTenantSpecificId.class);
+    }
+
+    private static String extractQueryAndTenantSelectionIfNeeded(RequestBody body, EntityContext ec, boolean admin) {
+        String query;
+        if(admin){
+            QueryWithTenantSelection qwts = body.asPojo(QueryWithTenantSelection.class);
+            query = qwts.query();
+            ec.setTenantSelection(qwts.tenantSelection());
+        }else{
+            query = body.asString();
+        }
+        Validate.notBlank(query, "A request body containing a query must be provided");
+        return query;
+    }
+
     public Router createRouter() {
-        String apiBasePath = properties.getOpenApiPath();
         Router router = Router.router(vertx);
 
         router.route().failureHandler(VertxWebUtil.createExceptionConvertingFailureHandler());
@@ -78,10 +120,6 @@ public class OpenApiVertxRouterFactory {
                   VertxCompletableFuture.from(vertx, openApiService.getOpenApiSpec(structureNamespace))
                                         .thenApply((Function<OpenAPI, Void>) openAPI -> {
                                             try {
-                                                if(openApiMapper == null){
-                                                    openApiMapper = ObjectMapperFactory.createJson();
-                                                }
-
                                                 byte[] bytes = openApiMapper.writeValueAsBytes(openAPI);
                                                 ctx.response().putHeader("Content-Type", "application/json");
                                                 ctx.response().end(Buffer.buffer(bytes));
@@ -97,241 +135,23 @@ public class OpenApiVertxRouterFactory {
             router.route().handler(new AuthenticationHandler(securityService, vertx));
         }
 
-        // Delete Entity By ID
-        router.delete(apiBasePath + ":structureNamespace/:structureName/:id")
-              .handler(ctx -> {
+        addDeleteRoutes(router, bodyHandler, true);
 
-                  String id = ctx.pathParam("id");
-                  Validate.notNull(id, "id must not be null");
+        addReadRoutes(router, bodyHandler, true);
 
-                  String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
+        addDeleteRoutes(router, bodyHandler, false);
 
-                  VertxCompletableFuture.from(vertx, entitiesService.deleteById(structureId,
-                                                                                id,
-                                                                                new RoutingContextToEntityContextAdapter(ctx)))
-                                        .handle(new NoValueHandler(ctx))
-                                        .exceptionally(throwable -> {
-                                            VertxWebUtil.writeException(ctx, throwable);
-                                            return null;
-                                        });
-              });
+        addReadRoutes(router, bodyHandler, false);
 
-        // Get all entities
-        router.get(apiBasePath + ":structureNamespace/:structureName")
-              .produces("application/json")
-              .handler(ctx -> {
+        addNamedQueryRoutes(router, bodyHandler);
 
-                  String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
+        addCreateUpdateRoutes(router, bodyHandler);
 
-                  Pageable pageable = VertxWebUtil.getPageableOrDefaultOffsetPageable(ctx);
+        return router;
+    }
 
-                  VertxCompletableFuture.from(vertx, entitiesService.findAll(structureId,
-                                                                             pageable,
-                                                                             FastestType.class,
-                                                                             new RoutingContextToEntityContextAdapter(ctx)))
-                                        .handle(new ValueToJsonHandler<>(ctx, objectMapper))
-                                        .exceptionally(throwable -> {
-                                            VertxWebUtil.writeException(ctx, throwable);
-                                            return null;
-                                        });
-              });
-
-        // Get Entity By ID
-        router.get(apiBasePath + ":structureNamespace/:structureName/:id")
-              .produces("application/json")
-              .handler(ctx -> {
-
-                  String id = ctx.pathParam("id");
-                  Validate.notNull(id, "id must not be null");
-
-                  String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
-
-                  VertxCompletableFuture.from(vertx, entitiesService.findById(structureId,
-                                                                              id,
-                                                                              FastestType.class,
-                                                                              new RoutingContextToEntityContextAdapter(ctx)))
-                                        .handle(new ValueToJsonHandler<>(ctx, objectMapper, true))
-                                        .exceptionally(throwable -> {
-                                            VertxWebUtil.writeException(ctx, throwable);
-                                            return null;
-                                        });
-              });
-
-
-        // Get Total Count for entity
-        router.get(apiBasePath + ":structureNamespace/:structureName/count/all")
-              .produces("application/json")
-              .handler(ctx -> {
-
-                  String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
-
-                  VertxCompletableFuture.from(vertx, entitiesService.count(structureId,
-                                                                           new RoutingContextToEntityContextAdapter(ctx)))
-                                        .handle(new CountHandler(ctx))
-                                        .exceptionally(throwable -> {
-                                            VertxWebUtil.writeException(ctx, throwable);
-                                            return null;
-                                        });
-              });
-
-        // Get Count for query against entity
-        router.post(apiBasePath + ":structureNamespace/:structureName/count/by-query")
-              .consumes("text/plain")
-              .produces("application/json")
-              .handler(bodyHandler)
-              .handler(ctx -> {
-
-                  String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
-                  String query = ctx.body().asString();
-
-                  VertxCompletableFuture.from(vertx, entitiesService.countByQuery(structureId,
-                                                                                  query,
-                                                                                  new RoutingContextToEntityContextAdapter(ctx)))
-                                        .handle(new CountHandler(ctx))
-                                        .exceptionally(throwable -> {
-                                            VertxWebUtil.writeException(ctx, throwable);
-                                            return null;
-                                        });
-              });
-
-        // Delete Entity By Query
-        router.post(apiBasePath + ":structureNamespace/:structureName/delete/by-query")
-              .consumes("text/plain")
-              .handler(bodyHandler)
-              .handler(ctx -> {
-
-                  String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
-                  String query = ctx.body().asString();
-
-                  VertxCompletableFuture.from(vertx, entitiesService.deleteByQuery(structureId,
-                                                                                   query,
-                                                                                   new RoutingContextToEntityContextAdapter(ctx)))
-                                        .handle(new NoValueHandler(ctx))
-                                        .exceptionally(throwable -> {
-                                            VertxWebUtil.writeException(ctx, throwable);
-                                            return null;
-                                        });
-              });
-
-        // Get Entity By IDs
-        router.post(apiBasePath + ":structureNamespace/:structureName/find/by-ids")
-              .consumes("application/json")
-              .produces("application/json")
-              .handler(bodyHandler)
-              .handler(ctx -> {
-
-                  String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
-
-                  try {
-                      TypeFactory typeFactory = this.objectMapper.getTypeFactory();
-                      JavaType listType = typeFactory.constructCollectionType(List.class, String.class);
-                      List<String> ids = this.objectMapper.readValue(ctx.body().buffer().getBytes(), listType);
-
-                      VertxCompletableFuture.from(vertx, entitiesService.findByIds(structureId,
-                                                                                   ids,
-                                                                                   FastestType.class,
-                                                                                   new RoutingContextToEntityContextAdapter(ctx)))
-                                            .handle(new ValueToJsonHandler<>(ctx, objectMapper))
-                                            .exceptionally(throwable -> {
-                                                VertxWebUtil.writeException(ctx, throwable);
-                                                return null;
-                                            });
-                  } catch (IOException e) {
-                      VertxWebUtil.writeException(ctx, e);
-                  }
-              });
-
-        // Named Query
-        router.post(apiBasePath + ":structureNamespace/:structureName/named-query/:queryName")
-              .produces("application/json")
-              .handler(bodyHandler)
-              .handler(ctx -> {
-
-                  String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
-                  String queryName = VertxWebUtil.validateAndReturnPathParam("queryName", ctx);
-
-                  try {
-                      ParameterHolder parameterHolder = null;
-                      if(!ctx.body().isEmpty()){
-                          Map<String, Object> paramMap = this.objectMapper.readValue(ctx.body().buffer().getBytes(), new TypeReference<>() {});
-                          parameterHolder = new MapParameterHolder(paramMap);
-                      }
-
-                      VertxCompletableFuture.from(vertx, entitiesService.namedQuery(structureId,
-                                                                                    queryName,
-                                                                                    parameterHolder,
-                                                                                    RawJson.class,
-                                                                                    new RoutingContextToEntityContextAdapter(ctx)))
-                                            .handle(new ValueToJsonHandler<>(ctx, objectMapper))
-                                            .exceptionally(throwable -> {
-                                                VertxWebUtil.writeException(ctx, throwable);
-                                                return null;
-                                            });
-                  } catch (IOException e) {
-                      VertxWebUtil.writeException(ctx, e);
-                  }
-              });
-
-        // Named Query Page
-        router.post(apiBasePath + ":structureNamespace/:structureName/named-query-page/:queryName")
-              .produces("application/json")
-              .handler(bodyHandler)
-              .handler(ctx -> {
-
-                  String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
-                  String queryName = VertxWebUtil.validateAndReturnPathParam("queryName", ctx);
-                  Pageable pageable = VertxWebUtil.getPageableOrDefaultCursorPageable(ctx);
-
-                  try {
-                      ParameterHolder parameterHolder = null;
-                      if(!ctx.body().isEmpty()){
-                          Map<String, Object> paramMap = this.objectMapper.readValue(ctx.body().buffer().getBytes(), new TypeReference<>() {});
-                          parameterHolder = new MapParameterHolder(paramMap);
-                      }
-
-                      VertxCompletableFuture.from(vertx, entitiesService.namedQueryPage(structureId,
-                                                                                        queryName,
-                                                                                        parameterHolder,
-                                                                                        pageable,
-                                                                                        RawJson.class,
-                                                                                        new RoutingContextToEntityContextAdapter(ctx)))
-                                            .handle(new ValueToJsonHandler<>(ctx, objectMapper))
-                                            .exceptionally(throwable -> {
-                                                VertxWebUtil.writeException(ctx, throwable);
-                                                return null;
-                                            });
-                  } catch (IOException e) {
-                      VertxWebUtil.writeException(ctx, e);
-                  }
-              });
-
-        // Search for entities
-        router.post(apiBasePath + ":structureNamespace/:structureName/search")
-              .consumes("text/plain")
-              .produces("application/json")
-              .handler(bodyHandler)
-              .handler(ctx -> {
-
-                  String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
-
-                  Pageable pageable = VertxWebUtil.getPageableOrDefaultOffsetPageable(ctx);
-
-                  String searchString = ctx.body().asString();
-
-                  Validate.notBlank(searchString, "A request body containing a search string must be provided");
-
-                  VertxCompletableFuture.from(vertx, entitiesService.search(structureId,
-                                                                            searchString,
-                                                                            pageable,
-                                                                            FastestType.class,
-                                                                            new RoutingContextToEntityContextAdapter(ctx)))
-                                        .handle(new ValueToJsonHandler<>(ctx, objectMapper))
-                                        .exceptionally(throwable -> {
-                                            VertxWebUtil.writeException(ctx, throwable);
-                                            return null;
-                                        });
-              });
-
+    private void addCreateUpdateRoutes(Router router,
+                                       BodyHandler bodyHandler) {
         // Bulk save
         router.post(apiBasePath + ":structureNamespace/:structureName/bulk")
               .consumes("application/json")
@@ -426,8 +246,347 @@ public class OpenApiVertxRouterFactory {
                                             return null;
                                         });
               });
+    }
 
-        return router;
+    private void addDeleteRoutes(Router router, BodyHandler bodyHandler, boolean admin) {
+
+        if(admin){
+            // Admin Delete Entity By ID
+            router.delete(adminApiBasePath + ":structureNamespace/:structureName/:tenantId/:id")
+                  .handler(ctx -> {
+
+                      String id = ctx.pathParam("id");
+                      Validate.notBlank(id, "id must not be null or blank");
+                      String tenantID = ctx.pathParam("tenantId");
+                      Validate.notBlank(tenantID, "tenantId must not be null or blank");
+
+                      String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
+
+                      VertxCompletableFuture.from(vertx, entitiesService.deleteById(structureId,
+                                                                                    TenantSpecificId.create(id, tenantID),
+                                                                                    new RoutingContextToEntityContextAdapter(ctx)))
+                                            .handle(new NoValueHandler(ctx))
+                                            .exceptionally(throwable -> {
+                                                VertxWebUtil.writeException(ctx, throwable);
+                                                return null;
+                                            });
+                  });
+        }else{
+            // Delete Entity By ID
+            router.delete(apiBasePath + ":structureNamespace/:structureName/:id")
+                  .handler(ctx -> {
+
+                      String id = ctx.pathParam("id");
+                      Validate.notNull(id, "id must not be null");
+
+                      String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
+
+                      VertxCompletableFuture.from(vertx, entitiesService.deleteById(structureId,
+                                                                                    id,
+                                                                                    new RoutingContextToEntityContextAdapter(ctx)))
+                                            .handle(new NoValueHandler(ctx))
+                                            .exceptionally(throwable -> {
+                                                VertxWebUtil.writeException(ctx, throwable);
+                                                return null;
+                                            });
+                  });
+        }
+
+        // Delete Entity By Query
+        router.post((admin ? adminApiBasePath : apiBasePath) + ":structureNamespace/:structureName/delete/by-query")
+              .consumes((admin ? "application/json" : "text/plain"))
+              .handler(bodyHandler)
+              .handler(ctx -> {
+
+                  String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
+                  String query;
+                  EntityContext ec = new RoutingContextToEntityContextAdapter(ctx);
+
+                  query = extractQueryAndTenantSelectionIfNeeded(ctx.body(), ec, admin);
+
+                  VertxCompletableFuture.from(vertx, entitiesService.deleteByQuery(structureId,
+                                                                                   query,
+                                                                                   ec))
+                                        .handle(new NoValueHandler(ctx))
+                                        .exceptionally(throwable -> {
+                                            VertxWebUtil.writeException(ctx, throwable);
+                                            return null;
+                                        });
+              });
+    }
+
+    private void addNamedQueryRoutes(Router router, BodyHandler bodyHandler) {
+        // Named Query
+        router.post(apiBasePath + ":structureNamespace/:structureName/named-query/:queryName")
+              .produces("application/json")
+              .handler(bodyHandler)
+              .handler(ctx -> {
+
+                  String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
+                  String queryName = VertxWebUtil.validateAndReturnPathParam("queryName", ctx);
+
+                  try {
+                      ParameterHolder parameterHolder = null;
+                      if(!ctx.body().isEmpty()){
+                          Map<String, Object> paramMap = this.objectMapper.readValue(ctx.body().buffer().getBytes(), new TypeReference<>() {});
+                          parameterHolder = new MapParameterHolder(paramMap);
+                      }
+
+                      VertxCompletableFuture.from(vertx, entitiesService.namedQuery(structureId,
+                                                                                    queryName,
+                                                                                    parameterHolder,
+                                                                                    RawJson.class,
+                                                                                    new RoutingContextToEntityContextAdapter(ctx)))
+                                            .handle(new ValueToJsonHandler<>(ctx, objectMapper))
+                                            .exceptionally(throwable -> {
+                                                VertxWebUtil.writeException(ctx, throwable);
+                                                return null;
+                                            });
+                  } catch (IOException e) {
+                      VertxWebUtil.writeException(ctx, e);
+                  }
+              });
+
+        // Named Query Page
+        router.post(apiBasePath + ":structureNamespace/:structureName/named-query-page/:queryName")
+              .produces("application/json")
+              .handler(bodyHandler)
+              .handler(ctx -> {
+
+                  String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
+                  String queryName = VertxWebUtil.validateAndReturnPathParam("queryName", ctx);
+                  Pageable pageable = VertxWebUtil.getPageableOrDefaultCursorPageable(ctx);
+
+                  try {
+                      ParameterHolder parameterHolder = null;
+                      if(!ctx.body().isEmpty()){
+                          Map<String, Object> paramMap = this.objectMapper.readValue(ctx.body().buffer().getBytes(), new TypeReference<>() {});
+                          parameterHolder = new MapParameterHolder(paramMap);
+                      }
+
+                      VertxCompletableFuture.from(vertx, entitiesService.namedQueryPage(structureId,
+                                                                                        queryName,
+                                                                                        parameterHolder,
+                                                                                        pageable,
+                                                                                        RawJson.class,
+                                                                                        new RoutingContextToEntityContextAdapter(ctx)))
+                                            .handle(new ValueToJsonHandler<>(ctx, objectMapper))
+                                            .exceptionally(throwable -> {
+                                                VertxWebUtil.writeException(ctx, throwable);
+                                                return null;
+                                            });
+                  } catch (IOException e) {
+                      VertxWebUtil.writeException(ctx, e);
+                  }
+              });
+    }
+
+    private void addReadRoutes(Router router, BodyHandler bodyHandler, boolean admin) {
+        String basePath = (admin ? adminApiBasePath : apiBasePath);
+
+        // Find all entities
+        Route findAllRoute
+                = router.route((admin ? HttpMethod.POST : HttpMethod.GET), basePath + ":structureNamespace/:structureName")
+                        .produces("application/json");
+        if(admin){
+            findAllRoute.consumes("application/json")
+                        .handler(bodyHandler);
+        }
+        findAllRoute.handler(ctx -> {
+
+            String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
+            Pageable pageable = VertxWebUtil.getPageableOrDefaultOffsetPageable(ctx);
+            EntityContext ec = new RoutingContextToEntityContextAdapter(ctx);
+
+            try {
+                if(admin){
+                    List<String> tenantSelection = objectMapper.readValue(ctx.body().buffer().getBytes(),
+                                                                          stringListType);
+                    ec.setTenantSelection(tenantSelection);
+                }
+
+                VertxCompletableFuture.from(vertx, entitiesService.findAll(structureId,
+                                                                           pageable,
+                                                                           FastestType.class,
+                                                                           ec))
+                                      .handle(new ValueToJsonHandler<>(ctx, objectMapper))
+                                      .exceptionally(throwable -> {
+                                          VertxWebUtil.writeException(ctx, throwable);
+                                          return null;
+                                      });
+
+            } catch (IOException e) {
+                VertxWebUtil.writeException(ctx, e);
+            }
+        });
+
+        if(admin){
+            // Admin Get Entity By ID
+            router.get(adminApiBasePath + ":structureNamespace/:structureName/:tenantId/:id")
+                  .produces("application/json")
+                  .handler(ctx -> {
+
+                      String id = ctx.pathParam("id");
+                      Validate.notNull(id, "id must not be null");
+                      String tenantID = ctx.pathParam("tenantId");
+                      Validate.notBlank(tenantID, "tenantId must not be null or blank");
+
+                      String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
+
+                      VertxCompletableFuture.from(vertx, entitiesService.findById(structureId,
+                                                                                  TenantSpecificId.create(id, tenantID),
+                                                                                  FastestType.class,
+                                                                                  new RoutingContextToEntityContextAdapter(ctx)))
+                                            .handle(new ValueToJsonHandler<>(ctx, objectMapper, true))
+                                            .exceptionally(throwable -> {
+                                                VertxWebUtil.writeException(ctx, throwable);
+                                                return null;
+                                            });
+                  });
+        }else {
+            // Get Entity By ID
+            router.get(apiBasePath + ":structureNamespace/:structureName/:id")
+                  .produces("application/json")
+                  .handler(ctx -> {
+
+                      String id = ctx.pathParam("id");
+                      Validate.notNull(id, "id must not be null");
+
+                      String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
+
+                      VertxCompletableFuture.from(vertx, entitiesService.findById(structureId,
+                                                                                  id,
+                                                                                  FastestType.class,
+                                                                                  new RoutingContextToEntityContextAdapter(ctx)))
+                                            .handle(new ValueToJsonHandler<>(ctx, objectMapper, true))
+                                            .exceptionally(throwable -> {
+                                                VertxWebUtil.writeException(ctx, throwable);
+                                                return null;
+                                            });
+                  });
+        }
+
+
+        // Get Total Count for entity
+        Route countRoute = router.route((admin ? HttpMethod.POST : HttpMethod.GET), basePath + ":structureNamespace/:structureName/count/all")
+                                 .produces("application/json");
+        if(admin){
+            countRoute.consumes("application/json")
+                      .handler(bodyHandler);
+        }
+        countRoute.handler(ctx -> {
+
+            String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
+            EntityContext ec = new RoutingContextToEntityContextAdapter(ctx);
+
+            try {
+                if(admin){
+                    List<String> tenantSelection = objectMapper.readValue(ctx.body().buffer().getBytes(),
+                                                                          stringListType);
+                    ec.setTenantSelection(tenantSelection);
+                }
+
+                VertxCompletableFuture.from(vertx, entitiesService.count(structureId,
+                                                                         ec))
+                                      .handle(new CountHandler(ctx))
+                                      .exceptionally(throwable -> {
+                                          VertxWebUtil.writeException(ctx, throwable);
+                                          return null;
+                                      });
+            } catch (IOException e) {
+                VertxWebUtil.writeException(ctx, e);
+            }
+        });
+
+        // Get Count for query against entity
+        router.post(basePath + ":structureNamespace/:structureName/count/by-query")
+              .consumes((admin ? "application/json" : "text/plain"))
+              .produces("application/json")
+              .handler(bodyHandler)
+              .handler(ctx -> {
+
+                  String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
+                  String query;
+                  EntityContext ec = new RoutingContextToEntityContextAdapter(ctx);
+
+                  query = extractQueryAndTenantSelectionIfNeeded(ctx.body(), ec, admin);
+
+                  VertxCompletableFuture.from(vertx, entitiesService.countByQuery(structureId,
+                                                                                  query,
+                                                                                  ec))
+                                        .handle(new CountHandler(ctx))
+                                        .exceptionally(throwable -> {
+                                            VertxWebUtil.writeException(ctx, throwable);
+                                            return null;
+                                        });
+              });
+
+        // Get Entity By IDs
+        router.post(basePath + ":structureNamespace/:structureName/find/by-ids")
+              .consumes("application/json")
+              .produces("application/json")
+              .handler(bodyHandler)
+              .handler(ctx -> {
+
+                  String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
+                  try {
+                      if(admin){
+                          List<TenantSpecificId> ids = this.objectMapper.readValue(ctx.body().buffer().getBytes(), tenantSpecificListType);
+
+                          VertxCompletableFuture.from(vertx, entitiesService.findByIdsWithTenant(structureId,
+                                                                                       ids,
+                                                                                       FastestType.class,
+                                                                                       new RoutingContextToEntityContextAdapter(
+                                                                                               ctx)))
+                                                .handle(new ValueToJsonHandler<>(ctx, objectMapper))
+                                                .exceptionally(throwable -> {
+                                                    VertxWebUtil.writeException(ctx, throwable);
+                                                    return null;
+                                                });
+                      }else {
+                          List<String> ids = this.objectMapper.readValue(ctx.body().buffer().getBytes(), stringListType);
+
+                          VertxCompletableFuture.from(vertx, entitiesService.findByIds(structureId,
+                                                                                       ids,
+                                                                                       FastestType.class,
+                                                                                       new RoutingContextToEntityContextAdapter(
+                                                                                               ctx)))
+                                                .handle(new ValueToJsonHandler<>(ctx, objectMapper))
+                                                .exceptionally(throwable -> {
+                                                    VertxWebUtil.writeException(ctx, throwable);
+                                                    return null;
+                                                });
+                      }
+                  } catch (IOException e) {
+                      VertxWebUtil.writeException(ctx, e);
+                  }
+              });
+
+        // Search for entities
+        router.post(basePath + ":structureNamespace/:structureName/search")
+              .consumes((admin ? "application/json" : "text/plain"))
+              .produces("application/json")
+              .handler(bodyHandler)
+              .handler(ctx -> {
+
+                  String structureId = VertxWebUtil.validateAndReturnStructureId(ctx);
+                  Pageable pageable = VertxWebUtil.getPageableOrDefaultOffsetPageable(ctx);
+                  String query;
+                  EntityContext ec = new RoutingContextToEntityContextAdapter(ctx);
+
+                  query = extractQueryAndTenantSelectionIfNeeded(ctx.body(), ec, admin);
+
+                  VertxCompletableFuture.from(vertx, entitiesService.search(structureId,
+                                                                            query,
+                                                                            pageable,
+                                                                            FastestType.class,
+                                                                            ec))
+                                        .handle(new ValueToJsonHandler<>(ctx, objectMapper))
+                                        .exceptionally(throwable -> {
+                                            VertxWebUtil.writeException(ctx, throwable);
+                                            return null;
+                                        });
+              });
     }
 
 }

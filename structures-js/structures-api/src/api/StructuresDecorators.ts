@@ -145,3 +145,8 @@ export function Text(target: any, propertyKey: string) {
 export function Version(target: any, propertyKey: string) {
 
 }
+
+// @ts-ignore
+export function TenantId(target: any, propertyKey: string) {
+
+}

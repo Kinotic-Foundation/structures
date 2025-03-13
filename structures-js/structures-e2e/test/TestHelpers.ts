@@ -2,10 +2,10 @@ import {faker} from '@faker-js/faker/locale/en'
 import {CodeGenerationService} from '@kinotic/structures-cli/dist/internal/CodeGenerationService.js'
 import {ConsoleLogger} from '@kinotic/structures-cli/dist/internal/Logger.js'
 import {NamespaceConfiguration} from '@kinotic/structures-cli/dist/internal/state/StructuresProject.js'
-import delay from 'delay'
 import {Continuum, Direction, Order, Pageable} from '@kinotic/continuum-client'
 import {
-    ObjectC3Type
+    ObjectC3Type,
+    FunctionDefinition
 } from '@kinotic/continuum-idl'
 import {randomUUID} from 'node:crypto'
 import {expect} from 'vitest'
@@ -13,15 +13,25 @@ import {IterablePage} from '@kinotic/continuum-client'
 import {
     Structures,
     Structure,
-    IEntityService
+    IEntityService,
+    IAdminEntityService,
+    NamedQueriesDefinition,
+    QueryDecorator
 } from '@kinotic/structures-api'
 import {Person} from './domain/Person.js'
 import {inject} from 'vitest'
+// @ts-ignore
 import path from 'path'
+import {PersonWithTenant} from './domain/PersonWithTenant.js'
 import {Cat, Dog} from './domain/Pet.js'
 import {Vehicle, Wheel} from './domain/Vehicle.js'
 
-let schemas: Map<string, ObjectC3Type> = new Map<string, ObjectC3Type>()
+
+type SchemaCreationResult ={
+    entityDefinition: ObjectC3Type
+    namedQueriesDefinition: NamedQueriesDefinition
+}
+let schemas: Map<string, SchemaCreationResult> = new Map<string, SchemaCreationResult>()
 
 export async function initContinuumClient(): Promise<void> {
     try {
@@ -54,54 +64,94 @@ export async function shutdownContinuumClient(): Promise<void> {
     }
 }
 
-export async function createPersonSchema(suffix: string): Promise<ObjectC3Type> {
-    return createSchema(suffix, 'Person')
+export async function createPersonSchema(suffix: string, withTenant: boolean = false): Promise<SchemaCreationResult> {
+    return createSchema(suffix, 'Person'+(withTenant ? 'WithTenant' : ''))
 }
 
-export async function createVehicleSchema(suffix: string): Promise<ObjectC3Type> {
+export async function createVehicleSchema(suffix: string): Promise<SchemaCreationResult> {
     return createSchema(suffix, 'Vehicle')
 }
 
-export async function createSchema(suffix: string, entityName: string): Promise<ObjectC3Type> {
+export async function createSchema(suffix: string, entityName: string): Promise<SchemaCreationResult> {
+    const namespace = 'structures.api.tests'
     if(!schemas.has(entityName)){
-        const codeGenerationService = new CodeGenerationService('structures.api.tests',
+        const codeGenerationService = new CodeGenerationService(namespace,
                                                                 '.js',
                                                                 new ConsoleLogger())
         const namespaceConfig: NamespaceConfiguration = new NamespaceConfiguration()
-        namespaceConfig.namespaceName = 'structures.api.tests'
+        namespaceConfig.namespaceName = namespace
         namespaceConfig.validate = false
         namespaceConfig.entitiesPaths = [path.resolve(__dirname, './domain')]
         namespaceConfig.generatedPath = path.resolve(__dirname, './services')
         await codeGenerationService
             .generateAllEntities(namespaceConfig,
                                  false,
-                                 async (entityInfo) =>{
-                                     schemas.set(entityInfo.entity.name, entityInfo.entity)
+                                 async (entityInfo, serviceInfos) =>{
+                                    // combine named queries from generated services
+                                     const namedQueries: FunctionDefinition[] = []
+                                     for(let serviceInfo of serviceInfos){
+                                            namedQueries.push(...serviceInfo.namedQueries)
+                                     }
+                                     const id = (namespace + '.' + entityName).toLowerCase()
+                                    const result: SchemaCreationResult = {
+                                        entityDefinition: entityInfo.entity,
+                                        namedQueriesDefinition: new NamedQueriesDefinition(id,
+                                                                                           namespace,
+                                                                                           entityName,
+                                                                                           namedQueries)
+                                    }
+                                     schemas.set(entityInfo.entity.name, result)
                                  })
     }
-    const ret = structuredClone(schemas.get(entityName))
-    if(ret) {
-        ret.name = entityName+suffix
-    }else{
-        throw new Error('Could not copy schema')
+    const result = schemas.get(entityName)
+    if(!result){
+        throw new Error('Could not find Entity ' + entityName)
     }
+    const ret = structuredClone(result)
+    if(!ret){
+        throw new Error('Could not copy schema for ' + entityName)
+    }
+
+    ret.entityDefinition.name = entityName + suffix
+    ret.namedQueriesDefinition.id = (namespace + '.' + entityName + suffix).toLowerCase()
+    ret.namedQueriesDefinition.structure = entityName + suffix
+    replaceAllQueryPlaceholdersWithName(entityName + suffix, ret.namedQueriesDefinition.namedQueries)
     return ret
 }
 
-export async function createPersonStructureIfNotExist(suffix: string): Promise<Structure>{
+/**
+ * This replaces the PLACEHOLDER string in all @Query decorators applied to the given function definitions
+ * @param structureName to replace the PLACEHOLDER with
+ * @param functionDefinitions all of the {@link FunctionDefinition}s to replace the PLACEHOLDER in
+ */
+function replaceAllQueryPlaceholdersWithName(structureName: string, functionDefinitions: FunctionDefinition[]){
+    for(const functionDefinition of functionDefinitions){
+        if(functionDefinition.decorators) {
+            for (const decorator of functionDefinition.decorators) {
+                if (decorator.type === 'Query') {
+                    const queryDecorator = decorator as QueryDecorator
+                    // @ts-ignore stupid intellij error for replaceAll
+                    queryDecorator.statements = queryDecorator.statements.replaceAll('PLACEHOLDER', structureName.toLowerCase())
+                }
+            }
+        }
+    }
+}
+
+export async function createPersonStructureIfNotExist(suffix: string, withTenant: boolean = false): Promise<Structure>{
     const structureId = 'structures.api.tests.person' + suffix
     let structure = await Structures.getStructureService().findById(structureId)
     if(structure == null){
-        structure = await createPersonStructure(suffix)
+        structure = await createPersonStructure(suffix, withTenant)
     }
     return structure
 }
 
-export async function createPersonStructure(suffix: string): Promise<Structure>{
-    const schema: ObjectC3Type = await createPersonSchema(suffix)
+export async function createPersonStructure(suffix: string, withTenant: boolean = false): Promise<Structure>{
+    const {entityDefinition} = await createPersonSchema(suffix, withTenant)
     const personStructure = new Structure('structures.api.tests',
-                                          'Person' + suffix,
-                                          schema,
+                                          'Person' + (withTenant ? 'WithTenant' : '') + suffix,
+                                          entityDefinition,
                                           'Tracks people that are going to mars')
 
     await Structures.getNamespaceService().createNamespaceIfNotExist('structures.api.tests', 'Sample Data Namespace')
@@ -127,11 +177,11 @@ export async function createVehicleStructureIfNotExist(suffix: string): Promise<
 }
 
 export async function createVehicleStructure(suffix: string): Promise<Structure>{
-    const schema: ObjectC3Type = await createVehicleSchema(suffix)
+    const {entityDefinition} = await createVehicleSchema(suffix)
     const vehicleStructure = new Structure('structures.api.tests',
-                                          'Vehicle' + suffix,
-                                          schema,
-                                          'Some form of transportation')
+                                           'Vehicle' + suffix,
+                                           entityDefinition,
+                                           'Some form of transportation')
 
     await Structures.getNamespaceService().createNamespaceIfNotExist('structures.api.tests', 'Sample Data Namespace')
 
@@ -161,16 +211,35 @@ export function createTestPeople(numberToCreate: number): Person[] {
 }
 
 export async function createTestPeopleAndVerify(entityService: IEntityService<Person>,
-                                                numberToCreate: number,
-                                                delayAfterUpdate: number): Promise<void> {
+                                                numberToCreate: number): Promise<void> {
     // Create people
     const people: Person[] = createTestPeople(numberToCreate)
     await expect(entityService.bulkSave(people)).resolves.toBeNull()
-
-    await delay(delayAfterUpdate)
+    await expect(entityService.syncIndex()).resolves.toBeNull()
 
     // Count the people
     await expect(entityService.count()).resolves.toBe(numberToCreate)
+}
+
+export function createTestPeopleWithTenant(numberToCreate: number, tenantId: string): PersonWithTenant[] {
+    const ret: PersonWithTenant[] = []
+    for (let i = 0; i < numberToCreate; i++) {
+        ret.push(createTestPersonWithTenant(i, tenantId))
+    }
+    return ret
+}
+
+export async function createTestPeopleWithTenantAndVerify(adminEntityService: IAdminEntityService<PersonWithTenant>,
+                                                          entityService: IEntityService<PersonWithTenant>,
+                                                          tenantId: string,
+                                                          numberToCreate: number): Promise<void> {
+    // Create people
+    const people: PersonWithTenant[] = createTestPeopleWithTenant(numberToCreate, tenantId)
+    await expect(entityService.bulkSave(people)).resolves.toBeNull()
+    await expect(entityService.syncIndex()).resolves.toBeNull()
+
+    // Count the people
+    await expect(adminEntityService.count([tenantId])).resolves.toBe(numberToCreate)
 }
 
 export async function findAndVerifyPeopleWithCursorPaging(entityService: IEntityService<Person>,
@@ -209,29 +278,40 @@ export async function findAndVerifyPeopleWithOffsetPaging(entityService: IEntity
     expect(elementsFound, `Should have found ${numberToExpect} Entities`).toBe(numberToExpect)
 }
 
+export function createTestPersonWithTenant(index: number = 0, tenantId: string): PersonWithTenant {
+    let ret: PersonWithTenant = new PersonWithTenant()
+    addDataToPerson(index, ret)
+    ret.tenantId = tenantId
+    return ret
+}
+
 export function createTestPerson(index: number = 0): Person {
-    const ret = new Person()
+    let ret: Person = new Person()
+    addDataToPerson(index, ret)
+    return ret
+}
+
+function addDataToPerson(index: number = 0, person: Person | PersonWithTenant){
     if(index % 2 === 0){
-        ret.firstName = 'John'
-        ret.lastName = 'Doe'
-        ret.myPet = new Cat()
-        ret.myPet.age = 4
-        ret.myPet.name = 'Fluffy'
+        person.firstName = 'John'
+        person.lastName = 'Doe'
+        person.myPet = new Cat()
+        person.myPet.age = 4
+        person.myPet.name = 'Fluffy'
     }else{
-        ret.firstName = 'Steve'
-        ret.lastName = 'Wozniak'
-        ret.myPet = new Dog()
-        ret.myPet.age = 10
-        ret.myPet.name = 'Zapato'
+        person.firstName = 'Steve'
+        person.lastName = 'Wozniak'
+        person.myPet = new Dog()
+        person.myPet.age = 10
+        person.myPet.name = 'Zapato'
     }
-    ret.age = 42
-    ret.address = {
+    person.age = 42
+    person.address = {
         street: '123 Main St',
         city: 'Anytown',
         state: 'CA',
         zip: '12345'
     }
-    return ret
 }
 
 export function createTestVehicles(numberToCreate: number): Vehicle[] {

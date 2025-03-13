@@ -5,6 +5,7 @@ import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.continuum.idl.api.schema.FunctionDefinition;
 import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.api.domain.TenantSpecificId;
 import org.kinotic.structures.internal.api.services.sql.ParameterHolder;
 
 import java.util.List;
@@ -62,6 +63,17 @@ public interface EntitiesService {
     CompletableFuture<Void> deleteById(String structureId, String id, EntityContext context);
 
     /**
+     * Deletes the entity with the given id.
+     * NOTE: this method is only allowed if the {@link Structure#isMultiTenantSelectionEnabled()} is true
+     *
+     * @param structureId the id of the structure to delete the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * @param id          must not be {@literal null}
+     * @param context     the context for this operation
+     * @return {@link CompletableFuture} emitting when delete is complete
+     */
+    CompletableFuture<Void> deleteById(String structureId, TenantSpecificId id, EntityContext context);
+
+    /**
      * Deletes any entities that match the given query.
      *
      * @param structureId the id of the structure to delete the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
@@ -100,6 +112,18 @@ public interface EntitiesService {
     <T> CompletableFuture<T> findById(String structureId, String id, Class<T> type, EntityContext context);
 
     /**
+     * Retrieves an entity by its id.
+     * NOTE: this method is only allowed if the {@link Structure#isMultiTenantSelectionEnabled()} is true
+     *
+     * @param structureId the id of the structure to find the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * @param id          must not be {@literal null}
+     * @param type        the type of the entity
+     * @param context     the context for this operation
+     * @return {@link CompletableFuture} with the entity with the given id or {@link CompletableFuture} emitting null if none found
+     */
+    <T> CompletableFuture<T> findById(String structureId, TenantSpecificId id, Class<T> type, EntityContext context);
+
+    /**
      * Retrieves a list of entities by their id.
      *
      * @param structureId the id of the structure to find the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
@@ -109,6 +133,18 @@ public interface EntitiesService {
      * @return {@link CompletableFuture} with the list of matched entities with the given ids or {@link CompletableFuture} emitting an empty list if none found
      */
     <T> CompletableFuture<List<T>> findByIds(String structureId, List<String> ids, Class<T> type, EntityContext context);
+
+    /**
+     * Retrieves a list of entities by their id.
+     * NOTE: this method is only allowed if the {@link Structure#isMultiTenantSelectionEnabled()} is true
+     *
+     * @param structureId the id of the structure to find the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * @param ids         must not be {@literal null}
+     * @param type        the type of the entity
+     * @param context     the context for this operation
+     * @return {@link CompletableFuture} with the list of matched entities with the given ids or {@link CompletableFuture} emitting an empty list if none found
+     */
+    <T> CompletableFuture<List<T>> findByIdsWithTenant(String structureId, List<TenantSpecificId> ids, Class<T> type, EntityContext context);
 
     /**
      * Executes a named query.
