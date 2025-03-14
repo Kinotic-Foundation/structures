@@ -138,7 +138,7 @@ function replaceAllQueryPlaceholdersWithId(structureId: string, functionDefiniti
 }
 
 export async function createPersonStructureIfNotExist(namespace: string, withTenant: boolean = false): Promise<Structure>{
-    const structureId = namespace + '.person'
+    const structureId = namespace + '.person' + ( withTenant ? 'withtenant' : '')
     let structure = await Structures.getStructureService().findById(structureId)
     if(structure == null){
         structure = await createPersonStructure(namespace, withTenant)

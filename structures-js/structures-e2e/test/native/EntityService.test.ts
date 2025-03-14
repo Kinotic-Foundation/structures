@@ -1,8 +1,6 @@
 import {Direction, Order, Page, Pageable} from '@kinotic/continuum-client'
 import {IEntityService, Structure, Structures} from '@kinotic/structures-api'
 import * as allure from 'allure-js-commons'
-import delay from 'delay'
-import {setTimeout} from 'node:timers/promises'
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it} from 'vitest'
 import {WebSocket} from 'ws'
 import {Person} from '../domain/Person.js'
@@ -47,8 +45,7 @@ describe('End To End Tests', () => {
 
     afterEach<LocalTestContext>(async (context) => {
         await expect(deleteStructure(context.structure.id as string)).resolves.toBeUndefined()
-        // next line waits for 2 seconds
-        await setTimeout(1000)
+        await expect(Structures.getStructureService().syncIndex()).resolves.toBeNull()
         await Structures.getNamespaceService().deleteById(context.structure.namespace)
     })
 
@@ -181,7 +178,7 @@ describe('End To End Tests', () => {
             await createTestPeopleAndVerify(entityService, 100)
 
             await entityService.deleteByQuery("lastName: Doe")
-            await delay(2000)
+            await entityService.syncIndex()
 
             let countByQueryAfterDelete = await entityService.countByQuery("lastName: Doe")
             expect(countByQueryAfterDelete, 'Should have 0 Entities when using countByQuery after deleteByQuery').toBe(0)
