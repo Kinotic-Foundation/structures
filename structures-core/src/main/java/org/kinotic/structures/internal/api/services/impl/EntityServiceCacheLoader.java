@@ -112,7 +112,8 @@ public class EntityServiceCacheLoader implements AsyncCacheLoader<String, Entity
                                          namedQueriesService,
                                          objectMapper,
                                          readPreProcessor,
-                                         structure));
+                                         structure,
+                                         structuresProperties));
     }
 
 }

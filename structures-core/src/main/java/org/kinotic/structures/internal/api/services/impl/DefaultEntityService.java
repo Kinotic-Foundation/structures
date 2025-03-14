@@ -14,9 +14,12 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.util.TokenBuffer;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.ObjectUtils;
+import org.kinotic.continuum.core.api.crud.CursorPage;
 import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
+import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.domain.*;
 import org.kinotic.structures.api.domain.idl.decorators.MultiTenancyType;
 import org.kinotic.structures.api.services.NamedQueriesService;
@@ -27,11 +30,11 @@ import org.kinotic.structures.internal.api.services.ElasticVersion;
 import org.kinotic.structures.internal.api.services.EntityHolder;
 import org.kinotic.structures.internal.api.services.EntityService;
 import org.kinotic.structures.internal.api.services.sql.ParameterHolder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
@@ -41,6 +44,8 @@ import java.util.function.Function;
 @RequiredArgsConstructor
 public class DefaultEntityService implements EntityService {
 
+    private static final Logger log = LoggerFactory.getLogger(DefaultEntityService.class);
+
     private final AuthorizationService<EntityOperation> authService;
     private final CrudServiceTemplate crudServiceTemplate;
     private final DelegatingUpsertPreProcessor delegatingUpsertPreProcessor;
@@ -49,6 +54,7 @@ public class DefaultEntityService implements EntityService {
     private final ObjectMapper objectMapper;
     private final ReadPreProcessor readPreProcessor;
     private final Structure structure;
+    private final StructuresProperties structuresProperties;
 
     @WithSpan
     @Override
@@ -231,7 +237,7 @@ public class DefaultEntityService implements EntityService {
                                             builder -> readPreProcessor.beforeFindAll(structure, builder, context));
                         }
                     }
-                });
+                }).thenApply(createParanoidCheck(context, "FindAll"));
     }
 
     @WithSpan
@@ -401,7 +407,7 @@ public class DefaultEntityService implements EntityService {
                                                                                      context));
                         }
                     }
-                });
+                }).thenApply(createParanoidCheck(context, "Search"));
     }
 
     @WithSpan
@@ -484,6 +490,65 @@ public class DefaultEntityService implements EntityService {
             ret.add(builder.build());
         }
         return ret;
+    }
+
+    @WithSpan
+    private <T> Function<Page<T>, Page<T>> createParanoidCheck(EntityContext context, String what){
+        return page -> {
+            // This is a temporary bit of code to make sure multi tenancy is working properly
+            if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
+                String tenantIdFieldName
+                        = structure.isMultiTenantSelectionEnabled()
+                        ? structure.getTenantIdFieldName() : structuresProperties.getTenantIdFieldName();
+
+                List<Object> result = new ArrayList<>(page.getContent().size());
+                Set<String> tenantIds = Collections.emptySet();
+                if(context.hasTenantSelection()) {
+                    tenantIds = new HashSet<>(context.getTenantSelection());
+                }
+
+                for(Object object : page.getContent()){
+                    String tenant = extractTenant(object, tenantIdFieldName);
+                    // Find and search methods will use the logged in tenant if no multi tenant selection is provided
+                    if(context.hasTenantSelection()){
+                        if(tenant != null && tenantIds.contains(tenant)){
+                            result.add(object);
+                        }else{
+                            log.error(
+                                    "{} Multi tenancy is not working properly for structure: {} and expected one of: {} got: {}\nData:\n{}",
+                                    what,
+                                    structure,
+                                    String.join(",", tenantIds),
+                                    tenant,
+                                    formatToPrintJson(object));
+                        }
+                    }else {
+                        if (tenant != null && tenant.equals(context.getParticipant().getTenantId())) {
+                            result.add(object);
+                        }else{
+                            log.error(
+                                    "{} Multi tenancy is not working properly for structure: {} and expected tenant: {} got: {}\nData:\n{}",
+                                    what,
+                                    structure,
+                                    context.getParticipant().getTenantId(),
+                                    tenant,
+                                    formatToPrintJson(object));
+                        }
+                    }
+                }
+
+                if(page instanceof CursorPage){
+                    //noinspection unchecked
+                    return (Page<T>) new CursorPage<>(result, ((CursorPage<?>) page).getCursor(), page.getTotalElements());
+                }else{
+                    //noinspection unchecked
+                    return (Page<T>) new Page<>(result, page.getTotalElements());
+                }
+
+            }else{
+                return page;
+            }
+        };
     }
 
     private <T> CompletableFuture<T> doFindById(String id, Class<T> type, EntityContext context) {
@@ -649,6 +714,38 @@ public class DefaultEntityService implements EntityService {
                 return CompletableFuture.completedFuture(bulkResponse);
             }
         });
+    }
+
+    private String extractTenant(Object object, String tenantIdFieldName){
+        Object data = (object instanceof FastestType ? ((FastestType) object).data() : object);
+        if(data instanceof RawJson rawJson){
+            try {
+                Map<?,?> converted = objectMapper.readValue(rawJson.data(), Map.class);
+                return (String) converted.get(tenantIdFieldName);
+            } catch (IOException e) {
+                throw new IllegalStateException("RawJson could not be deserialized for sanity check",e);
+            }
+
+        } else if (data instanceof Map<?,?> map) {
+            return (String) map.get(tenantIdFieldName);
+        }else{
+            throw new NotImplementedException("Pojo Multi tenancy check is not implemented yet");
+        }
+    }
+
+    private String formatToPrintJson(Object object){
+        Object data = (object instanceof FastestType ? ((FastestType) object).data() : object);
+        try {
+            if(data instanceof Map<?,?> map){
+                return objectMapper.convertValue(map, ObjectNode.class).toPrettyString();
+            }else if(data instanceof RawJson rawJson){
+                return objectMapper.readValue(rawJson.data(), ObjectNode.class).toPrettyString();
+            }else{
+                return objectMapper.convertValue(data, ObjectNode.class).toPrettyString();
+            }
+        } catch (Exception e) {
+            return data.toString();
+        }
     }
 
     @SuppressWarnings("unchecked")
