@@ -28,6 +28,12 @@ export interface IStructureService extends ICrudServiceProxy<Structure> {
     publish(structureId: string): Promise<void>
 
     /**
+     * This operation makes all the recent writes immediately available for search.
+     * @return a Promise that resolves when the operation is complete
+     */
+    syncIndex(): Promise<void>
+
+    /**
      * Un-publish the structure with the given id.
      * @param structureId the id of the structure to un-publish
      * @return a future that will complete when the structure has been unpublished
@@ -55,5 +61,9 @@ export class StructureService extends CrudServiceProxy<Structure> implements ISt
 
     public unPublish(structureId: string): Promise<void> {
         return this.serviceProxy.invoke('unPublish', [structureId])
+    }
+
+    public syncIndex(): Promise<void> {
+        return this.serviceProxy.invoke('syncIndex', [])
     }
 }
