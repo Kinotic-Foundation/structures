@@ -734,16 +734,17 @@ public class DefaultEntityService implements EntityService {
     }
 
     private String formatToPrintJson(Object object){
-        if(object instanceof Map<?,?> map){
-            return objectMapper.convertValue(map, ObjectNode.class).toPrettyString();
-        }else if(object instanceof RawJson rawJson){
-            try {
+        Object data = (object instanceof FastestType ? ((FastestType) object).data() : object);
+        try {
+            if(data instanceof Map<?,?> map){
+                return objectMapper.convertValue(map, ObjectNode.class).toPrettyString();
+            }else if(data instanceof RawJson rawJson){
                 return objectMapper.readValue(rawJson.data(), ObjectNode.class).toPrettyString();
-            } catch (IOException e) {
-                throw new IllegalStateException("RawJson could not be deserialized for sanity check",e);
+            }else{
+                return objectMapper.convertValue(data, ObjectNode.class).toPrettyString();
             }
-        }else{
-            return objectMapper.convertValue(object, ObjectNode.class).toPrettyString();
+        } catch (Exception e) {
+            return data.toString();
         }
     }
 
