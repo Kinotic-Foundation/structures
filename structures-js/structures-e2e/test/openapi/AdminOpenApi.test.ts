@@ -31,12 +31,13 @@ const axiosInstance = axios.create({
                                        }
                                    })
 
-describe('Admin OpenApi Tests', () => {
+describe('End To End Tests', () => {
     let context: LocalTestContext = { personWithTenantStructure: null! }
     let baseUrl: string
 
     beforeAll(async () => {
-        await allure.parentSuite('End To End Tests')
+        await allure.suite('OpenAPI Client')
+        await allure.subSuite('Admin OpenAPI Tests')
         await initContinuumClient()
 
         context.personWithTenantStructure = await createPersonStructureIfNotExist(namespace, true)
