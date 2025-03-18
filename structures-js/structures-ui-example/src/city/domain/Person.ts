@@ -18,7 +18,7 @@ import {Address} from './Address.js'
         ],
     }
 )
-@Entity(MultiTenancyType.SHARED)
+@Entity(MultiTenancyType.SHARED, true)
 @Policy([['data:read']])
 export class Person {
 

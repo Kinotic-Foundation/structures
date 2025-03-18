@@ -10,21 +10,20 @@ import org.kinotic.continuum.idl.api.schema.decorators.DecoratorTarget;
 import java.util.List;
 
 /**
- * Created by Navíd Mitchell 🤪on 6/16/23.
+ * Provides the ability to override the way an Entity Elasticsearch index is configured.
+ * Created By Navíd Mitchell 🤪on 3/18/25
  */
 @Getter
 @Setter
 @Accessors(chain = true)
-public final class EntityDecorator extends C3Decorator {
+public class EsIndexConfigurationDecorator extends C3Decorator {
 
     @JsonIgnore
-    public static final String type = "Entity";
+    public static final String type = "EsIndexConfigurationDecorator";
 
-    private MultiTenancyType multiTenancyType = MultiTenancyType.NONE;
+    private EsIndexConfigurationData value;
 
-    private boolean stream = false;
-
-    public EntityDecorator() {
+    public EsIndexConfigurationDecorator() {
         this.targets = List.of(DecoratorTarget.TYPE);
     }
 }

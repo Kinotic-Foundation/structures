@@ -45,6 +45,8 @@ public class ElasticConversionState extends BaseConversionState {
                                                           propertyDefinition.getDecorators()));
 
             shouldIndex = !propertyDefinition.containsDecorator(NotIndexedDecorator.class);
+        }else{
+            shouldIndex = true;
         }
     }
 }

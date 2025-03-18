@@ -55,6 +55,11 @@ export function tsDecoratorToC3Decorator(decorator: Decorator): C3Decorator | nu
             } else {
                 throw new Error(`Unsupported MultiTenancyType ${argument?.getText()}`)
             }
+            if(decorator.getArguments().length == 2){
+                const streamArg = decorator.getArguments()[1]
+                console.log('Test')
+            }
+
         }
         ret = entityDecorator
     } else if (decorator.getName() === 'EntityServiceDecorators') {
