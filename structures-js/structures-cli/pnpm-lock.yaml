@@ -18,8 +18,8 @@ importers:
         specifier: ^2.0.2
         version: 2.0.2
       '@kinotic/structures-api':
-        specifier: ^3.3.0
-        version: 3.3.0(@kinotic/continuum-client@2.12.1)
+        specifier: ^3.4.0-beta.2
+        version: 3.4.0-beta.2(@kinotic/continuum-client@2.12.1)
       '@oclif/core':
         specifier: ^4.2.0
         version: 4.2.0
@@ -615,8 +615,8 @@ packages:
   '@kinotic/continuum-idl@2.0.2':
     resolution: {integrity: sha512-UoXNWArw2M7FWmRCeiF6IsUNnSaGkRZix/Gl2L+HvmMGFnukpoZU0/v9pjRYDUBTa76+lBJa/Ir5dmrmtxdbTQ==}
 
-  '@kinotic/structures-api@3.3.0':
-    resolution: {integrity: sha512-F+68f8rsA/OmtUC3qf79oZSUNO530Rh7AxQ3zyxwSfg+xdTYqNR+NY/qM2vBi28H9rQX/7+hWEx6o3bF1r7erg==}
+  '@kinotic/structures-api@3.4.0-beta.2':
+    resolution: {integrity: sha512-MubsAuxoXtDU6Owgg18jI5f7oK0n4yPqjPs1bb+GRaUtfpmMrHlfpO8iykKyVUh0udHDwwOBdi2+FmMXHfmuQg==}
     peerDependencies:
       '@kinotic/continuum-client': ^2.12.1
 
@@ -4306,7 +4306,7 @@ snapshots:
 
   '@kinotic/continuum-idl@2.0.2': {}
 
-  '@kinotic/structures-api@3.3.0(@kinotic/continuum-client@2.12.1)':
+  '@kinotic/structures-api@3.4.0-beta.2(@kinotic/continuum-client@2.12.1)':
     dependencies:
       '@kinotic/continuum-client': 2.12.1
       '@kinotic/continuum-idl': 2.0.2

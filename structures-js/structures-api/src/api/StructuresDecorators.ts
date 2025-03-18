@@ -56,6 +56,8 @@ export class EntityConfig {
 /**
  * Signifies that a class is a Structures Entity.
  * This is required to define the class as an entity in the Structures framework.
+ * @param multiTenancyType the type of multi-tenancy to use for this entity
+ * @param stream whether this entity should be stored as a stream
  */
 export function Entity(multiTenancyType: MultiTenancyType = MultiTenancyType.NONE, stream: boolean = false) {
     return function (constructor: Function) {
