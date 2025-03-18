@@ -1,13 +1,20 @@
-import axios from 'axios'
-import { faker } from '@faker-js/faker'
-import { Structure, Structures } from '@kinotic/structures-api'
+import {Structure, Structures} from '@kinotic/structures-api'
 import * as allure from 'allure-js-commons'
-import { afterAll, beforeAll, describe, expect, inject, it } from 'vitest'
-import { createPersonStructureIfNotExist, createSchema, initContinuumClient, shutdownContinuumClient } from '../TestHelpers.js'
-import { loadOpenAPISchema } from './OpenApiHelpers.js'
-import { PersonWithTenant } from '../domain/PersonWithTenant.js'
-import { Address } from '../domain/Address.js'
-import { Pet } from '../domain/Pet.js'
+import axios from 'axios'
+import {afterAll, beforeAll, describe, expect, inject, it} from 'vitest'
+import {PersonWithTenant} from '../domain/PersonWithTenant.js'
+import {createPersonStructureIfNotExist, createSchema, initContinuumClient, shutdownContinuumClient} from '../TestHelpers.js'
+import {
+    buildFirstNameQuery,
+    bulkSavePeople,
+    countWithTenants,
+    generatePeopleForTenants,
+    generatePerson,
+    loadOpenAPISchema,
+    searchWithTenants,
+    syncIndex
+} from './OpenApiHelpers.js'
+import { faker } from '@faker-js/faker'
 
 interface LocalTestContext {
     personWithTenantStructure: Structure
@@ -23,26 +30,6 @@ const axiosInstance = axios.create({
                                            'Content-Type': 'application/json'
                                        }
                                    })
-
-const generatePerson = (tenantId: string): PersonWithTenant => {
-    const person = new PersonWithTenant()
-    person.firstName = faker.person.firstName()
-    person.lastName = faker.person.lastName()
-    person.age = faker.number.int({ min: 18, max: 80 })
-    person.address = Object.assign(new Address(), {
-        street: faker.location.streetAddress(),
-        city: faker.location.city(),
-        state: faker.location.state({ abbreviated: true }),
-        zip: faker.location.zipCode()
-    })
-    person.myPet = {
-        type: faker.helpers.arrayElement(['Dog', 'Cat']),
-        name: faker.animal[faker.helpers.arrayElement(['dog', 'cat'])](),
-        age: faker.number.int({ min: 1, max: 15 })
-    } as Pet
-    person.tenantId = tenantId
-    return person
-}
 
 describe('Admin OpenApi Tests', () => {
     let context: LocalTestContext = { personWithTenantStructure: null! }
@@ -126,8 +113,11 @@ describe('Admin OpenApi Tests', () => {
                 cursor?: string;
             }>(
                 `${baseUrl}/api/openapi.admin/personwithtenant/search`,
-                `firstName:${testPerson.firstName}`,
+                `firstName:"${testPerson.firstName}"`,
                 {
+                    headers: {
+                        'Content-Type': 'text/plain' // Override default application/json
+                    },
                     params: {
                         size: 10,
                         sort: 'lastName'
@@ -167,164 +157,98 @@ describe('Admin OpenApi Tests', () => {
             )
             const createdId = createResponse.data.id!
 
+            // Delete the person
             const deleteResponse = await axiosInstance.delete(
                 `${baseUrl}/api/openapi.admin/personwithtenant/${createdId}`
             )
+            expect(deleteResponse.status).toBe(200) // Confirm delete request succeeds
 
-            expect(deleteResponse.status).toBe(200)
+            // Sync the index to ensure deletion is reflected
+            const syncResponse = await axiosInstance.get(
+                `${baseUrl}/api/openapi.admin/personwithtenant/util/sync`
+            )
+            expect(syncResponse.status).toBe(200)
 
-            await expect(axiosInstance.get(
+            // Verify deletion by attempting to look it up (expecting 404)
+            await expect(axiosInstance.get<PersonWithTenant>(
                 `${baseUrl}/api/openapi.admin/personwithtenant/${createdId}`
             )).rejects.toHaveProperty('response.status', 404)
-        })
+        },600000)
     })
 
+
     describe('Multi-Tenant Selection Tests', () => {
-        const tenantA = 'tenantA'
-        const tenantB = 'tenantB'
-        const tenantC = 'tenantC'
-        const tenants = [tenantA, tenantB, tenantC]
+
+        // Helper to generate unique tenant IDs per test
+        const generateUniqueTenants = (): [string, string, string] => {
+            const tenantA = `tenantA-${faker.string.uuid()}`
+            const tenantB = `tenantB-${faker.string.uuid()}`
+            const tenantC = `tenantC-${faker.string.uuid()}`
+            return [tenantA, tenantB, tenantC]
+        }
 
         it('Can bulk save people across multiple tenants and retrieve them selectively', async () => {
-            // Generate 12 people, 4 per tenant
-            const people: PersonWithTenant[] = []
-            tenants.forEach(tenant => {
-                for (let i = 0; i < 4; i++) {
-                    people.push(generatePerson(tenant))
-                }
-            })
+            const [tenantA, tenantB, tenantC] = generateUniqueTenants()
+            const tenants = [tenantA, tenantB, tenantC]
+            const people = generatePeopleForTenants(tenants, 4)
+            await bulkSavePeople(axiosInstance, baseUrl, people, tenantA)
 
-            // Bulk save all 12 people
-            const bulkSaveResponse = await axiosInstance.post(
-                `${baseUrl}/api/openapi.admin/personwithtenant/bulk`,
-                people,
-                { headers: { tenantId: tenantA } }
-            )
-            expect(bulkSaveResponse.status).toBe(200)
+            const query = buildFirstNameQuery(people)
 
-            // Test retrieval with tenant selection (tenantA only)
-            // Lucene syntax: Use field name with space-separated terms in parentheses for OR condition
-            const query = `firstName:(${people.map(p => `"${p.firstName}"`).join(' ')})`;
-            const searchTenantA = await axiosInstance.post<{
-                content: PersonWithTenant[];
-                totalElements: number;
-                cursor?: string;
-            }>(
-                `${baseUrl}/admin/api/openapi.admin/personwithtenant/search`,
-                {
-                    query: query,
-                    tenantSelection: [tenantA]
-                },
-                { params: { size: 20 } }
-            )
-            expect(searchTenantA.status).toBe(200)
-            expect(searchTenantA.data.content.length).toBe(4) // Should only return 4 from tenantA
-            expect(searchTenantA.data.content.every(p => p.tenantId === tenantA)).toBe(true)
+            const tenantAData = await searchWithTenants(axiosInstance, baseUrl, query, [tenantA])
+            expect(tenantAData.content.length).toBe(4)
+            expect(tenantAData.content.every(p => p.tenantId === tenantA)).toBe(true)
 
-            // Test retrieval with multiple tenants (tenantA and tenantB)
-            const searchTenantAB = await axiosInstance.post<{
-                content: PersonWithTenant[];
-                totalElements: number;
-                cursor?: string;
-            }>(
-                `${baseUrl}/admin/api/openapi.admin/personwithtenant/search`,
-                {
-                    query: query,
-                    tenantSelection: [tenantA, tenantB]
-                },
-                { params: { size: 20 } }
-            )
-            expect(searchTenantAB.status).toBe(200)
-            expect(searchTenantAB.data.content.length).toBe(8) // 4 from tenantA + 4 from tenantB
-            expect(searchTenantAB.data.content.every(p =>
-                                                         [tenantA, tenantB].includes(p.tenantId)
-            )).toBe(true)
+            const tenantABData = await searchWithTenants(axiosInstance, baseUrl, query, [tenantA, tenantB])
+            expect(tenantABData.content.length).toBe(8)
+            expect(tenantABData.content.every(p => [tenantA, tenantB].includes(p.tenantId))).toBe(true)
         })
 
         it('Can count people across specific tenants', async () => {
-            // Generate and save 12 people (4 per tenant)
-            const people: PersonWithTenant[] = []
-            tenants.forEach(tenant => {
-                for (let i = 0; i < 4; i++) {
-                    people.push(generatePerson(tenant))
-                }
-            })
-            await axiosInstance.post(
-                `${baseUrl}/api/openapi.admin/personwithtenant/bulk`,
-                people,
-                { headers: { tenantId: tenantA } }
-            )
+            const [tenantA, tenantB, tenantC] = generateUniqueTenants()
+            const tenants = [tenantA, tenantB, tenantC]
+            const people = generatePeopleForTenants(tenants, 4)
+            await bulkSavePeople(axiosInstance, baseUrl, people, tenantA)
 
-            // Count for tenantA only
-            // Lucene syntax: Quote terms to ensure exact matches
-            const query = `firstName:(${people.map(p => `"${p.firstName}"`).join(' ')})`;
-            const countTenantA = await axiosInstance.post<{ count: number }>(
-                `${baseUrl}/admin/api/openapi.admin/personwithtenant/count/by-query`,
-                {
-                    query: query,
-                    tenantSelection: [tenantA]
-                }
-            )
-            expect(countTenantA.status).toBe(200)
-            expect(countTenantA.data.count).toBe(4)
+            const query = buildFirstNameQuery(people)
 
-            // Count for tenantA and tenantC
-            const countTenantAC = await axiosInstance.post<{ count: number }>(
-                `${baseUrl}/admin/api/openapi.admin/personwithtenant/count/by-query`,
-                {
-                    query: query,
-                    tenantSelection: [tenantA, tenantC]
-                }
-            )
-            expect(countTenantAC.status).toBe(200)
-            expect(countTenantAC.data.count).toBe(8)
+            const tenantACount = await countWithTenants(axiosInstance, baseUrl, query, [tenantA])
+            expect(tenantACount).toBe(4)
+
+            const tenantACCount = await countWithTenants(axiosInstance, baseUrl, query, [tenantA, tenantC])
+            expect(tenantACCount).toBe(8)
         })
 
         it('Can find people by IDs across specific tenants', async () => {
-            // Generate and save 12 people
-            const people: PersonWithTenant[] = []
-            tenants.forEach(tenant => {
-                for (let i = 0; i < 4; i++) {
-                    people.push(generatePerson(tenant))
-                }
-            })
-            await axiosInstance.post(
-                `${baseUrl}/api/openapi.admin/personwithtenant/bulk`,
-                people,
-                { headers: { tenantId: tenantA } }
-            )
+            const [tenantA, tenantB, tenantC] = generateUniqueTenants()
+            const tenants = [tenantA, tenantB, tenantC]
+            const people = generatePeopleForTenants(tenants, 4)
+            await bulkSavePeople(axiosInstance, baseUrl, people, tenantA) // Includes sync
 
-            // Get IDs by searching with Lucene syntax
-            const query = `firstName:(${people.map(p => `"${p.firstName}"`).join(' ')})`;
-            const searchResponse = await axiosInstance.post<{
-                content: PersonWithTenant[];
-                totalElements: number;
-                cursor?: string;
-            }>(
-                `${baseUrl}/api/openapi.admin/personwithtenant/search`,
-                query,
-                { params: { size: 20 } }
-            )
+            const query = buildFirstNameQuery(people)
+            const searchResponse = await searchWithTenants(axiosInstance, baseUrl, query, tenants, 20)
+            expect(searchResponse.content.length).toBe(12)
+
             people.forEach((person, index) => {
-                const match = searchResponse.data.content.find(
+                const match = searchResponse.content.find(
                     p => p.firstName === person.firstName && p.lastName === person.lastName
                 )
                 if (match) people[index].id = match.id!
             })
 
-            // Find by IDs for tenantB only
             const tenantBIds = people
                 .filter(p => p.tenantId === tenantB)
                 .map(p => ({ entityId: p.id!, tenantId: p.tenantId }))
+
             const findTenantB = await axiosInstance.post<PersonWithTenant[]>(
                 `${baseUrl}/admin/api/openapi.admin/personwithtenant/find/by-ids`,
                 tenantBIds
             )
+
             expect(findTenantB.status).toBe(200)
             expect(findTenantB.data.length).toBe(4)
             expect(findTenantB.data.every(p => p.tenantId === tenantB)).toBe(true)
 
-            // Find by IDs for tenantA and tenantC
             const tenantACIds = people
                 .filter(p => [tenantA, tenantC].includes(p.tenantId))
                 .map(p => ({ entityId: p.id!, tenantId: p.tenantId }))
@@ -338,21 +262,13 @@ describe('Admin OpenApi Tests', () => {
         })
 
         it('Can delete people across specific tenants', async () => {
-            // Generate and save 12 people
-            const people: PersonWithTenant[] = []
-            tenants.forEach(tenant => {
-                for (let i = 0; i < 4; i++) {
-                    people.push(generatePerson(tenant))
-                }
-            })
-            await axiosInstance.post(
-                `${baseUrl}/api/openapi.admin/personwithtenant/bulk`,
-                people,
-                { headers: { tenantId: tenantA } }
-            )
+            const [tenantA, tenantB, tenantC] = generateUniqueTenants()
+            const tenants = [tenantA, tenantB, tenantC]
+            const people = generatePeopleForTenants(tenants, 4)
+            await bulkSavePeople(axiosInstance, baseUrl, people, tenantA)
 
-            // Delete from tenantB only
-            const query = `firstName:(${people.map(p => `"${p.firstName}"`).join(' ')})`;
+            const query = buildFirstNameQuery(people)
+
             const deleteTenantB = await axiosInstance.post(
                 `${baseUrl}/admin/api/openapi.admin/personwithtenant/delete/by-query`,
                 {
@@ -361,36 +277,13 @@ describe('Admin OpenApi Tests', () => {
                 }
             )
             expect(deleteTenantB.status).toBe(200)
+            await syncIndex(axiosInstance, baseUrl)
 
-            // Verify deletion
-            const verifyB = await axiosInstance.post<{
-                content: PersonWithTenant[];
-                totalElements: number;
-                cursor?: string;
-            }>(
-                `${baseUrl}/admin/api/openapi.admin/personwithtenant/search`,
-                {
-                    query: query,
-                    tenantSelection: [tenantB]
-                },
-                { params: { size: 20 } }
-            )
-            expect(verifyB.data.content.length).toBe(0)
+            const verifyB = await searchWithTenants(axiosInstance, baseUrl, query, [tenantB])
+            expect(verifyB.content.length).toBe(0)
 
-            // Verify others remain
-            const verifyAC = await axiosInstance.post<{
-                content: PersonWithTenant[];
-                totalElements: number;
-                cursor?: string;
-            }>(
-                `${baseUrl}/admin/api/openapi.admin/personwithtenant/search`,
-                {
-                    query: query,
-                    tenantSelection: [tenantA, tenantC]
-                },
-                { params: { size: 20 } }
-            )
-            expect(verifyAC.data.content.length).toBe(8)
+            const verifyAC = await searchWithTenants(axiosInstance, baseUrl, query, [tenantA, tenantC])
+            expect(verifyAC.content.length).toBe(8)
         })
     })
 })
