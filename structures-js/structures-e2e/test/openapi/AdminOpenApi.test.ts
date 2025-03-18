@@ -107,6 +107,8 @@ describe('Admin OpenApi Tests', () => {
                 testPerson
             )
 
+            await syncIndex(axiosInstance, baseUrl)
+
             const searchResponse = await axiosInstance.post<{
                 content: PersonWithTenant[];
                 totalElements: number;
@@ -140,6 +142,8 @@ describe('Admin OpenApi Tests', () => {
                 testPerson
             )
 
+            await syncIndex(axiosInstance, baseUrl)
+
             const countResponse = await axiosInstance.get<{ count: number }>(
                 `${baseUrl}/api/openapi.admin/personwithtenant/count/all`
             )
@@ -157,17 +161,15 @@ describe('Admin OpenApi Tests', () => {
             )
             const createdId = createResponse.data.id!
 
+            await syncIndex(axiosInstance, baseUrl)
+
             // Delete the person
             const deleteResponse = await axiosInstance.delete(
                 `${baseUrl}/api/openapi.admin/personwithtenant/${createdId}`
             )
             expect(deleteResponse.status).toBe(200) // Confirm delete request succeeds
 
-            // Sync the index to ensure deletion is reflected
-            const syncResponse = await axiosInstance.get(
-                `${baseUrl}/api/openapi.admin/personwithtenant/util/sync`
-            )
-            expect(syncResponse.status).toBe(200)
+            await syncIndex(axiosInstance, baseUrl)
 
             // Verify deletion by attempting to look it up (expecting 404)
             await expect(axiosInstance.get<PersonWithTenant>(
