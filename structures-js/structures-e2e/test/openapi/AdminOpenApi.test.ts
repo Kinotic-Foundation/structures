@@ -37,7 +37,6 @@ describe('End To End Tests', () => {
 
     beforeAll(async () => {
         await allure.suite('OpenAPI Client')
-        await allure.subSuite('Admin OpenAPI Tests')
         await initContinuumClient()
 
         context.personWithTenantStructure = await createPersonStructureIfNotExist(namespace, true)
@@ -67,7 +66,12 @@ describe('End To End Tests', () => {
         expect(schema.info?.title).toBe('openapi.admin Structures API')
     })
 
-    describe('PersonWithTenant CRUD Operations', () => {
+    describe('OpenAPI Client', () => {
+
+        beforeAll(async () => {
+            await allure.subSuite('PersonWithTenant CRUD Operations')
+        })
+
         it('Can create a person', async () => {
             const testPerson = generatePerson(DEFAULT_TENANT)
             const response = await axiosInstance.post<PersonWithTenant>(
@@ -108,6 +112,12 @@ describe('End To End Tests', () => {
                 testPerson
             )
 
+            const testPerson2 = generatePerson(DEFAULT_TENANT)
+            await axiosInstance.post<PersonWithTenant>(
+                `${baseUrl}/api/openapi.admin/personwithtenant`,
+                testPerson2
+            )
+
             await syncIndex(axiosInstance, baseUrl)
 
             const searchResponse = await axiosInstance.post<{
@@ -141,6 +151,12 @@ describe('End To End Tests', () => {
             await axiosInstance.post<PersonWithTenant>(
                 `${baseUrl}/api/openapi.admin/personwithtenant`,
                 testPerson
+            )
+
+            const testPerson2 = generatePerson(DEFAULT_TENANT)
+            await axiosInstance.post<PersonWithTenant>(
+                `${baseUrl}/api/openapi.admin/personwithtenant`,
+                testPerson2
             )
 
             await syncIndex(axiosInstance, baseUrl)
@@ -180,7 +196,11 @@ describe('End To End Tests', () => {
     })
 
 
-    describe('Multi-Tenant Selection Tests', () => {
+    describe('OpenAPI Client', () => {
+
+        beforeAll(async () => {
+            await allure.subSuite('Multitenant Selection Operations')
+        })
 
         // Helper to generate unique tenant IDs per test
         const generateUniqueTenants = (): [string, string, string] => {
