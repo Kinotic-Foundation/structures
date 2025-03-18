@@ -12,6 +12,12 @@ export interface INamespaceService extends ICrudServiceProxy<Namespace> {
      */
     createNamespaceIfNotExist(id: string, description: string): Promise<Namespace>
 
+    /**
+     * This operation makes all the recent writes immediately available for search.
+     * @return a Promise that resolves when the operation is complete
+     */
+    syncIndex(): Promise<void>
+
 }
 
 export class NamespaceService extends CrudServiceProxy<Namespace> implements INamespaceService{
@@ -22,6 +28,10 @@ export class NamespaceService extends CrudServiceProxy<Namespace> implements INa
 
     public createNamespaceIfNotExist(id: string, description: string): Promise<Namespace> {
         return this.serviceProxy.invoke('createNamespaceIfNotExist', [id, description])
+    }
+
+    public syncIndex(): Promise<void> {
+        return this.serviceProxy.invoke('syncIndex', [])
     }
 
 }

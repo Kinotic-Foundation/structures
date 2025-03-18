@@ -80,7 +80,7 @@ public class EntityCrudTests extends ElasticsearchTestBase {
     }
 
     @Test
-    public void testCreateAndDeleteByQuery() throws InterruptedException {
+    public void testCreateAndDeleteByQuery() {
         EntityContext context = new DefaultEntityContext(new DummyParticipant("tenant", "user"));
 
         StructureAndPersonHolder holder = createAndVerify(20, false, context, "_testFindByIds");

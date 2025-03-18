@@ -210,8 +210,14 @@ public class DefaultStructureService implements StructureService {
                     structure.setDecoratedProperties(result.decoratedProperties());
                     structure.setMultiTenancyType(result.multiTenancyType());
                     structure.setVersionFieldName(result.versionFieldName());
-                    // FIXME: make sure this did not change in an unsupported fashion
                     structure.setTenantIdFieldName(result.tenantIdFieldName());
+
+                    if(structure.isPublished()
+                        && !existingStructure.isMultiTenantSelectionEnabled()
+                        && structure.isMultiTenantSelectionEnabled()
+                        && !structuresProperties.getTenantIdFieldName().equals(structure.getTenantIdFieldName())){
+                        return CompletableFuture.failedFuture(new IllegalArgumentException("When enabling multi-tenant selection for an existing published structure, the tenantId field must be set to: " + structuresProperties.getTenantIdFieldName()));
+                    }
 
                     if(structure.isPublished()) {
                         // FIXME: how to best handle an operation where the mapping completes but the save fails.
@@ -270,6 +276,11 @@ public class DefaultStructureService implements StructureService {
                                                                });
                                         });
                 });
+    }
+
+    @Override
+    public CompletableFuture<Void> syncIndex() {
+        return structureDAO.syncIndex();
     }
 
 }

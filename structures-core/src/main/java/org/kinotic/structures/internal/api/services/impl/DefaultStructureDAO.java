@@ -55,4 +55,11 @@ public class DefaultStructureDAO extends AbstractCrudService<Structure> implemen
                                           Structure.class,
                                           builder -> builder.q(searchText));
     }
+
+    @Override
+    public CompletableFuture<Void> syncIndex() {
+        return esAsyncClient.indices()
+                            .refresh(b -> b.index(indexName))
+                            .thenApply(unused -> null);
+    }
 }

@@ -28,4 +28,10 @@ public interface StructureDAO extends IdentifiableCrudService<Structure, String>
      */
     CompletableFuture<Page<Structure>> findAllPublishedForNamespace(String namespace, Pageable pageable);
 
+    /**
+     * This operation makes all the recent writes immediately available for search.
+     * @return a future that will complete when the index has been synced
+     */
+    CompletableFuture<Void> syncIndex();
+
 }

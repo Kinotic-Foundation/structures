@@ -13,7 +13,7 @@ export class BasePersonEntityService extends EntityService<Person> {
   private readonly shouldValidate: boolean
 
   constructor(shouldValidate: boolean = true, entitiesService?: IEntitiesService) {
-    super('structures.api.tests', 'Person', entitiesService)
+    super('openapi.admin', 'Person', entitiesService)
     this.shouldValidate = shouldValidate
   }
 
