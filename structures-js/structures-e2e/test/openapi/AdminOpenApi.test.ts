@@ -56,16 +56,16 @@ describe('End To End Tests', () => {
         await shutdownContinuumClient()
     }, 60000)
 
-    it('OpenApi Schema loads', async () => {
-        const schemaUrl = `${baseUrl}/api-docs/openapi.admin/openapi.json`
-        const schema = await loadOpenAPISchema(schemaUrl)
-
-        expect(schema).toBeDefined()
-        expect(schema.openapi).toBe('3.0.1')
-        expect(schema.info?.title).toBe('openapi.admin Structures API')
-    })
-
     describe('OpenAPI Client', () => {
+
+        it('OpenApi Schema loads', async () => {
+            const schemaUrl = `${baseUrl}/api-docs/openapi.admin/openapi.json`
+            const schema = await loadOpenAPISchema(schemaUrl)
+
+            expect(schema).toBeDefined()
+            expect(schema.openapi).toBe('3.0.1')
+            expect(schema.info?.title).toBe('openapi.admin Structures API')
+        })
 
         describe('PersonWithTenant CRUD Operations', () => {
 
