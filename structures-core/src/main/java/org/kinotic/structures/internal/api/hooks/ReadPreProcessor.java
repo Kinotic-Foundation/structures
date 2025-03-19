@@ -96,7 +96,9 @@ public class ReadPreProcessor {
                 builder.routing(context.getTenantSelection().getFirst());
             }else{
                 builder.routing(context.getParticipant().getTenantId());
-                builder.sourceExcludes(structuresProperties.getTenantIdFieldName());
+                if(!structure.isMultiTenantSelectionEnabled()) {
+                    builder.sourceExcludes(structuresProperties.getTenantIdFieldName());
+                }
             }
         }
 
@@ -110,10 +112,9 @@ public class ReadPreProcessor {
                                 MgetRequest.Builder builder,
                                 EntityContext context){
 
-        if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
-            if(!context.hasTenantSelection()){
-                builder.sourceExcludes(structuresProperties.getTenantIdFieldName());
-            }
+        if(structure.getMultiTenancyType() == MultiTenancyType.SHARED
+            && !structure.isMultiTenantSelectionEnabled()){
+            builder.sourceExcludes(structuresProperties.getTenantIdFieldName());
         }
 
         if(context.hasIncludedFieldsFilter()){
