@@ -9,7 +9,7 @@ import { PersonWithTenant } from '../../domain/PersonWithTenant.js'
 export class BasePersonWithTenantAdminEntityService extends AdminEntityService<PersonWithTenant> {
 
   constructor(adminEntitiesService?: IAdminEntitiesService) {
-    super('openapi.admin', 'PersonWithTenant', adminEntitiesService)
+    super('people', 'PersonWithTenant', adminEntitiesService)
   }
 
 }

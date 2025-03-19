@@ -5,7 +5,7 @@ export class Wheel {
     public size!: number
 }
 
-@Entity(MultiTenancyType.SHARED)
+@Entity(MultiTenancyType.SHARED, false)
 export class Vehicle {
     @Id
     public id!: string

@@ -13,7 +13,7 @@ export class BasePersonEntityService extends EntityService<Person> {
   private readonly shouldValidate: boolean
 
   constructor(shouldValidate: boolean = true, entitiesService?: IEntitiesService) {
-    super('openapi.admin', 'Person', entitiesService)
+    super('people', 'Person', entitiesService)
     this.shouldValidate = shouldValidate
   }
 
@@ -70,6 +70,7 @@ export class BasePersonEntityService extends EntityService<Person> {
         retMyPetO2.age = entityMyPetI2.age
       }
       ret.myPet = retMyPetO2
+      ret.favoriteSaying = entity.favoriteSaying
     }
 
     return ret
