@@ -22,7 +22,7 @@ import {
     PolicyDecorator,
     RoleDecorator,
     VersionDecorator,
-    TenantIdDecorator
+    TenantIdDecorator, NotIndexedDecorator, EsIndexConfigurationData, EsIndexConfigurationDecorator
 } from '@kinotic/structures-api'
 import {Decorator, SyntaxKind, ObjectLiteralExpression, CallExpression} from 'ts-morph'
 
@@ -46,7 +46,7 @@ export function tsDecoratorToC3Decorator(decorator: Decorator): C3Decorator | nu
         ret = discriminatorDecorator
     } else if (decorator.getName() === 'Entity') {
         const entityDecorator = new EntityDecorator()
-        if (decorator.getArguments().length == 1) {
+        if (decorator.getArguments().length > 0) {
             const argument = decorator.getArguments()[0]
             if (argument?.getText() == 'MultiTenancyType.SHARED') {
                 entityDecorator.multiTenancyType = MultiTenancyType.SHARED
@@ -55,9 +55,10 @@ export function tsDecoratorToC3Decorator(decorator: Decorator): C3Decorator | nu
             } else {
                 throw new Error(`Unsupported MultiTenancyType ${argument?.getText()}`)
             }
+
             if(decorator.getArguments().length == 2){
                 const streamArg = decorator.getArguments()[1]
-                console.log('Test')
+                entityDecorator.stream = parseExpressionToJs(streamArg)
             }
 
         }
@@ -67,11 +68,22 @@ export function tsDecoratorToC3Decorator(decorator: Decorator): C3Decorator | nu
         if (argument?.getKind() === SyntaxKind.ObjectLiteralExpression) {
             const obj = convertToObjectLiteral(argument as ObjectLiteralExpression)
             ret = {
-                type: 'EntityServiceDecorators',
+                type  : 'EntityServiceDecorators',
                 config: obj as EntityServiceDecoratorsConfig,
             } as EntityServiceDecoratorsDecorator
         } else {
             throw new Error('EntityServiceDecorators must have an object literal argument')
+        }
+    } else if (decorator.getName() === 'EsIndexConfiguration') {
+        const argument = decorator.getArguments()[0]
+        if (argument?.getKind() === SyntaxKind.ObjectLiteralExpression) {
+            const obj = convertToObjectLiteral(argument as ObjectLiteralExpression)
+            ret = {
+                type  : 'EsIndexConfigurationDecorator',
+                value: obj as EsIndexConfigurationData,
+            } as EsIndexConfigurationDecorator
+        } else {
+            throw new Error('EsIndexConfiguration must have an object literal argument')
         }
     } else if (decorator.getName() === 'Flattened') {
         ret = new FlattenedDecorator()
@@ -79,6 +91,8 @@ export function tsDecoratorToC3Decorator(decorator: Decorator): C3Decorator | nu
         ret = new IdDecorator()
     } else if (decorator.getName() === 'Nested') {
         ret = new NestedDecorator()
+    } else if (decorator.getName() === 'NotIndexed') {
+        ret = new NotIndexedDecorator()
     } else if (decorator.getName() === 'NotNull') {
         ret = new NotNullDecorator()
     } else if (decorator.getName() === 'Policy') {
@@ -167,6 +181,10 @@ function parseExpressionToJs(expression: any): any {
             return expression.asKindOrThrow(SyntaxKind.StringLiteral).getLiteralValue()
         case SyntaxKind.NumericLiteral:
             return parseFloat(expression.asKindOrThrow(SyntaxKind.NumericLiteral).getLiteralText())
+        case SyntaxKind.TrueKeyword:
+            return true
+        case SyntaxKind.FalseKeyword:
+            return false
         case SyntaxKind.CallExpression:
             const callExpr = expression.asKindOrThrow(SyntaxKind.CallExpression)
             if(callExpr.getText().startsWith('$')){ // Check if it is a supported internal function
