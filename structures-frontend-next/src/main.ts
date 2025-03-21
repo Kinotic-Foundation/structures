@@ -4,7 +4,7 @@ import './style.css'
 import App from './App.vue'
 import PrimeVue from 'primevue/config'
 import StyleClass from 'primevue/styleclass'
-import Aura from '@primevue/themes/aura'
+import Aura from '@primeuix/themes/aura'
 import router from '@/router'
 
 const app = createApp(App);
