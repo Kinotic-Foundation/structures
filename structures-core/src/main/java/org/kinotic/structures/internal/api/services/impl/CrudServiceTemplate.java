@@ -4,6 +4,7 @@ import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import co.elastic.clients.elasticsearch._types.ErrorResponse;
 import co.elastic.clients.elasticsearch._types.FieldSort;
 import co.elastic.clients.elasticsearch._types.FieldValue;
+import co.elastic.clients.elasticsearch._types.Refresh;
 import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch.core.*;
 import co.elastic.clients.elasticsearch.core.get.GetResult;
@@ -129,7 +130,7 @@ public class CrudServiceTemplate {
                                                         String id,
                                                         Consumer<DeleteRequest.Builder> builderConsumer) {
         return esAsyncClient.delete(builder -> {
-            builder.index(indexName).id(id);
+            builder.index(indexName).id(id).refresh(Refresh.True);
             if (builderConsumer != null) {
                 builderConsumer.accept(builder);
             }
