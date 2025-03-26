@@ -1,4 +1,5 @@
-import { reactive, markRaw } from 'vue'
+import {NavItem} from '@/components/NavItem.js'
+import {markRaw, shallowReactive} from 'vue'
 import type {
     Router,
     RouteRecordRaw,
@@ -8,17 +9,17 @@ import type {
 } from 'vue-router'
 
 
-export interface IFrontendState {
+export interface IApplicationState {
 
     /**
-     * Frontends are Routes defined in the route.js with a meta property if isFrontend: true
+     * List of Navigation Items for the main navigation
      */
-    frontends: RouteRecordRaw[]
+    mainNavItems: NavItem[]
 
     /**
-     * The selected "Frontend"
+     * The selected Navigation Item
      */
-    selectedFrontend: RouteRecordRaw
+    selectedNavItem: NavItem | null
 
     /**
      * Must be called with a configured VueRouter
@@ -31,28 +32,22 @@ export interface IFrontendState {
 /**
  * Base functionality for FrontendLayout and navigation functionality
  */
-class FrontendState implements IFrontendState {
+class ApplicationState implements IApplicationState {
 
-    public frontends: RouteRecordRaw[] = markRaw([])
+    public mainNavItems: NavItem[] = markRaw([])
 
-    public selectedFrontend: RouteRecordRaw = {path: '', children: []}
+    public selectedNavItem: NavItem | null = null
 
     public initialize(router: Router): void {
         // initialize the store with the router configuration
-        // Get all routes defined as "Frontends"
+        // Get all routes defined as
         if (router.options.routes !== undefined) {
-            // this logic will only work if all frontends have an unique root path with no parameters or regex
-            // for now that is what we will require
-            const activeFrontend: RouteRecordRaw | null = this.resolveFrontendRecord(router.currentRoute.value)
 
             router.options.routes.forEach((route: RouteRecordRaw) => {
-                if (this.isFrontend(route)) {
+                if (this.showInMainNav(route)) {
 
-                    this.frontends.push(route)
+                    this.mainNavItems.push(new NavItem())
 
-                    if (activeFrontend != null && activeFrontend.path === route.path) {
-                        this.selectedFrontend = route
-                    }
                 }
             })
         }
@@ -88,13 +83,19 @@ class FrontendState implements IFrontendState {
         return ret
     }
 
-    private isFrontend(routeConfig: RouteRecordRaw): boolean {
-        return typeof (routeConfig.meta) !== 'undefined'
-                    && typeof (routeConfig.meta.isFrontend) !== 'undefined'
-                    && routeConfig.meta.isFrontend as boolean
+    private createNavItem(route: RouteRecordRaw): NavItem {
+        const navItem = new NavItem(route.meta?.icon as string || '',
+                                    route.meta?.label as string || '',
+                                    async () => {
+
+                                    })
+    }
+
+    private showInMainNav(routeConfig: RouteRecordRaw): boolean {
+        return routeConfig?.meta?.showInMainNav === true
     }
 
 }
 
-export const FRONTEND_STATE: IFrontendState = reactive(new FrontendState())
+export const APPLICATION_STATE: IApplicationState = shallowReactive(new ApplicationState())
 

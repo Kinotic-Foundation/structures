@@ -5,7 +5,7 @@ const pageRoutes: RouteRecordRaw[] = [
         path: '/applications', component: () => import('@/layouts/MainLayout.vue'),
         meta: {
             authenticationRequired: false,
-            showInNav: true,
+            showInMainNav: true,
             icon: 'fa-sitemap',
             title: 'Applications'
         },
