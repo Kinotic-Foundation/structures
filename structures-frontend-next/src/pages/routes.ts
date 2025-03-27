@@ -11,13 +11,22 @@ const pageRoutes: RouteRecordRaw[] = [
         },
         children: [
             {
-                path: '/test',
+                path: 'test',
                 meta:{
                     showInMainNav: true,
                     icon: 'fa-sitemap',
                     label: 'Test'
                 },
                 component: () => import('@/pages/Test.vue'),
+            },
+            {
+                path: 'test3',
+                meta:{
+                    showInMainNav: true,
+                    icon: 'fa-sitemap',
+                    label: 'Test Two'
+                },
+                component: () => import('@/pages/Test2.vue'),
             },
         ]
     },

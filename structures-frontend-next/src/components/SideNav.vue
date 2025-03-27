@@ -4,10 +4,10 @@
             <li>
                 <div
                     :class="
-                                        selectedNav?.parent === null && selectedNav?.label === item.label
-                                            ? 'bg-surface-950 text-surface-0 border-surface shadow-sm'
-                                            : 'border-transparent hover:border-surface-800 hover:bg-surface-950 text-surface-400'
-                                    "
+                            isParentNavSelected(item)
+                                ? 'bg-surface-950 text-surface-0 border-surface shadow-sm'
+                                : 'border-transparent hover:border-surface-800 hover:bg-surface-950 text-surface-400'
+                            "
                     class="z-30 relative flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-all border"
                     @click="navClicked(item)"
                 >
@@ -16,9 +16,9 @@
                     <i v-if="item?.children?.length !== 0" class="pi pi-chevron-down text-sm leading-none" />
                 </div>
                 <div
-                    v-if="shouldSubMenuBeOpen(item)"
+                    v-if="isParentNavSelected(item)"
                     class="relative pl-1.5 flex flex-col transition-all duration-500 mt-2"
-                    :class="shouldSubMenuBeOpen(item) ? 'opacity-100' : 'opacity-0'"
+                    :class="isParentNavSelected(item) ? 'opacity-100' : 'opacity-0'"
                 >
                     <template v-for="(subItem, index) of item.children" :key="index">
                         <div class="cursor-pointer relative px-3.5 py-2 flex items-center transition-all" @click="navClicked(subItem)">
@@ -71,16 +71,15 @@ export default class SideNav extends Vue {
     selectedNav: NavItem | null = null
 
     async navClicked(item: NavItem) {
-        this.selectedNav = item
-        await this.selectedNav.navigate()
+        await item.navigate()
     }
 
     beforeMount() {
         this.selectedNav = this.navItems[0]
     }
 
-    shouldSubMenuBeOpen(item: NavItem) {
-        return this.selectedNav?.label === item.label && item?.children?.length !== 0
+    isParentNavSelected(item: NavItem) {
+        return this.selectedNav?.label === item.label || this.selectedNav?.parent?.label === item.label
     }
 
     getLinePath(index: number, totalItems: number) {
@@ -108,7 +107,7 @@ export default class SideNav extends Vue {
         if(children){
             return children.findIndex((subItem) => subItem.label === this.selectedNav?.label)
         }else{
-            return 0
+            return -1
         }
     }
 }

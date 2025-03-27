@@ -1,76 +1,75 @@
-import { markRaw, shallowReactive } from 'vue'
+import { markRaw, shallowReactive, computed, type ComputedRef } from 'vue'
 import type { Router, RouteRecordRaw, RouteLocationNormalized, NavigationGuardNext } from 'vue-router'
 import { NavItem } from '@/components/NavItem'
 
 export interface IApplicationState {
-    /**
-     * The main navigation items
-     */
     mainNavItems: NavItem[]
-
-    /**
-     * The bottom navigation items
-     */
     bottomNavItems: NavItem[]
-
-    /**
-     * The currently selected navigation item
-     */
     selectedNavItem: NavItem | null
-
-    /**
-     * Must be called with a configured VueRouter
-     * @param router to initialize ths with
-     */
+    breadcrumbItems: ComputedRef<NavItem[]>
     initialize(router: Router): void
 }
 
 class ApplicationState implements IApplicationState {
     public mainNavItems: NavItem[] = markRaw([])
-    public bottomNavItems: NavItem[] = markRaw([])  // Added bottom nav items
+    public bottomNavItems: NavItem[] = markRaw([])
     public selectedNavItem: NavItem | null = null
     private router!: Router
+    private allNavItems: NavItem[] = []
+
+    public breadcrumbItems: ComputedRef<NavItem[]>
+
+    constructor() {
+        this.breadcrumbItems = computed(() => this.getBreadcrumbItems())
+    }
 
     public initialize(router: Router): void {
         this.router = router
 
-        // Build navigation items from routes
         if (router.options.routes) {
             router.options.routes.forEach(route => {
                 if (this.showInMainNav(route)) {
-                    this.mainNavItems.push(this.createNavItem(route))
+                    const navItem = this.createNavItem(route, '')
+                    this.mainNavItems.push(navItem)
+                    this.allNavItems.push(navItem)
                 }
                 if (this.showInBottomNav(route)) {
-                    this.bottomNavItems.push(this.createNavItem(route))
+                    const navItem = this.createNavItem(route, '')
+                    this.bottomNavItems.push(navItem)
+                    this.allNavItems.push(navItem)
+                }
+                if (this.showInBreadcrumbs(route)) {
+                    this.allNavItems.push(this.createNavItem(route, ''))
                 }
             })
         }
 
-        // Handle navigation and initial state
         router.beforeResolve((to: RouteLocationNormalized, _: RouteLocationNormalized, next: NavigationGuardNext) => {
             this.updateSelectedNavItem(to.path)
             next()
         })
 
-        // Set initial state
         this.updateSelectedNavItem(router.currentRoute.value.path)
     }
 
-    private createNavItem(route: RouteRecordRaw): NavItem {
+    private createNavItem(route: RouteRecordRaw, parentPath: string): NavItem {
+        const fullPath = this.resolveFullPath(route.path, parentPath)
+
         const navItem = new NavItem(
             route.meta?.icon as string || '',
             route.meta?.label as string || route.name?.toString() || '',
-            route.path,
+            fullPath,
             async () => {
-                await this.router.push(route.path)
+                await this.router.push(fullPath)
             }
         )
 
-        // Add child nav items
         if (route.children?.length) {
             route.children.forEach(child => {
-                if (this.showInMainNav(child) || this.showInBottomNav(child)) {
-                    navItem.addChild(this.createNavItem(child))
+                if (this.showInMainNav(child) || this.showInBottomNav(child) || this.showInBreadcrumbs(child)) {
+                    const childItem = this.createNavItem(child, fullPath)
+                    navItem.addChild(childItem)
+                    this.allNavItems.push(childItem)
                 }
             })
         }
@@ -78,13 +77,22 @@ class ApplicationState implements IApplicationState {
         return navItem
     }
 
+    private resolveFullPath(routePath: string, parentPath: string): string {
+        // If the route path is absolute or there's no parent, use it as-is
+        if (routePath.startsWith('/') || !parentPath) {
+            return routePath
+        }
+        // Combine parent and child paths
+        return `${parentPath}${parentPath.endsWith('/') ? '' : '/'}${routePath}`
+    }
+
     private updateSelectedNavItem(path: string): void {
-        const normalizedPath = path.replace(/\/$/, '')
+        const normalizedPath = path
         let bestMatch: NavItem | null = null
         let longestMatchLength = 0
 
         const checkNavItem = (navItem: NavItem): void => {
-            const navPath = navItem.path.replace(/\/$/, '')
+            const navPath = navItem.path
 
             if (normalizedPath.startsWith(navPath) && navPath.length > longestMatchLength) {
                 bestMatch = navItem
@@ -94,10 +102,23 @@ class ApplicationState implements IApplicationState {
             navItem.children.forEach(child => checkNavItem(child))
         }
 
-        // Check both main and bottom nav items
         [...this.mainNavItems, ...this.bottomNavItems].forEach(navItem => checkNavItem(navItem))
-
         this.selectedNavItem = bestMatch
+    }
+
+    private getBreadcrumbItems(): NavItem[] {
+        if (!this.router) return []
+
+        const currentPath = this.router.currentRoute.value.path
+        const items: NavItem[] = []
+
+        this.allNavItems.forEach(navItem => {
+            if (currentPath.startsWith(navItem.path) && this.showInBreadcrumbsForPath(navItem.path)) {
+                items.push(navItem)
+            }
+        })
+
+        return items.sort((a, b) => a.path.length - b.path.length)
     }
 
     private showInMainNav(routeConfig: RouteRecordRaw): boolean {
@@ -106,6 +127,15 @@ class ApplicationState implements IApplicationState {
 
     private showInBottomNav(routeConfig: RouteRecordRaw): boolean {
         return routeConfig?.meta?.showInBottomNav === true
+    }
+
+    private showInBreadcrumbs(routeConfig: RouteRecordRaw): boolean {
+        return routeConfig?.meta?.showInBreadcrumbs === true
+    }
+
+    private showInBreadcrumbsForPath(path: string): boolean {
+        const route = this.router.getRoutes().find(r => r.path === path)
+        return route?.meta?.showInBreadcrumbs === true
     }
 }
 
