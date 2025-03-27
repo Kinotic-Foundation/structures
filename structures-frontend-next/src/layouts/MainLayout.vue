@@ -1,6 +1,6 @@
 <template>
-    <div class="relative flex gap-6 h-screen bg-surface-0 dark:bg-surface-950">
-        <div id="app-sidebar" class="h-full hidden lg:block lg:static absolute left-0 top-0 py-4 pl-4 lg:p-0 z-50">
+    <div class="relative flex h-screen bg-surface-0 dark:bg-surface-950">
+        <div id="app-sidebar" class="h-full hidden lg:block lg:static absolute left-0 top-0 z-50">
             <div class="w-[18rem] h-full flex flex-col" style="background-color: #101010">
                 <a class="inline-flex items-center gap-3 px-6 py-4 cursor-pointer">
                     <svg class="fill-surface-0" width="28" height="29" viewBox="0 0 28 29" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -14,25 +14,19 @@
                 </a>
                 <div class="w-[calc(100%-3rem)] mx-auto h-[1px] bg-surface-700" />
                 <div class="p-6 flex-1">
-                    <SideNav></SideNav>
+                    <SideNav class="flex flex-col gap-2 overflow-hidden"
+                             :nav-items="applicationState.mainNavItems"
+                             v-model="applicationState.selectedNavItem"
+                    >
+                    </SideNav>
                 </div>
-                <ul class="flex flex-col gap-2 px-6 py-3">
-                    <template v-for="(item, index) of bottomNavs" :key="index">
-                        <li
-                            :class="
-                                selectedNav === item.label
-                                    ? 'bg-surface-950 text-surface-0 border-surface shadow-sm'
-                                    : 'border-transparent hover:border-surface-800 hover:bg-surface-950 text-surface-400'
-                            "
-                            class="flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-all border"
-                            @click="selectedNav = item.label"
-                        >
-                            <i :class="item.icon" />
-                            <span class="flex-1 font-medium">{{ item.label }}</span>
-                            <i v-if="item?.subMenu" class="pi pi-chevron-down text-sm leading-none" />
-                        </li>
-                    </template>
-                </ul>
+<!--                <SideNav-->
+<!--                    class="flex flex-col gap-2 px-6 py-3"-->
+<!--                    selected-nav="{{applicationState.selectedNavItem}}"-->
+<!--                    nav-items="{{applicationState.bottomNavItems}}"-->
+
+<!--                >-->
+<!--                </SideNav>-->
                 <div class="w-[calc(100%-3rem)] mx-auto h-[1px] bg-surface-700 px-6" />
                 <div class="p-6 flex items-center gap-3 cursor-pointer">
                     <Avatar image="https://fqjltiegiezfetthbags.supabase.co/storage/v1/render/image/public/block.images/blocks/avatars/circle/avatar-f-1.png" size="large" shape="circle" class="!w-9 !h-9" />
@@ -68,35 +62,30 @@
                 <div class="flex items-center gap-2">
                     <IconField>
                         <InputIcon class="pi pi-search" />
-                        <InputText v-model="search" placeholder="Search" />
+                        <InputText v-model="search" placeholder="Search"  />
                     </IconField>
-                    <Button icon="pi pi-bell" outlined severity="secondary" />
+                    <Button icon="pi pi-bell" outlined rounded severity="secondary" />
                 </div>
             </div>
-            <div class="flex-1 border-2 border-surface rounded-xl border-dashed" />
+            <div class="flex-1">
+                <router-view />
+            </div>
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
 import SideNav from '@/components/SideNav.vue'
-import Avatar from 'primevue/avatar';
-import Button from 'primevue/button';
-import IconField from 'primevue/iconfield';
-import InputIcon from 'primevue/inputicon';
-import InputText from 'primevue/inputtext';
-import { ref } from 'vue';
+import {StructuresStates} from '@/states/index.js'
+import Avatar from 'primevue/avatar'
+import Button from 'primevue/button'
+import IconField from 'primevue/iconfield'
+import InputIcon from 'primevue/inputicon'
+import InputText from 'primevue/inputtext'
+import { ref } from 'vue'
 
-const search = ref();
-const selectedNav = ref('Dashboard');
-const bottomNavs = ref([
-                           {
-                               icon: 'pi pi-question-circle',
-                               label: 'Help'
-                           },
-                           {
-                               icon: 'pi pi-cog',
-                               label: 'Settings'
-                           }
-                       ]);
+const search = ref()
+const applicationState = StructuresStates.getApplicationState()
+
+
 </script>

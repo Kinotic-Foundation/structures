@@ -1,19 +1,20 @@
-/**
- * Represents a navigation item in the navigation bar.
- */
 export class NavItem {
-
     public icon: string
     public label: string
+    public path: string  // Added path property
     public parent: NavItem | null = null
     public children: NavItem[] = []
     private readonly navigateFunction: () => Promise<void>
 
-    constructor(icon: string,
-                label: string,
-                navigateFunction: () => Promise<void>) {
+    constructor(
+        icon: string,
+        label: string,
+        path: string,
+        navigateFunction: () => Promise<void>
+    ) {
         this.icon = icon
         this.label = label
+        this.path = path
         this.navigateFunction = navigateFunction
     }
 
@@ -25,5 +26,4 @@ export class NavItem {
         child.parent = this
         this.children.push(child)
     }
-
 }

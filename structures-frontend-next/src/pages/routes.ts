@@ -7,20 +7,19 @@ const pageRoutes: RouteRecordRaw[] = [
             authenticationRequired: false,
             showInMainNav: true,
             icon: 'fa-sitemap',
-            title: 'Applications'
+            label: 'Applications'
         },
-        // children: [
-        //     {
-        //         path: '',
-        //         component: () => import('@/frontends/structures-admin/pages/structures/namespaces/NamespaceList.vue')
-        //     },
-        //     {
-        //         path: 'edit/:id', component: () => import('@/frontends/structures-admin/pages/structures/namespaces/NamespaceAddEdit.vue'), props: true
-        //     },
-        //     {
-        //         path: 'add', component: () => import('@/frontends/structures-admin/pages/structures/namespaces/NamespaceAddEdit.vue')
-        //     }
-        // ]
+        children: [
+            {
+                path: '/test',
+                meta:{
+                    showInMainNav: true,
+                    icon: 'fa-sitemap',
+                    label: 'Test'
+                },
+                component: () => import('@/pages/Test.vue'),
+            },
+        ]
     },
     // {
     //     path: '/structures', component: () => import('@/frontends/continuum/layouts/NestedLayout.vue'),

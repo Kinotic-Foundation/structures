@@ -6,7 +6,7 @@ import {USER_STATE, type IUserState} from './IUserState'
  */
 export namespace StructuresStates {
 
-    export function getFrontendState(): IApplicationState {
+    export function getApplicationState(): IApplicationState {
         return APPLICATION_STATE
     }
 

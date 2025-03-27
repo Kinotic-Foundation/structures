@@ -1,23 +1,20 @@
-import {NavItem} from '@/components/NavItem.js'
-import {markRaw, shallowReactive} from 'vue'
-import type {
-    Router,
-    RouteRecordRaw,
-    NavigationGuardNext,
-    RouteLocationNormalizedLoaded,
-    RouteLocationNormalized
-} from 'vue-router'
-
+import { markRaw, shallowReactive } from 'vue'
+import type { Router, RouteRecordRaw, RouteLocationNormalized, NavigationGuardNext } from 'vue-router'
+import { NavItem } from '@/components/NavItem'
 
 export interface IApplicationState {
-
     /**
-     * List of Navigation Items for the main navigation
+     * The main navigation items
      */
     mainNavItems: NavItem[]
 
     /**
-     * The selected Navigation Item
+     * The bottom navigation items
+     */
+    bottomNavItems: NavItem[]
+
+    /**
+     * The currently selected navigation item
      */
     selectedNavItem: NavItem | null
 
@@ -28,74 +25,88 @@ export interface IApplicationState {
     initialize(router: Router): void
 }
 
-
-/**
- * Base functionality for FrontendLayout and navigation functionality
- */
 class ApplicationState implements IApplicationState {
-
     public mainNavItems: NavItem[] = markRaw([])
-
+    public bottomNavItems: NavItem[] = markRaw([])  // Added bottom nav items
     public selectedNavItem: NavItem | null = null
+    private router!: Router
 
     public initialize(router: Router): void {
-        // initialize the store with the router configuration
-        // Get all routes defined as
-        if (router.options.routes !== undefined) {
+        this.router = router
 
-            router.options.routes.forEach((route: RouteRecordRaw) => {
+        // Build navigation items from routes
+        if (router.options.routes) {
+            router.options.routes.forEach(route => {
                 if (this.showInMainNav(route)) {
-
-                    this.mainNavItems.push(new NavItem())
-
+                    this.mainNavItems.push(this.createNavItem(route))
+                }
+                if (this.showInBottomNav(route)) {
+                    this.bottomNavItems.push(this.createNavItem(route))
                 }
             })
         }
 
+        // Handle navigation and initial state
         router.beforeResolve((to: RouteLocationNormalized, _: RouteLocationNormalized, next: NavigationGuardNext) => {
-            const frontend: RouteRecordRaw | null = this.resolveFrontendConfig(to)
-            if (frontend !== null) {
-                this.selectedFrontend = frontend
-            }
+            this.updateSelectedNavItem(to.path)
             next()
         })
-    }
 
-    private resolveFrontendConfig(route: RouteLocationNormalized): RouteRecordRaw | null {
-        let ret: RouteRecordRaw | null = null
-        const frontendRecord: RouteRecordRaw | null = this.resolveFrontendRecord(route)
-        if (frontendRecord != null) {
-            for (const routeConfig of this.frontends) {
-                if (routeConfig.path === frontendRecord.path) {
-                    ret = routeConfig
-                    break
-                }
-            }
-        }
-        return ret
-    }
-
-    private resolveFrontendRecord(route: RouteLocationNormalizedLoaded): RouteRecordRaw | null {
-        let ret: RouteRecordRaw | null = null
-        if (route.matched.length > 0 && this.isFrontend(route.matched[0])) {
-            ret = route.matched[0]
-        }
-        return ret
+        // Set initial state
+        this.updateSelectedNavItem(router.currentRoute.value.path)
     }
 
     private createNavItem(route: RouteRecordRaw): NavItem {
-        const navItem = new NavItem(route.meta?.icon as string || '',
-                                    route.meta?.label as string || '',
-                                    async () => {
+        const navItem = new NavItem(
+            route.meta?.icon as string || '',
+            route.meta?.label as string || route.name?.toString() || '',
+            route.path,
+            async () => {
+                await this.router.push(route.path)
+            }
+        )
 
-                                    })
+        // Add child nav items
+        if (route.children?.length) {
+            route.children.forEach(child => {
+                if (this.showInMainNav(child) || this.showInBottomNav(child)) {
+                    navItem.addChild(this.createNavItem(child))
+                }
+            })
+        }
+
+        return navItem
+    }
+
+    private updateSelectedNavItem(path: string): void {
+        const normalizedPath = path.replace(/\/$/, '')
+        let bestMatch: NavItem | null = null
+        let longestMatchLength = 0
+
+        const checkNavItem = (navItem: NavItem): void => {
+            const navPath = navItem.path.replace(/\/$/, '')
+
+            if (normalizedPath.startsWith(navPath) && navPath.length > longestMatchLength) {
+                bestMatch = navItem
+                longestMatchLength = navPath.length
+            }
+
+            navItem.children.forEach(child => checkNavItem(child))
+        }
+
+        // Check both main and bottom nav items
+        [...this.mainNavItems, ...this.bottomNavItems].forEach(navItem => checkNavItem(navItem))
+
+        this.selectedNavItem = bestMatch
     }
 
     private showInMainNav(routeConfig: RouteRecordRaw): boolean {
         return routeConfig?.meta?.showInMainNav === true
     }
 
+    private showInBottomNav(routeConfig: RouteRecordRaw): boolean {
+        return routeConfig?.meta?.showInBottomNav === true
+    }
 }
 
 export const APPLICATION_STATE: IApplicationState = shallowReactive(new ApplicationState())
-

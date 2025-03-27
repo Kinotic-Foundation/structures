@@ -1,6 +1,6 @@
 <template>
-    <ul class="flex flex-col gap-2 overflow-hidden">
-        <template v-for="(item) of navItems" :key="index">
+    <ul>
+        <template v-for="(item, index) of navItems" :key="index">
             <li>
                 <div
                     :class="
@@ -13,12 +13,12 @@
                 >
                     <i :class="item.icon" />
                     <span class="flex-1 font-medium">{{ item.label }}</span>
-                    <i v-if="item?.children" class="pi pi-chevron-down text-sm leading-none" />
+                    <i v-if="item?.children?.length !== 0" class="pi pi-chevron-down text-sm leading-none" />
                 </div>
                 <div
-                    v-if="isSubmenuSelected(item)"
+                    v-if="shouldSubMenuBeOpen(item)"
                     class="relative pl-1.5 flex flex-col transition-all duration-500 mt-2"
-                    :class="isSubmenuSelected(item) ? 'opacity-100' : 'opacity-0'"
+                    :class="shouldSubMenuBeOpen(item) ? 'opacity-100' : 'opacity-0'"
                 >
                     <template v-for="(subItem, index) of item.children" :key="index">
                         <div class="cursor-pointer relative px-3.5 py-2 flex items-center transition-all" @click="navClicked(subItem)">
@@ -75,8 +75,12 @@ export default class SideNav extends Vue {
         await this.selectedNav.navigate()
     }
 
-    isSubmenuSelected(item: NavItem) {
-        return this.selectedNav?.parent !== null && this.selectedNav?.parent.label === item.label
+    beforeMount() {
+        this.selectedNav = this.navItems[0]
+    }
+
+    shouldSubMenuBeOpen(item: NavItem) {
+        return this.selectedNav?.label === item.label && item?.children?.length !== 0
     }
 
     getLinePath(index: number, totalItems: number) {
