@@ -9,14 +9,14 @@ importers:
   .:
     dependencies:
       '@kinotic/continuum-client':
-        specifier: ^2.12.1
-        version: 2.12.1
+        specifier: ^2.13.0
+        version: 2.13.0(reflect-metadata@0.2.2)
       '@kinotic/continuum-idl':
         specifier: ^2.0.2
         version: 2.0.2
       '@kinotic/structures-api':
         specifier: ^3.4.0-beta.2
-        version: 3.4.0-beta.2(@kinotic/continuum-client@2.12.1)
+        version: 3.4.0-beta.2(@kinotic/continuum-client@2.13.0(reflect-metadata@0.2.2))
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -437,8 +437,10 @@ packages:
   '@jridgewell/trace-mapping@0.3.25':
     resolution: {integrity: sha512-vNk6aEwybGtawWmy/PzwnGDOjCkLWSD2wqvjGGAgOAwCGWySYXfYoxt00IJkTF+8Lb57DwOb3Aa0o9CApepiYQ==}
 
-  '@kinotic/continuum-client@2.12.1':
-    resolution: {integrity: sha512-tiQdeZBEwT/UAZO1JQscu+T/tB89TB/SICMmTiBCx6D/idjYY+nAX8e+pKHTDd2J47Lg4rRB9QBQ+K0vDnkm7g==}
+  '@kinotic/continuum-client@2.13.0':
+    resolution: {integrity: sha512-rBHulZfJyYnOrrKUpT2K+7KctT9pQ1kMXb4oL6wedIhrsKxdekh24XojvpTE6bEAkl2PpmE++ZF1kxVFiCCsiw==}
+    peerDependencies:
+      reflect-metadata: ^0.2.2
 
   '@kinotic/continuum-idl@2.0.2':
     resolution: {integrity: sha512-UoXNWArw2M7FWmRCeiF6IsUNnSaGkRZix/Gl2L+HvmMGFnukpoZU0/v9pjRYDUBTa76+lBJa/Ir5dmrmtxdbTQ==}
@@ -505,18 +507,6 @@ packages:
   '@opentelemetry/api@1.9.0':
     resolution: {integrity: sha512-3giAOQvZiH5F9bMlMiv8+GSPMeqg0dbaeo58/0SlA9sxSqZhnUtxzX9/2FzyhS9sWQf5S0GJE0AKBrFqjpeYcg==}
     engines: {node: '>=8.0.0'}
-
-  '@opentelemetry/core@1.30.1':
-    resolution: {integrity: sha512-OOCM2C/QIURhJMuKaekP3TRBxBKxG/TWWA0TL2J6nXUtDnuCtccy49LUJF8xPFXMX+0LMcxFpCo8M9cGY1W6rQ==}
-    engines: {node: '>=14'}
-    peerDependencies:
-      '@opentelemetry/api': '>=1.0.0 <1.10.0'
-
-  '@opentelemetry/resources@1.30.1':
-    resolution: {integrity: sha512-5UxZqiAgLYGFjS4s9qm5mBVo433u+dSPUFWVWXmLAD4wB65oMCoXaJP1KJa9DIYYMeHu3z4BZcStG3LC593cWA==}
-    engines: {node: '>=14'}
-    peerDependencies:
-      '@opentelemetry/api': '>=1.0.0 <1.10.0'
 
   '@opentelemetry/semantic-conventions@1.28.0':
     resolution: {integrity: sha512-lp4qAiMTD4sNWW4DbKLBkfiMZ4jbAboJIGOQr5DvciMRI494OapieI9qiODpOt0XBr1LjIDy1xAGAnVs5supTA==}
@@ -2808,39 +2798,42 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.0
 
-  '@kinotic/continuum-client@2.12.1':
+  '@kinotic/continuum-client@2.13.0(reflect-metadata@0.2.2)':
     dependencies:
       '@opentelemetry/api': 1.9.0
-      '@opentelemetry/resources': 1.30.1(@opentelemetry/api@1.9.0)
       '@opentelemetry/semantic-conventions': 1.28.0
       '@stomp/rx-stomp': 2.0.0(@stomp/stompjs@7.0.0)(rxjs@7.8.1)(uuid@9.0.1)
       '@stomp/stompjs': 7.0.0
+      debug: 4.4.0(supports-color@8.1.1)
       elliptic: 6.6.1
       p-tap: 4.0.0
+      reflect-metadata: 0.2.2
       rxjs: 7.8.1
       typescript-optional: 3.0.0-alpha.3
       uuid: 9.0.1
+    transitivePeerDependencies:
+      - supports-color
 
   '@kinotic/continuum-idl@2.0.2': {}
 
-  '@kinotic/structures-api@3.3.0(@kinotic/continuum-client@2.12.1)':
+  '@kinotic/structures-api@3.3.0(@kinotic/continuum-client@2.13.0(reflect-metadata@0.2.2))':
     dependencies:
-      '@kinotic/continuum-client': 2.12.1
+      '@kinotic/continuum-client': 2.13.0(reflect-metadata@0.2.2)
       '@kinotic/continuum-idl': 2.0.2
       reflect-metadata: 0.2.2
 
-  '@kinotic/structures-api@3.4.0-beta.2(@kinotic/continuum-client@2.12.1)':
+  '@kinotic/structures-api@3.4.0-beta.2(@kinotic/continuum-client@2.13.0(reflect-metadata@0.2.2))':
     dependencies:
-      '@kinotic/continuum-client': 2.12.1
+      '@kinotic/continuum-client': 2.13.0(reflect-metadata@0.2.2)
       '@kinotic/continuum-idl': 2.0.2
       reflect-metadata: 0.2.2
 
   '@kinotic/structures-cli@3.3.0(@types/node@22.13.10)':
     dependencies:
       '@inquirer/prompts': 7.3.1(@types/node@22.13.10)
-      '@kinotic/continuum-client': 2.12.1
+      '@kinotic/continuum-client': 2.13.0(reflect-metadata@0.2.2)
       '@kinotic/continuum-idl': 2.0.2
-      '@kinotic/structures-api': 3.3.0(@kinotic/continuum-client@2.12.1)
+      '@kinotic/structures-api': 3.3.0(@kinotic/continuum-client@2.13.0(reflect-metadata@0.2.2))
       '@oclif/core': 4.2.6
       '@oclif/plugin-autocomplete': 3.2.20
       '@oclif/plugin-help': 6.2.24
@@ -2985,17 +2978,6 @@ snapshots:
       - utf-8-validate
 
   '@opentelemetry/api@1.9.0': {}
-
-  '@opentelemetry/core@1.30.1(@opentelemetry/api@1.9.0)':
-    dependencies:
-      '@opentelemetry/api': 1.9.0
-      '@opentelemetry/semantic-conventions': 1.28.0
-
-  '@opentelemetry/resources@1.30.1(@opentelemetry/api@1.9.0)':
-    dependencies:
-      '@opentelemetry/api': 1.9.0
-      '@opentelemetry/core': 1.30.1(@opentelemetry/api@1.9.0)
-      '@opentelemetry/semantic-conventions': 1.28.0
 
   '@opentelemetry/semantic-conventions@1.28.0': {}
 
