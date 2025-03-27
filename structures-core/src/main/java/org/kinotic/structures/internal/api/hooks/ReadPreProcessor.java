@@ -1,6 +1,7 @@
 package org.kinotic.structures.internal.api.hooks;
 
 import co.elastic.clients.elasticsearch._types.FieldValue;
+import co.elastic.clients.elasticsearch._types.Refresh;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import co.elastic.clients.elasticsearch.core.*;
 import org.kinotic.structures.api.config.StructuresProperties;
@@ -46,6 +47,8 @@ public class ReadPreProcessor {
     public void beforeDelete(Structure structure,
                              DeleteRequest.Builder builder,
                              EntityContext context) {
+
+        builder.refresh(Refresh.True);
 
         // add multi tenancy filters if needed
         if(structure.getMultiTenancyType() == MultiTenancyType.SHARED){
