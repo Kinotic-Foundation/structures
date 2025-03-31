@@ -181,6 +181,13 @@ export function Text(target: any, propertyKey: string) {
     Reflect.defineMetadata(StructuresDecorator.Text, {}, target, propertyKey)
 }
 
+/**
+ * This is used for data streams to signify the field that should be used as the time reference.
+ */
+// @ts-ignore
+export function TimeReference(target: any, propertyKey: string) {
+}
+
 // @ts-ignore
 export function Version(target: any, propertyKey: string) {
 

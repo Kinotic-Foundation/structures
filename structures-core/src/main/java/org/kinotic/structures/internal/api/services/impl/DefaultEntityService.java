@@ -65,9 +65,12 @@ public class DefaultEntityService implements EntityService {
                              entityHolder -> BulkOperation.of(b -> {
                                  // When optimistic locking is enabled and no version is present we use create
                                  // We do this since there is no way to set an initial primary_term / seq_no combination
+                                 // Or if using streams since this is the only supported operation
                                  ElasticVersion elasticVersion = entityHolder.getElasticVersionIfPresent();
-                                 if(structure.isOptimisticLockingEnabled()
-                                         && elasticVersion == null){
+                                 if((structure.isOptimisticLockingEnabled()
+                                         && elasticVersion == null)
+                                     || structure.isStream()
+                                 ){
 
                                      return b.create(c ->
                                                              c.index(structure.getItemIndex())
@@ -326,9 +329,12 @@ public class DefaultEntityService implements EntityService {
 
                              // When optimistic locking is enabled and no version is present we use create
                              // We do this since there is no way to set an initial primary_term / seq_no combination
+                             // Or if using streams since this is the only supported operation
                              ElasticVersion elasticVersion = entityHolder.getElasticVersionIfPresent();
-                             if(structure.isOptimisticLockingEnabled()
-                                     && elasticVersion == null){
+                             if((structure.isOptimisticLockingEnabled()
+                                     && elasticVersion == null)
+                                 || structure.isStream()
+                             ){
 
                                  i.opType(OpType.Create);
 

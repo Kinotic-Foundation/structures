@@ -57,6 +57,9 @@ public class Structure implements Identifiable<String> {
 
     private MultiTenancyType multiTenancyType = null;
 
+    @Field(type = FieldType.Boolean)
+    private boolean stream = false;
+
     @Field(type = FieldType.Flattened)
     private ObjectC3Type entityDefinition = null;
 

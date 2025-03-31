@@ -45,18 +45,23 @@ public class DefaultStructureConversionService implements StructureConversionSer
         if(esProperty.isObject()){
             objectProperty = esProperty.object();
         }else{
-            throw new IllegalStateException("EntityDefinition must be an object");
+            throw new IllegalStateException("Entity must be an object");
         }
 
         if(state.getIdFieldName() == null){
-            throw new IllegalArgumentException("An Id field must be defined for the EntityDefinition");
+            throw new IllegalArgumentException("An Id field must be defined for the Entity");
+        }
+
+        if(state.getEntityDecorator().isStream() && state.getVersionFieldName() != null){
+            throw new IllegalArgumentException("You should not provide a version field when an Entity is a stream");
         }
 
         return new ElasticConversionResult(state.getDecoratedProperties(),
-                                           state.getEntityDecorator().getMultiTenancyType(),
+                                           state.getEntityDecorator(),
                                            objectProperty,
                                            state.getVersionFieldName(),
-                                           state.getTenantIdFieldName());
+                                           state.getTenantIdFieldName(),
+                                           state.getTimeReferenceFieldName());
     }
 
     @Override

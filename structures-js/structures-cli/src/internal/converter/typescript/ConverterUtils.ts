@@ -22,7 +22,11 @@ import {
     PolicyDecorator,
     RoleDecorator,
     VersionDecorator,
-    TenantIdDecorator, NotIndexedDecorator, EsIndexConfigurationData, EsIndexConfigurationDecorator
+    TenantIdDecorator,
+    NotIndexedDecorator,
+    EsIndexConfigurationData,
+    EsIndexConfigurationDecorator,
+    TimeReferenceDecorator
 } from '@kinotic/structures-api'
 import {Decorator, SyntaxKind, ObjectLiteralExpression, CallExpression} from 'ts-morph'
 
@@ -130,6 +134,8 @@ export function tsDecoratorToC3Decorator(decorator: Decorator): C3Decorator | nu
         ret = new TenantIdDecorator()
     } else if (decorator.getName() === 'Text') {
         ret = new TextDecorator()
+    } else if (decorator.getName() === 'TimeReference') {
+        ret = new TimeReferenceDecorator()
     } else if (decorator.getName() === 'Version') {
         ret = new VersionDecorator()
     }
