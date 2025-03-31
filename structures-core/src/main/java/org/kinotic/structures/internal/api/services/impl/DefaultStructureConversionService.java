@@ -52,8 +52,13 @@ public class DefaultStructureConversionService implements StructureConversionSer
             throw new IllegalArgumentException("An Id field must be defined for the Entity");
         }
 
-        if(state.getEntityDecorator().isStream() && state.getVersionFieldName() != null){
-            throw new IllegalArgumentException("You should not provide a version field when an Entity is a stream");
+        if(state.getEntityDecorator().isStream()){
+            if(state.getVersionFieldName() != null) {
+                throw new IllegalArgumentException("You should not provide a version field when an Entity is a stream");
+            }
+            if(state.getTimeReferenceFieldName() == null) {
+                throw new IllegalArgumentException("You must provide a time reference field when configuring an Entity as a stream");
+            }
         }
 
         return new ElasticConversionResult(state.getDecoratedProperties(),

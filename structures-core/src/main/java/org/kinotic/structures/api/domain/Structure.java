@@ -57,9 +57,6 @@ public class Structure implements Identifiable<String> {
 
     private MultiTenancyType multiTenancyType = null;
 
-    @Field(type = FieldType.Boolean)
-    private boolean stream = false;
-
     @Field(type = FieldType.Flattened)
     private ObjectC3Type entityDefinition = null;
 
@@ -95,6 +92,11 @@ public class Structure implements Identifiable<String> {
     @Field(type = FieldType.Keyword)
     private String tenantIdFieldName = null; // do not ever set, system managed
 
+    /**
+     * The name of the field that will be used to hold the time reference for an entity.
+     */
+    @Field(type = FieldType.Keyword)
+    private String timeReferenceFieldName = null; // do not ever set, system managed
 
     @Override
     public boolean equals(Object o) {
@@ -118,6 +120,10 @@ public class Structure implements Identifiable<String> {
 
     public boolean isMultiTenantSelectionEnabled() {
         return tenantIdFieldName != null;
+    }
+
+    public boolean isStream() {
+        return timeReferenceFieldName != null;
     }
 
     @Override

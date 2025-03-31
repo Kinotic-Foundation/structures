@@ -88,9 +88,10 @@ public class DefaultStructureService implements StructureService {
                     ElasticConversionResult result = structureConversionService.convertToElasticMapping(structure);
 
                     structure.setDecoratedProperties(result.decoratedProperties());
-                    structure.setMultiTenancyType(result.multiTenancyType());
+                    structure.setMultiTenancyType(result.entityDecorator().getMultiTenancyType());
                     structure.setVersionFieldName(result.versionFieldName());
                     structure.setTenantIdFieldName(result.tenantIdFieldName());
+                    structure.setTimeReferenceFieldName(result.timeReferenceFieldName());
 
                     return  structureDAO.save(structure);
                 });
@@ -204,22 +205,27 @@ public class DefaultStructureService implements StructureService {
                     structure.setPublished(existingStructure.isPublished());
                     structure.setPublishedTimestamp(existingStructure.getPublishedTimestamp());
 
-
                     ElasticConversionResult result = structureConversionService.convertToElasticMapping(structure);
 
                     structure.setDecoratedProperties(result.decoratedProperties());
-                    structure.setMultiTenancyType(result.multiTenancyType());
+                    structure.setMultiTenancyType(result.entityDecorator().getMultiTenancyType());
                     structure.setVersionFieldName(result.versionFieldName());
                     structure.setTenantIdFieldName(result.tenantIdFieldName());
-
-                    if(structure.isPublished()
-                        && !existingStructure.isMultiTenantSelectionEnabled()
-                        && structure.isMultiTenantSelectionEnabled()
-                        && !structuresProperties.getTenantIdFieldName().equals(structure.getTenantIdFieldName())){
-                        return CompletableFuture.failedFuture(new IllegalArgumentException("When enabling multi-tenant selection for an existing published structure, the tenantId field must be set to: " + structuresProperties.getTenantIdFieldName()));
-                    }
+                    structure.setTimeReferenceFieldName(result.timeReferenceFieldName());
 
                     if(structure.isPublished()) {
+
+                        if(!existingStructure.isMultiTenantSelectionEnabled()
+                                && structure.isMultiTenantSelectionEnabled()
+                                && !structuresProperties.getTenantIdFieldName().equals(structure.getTenantIdFieldName())){
+                            return CompletableFuture.failedFuture(new IllegalArgumentException("When enabling multi-tenant selection for an existing published Structure, the tenantId field must be set to: " + structuresProperties.getTenantIdFieldName()));
+                        }
+
+                        if(!existingStructure.isStream()
+                            && structure.isStream()){
+                            return CompletableFuture.failedFuture(new IllegalArgumentException("Cannot change an existing published Structure from a non-stream to a stream"));
+                        }
+
                         // FIXME: how to best handle an operation where the mapping completes but the save fails.
                         //        Additionally this could have serious race conditions if multiple clients are updating the same structure
                         //        This could probably be solved by verifying the mapping is still valid before saving
