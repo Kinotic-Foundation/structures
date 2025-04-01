@@ -15,8 +15,8 @@ importers:
         specifier: ^2.0.2
         version: 2.0.2
       '@kinotic/structures-api':
-        specifier: ^3.4.0-beta.5
-        version: 3.4.0-beta.5(@kinotic/continuum-client@2.13.0(reflect-metadata@0.2.2))
+        specifier: ^3.4.0
+        version: 3.4.0(@kinotic/continuum-client@2.13.0(reflect-metadata@0.2.2))
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -28,8 +28,8 @@ importers:
         specifier: ^9.6.0
         version: 9.6.0
       '@kinotic/structures-cli':
-        specifier: ^3.4.0-beta.0
-        version: 3.4.0-beta.0(@types/node@22.13.10)
+        specifier: ^3.4.0
+        version: 3.4.0(@types/node@22.13.10)
       '@types/node':
         specifier: ^22.13.10
         version: 22.13.10
@@ -323,10 +323,6 @@ packages:
       '@types/node':
         optional: true
 
-  '@inquirer/figures@1.0.10':
-    resolution: {integrity: sha512-Ey6176gZmeqZuY/W/nZiUyvmb1/qInjcpiZjXWi6nON+nxJpD1bxtSoBxNliGISae32n6OwbY+TSXPZ1CfS4bw==}
-    engines: {node: '>=18'}
-
   '@inquirer/figures@1.0.11':
     resolution: {integrity: sha512-eOg92lvrn/aRUqbxRyvpEWnrvRuTYRifixHkYVpJiygTgVSBIHDqLh0SrMQXkafvULg3ck11V7xvR+zcgvpHFw==}
     engines: {node: '>=18'}
@@ -449,13 +445,13 @@ packages:
   '@kinotic/continuum-idl@2.0.2':
     resolution: {integrity: sha512-UoXNWArw2M7FWmRCeiF6IsUNnSaGkRZix/Gl2L+HvmMGFnukpoZU0/v9pjRYDUBTa76+lBJa/Ir5dmrmtxdbTQ==}
 
-  '@kinotic/structures-api@3.4.0-beta.5':
-    resolution: {integrity: sha512-1S9DPZUzdIhBrW9JOurwKZpTUytX9ajEJ1v02PwcDA9gil5NHQJy1W+wpa2jezLEvBqrR2L8rpCEckJy80KtVw==}
+  '@kinotic/structures-api@3.4.0':
+    resolution: {integrity: sha512-TmkgHLiWbIcbG9XU7pkEIAPyzJqlDVoS63cWR82nip4pVP/lmh2AzzQEoOhx6EkTa4l7mu5qV37yOPDI3yXmqA==}
     peerDependencies:
       '@kinotic/continuum-client': ^2.13.0
 
-  '@kinotic/structures-cli@3.4.0-beta.0':
-    resolution: {integrity: sha512-WAukNikp0020v+qE+BhusTBwlPAjw7SoDC3gpxARo3jtZpyskTQjtXP0PcpylspXhpwkEd0lx3y3dWXGIUNZcw==}
+  '@kinotic/structures-cli@3.4.0':
+    resolution: {integrity: sha512-0jPZZ/snOHjGfDsiXcVXYrL/3DrpaquSThZ9X7zq1cyn+tIznt99hQZPhWbFtQEvWLIimaY2Jq+BeW8GDXnixQ==}
     engines: {node: '>=18.0.0'}
     hasBin: true
 
@@ -2655,7 +2651,7 @@ snapshots:
 
   '@inquirer/core@9.2.1':
     dependencies:
-      '@inquirer/figures': 1.0.10
+      '@inquirer/figures': 1.0.11
       '@inquirer/type': 2.0.0
       '@types/mute-stream': 0.0.4
       '@types/node': 22.13.10
@@ -2683,8 +2679,6 @@ snapshots:
       yoctocolors-cjs: 2.1.2
     optionalDependencies:
       '@types/node': 22.13.10
-
-  '@inquirer/figures@1.0.10': {}
 
   '@inquirer/figures@1.0.11': {}
 
@@ -2745,7 +2739,7 @@ snapshots:
   '@inquirer/select@2.5.0':
     dependencies:
       '@inquirer/core': 9.2.1
-      '@inquirer/figures': 1.0.10
+      '@inquirer/figures': 1.0.11
       '@inquirer/type': 1.5.5
       ansi-escapes: 4.3.2
       yoctocolors-cjs: 2.1.2
@@ -2818,18 +2812,18 @@ snapshots:
 
   '@kinotic/continuum-idl@2.0.2': {}
 
-  '@kinotic/structures-api@3.4.0-beta.5(@kinotic/continuum-client@2.13.0(reflect-metadata@0.2.2))':
+  '@kinotic/structures-api@3.4.0(@kinotic/continuum-client@2.13.0(reflect-metadata@0.2.2))':
     dependencies:
       '@kinotic/continuum-client': 2.13.0(reflect-metadata@0.2.2)
       '@kinotic/continuum-idl': 2.0.2
       reflect-metadata: 0.2.2
 
-  '@kinotic/structures-cli@3.4.0-beta.0(@types/node@22.13.10)':
+  '@kinotic/structures-cli@3.4.0(@types/node@22.13.10)':
     dependencies:
       '@inquirer/prompts': 7.4.0(@types/node@22.13.10)
       '@kinotic/continuum-client': 2.13.0(reflect-metadata@0.2.2)
       '@kinotic/continuum-idl': 2.0.2
-      '@kinotic/structures-api': 3.4.0-beta.5(@kinotic/continuum-client@2.13.0(reflect-metadata@0.2.2))
+      '@kinotic/structures-api': 3.4.0(@kinotic/continuum-client@2.13.0(reflect-metadata@0.2.2))
       '@oclif/core': 4.2.10
       '@oclif/plugin-autocomplete': 3.2.26
       '@oclif/plugin-help': 6.2.24
