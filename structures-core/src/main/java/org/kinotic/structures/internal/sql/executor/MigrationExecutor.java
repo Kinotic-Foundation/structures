@@ -1,6 +1,8 @@
 package org.kinotic.structures.internal.sql.executor;
 
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
+import co.elastic.clients.elasticsearch.core.SearchResponse;
+import co.elastic.clients.elasticsearch.core.search.TotalHits;
 import org.kinotic.structures.internal.sql.domain.Migration;
 import org.kinotic.structures.internal.sql.domain.Statement;
 
@@ -57,11 +59,13 @@ public class MigrationExecutor {
     }
 
     private boolean isMigrationApplied(String version) throws Exception {
-        return client.search(s -> s
-                                     .index(MIGRATION_INDEX)
-                                     .query(q -> q.term(t -> t.field("version").value(version))),
-                             Object.class
-        ).get().hits().total().value() > 0;
+        SearchResponse<Object> response = client.search(s -> s
+                                                                .index(MIGRATION_INDEX)
+                                                                .query(q -> q.term(t -> t.field("version").value(version))),
+                                                        Object.class
+        ).get();
+        TotalHits totalHits = response.hits().total();
+        return totalHits != null && totalHits.value() > 0;
     }
 
     private void recordMigration(String version) throws Exception {

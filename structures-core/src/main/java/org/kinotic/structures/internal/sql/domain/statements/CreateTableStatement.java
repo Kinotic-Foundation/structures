@@ -17,6 +17,4 @@ import java.util.List;
 public class CreateTableStatement implements Statement {
     private final String tableName;
     private final List<Column> columns;
-    private final String template; // null if not using template or component template
-    private final boolean isComponentTemplate;
 }
