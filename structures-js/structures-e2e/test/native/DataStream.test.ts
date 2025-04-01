@@ -87,7 +87,7 @@ describe('End To End Tests', () => {
         expect(count).toBe(50)
 
         const highSeverityCount = await entityService.countByQuery('severity:HIGH')
-        expect(highSeverityCount).toBeGreaterThan(0)
+        expect(highSeverityCount).toBe(16)
     })
 
     it<LocalTestContext>('Test Stream Filtering by Severity', async ({entityService}) => {
