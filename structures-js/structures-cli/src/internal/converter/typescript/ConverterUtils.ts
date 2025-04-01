@@ -19,6 +19,7 @@ import {
     QueryDecorator,
     EntityServiceDecoratorsDecorator,
     EntityServiceDecoratorsConfig,
+    EntityType,
     PolicyDecorator,
     RoleDecorator,
     VersionDecorator,
@@ -61,10 +62,15 @@ export function tsDecoratorToC3Decorator(decorator: Decorator): C3Decorator | nu
             }
 
             if(decorator.getArguments().length == 2){
-                const streamArg = decorator.getArguments()[1]
-                entityDecorator.stream = parseExpressionToJs(streamArg)
+                const entityTypeArg = decorator.getArguments()[1]
+                if (entityTypeArg?.getText() == 'EntityType.TABLE') {
+                    entityDecorator.entityType = EntityType.TABLE
+                } else if (entityTypeArg?.getText() == 'EntityType.STREAM') {
+                    entityDecorator.entityType = EntityType.STREAM
+                } else {
+                    throw new Error(`Unsupported EntityType ${entityTypeArg?.getText()}`)
+                }
             }
-
         }
         ret = entityDecorator
     } else if (decorator.getName() === 'EntityServiceDecorators') {

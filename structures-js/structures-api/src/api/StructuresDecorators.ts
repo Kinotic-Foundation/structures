@@ -1,4 +1,5 @@
 import 'reflect-metadata'
+import {EntityType} from '@/api/idl/decorators/EntityType.js'
 import {EsIndexConfigurationData} from '@/api/idl/decorators/EsIndexConfigurationData.js'
 import {MultiTenancyType} from '@/api/idl/decorators/MultiTenancyType'
 import {PrecisionType} from '@/api/idl/decorators/PrecisionType'
@@ -45,11 +46,11 @@ export function Discriminator(propertyName: string){
 
 export class EntityConfig {
     public multiTenancyType: MultiTenancyType
-    public stream: boolean
+    public entityType: EntityType
 
-    constructor(multiTenancyType: MultiTenancyType, stream: boolean = false) {
+    constructor(multiTenancyType: MultiTenancyType, entityType: EntityType = EntityType.TABLE) {
         this.multiTenancyType = multiTenancyType
-        this.stream = stream
+        this.entityType = entityType
     }
 }
 
@@ -57,11 +58,12 @@ export class EntityConfig {
  * Signifies that a class is a Structures Entity.
  * This is required to define the class as an entity in the Structures framework.
  * @param multiTenancyType the type of multi-tenancy to use for this entity
- * @param stream whether this entity should be stored as a stream
+ * @param entityType the type of entity to use for this entity
  */
-export function Entity(multiTenancyType: MultiTenancyType = MultiTenancyType.NONE, stream: boolean = false) {
+export function Entity(multiTenancyType: MultiTenancyType = MultiTenancyType.NONE,
+                       entityType: EntityType = EntityType.TABLE) {
     return function (constructor: Function) {
-        Reflect.defineMetadata(StructuresDecorator.Entity, new EntityConfig(multiTenancyType, stream), constructor)
+        Reflect.defineMetadata(StructuresDecorator.Entity, new EntityConfig(multiTenancyType, entityType), constructor)
     }
 }
 

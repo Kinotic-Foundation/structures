@@ -89,6 +89,7 @@ public class DefaultStructureService implements StructureService {
 
                     structure.setDecoratedProperties(result.decoratedProperties());
                     structure.setMultiTenancyType(result.entityDecorator().getMultiTenancyType());
+                    structure.setEntityType(result.entityDecorator().getEntityType());
                     structure.setVersionFieldName(result.versionFieldName());
                     structure.setTenantIdFieldName(result.tenantIdFieldName());
                     structure.setTimeReferenceFieldName(result.timeReferenceFieldName());
@@ -209,6 +210,7 @@ public class DefaultStructureService implements StructureService {
 
                     structure.setDecoratedProperties(result.decoratedProperties());
                     structure.setMultiTenancyType(result.entityDecorator().getMultiTenancyType());
+                    structure.setEntityType(result.entityDecorator().getEntityType());
                     structure.setVersionFieldName(result.versionFieldName());
                     structure.setTenantIdFieldName(result.tenantIdFieldName());
                     structure.setTimeReferenceFieldName(result.timeReferenceFieldName());

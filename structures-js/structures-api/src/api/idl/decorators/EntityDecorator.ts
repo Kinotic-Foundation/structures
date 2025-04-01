@@ -1,3 +1,4 @@
+import {EntityType} from '@/api/idl/decorators/EntityType.js'
 import {C3Decorator} from '@kinotic/continuum-idl'
 import {MultiTenancyType} from '@/api/idl/decorators/MultiTenancyType'
 
@@ -6,7 +7,7 @@ import {MultiTenancyType} from '@/api/idl/decorators/MultiTenancyType'
  */
 export class EntityDecorator extends C3Decorator {
     public multiTenancyType: MultiTenancyType = MultiTenancyType.NONE
-    public stream: boolean = false
+    public entityType: EntityType = EntityType.TABLE
     constructor() {
         super()
         this.type = 'Entity'
@@ -17,8 +18,8 @@ export class EntityDecorator extends C3Decorator {
         return this
     }
 
-    public withStream(stream: boolean): EntityDecorator {
-        this.stream = stream
+    public withEntityType(type: EntityType): EntityDecorator {
+        this.entityType = type
         return this
     }
 }

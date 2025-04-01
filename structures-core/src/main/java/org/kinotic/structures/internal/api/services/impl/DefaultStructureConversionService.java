@@ -9,6 +9,7 @@ import org.kinotic.continuum.idl.api.converter.IdlConverter;
 import org.kinotic.continuum.idl.api.converter.IdlConverterFactory;
 import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.api.domain.idl.decorators.EntityType;
 import org.kinotic.structures.internal.api.services.ElasticConversionResult;
 import org.kinotic.structures.internal.api.services.StructureConversionService;
 import org.kinotic.structures.internal.idl.converters.elastic.ElasticConversionState;
@@ -52,7 +53,7 @@ public class DefaultStructureConversionService implements StructureConversionSer
             throw new IllegalArgumentException("An Id field must be defined for the Entity");
         }
 
-        if(state.getEntityDecorator().isStream()){
+        if(state.getEntityDecorator().getEntityType() == EntityType.STREAM) {
             if(state.getVersionFieldName() != null) {
                 throw new IllegalArgumentException("You should not provide a version field when an Entity is a stream");
             }
