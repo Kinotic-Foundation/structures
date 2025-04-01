@@ -84,7 +84,7 @@ public class ObjectC3TypeToElastic implements C3TypeConverter<Property, ObjectC3
                 } else {
 
                     // Handle other decorators that do not affect mapping
-                    processDecorators(property, state);
+                    processDecorators(property, state, builder);
 
                     builder.properties(fieldName, conversionContext.convert(type));
                 }
@@ -113,7 +113,9 @@ public class ObjectC3TypeToElastic implements C3TypeConverter<Property, ObjectC3
     }
 
 
-    private void processDecorators(PropertyDefinition prop, ElasticConversionState state) {
+    private void processDecorators(PropertyDefinition prop,
+                                   ElasticConversionState state,
+                                   ObjectProperty.Builder builder) {
         String jsonPath = state.getCurrentJsonPath();
 
         for(C3Decorator decorator: prop.getDecorators()){
@@ -163,7 +165,7 @@ public class ObjectC3TypeToElastic implements C3TypeConverter<Property, ObjectC3
 
             } else if (decorator instanceof TimeReferenceDecorator) {
 
-                if(state.getEntityDecorator().isStream()){
+                if(state.getEntityDecorator().getEntityType() == EntityType.STREAM){
                     throw new IllegalArgumentException("The TimeReference field can only be defined if the Entity has stream set to true");
                 }
 
@@ -177,6 +179,8 @@ public class ObjectC3TypeToElastic implements C3TypeConverter<Property, ObjectC3
 
                 state.setTimeReferenceFieldName(jsonPath);
 
+                // Add the required @timestamp field to the mapping
+                builder.properties("@timestamp", DateProperty.of(f -> f)._toProperty());
             }
         }
 

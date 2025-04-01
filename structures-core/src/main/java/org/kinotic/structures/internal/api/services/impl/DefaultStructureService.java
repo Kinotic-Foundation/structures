@@ -1,7 +1,7 @@
 package org.kinotic.structures.internal.api.services.impl;
 
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
-import co.elastic.clients.elasticsearch._types.mapping.DynamicMapping;
+import co.elastic.clients.elasticsearch._types.mapping.Property;
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +18,7 @@ import org.kinotic.structures.internal.utils.StructuresUtil;
 import org.springframework.stereotype.Component;
 
 import java.util.Date;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 
@@ -140,44 +141,42 @@ public class DefaultStructureService implements StructureService {
     public CompletableFuture<Void> publish(@SpanAttribute("structureId") String structureId) {
         return findById(structureId)
                 .thenCompose(structure -> {
-
-                    if(structure == null){
-                        return CompletableFuture.failedFuture(new IllegalArgumentException("Structure cannot be found for id: " + structureId));
+                    if (structure == null) {
+                        return CompletableFuture.failedFuture(
+                                new IllegalArgumentException("Structure cannot be found for id: " + structureId));
                     }
-
-                    if(structure.isPublished()){
-                        return CompletableFuture
-                                .failedFuture(new IllegalStateException("Structure is already published"));
+                    if (structure.isPublished()) {
+                        return CompletableFuture.failedFuture(
+                                new IllegalStateException("Structure is already published"));
                     }
 
                     ElasticConversionResult result = structureConversionService.convertToElasticMapping(structure);
+                    Map<String, Property> mappings = result.objectProperty().properties();
+                    String templateName = structure.getId() + "_tpl";
 
-                    return crudServiceTemplate
-                            .createIndex(structure.getItemIndex(), true, indexBuilder -> {
+                    CompletableFuture<Void> creationFuture = structure.isStream()
+                            ? crudServiceTemplate
+                            .createIndexTemplate(templateName, structure.getItemIndex() + "-*", true, mappings)
+                            .thenCompose(v -> crudServiceTemplate.createDataStream(structure.getItemIndex()))
+                            : crudServiceTemplate
+                            .createIndex(structure.getItemIndex(), true, mappings);
 
-                                indexBuilder.mappings(m -> m.dynamic(DynamicMapping.Strict)
-                                                            .properties(result.objectProperty().properties()));
-
-                            })
-                            .thenCompose(createIndexResponse -> {
-                                // update tracking fields
-                                structure.setPublished(true);
-                                structure.setPublishedTimestamp(new Date());
-                                structure.setUpdated(structure.getPublishedTimestamp());
-
-                                return structureDAO.save(structure)
-                                                   .thenApply(structure1 -> {
-                                                       cacheEvictionService.evictCachesFor(structure);
-                                                       return null;
-                                                   });
-                            });
+                    return creationFuture.thenCompose(v -> {
+                        structure.setPublished(true);
+                        structure.setPublishedTimestamp(new Date());
+                        structure.setUpdated(structure.getPublishedTimestamp());
+                        return structureDAO.save(structure)
+                                           .thenApply(structure1 -> {
+                                               cacheEvictionService.evictCachesFor(structure);
+                                               return null;
+                                           });
+                    });
                 });
     }
 
     @WithSpan
     @Override
     public CompletableFuture<Structure> save(@SpanAttribute("structure") Structure structure) {
-
         try {
             if (structure.getId() == null || structure.getId().isBlank()) {
                 throw new IllegalArgumentException("Structure Id Invalid");
@@ -189,15 +188,11 @@ public class DefaultStructureService implements StructureService {
 
         return findById(structure.getId())
                 .thenCompose(existingStructure -> {
-                    // short circuit validation
-                    if(existingStructure == null){
-                        return CompletableFuture.failedFuture(new IllegalArgumentException("Structure cannot be found for id: " + structure.getId()));
+                    if (existingStructure == null) {
+                        return CompletableFuture.failedFuture(
+                                new IllegalArgumentException("Structure cannot be found for id: " + structure.getId()));
                     }
 
-                    // TODO: how to ensure structures namespace name match the C3Type name
-                    // Should we just use the Structures one?
-
-                    // FIXME: handle namespace/name changes
                     structure.setUpdated(new Date());
                     structure.setCreated(existingStructure.getCreated());
                     structure.setName(existingStructure.getName());
@@ -207,6 +202,7 @@ public class DefaultStructureService implements StructureService {
                     structure.setPublishedTimestamp(existingStructure.getPublishedTimestamp());
 
                     ElasticConversionResult result = structureConversionService.convertToElasticMapping(structure);
+                    Map<String, Property> mappings = result.objectProperty().properties();
 
                     structure.setDecoratedProperties(result.decoratedProperties());
                     structure.setMultiTenancyType(result.entityDecorator().getMultiTenancyType());
@@ -215,17 +211,17 @@ public class DefaultStructureService implements StructureService {
                     structure.setTenantIdFieldName(result.tenantIdFieldName());
                     structure.setTimeReferenceFieldName(result.timeReferenceFieldName());
 
-                    if(structure.isPublished()) {
-
-                        if(!existingStructure.isMultiTenantSelectionEnabled()
+                    if (structure.isPublished()) {
+                        if (!existingStructure.isMultiTenantSelectionEnabled()
                                 && structure.isMultiTenantSelectionEnabled()
-                                && !structuresProperties.getTenantIdFieldName().equals(structure.getTenantIdFieldName())){
-                            return CompletableFuture.failedFuture(new IllegalArgumentException("When enabling multi-tenant selection for an existing published Structure, the tenantId field must be set to: " + structuresProperties.getTenantIdFieldName()));
+                                && !structuresProperties.getTenantIdFieldName().equals(structure.getTenantIdFieldName())) {
+                            return CompletableFuture.failedFuture(
+                                    new IllegalArgumentException("When enabling multi-tenant selection for an existing published Structure, the tenantId field must be set to: " + structuresProperties.getTenantIdFieldName()));
                         }
 
-                        if(!existingStructure.isStream()
-                            && structure.isStream()){
-                            return CompletableFuture.failedFuture(new IllegalArgumentException("Cannot change an existing published Structure from a non-stream to a stream"));
+                        if (!existingStructure.isStream() && structure.isStream()) {
+                            return CompletableFuture.failedFuture(
+                                    new IllegalArgumentException("Cannot change an existing published Structure from a non-stream to a stream"));
                         }
 
                         // FIXME: how to best handle an operation where the mapping completes but the save fails.
@@ -233,22 +229,31 @@ public class DefaultStructureService implements StructureService {
                         //        This could probably be solved by verifying the mapping is still valid before saving
                         //        (diff the fields and make sure only fields are added and no types are changed)
                         //        Then this could be moved to save the structure first with optimistic locking, and if that succeeds then update the mapping
-                        return crudServiceTemplate
-                                .updateIndexMapping(structure.getItemIndex(),
-                                                    mappingBuilder -> mappingBuilder.dynamic(DynamicMapping.Strict)
-                                                                                    .properties(result.objectProperty()
-                                                                                                      .properties()))
-                                .thenCompose(v -> structureDAO
-                                        .save(structure)
-                                        .thenApply(structure1 -> {
-                                            cacheEvictionService.evictCachesFor(structure1);
-                                            return structure1;
-                                        }));
-                    }else{
+
+
+                        CompletableFuture<Void> updateFuture;
+                        if (structure.isStream()) {
+                            String templateName = structure.getId() + "_tpl";
+                            // Update both the template (for future indices) and the data stream's current indices
+                            updateFuture = crudServiceTemplate.updateIndexTemplate(templateName, mappings)
+                                                              .thenCompose(v -> crudServiceTemplate.updateIndexMapping(structure.getItemIndex(), mappings));
+                        } else {
+                            // For regular indices, just update the mappings
+                            updateFuture = crudServiceTemplate.updateIndexMapping(structure.getItemIndex(), mappings);
+                        }
+
+                        return updateFuture.thenCompose(v -> structureDAO
+                                .save(structure)
+                                .thenApply(structure1 -> {
+                                    cacheEvictionService.evictCachesFor(structure1);
+                                    return structure1;
+                                }));
+                    } else {
                         return structureDAO.save(structure);
                     }
                 });
     }
+
 
     @WithSpan
     @Override
