@@ -2,6 +2,7 @@ package org.kinotic.structures.internal.api.services.impl;
 
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import co.elastic.clients.elasticsearch._types.mapping.Property;
+import co.elastic.clients.elasticsearch.indices.DataStreamVisibility;
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
 import lombok.RequiredArgsConstructor;
@@ -9,6 +10,7 @@ import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.api.domain.idl.decorators.MultiTenancyType;
 import org.kinotic.structures.api.services.StructureService;
 import org.kinotic.structures.internal.api.services.CacheEvictionService;
 import org.kinotic.structures.internal.api.services.ElasticConversionResult;
@@ -153,10 +155,14 @@ public class DefaultStructureService implements StructureService {
                     ElasticConversionResult result = structureConversionService.convertToElasticMapping(structure);
                     Map<String, Property> mappings = result.objectProperty().properties();
                     String templateName = structure.getId() + "_tpl";
+                    boolean allowCustomRouting = structure.getMultiTenancyType() == MultiTenancyType.SHARED;
 
                     CompletableFuture<Void> creationFuture = structure.isStream()
                             ? crudServiceTemplate
-                            .createIndexTemplate(templateName, structure.getItemIndex() + "-*", true, mappings)
+                            .createIndexTemplate(templateName,
+                                                 structure.getItemIndex() + "*",
+                                                 DataStreamVisibility.of(b -> b.allowCustomRouting(allowCustomRouting)),
+                                                 mappings)
                             .thenCompose(v -> crudServiceTemplate.createDataStream(structure.getItemIndex()))
                             : crudServiceTemplate
                             .createIndex(structure.getItemIndex(), true, mappings);
@@ -266,28 +272,39 @@ public class DefaultStructureService implements StructureService {
     public CompletableFuture<Void> unPublish(@SpanAttribute("structureId") String structureId) {
         return findById(structureId)
                 .thenCompose(structure -> {
-
-                    if(structure == null){
-                        return CompletableFuture.failedFuture(new IllegalArgumentException("Structure cannot be found for id: " + structureId));
+                    if (structure == null) {
+                        return CompletableFuture.failedFuture(
+                                new IllegalArgumentException("Structure cannot be found for id: " + structureId));
                     }
 
-                    if(!structure.isPublished()){
-                        return CompletableFuture
-                                .failedFuture(new IllegalStateException("Structure is not published"));
+                    if (!structure.isPublished()) {
+                        return CompletableFuture.failedFuture(
+                                new IllegalStateException("Structure is not published"));
                     }
 
-                    return esAsyncClient.indices()
-                                        .delete(builder -> builder.index(structure.getItemIndex()))
-                                        .thenCompose(deleteIndexResponse -> {
-                                            structure.setPublished(false);
-                                            structure.setPublishedTimestamp(null);
-                                            structure.setUpdated(new Date());
-                                            return structureDAO.save(structure)
-                                                               .thenApply(structure1 -> {
-                                                                   cacheEvictionService.evictCachesFor(structure);
-                                                                   return null;
-                                                               });
-                                        });
+                    CompletableFuture<Void> deleteStorageFuture;
+                    if (structure.isStream()) {
+                        String templateName = structure.getId() + "_tpl";
+                        // Delete the data stream and its template
+                        deleteStorageFuture = crudServiceTemplate.deleteDataStream(structure.getItemIndex())
+                                                                 .thenCompose(v -> crudServiceTemplate.deleteIndexTemplate(templateName));
+                    } else {
+                        // Delete the regular index
+                        deleteStorageFuture = esAsyncClient.indices()
+                                                           .delete(builder -> builder.index(structure.getItemIndex()))
+                                                           .thenApply(response -> null);
+                    }
+
+                    return deleteStorageFuture.thenCompose(v -> {
+                        structure.setPublished(false);
+                        structure.setPublishedTimestamp(null);
+                        structure.setUpdated(new Date());
+                        return structureDAO.save(structure)
+                                           .thenApply(structure1 -> {
+                                               cacheEvictionService.evictCachesFor(structure);
+                                               return null;
+                                           });
+                    });
                 });
     }
 

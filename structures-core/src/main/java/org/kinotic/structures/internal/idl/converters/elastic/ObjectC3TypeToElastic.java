@@ -165,7 +165,7 @@ public class ObjectC3TypeToElastic implements C3TypeConverter<Property, ObjectC3
 
             } else if (decorator instanceof TimeReferenceDecorator) {
 
-                if(state.getEntityDecorator().getEntityType() == EntityType.STREAM){
+                if(state.getEntityDecorator().getEntityType() != EntityType.STREAM){
                     throw new IllegalArgumentException("The TimeReference field can only be defined if the Entity has stream set to true");
                 }
 

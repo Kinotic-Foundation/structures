@@ -14,6 +14,7 @@ import co.elastic.clients.elasticsearch.core.mget.MultiGetResponseItem;
 import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.elasticsearch.core.search.HitsMetadata;
 import co.elastic.clients.elasticsearch.indices.CreateIndexRequest;
+import co.elastic.clients.elasticsearch.indices.DataStreamVisibility;
 import co.elastic.clients.elasticsearch.indices.StorageType;
 import co.elastic.clients.json.JsonpDeserializer;
 import co.elastic.clients.json.JsonpMapperBase;
@@ -130,10 +131,15 @@ public class CrudServiceTemplate {
 
     /**
      * Creates an index template with the given name, pattern, and mappings
+     * @param templateName the name of the template
+     * @param indexPattern the pattern to match the index names
+     * @param dataStreamVisibility the visibility of the data stream or null if not a data stream
+     * @param mappings the mappings to use for the index, or null if no mappings are needed
+     * @return a {@link CompletableFuture} that will complete when the index template has been created
      */
     public CompletableFuture<Void> createIndexTemplate(String templateName,
                                                        String indexPattern,
-                                                       boolean isDataStream,
+                                                       DataStreamVisibility dataStreamVisibility,
                                                        Map<String, Property> mappings) {
         return esAsyncClient.indices().putIndexTemplate(builder -> {
             builder.name(templateName)
@@ -145,8 +151,8 @@ public class CrudServiceTemplate {
                                    .numberOfReplicas("2")
                            )
                    );
-            if (isDataStream) {
-                builder.dataStream(d -> d);
+            if (dataStreamVisibility != null) {
+                builder.dataStream(dataStreamVisibility);
             }
             if (mappings != null && !mappings.isEmpty()) {
                 builder.template(t -> t
@@ -195,6 +201,24 @@ public class CrudServiceTemplate {
             }
             return builder;
         });
+    }
+
+    /**
+     * Deletes a data stream
+     */
+    public CompletableFuture<Void> deleteDataStream(String dataStreamName) {
+        return esAsyncClient.indices()
+                            .deleteDataStream(builder -> builder.name(dataStreamName))
+                            .thenApply(response -> null);
+    }
+
+    /**
+     * Deletes an index template
+     */
+    public CompletableFuture<Void> deleteIndexTemplate(String templateName) {
+        return esAsyncClient.indices()
+                            .deleteIndexTemplate(builder -> builder.name(templateName))
+                            .thenApply(response -> null);
     }
 
     /**
@@ -393,6 +417,28 @@ public class CrudServiceTemplate {
                 });
     }
 
+    public CompletableFuture<Void> updateIndexMapping(String indexName,
+                                                      Map<String, Property> mappings) {
+        return esAsyncClient.indices().exists(builder -> builder.index(indexName))
+                            .thenCompose(exists -> {
+                                if (exists.value()) {
+                                    return esAsyncClient.indices()
+                                                        .putMapping(builder -> {
+                                                            builder.index(indexName);
+                                                            if (mappings != null && !mappings.isEmpty()) {
+                                                                builder.dynamic(DynamicMapping.Strict)
+                                                                       .properties(mappings);
+                                                            }
+                                                            return builder;
+                                                        })
+                                                        .thenApply(response -> null);
+                                } else {
+                                    return CompletableFuture.failedFuture(
+                                            new IllegalArgumentException("Index " + indexName + " does not exist"));
+                                }
+                            });
+    }
+
     /**
      * Updates an existing index template
      */
@@ -535,28 +581,6 @@ public class CrudServiceTemplate {
         //noinspection resource
         return esAsyncClient._transport()
                             .performRequestAsync(request, endpoint, esAsyncClient._transportOptions());
-    }
-
-    public CompletableFuture<Void> updateIndexMapping(String indexName,
-                                                      Map<String, Property> mappings) {
-        return esAsyncClient.indices().exists(builder -> builder.index(indexName))
-                            .thenCompose(exists -> {
-                                if (exists.value()) {
-                                    return esAsyncClient.indices()
-                                                        .putMapping(builder -> {
-                                                            builder.index(indexName);
-                                                            if (mappings != null && !mappings.isEmpty()) {
-                                                                builder.dynamic(DynamicMapping.Strict)
-                                                                       .properties(mappings);
-                                                            }
-                                                            return builder;
-                                                        })
-                                                        .thenApply(response -> null);
-                                } else {
-                                    return CompletableFuture.failedFuture(
-                                            new IllegalArgumentException("Index " + indexName + " does not exist"));
-                                }
-                            });
     }
 
 }

@@ -18,6 +18,7 @@ import {
     NamedQueriesDefinition,
     QueryDecorator
 } from '@kinotic/structures-api'
+import {Alert} from './domain/Alert.js'
 import {Person} from './domain/Person.js'
 import {inject} from 'vitest'
 // @ts-ignore
@@ -135,6 +136,65 @@ function replaceAllQueryPlaceholdersWithId(structureId: string, functionDefiniti
             }
         }
     }
+}
+
+// Add these new functions to your existing TestHelpers.ts file
+
+export async function createAlertStructureIfNotExist(namespace: string): Promise<Structure> {
+    const structureId = namespace + '.alert'
+    let structure = await Structures.getStructureService().findById(structureId)
+    if (structure == null) {
+        structure = await createAlertStructure(namespace)
+    }
+    return structure
+}
+
+export async function createAlertStructure(namespace: string): Promise<Structure> {
+    const {entityDefinition} = await createAlertSchema(namespace)
+    const alertStructure = new Structure(
+        namespace,
+        'Alert',
+        entityDefinition,
+        'System alerts and notifications stream'
+    )
+
+    await Structures.getNamespaceService().createNamespaceIfNotExist(namespace, 'Sample Data Namespace')
+
+    const savedStructure = await Structures.getStructureService().create(alertStructure)
+
+    if (savedStructure.id) {
+        await Structures.getStructureService().publish(savedStructure.id)
+    } else {
+        throw new Error('No Structure id')
+    }
+
+    return savedStructure
+}
+
+export async function createAlertSchema(namespace: string): Promise<SchemaCreationResult> {
+    return createSchema(namespace, 'Alert')
+}
+
+// Add this helper function to create test Alert instances
+export function createTestAlert(options: Partial<Alert> & { index?: number } = {}): Alert {
+    const index = options.index ?? 0
+    const ret = new Alert()
+    ret.alertId = options.alertId ?? `alert-${index.toString().padStart(3, '0')}`
+    ret.message = options.message ?? faker.lorem.sentence()
+    ret.severity = options.severity ?? (index % 3 === 0 ? 'LOW' : index % 3 === 1 ? 'MEDIUM' : 'HIGH')
+    ret.source = options.source ?? faker.internet.domainName()
+    ret.timestamp = options.timestamp ?? new Date(Date.now() - (index * 1000))
+    ret.active = options.active ?? (index % 2 === 0)
+    return ret
+}
+
+// Add this helper function to create multiple test Alerts
+export function createTestAlerts(numberToCreate: number): Alert[] {
+    const ret: Alert[] = []
+    for (let i = 0; i < numberToCreate; i++) {
+        ret.push(createTestAlert({index: i}))
+    }
+    return ret
 }
 
 export async function createPersonStructureIfNotExist(namespace: string, withTenant: boolean = false): Promise<Structure>{
