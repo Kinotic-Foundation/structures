@@ -61,3 +61,9 @@ dependencies {
 	testImplementation "org.testcontainers:elasticsearch:${testContainersVersion}"
 	testImplementation 'io.projectreactor:reactor-test'
 }
+
+// Configure Javadoc to exclude non-Java files
+tasks.named('javadoc') {
+	source = sourceSets.main.allJava // Only include Java sources
+	exclude '**/*.interp', '**/*.tokens' // Exclude ANTLR artifacts
+}
