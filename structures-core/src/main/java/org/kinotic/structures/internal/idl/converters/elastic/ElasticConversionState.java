@@ -5,6 +5,7 @@ import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.domain.idl.decorators.EntityDecorator;
+import org.kinotic.structures.api.domain.idl.decorators.EsIndexConfigurationDecorator;
 import org.kinotic.structures.internal.idl.converters.common.BaseConversionState;
 import org.kinotic.structures.internal.idl.converters.common.DecoratedProperty;
 
@@ -26,16 +27,23 @@ public class ElasticConversionState extends BaseConversionState {
      */
     private EntityDecorator entityDecorator;
 
+    private EsIndexConfigurationDecorator esIndexConfigurationDecorator;
+
     private String idFieldName;
 
     private String versionFieldName;
 
+    private String timeReferenceFieldName;
+
     private String tenantIdFieldName;
 
+    /**
+     * If true the index will be created, if false the index will not be created for a given field.
+     */
+    private boolean shouldIndex = true;
 
     public ElasticConversionState(StructuresProperties structuresProperties) {
         super(structuresProperties);
     }
-
 
 }

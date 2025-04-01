@@ -17,7 +17,7 @@ Object.assign(global, {WebSocket})
 
 interface LocalTestContext {
     structure: Structure
-    suffixUsed: string
+    namespaceUsed: string
     adminEntityService: IAdminEntityService<PersonWithTenant>
     entityService: IEntityService<PersonWithTenant>
 }
@@ -35,8 +35,8 @@ describe('End To End Tests', () => {
     }, 60000)
 
     beforeEach<LocalTestContext>(async (context) => {
-        context.suffixUsed = generateRandomString(5)
-        context.structure = await createPersonStructureIfNotExist(context.suffixUsed , true)
+        context.namespaceUsed = generateRandomString(5)
+        context.structure = await createPersonStructureIfNotExist(context.namespaceUsed , true)
         expect(context.structure).toBeDefined()
         context.adminEntityService = new AdminEntityService(context.structure.namespace, context.structure.name)
         expect(context.adminEntityService).toBeDefined()
@@ -46,17 +46,19 @@ describe('End To End Tests', () => {
 
     afterEach<LocalTestContext>(async (context) => {
         await expect(deleteStructure(context.structure.id as string)).resolves.toBeUndefined()
+        await expect(Structures.getStructureService().syncIndex()).resolves.toBeNull()
+        await Structures.getNamespaceService().deleteById(context.structure.namespace)
     })
 
     it<LocalTestContext>(
         'Aggregate With Parameter and Tenant Selection Test',
-        async ({entityService, adminEntityService, suffixUsed}) => {
+        async ({entityService, adminEntityService, namespaceUsed}) => {
             // Create people
             await createTestPeopleWithTenantAndVerify(adminEntityService, entityService, 'tenant01', 100)
             await createTestPeopleWithTenantAndVerify(adminEntityService, entityService, 'tenant02', 100)
 
             // This wil get any NamedQueries defined in the EntityServices
-            const {namedQueriesDefinition} = await createSchema(suffixUsed, 'PersonWithTenant')
+            const {namedQueriesDefinition} = await createSchema(namespaceUsed, 'PersonWithTenant')
 
             const namedQueriesService = Structures.getNamedQueriesService()
             await namedQueriesService.save(namedQueriesDefinition)

@@ -9,6 +9,7 @@ import org.kinotic.continuum.idl.api.converter.IdlConverter;
 import org.kinotic.continuum.idl.api.converter.IdlConverterFactory;
 import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.api.domain.idl.decorators.EntityType;
 import org.kinotic.structures.internal.api.services.ElasticConversionResult;
 import org.kinotic.structures.internal.api.services.StructureConversionService;
 import org.kinotic.structures.internal.idl.converters.elastic.ElasticConversionState;
@@ -45,18 +46,28 @@ public class DefaultStructureConversionService implements StructureConversionSer
         if(esProperty.isObject()){
             objectProperty = esProperty.object();
         }else{
-            throw new IllegalStateException("EntityDefinition must be an object");
+            throw new IllegalStateException("Entity must be an object");
         }
 
         if(state.getIdFieldName() == null){
-            throw new IllegalArgumentException("An Id field must be defined for the EntityDefinition");
+            throw new IllegalArgumentException("An Id field must be defined for the Entity");
+        }
+
+        if(state.getEntityDecorator().getEntityType() == EntityType.STREAM) {
+            if(state.getVersionFieldName() != null) {
+                throw new IllegalArgumentException("You should not provide a version field when an Entity is a stream");
+            }
+            if(state.getTimeReferenceFieldName() == null) {
+                throw new IllegalArgumentException("You must provide a time reference field when configuring an Entity as a stream");
+            }
         }
 
         return new ElasticConversionResult(state.getDecoratedProperties(),
-                                           state.getEntityDecorator().getMultiTenancyType(),
+                                           state.getEntityDecorator(),
                                            objectProperty,
                                            state.getVersionFieldName(),
-                                           state.getTenantIdFieldName());
+                                           state.getTenantIdFieldName(),
+                                           state.getTimeReferenceFieldName());
     }
 
     @Override

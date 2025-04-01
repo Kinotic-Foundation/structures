@@ -1,11 +1,11 @@
-import {Entity, Id, MultiTenancyType, Text, Version} from '@kinotic/structures-api'
+import {Entity, Id, MultiTenancyType, Text, Version, EntityType} from '@kinotic/structures-api'
 
 export class Wheel {
     public brand!: string
     public size!: number
 }
 
-@Entity(MultiTenancyType.SHARED)
+@Entity(MultiTenancyType.SHARED, EntityType.TABLE)
 export class Vehicle {
     @Id
     public id!: string

@@ -29,6 +29,13 @@ import java.util.concurrent.CompletableFuture;
 public interface StructureService extends IdentifiableCrudService<Structure, String> {
 
     /**
+     * Counts all structures for the given namespace.
+     * @param namespace the namespace to find structures for
+     * @return a future that will complete with a page of structures
+     */
+    CompletableFuture<Long> countForNamespace(String namespace);
+
+    /**
      * Finds all published structures for the given namespace.
      * @param namespace the namespace to find structures for
      * @param pageable the page to return
@@ -37,19 +44,18 @@ public interface StructureService extends IdentifiableCrudService<Structure, Str
     CompletableFuture<Page<Structure>> findAllPublishedForNamespace(String namespace, Pageable pageable);
 
     /**
-     * Counts all structures for the given namespace.
-     * @param namespace the namespace to find structures for
-     * @return a future that will complete with a page of structures
-     */
-    CompletableFuture<Long> countForNamespace(String namespace);
-
-    /**
      * Publishes thed structure with the given id.
      * This will make the structure available for use to read and write items for.
      * @param structureId the id of the structure to publish
      * @return a future that will complete when the structure has been published
      */
     CompletableFuture<Void> publish(String structureId);
+
+    /**
+     * This operation makes all the recent writes immediately available for search.
+     * @return a future that will complete when the index has been synced
+     */
+    CompletableFuture<Void> syncIndex();
 
     /**
      * Un-publish the structure with the given id.

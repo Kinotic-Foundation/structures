@@ -4,9 +4,6 @@ import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import co.elastic.clients.elasticsearch._types.query_dsl.TermQuery;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import lombok.AllArgsConstructor;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
@@ -49,17 +46,17 @@ public class DefaultNamedQueriesService extends AbstractCrudService<NamedQueries
         cache = Caffeine.newBuilder()
                         .expireAfterAccess(20, TimeUnit.HOURS)
                         .maximumSize(10_000)
-                        .buildAsync((key, executor) -> findByNamespaceAndStructure(key.getStructure().getNamespace(),
-                                                                                   key.getStructure().getName())
+                        .buildAsync((key, executor) -> findByNamespaceAndStructure(key.structure().getNamespace(),
+                                                                                   key.structure().getName())
                                 .thenApplyAsync(namedQueriesDefinition -> {
 
                                     Validate.notNull(namedQueriesDefinition, "No Named Query found for Structure: "
-                                            + key.getStructure()
+                                            + key.structure()
                                             + " and Query: "
-                                            + key.getQueryName());
+                                            + key.queryName());
 
-                                    QueryExecutor ret = queryExecutorFactory.createQueryExecutor(key.getStructure(),
-                                                                                                 key.getQueryName(),
+                                    QueryExecutor ret = queryExecutorFactory.createQueryExecutor(key.structure(),
+                                                                                                 key.queryName(),
                                                                                                  namedQueriesDefinition);
 
                                     // Track the cache key so, we can invalidate it when the named query is updated
@@ -141,11 +138,12 @@ public class DefaultNamedQueriesService extends AbstractCrudService<NamedQueries
                                           builder -> builder.q(searchText));
     }
 
-    @AllArgsConstructor
-    @Getter
-    @EqualsAndHashCode
-    private static class CacheKey {
-        private final String queryName;
-        private final Structure structure;
+    @Override
+    public CompletableFuture<Void> syncIndex() {
+        return esAsyncClient.indices()
+                            .refresh(b -> b.index(indexName))
+                            .thenApply(unused -> null);
     }
+
+    private record CacheKey(String queryName, Structure structure) {}
 }

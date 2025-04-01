@@ -63,4 +63,11 @@ public class DefaultNamespaceService extends AbstractCrudService<Namespace> impl
                                           Namespace.class,
                                           builder -> builder.q(searchText));
     }
+
+    @Override
+    public CompletableFuture<Void> syncIndex() {
+        return esAsyncClient.indices()
+                            .refresh(b -> b.index(indexName))
+                            .thenApply(unused -> null);
+    }
 }

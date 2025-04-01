@@ -6,6 +6,7 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.RoutingContext;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.Validate;
+import org.kinotic.structures.api.domain.FastestType;
 import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.internal.utils.VertxWebUtil;
 
@@ -32,12 +33,13 @@ class ValueToJsonHandler<T> implements BiFunction<T, Throwable, Void> {
     public Void apply(T value, Throwable throwable) {
         if (throwable == null) {
             Validate.notNull(context, "context must not be null");
-            if(value == null && send404IfNull) {
+            Object data = (value instanceof FastestType ? ((FastestType) value).data() : value);
+            if(data == null && send404IfNull) {
                 // No data so send Not Found
                 context.response().setStatusCode(404);
                 context.response().end();
             }else {
-                if (value instanceof RawJson raw) {
+                if (data instanceof RawJson raw) {
                     context.response().putHeader("Content-Type", "application/json");
                     context.response().setStatusCode(200);
                     context.response().end(Buffer.buffer(raw.data()));
@@ -45,8 +47,8 @@ class ValueToJsonHandler<T> implements BiFunction<T, Throwable, Void> {
                     try {
                         context.response().putHeader("Content-Type", "application/json");
                         context.response().setStatusCode(200);
-                        byte[] data = objectMapper.writeValueAsBytes(value);
-                        context.response().end(Buffer.buffer(data));
+                        byte[] bytes = objectMapper.writeValueAsBytes(value);
+                        context.response().end(Buffer.buffer(bytes));
                     } catch (JsonProcessingException e) {
                         VertxWebUtil.writeException(context, e);
                     }
