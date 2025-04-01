@@ -22,6 +22,8 @@ public final class EntityDecorator extends C3Decorator {
 
     private MultiTenancyType multiTenancyType = MultiTenancyType.NONE;
 
+    private EntityType entityType = EntityType.TABLE;
+
     public EntityDecorator() {
         this.targets = List.of(DecoratorTarget.TYPE);
     }

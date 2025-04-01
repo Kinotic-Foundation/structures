@@ -63,13 +63,13 @@ describe('End To End Tests', () => {
         async ({entityService, adminEntityService}) => {
             // Create a person
             const person = createTestPersonWithTenant(1, 'tenant01')
-            const savedPerson: Person = await logFailure(entityService.save(person), 'Failed to save person for tenant01')
+            const savedPerson: PersonWithTenant = await logFailure(entityService.save(person), 'Failed to save person for tenant01')
 
             expect(savedPerson).toBeDefined()
             expect(savedPerson.id).toBeDefined()
 
             const person2 = createTestPersonWithTenant(1, 'tenant02')
-            const savedPerson2: Person = await logFailure(entityService.save(person2), 'Failed to save person for tenant02')
+            const savedPerson2: PersonWithTenant = await logFailure(entityService.save(person2), 'Failed to save person for tenant02')
 
             expect(savedPerson2).toBeDefined()
             expect(savedPerson2.id).toBeDefined()
@@ -77,13 +77,13 @@ describe('End To End Tests', () => {
             await expect(entityService.syncIndex()).resolves.toBeNull()
 
             // Find the 1st person
-            const foundPerson: Person = await logFailure(adminEntityService.findById({entityId: savedPerson.id as string, tenantId: 'tenant01'}), 'Failed to find person')
+            const foundPerson: PersonWithTenant = await logFailure(adminEntityService.findById({entityId: savedPerson.id as string, tenantId: 'tenant01'}), 'Failed to find person')
             expect(foundPerson).toBeDefined()
             expect(foundPerson.id).toBe(savedPerson.id)
 
             // Update the person
             // Find the 1st person
-            const foundPerson2: Person = await logFailure(adminEntityService.findById({entityId: savedPerson2.id as string, tenantId: 'tenant02'}), 'Failed to find person')
+            const foundPerson2: PersonWithTenant = await logFailure(adminEntityService.findById({entityId: savedPerson2.id as string, tenantId: 'tenant02'}), 'Failed to find person')
             expect(foundPerson2).toBeDefined()
             expect(foundPerson2.id).toBe(savedPerson2.id)
 

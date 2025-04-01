@@ -5,6 +5,8 @@ import co.elastic.clients.elasticsearch._types.ErrorResponse;
 import co.elastic.clients.elasticsearch._types.FieldSort;
 import co.elastic.clients.elasticsearch._types.FieldValue;
 import co.elastic.clients.elasticsearch._types.SortOrder;
+import co.elastic.clients.elasticsearch._types.mapping.DynamicMapping;
+import co.elastic.clients.elasticsearch._types.mapping.Property;
 import co.elastic.clients.elasticsearch.core.*;
 import co.elastic.clients.elasticsearch.core.get.GetResult;
 import co.elastic.clients.elasticsearch.core.mget.MultiGetOperation;
@@ -12,7 +14,7 @@ import co.elastic.clients.elasticsearch.core.mget.MultiGetResponseItem;
 import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.elasticsearch.core.search.HitsMetadata;
 import co.elastic.clients.elasticsearch.indices.CreateIndexRequest;
-import co.elastic.clients.elasticsearch.indices.PutMappingRequest;
+import co.elastic.clients.elasticsearch.indices.DataStreamVisibility;
 import co.elastic.clients.elasticsearch.indices.StorageType;
 import co.elastic.clients.json.JsonpDeserializer;
 import co.elastic.clients.json.JsonpMapperBase;
@@ -31,6 +33,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
@@ -56,6 +59,8 @@ public class CrudServiceTemplate {
     }
 
 
+    // In CrudServiceTemplate.java
+
     /**
      * Counts the number of documents in the index. Also allows for customization of the {@link CountRequest}.
      *
@@ -75,46 +80,89 @@ public class CrudServiceTemplate {
                             .thenApply(CountResponse::count);
     }
 
+    /**
+     * Creates a data stream
+     */
+    public CompletableFuture<Void> createDataStream(String dataStreamName) {
+        return esAsyncClient.indices().createDataStream(builder -> builder.name(dataStreamName))
+                            .thenApply(response -> null);
+    }
 
     /**
      * Creates an index with the given name. Also allows for customization of the {@link CreateIndexRequest}.
      *
      * @param indexName       name of the index to create
      * @param failIfExists    if true will fail with an exception if the index already exists
-     * @param builderConsumer to customize the {@link CreateIndexRequest}, or null if no customization is needed
+     * @param mappings        the mappings to use for the index, or null if no mappings are needed
      * @return a {@link CompletableFuture} that will complete when the index has been created
      */
     public CompletableFuture<Void> createIndex(String indexName,
                                                boolean failIfExists,
-                                               Consumer<CreateIndexRequest.Builder> builderConsumer) {
+                                               Map<String, Property> mappings) {
         return esAsyncClient.indices().exists(builder -> builder.index(indexName))
                             .thenCompose(exists -> {
                                 if (!exists.value()) {
                                     return esAsyncClient.indices()
                                                         .create(builder -> {
-                                                            builder.index(indexName);
-                                                            builder.settings(s -> s
-                                                                    .numberOfShards("3")
-                                                                    .numberOfReplicas("2")
-                                                                    .store(st -> st.type(StorageType.Fs))
-                                                            );
-
-                                                            if (builderConsumer != null) {
-                                                                builderConsumer.accept(builder);
+                                                            builder.index(indexName)
+                                                                   .settings(s -> s
+                                                                           .numberOfShards("3")
+                                                                           .numberOfReplicas("2")
+                                                                           .store(st -> st.type(StorageType.Fs))
+                                                                   );
+                                                            if (mappings != null && !mappings.isEmpty()) {
+                                                                builder.mappings(m -> m
+                                                                        .dynamic(DynamicMapping.Strict)
+                                                                        .properties(mappings));
                                                             }
-
                                                             return builder;
                                                         })
                                                         .thenApply(response -> null);
                                 } else {
                                     if (failIfExists) {
-                                        return CompletableFuture.failedFuture(new IllegalArgumentException(
-                                                "Index already exists: " + indexName));
+                                        return CompletableFuture.failedFuture(
+                                                new IllegalArgumentException("Index already exists: " + indexName));
                                     } else {
                                         return CompletableFuture.completedFuture(null);
                                     }
                                 }
                             });
+    }
+
+    /**
+     * Creates an index template with the given name, pattern, and mappings
+     * @param templateName the name of the template
+     * @param indexPattern the pattern to match the index names
+     * @param dataStreamVisibility the visibility of the data stream or null if not a data stream
+     * @param mappings the mappings to use for the index, or null if no mappings are needed
+     * @return a {@link CompletableFuture} that will complete when the index template has been created
+     */
+    public CompletableFuture<Void> createIndexTemplate(String templateName,
+                                                       String indexPattern,
+                                                       DataStreamVisibility dataStreamVisibility,
+                                                       Map<String, Property> mappings) {
+        return esAsyncClient.indices().putIndexTemplate(builder -> {
+            builder.name(templateName)
+                   .indexPatterns(List.of(indexPattern))
+                   .priority(500L)
+                   .template(t -> t
+                           .settings(s -> s
+                                   .numberOfShards("3")
+                                   .numberOfReplicas("2")
+                           )
+                   );
+            if (dataStreamVisibility != null) {
+                builder.dataStream(dataStreamVisibility);
+            }
+            if (mappings != null && !mappings.isEmpty()) {
+                builder.template(t -> t
+                        .mappings(m -> m
+                                .dynamic(DynamicMapping.Strict)
+                                .properties(mappings))
+                );
+            }
+            return builder;
+        }).thenApply(response -> null);
     }
 
     /**
@@ -155,6 +203,23 @@ public class CrudServiceTemplate {
         });
     }
 
+    /**
+     * Deletes a data stream
+     */
+    public CompletableFuture<Void> deleteDataStream(String dataStreamName) {
+        return esAsyncClient.indices()
+                            .deleteDataStream(builder -> builder.name(dataStreamName))
+                            .thenApply(response -> null);
+    }
+
+    /**
+     * Deletes an index template
+     */
+    public CompletableFuture<Void> deleteIndexTemplate(String templateName) {
+        return esAsyncClient.indices()
+                            .deleteIndexTemplate(builder -> builder.name(templateName))
+                            .thenApply(response -> null);
+    }
 
     /**
      * Finds a document by id. Also allows for customization of the {@link GetRequest}.
@@ -352,6 +417,77 @@ public class CrudServiceTemplate {
                 });
     }
 
+    public CompletableFuture<Void> updateIndexMapping(String indexName,
+                                                      Map<String, Property> mappings) {
+        return esAsyncClient.indices().exists(builder -> builder.index(indexName))
+                            .thenCompose(exists -> {
+                                if (exists.value()) {
+                                    return esAsyncClient.indices()
+                                                        .putMapping(builder -> {
+                                                            builder.index(indexName);
+                                                            if (mappings != null && !mappings.isEmpty()) {
+                                                                builder.dynamic(DynamicMapping.Strict)
+                                                                       .properties(mappings);
+                                                            }
+                                                            return builder;
+                                                        })
+                                                        .thenApply(response -> null);
+                                } else {
+                                    return CompletableFuture.failedFuture(
+                                            new IllegalArgumentException("Index " + indexName + " does not exist"));
+                                }
+                            });
+    }
+
+    /**
+     * Updates an existing index template
+     */
+    public CompletableFuture<Void> updateIndexTemplate(String templateName,
+                                                       Map<String, Property> mappings) {
+        return esAsyncClient.indices().existsTemplate(builder -> builder.name(templateName))
+                            .thenCompose(exists -> {
+                                if (exists.value()) {
+                                    return esAsyncClient.indices()
+                                                        .putIndexTemplate(builder -> {
+                                                            builder.name(templateName)
+                                                                   .template(t -> t
+                                                                           .settings(s -> s
+                                                                                   .numberOfShards("3")
+                                                                                   .numberOfReplicas("2")
+                                                                           )
+                                                                   );
+                                                            if (mappings != null && !mappings.isEmpty()) {
+                                                                builder.template(t -> t
+                                                                        .mappings(m -> m
+                                                                                .dynamic(DynamicMapping.Strict)
+                                                                                .properties(mappings))
+                                                                );
+                                                            }
+                                                            return builder;
+                                                        })
+                                                        .thenApply(response -> null);
+                                } else {
+                                    return CompletableFuture.failedFuture(
+                                            new IllegalArgumentException("Index template " + templateName + " does not exist"));
+                                }
+                            });
+    }
+
+    private <T> JsonpDeserializer<T> getDeserializer(Class<T> type) {
+        if (RawJson.class.isAssignableFrom(type)) {
+            //noinspection unchecked
+            return (JsonpDeserializer<T>) rawJsonJsonpDeserializer;
+        }
+
+        // Try the built-in deserializers first to avoid repeated lookups in the Jsonp mapper for client-defined classes
+        JsonpDeserializer<T> result = JsonpMapperBase.findDeserializer(type);
+        if (result != null) {
+            return result;
+        }
+
+        return JsonpDeserializer.of(type);
+    }
+
     /**
      * Provides base functionality to get a {@link Page} of documents from elasticsearch. With the ability to customize the {@link SearchRequest}.
      *
@@ -445,42 +581,6 @@ public class CrudServiceTemplate {
         //noinspection resource
         return esAsyncClient._transport()
                             .performRequestAsync(request, endpoint, esAsyncClient._transportOptions());
-    }
-
-    private <T> JsonpDeserializer<T> getDeserializer(Class<T> type) {
-        if (RawJson.class.isAssignableFrom(type)) {
-            //noinspection unchecked
-            return (JsonpDeserializer<T>) rawJsonJsonpDeserializer;
-        }
-
-        // Try the built-in deserializers first to avoid repeated lookups in the Jsonp mapper for client-defined classes
-        JsonpDeserializer<T> result = JsonpMapperBase.findDeserializer(type);
-        if (result != null) {
-            return result;
-        }
-
-        return JsonpDeserializer.of(type);
-    }
-
-    CompletableFuture<Void> updateIndexMapping(String indexName,
-                                               Consumer<PutMappingRequest.Builder> builderConsumer){
-        return esAsyncClient.indices().exists(builder -> builder.index(indexName))
-                            .thenCompose(exists -> {
-                                if (exists.value()) {
-                                    return esAsyncClient.indices()
-                                                        .putMapping(builder -> {
-                                                            builder.index(indexName);
-                                                            if (builderConsumer != null) {
-                                                                builderConsumer.accept(builder);
-                                                            }
-                                                            return builder;
-                                                        })
-                                                        .thenApply(response -> null);
-                                } else {
-                                    return CompletableFuture.failedFuture(new IllegalArgumentException(
-                                            "Index "+indexName+" does not exist"));
-                                }
-                            });
     }
 
 }
