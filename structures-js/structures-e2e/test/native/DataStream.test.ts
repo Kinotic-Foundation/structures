@@ -1,4 +1,5 @@
-import {Page, Pageable} from '@kinotic/continuum-client'
+import {Pageable} from '@kinotic/continuum-client'
+import {ObjectC3Type, PropertyDefinition, StringC3Type} from '@kinotic/continuum-idl'
 import {IEntityService, Structure, Structures} from '@kinotic/structures-api'
 import * as allure from 'allure-js-commons'
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it} from 'vitest'
@@ -6,8 +7,8 @@ import {WebSocket} from 'ws'
 import {Alert} from '../domain/Alert.js'
 import {
     createAlertStructureIfNotExist,
-    createTestAlerts,
     createTestAlert,
+    createTestAlerts,
     deleteStructure,
     generateRandomString,
     initContinuumClient,
@@ -122,9 +123,8 @@ describe('End To End Tests', () => {
         await entityService.syncIndex()
 
         const rangeStart = new Date(now.getTime() - 2500)
-        const rangeEnd = now
         const recentAlerts = await entityService.search(
-            `timestamp:[${rangeStart.toISOString()} TO ${rangeEnd.toISOString()}]`,
+            `timestamp:[${rangeStart.toISOString()} TO ${now.toISOString()}]`,
             Pageable.create(0, 10)
         )
         expect(recentAlerts.totalElements).toBe(2)
@@ -165,5 +165,87 @@ describe('End To End Tests', () => {
         const remainingAlerts = await entityService.findAll(Pageable.create(0, 10))
         expect(remainingAlerts.content?.[0].alertId).toBe(alertLow.alertId)
         expect(remainingAlerts.content?.[0].severity).toBe('LOW')
+    })
+
+    it<LocalTestContext>('Test Alert Schema Evolution - Add Field (Non-Breaking)', async ({structure, entityService}) => {
+        // Step 1: Save initial data with existing structure
+        const initialAlert = createTestAlert()
+        await logFailure(entityService.save(initialAlert), 'Failed to save initial alert')
+        await entityService.syncIndex()
+
+        // Verify initial data
+        let results = await entityService.search(`alertId:${initialAlert.alertId}`, Pageable.create(0, 10))
+        expect(results.totalElements).toBe(1)
+        expect(results.content?.[0].alertId).toBe(initialAlert.alertId)
+
+        // Step 2: Modify the schema - add a new 'category' field (no unpublish needed)
+        const propertyDefinition = new PropertyDefinition('category', new StringC3Type())
+        structure.entityDefinition.properties.push(propertyDefinition)
+
+        // Step 3: Update the existing structure
+        await Structures.getStructureService().save(structure)
+
+        // Step 4: Save data with new field
+        const newAlert = createTestAlert({index: 2})
+        const alertWithCategory = {
+            ...newAlert,
+            category: 'System Failure'
+        }
+
+        await logFailure(entityService.save(alertWithCategory as Alert), 'Failed to save alert with category')
+        await entityService.syncIndex()
+
+        // Verify new data with category
+        results = await entityService.search(`alertId:${newAlert.alertId}`, Pageable.create(0, 10))
+        expect(results.totalElements).toBe(1)
+        expect(results.content?.[0].alertId).toBe(newAlert.alertId)
+        expect(results.content?.[0]).toHaveProperty('category')
+        // @ts-ignore We manually added the category field
+        expect(results.content?.[0].category).toBe('System Failure')
+    })
+
+    it<LocalTestContext>('Test Alert Schema Evolution - Remove Field (Breaking)', async ({structure, entityService}) => {
+        // Step 1: Save initial data with existing structure
+        const initialAlert = createTestAlert()
+        await logFailure(entityService.save(initialAlert), 'Failed to save initial alert')
+        await entityService.syncIndex()
+
+        // Verify initial data
+        let results = await entityService.search(`alertId:${initialAlert.alertId}`, Pageable.create(0, 10))
+        expect(results.totalElements).toBe(1)
+        expect(results.content?.[0].alertId).toBe(initialAlert.alertId)
+        expect(results.content?.[0].source).toBe(initialAlert.source)
+
+        // Step 2: Modify the schema - remove the 'source' field (breaking change)
+        await Structures.getStructureService().unPublish(structure.id as string)
+
+        const updatedEntityDefinition = structure.entityDefinition
+        updatedEntityDefinition.properties = updatedEntityDefinition.properties.filter(
+            prop => prop.name !== 'source'
+        )
+
+        // Step 3: Update the existing structure
+        structure.entityDefinition = updatedEntityDefinition
+        await Structures.getStructureService().save(structure)
+        await Structures.getStructureService().publish(structure.id as string)
+
+        // Step 4: Save data without the removed 'source' field (using existing entityService)
+        const newAlert = createTestAlert()
+        const alertWithoutSource = {
+            alertId: newAlert.alertId,
+            message: newAlert.message,
+            severity: newAlert.severity,
+            timestamp: newAlert.timestamp,
+            active: newAlert.active
+        }
+
+        await logFailure(entityService.save(alertWithoutSource as Alert), 'Failed to save alert without source')
+        await entityService.syncIndex()
+
+        // Verify new data doesn't have 'source'
+        results = await entityService.search(`alertId:${newAlert.alertId}`, Pageable.create(0, 10))
+        expect(results.totalElements).toBe(1)
+        expect(results.content?.[0].alertId).toBe(newAlert.alertId)
+        expect(results.content?.[0]).not.toHaveProperty('source')
     })
 })
