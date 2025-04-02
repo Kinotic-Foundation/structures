@@ -154,7 +154,7 @@ public class DefaultStructureService implements StructureService {
 
                     ElasticConversionResult result = structureConversionService.convertToElasticMapping(structure);
                     Map<String, Property> mappings = result.objectProperty().properties();
-                    String templateName = structure.getId() + "_tpl";
+                    String templateName = structure.getItemIndex() + "_tpl";
                     boolean allowCustomRouting = structure.getMultiTenancyType() == MultiTenancyType.SHARED;
 
                     CompletableFuture<Void> creationFuture = structure.isStream()
@@ -239,7 +239,7 @@ public class DefaultStructureService implements StructureService {
 
                         CompletableFuture<Void> updateFuture;
                         if (structure.isStream()) {
-                            String templateName = structure.getId() + "_tpl";
+                            String templateName = structure.getItemIndex() + "_tpl";
                             // Update both the template (for future indices) and the data stream's current indices
                             updateFuture = crudServiceTemplate.updateIndexTemplate(templateName, mappings)
                                                               .thenCompose(v -> crudServiceTemplate.updateIndexMapping(structure.getItemIndex(), mappings));
@@ -284,7 +284,7 @@ public class DefaultStructureService implements StructureService {
 
                     CompletableFuture<Void> deleteStorageFuture;
                     if (structure.isStream()) {
-                        String templateName = structure.getId() + "_tpl";
+                        String templateName = structure.getItemIndex() + "_tpl";
                         // Delete the data stream and its template
                         deleteStorageFuture = crudServiceTemplate.deleteDataStream(structure.getItemIndex())
                                                                  .thenCompose(v -> crudServiceTemplate.deleteIndexTemplate(templateName));

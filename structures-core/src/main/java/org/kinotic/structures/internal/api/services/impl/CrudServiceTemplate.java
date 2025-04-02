@@ -13,9 +13,7 @@ import co.elastic.clients.elasticsearch.core.mget.MultiGetOperation;
 import co.elastic.clients.elasticsearch.core.mget.MultiGetResponseItem;
 import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.elasticsearch.core.search.HitsMetadata;
-import co.elastic.clients.elasticsearch.indices.CreateIndexRequest;
-import co.elastic.clients.elasticsearch.indices.DataStreamVisibility;
-import co.elastic.clients.elasticsearch.indices.StorageType;
+import co.elastic.clients.elasticsearch.indices.*;
 import co.elastic.clients.json.JsonpDeserializer;
 import co.elastic.clients.json.JsonpMapperBase;
 import co.elastic.clients.transport.JsonEndpoint;
@@ -141,25 +139,28 @@ public class CrudServiceTemplate {
                                                        String indexPattern,
                                                        DataStreamVisibility dataStreamVisibility,
                                                        Map<String, Property> mappings) {
+        Validate.notNull(templateName, "templateName cannot be null");
+        Validate.notNull(indexPattern, "indexPattern cannot be null");
         return esAsyncClient.indices().putIndexTemplate(builder -> {
             builder.name(templateName)
                    .indexPatterns(List.of(indexPattern))
                    .priority(500L)
-                   .template(t -> t
-                           .settings(s -> s
-                                   .numberOfShards("3")
-                                   .numberOfReplicas("2")
-                           )
+                   .create(true)
+                   .template(t -> {
+                                 t.settings(s -> s
+                                         .numberOfShards("3")
+                                         .numberOfReplicas("2")
+                                 );
+                                 if(mappings != null && !mappings.isEmpty()) {
+                                     t.mappings(m -> m
+                                             .dynamic(DynamicMapping.Strict)
+                                             .properties(mappings));
+                                 }
+                                 return t;
+                             }
                    );
             if (dataStreamVisibility != null) {
                 builder.dataStream(dataStreamVisibility);
-            }
-            if (mappings != null && !mappings.isEmpty()) {
-                builder.template(t -> t
-                        .mappings(m -> m
-                                .dynamic(DynamicMapping.Strict)
-                                .properties(mappings))
-                );
             }
             return builder;
         }).thenApply(response -> null);
@@ -444,32 +445,59 @@ public class CrudServiceTemplate {
      */
     public CompletableFuture<Void> updateIndexTemplate(String templateName,
                                                        Map<String, Property> mappings) {
-        return esAsyncClient.indices().existsTemplate(builder -> builder.name(templateName))
+        Validate.notNull(templateName, "templateName cannot be null");
+        Validate.notNull(mappings, "mappings cannot be null");
+        Validate.notEmpty(mappings, "mappings cannot be empty");
+
+        return esAsyncClient.indices()
+                            .existsIndexTemplate(builder -> builder.name(templateName))
                             .thenCompose(exists -> {
-                                if (exists.value()) {
-                                    return esAsyncClient.indices()
-                                                        .putIndexTemplate(builder -> {
-                                                            builder.name(templateName)
-                                                                   .template(t -> t
-                                                                           .settings(s -> s
-                                                                                   .numberOfShards("3")
-                                                                                   .numberOfReplicas("2")
-                                                                           )
-                                                                   );
-                                                            if (mappings != null && !mappings.isEmpty()) {
-                                                                builder.template(t -> t
-                                                                        .mappings(m -> m
-                                                                                .dynamic(DynamicMapping.Strict)
-                                                                                .properties(mappings))
-                                                                );
-                                                            }
-                                                            return builder;
-                                                        })
-                                                        .thenApply(response -> null);
-                                } else {
+                                if (!exists.value()) {
                                     return CompletableFuture.failedFuture(
                                             new IllegalArgumentException("Index template " + templateName + " does not exist"));
                                 }
+
+                                // Fetch the existing template
+                                return esAsyncClient.indices()
+                                                    .getIndexTemplate(builder -> builder.name(templateName))
+                                                    .thenCompose(response -> {
+                                                        IndexTemplate existingTemplate = response.indexTemplates().getFirst()
+                                                                                                 .indexTemplate();
+
+                                                        if (existingTemplate == null) {
+                                                            return CompletableFuture.failedFuture(
+                                                                    new IllegalStateException("Failed to retrieve template " + templateName));
+                                                        }
+
+                                                        // Update the template with existing settings and patterns
+                                                        return esAsyncClient.indices()
+                                                                            .putIndexTemplate(builder -> {
+                                                                                builder.name(templateName)
+                                                                                       .indexPatterns(existingTemplate.indexPatterns())
+                                                                                       .priority(existingTemplate.priority() != null ? existingTemplate.priority() : 500);
+
+                                                                                // Preserve data stream configuration if present
+                                                                                if (existingTemplate.dataStream() != null) {
+                                                                                    builder.dataStream(d -> d);
+                                                                                }
+
+                                                                                // Apply existing settings and new mappings
+                                                                                builder.template(t -> {
+                                                                                    if (existingTemplate.template() != null && existingTemplate.template()
+                                                                                                                                               .settings() != null) {
+                                                                                        t.settings(existingTemplate.template()
+                                                                                                                   .settings());
+                                                                                    }
+                                                                                    t.mappings(m -> m
+                                                                                            .dynamic(DynamicMapping.Strict)
+                                                                                            .properties(mappings));
+                                                                                    return t;
+                                                                                });
+
+                                                                                return builder;
+                                                                            })
+                                                                            .thenApply(pr -> null);
+                                                    });
                             });
     }
 
