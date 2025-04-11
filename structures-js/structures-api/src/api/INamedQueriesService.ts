@@ -3,6 +3,12 @@ import {Continuum, CrudServiceProxy, ICrudServiceProxy,} from '@kinotic/continuu
 
 export interface INamedQueriesService extends ICrudServiceProxy<NamedQueriesDefinition> {
 
+    /**
+     * This operation makes all the recent writes immediately available for search.
+     * @return a Promise that resolves when the operation is complete
+     */
+    syncIndex(): Promise<void>
+
 }
 
 export class NamedQueriesService extends CrudServiceProxy<NamedQueriesDefinition> implements INamedQueriesService{
@@ -11,4 +17,7 @@ export class NamedQueriesService extends CrudServiceProxy<NamedQueriesDefinition
         super(Continuum.serviceProxy('org.kinotic.structures.api.services.NamedQueriesService'))
     }
 
+    public syncIndex(): Promise<void> {
+        return this.serviceProxy.invoke('syncIndex', [])
+    }
 }

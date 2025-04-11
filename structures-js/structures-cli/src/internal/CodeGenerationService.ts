@@ -25,7 +25,7 @@ import {
 } from './Utils.js'
 import chalk from 'chalk'
 
-export type GeneratedEntityProcessor = (entityInfo: EntityInfo, serviceInfo: GeneratedServiceInfo) => Promise<void>
+export type GeneratedEntityProcessor = (entityInfo: EntityInfo, serviceInfo: GeneratedServiceInfo[]) => Promise<void>
 
 
 /**
@@ -101,10 +101,19 @@ export class CodeGenerationService {
 
                 this.logger.logVerbose(`Generated Structure Mapping for ${entityInfo.entity.namespace}.${entityInfo.entity.name}`, config.verbose)
 
-                const generatedServiceInfo
-                          = await this.generateEntityService(entityInfo,
+                const generatedServices: GeneratedServiceInfo[] = []
+
+                generatedServices.push(await this.generateEntityService(false,
+                                                             entityInfo,
                                                              namespaceConfig,
-                                                             config.utilFunctionLocator)
+                                                             config.utilFunctionLocator))
+
+                if(entityInfo.multiTenantSelectionEnabled){
+                    generatedServices.push(await this.generateEntityService(true,
+                                                                            entityInfo,
+                                                                            namespaceConfig,
+                                                                            config.utilFunctionLocator))
+                }
 
                 if(config.verbose){
 
@@ -112,15 +121,17 @@ export class CodeGenerationService {
                                                       entityInfo.entity,
                                                       this.logger)
 
-                    if(generatedServiceInfo.namedQueries.length > 0) {
-                        await writeGeneratedServiceInfoToFilesystem(namespaceConfig.generatedPath,
-                                                                    generatedServiceInfo,
-                                                                    this.logger)
+                    for(let generatedServiceInfo of generatedServices) {
+                        if (generatedServiceInfo.namedQueries.length > 0) {
+                            await writeGeneratedServiceInfoToFilesystem(namespaceConfig.generatedPath,
+                                                                        generatedServiceInfo,
+                                                                        this.logger)
+                        }
                     }
                 }
 
                 if(entityProcessor){
-                    await entityProcessor(entityInfo, generatedServiceInfo)
+                    await entityProcessor(entityInfo, generatedServices)
                 }
             }
 
@@ -129,14 +140,16 @@ export class CodeGenerationService {
         }
     }
 
-    private async generateEntityService(entityInfo: EntityInfo,
+    private async generateEntityService(adminService: boolean,
+                                        entityInfo: EntityInfo,
                                         namespaceConfig: NamespaceConfiguration,
                                         utilFunctionLocator: UtilFunctionLocator): Promise<GeneratedServiceInfo> {
 
+        const adminPrefix = (adminService ? 'Admin' : '')
         const fileExtensionForImports = this.fileExtensionForImports
         const generatedPath = namespaceConfig.generatedPath
-        const baseEntityServicePath = path.resolve(generatedPath, 'generated', `Base${entityInfo.entity.name}EntityService.ts`)
-        const entityServicePath = path.resolve(generatedPath, `${entityInfo.entity.name}EntityService.ts`)
+        const baseEntityServicePath = path.resolve(generatedPath, 'generated', `Base${entityInfo.entity.name}${adminPrefix}EntityService.ts`)
+        const entityServicePath = path.resolve(generatedPath, `${entityInfo.entity.name}${adminPrefix}EntityService.ts`)
 
         const entityName = entityInfo.entity.name
         const entityNamespace = entityInfo.entity.namespace
@@ -148,14 +161,19 @@ export class CodeGenerationService {
             entityImportPath = getRelativeImportPath(baseEntityServicePath, entityInfo.exportedFromFile, fileExtensionForImports)
         }
 
-        const statement = this.createStatementMapper(entityInfo, utilFunctionLocator)
+        // We don't add validation logic to admin services since there are no save/update methods there
+        let statement: StatementMapper | null = null
+        let validationLogic: string | null = null
+        if(!adminService) {
+            statement = this.createStatementMapper(entityInfo, utilFunctionLocator)
+            validationLogic = statement.toStatementString()
+        }
 
-        const validationLogic = statement.toStatementString()
         const importStatements = createImportString(statement, baseEntityServicePath, fileExtensionForImports) || ''
 
         //  We always generate the base entity service. This way if our internal logic changes we can update it
         fs.mkdirSync(path.dirname(baseEntityServicePath), {recursive: true})
-        const baseReadStream= await this.engine.renderFileToNodeStream('BaseEntityService',
+        const baseReadStream= await this.engine.renderFileToNodeStream(`Base${adminPrefix}EntityService`,
                                                                        {
                                                                            entityName,
                                                                            entityNamespace,
@@ -170,7 +188,7 @@ export class CodeGenerationService {
         //  we only generate if the file does not exist
         let namedQueries: FunctionDefinition[] = []
         if (!fs.existsSync(entityServicePath)) {
-            const readStream= await this.engine.renderFileToNodeStream('EntityService',
+            const readStream= await this.engine.renderFileToNodeStream(`${adminPrefix}EntityService`,
                                                                        {
                                                                            entityName,
                                                                            entityNamespace,
@@ -181,12 +199,12 @@ export class CodeGenerationService {
             readStream.pipe(writeStream)
         } else {
             // if it already exists we check if there are any named queries defined
-            namedQueries = await this.processNamedQueries(entityName + 'EntityService',
+            namedQueries = await this.processNamedQueries(`${entityName}${adminPrefix}EntityService`,
                                                           entityServicePath)
         }
 
         return {
-            entityServiceName: entityName + 'EntityService',
+            entityServiceName: `${entityName}${adminPrefix}EntityService`,
             namedQueries: namedQueries
         }
     }

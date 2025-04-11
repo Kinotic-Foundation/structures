@@ -3,7 +3,9 @@ package org.kinotic.structures.api.domain;
 import co.elastic.clients.json.JsonpMapper;
 import co.elastic.clients.json.JsonpSerializable;
 import co.elastic.clients.json.jackson.JacksonJsonpGenerator;
+import co.elastic.clients.util.BinaryData;
 import com.fasterxml.jackson.core.*;
+import com.fasterxml.jackson.core.util.ByteArrayBuilder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.ByteArrayOutputStream;
@@ -70,18 +72,20 @@ public final class RawJson implements JsonpSerializable {
      */
     public static RawJson from(JsonParser parser,
                                ObjectMapper objectMapper) throws IOException {
-        if(parser.currentToken() != JsonToken.START_ARRAY
+        if (parser.currentToken() != JsonToken.START_ARRAY
                 && parser.currentToken() != JsonToken.START_OBJECT) {
-            throw new JsonParseException(parser, "The root of a RawJson must be an array or object", parser.getCurrentLocation());
+            throw new JsonParseException(parser, "The root of a RawJson must be an array or object", parser.currentLocation());
         }
 
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        try(JsonGenerator jsonGenerator = objectMapper.getFactory().createGenerator(outputStream, JsonEncoding.UTF8)) {
-
-            jsonGenerator.copyCurrentStructure(parser);
-
-            jsonGenerator.flush();
-            return new RawJson(outputStream.toByteArray());
+        // Use an efficient output stream from Jackson to avoid unnecessary allocations
+        try (ByteArrayBuilder byteArrayBuilder = new ByteArrayBuilder()) {
+            try (JsonGenerator jsonGenerator = objectMapper.getFactory()
+                                                           .createGenerator(byteArrayBuilder,
+                                                                            JsonEncoding.UTF8)) {
+                jsonGenerator.copyCurrentStructure(parser);
+                jsonGenerator.flush();
+            }
+            return new RawJson(byteArrayBuilder.toByteArray());
         }
     }
 

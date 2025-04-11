@@ -2,7 +2,6 @@ package org.kinotic.structures.internal.idl.converters.graphql;
 
 import graphql.scalars.ExtendedScalars;
 import graphql.schema.GraphQLEnumType;
-import graphql.schema.GraphQLList;
 import lombok.RequiredArgsConstructor;
 import org.kinotic.continuum.idl.api.converter.C3TypeConverter;
 import org.kinotic.continuum.idl.api.converter.C3TypeConverterContainer;
@@ -15,6 +14,7 @@ import java.util.List;
 import java.util.Set;
 
 import static graphql.Scalars.*;
+import static graphql.schema.GraphQLTypeReference.typeRef;
 
 /**
  * Created by Navíd Mitchell 🤪 on 5/14/23.
@@ -50,29 +50,24 @@ public class GqlConverterStrategy implements IdlConverterStrategy<GqlTypeHolder,
                  // Enum type
                  .addConverter(EnumC3Type.class, (c3Type, context) -> {
                      GraphQLEnumType.Builder builder = GraphQLEnumType.newEnum();
-                     builder.name(c3Type.getName());
+                     String enumTypeName = c3Type.getName();
+                     builder.name(enumTypeName);
 
                      for (String value : c3Type.getValues()) {
                          builder.value(value);
                      }
 
                      GraphQLEnumType type = builder.build();
-                     return new GqlTypeHolder(type, type);
-                 })
-                 // Array type
-                 .addConverter(ArrayC3Type.class, (c3Type, context) -> {
+                     context.state().getReferencedTypes().put(enumTypeName, type);
 
-                     // TODO: How do we want to specify that Nulls are allowed of not?
-                     //       GQL allows the schema to specify this. However, we do not have a similar concept in C3.
-                     GqlTypeHolder typeHolder = context.convert(c3Type.getContains());
-
-                     // input type can be null in some cases such as a Union type.
-                     // This can create a paradigm mismatch between OpenApi and GraphQL, but we cannot do anything about it.
-                     // For now, we will not create an input type for these cases.
-                     return new GqlTypeHolder(typeHolder.inputType() != null ? GraphQLList.list(typeHolder.inputType()) : null,
-                                              GraphQLList.list(typeHolder.outputType()));
+                     return new GqlTypeHolder(typeRef(enumTypeName), typeRef(enumTypeName));
                  });
-        converters = new LinkedHashSet<>(List.of(container, new ObjectC3TypeToGql(), new UnionC3TypeToGql(), new CursorPageC3TypeToGql(), new PageC3TypeToGql()));
+        converters = new LinkedHashSet<>(List.of(container,
+                                                 new ArrayC3TypeToGql(),
+                                                 new ObjectC3TypeToGql(),
+                                                 new UnionC3TypeToGql(),
+                                                 new CursorPageC3TypeToGql(),
+                                                 new PageC3TypeToGql()));
     }
 
     @Override

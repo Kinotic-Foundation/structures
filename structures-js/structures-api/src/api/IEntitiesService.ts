@@ -1,19 +1,13 @@
 import {QueryParameter} from '@/api/domain/QueryParameter'
-import {FindAllIterablePage} from '@/internal/api/domain/FindAllIterablePage'
-import {NamedQueryIterablePage} from '@/internal/api/domain/NamedQueryIterablePage.js'
-import {SearchIterablePage} from '@/internal/api/domain/SearchIterablePage'
 import {
     Continuum,
     IServiceProxy,
     Page,
     Pageable,
     IterablePage,
-    IServiceRegistry
+    IServiceRegistry,
+    FunctionalIterablePage
 } from '@kinotic/continuum-client'
-
-export interface EntityContext {
-    [key: string]: any;
-}
 
 export interface IEntitiesService {
 
@@ -160,6 +154,13 @@ export interface IEntitiesService {
     searchSinglePage<T>(structureId: string, searchText: string, pageable: Pageable): Promise<Page<T>>
 
     /**
+     * This operation makes all the recent writes immediately available for search.
+     * @param structureId the id of the structure to sync the index for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * @return a Promise that resolves when the operation is complete
+     */
+    syncIndex(structureId: string): Promise<void>
+
+    /**
      * Updates a given entity. This will only override the fields that are present in the given entity.
      * If any fields are not present in the given entity data, they will not be changed.
      * If the entity does not exist, it will be created.
@@ -209,7 +210,8 @@ export class EntitiesService implements IEntitiesService {
 
     public async findAll<T>(structureId: string, pageable: Pageable): Promise<IterablePage<T>> {
         const page: Page<T> = await this.findAllSinglePage(structureId, pageable)
-        return new FindAllIterablePage(this, pageable, page, structureId)
+        return new FunctionalIterablePage(pageable, page,
+                                          (pageable: Pageable) => this.findAllSinglePage(structureId, pageable))
     }
 
     public async findAllSinglePage<T>(structureId: string, pageable: Pageable): Promise<Page<T>> {
@@ -233,13 +235,14 @@ export class EntitiesService implements IEntitiesService {
                                    parameters: QueryParameter[],
                                    pageable: Pageable): Promise<IterablePage<T>> {
         const page: Page<T> = await this.namedQuerySinglePage(structureId, queryName, parameters, pageable)
-        return new NamedQueryIterablePage(this, pageable, page, parameters, queryName, structureId)
+        return new FunctionalIterablePage(pageable, page,
+                                          (pageable: Pageable) => this.namedQuerySinglePage(structureId, queryName, parameters, pageable))
     }
 
     public namedQuerySinglePage<T>(structureId: string,
                                    queryName: string,
                                    parameters: QueryParameter[],
-                                   pageable: Pageable): Promise<Page<T>> {
+                                   pageable: Pageable): Promise<Page<T  >> {
         return this.serviceProxy.invoke('namedQueryPage', [structureId, queryName, parameters, pageable])
     }
 
@@ -249,11 +252,16 @@ export class EntitiesService implements IEntitiesService {
 
     public async search<T>(structureId: string, searchText: string, pageable: Pageable): Promise<IterablePage<T>> {
         const page: Page<T> = await this.searchSinglePage(structureId, searchText, pageable)
-        return new SearchIterablePage(this, pageable, page, searchText, structureId)
+        return new FunctionalIterablePage(pageable, page,
+                                          (pageable: Pageable) => this.searchSinglePage(structureId, searchText, pageable))
     }
 
     public async searchSinglePage<T>(structureId: string, searchText: string, pageable: Pageable): Promise<Page<T>> {
         return this.serviceProxy.invoke('search', [structureId, searchText, pageable])
+    }
+
+    public async syncIndex(structureId: string): Promise<void> {
+        return this.serviceProxy.invoke('syncIndex', [structureId])
     }
 
     public update<T>(structureId: string, entity: T): Promise<T>{

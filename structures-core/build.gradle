@@ -1,10 +1,24 @@
 plugins {
 	id 'org.kinotic.java-library-conventions'
 	id 'io.freefair.lombok'
+	id 'antlr'
+}
+
+
+// Configure ANTLR plugin
+generateGrammarSource {
+	arguments += ['-package', 'org.kinotic.structures.internal.sql.parser']
+	arguments += ['-visitor']
+
+	// Output directly to the parser package
+	outputDirectory = file("${projectDir}/src/main/java/org/kinotic/structures/internal/sql/parser")
+	enabled = false
 }
 
 dependencies {
-	implementation "io.opentelemetry.instrumentation:opentelemetry-instrumentation-annotations:${otelAnnotationsVersion}"
+
+	implementation 'org.antlr:antlr4-runtime:4.13.2'
+	antlr 'org.antlr:antlr4:4.13.2'
 
 	implementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
@@ -18,8 +32,9 @@ dependencies {
 	implementation "io.vertx:vertx-web-graphql"
 	implementation "io.vertx:vertx-web-client"
 	implementation "io.vertx:vertx-health-check"
-	implementation "com.github.rworsnop:vertx-beans"
 	implementation "me.escoffier.vertx:vertx-completable-future"
+
+	implementation 'org.apache.ignite:ignite-core'
 
 	implementation "org.kinotic:continuum-core"
 	implementation "org.kinotic:continuum-core-vertx"
@@ -40,12 +55,14 @@ dependencies {
 	implementation "io.swagger.core.v3:swagger-core:${swaggerCoreVersion}"
 
 	annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation "org.testcontainers:testcontainers:${testContainersVersion}"
 	testImplementation "org.testcontainers:elasticsearch:${testContainersVersion}"
 	testImplementation 'io.projectreactor:reactor-test'
 }
 
-test {
-	useJUnitPlatform()
+// Configure Javadoc to exclude non-Java files
+tasks.named('javadoc') {
+	exclude '**/*.interp', '**/*.tokens' // Exclude ANTLR artifacts
 }

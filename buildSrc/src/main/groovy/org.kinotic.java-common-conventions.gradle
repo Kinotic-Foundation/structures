@@ -17,15 +17,24 @@ repositories {
     }
 }
 
+// Define configuration for AspectJ agent
+configurations {
+    agent {
+        canBeResolved = true
+        canBeConsumed = true
+    }
+}
+
 dependencyManagement {
     imports {
         mavenBom "org.springframework.boot:spring-boot-dependencies:${springBootVersion}"
+        mavenBom "io.opentelemetry:opentelemetry-bom:${otelBomVersion}"
+        mavenBom "io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom:${otelInstrumentationBomVersion}"
     }
     dependencies {
         dependency "co.elastic.clients:elasticsearch-java:${elasticClientVersion}"
 
         dependency "com.github.ben-manes.caffeine:caffeine:${caffeineVersion}"
-        dependency "com.github.rworsnop:vertx-beans:${vertxBeansVersion}"
 
         dependency "com.graphql-java:graphql-java:${graphQlJavaVersion}"
 
@@ -37,6 +46,8 @@ dependencyManagement {
         dependency "me.escoffier.vertx:vertx-completable-future:${vertxCompletableFutureVersion}"
 
         dependency "org.apache.commons:commons-compress:${commonsCompressVersion}"
+
+        dependency "org.apache.ignite:ignite-core:${igniteVersion}"
 
         dependency "org.apache.lucene:lucene-analyzers-common:${luceneVersion}"
         dependency "org.apache.lucene:lucene-backwards-codecs:${luceneVersion}"
@@ -67,18 +78,25 @@ dependencyManagement {
 }
 
 dependencies {
-  implementation 'org.apache.commons:commons-lang3'
-  implementation "org.apache.commons:commons-text:${apacheCommonsTextVersion}"
+    implementation 'org.apache.commons:commons-lang3'
+    implementation "org.apache.commons:commons-text:${apacheCommonsTextVersion}"
 
-  implementation 'ch.qos.logback:logback-core'
-  implementation 'ch.qos.logback:logback-classic'
+    implementation 'io.opentelemetry.instrumentation:opentelemetry-instrumentation-annotations'
 
-  testImplementation 'org.junit.jupiter:junit-jupiter-api'
-  testImplementation 'org.junit.jupiter:junit-jupiter-engine'
+    implementation 'ch.qos.logback:logback-core'
+    implementation 'ch.qos.logback:logback-classic'
+
+    // Add aspectj weaver dependency for use during tests
+    agent "org.aspectj:aspectjweaver:$aspectJVersion"
+
+    testImplementation platform("io.qameta.allure:allure-bom:$allureVersion")
+    testImplementation "io.qameta.allure:allure-junit5"
+    testImplementation 'org.junit.jupiter:junit-jupiter-api'
+    testImplementation 'org.junit.jupiter:junit-jupiter-engine'
 
 }
 
 test {
     useJUnitPlatform()
-    environment("JAVA_TOOL_OPTIONS", "--add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED --add-opens=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED --add-opens=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED")
+    environment("JAVA_TOOL_OPTIONS", "-javaagent:${configurations.agent.singleFile} --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED --add-opens=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED")
 }

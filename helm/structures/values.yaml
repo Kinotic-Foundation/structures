@@ -12,7 +12,7 @@ properties:
   corsAllowedOriginPattern: "*"
   enableJmx: true
   enableNmt: true
-  javaToolOptions: "-XX:MaxDirectMemorySize=1024M -javaagent:/workspace/BOOT-INF/classes/elastic-apm-agent.jar -Delastic.apm.service_name=structures -Delastic.apm.server_urls=https://506858167386480c97844870a815ed13.apm.centralus.azure.elastic-cloud.com:443 -Delastic.apm.secret_token=iwWOfv0uaECcDXMtX4 -Delastic.apm.environment=production -Delastic.apm.application_packages=org.kinotic"
+  javaToolOptions: "-XX:MaxDirectMemorySize=1024M"
   structures:
     tenantIdFieldName: "tenantId"
     indexPrefix: "struct_"

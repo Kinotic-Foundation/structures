@@ -5,14 +5,15 @@ import co.elastic.clients.elasticsearch._types.ErrorResponse;
 import co.elastic.clients.elasticsearch._types.FieldSort;
 import co.elastic.clients.elasticsearch._types.FieldValue;
 import co.elastic.clients.elasticsearch._types.SortOrder;
+import co.elastic.clients.elasticsearch._types.mapping.DynamicMapping;
+import co.elastic.clients.elasticsearch._types.mapping.Property;
 import co.elastic.clients.elasticsearch.core.*;
 import co.elastic.clients.elasticsearch.core.get.GetResult;
+import co.elastic.clients.elasticsearch.core.mget.MultiGetOperation;
 import co.elastic.clients.elasticsearch.core.mget.MultiGetResponseItem;
 import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.elasticsearch.core.search.HitsMetadata;
-import co.elastic.clients.elasticsearch.indices.CreateIndexRequest;
-import co.elastic.clients.elasticsearch.indices.PutMappingRequest;
-import co.elastic.clients.elasticsearch.indices.StorageType;
+import co.elastic.clients.elasticsearch.indices.*;
 import co.elastic.clients.json.JsonpDeserializer;
 import co.elastic.clients.json.JsonpMapperBase;
 import co.elastic.clients.transport.JsonEndpoint;
@@ -30,9 +31,11 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 /**
  * Created by Navíd Mitchell 🤪 on 5/10/23.
@@ -54,6 +57,8 @@ public class CrudServiceTemplate {
     }
 
 
+    // In CrudServiceTemplate.java
+
     /**
      * Counts the number of documents in the index. Also allows for customization of the {@link CountRequest}.
      *
@@ -73,46 +78,92 @@ public class CrudServiceTemplate {
                             .thenApply(CountResponse::count);
     }
 
+    /**
+     * Creates a data stream
+     */
+    public CompletableFuture<Void> createDataStream(String dataStreamName) {
+        return esAsyncClient.indices().createDataStream(builder -> builder.name(dataStreamName))
+                            .thenApply(response -> null);
+    }
 
     /**
      * Creates an index with the given name. Also allows for customization of the {@link CreateIndexRequest}.
      *
      * @param indexName       name of the index to create
      * @param failIfExists    if true will fail with an exception if the index already exists
-     * @param builderConsumer to customize the {@link CreateIndexRequest}, or null if no customization is needed
+     * @param mappings        the mappings to use for the index, or null if no mappings are needed
      * @return a {@link CompletableFuture} that will complete when the index has been created
      */
     public CompletableFuture<Void> createIndex(String indexName,
                                                boolean failIfExists,
-                                               Consumer<CreateIndexRequest.Builder> builderConsumer) {
+                                               Map<String, Property> mappings) {
         return esAsyncClient.indices().exists(builder -> builder.index(indexName))
                             .thenCompose(exists -> {
                                 if (!exists.value()) {
                                     return esAsyncClient.indices()
                                                         .create(builder -> {
-                                                            builder.index(indexName);
-                                                            builder.settings(s -> s
-                                                                    .numberOfShards("3")
-                                                                    .numberOfReplicas("2")
-                                                                    .store(st -> st.type(StorageType.Fs))
-                                                            );
-
-                                                            if (builderConsumer != null) {
-                                                                builderConsumer.accept(builder);
+                                                            builder.index(indexName)
+                                                                   .settings(s -> s
+                                                                           .numberOfShards("3")
+                                                                           .numberOfReplicas("2")
+                                                                           .store(st -> st.type(StorageType.Fs))
+                                                                   );
+                                                            if (mappings != null && !mappings.isEmpty()) {
+                                                                builder.mappings(m -> m
+                                                                        .dynamic(DynamicMapping.Strict)
+                                                                        .properties(mappings));
                                                             }
-
                                                             return builder;
                                                         })
                                                         .thenApply(response -> null);
                                 } else {
                                     if (failIfExists) {
-                                        return CompletableFuture.failedFuture(new IllegalArgumentException(
-                                                "Index already exists: " + indexName));
+                                        return CompletableFuture.failedFuture(
+                                                new IllegalArgumentException("Index already exists: " + indexName));
                                     } else {
                                         return CompletableFuture.completedFuture(null);
                                     }
                                 }
                             });
+    }
+
+    /**
+     * Creates an index template with the given name, pattern, and mappings
+     * @param templateName the name of the template
+     * @param indexPattern the pattern to match the index names
+     * @param dataStreamVisibility the visibility of the data stream or null if not a data stream
+     * @param mappings the mappings to use for the index, or null if no mappings are needed
+     * @return a {@link CompletableFuture} that will complete when the index template has been created
+     */
+    public CompletableFuture<Void> createIndexTemplate(String templateName,
+                                                       String indexPattern,
+                                                       DataStreamVisibility dataStreamVisibility,
+                                                       Map<String, Property> mappings) {
+        Validate.notNull(templateName, "templateName cannot be null");
+        Validate.notNull(indexPattern, "indexPattern cannot be null");
+        return esAsyncClient.indices().putIndexTemplate(builder -> {
+            builder.name(templateName)
+                   .indexPatterns(List.of(indexPattern))
+                   .priority(500L)
+                   .create(true)
+                   .template(t -> {
+                                 t.settings(s -> s
+                                         .numberOfShards("3")
+                                         .numberOfReplicas("2")
+                                 );
+                                 if(mappings != null && !mappings.isEmpty()) {
+                                     t.mappings(m -> m
+                                             .dynamic(DynamicMapping.Strict)
+                                             .properties(mappings));
+                                 }
+                                 return t;
+                             }
+                   );
+            if (dataStreamVisibility != null) {
+                builder.dataStream(dataStreamVisibility);
+            }
+            return builder;
+        }).thenApply(response -> null);
     }
 
     /**
@@ -154,9 +205,26 @@ public class CrudServiceTemplate {
     }
 
     /**
+     * Deletes a data stream
+     */
+    public CompletableFuture<Void> deleteDataStream(String dataStreamName) {
+        return esAsyncClient.indices()
+                            .deleteDataStream(builder -> builder.name(dataStreamName))
+                            .thenApply(response -> null);
+    }
+
+    /**
+     * Deletes an index template
+     */
+    public CompletableFuture<Void> deleteIndexTemplate(String templateName) {
+        return esAsyncClient.indices()
+                            .deleteIndexTemplate(builder -> builder.name(templateName))
+                            .thenApply(response -> null);
+    }
+
+    /**
      * Finds a document by id. Also allows for customization of the {@link GetRequest}.
      *
-     * @param <T>             type of the document to return
      * @param indexName       name of the index to search
      * @param id              of the document to return
      * @param type            of the document to return
@@ -166,9 +234,8 @@ public class CrudServiceTemplate {
     public <T> CompletableFuture<T> findById(String indexName,
                                              String id,
                                              Class<T> type,
-                                             Consumer<GetRequest.Builder> builderConsumer) {
-        return this.findById(indexName, id, getDeserializer(type), builderConsumer)
-                   .thenApply(GetResult::source);
+                                             Consumer<GetRequest.Builder> builderConsumer){
+        return findById(indexName, id, type, builderConsumer, null);
     }
 
     /**
@@ -176,22 +243,24 @@ public class CrudServiceTemplate {
      *
      * @param indexName       name of the index to search
      * @param id              of the document to return
-     * @param deserializer    to use to deserialize the document
+     * @param type            of the document to return
      * @param builderConsumer to customize the {@link GetRequest}, or null if no customization is needed
-     * @param <T>             type of the document to return
+     * @param resultMapper to map the {@link GetResult} to the desired type or null if the source should be returned directly
      * @return a {@link CompletableFuture} that will complete with the document
      */
-    public <T> CompletableFuture<GetResponse<T>> findById(String indexName,
-                                                          String id,
-                                                          JsonpDeserializer<T> deserializer,
-                                                          Consumer<GetRequest.Builder> builderConsumer) {
+    public <T, R> CompletableFuture<R> findById(String indexName,
+                                                String id,
+                                                Class<T> type,
+                                                Consumer<GetRequest.Builder> builderConsumer,
+                                                Function<GetResult<T>, R> resultMapper) {
+
         //noinspection unchecked
         JsonEndpoint<GetRequest, GetResponse<T>, ErrorResponse> endpoint =
                 (JsonEndpoint<GetRequest, GetResponse<T>, ErrorResponse>) GetRequest._ENDPOINT;
 
         endpoint = new EndpointWithResponseMapperAttr<>(endpoint,
                                                         "co.elastic.clients:Deserializer:_global.get.Response.TDocument",
-                                                        deserializer);
+                                                        getDeserializer(type));
 
         GetRequest.Builder builder = new GetRequest.Builder();
 
@@ -202,71 +271,72 @@ public class CrudServiceTemplate {
 
         //noinspection resource
         return esAsyncClient._transport()
-                            .performRequestAsync(builder.build(), endpoint, esAsyncClient._transportOptions());
+                            .performRequestAsync(builder.build(),
+                                                 endpoint,
+                                                 esAsyncClient._transportOptions())
+                            .thenApply(tGetResponse -> {
+                                if(resultMapper != null) {
+                                    return resultMapper.apply(tGetResponse);
+                                }else{
+                                    //noinspection unchecked
+                                    return (R)tGetResponse.source();
+                                }
+                            });
     }
 
     /**
-     * Finds a list document by their id. Also allows for customization of the {@link MgetRequest}.
-     *
-     * @param <T>             type of the document to return
-     * @param indexName       name of the index to search
-     * @param ids             of the documents to return
-     * @param type            of the document to return
-     * @param builderConsumer to customize the {@link GetRequest}, or null if no customization is needed
+     * Gets multiple documents for their {@link MultiGetOperation} objects. Also allows for customization of the {@link MgetRequest}.
+     * @param getOperations list of {@link MultiGetOperation} to get
+     * @param type of the document to return
+     * @param builderConsumer to customize the {@link MgetRequest}, or null if no customization is needed
+     * @param resultMapper to map the {@link GetResult} to the desired type or null if the source should be returned directly
      * @return a {@link CompletableFuture} that will complete with the documents requested
      */
-    public <T> CompletableFuture<List<T>> findByIds(String indexName,
-                                                    List<String> ids,
-                                                    Class<T> type,
-                                                    Consumer<MgetRequest.Builder> builderConsumer) {
-        return this.findByIds(indexName, ids, getDeserializer(type), builderConsumer)
-                .thenApply(response -> {
-
-                    List<MultiGetResponseItem<T>> recordsResponse = response.docs();
-                    ArrayList<T> content = new ArrayList<>();
-
-                    for (MultiGetResponseItem<T> hit : recordsResponse) {
-                        if(hit.isResult() && hit.result().found()){
-                            content.add(hit.result().source());
-                        }
-                    }
-
-                    return content;
-                });
-    }
-
-    /**
-     * Finds a list of document by their ids. Also allows for customization of the {@link MgetRequest}.
-     *
-     * @param indexName       name of the index to search
-     * @param ids             ids of the documents to return
-     * @param deserializer    to use to deserialize the document
-     * @param builderConsumer to customize the {@link GetRequest}, or null if no customization is needed
-     * @param <T>             type of the document to return
-     * @return a {@link CompletableFuture} that will complete with the document
-     */
-    public <T> CompletableFuture<MgetResponse<T>> findByIds(String indexName,
-                                                            List<String> ids,
-                                                            JsonpDeserializer<T> deserializer,
-                                                            Consumer<MgetRequest.Builder> builderConsumer) {
-        //noinspection unchecked
+    public <T, R> CompletableFuture<List<R>> multiGet(List<MultiGetOperation> getOperations,
+                                                      Class<T> type,
+                                                      Consumer<MgetRequest.Builder> builderConsumer,
+                                                      Function<GetResult<T>, R> resultMapper){
+        @SuppressWarnings("unchecked")
         JsonEndpoint<MgetRequest, MgetResponse<T>, ErrorResponse> endpoint =
                 (JsonEndpoint<MgetRequest, MgetResponse<T>, ErrorResponse>) MgetRequest._ENDPOINT;
 
         endpoint = new EndpointWithResponseMapperAttr<>(endpoint,
-                "co.elastic.clients:Deserializer:_global.mget.Response.TDocument",
-                deserializer);
+                                                        "co.elastic.clients:Deserializer:_global.mget.Response.TDocument",
+                                                        getDeserializer(type));
 
         MgetRequest.Builder builder = new MgetRequest.Builder();
+        builder.docs(getOperations);
 
-        builder.index(indexName).ids(ids);
         if (builderConsumer != null) {
             builderConsumer.accept(builder);
         }
 
         //noinspection resource
         return esAsyncClient._transport()
-                .performRequestAsync(builder.build(), endpoint, esAsyncClient._transportOptions());
+                            .performRequestAsync(builder.build(),
+                                                 endpoint,
+                                                 esAsyncClient._transportOptions())
+                            .thenApply(response -> {
+
+                                List<MultiGetResponseItem<T>> recordsResponse = response.docs();
+                                ArrayList<R> content = new ArrayList<>();
+
+                                if(resultMapper != null) {
+                                    for (MultiGetResponseItem<T> hit : recordsResponse) {
+                                        if (hit.isResult() && hit.result().found()) {
+                                            content.add(resultMapper.apply(hit.result()));
+                                        }
+                                    }
+                                }else{
+                                    for (MultiGetResponseItem<T> hit : recordsResponse) {
+                                        if(hit.isResult() && hit.result().found()){
+                                            //noinspection unchecked
+                                            content.add((R)hit.result().source());
+                                        }
+                                    }
+                                }
+                                return content;
+                            });
     }
 
     /**
@@ -284,18 +354,47 @@ public class CrudServiceTemplate {
     public <T> CompletableFuture<Page<T>> search(String indexName,
                                                  Pageable pageable,
                                                  Class<T> type,
-                                                 Consumer<SearchRequest.Builder> builderConsumer) {
+                                                 Consumer<SearchRequest.Builder> builderConsumer){
+        return search(indexName, pageable, type, builderConsumer, null);
+    }
+
+    /**
+     * Provides base functionality to get a {@link Page} of documents from elasticsearch. With the ability to customize the {@link SearchRequest}.
+     * NOTE: not all customizations are supported, only the ones that make sense for a {@link Page} of documents.
+     * For example aggregations are not supported.
+     * This is meant to be used internally by implementors.
+     *
+     * @param indexName       name of the index to search
+     * @param pageable        to use for the search
+     * @param type            of the documents to return
+     * @param builderConsumer to customize the {@link SearchRequest}, or null if no customization is needed
+     * @param hitMapper       to map the {@link Hit} to the desired type or null if the source should be returned directly
+     * @return a {@link CompletableFuture} that will complete with a {@link Page} of documents
+     */
+    public <T,R> CompletableFuture<Page<R>> search(String indexName,
+                                                   Pageable pageable,
+                                                   Class<T> type,
+                                                   Consumer<SearchRequest.Builder> builderConsumer,
+                                                   Function<Hit<T>, R> hitMapper) {
 
         return searchFullResponse(indexName, pageable, type, builderConsumer)
                 .thenApply(response -> {
 
                     HitsMetadata<T> hitsMetadata = response.hits();
-                    List<T> content = new ArrayList<>(hitsMetadata.hits().size());
+                    List<R> content = new ArrayList<>(hitsMetadata.hits().size());
                     List<FieldValue> lastSort = null;
 
-                    for (Hit<T> hit : hitsMetadata.hits()) {
-                        content.add(hit.source());
-                        lastSort = hit.sort();
+                    if(hitMapper != null) {
+                        for (Hit<T> hit : hitsMetadata.hits()) {
+                            content.add(hitMapper.apply(hit));
+                            lastSort = hit.sort();
+                        }
+                    }else {
+                        for (Hit<T> hit : hitsMetadata.hits()) {
+                            //noinspection unchecked
+                            content.add((R)hit.source());
+                            lastSort = hit.sort();
+                        }
                     }
 
                     if(pageable instanceof CursorPageable) {
@@ -319,6 +418,104 @@ public class CrudServiceTemplate {
                 });
     }
 
+    public CompletableFuture<Void> updateIndexMapping(String indexName,
+                                                      Map<String, Property> mappings) {
+        return esAsyncClient.indices().exists(builder -> builder.index(indexName))
+                            .thenCompose(exists -> {
+                                if (exists.value()) {
+                                    return esAsyncClient.indices()
+                                                        .putMapping(builder -> {
+                                                            builder.index(indexName);
+                                                            if (mappings != null && !mappings.isEmpty()) {
+                                                                builder.dynamic(DynamicMapping.Strict)
+                                                                       .properties(mappings);
+                                                            }
+                                                            return builder;
+                                                        })
+                                                        .thenApply(response -> null);
+                                } else {
+                                    return CompletableFuture.failedFuture(
+                                            new IllegalArgumentException("Index " + indexName + " does not exist"));
+                                }
+                            });
+    }
+
+    /**
+     * Updates an existing index template
+     */
+    public CompletableFuture<Void> updateIndexTemplate(String templateName,
+                                                       Map<String, Property> mappings) {
+        Validate.notNull(templateName, "templateName cannot be null");
+        Validate.notNull(mappings, "mappings cannot be null");
+        Validate.notEmpty(mappings, "mappings cannot be empty");
+
+        return esAsyncClient.indices()
+                            .existsIndexTemplate(builder -> builder.name(templateName))
+                            .thenCompose(exists -> {
+                                if (!exists.value()) {
+                                    return CompletableFuture.failedFuture(
+                                            new IllegalArgumentException("Index template " + templateName + " does not exist"));
+                                }
+
+                                // Fetch the existing template
+                                return esAsyncClient.indices()
+                                                    .getIndexTemplate(builder -> builder.name(templateName))
+                                                    .thenCompose(response -> {
+                                                        IndexTemplate existingTemplate = response.indexTemplates().getFirst()
+                                                                                                 .indexTemplate();
+
+                                                        if (existingTemplate == null) {
+                                                            return CompletableFuture.failedFuture(
+                                                                    new IllegalStateException("Failed to retrieve template " + templateName));
+                                                        }
+
+                                                        // Update the template with existing settings and patterns
+                                                        return esAsyncClient.indices()
+                                                                            .putIndexTemplate(builder -> {
+                                                                                builder.name(templateName)
+                                                                                       .indexPatterns(existingTemplate.indexPatterns())
+                                                                                       .priority(existingTemplate.priority() != null ? existingTemplate.priority() : 500);
+
+                                                                                // Preserve data stream configuration if present
+                                                                                if (existingTemplate.dataStream() != null) {
+                                                                                    builder.dataStream(d -> d);
+                                                                                }
+
+                                                                                // Apply existing settings and new mappings
+                                                                                builder.template(t -> {
+                                                                                    if (existingTemplate.template() != null && existingTemplate.template()
+                                                                                                                                               .settings() != null) {
+                                                                                        t.settings(existingTemplate.template()
+                                                                                                                   .settings());
+                                                                                    }
+                                                                                    t.mappings(m -> m
+                                                                                            .dynamic(DynamicMapping.Strict)
+                                                                                            .properties(mappings));
+                                                                                    return t;
+                                                                                });
+
+                                                                                return builder;
+                                                                            })
+                                                                            .thenApply(pr -> null);
+                                                    });
+                            });
+    }
+
+    private <T> JsonpDeserializer<T> getDeserializer(Class<T> type) {
+        if (RawJson.class.isAssignableFrom(type)) {
+            //noinspection unchecked
+            return (JsonpDeserializer<T>) rawJsonJsonpDeserializer;
+        }
+
+        // Try the built-in deserializers first to avoid repeated lookups in the Jsonp mapper for client-defined classes
+        JsonpDeserializer<T> result = JsonpMapperBase.findDeserializer(type);
+        if (result != null) {
+            return result;
+        }
+
+        return JsonpDeserializer.of(type);
+    }
+
     /**
      * Provides base functionality to get a {@link Page} of documents from elasticsearch. With the ability to customize the {@link SearchRequest}.
      *
@@ -328,10 +525,10 @@ public class CrudServiceTemplate {
      * @param builderConsumer to customize the {@link SearchRequest}, or null if no customization is needed
      * @return a {@link CompletableFuture} that will complete with a {@link SearchResponse} of documents
      */
-    public <T> CompletableFuture<SearchResponse<T>> searchFullResponse(String indexName,
-                                                                       Pageable pageable,
-                                                                       Class<T> type,
-                                                                       Consumer<SearchRequest.Builder> builderConsumer) {
+    private <T> CompletableFuture<SearchResponse<T>> searchFullResponse(String indexName,
+                                                                        Pageable pageable,
+                                                                        Class<T> type,
+                                                                        Consumer<SearchRequest.Builder> builderConsumer) {
 
         Validate.notNull(indexName, "indexName cannot be null");
         Validate.notNull(pageable, "pageable cannot be null");
@@ -412,42 +609,6 @@ public class CrudServiceTemplate {
         //noinspection resource
         return esAsyncClient._transport()
                             .performRequestAsync(request, endpoint, esAsyncClient._transportOptions());
-    }
-
-    private <T> JsonpDeserializer<T> getDeserializer(Class<T> type) {
-        if (RawJson.class.isAssignableFrom(type)) {
-            //noinspection unchecked
-            return (JsonpDeserializer<T>) rawJsonJsonpDeserializer;
-        }
-
-        // Try the built-in deserializers first to avoid repeated lookups in the Jsonp mapper for client-defined classes
-        JsonpDeserializer<T> result = JsonpMapperBase.findDeserializer(type);
-        if (result != null) {
-            return result;
-        }
-
-        return JsonpDeserializer.of(type);
-    }
-
-    CompletableFuture<Void> updateIndexMapping(String indexName,
-                                               Consumer<PutMappingRequest.Builder> builderConsumer){
-        return esAsyncClient.indices().exists(builder -> builder.index(indexName))
-                            .thenCompose(exists -> {
-                                if (exists.value()) {
-                                    return esAsyncClient.indices()
-                                                        .putMapping(builder -> {
-                                                            builder.index(indexName);
-                                                            if (builderConsumer != null) {
-                                                                builderConsumer.accept(builder);
-                                                            }
-                                                            return builder;
-                                                        })
-                                                        .thenApply(response -> null);
-                                } else {
-                                    return CompletableFuture.failedFuture(new IllegalArgumentException(
-                                            "Index "+indexName+" does not exist"));
-                                }
-                            });
     }
 
 }

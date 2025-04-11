@@ -164,7 +164,8 @@ export type EntityInfo = {
     exportedFromFile: string,
     defaultExport: boolean,
     entity: ObjectC3Type
-    entityConfiguration?: EntityConfiguration
+    entityConfiguration?: EntityConfiguration,
+    multiTenantSelectionEnabled: boolean
 }
 
 export type ConversionConfiguration = {
@@ -264,6 +265,7 @@ export function convertAllEntities(config: ConversionConfiguration): EntityInfo[
                             let c3Type: C3Type | null = null
                             try {
                                 conversionContext.state().entityConfiguration = entityConfig
+                                conversionContext.state().multiTenantSelectionEnabled = false
                                 c3Type = conversionContext.convert(declaration.getType())
                             } catch (e) {
                             } // We ignore this error since the converter will print any errors
@@ -283,7 +285,8 @@ export function convertAllEntities(config: ConversionConfiguration): EntityInfo[
                                                       exportedFromFile: declaration.getSourceFile().getFilePath(),
                                                       defaultExport: declaration.isDefaultExport(),
                                                       entity: c3Type,
-                                                      entityConfiguration: entityConfig
+                                                      entityConfiguration: entityConfig,
+                                                      multiTenantSelectionEnabled: conversionContext.state().multiTenantSelectionEnabled
                                                   })
                                 } else {
                                     throw new Error(`Could not convert ${name} to a C3Type`)

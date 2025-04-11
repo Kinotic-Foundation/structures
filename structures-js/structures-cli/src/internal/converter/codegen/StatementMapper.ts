@@ -106,10 +106,10 @@ export class LiteralStatementMapper implements StatementMapper {
  * @param targetFilePath The path to the file that will be generated.
  * @param fileExtensionForImports The file extension to use for imports.
  */
-export function createImportString(statementMapper: StatementMapper,
+export function createImportString(statementMapper: StatementMapper | null,
                                    targetFilePath: string,
                                    fileExtensionForImports: string): string | null{
-    const importsWithoutDuplicates = removeDuplicateImports(statementMapper.getNeededImports())
+    const importsWithoutDuplicates = statementMapper != null ? removeDuplicateImports(statementMapper.getNeededImports()) : []
     // Now make sure all imports for the same paths are grouped together in the import string
     const importMap: { [key: string]: NeededImport[] } = {}
     for (const imp of importsWithoutDuplicates) {

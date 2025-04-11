@@ -29,7 +29,8 @@
     }
   },
   "include": [
-    "src/**/*"
+    "src/**/*",
+    "vitest.shims.d.ts"
   ],
   "exclude": ["node_modules"]
 }

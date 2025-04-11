@@ -67,7 +67,6 @@ public abstract class AbstractCrudService<T extends Identifiable<String>> implem
 
     @Override
     public CompletableFuture<T> save(T entity) {
-        // FIXME: add support for versioning, and optimistic locking with errors if version is out of date
         return esAsyncClient.index(i -> i
                 .index(indexName)
                 .id(entity.getId())

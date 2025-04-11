@@ -4,7 +4,7 @@ import org.kinotic.structures.api.domain.NamedQueriesDefinition;
 import org.kinotic.structures.api.domain.Structure;
 
 /**
- * Created by Navíd Mitchell 🤪on 6/25/23.
+ * Created By Navíd Mitchell 🤪on 2/12/25
  */
 public interface CacheEvictionService {
 
@@ -14,6 +14,10 @@ public interface CacheEvictionService {
      */
     void evictCachesFor(Structure structure);
 
+    /**
+     * Evicts the cache for a given {@link NamedQueriesDefinition}
+     * @param namedQueriesDefinition to evict the cache for
+     */
     void evictCachesFor(NamedQueriesDefinition namedQueriesDefinition);
 
 }

@@ -14,4 +14,8 @@ public class MapParameterHolder implements ParameterHolder {
 
     private final Map<String, Object> parameters;
 
+    @Override
+    public boolean isEmpty() {
+        return parameters == null || parameters.isEmpty();
+    }
 }

@@ -10,7 +10,11 @@ logging:
     org:
       kinotic: TRACE
     io:
-      vertx: DEBUG
+      vertx: WARN
+      netty:
+        util: DEBUG
+        buffer: DEBUG
+
 
 structures:
   initializeWithSampleData: true

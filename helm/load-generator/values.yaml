@@ -4,7 +4,7 @@
 
 structures:
   useSsl: false
-  host: 127.0.0.1
+  host: host.docker.internal
   port: 58503
 
 loadGenerator:
@@ -12,11 +12,15 @@ loadGenerator:
     tag: latest
     pullPolicy: IfNotPresent
   config:
-    maxConcurrentRequests: 25
-    maxRequestsPerSecond: 1000
-    testName: bulkLoadMedium
+    maxConcurrentRequests: 1000
+    maxRequestsPerSecond: 100
+    testName: bulkLoadLarge
     beginTenantIdNumber: 1
     numberOfTenants: 1000
+
+otel:
+  endpoint: http://$(KUBE_NODE):4317
+  type: NONE # NONE, OTLP, CONSOLE
 
 # The number of jobs to run in parallel
 parallelism: 1
@@ -46,7 +50,7 @@ securityContext:
 
 resources:
    limits:
-     memory: 512Mi
+     memory: 2048Mi
    requests:
      cpu: 100m
      memory: 128Mi

@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletionException;
 
 /**
  * Created by Navíd Mitchell 🤪 on 6/1/23.
@@ -42,11 +43,13 @@ public class VertxWebUtil {
      * @return a {@link Pageable}
      */
     public static Pageable getPageableOrDefaultOffsetPageable(RoutingContext ctx){
-       Pageable ret = getPageableIfExits(ctx ,true, OffsetPageable.class);
-         if(ret == null){
-              ret = Pageable.create(0, 25, null);
-         }
-         return ret;
+        Pageable ret = getPageableIfExits(ctx ,true, OffsetPageable.class);
+        if(ret == null){
+            String sizeString = ctx.request().getParam("size");
+            int size = (sizeString != null && !sizeString.isEmpty()) ? Integer.parseInt(sizeString) : 25;
+            ret = Pageable.create(0, size, null);
+        }
+        return ret;
     }
 
     /**
@@ -57,7 +60,9 @@ public class VertxWebUtil {
     public static Pageable getPageableOrDefaultCursorPageable(RoutingContext ctx){
         Pageable ret = getPageableIfExits(ctx ,true, CursorPageable.class);
         if(ret == null){
-            ret = Pageable.create(null, 25, null);
+            String sizeString = ctx.request().getParam("size");
+            int size = (sizeString != null && !sizeString.isEmpty()) ? Integer.parseInt(sizeString) : 25;
+            ret = Pageable.create(null, size, null);
         }
         return ret;
     }
@@ -132,6 +137,12 @@ public class VertxWebUtil {
         int statusCode = context.statusCode();
 
         if(throwable != null){
+
+            if(throwable instanceof CompletionException){
+                if(throwable.getCause() != null) {
+                    throwable = throwable.getCause();
+                }
+            }
 
             errorMessage = throwable.getMessage();
 
