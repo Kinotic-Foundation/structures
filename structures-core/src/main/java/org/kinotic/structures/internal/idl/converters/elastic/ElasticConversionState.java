@@ -3,9 +3,9 @@ package org.kinotic.structures.internal.idl.converters.elastic;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.kinotic.continuum.idl.api.schema.PropertyDefinition;
 import org.kinotic.structures.api.config.StructuresProperties;
-import org.kinotic.structures.api.domain.idl.decorators.MultiTenancyType;
+import org.kinotic.structures.api.domain.idl.decorators.EntityDecorator;
+import org.kinotic.structures.api.domain.idl.decorators.EsIndexConfigurationDecorator;
 import org.kinotic.structures.internal.idl.converters.common.BaseConversionState;
 import org.kinotic.structures.internal.idl.converters.common.DecoratedProperty;
 
@@ -21,22 +21,29 @@ import java.util.List;
 public class ElasticConversionState extends BaseConversionState {
 
     private final List<DecoratedProperty> decoratedProperties = new LinkedList<>();
+
     /**
-     * The {@link MultiTenancyType} detected while converting the structure
+     * The {@link EntityDecorator} that was found while converting the structure
      */
-    private MultiTenancyType multiTenancyType;
+    private EntityDecorator entityDecorator;
+
+    private EsIndexConfigurationDecorator esIndexConfigurationDecorator;
+
+    private String idFieldName;
+
+    private String versionFieldName;
+
+    private String timeReferenceFieldName;
+
+    private String tenantIdFieldName;
+
+    /**
+     * If true the index will be created, if false the index will not be created for a given field.
+     */
+    private boolean shouldIndex = true;
 
     public ElasticConversionState(StructuresProperties structuresProperties) {
         super(structuresProperties);
     }
 
-    @Override
-    public void beginProcessingField(PropertyDefinition propertyDefinition) {
-        super.beginProcessingField(propertyDefinition);
-
-        if(propertyDefinition.hasDecorators()){
-            decoratedProperties.add(new DecoratedProperty(getCurrentJsonPath(),
-                                                          propertyDefinition.getDecorators()));
-        }
-    }
 }

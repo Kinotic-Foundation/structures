@@ -15,6 +15,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.tracing.TracingPolicy;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
@@ -70,7 +71,11 @@ public class DefaultElasticVertxClient implements ElasticVertxClient {
         this.vertx = vertx;
 
         WebClientOptions options = new WebClientOptions()
-                .setConnectTimeout((int) structuresProperties.getElasticConnectionTimeout().toMillis());
+                .setConnectTimeout((int) structuresProperties.getElasticConnectionTimeout().toMillis())
+                .setMaxPoolSize(500)
+                .setTcpNoDelay(true)
+                .setTcpKeepAlive(true)
+                .setTracingPolicy(TracingPolicy.IGNORE);
 
         this.webClient = WebClient.create(vertx, options);
 
@@ -118,7 +123,7 @@ public class DefaultElasticVertxClient implements ElasticVertxClient {
                     json.put("fetch_size", pageable.getPageSize());
                 }
             }else{
-                throw new IllegalArgumentException("Only CursorPageable is supported for queries containing Aggregations.");
+                return CompletableFuture.failedFuture(new IllegalArgumentException("Only CursorPageable is supported for queries containing Aggregations."));
             }
         }
 
@@ -173,7 +178,11 @@ public class DefaultElasticVertxClient implements ElasticVertxClient {
                         fut.completeExceptionally(new IllegalArgumentException("Type: " + type.getName() + " is not supported at this time"));
                     }
                 }else{
-                    fut.completeExceptionally(convertErrorResponse(new ByteArrayInputStream(ar.result().body().getBytes())));
+                    try {
+                        fut.completeExceptionally(convertErrorResponse(new ByteArrayInputStream(ar.result().body().getBytes())));
+                    } catch (Exception e) {
+                        fut.completeExceptionally(new IllegalStateException("Could not convert error response " + e.getMessage(), e));
+                    }
                 }
             }else{
                 fut.completeExceptionally(ar.cause());
@@ -232,7 +241,6 @@ public class DefaultElasticVertxClient implements ElasticVertxClient {
         return new IllegalArgumentException("SQL " + cause.type() + " " + cause.reason());
     }
 
-    @WithSpan
     private Page<Map<String, Object>> processBufferToMap(Buffer buffer, String cursorProvided) throws Exception {
         ElasticSQLResponse response = objectMapper.readValue(buffer.getBytes(), ElasticSQLResponse.class);
         List<ElasticColumn> elasticColumns = getElasticColumns(response, cursorProvided);
@@ -258,7 +266,6 @@ public class DefaultElasticVertxClient implements ElasticVertxClient {
         return new CursorPage<>(ret, response.getCursor(), null);
     }
 
-    @WithSpan
     private List<ElasticColumn> getElasticColumns(ElasticSQLResponse response, String cursorProvided) {
         List<ElasticColumn> elasticColumns;
         if(cursorProvided != null){
@@ -272,7 +279,6 @@ public class DefaultElasticVertxClient implements ElasticVertxClient {
         return elasticColumns;
     }
 
-    @WithSpan
     private Page<RawJson> processBufferToRawJson(Buffer buffer, String cursorProvided) throws Exception {
         ElasticSQLResponse response = objectMapper.readValue(buffer.getBytes(), ElasticSQLResponse.class);
         List<ElasticColumn> elasticColumns = getElasticColumns(response, cursorProvided);

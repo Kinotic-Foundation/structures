@@ -16,6 +16,7 @@ import org.kinotic.structures.internal.api.hooks.DecoratorLogic;
 import org.kinotic.structures.internal.api.hooks.UpsertFieldPreProcessor;
 import org.kinotic.structures.internal.api.hooks.UpsertPreProcessor;
 import org.kinotic.structures.internal.api.services.EntityHolder;
+import org.kinotic.structures.internal.api.services.json.JsonStreamProcessor;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -24,6 +25,7 @@ import java.util.concurrent.CompletableFuture;
  * This class was created to make the extraction of needed data as performant as possible
  * since elasticsearch already expects json there is not a need to convert to a java object.
  * For this reason the code below is a single loop limiting allocations as much as possible.
+ * NOTE: this will all be removed in favor of the new {@link JsonStreamProcessor} I am working on.
  * Created by Navíd Mitchell 🤪 on 5/5/23.
  */
 public abstract class AbstractJsonUpsertPreProcessor<T> implements UpsertPreProcessor<T, T, RawJson> {
@@ -124,14 +126,13 @@ public abstract class AbstractJsonUpsertPreProcessor<T> implements UpsertPreProc
                             // if this is the id we add the special _id field for elasticsearch to use
                             currentId = (String) value;
 
-                        }else if(objectDepth == 1 && decorator instanceof VersionDecorator){
+                        }else if(objectDepth == 1 && decorator instanceof VersionDecorator) {
 
-                            if(currentVersion != null){ // should never happen, because the structure is validated when published
+                            if (currentVersion != null) { // should never happen, because the structure is validated when published
                                 throw new IllegalArgumentException("Found multiple Version fields in entity");
                             }
 
                             currentVersion = (String) value;
-
                         }else if(objectDepth == 1 && decorator instanceof TenantIdDecorator){
 
                             if(currentTenantId != null){ // should never happen, because the structure is validated when published
@@ -143,6 +144,15 @@ public abstract class AbstractJsonUpsertPreProcessor<T> implements UpsertPreProc
                             }
 
                             currentTenantId = (String) value;
+                        }else if(objectDepth == 1 && decorator instanceof TimeReferenceDecorator){
+
+                            // Elasticsearch requires a @timestamp field to contain the time data so we just duplicate the value
+                            if(value != null){
+                                jsonGenerator.writeFieldName("@timestamp");
+                                jsonGenerator.writeObject(value);
+                            }else{
+                                jsonGenerator.writeNullField("@timestamp");
+                            }
                         }
                     }else{
                         // Check if this is the tenant id if MultiTenancyType.SHARED is enabled
@@ -162,7 +172,6 @@ public abstract class AbstractJsonUpsertPreProcessor<T> implements UpsertPreProc
                             jsonGenerator.writeObject(currentTenantId);
 
                         }else{
-                            // not tenant so just copy raw data
                             jsonGenerator.copyCurrentEvent(jsonParser);
                         }
                     }
@@ -231,8 +240,6 @@ public abstract class AbstractJsonUpsertPreProcessor<T> implements UpsertPreProc
                     }
                 }
             }
-
-            jsonGenerator.flush();
 
             // We always blow away tenant selection on save/update since the only tenants that mater are the ones in the data
             // This is a sanity check, in case somehow it was already provided. We want to make sure auth services see the correct list.
