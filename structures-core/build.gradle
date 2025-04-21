@@ -1,9 +1,25 @@
 plugins {
 	id 'org.kinotic.java-library-conventions'
 	id 'io.freefair.lombok'
+	id 'antlr'
+}
+
+
+// Configure ANTLR plugin
+generateGrammarSource {
+	arguments += ['-package', 'org.kinotic.structures.internal.sql.parser']
+	arguments += ['-visitor']
+
+	// Output directly to the parser package
+	outputDirectory = file("${projectDir}/src/main/java/org/kinotic/structures/internal/sql/parser")
+	enabled = false
 }
 
 dependencies {
+
+	implementation 'org.antlr:antlr4-runtime:4.13.2'
+	antlr 'org.antlr:antlr4:4.13.2'
+
 	implementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-json'
@@ -44,4 +60,9 @@ dependencies {
 	testImplementation "org.testcontainers:testcontainers:${testContainersVersion}"
 	testImplementation "org.testcontainers:elasticsearch:${testContainersVersion}"
 	testImplementation 'io.projectreactor:reactor-test'
+}
+
+// Configure Javadoc to exclude non-Java files
+tasks.named('javadoc') {
+	exclude '**/*.interp', '**/*.tokens' // Exclude ANTLR artifacts
 }
