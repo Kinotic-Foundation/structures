@@ -17,7 +17,7 @@ export function createStructuresUI(): Plugin {
                 }
             })
 
-            StructuresStates.getFrontendState().initialize(options.router)
+            StructuresStates.getApplicationState().initialize(options.router)
         }
     }
 }

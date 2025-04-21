@@ -1,7 +1,7 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import {createRouter, createWebHistory, type RouteRecordRaw} from 'vue-router'
 import pagesRoutes from '@/pages/routes'
 
-const routes =  [
+const routes: RouteRecordRaw[] = [
     { // This is where we have to configure the default route
         path: '/',
         redirect: '/applications'
