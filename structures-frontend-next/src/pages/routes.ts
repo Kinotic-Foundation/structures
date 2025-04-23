@@ -1,24 +1,33 @@
-import { type RouteRecordRaw } from 'vue-router'
+import { type RouteMeta, type RouteRecordRaw } from 'vue-router'
 
 const pageRoutes: RouteRecordRaw[] = [
     {
-        path: '/applications', component: () => import('@/layouts/MainLayout.vue'),
+        path: '/applications',
+        component: () => import('@/layouts/MainLayout.vue'),
+        name:"Applications",
         meta: {
-            authenticationRequired: false,
-            showInMainNav: true,
-            icon: 'fa-sitemap',
-            label: 'Applications'
-        },
+          authenticationRequired: false,
+          showInMainNav: true,
+          icon: 'pi pi-sitemap',
+          label: 'Applications',
+        } as RouteMeta,
         children: [
             {
-                path: 'test',
-                meta:{
-                    showInMainNav: true,
-                    icon: 'fa-sitemap',
-                    label: 'Test'
-                },
-                component: () => import('@/pages/Test.vue'),
+                path: '',
+                component: () => import('@/pages/NamespaceList.vue'),
+                meta: {
+                } as RouteMeta,
             },
+            {
+                path: 'list',
+                name:"List",
+                meta: {
+                  showInMainNav: true,
+                  icon: 'pi pi-list',
+                  label: 'List',
+                } as RouteMeta,
+                component: () => import('@/pages/Test.vue'),
+              },
             {
                 path: 'test3',
                 meta:{
@@ -30,6 +39,17 @@ const pageRoutes: RouteRecordRaw[] = [
             },
         ]
     },
+    {
+        path: '/application-add',
+        component: () => import('@/pages/NamespaceAddEdit.vue'),
+        // name:"Add",
+        meta: {
+          authenticationRequired: false,
+          showInMainNav: true,
+          icon: 'pi pi-sitemap',
+          label: 'Create Application',
+        } as RouteMeta,
+    }
     // {
     //     path: '/structures', component: () => import('@/frontends/continuum/layouts/NestedLayout.vue'),
     //     meta: {

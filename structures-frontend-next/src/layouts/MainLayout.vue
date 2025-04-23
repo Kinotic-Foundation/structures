@@ -20,13 +20,6 @@
                     >
                     </SideNav>
                 </div>
-<!--                <SideNav-->
-<!--                    class="flex flex-col gap-2 px-6 py-3"-->
-<!--                    selected-nav="{{applicationState.selectedNavItem}}"-->
-<!--                    nav-items="{{applicationState.bottomNavItems}}"-->
-
-<!--                >-->
-<!--                </SideNav>-->
                 <div class="w-[calc(100%-3rem)] mx-auto h-[1px] bg-surface-700 px-6" />
                 <div class="p-6 flex items-center gap-3 cursor-pointer">
                     <Avatar image="https://fqjltiegiezfetthbags.supabase.co/storage/v1/render/image/public/block.images/blocks/avatars/circle/avatar-f-1.png" size="large" shape="circle" class="!w-9 !h-9" />
@@ -39,35 +32,8 @@
         </div>
 
         <div class="flex-1 flex flex-col gap-6">
-            <div class="flex sm:items-center flex-wrap sm:flex-row flex-col lg:px-5 pt-3 pb-4 justify-between border-b border-surface gap-4">
-                <div class="flex items-center gap-2">
-                    <a
-                        v-styleclass="{
-                            selector: '#app-sidebar',
-                            enterFromClass: 'hidden',
-                            enterActiveClass: 'animate-fadeinleft',
-                            leaveToClass: 'hidden',
-                            leaveActiveClass: 'animate-fadeoutleft',
-                            hideOnOutsideClick: true
-                        }"
-                        class="cursor-pointer block lg:hidden text-surface-700 dark:text-surface-100 mr-2"
-                    >
-                        <i class="pi pi-bars text-3xl" />
-                    </a>
-                    <div class="flex-1">
-                        <h1 class="text-lg font-medium text-surface-900 dark:text-surface-0">Dashboard</h1>
-                        <p class="text-surface-500">Excepteur sint occaecat</p>
-                    </div>
-                </div>
-                <div class="flex items-center gap-2">
-                    <IconField>
-                        <InputIcon class="pi pi-search" />
-                        <InputText v-model="search" placeholder="Search"  />
-                    </IconField>
-                    <Button icon="pi pi-bell" outlined rounded severity="secondary" />
-                </div>
-            </div>
-            <div class="flex-1">
+            <MainLayoutBreadcrumb separator-icon="pi pi-chevron-right" />
+            <div class="flex-1 px-[33px]">
                 <router-view />
             </div>
         </div>
@@ -78,13 +44,8 @@
 import SideNav from '@/components/SideNav.vue'
 import {StructuresStates} from '@/states/index.js'
 import Avatar from 'primevue/avatar'
-import Button from 'primevue/button'
-import IconField from 'primevue/iconfield'
-import InputIcon from 'primevue/inputicon'
-import InputText from 'primevue/inputtext'
-import { ref } from 'vue'
+import MainLayoutBreadcrumb from './MainLayoutBreadcrumb.vue'
 
-const search = ref()
 const applicationState = StructuresStates.getApplicationState()
 
 
