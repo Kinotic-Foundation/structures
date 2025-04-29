@@ -8,17 +8,19 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@kinotic/continuum-client": "^2.14.0",
+    "@kinotic/continuum-client": "^2.10.3",
     "@kinotic/continuum-idl": "^2.0.2",
     "@kinotic/structures-api": "^3.4.0",
+    "@mdi/js": "^7.4.47",
     "@primeuix/themes": "^1.0.3",
+    "@primevue/themes": "^4.3.3",
     "keycloak-js": "^26.1.5",
     "primeicons": "^7.0.0",
     "primevue": "^4.3.3",
     "tailwindcss-primeui": "^0.6.1",
     "vue": "^3.5.13",
     "vue-facing-decorator": "^3.0.4",
-    "vue-router": "4"
+    "vue-router": "^4.5.0"
   },
   "devDependencies": {
     "@primevue/auto-import-resolver": "^4.3.3",

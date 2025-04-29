@@ -74,6 +74,7 @@ export class UserState implements IUserState {
     }
 
     public createConnectionInfo(): ConnectionInfo {
+        console.log("KJAHSKDJASHDHKASHDH")
         const connectionInfo: ConnectionInfo = {
             host: '127.0.0.1',
             port: 58503
