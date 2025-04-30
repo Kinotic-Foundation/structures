@@ -1,9 +1,15 @@
 <template>
   <div class="pt-4">
-
-    <CrudTable  title="My Applications"
-  subtitle="List of all applications in the system" :data-source="dataSource"
-      :headers="headers" :singleExpand="false" @add-item="onAddItem" @edit-item="onEditItem" ref="crudTable">
+      <!-- :data-source="dataSource"  -->
+    <CrudTable 
+      :headers="headers" 
+      :singleExpand="false" 
+      @add-item="onAddItem"
+      @edit-item="onEditItem" 
+      ref="crudTable"
+      title="Users"
+      subtitle=""
+      >
       <template #item.id="{ item }">
         <span>{{ item.id }}</span>
       </template>
@@ -45,13 +51,11 @@ import { USER_STATE } from '@/states/IUserState'
 @Component({
   components: { CrudTable }
 })
-class NamespaceList extends Vue {
+class Users extends Vue {
   headers = [
     { field: 'id', header: 'Id', sortable: false },
-    { field: 'status', header: 'Status', sortable: false },
-    { field: 'description', header: 'Description', sortable: false },
-    { field: 'created', header: 'Created', sortable: false },
-    { field: 'updated', header: 'Updated', sortable: false },
+    { field: 'name', header: 'Name', sortable: false },
+    { field: 'surname', header: 'Surname', sortable: false },
   ]
 
   dataSource: INamespaceService = Structures.getNamespaceService()
@@ -61,6 +65,7 @@ class NamespaceList extends Vue {
     api: mdiApi
   }
   async mounted() {
+    console.log(this.icons.api, "asdsadsa")
     try {
       if (!USER_STATE.isAuthenticated()) {
         await USER_STATE.authenticate('admin', 'structures')
@@ -71,7 +76,7 @@ class NamespaceList extends Vue {
       }
 
     } catch (error) {
-      console.error('[NamespaceList] Auth or connection failed:', error)
+      console.error('[UsersList] Auth or connection failed:', error)
     }
   }
 
@@ -88,5 +93,5 @@ class NamespaceList extends Vue {
   }
 }
 
-export default NamespaceList
+export default Users
 </script>

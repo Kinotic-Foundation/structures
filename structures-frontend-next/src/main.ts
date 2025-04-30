@@ -7,10 +7,10 @@ import StyleClass from 'primevue/styleclass'
 import Aura from '@primeuix/themes/aura'
 import router from '@/router'
 import ToastService from 'primevue/toastservice'
-// import 'primevue/resources/themes/saga-blue/theme.css'
-// import 'primevue/resources/primevue.min.css'
-// import 'primeicons/primeicons.css'
-// import '@primevue/themes/saga-blue/theme.css';
+import { CONTINUUM_UI } from '@/IContinuumUI'
+import 'primeicons/primeicons.css'
+
+
 const app = createApp(App);
 app.use(PrimeVue, {
     theme: {
@@ -22,6 +22,9 @@ app.use(PrimeVue, {
         }
     }
 })
+CONTINUUM_UI.initialize({
+    routes: router.options.routes
+  });
 app.directive('styleclass', StyleClass)
 app.use(ToastService)
 app.use(createStructuresUI(), {router})

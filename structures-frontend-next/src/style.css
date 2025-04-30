@@ -1,6 +1,13 @@
 @import 'primeicons/primeicons.css';
 
-@import "tailwindcss/base";
-@import "tailwindcss/components";
-@import "tailwindcss/utilities";
+@import "tailwindcss";
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .btn-v4 {
+    @apply bg-indigo-900 text-white font-semibold px-4 py-2 rounded;
+  }
+}
