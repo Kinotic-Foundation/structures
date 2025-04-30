@@ -21,6 +21,6 @@ test {
 	useJUnitPlatform()
 }
 
-tasks.named('processResources'){
+tasks.named('processResources') {
 	dependsOn ":structures-frontend:copyDist"
 }

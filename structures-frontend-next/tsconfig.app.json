@@ -9,6 +9,7 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
+    "experimentalDecorators": true,
     "paths": {
       "@/*": [
         "src/*"

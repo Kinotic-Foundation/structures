@@ -47,7 +47,6 @@ import { USER_STATE } from '@/states/IUserState'
 class NamespaceList extends Vue {
   headers = [
     { field: 'id', header: 'Id', sortable: false },
-    { field: 'status', header: 'Status', sortable: false },
     { field: 'description', header: 'Description', sortable: false },
     { field: 'created', header: 'Created', sortable: false },
     { field: 'updated', header: 'Updated', sortable: false },

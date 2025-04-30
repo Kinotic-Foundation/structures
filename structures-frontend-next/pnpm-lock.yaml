@@ -17,9 +17,15 @@ importers:
       '@kinotic/structures-api':
         specifier: ^3.4.0
         version: 3.4.0(@kinotic/continuum-client@2.14.0(reflect-metadata@0.2.2))
+      '@mdi/js':
+        specifier: ^7.4.47
+        version: 7.4.47
       '@primeuix/themes':
         specifier: ^1.0.3
         version: 1.0.3
+      '@primevue/themes':
+        specifier: ^4.3.3
+        version: 4.3.3
       keycloak-js:
         specifier: ^26.1.5
         version: 26.1.5
@@ -39,7 +45,7 @@ importers:
         specifier: ^3.0.4
         version: 3.0.4(vue@3.5.13(typescript@5.8.3))
       vue-router:
-        specifier: '4'
+        specifier: ^4.5.0
         version: 4.5.0(vue@3.5.13(typescript@5.8.3))
     devDependencies:
       '@primevue/auto-import-resolver':
@@ -287,6 +293,9 @@ packages:
     peerDependencies:
       '@kinotic/continuum-client': ^2.13.0
 
+  '@mdi/js@7.4.47':
+    resolution: {integrity: sha512-KPnNOtm5i2pMabqZxpUz7iQf+mfrYZyKCZ8QNz85czgEt7cuHcGorWfdzUMWYA0SD+a6Hn4FmJ+YhzzzjkTZrQ==}
+
   '@nodelib/fs.scandir@2.1.5':
     resolution: {integrity: sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==}
     engines: {node: '>= 8'}
@@ -349,6 +358,10 @@ packages:
 
   '@primevue/metadata@4.3.3':
     resolution: {integrity: sha512-R1IBTGsYsmOlAy4/dytJW699Iie9B8p8PqbIxDY0GWiMGk8O0tVBYfuCs50w0QtHqmThhLRtSS+eCSOP1ybwSg==}
+    engines: {node: '>=12.11.0'}
+
+  '@primevue/themes@4.3.3':
+    resolution: {integrity: sha512-LiYlSXsHeA8DFm8+yGyiDFQc3SEQwHcESTN1/rV+rrZ+UPuPisHY9fNIGRFQKA5XUQPDTQDQjtwYGx25Jikwhg==}
     engines: {node: '>=12.11.0'}
 
   '@rollup/rollup-android-arm-eabi@4.36.0':
@@ -1357,6 +1370,8 @@ snapshots:
       '@kinotic/continuum-idl': 2.0.2
       reflect-metadata: 0.2.2
 
+  '@mdi/js@7.4.47': {}
+
   '@nodelib/fs.scandir@2.1.5':
     dependencies:
       '@nodelib/fs.stat': 2.0.5
@@ -1414,6 +1429,11 @@ snapshots:
       - vue
 
   '@primevue/metadata@4.3.3': {}
+
+  '@primevue/themes@4.3.3':
+    dependencies:
+      '@primeuix/styled': 0.5.1
+      '@primeuix/themes': 1.0.3
 
   '@rollup/rollup-android-arm-eabi@4.36.0':
     optional: true
