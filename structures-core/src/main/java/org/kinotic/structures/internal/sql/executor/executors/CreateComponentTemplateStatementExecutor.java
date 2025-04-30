@@ -32,24 +32,24 @@ public class CreateComponentTemplateStatementExecutor implements StatementExecut
     public void executeMigration(CreateComponentTemplateStatement statement) {
         try {
             Map<String, Property> properties = new HashMap<>();
-            statement.getDefinitions().forEach(def -> {
+            statement.definitions().forEach(def -> {
                 if (def.isColumn()) {
-                    properties.put(def.getKey(), TypeMapper.mapType(def.getValue()));
+                    properties.put(def.key(), TypeMapper.mapType(def.value()));
                 }
             });
 
             client.cluster().putComponentTemplate(t -> t
-                    .name(statement.getTemplateName())
+                    .name(statement.templateName())
                     .template(te -> te
                             .settings(s -> {
-                                statement.getDefinitions().forEach(def -> {
+                                statement.definitions().forEach(def -> {
                                     if (!def.isColumn()) {
-                                        switch (def.getKey()) {
+                                        switch (def.key()) {
                                             case "NUMBER_OF_SHARDS":
-                                                s.numberOfShards(def.getValue());
+                                                s.numberOfShards(def.value());
                                                 break;
                                             case "NUMBER_OF_REPLICAS":
-                                                s.numberOfReplicas(def.getValue());
+                                                s.numberOfReplicas(def.value());
                                                 break;
                                         }
                                     }

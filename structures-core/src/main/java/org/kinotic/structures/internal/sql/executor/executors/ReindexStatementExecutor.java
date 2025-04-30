@@ -35,28 +35,28 @@ public class ReindexStatementExecutor implements StatementExecutor<ReindexStatem
         try {
             client.reindex(r -> {
                 r.source(s -> {
-                     s.index(statement.getSource());
-                     if (statement.getQuery() != null) {
-                         s.query(q -> q.queryString(qs -> qs.query(statement.getQuery())));
+                     s.index(statement.source());
+                     if (statement.query() != null) {
+                         s.query(q -> q.queryString(qs -> qs.query(statement.query())));
                      }
-                     if (statement.getSourceFields() != null) {
-                         s.sourceFields(Arrays.asList(statement.getSourceFields().split(",")));
+                     if (statement.sourceFields() != null) {
+                         s.sourceFields(Arrays.asList(statement.sourceFields().split(",")));
                      }
-                     if (statement.getSize() != null) {
-                         s.size(statement.getSize());
+                     if (statement.size() != null) {
+                         s.size(statement.size());
                      }
                      return s;
                  })
-                 .dest(d -> d.index(statement.getDest()))
-                 .conflicts(statement.getConflicts() != null && "proceed".equals(statement.getConflicts()) ? Conflicts.Proceed : Conflicts.Abort)
-                 .maxDocs(statement.getMaxDocs() != null ? statement.getMaxDocs().longValue() : null)
-                 .script(statement.getScript() != null ? Script.of(sc -> sc.source(statement.getScript())) : null)
+                 .dest(d -> d.index(statement.dest()))
+                 .conflicts(statement.conflicts() != null && "proceed".equals(statement.conflicts()) ? Conflicts.Proceed : Conflicts.Abort)
+                 .maxDocs(statement.maxDocs() != null ? statement.maxDocs().longValue() : null)
+                 .script(statement.script() != null ? Script.of(sc -> sc.source(statement.script())) : null)
                  .slices(s -> {
-                     if (statement.getSlices() != null) {
-                         if ("auto".equals(statement.getSlices())) {
+                     if (statement.slices() != null) {
+                         if ("auto".equals(statement.slices())) {
                              s.computed(SlicesCalculation.Auto);
                          } else {
-                             s.value(Integer.parseInt(statement.getSlices()));
+                             s.value(Integer.parseInt(statement.slices()));
                          }
                      }
                      return s;

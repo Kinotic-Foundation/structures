@@ -706,7 +706,7 @@ public class DefaultEntityService implements EntityService {
                         builder.append(error.reason()).append("\n");
                     }
                 }
-                String errorMessage = builder.length() > 0 ? builder.toString() : "Unknown error occurred during bulk operation";
+                String errorMessage = !builder.isEmpty() ? builder.toString() : "Unknown error occurred during bulk operation";
                 return CompletableFuture.failedFuture(new IllegalArgumentException("Bulk save failed with errors:\n" + errorMessage));
             } else {
                 return CompletableFuture.completedFuture(bulkResponse);

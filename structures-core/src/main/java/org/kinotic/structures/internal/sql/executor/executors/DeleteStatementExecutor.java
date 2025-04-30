@@ -39,8 +39,8 @@ public class DeleteStatementExecutor implements StatementExecutor<DeleteStatemen
     @Override
     public CompletableFuture<Long> executeQuery(DeleteStatement statement, Map<String, Object> parameters) {
         return client.deleteByQuery(d -> d
-                .index(statement.getTableName())
-                .query(QueryBuilder.buildQuery(statement.getWhereClause(), parameters))
+                .index(statement.tableName())
+                .query(QueryBuilder.buildQuery(statement.whereClause(), parameters))
         ).thenApply(DeleteByQueryResponse::deleted);
     }
 }
