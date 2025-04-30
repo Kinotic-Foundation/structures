@@ -10,7 +10,7 @@
   "dependencies": {
     "@kinotic/continuum-client": "^2.14.0",
     "@kinotic/continuum-idl": "^2.0.2",
-    "@kinotic/structures-api": "^3.4.0",
+    "@kinotic/structures-api": "^3.4.2",
     "@mdi/js": "^7.4.47",
     "@primeuix/themes": "^1.0.3",
     "@primevue/themes": "^4.3.3",
