@@ -16,6 +16,7 @@ declare module 'vue' {
     ConfirmDialog: typeof import('primevue/confirmdialog')['default']
     CrudEntityAddEdit: typeof import('./src/components/CrudEntityAddEdit.vue')['default']
     CrudTable: typeof import('./src/components/CrudTable.vue')['default']
+    DashboardIcon: typeof import('./src/components/Images/DashboardIcon.vue')['default']
     DataTable: typeof import('primevue/datatable')['default']
     Dialog: typeof import('primevue/dialog')['default']
     FloatLabel: typeof import('primevue/floatlabel')['default']

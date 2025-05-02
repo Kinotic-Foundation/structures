@@ -39,7 +39,7 @@
 import { Component, Vue } from 'vue-facing-decorator'
 import CrudTable from '@/components/CrudTable.vue'
 import { type Identifiable } from '@kinotic/continuum-client'
-import { Structures, INamespaceService } from '@kinotic/structures-api'
+import { Structures, type INamespaceService } from '@kinotic/structures-api'
 import { mdiGraphql, mdiApi } from '@mdi/js'
 import { USER_STATE } from '@/states/IUserState'
 @Component({

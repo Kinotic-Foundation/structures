@@ -1,11 +1,8 @@
 <template>
-  <div class="flex justify-between h-screen max-w-[1440px] mx-auto">
-    <div class="w-1/2 h-full relative">
-      <img src="@/assets/login-page-image.png" alt="Create Application Image"
-        class="absolute left-0 top-0 max-h-[100vh]" />
+  <div class="flex w-full justify-center items-center h-screen">
+    <div class="w-1/2 h-full bg-[url(@/assets/login-page-image.png)] bg-no-repeat bg-contain">
     </div>
-
-    <div class="w-1/2 h-full flex justify-center items-center">
+    <div class="w-1/2 h-full flex flex-col justify-around items-center bg-center bg-cover">
       <div class="w-[320px] flex flex-col items-center">
 
         <img src="@/assets/login-page-logo.svg" class="w-[218px] h-[45px] mb-[53px]" />
@@ -51,22 +48,35 @@
           <p class="border border-gray-300 w-full"></p>
         </div>
 
-        <div class="flex border border-[#B8BCBD] w-full p-4 mb-4 rounded-[5px] text-[#B8BCBD] cursor-pointer">
+        <div class="flex border border-[#B8BCBD] w-full p-4 mb-4 rounded-[5px] text-black/50 cursor-pointer">
           <img src="@/assets/google-icon.svg" class="mr-6" />
           <span>Continue with Google</span>
         </div>
 
-        <div class="flex border border-[#B8BCBD] w-full p-4 mb-4 rounded-[5px] text-[#B8BCBD] cursor-pointer">
+        <div class="flex border border-[#B8BCBD] w-full p-4 mb-4 rounded-[5px] text-black/50 cursor-pointer">
           <img src="@/assets/microsoft_online-icon.svg" class="mr-6" />
           <span>Continue with Microsoft</span>
         </div>
 
-        <div class="flex border border-[#B8BCBD] w-full p-4 mb-4 rounded-[5px] text-[#B8BCBD] cursor-pointer">
+        <div class="flex border border-[#B8BCBD] w-full p-4 mb-4 rounded-[5px] text-black/50 cursor-pointer">
           <img src="@/assets/apple-logo.svg" class="mr-6" />
           <span>Continue with Apple</span>
         </div>
-
+        <div class="text-[#212121] cursor-pointer">
+          Forgot Password
+        </div>
       </div>
+      <div class="flex gap-2">
+          <a href="#" class="text-[#0568FD] border-b-1">
+            Terms of use
+          </a>
+          <span clas>
+            |
+          </span>
+          <span class="text-[#0568FD] border-b-1">
+            Privacy policy
+          </span>
+        </div>
     </div>
 
     <Toast />
