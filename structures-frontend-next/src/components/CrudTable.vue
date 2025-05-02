@@ -41,6 +41,8 @@ class CrudTable extends Vue {
   @Prop({ default: false }) disableModifications!: boolean
   @Prop({ default: '' }) title!: string
   @Prop({ default: '' }) subtitle!: string
+  @Prop({ default: true }) isShowAddNew!: boolean
+  @Prop({ default: true }) isShowDelete!: boolean
 
   items: Identifiable<string>[] = []
   totalItems = 0
@@ -103,32 +105,33 @@ class CrudTable extends Vue {
   }
 
   async deleteItem(item: Identifiable<string>) {
-    if (item.id == null || !this.editable) return
+  if (!item.id || !this.editable) return
 
-    const confirmed = await (this.$refs.confirm as any).open(
-      'Delete Item',
-      'Are you sure you want to delete this item?',
-      { width: 400 }
-    )
+  const confirmed = await (this.$refs.confirm as any).open(
+    'Delete Item',
+    'Are you sure you want to delete this item?',
+    { width: 400, style: { maxWidth: '400px' } }
+  )
 
-    if (confirmed) {
-      const index = this.items.findIndex((i) => i.id === item.id)
-      try {
-        await (this.dataSource as IEditableDataSource<any>).deleteById(item.id)
+  if (!confirmed) return
 
-        this.items.splice(index, 1)
-        this.totalItems--
+  try {
+    const index = this.items.findIndex(i => i.id === item.id)
+    await (this.dataSource as IEditableDataSource<any>).deleteById(item.id)
 
-        const totalPages = Math.ceil(this.totalItems / this.options.rows)
-        if (this.options.page > totalPages && this.options.page > 1) {
-          this.options.page--
-          this.find()
-        }
-      } catch (error: any) {
-        this.displayAlert(error.message || 'Failed to delete item')
-      }
+    this.items.splice(index, 1)
+    this.totalItems--
+
+    const totalPages = Math.ceil(this.totalItems / this.options.rows)
+    if (this.options.page >= totalPages && this.options.page > 0) {
+      this.options.page--
     }
+
+    this.find()
+  } catch (error: any) {
+    this.displayAlert(error.message || 'Failed to delete item.')
   }
+}
 
 
   search() {
@@ -203,7 +206,7 @@ export default toNative(CrudTable)
           class="!border-gray-300 !ml-4 !min-h-[33px] !w-min-[35px] !rounded-[8px] !text-gray-600 hover:!bg-gray-100" />
       </template>
       <template #end>
-        <Button v-if="editable && !disableModifications" label="Add New" @click="addItem" severity="secondary"
+        <Button v-if="editable && !disableModifications && isShowAddNew" label="Add New" @click="addItem" severity="secondary"
           class="!bg-[#3651ED] !text-white hover:!bg-[#274bcc]" />
       </template>
     </Toolbar>
@@ -221,9 +224,17 @@ export default toNative(CrudTable)
               <slot name="additional-actions" :item="slotProps.data" />
               <!-- <Button icon="pi pi-pencil" class="p-button-text p-button-sm mr-2" @click="editItem(slotProps.data)"
             v-if="!disableModifications" /> -->
-              <span class="text-[#D0D5DD] mx-5">|</span>
-              <Button icon="pi pi-trash" class="p-button-text p-button-sm !text-[#334155] !bg-white" severity="danger"
-                @click="deleteItem(slotProps.data)" />
+              <span v-if="isShowDelete" class="text-[#D0D5DD] mx-5">|</span>
+              <!-- <Button v-if="isShowDelete" icon="pi pi-trash" class="p-button-text p-button-sm !text-[#334155] !bg-white" severity="danger"
+                @click="deleteItem(slotProps.data)" /> -->
+                <Button
+  v-if="isShowDelete"
+  icon="pi pi-trash"
+  class="p-button-text p-button-sm !text-[#334155] !bg-white"
+  severity="danger"
+  @click="deleteItem(slotProps.data)"
+/>
+
             </div>
           </template>
         </Column>
