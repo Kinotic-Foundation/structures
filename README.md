@@ -23,10 +23,7 @@ docker-compose up -d
 3. Visit [http://localhost:9090](http://localhost:9090) to access the Structures GUI
 
 ## Next Steps
-- [Getting Started Guide](https://kinotic-foundation.github.io/structures/guide/getting-started) - Complete setup instructions and prerequisites
-- [New Project Setup](https://kinotic-foundation.github.io/structures/guide/getting-started#new-project-setup) - Learn how to create a new project with Structures
-- [Adding to Existing Project](https://kinotic-foundation.github.io/structures/guide/getting-started#adding-structures-to-an-existing-project) - Integrate Structures into your current project
-- [Entity Definitions](https://kinotic-foundation.github.io/structures/guide/getting-started#understanding-entity-definitions) - Learn how to define your data structures
+- [Getting Started Guide](https://kinotic-foundation.github.io/structures/website/guide/getting-started.html) - Complete setup instructions and prerequisites
 
 ### Projects
 * structures-core
