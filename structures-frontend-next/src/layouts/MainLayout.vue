@@ -1,8 +1,8 @@
 <template>
-    <div class="relative flex h-screen bg-surface-0 dark:bg-surface-950">
-        <div id="app-sidebar" class="h-full hidden lg:block lg:static absolute left-0 top-0 z-50">
+    <div class="relative flex h-screen bg-surface-0 dark:bg-surface-950 w-full">
+        <div id="app-sidebar" class="h-full hidden lg:block lg:sticky absolute left-0 top-0 z-50">
             <div :class="[
-                isCollapsed ? 'w-[4.5rem] px-3' : 'w-[18rem] px-8',
+                isCollapsed ? 'w-[72px] px-3' : 'w-[258px] px-8',
                 'h-full flex flex-col py-6 transition-all duration-300 ease-in-out'
             ]" style="background-color: #101010">
                 <div :class="[isCollapsed ? 'flex-col items-center justify-center gap-4' : 'flex-row']" class="mb-10 flex justify-between">
@@ -27,9 +27,11 @@
                 </div>
             </div>
         </div>
-        <div class="flex-1 flex flex-col gap-6">
+        <div class="flex-1 flex flex-col gap-6 overflow-y-auto"
+        :style="[isCollapsed ? {'width' :'calc(100% - 72px)'}: {'width' :'calc(100% - 250px)'}]"
+        >
             <MainLayoutBreadcrumb separator-icon="pi pi-chevron-right" />
-            <div class="flex-1 px-[33px]">
+            <div class="flex-1 px-[33px] overflow-y-auto">
                 <router-view />
             </div>
         </div>

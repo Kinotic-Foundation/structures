@@ -1,56 +1,3 @@
-   <template>
-    <div>
-      <div class="flex flex-col mb-[37px]">
-        <span class="text-3xl font-semibold mb-4">
-          Applications
-        </span>
-        <span class="font-semibold text-[13px] text-[#9FA9B7]">
-          This is where all your applications live
-        </span>
-      </div>
-      <Toolbar class="mb-4">
-        <template #start>
-          <InputGroup>
-            <InputGroupAddon>
-              <i class="pi pi-search" />
-            </InputGroupAddon>
-            <InputText v-model="searchText" placeholder="Search" @keyup.enter="search" @input="onSearchChange" />
-          </InputGroup>
-          <Button icon="pi pi-filter" rounded outlined aria-label="Filter"
-            class="!border-gray-300 !ml-4 !min-h-[33px] !w-min-[35px] !rounded-[8px] !text-gray-600 hover:!bg-gray-100" />
-        </template>
-        <template #end>
-          <Button v-if="editable && !disableModifications" label="Add New" @click="addItem" severity="secondary"
-            class="!bg-[#3651ED] !text-white hover:!bg-[#274bcc]" />
-        </template>
-      </Toolbar>
-<div class="rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-
-  <DataTable :value="items" :paginator="true" :rows="options.rows" :totalRecords="totalItems" :lazy="true"
-    :loading="loading" :first="options.first" :sortField="options.sortField" :sortOrder="options.sortOrder"
-    :scrollable="true" scrollHeight="flex" @page="onPage" @sort="onSort" dataKey="id">
-    <Column v-for="col in computedHeaders" :key="col.field" :field="col.field" :header="col.header"
-      :sortable="col.sortable !== false" :style="col.style || ''" />
-
-    <Column v-if="editable" header="Actions" style="text-align: right">
-      <template #body="slotProps">
-        <div class="flex justify-center items-center">
-          <slot name="additional-actions" :item="slotProps.data" />
-          <!-- <Button icon="pi pi-pencil" class="p-button-text p-button-sm mr-2" @click="editItem(slotProps.data)"
-            v-if="!disableModifications" /> -->
-          <span class="text-[#D0D5DD] mx-5">|</span>
-          <Button icon="pi pi-trash" class="p-button-text p-button-sm !text-[#334155] !bg-white" severity="danger"
-            @click="deleteItem(slotProps.data)" />
-        </div>
-      </template>
-    </Column>
-  </DataTable>
-</div>
-      <Confirm ref="confirm" />
-      <ConfirmDialog />
-    </div>
-  </template>
-
 <script lang="ts">
 import { Vue, Prop, Emit, toNative, Component, Watch } from 'vue-facing-decorator'
 import DataTable from 'primevue/datatable'
@@ -72,7 +19,6 @@ import {
   DataSourceUtils,
   type IEditableDataSource,
 } from '@kinotic/continuum-client'
-import Confirm from './Confirm.vue'
 
 @Component
 class CrudTable extends Vue {
@@ -93,6 +39,10 @@ class CrudTable extends Vue {
   @Prop({ default: true }) mustSort!: boolean
   @Prop({ default: false }) singleExpand!: boolean
   @Prop({ default: false }) disableModifications!: boolean
+  @Prop({ default: '' }) title!: string
+  @Prop({ default: '' }) subtitle!: string
+  @Prop({ default: true }) isShowAddNew!: boolean
+  @Prop({ default: true }) isShowDelete!: boolean
 
   items: Identifiable<string>[] = []
   totalItems = 0
@@ -155,30 +105,31 @@ class CrudTable extends Vue {
   }
 
   async deleteItem(item: Identifiable<string>) {
-  if (item.id == null || !this.editable) return
+  if (!item.id || !this.editable) return
 
   const confirmed = await (this.$refs.confirm as any).open(
     'Delete Item',
     'Are you sure you want to delete this item?',
-    { width: 400 }
+    { width: 400, style: { maxWidth: '400px' } }
   )
 
-  if (confirmed) {
-    const index = this.items.findIndex((i) => i.id === item.id)
-    try {
-      await (this.dataSource as IEditableDataSource<any>).deleteById(item.id)
+  if (!confirmed) return
 
-      this.items.splice(index, 1)
-      this.totalItems--
+  try {
+    const index = this.items.findIndex(i => i.id === item.id)
+    await (this.dataSource as IEditableDataSource<any>).deleteById(item.id)
 
-      const totalPages = Math.ceil(this.totalItems / this.options.rows)
-      if (this.options.page > totalPages && this.options.page > 1) {
-        this.options.page--
-        this.find()
-      }
-    } catch (error: any) {
-      this.displayAlert(error.message || 'Failed to delete item')
+    this.items.splice(index, 1)
+    this.totalItems--
+
+    const totalPages = Math.ceil(this.totalItems / this.options.rows)
+    if (this.options.page >= totalPages && this.options.page > 0) {
+      this.options.page--
     }
+
+    this.find()
+  } catch (error: any) {
+    this.displayAlert(error.message || 'Failed to delete item.')
   }
 }
 
@@ -233,3 +184,77 @@ class CrudTable extends Vue {
 
 export default toNative(CrudTable)
 </script>
+<template>
+  <div>
+    <div class="flex flex-col mb-[37px] overflow-x-auto w-full">
+      <span class="text-3xl font-semibold mb-4">
+        {{ title }}
+      </span>
+      <span class="font-semibold text-[13px] text-[#9FA9B7]">
+        {{ subtitle }}
+      </span>
+    </div>
+    <Toolbar class="mb-4 !border-none">
+      <template #start>
+        <InputGroup>
+          <InputGroupAddon>
+            <i class="pi pi-search" />
+          </InputGroupAddon>
+          <InputText v-model="searchText" placeholder="Search" @keyup.enter="search" @input="onSearchChange" />
+        </InputGroup>
+        <Button icon="pi pi-filter" rounded outlined aria-label="Filter"
+          class="!border-gray-300 !ml-4 !min-h-[33px] !w-min-[35px] !rounded-[8px] !text-gray-600 hover:!bg-gray-100" />
+      </template>
+      <template #end>
+        <Button v-if="editable && !disableModifications && isShowAddNew" label="Add New" @click="addItem" severity="secondary"
+          class="!bg-[#3651ED] !text-white hover:!bg-[#274bcc]" />
+      </template>
+    </Toolbar>
+    <div class="mb-9">
+
+      <DataTable :rowsPerPageOptions="[5, 10, 20, 50]" :value="items" :paginator="true" :rows="options.rows" :totalRecords="totalItems" :lazy="true"
+        :loading="loading" :first="options.first" :sortField="options.sortField" :sortOrder="options.sortOrder"
+        :scrollable="true" scrollHeight="flex" @page="onPage" @sort="onSort" dataKey="id">
+        <Column v-for="col in computedHeaders" :key="col.field" :field="col.field" :header="col.header"
+          :sortable="col.sortable !== false" :style="col.style || ''" />
+
+        <Column v-if="editable" header="Actions" style="text-align: right">
+          <template #body="slotProps">
+            <div class="flex justify-center items-center">
+              <slot name="additional-actions" :item="slotProps.data" />
+              <!-- <Button icon="pi pi-pencil" class="p-button-text p-button-sm mr-2" @click="editItem(slotProps.data)"
+            v-if="!disableModifications" /> -->
+              <span v-if="isShowDelete" class="text-[#D0D5DD] mx-5">|</span>
+              <!-- <Button v-if="isShowDelete" icon="pi pi-trash" class="p-button-text p-button-sm !text-[#334155] !bg-white" severity="danger"
+                @click="deleteItem(slotProps.data)" /> -->
+                <Button
+  v-if="isShowDelete"
+  icon="pi pi-trash"
+  class="p-button-text p-button-sm !text-[#334155] !bg-white"
+  severity="danger"
+  @click="deleteItem(slotProps.data)"
+/>
+
+            </div>
+          </template>
+        </Column>
+      </DataTable>
+    </div>
+    <Confirm ref="confirm" />
+    <ConfirmDialog />
+  </div>
+</template>
+<style>
+.p-paginator {
+  justify-content: flex-end !important
+}
+.p-datatable-table-container {
+      overflow: auto !important;
+    border: 1px solid #E2E8F0 !important;
+    border-radius: 26px !important;
+    padding: 20px !important;
+}
+.p-datatable-paginator-bottom {
+  border: none !important
+}
+</style>

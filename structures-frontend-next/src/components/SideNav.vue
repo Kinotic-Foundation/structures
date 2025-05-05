@@ -79,7 +79,7 @@ export default class SideNav extends Vue {
 
     mounted() {
         if (this.navItems && this.navItems.length > 0) {
-            this.selectedNav = this.navItems[0]
+            this.selectedNav = this.navItems[1]
         }
     }
 

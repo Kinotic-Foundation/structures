@@ -9,58 +9,59 @@ defineProps<{
 }>();
 
 const route = useRoute();
+const icons = import.meta.glob('../assets/*.svg', { eager: true, import: 'default' });
+
+const getIconUrl = (icon: string | undefined) => {
+  if (!icon) return ''
+  const match = icons[`../assets/${icon}`]
+  return match || ''
+}
 
 const breadcrumbs = computed<MenuItem[]>(() => {
-  return route.matched
-    .filter((r) => r.meta.label)
-    .map((r, index, array) => ({
+  const matched = route.matched.filter((r) => r.meta.label);
+  if (!matched.length) return [];
+
+  const breadcrumbItems: MenuItem[] = [];
+
+  matched.forEach((r, index) => {
+    const isLast = index === matched.length - 1;
+    breadcrumbItems.push({
       label: r.meta.label as string,
-      to: index < array.length - 1 ? r.path : undefined,
-      icon: r.meta.icon as string | undefined,
-    }));
+      to: !isLast ? r.path : undefined,
+      icon: r.meta.icon,
+    });
+  });
+
+  return breadcrumbItems;
 });
+
 </script>
 
 <template>
-    <div class="w-full pt-6 px-[33px] flex justify-between items-center">
-      <Breadcrumb
-        :model="breadcrumbs"
-        aria-label="Breadcrumb"
-        class="bg-surface-0 rounded-md shadow-sm"
-      >
-        <template #item="{ item }">
-          <router-link
-            v-if="item.to"
-            :to="item.to"
-            class="flex justify-center gap-2 items-center"
-          >
-            <span v-if="item.icon" :class="item.icon" class="text-[#64748B] text-[14px] "></span>
-            <span class="text-[#64748B] text-[14px]">{{ item.label }}</span>
+  <div class="w-full pt-6 px-[33px] flex justify-between items-center">
+    <Breadcrumb :model="breadcrumbs" aria-label="Breadcrumb" class="!px-0">
+
+      <template #item="{ item }">
+        <div class="flex items-center gap-2">
+          <img v-if="item.icon" :src="getIconUrl(item.icon)" class="filter-(--filter-home) h-5 w-5" />
+          <img v-if="item.icon && item.label" src="@/assets/chevron-right.svg" class="filter-(--filter-home) h-4 w-4" />
+          <router-link v-if="item.to" :to="item.to" class="text-[#64748B] text-[14px]">
+            {{ item.label }}
           </router-link>
-          <div class="flex justify-center gap-2 items-center" v-else >
-              <span class="text-[#64748B] text-[14px] flex justify-start items-center">
-                <span v-if="item.icon" :class="item.icon" class="mr-2"></span>
-                {{ item.label }}
-              </span>
-          </div>
-        </template>
-        <template #separator>
-          <span
-            :class="separatorIcon || 'pi pi-angle-right'"
-            class="mx-2 text-[#64748B] text-lg"
-          ></span>
-        </template>
-      </Breadcrumb>
-      <div class="flex justify-between items-center gap-16">
-        <div class="text-[#64748B] text-[14px] flex gap-4">
-            <router-link to="#">FeedBack</router-link>
-            <router-link to="#">Changelog</router-link>
-            <router-link to="#">Help</router-link>
-            <router-link to="#">Docs</router-link>
+          <span v-else class="text-[#64748B] text-[14px]">{{ item.label }}</span>
         </div>
-        <div class="w-8 h-8 rounded-full border border-text-[#64748B] flex justify-center items-center cursor-pointer">
-            <i class="pi pi-bell"></i>
-        </div>
+      </template>
+    </Breadcrumb>
+    <div class="flex justify-between items-center gap-16">
+      <div class="text-[#64748B] text-[14px] flex gap-4">
+        <router-link to="#">FeedBack</router-link>
+        <router-link to="#">Changelog</router-link>
+        <router-link to="#">Help</router-link>
+        <router-link to="#">Docs</router-link>
+      </div>
+      <div class="w-8 h-8 rounded-full border border-text-[#64748B] flex justify-center items-center cursor-pointer">
+        <i class="pi pi-bell"></i>
       </div>
     </div>
-  </template>
+  </div>
+</template>
