@@ -51,7 +51,6 @@ function sidebarGuide() {
     {
       text: 'Details',
       items: [
-        { text: 'Create a new Structure', link: '/guide/new-structure' },
         { text: 'Apollo @policy Support',
           link: '/guide/graphos/overview',
           items: [
@@ -75,6 +74,7 @@ function sidebarReference() {
     {
       text: 'API',
       items: [
+        { text: 'Decorators', link: '/reference/decorators' },
         { text: 'Javadoc', link: '/reference/javadoc' },
         { text: 'PolicyAuthorizationService', link: '/reference/graphos/policy-authorization-service' },
         { text: 'PolicyAuthorizer', link: '/reference/graphos/policy-authorizer' },
