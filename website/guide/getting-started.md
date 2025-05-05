@@ -86,6 +86,20 @@ function App() {
 
             // Use the generated service
             const personService = new PersonEntityService()
+
+            // Create some dummy data
+            const dummyPersons = [
+                { firstName: 'John', lastName: 'Doe' },
+                { firstName: 'Jane', lastName: 'Smith' },
+                { firstName: 'Bob', lastName: 'Johnson' }
+            ]
+
+            // Create the persons in the database
+            for (const person of dummyPersons) {
+                await personService.create(person)
+            }
+
+            // Fetch all persons
             const allPersons = await personService.findAll()
             setPersons(allPersons)
         }
@@ -167,7 +181,5 @@ export class Person {
 ```
 
 ## Next Steps
-- Explore the [API Reference](/reference/api) for available decorators and options
-- Check out the [Examples](/examples) section for more use cases
-- Learn about [Advanced Features](/guide/advanced-features) like multi-tenancy and indexing
+- Explore the [Decorators Reference](/reference/decorators) for available decorators and options
 
