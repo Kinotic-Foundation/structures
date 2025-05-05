@@ -5,6 +5,10 @@ export default defineConfig({
   title: "Structures",
   description: "Structures is an open-source framework for data storage and retrieval, supporting schema evolution, data management, and providing a user-friendly GUI and OpenAPI interface.",
   base: '/structures/website/',
+  ignoreDeadLinks: [
+    // Ignore localhost URLs
+    /^http:\/\/localhost:/
+  ],
   themeConfig: {
     // https://vitepress.vuejs.org/reference/default-theme-config
     nav: nav(),
@@ -51,7 +55,6 @@ function sidebarGuide() {
     {
       text: 'Details',
       items: [
-        { text: 'Create a new Structure', link: '/guide/new-structure' },
         { text: 'Apollo @policy Support',
           link: '/guide/graphos/overview',
           items: [
@@ -75,6 +78,7 @@ function sidebarReference() {
     {
       text: 'API',
       items: [
+        { text: 'Decorators', link: '/reference/decorators' },
         { text: 'Javadoc', link: '/reference/javadoc' },
         { text: 'PolicyAuthorizationService', link: '/reference/graphos/policy-authorization-service' },
         { text: 'PolicyAuthorizer', link: '/reference/graphos/policy-authorizer' },

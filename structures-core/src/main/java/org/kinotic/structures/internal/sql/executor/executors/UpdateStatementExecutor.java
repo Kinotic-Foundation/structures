@@ -41,13 +41,13 @@ public class UpdateStatementExecutor implements StatementExecutor<UpdateStatemen
 
     @Override
     public CompletableFuture<Long> executeQuery(UpdateStatement statement, Map<String, Object> parameters) {
-        String script = buildScript(statement.getAssignments(), parameters);
-        Map<String, Object> params = buildScriptParams(statement.getAssignments(), parameters);
+        String script = buildScript(statement.assignments(), parameters);
+        Map<String, Object> params = buildScriptParams(statement.assignments(), parameters);
         Map<String, JsonData> scriptParams = convertToJsonDataMap(params);
 
         return client.updateByQuery(u -> u
-                .index(statement.getTableName())
-                .query(QueryBuilder.buildQuery(statement.getWhereClause(), parameters))
+                .index(statement.tableName())
+                .query(QueryBuilder.buildQuery(statement.whereClause(), parameters))
                 .script(s -> s.source(script).params(scriptParams))
         ).thenApply(UpdateByQueryResponse::updated);
     }
