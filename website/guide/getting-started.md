@@ -26,6 +26,10 @@ docker-compose up -d
 
 ## Using Structures in Your Project
 
+Choose your setup path:
+- [New Project Setup](#new-project-setup) - Start fresh with a new project
+- [Adding to Existing Project](#adding-structures-to-an-existing-project) - Integrate Structures into your current project
+
 ### New Project Setup
 
 #### React + TypeScript Project
