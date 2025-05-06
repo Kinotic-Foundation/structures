@@ -12,9 +12,5 @@ import java.util.List;
  * Defines an Elasticsearch index or component template with column mappings.
  * Created by Navíd Mitchell 🤝Grok on 3/31/25.
  */
-@Getter
-@RequiredArgsConstructor
-public class CreateTableStatement implements Statement {
-    private final String tableName;
-    private final List<Column> columns;
+public record CreateTableStatement(String tableName, List<Column> columns) implements Statement {
 }

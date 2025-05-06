@@ -30,8 +30,8 @@ public class AlterTableStatementExecutor implements StatementExecutor<AlterTable
     public void executeMigration(AlterTableStatement statement) {
         try {
             client.indices().putMapping(m -> m
-                    .index(statement.getTableName())
-                    .properties(statement.getColumnName(), TypeMapper.mapType(statement.getType()))
+                    .index(statement.tableName())
+                    .properties(statement.columnName(), TypeMapper.mapType(statement.type()))
             ).get();
         } catch (Exception e) {
             throw new RuntimeException("Failed to execute ALTER TABLE migration", e);

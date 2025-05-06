@@ -33,26 +33,26 @@ public class CreateIndexTemplateStatementExecutor implements StatementExecutor<C
     public void executeMigration(CreateIndexTemplateStatement statement) {
         try {
             Map<String, Property> properties = new HashMap<>();
-            statement.getAdditionalDefinitions().forEach(def -> {
+            statement.additionalDefinitions().forEach(def -> {
                 if (def.isColumn()) {
-                    properties.put(def.getKey(), TypeMapper.mapType(def.getValue()));
+                    properties.put(def.key(), TypeMapper.mapType(def.value()));
                 }
             });
 
             client.indices().putIndexTemplate(t -> t
-                    .name(statement.getTemplateName())
-                    .indexPatterns(Collections.singletonList(statement.getIndexPattern()))
-                    .composedOf(Collections.singletonList(statement.getComponentTemplate()))
+                    .name(statement.templateName())
+                    .indexPatterns(Collections.singletonList(statement.indexPattern()))
+                    .composedOf(Collections.singletonList(statement.componentTemplate()))
                     .template(te -> te
                             .settings(s -> {
-                                statement.getAdditionalDefinitions().forEach(def -> {
+                                statement.additionalDefinitions().forEach(def -> {
                                     if (!def.isColumn()) {
-                                        switch (def.getKey()) {
+                                        switch (def.key()) {
                                             case "NUMBER_OF_SHARDS":
-                                                s.numberOfShards(def.getValue());
+                                                s.numberOfShards(def.value());
                                                 break;
                                             case "NUMBER_OF_REPLICAS":
-                                                s.numberOfReplicas(def.getValue());
+                                                s.numberOfReplicas(def.value());
                                                 break;
                                         }
                                     }

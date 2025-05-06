@@ -1,7 +1,7 @@
 package org.kinotic.structures.internal.sql.parser.parsers;
 
 import org.kinotic.structures.internal.sql.domain.Statement;
-import org.kinotic.structures.internal.sql.domain.statements.CreateComponentTemplateStatement;
+import org.kinotic.structures.internal.sql.domain.statements.ComponentDefinition;
 import org.kinotic.structures.internal.sql.domain.statements.CreateIndexTemplateStatement;
 import org.kinotic.structures.internal.sql.parser.StatementParser;
 import org.kinotic.structures.internal.sql.parser.StructuresSQLParser;
@@ -29,17 +29,17 @@ public class CreateIndexTemplateStatementParser implements StatementParser {
         String indexPattern = templateCtx.STRING(0).getText().replaceAll("'", "");
         String componentTemplate = templateCtx.STRING(1).getText().replaceAll("'", "");
 
-        List<CreateComponentTemplateStatement.ComponentDefinition> additionalDefinitions = new ArrayList<>();
+        List<ComponentDefinition> additionalDefinitions = new ArrayList<>();
         if (templateCtx.WITH() != null) {
             for (StructuresSQLParser.ComponentDefinitionContext def : templateCtx.componentDefinition()) {
                 if (def.NUMBER_OF_SHARDS() != null) {
-                    additionalDefinitions.add(new CreateComponentTemplateStatement.ComponentDefinition(
+                    additionalDefinitions.add(new ComponentDefinition(
                             "NUMBER_OF_SHARDS", def.INTEGER_LITERAL().getText(), false));
                 } else if (def.NUMBER_OF_REPLICAS() != null) {
-                    additionalDefinitions.add(new CreateComponentTemplateStatement.ComponentDefinition(
+                    additionalDefinitions.add(new ComponentDefinition(
                             "NUMBER_OF_REPLICAS", def.INTEGER_LITERAL().getText(), false));
                 } else if (def.columnDefinition() != null) {
-                    additionalDefinitions.add(new CreateComponentTemplateStatement.ComponentDefinition(
+                    additionalDefinitions.add(new ComponentDefinition(
                             def.columnDefinition().ID().getText(), def.columnDefinition().type().getText(), true));
                 }
             }

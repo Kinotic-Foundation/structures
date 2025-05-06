@@ -32,11 +32,11 @@ public class CreateTableStatementExecutor implements StatementExecutor<CreateTab
     public void executeMigration(CreateTableStatement statement) {
         try {
             Map<String, Property> properties = new HashMap<>();
-            statement.getColumns().forEach(col ->
-                                                   properties.put(col.getName(), TypeMapper.mapType(col.getType())));
+            statement.columns().forEach(col ->
+                                                   properties.put(col.name(), TypeMapper.mapType(col.type())));
 
             client.indices().create(c -> c
-                    .index(statement.getTableName())
+                    .index(statement.tableName())
                     .mappings(m -> m.properties(properties))
             ).get();
         } catch (Exception e) {

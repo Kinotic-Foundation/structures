@@ -10,9 +10,5 @@ import org.kinotic.structures.internal.sql.domain.WhereClause;
  * Deletes documents from an Elasticsearch index based on a WHERE clause.
  * Created by Navíd Mitchell 🤝Grok on 3/31/25.
  */
-@Getter
-@RequiredArgsConstructor
-public class DeleteStatement implements Statement {
-    private final String tableName;
-    private final WhereClause whereClause;
+public record DeleteStatement(String tableName, WhereClause whereClause) implements Statement {
 }
