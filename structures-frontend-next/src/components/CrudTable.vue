@@ -104,34 +104,38 @@ class CrudTable extends Vue {
     return { ...item }
   }
 
-  async deleteItem(item: Identifiable<string>) {
-  if (!item.id || !this.editable) return
-
-  const confirmed = await (this.$refs.confirm as any).open(
-    'Delete Item',
-    'Are you sure you want to delete this item?',
-    { width: 400, style: { maxWidth: '400px' } }
-  )
-
-  if (!confirmed) return
-
-  try {
-    const index = this.items.findIndex(i => i.id === item.id)
-    await (this.dataSource as IEditableDataSource<any>).deleteById(item.id)
-
-    this.items.splice(index, 1)
-    this.totalItems--
-
-    const totalPages = Math.ceil(this.totalItems / this.options.rows)
-    if (this.options.page >= totalPages && this.options.page > 0) {
-      this.options.page--
-    }
-
-    this.find()
-  } catch (error: any) {
-    this.displayAlert(error.message || 'Failed to delete item.')
+  @Emit()
+  onRowClick(event: { data: Identifiable<string>, index: number }) {
+    return { ...event.data }
   }
-}
+  async deleteItem(item: Identifiable<string>) {
+    if (!item.id || !this.editable) return
+
+    const confirmed = await (this.$refs.confirm as any).open(
+      'Delete Item',
+      'Are you sure you want to delete this item?',
+      { width: 400, style: { maxWidth: '400px' } }
+    )
+
+    if (!confirmed) return
+
+    try {
+      const index = this.items.findIndex(i => i.id === item.id)
+      await (this.dataSource as IEditableDataSource<any>).deleteById(item.id)
+
+      this.items.splice(index, 1)
+      this.totalItems--
+
+      const totalPages = Math.ceil(this.totalItems / this.options.rows)
+      if (this.options.page >= totalPages && this.options.page > 0) {
+        this.options.page--
+      }
+
+      this.find()
+    } catch (error: any) {
+      this.displayAlert(error.message || 'Failed to delete item.')
+    }
+  }
 
 
   search() {
@@ -206,34 +210,30 @@ export default toNative(CrudTable)
           class="!border-gray-300 !ml-4 !min-h-[33px] !w-min-[35px] !rounded-[8px] !text-gray-600 hover:!bg-gray-100" />
       </template>
       <template #end>
-        <Button v-if="editable && !disableModifications && isShowAddNew" label="Add New" @click="addItem" severity="secondary"
-          class="!bg-[#3651ED] !text-white hover:!bg-[#274bcc]" />
+        <Button v-if="editable && !disableModifications && isShowAddNew" label="Add New" @click="addItem"
+          severity="secondary" class="!bg-[#3651ED] !text-white hover:!bg-[#274bcc]" />
       </template>
     </Toolbar>
     <div class="mb-9">
 
-      <DataTable :rowsPerPageOptions="[5, 10, 20, 50]" :value="items" :paginator="true" :rows="options.rows" :totalRecords="totalItems" :lazy="true"
-        :loading="loading" :first="options.first" :sortField="options.sortField" :sortOrder="options.sortOrder"
-        :scrollable="true" scrollHeight="flex" @page="onPage" @sort="onSort" dataKey="id">
+      <DataTable :rowsPerPageOptions="[5, 10, 20, 50]" :value="items" :paginator="true" :rows="options.rows"
+        :totalRecords="totalItems" :lazy="true" :loading="loading" :first="options.first" :sortField="options.sortField"
+        :sortOrder="options.sortOrder" :scrollable="true" scrollHeight="flex" @page="onPage" @sort="onSort"
+        dataKey="id" @row-click="onRowClick">
         <Column v-for="col in computedHeaders" :key="col.field" :field="col.field" :header="col.header"
-          :sortable="col.sortable !== false" :style="col.style || ''" />
+          :sortable="col.sortable !== false" :style="col.style || ''"/>
 
         <Column v-if="editable" header="Actions" style="text-align: right">
           <template #body="slotProps">
-            <div class="flex justify-center items-center">
+            <div class="flex justify-center items-center" >
               <slot name="additional-actions" :item="slotProps.data" />
               <!-- <Button icon="pi pi-pencil" class="p-button-text p-button-sm mr-2" @click="editItem(slotProps.data)"
             v-if="!disableModifications" /> -->
               <span v-if="isShowDelete" class="text-[#D0D5DD] mx-5">|</span>
               <!-- <Button v-if="isShowDelete" icon="pi pi-trash" class="p-button-text p-button-sm !text-[#334155] !bg-white" severity="danger"
                 @click="deleteItem(slotProps.data)" /> -->
-                <Button
-  v-if="isShowDelete"
-  icon="pi pi-trash"
-  class="p-button-text p-button-sm !text-[#334155] !bg-white"
-  severity="danger"
-  @click="deleteItem(slotProps.data)"
-/>
+              <Button v-if="isShowDelete" icon="pi pi-trash" class="p-button-text p-button-sm !text-[#334155] !bg-white"
+                severity="danger" @click="deleteItem(slotProps.data)" />
 
             </div>
           </template>
@@ -248,12 +248,14 @@ export default toNative(CrudTable)
 .p-paginator {
   justify-content: flex-end !important
 }
+
 .p-datatable-table-container {
-      overflow: auto !important;
-    border: 1px solid #E2E8F0 !important;
-    border-radius: 26px !important;
-    padding: 20px !important;
+  overflow: auto !important;
+  border: 1px solid #E2E8F0 !important;
+  border-radius: 26px !important;
+  padding: 20px !important;
 }
+
 .p-datatable-paginator-bottom {
   border: none !important
 }
