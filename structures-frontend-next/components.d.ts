@@ -19,6 +19,9 @@ declare module 'vue' {
     DashboardIcon: typeof import('./src/components/Images/DashboardIcon.vue')['default']
     DataTable: typeof import('primevue/datatable')['default']
     Dialog: typeof import('primevue/dialog')['default']
+    Entity: typeof import('./src/components/Entity.vue')['default']
+    EntityNode: typeof import('./src/components/EntityNode.vue')['default']
+    ERTable: typeof import('./src/components/modals/ERTable.vue')['default']
     FloatLabel: typeof import('primevue/floatlabel')['default']
     Form: typeof import('@primevue/forms/form')['default']
     Glitch: typeof import('./src/components/Glitch.vue')['default']
@@ -33,6 +36,7 @@ declare module 'vue' {
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     SideNav: typeof import('./src/components/SideNav.vue')['default']
+    StructureItemModal: typeof import('./src/components/modals/StructureItemModal.vue')['default']
     Toast: typeof import('primevue/toast')['default']
     Toolbar: typeof import('primevue/toolbar')['default']
   }
