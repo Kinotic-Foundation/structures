@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { Person } from '../domain/Person.js'
 import { PersonEntityService } from '../services/PersonEntityService.js'
 import { Pageable, Continuum } from '@kinotic/continuum-client'
+import { Dog, Cat } from '../domain/Pet.js'
 
 const people = ref<Person[]>([])
 const loading = ref(true)
@@ -20,6 +21,16 @@ async function loadPeople() {
         })
         const personService = new PersonEntityService()
         if (people.value.length === 0) {
+            const max = new Dog()
+            max.name = 'Max'
+            max.breed = 'Golden Retriever'
+            max.isGoodBoy = true
+
+            const luna = new Cat()
+            luna.name = 'Luna'
+            luna.lives = 9
+            luna.isIndoor = true
+
             const dummyPeople = [
                 {
                     id: null,
@@ -44,12 +55,7 @@ async function loadPeople() {
                             zipCode: '94043'
                         }
                     ],
-                    pet: {
-                        name: 'Max',
-                        type: 'DOG',
-                        breed: 'Golden Retriever',
-                        isGoodBoy: true
-                    }
+                    pet: max
                 },
                 {
                     id: null,
@@ -66,12 +72,7 @@ async function loadPeople() {
                             zipCode: '98101'
                         }
                     ],
-                    pet: {
-                        name: 'Luna',
-                        type: 'CAT',
-                        lives: 9,
-                        isIndoor: true
-                    }
+                    pet: luna
                 },
                 {
                     id: null,
@@ -89,7 +90,8 @@ async function loadPeople() {
                             zipCode: '78701',
                             additionalInfo: 'Studio 5'
                         }
-                    ]
+                    ],
+                    pet: null
                 }
             ]
             for (const person of dummyPeople) {

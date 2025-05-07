@@ -37,5 +37,5 @@ export class Person {
     public pet: Dog | Cat | null = null
 
     @Version
-    public version: number = 0
+    public version: string | null = null
 } 
