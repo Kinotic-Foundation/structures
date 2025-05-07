@@ -1,7 +1,5 @@
 package org.kinotic.structures.internal.sql.domain.statements;
 
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import org.kinotic.structures.internal.sql.domain.Statement;
 import org.kinotic.structures.internal.sql.domain.WhereClause;
 
