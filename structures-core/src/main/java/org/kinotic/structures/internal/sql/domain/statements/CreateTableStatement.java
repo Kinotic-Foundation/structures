@@ -1,11 +1,9 @@
 package org.kinotic.structures.internal.sql.domain.statements;
 
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
+import java.util.List;
+
 import org.kinotic.structures.internal.sql.domain.Column;
 import org.kinotic.structures.internal.sql.domain.Statement;
-
-import java.util.List;
 
 /**
  * Represents a CREATE TABLE statement in the DSL.
