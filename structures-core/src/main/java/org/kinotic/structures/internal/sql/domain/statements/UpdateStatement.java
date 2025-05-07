@@ -1,12 +1,10 @@
 package org.kinotic.structures.internal.sql.domain.statements;
 
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
+import java.util.Map;
+
 import org.kinotic.structures.internal.sql.domain.Expression;
 import org.kinotic.structures.internal.sql.domain.Statement;
 import org.kinotic.structures.internal.sql.domain.WhereClause;
-
-import java.util.Map;
 
 /**
  * Represents an UPDATE statement in the DSL.

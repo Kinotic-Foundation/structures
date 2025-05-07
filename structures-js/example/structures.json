@@ -1,0 +1,14 @@
+{
+  "namespaces": [
+    {
+      "namespaceName": "example",
+      "entitiesPaths": [
+        "src/domain"
+      ],
+      "generatedPath": "src/services",
+      "validate": false
+    }
+  ],
+  "defaultNamespaceName": "example",
+  "fileExtensionForImports": ".js"
+}
