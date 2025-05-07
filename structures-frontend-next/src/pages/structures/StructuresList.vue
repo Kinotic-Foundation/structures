@@ -87,12 +87,8 @@ export default class StructuresList extends Vue {
     unpublish: mdiUmbraco,
     graph: mdiGraphql
   }
-  mounted() {
-    console.log(STRUCTURES_STATE.isModalOpen.value, "alksjhdlsajdlksajdl")
-  }
   private dataSource: IStructureService = Structures.getStructureService()
   openModal(item: any) {
-    // console.log(item, ")))))))))))))))))))))))))))))))000")
     STRUCTURES_STATE.openModal(item)
   }
   closeModal() {

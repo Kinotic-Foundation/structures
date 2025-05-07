@@ -2,7 +2,7 @@
   <Dialog modal v-model:visible="visible" header="Structure Details" :style="{ width: '80vw' }"
     :breakpoints="{ '1199px': '90vw', '575px': '95vw' }" @hide="onHide">
     <div class="h-[600px]">
-      <VueFlow ref="flow" :nodes="nodes" :edges="edges" :node-types="nodeTypes">
+      <VueFlow ref="flow" :nodes="flowNodes" :edges="flowEdges" :node-types="nodeTypes">
         <Background pattern-color="#ccc" :gap="20" />
         <MiniMap />
         <Controls position="top-left" />
@@ -36,9 +36,8 @@ export default class StructureItemModal extends Vue {
   @Prop({ default: null }) item!: any
   visible = true
 
-  _edges: Edge[] = []
-  _nodeCounter = 0
-  _yOffset = 50
+  flowNodes: Node[] = []
+  flowEdges: Edge[] = []
 
   @Emit('close')
   closeModal() {
@@ -56,95 +55,114 @@ export default class StructureItemModal extends Vue {
     }
   }
 
-  get nodes(): Node[] {
+  mounted() {
+    this.setupGraph()
+  }
+
+  setupGraph() {
     const entity = this.item?.entityDefinition
-    if (!entity) return []
+    if (!entity || !Array.isArray(entity.properties)) return
 
-    this._edges = []
-    this._nodeCounter = 0
-    this._yOffset = 50
-
+    this.flowEdges = []
+    let nodeCounter = 0
+    let yOffset = 20
     const nodes: Node[] = []
-
+    const getRandomColor = (): string => {
+  const colors = ['bg-orange-300', 'bg-blue-300', 'bg-green-300', 'bg-purple-300', 'bg-pink-300', 'bg-yellow-300', 'bg-teal-300']
+  return colors[Math.floor(Math.random() * colors.length)]
+}
     const createNode = (id: string, label: string, fields: string[], depth = 0): string => {
-      const nodeId = `${id}_${this._nodeCounter++}`
+      const nodeId = `${id}_${nodeCounter++}`
       nodes.push({
         id: nodeId,
         type: 'erTable',
-        position: { x: 100 + depth * 350, y: this._yOffset },
-        data: {
-          label,
-          fields,
-        },
+        position: { x: 100 + depth * 350, y: yOffset },
+        data: { label, fields, color: getRandomColor(), },
       })
-      this._yOffset += Math.max(120, fields.length * 25 + 40)
+      if (fields.length === 0) yOffset += 200 
+      console.log(fields.length, "asdasdsada  ")
+      // yOffset += Math.max(120, fields.length * 10 + 170)
+      yOffset += 20
       return nodeId
     }
 
-    const processEntity = (obj: any, label: string, depth = 0): string => {
+    const processProperties = (properties: any[], label: string, depth = 0): string => {
       const fields: string[] = []
-      const fieldIndexMap: Record<string, number> = {}
       const nodeId = createNode(label, label, fields, depth)
 
-      for (const key of Object.keys(obj)) {
-        const value = obj[key]
+      properties.forEach((prop: any, idx: number) => {
+        const propName = prop.name || `prop${idx}`
+        const type = prop.type?.type
+        let fieldLabel = `${propName}: ${type}`
+        let childId = ''
 
-        const currentIndex = fields.length
-
-        if (Array.isArray(value)) {
-          fields.push(`${key}: array`)
-          fieldIndexMap[key] = currentIndex
-
-          value.forEach((v, idx) => {
-            if (typeof v === 'object') {
-              const childId = processEntity(v, `${label}_${key}_${idx}`, depth + 1)
-              this._edges.push({
-                id: `e-${nodeId}-${childId}`,
-                source: nodeId,
-                sourceHandle: `out-${currentIndex}`,
-                target: childId,
-                targetHandle: 'in-0',
-                type: 'default',
-                animated: true,
-                markerEnd: { type: MarkerType.Arrow },
-              })
-            }
+        if (type === 'object' && Array.isArray(prop.type?.properties)) {
+          childId = processProperties(prop.type.properties, prop.type.name || propName, depth + 1)
+        } else if (type === 'array' && prop.type.contains?.type === 'object') {
+          fieldLabel = `${propName}: ${(prop.type.contains.name || propName)}[]`
+          childId = processProperties(prop.type.contains.properties, prop.type.contains.name || propName, depth + 1)
+        } else if (type === 'union' && Array.isArray(prop.type.types)) {
+          fieldLabel = `${propName}: union`
+          prop.type.types.forEach((unionType: any, idx: number) => {
+            const enumName = prop.type.types?.[idx]?.name;
+            const unionId = processProperties(unionType.properties || [], `${enumName}`, depth + 1)
+            console.log('nodeId => ', nodeId, unionId)
+            this.flowEdges.push({
+              id: `e-${nodeId}-${unionId}`,
+              source: nodeId,
+              sourceHandle: `out-${fields.length}`,
+              target: unionId,
+              targetHandle: 'in-0',
+              type: 'default',
+              animated: true,
+              markerEnd: { type: MarkerType.Arrow },
+            })
           })
-        } else if (typeof value === 'object' && value !== null) {
-          fields.push(`${key}: object`)
-          fieldIndexMap[key] = currentIndex
+        }
+        else if (type === 'enum' && Array.isArray(prop.type?.values)) {
+          fieldLabel = `${propName}: ${prop.type?.name || 'enum'}`
 
-          const childId = processEntity(value, `${label}_${key}`, depth + 1)
-          this._edges.push({
+          const enumLabel = prop.type?.name || `${propName}_Enum`
+          const enumFields = prop.type.values.map((val: string) => `• ${val}`)
+
+          const enumNodeId = createNode(`${propName}_enum`, enumLabel, enumFields, depth + 1)
+
+          this.flowEdges.push({
+            id: `e-${nodeId}-${enumNodeId}`,
+            source: nodeId,
+            sourceHandle: `out-${fields.length}`,
+            target: enumNodeId,
+            targetHandle: 'in-0',
+            type: 'default',
+            animated: true,
+            markerEnd: { type: MarkerType.Arrow },
+          })
+        }
+        fields.push(fieldLabel)
+
+        if (childId) {
+          this.flowEdges.push({
             id: `e-${nodeId}-${childId}`,
             source: nodeId,
-            sourceHandle: `out-${currentIndex}`,
+            sourceHandle: `out-${fields.length - 1}`,
             target: childId,
             targetHandle: 'in-0',
             type: 'default',
             animated: true,
             markerEnd: { type: MarkerType.Arrow },
           })
-        } else {
-          fields.push(`${key}: ${typeof value}`)
-          fieldIndexMap[key] = currentIndex
         }
-      }
+      })
 
       return nodeId
     }
-
-    processEntity(entity, entity.name || 'Root')
+    console.log('entity => ', entity)
+    processProperties(entity.properties, entity.name || 'Root')
+    this.flowNodes = nodes
 
     this.$nextTick(() => {
       (this.$refs.flow as any)?.fitView?.()
     })
-
-    return nodes
-  }
-
-  get edges(): Edge[] {
-    return this._edges
   }
 }
 </script>
