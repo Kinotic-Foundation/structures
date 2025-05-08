@@ -90,8 +90,12 @@ public class ParameterProcessorExecutor extends AbstractQueryExecutor {
                                       Object value,
                                       QueryContext context) {
         if(property.equals(queryMetadata.getTenantSelectionParameterName())) {
-            //noinspection unchecked
-            context.getEntityContext().setTenantSelection((List<String>) value);
+            if (!(value instanceof List<?> list)) {
+                throw new IllegalArgumentException("Tenant selection must be a List");
+            }
+            @SuppressWarnings("unchecked")
+            List<String> tenantList = (List<String>) list;
+            context.getEntityContext().setTenantSelection(tenantList);
         }else if(property.equals(queryMetadata.getQueryOptionsParameterName())) {
             context.setQueryOptions((QueryOptions) value);
         }else if(property.toLowerCase().equals(timeZoneOptionName)){
