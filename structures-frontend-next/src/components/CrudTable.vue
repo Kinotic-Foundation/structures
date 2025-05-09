@@ -221,7 +221,13 @@ export default toNative(CrudTable)
         :sortOrder="options.sortOrder" :scrollable="true" scrollHeight="flex" @page="onPage" @sort="onSort"
         dataKey="id" @row-click="onRowClick">
         <Column v-for="col in computedHeaders" :key="col.field" :field="col.field" :header="col.header"
-          :sortable="col.sortable !== false" :style="col.style || ''"/>
+        :sortable="col.sortable !== false">
+          <template #body="slotProps">
+            <slot :name="`item.${col.field}`" :item="slotProps.data">
+              {{ slotProps.data[col.field] }}
+            </slot>
+          </template>
+        </Column>
 
         <Column v-if="editable" header="Actions" style="text-align: right">
           <template #body="slotProps">

@@ -6,12 +6,17 @@
                     'z-30 relative flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer',
                     isParentNavSelected(item) ? 'text-white/80 border-none bg-[#2D2F39]' : 'border-transparent text-white/80 hover:border-none hover:bg-[#2D2F39] text-white/50',
                     collapsed ? 'justify-center' : ''
-                ]" @click="navClicked(item)">
+                ]" @click="navClicked(item)" v-tooltip.right="{
+                    value: collapsed ? item.label : null, pt: {
+                        text: '!bg-[#2D2F39] !text-primary-contrast !font-medium'
+                    }
+                }">
                     <img :src="getIconUrl(item.icon)" class="w-5 h-5" />
                     <span v-if="!collapsed" class="flex-1 font-medium">{{ item.label }}</span>
                     <i v-if="!collapsed && item?.children?.length !== 0"
                         class="pi pi-chevron-down text-sm leading-none" />
                 </div>
+
                 <div v-if="isParentNavSelected(item) && item.children.length && !collapsed"
                     class="relative pl-1.5 flex flex-col transition-all duration-500 mt-2"
                     :class="isParentNavSelected(item) ? 'opacity-100' : 'opacity-0'">
@@ -54,14 +59,13 @@
         </template>
     </ul>
 </template>
-
-<style scoped></style>
-
 <script lang="ts">
 import { NavItem } from '@/components/NavItem.js'
 import { Vue, Component, Prop, Model } from 'vue-facing-decorator'
-
-@Component({})
+import Tooltip from 'primevue/tooltip';
+@Component({
+    tooltip: Tooltip
+})
 export default class SideNav extends Vue {
 
     @Prop({ required: true }) navItems!: NavItem[]

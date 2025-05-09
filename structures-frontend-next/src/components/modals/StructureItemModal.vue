@@ -1,7 +1,7 @@
 <template>
-  <Dialog modal v-model:visible="visible" header="Structure Details" :style="{ width: '80vw' }"
-    :breakpoints="{ '1199px': '90vw', '575px': '95vw' }" @hide="onHide">
-    <div class="h-[600px]">
+  <Dialog modal v-model:visible="visible" header="Structure Details" :style="{ width: '100vw', height: '100vh' }"
+     @hide="onHide">
+    <div class="h-[600vh]">
       <VueFlow ref="flow" :nodes="flowNodes" :edges="flowEdges" :node-types="nodeTypes">
         <Background pattern-color="#ccc" :gap="20" />
         <MiniMap />
@@ -108,7 +108,7 @@ export default class StructureItemModal extends Vue {
             const unionId = processProperties(unionType.properties || [], `${enumName}`, depth + 1)
             console.log('nodeId => ', nodeId, unionId)
             this.flowEdges.push({
-              id: `e-${nodeId}-${unionId}`,
+              id: `e-${nodeId}-${childId}`,
               source: nodeId,
               sourceHandle: `out-${fields.length}`,
               target: unionId,
@@ -128,7 +128,7 @@ export default class StructureItemModal extends Vue {
           const enumNodeId = createNode(`${propName}_enum`, enumLabel, enumFields, depth + 1)
 
           this.flowEdges.push({
-            id: `e-${nodeId}-${enumNodeId}`,
+            id: `e-${nodeId}-${childId}`,
             source: nodeId,
             sourceHandle: `out-${fields.length}`,
             target: enumNodeId,
