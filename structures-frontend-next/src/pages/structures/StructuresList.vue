@@ -1,6 +1,6 @@
 <template>
   <div class="pt-4">
-    <CrudTable title="Structures" subtitle="" :data-source="dataSource" :headers="headers" :singleExpand="false"
+    <CrudTable title="Structures" :initial-search="searchParam" subtitle="" :data-source="dataSource" :headers="headers" :singleExpand="false"
       ref="crudTable" :isShowAddNew="false" :isShowDelete="true" @onRowClick="openModal">
       <template #item.id="{ item }">
         <span>{{ item.id }}</span>
@@ -95,6 +95,9 @@ export default class StructuresList extends Vue {
     database: mdiDatabase,
     unpublish: mdiUmbraco,
     graph: mdiGraphql
+  }
+  get searchParam() {
+    return this.$route.query.search as string || ''
   }
   private dataSource: IStructureService = Structures.getStructureService()
   openModal(item: any) {

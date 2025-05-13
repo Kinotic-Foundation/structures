@@ -43,11 +43,13 @@ class CrudTable extends Vue {
   @Prop({ default: '' }) subtitle!: string
   @Prop({ default: true }) isShowAddNew!: boolean
   @Prop({ default: true }) isShowDelete!: boolean
+  @Prop({ default: '' }) initialSearch!: string
 
   items: Identifiable<string>[] = []
   totalItems = 0
   loading = false
   finishedInitialLoad = false
+  searchDebounceTimer: any
 
   searchText: string | null = ''
   options = {
@@ -67,9 +69,14 @@ class CrudTable extends Vue {
   }
 
   mounted() {
+    this.searchText = (this.$route.query.search as string) || ''
     this.find()
   }
-
+  @Watch('searchText')
+  onSearchTextChanged(newVal: string) {
+    const query = { ...this.$route.query, search: newVal || undefined }
+    this.$router.replace({ query })
+  }
   @Watch('dataSource', { immediate: true })
   onDataSourceChanged(newVal: IDataSource<any>) {
     if (newVal) {
@@ -90,11 +97,23 @@ class CrudTable extends Vue {
     this.find()
   }
 
+  // onSearchChange() {
+  //   this.options.page = 0
+  //   this.options.first = 0
+  //   this.find()
+  // }
+  beforeUnmount() {
+  clearTimeout(this.searchDebounceTimer)
+}
   onSearchChange() {
+  clearTimeout(this.searchDebounceTimer)
+  this.searchDebounceTimer = setTimeout(() => {
     this.options.page = 0
     this.options.first = 0
     this.find()
-  }
+  }, 500)
+}
+
 
   @Emit()
   addItem() { }
@@ -157,7 +176,7 @@ class CrudTable extends Vue {
       }
 
       const pageable = Pageable.create(this.options.page, this.options.rows, { orders })
-
+      
       let queryPromise: Promise<Page<any>>
       if (this.searchText) {
         queryPromise = this.dataSource.search(this.searchText, pageable)
