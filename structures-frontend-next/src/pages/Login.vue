@@ -1,6 +1,6 @@
 <template>
-  <div class="flex w-full justify-center items-center h-screen">
-    <div class="w-1/2 h-full bg-[url(@/assets/login-page-image.png)] bg-no-repeat bg-contain">
+  <div class="flex w-full justify-center items-center h-screen max-w-[1440px] mx-auto">
+      <div class="hidden md:block w-1/2 h-full bg-[url(@/assets/login-page-image.png)] bg-no-repeat bg-cover bg-bottom-left">
     </div>
     <div class="w-1/2 h-full flex flex-col justify-around items-center bg-center bg-cover">
       <div class="w-[320px] flex flex-col items-center">
