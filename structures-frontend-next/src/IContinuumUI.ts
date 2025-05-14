@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory, type NavigationGuardNext, type RouterOptions, type RouteLocationNormalizedLoaded, type Router } from 'vue-router';
+import { createRouter, createWebHistory, type RouterOptions, type Router } from 'vue-router';
 import { reactive } from 'vue';
 import { StructuresStates } from './states';
 
@@ -16,12 +16,11 @@ class ContinuumUI implements IContinuumUI {
     constructor() {}
 
     public initialize(routerOptions: Omit<RouterOptions, 'history'>): Router {
-        console.log(StructuresStates.getUserState().isAuthenticated(), "LLLLKKKKKKLLLL")
         this.router = createRouter({
             history: createWebHistory(),  // You can use createWebHashHistory() if needed
             ...routerOptions
         });
-        this.router.beforeEach((to, from, next) => {
+        this.router.beforeEach((to, _from, next) => {
             const { authenticationRequired } = to.meta as { authenticationRequired?: boolean };
         
             if ((authenticationRequired === undefined || authenticationRequired)
@@ -33,10 +32,6 @@ class ContinuumUI implements IContinuumUI {
                 next();
             }
         });
-
-        if (StructuresStates.getFrontendState) {
-            StructuresStates.getFrontendState().initialize(this.router);
-        }
 
         return this.router;
     }

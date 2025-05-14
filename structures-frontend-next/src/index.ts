@@ -1,5 +1,3 @@
-import './plugins/vue-notification'
-
 export * from './states'
 // export * from './components'
 // export * from './layouts'

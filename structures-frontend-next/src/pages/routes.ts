@@ -6,7 +6,7 @@ const pageRoutes: RouteRecordRaw[] = [
       component: () => import('@/layouts/MainLayout.vue'),
       name: "Dashboard",
       meta: {
-        requiresAuth: true,
+        authenticationRequired: true,
         showInMainNav: true,
         icon: 'dashboard.svg',
         label: 'Dashboard',
@@ -15,7 +15,7 @@ const pageRoutes: RouteRecordRaw[] = [
         {
           path: '',
           component: () => import('@/pages/Test.vue'),
-          meta: { requiresAuth: false }
+          meta: { authenticationRequired: true }
         },
       ]
     },
@@ -24,7 +24,7 @@ const pageRoutes: RouteRecordRaw[] = [
       component: () => import('@/layouts/MainLayout.vue'),
       name: "Applications",
       meta: {
-        requiresAuth: true,
+        authenticationRequired: true,
         showInMainNav: true,
         icon: 'microchip.svg',
         label: 'Applications',
@@ -33,29 +33,8 @@ const pageRoutes: RouteRecordRaw[] = [
         {
           path: '',
           component: () => import('@/pages/NamespaceList.vue'),
-          meta: { requiresAuth: false }
-        },
-        {
-          path: 'list',
-          name: "List",
-          component: () => import('@/pages/Test.vue'),
-          meta: {
-            authenticationRequired: true,
-            showInMainNav: true,
-            icon: '',
-            label: 'List',
-          } as RouteMeta,
-        },
-        {
-          path: 'test3',
-          component: () => import('@/pages/Test2.vue'),
-          meta: {
-            authenticationRequired: true,
-            showInMainNav: true,
-            icon: '',
-            label: 'Test Two',
-          } as RouteMeta,
-        },
+          meta: { authenticationRequired: true }
+        }
       ]
     },
     {
@@ -81,7 +60,7 @@ const pageRoutes: RouteRecordRaw[] = [
         {
           path: '',
           component: () => import('@/pages/structures/StructuresList.vue'),
-          meta: { requiresAuth: true }
+          meta: { authenticationRequired: true }
         }
       ]
     },
@@ -125,7 +104,7 @@ const pageRoutes: RouteRecordRaw[] = [
         {
           path: '',
           component: () => import('@/pages/Users.vue'),
-          meta: { authenticationRequired: false }
+          meta: { authenticationRequired: true }
         },
         
       ]
