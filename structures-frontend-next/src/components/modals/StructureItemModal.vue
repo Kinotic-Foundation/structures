@@ -1,19 +1,41 @@
 <template>
-  <Dialog modal v-model:visible="visible" header="Structure Details" :style="{ width: '80vw' }"
-    :breakpoints="{ '1199px': '90vw', '575px': '95vw' }" @hide="onHide">
-    <div class="h-[600px]">
-      <VueFlow ref="flow" :nodes="flowNodes" :edges="flowEdges" :node-types="nodeTypes">
-        <Background pattern-color="#ccc" :gap="20" />
-        <MiniMap />
-        <Controls position="top-left" />
-      </VueFlow>
+  <div
+    v-show="visible"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+  >
+    <div class="relative w-full h-screen bg-white shadow-lg overflow-hidden">
+      <div class="flex items-center justify-between p-4 border-b border-gray-200">
+        <h3 class="text-xl font-semibold text-gray-900">Structure Details</h3>
+        <button
+          @click="onHide"
+          class="text-gray-400 hover:text-gray-900 hover:bg-gray-200 rounded-lg text-sm w-8 h-8 flex items-center justify-center"
+        >
+          <svg class="w-3 h-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
+            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="h-full">
+        <VueFlow
+          ref="flow"
+          :nodes="flowNodes"
+          :edges="flowEdges"
+          :node-types="nodeTypes"
+        >
+          <Background pattern-color="#ccc" :gap="20" />
+          <MiniMap />
+          <Controls position="top-left" />
+        </VueFlow>
+      </div>
     </div>
-  </Dialog>
+  </div>
 </template>
 
 <script lang="ts">
 import { Vue, Prop, Emit, Component } from 'vue-facing-decorator'
-import Dialog from 'primevue/dialog'
+
 import { VueFlow, type Node, type Edge, MarkerType } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
@@ -25,7 +47,6 @@ import '@vue-flow/core/dist/theme-default.css'
 
 @Component({
   components: {
-    Dialog,
     VueFlow,
     Background,
     Controls,
@@ -68,23 +89,24 @@ export default class StructureItemModal extends Vue {
     let yOffset = 20
     const nodes: Node[] = []
     const getRandomColor = (): string => {
-  const colors = ['bg-orange-300', 'bg-blue-300', 'bg-green-300', 'bg-purple-300', 'bg-pink-300', 'bg-yellow-300', 'bg-teal-300']
-  return colors[Math.floor(Math.random() * colors.length)]
-}
+      const colors = ['bg-orange-300', 'bg-blue-300', 'bg-green-300', 'bg-purple-300', 'bg-pink-300', 'bg-yellow-300', 'bg-teal-300']
+      return colors[Math.floor(Math.random() * colors.length)]
+    }
     const createNode = (id: string, label: string, fields: string[], depth = 0): string => {
       const nodeId = `${id}_${nodeCounter++}`
+      const estimatedHeight = Math.max(150, 50 + fields.length * 20)
+
       nodes.push({
         id: nodeId,
         type: 'erTable',
         position: { x: 100 + depth * 350, y: yOffset },
-        data: { label, fields, color: getRandomColor(), },
+        data: { label, fields, color: getRandomColor() },
       })
-      if (fields.length === 0) yOffset += 200 
-      console.log(fields.length, "asdasdsada  ")
-      // yOffset += Math.max(120, fields.length * 10 + 170)
-      yOffset += 20
+
+      yOffset += estimatedHeight + 40
       return nodeId
     }
+
 
     const processProperties = (properties: any[], label: string, depth = 0): string => {
       const fields: string[] = []
@@ -103,12 +125,12 @@ export default class StructureItemModal extends Vue {
           childId = processProperties(prop.type.contains.properties, prop.type.contains.name || propName, depth + 1)
         } else if (type === 'union' && Array.isArray(prop.type.types)) {
           fieldLabel = `${propName}: union`
-          prop.type.types.forEach((unionType: any, idx: number) => {
-            const enumName = prop.type.types?.[idx]?.name;
-            const unionId = processProperties(unionType.properties || [], `${enumName}`, depth + 1)
-            console.log('nodeId => ', nodeId, unionId)
+          prop.type.types.forEach((unionType: any, uIdx: number) => {
+            const enumName = unionType.name || `${propName}_Union_${uIdx}`
+            const unionId = processProperties(unionType.properties || [], enumName, depth + 1)
+
             this.flowEdges.push({
-              id: `e-${nodeId}-${unionId}`,
+              id: `e-${nodeId}-union-${uIdx}`,
               source: nodeId,
               sourceHandle: `out-${fields.length}`,
               target: unionId,
@@ -118,10 +140,8 @@ export default class StructureItemModal extends Vue {
               markerEnd: { type: MarkerType.Arrow },
             })
           })
-        }
-        else if (type === 'enum' && Array.isArray(prop.type?.values)) {
+        } else if (type === 'enum' && Array.isArray(prop.type?.values)) {
           fieldLabel = `${propName}: ${prop.type?.name || 'enum'}`
-
           const enumLabel = prop.type?.name || `${propName}_Enum`
           const enumFields = prop.type.values.map((val: string) => `• ${val}`)
 
@@ -138,6 +158,7 @@ export default class StructureItemModal extends Vue {
             markerEnd: { type: MarkerType.Arrow },
           })
         }
+
         fields.push(fieldLabel)
 
         if (childId) {
@@ -156,7 +177,7 @@ export default class StructureItemModal extends Vue {
 
       return nodeId
     }
-    console.log('entity => ', entity)
+
     processProperties(entity.properties, entity.name || 'Root')
     this.flowNodes = nodes
 
