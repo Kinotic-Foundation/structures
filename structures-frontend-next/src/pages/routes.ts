@@ -86,6 +86,23 @@ const pageRoutes: RouteRecordRaw[] = [
       ]
     },
     {
+      path: '/entity/:id',
+      component: () => import('@/layouts/MainLayout.vue'),
+      meta: {
+        authenticationRequired: true,
+        showInMainNav: false,
+        icon: 'objects-column.svg',
+        label: 'Structure Details',
+      } as RouteMeta,
+      children: [
+        {
+          path: '',
+          component: () => import('@/pages/structures/entity/EntityList.vue'),
+          meta: { requiresAuth: true }
+        }
+      ]
+    },
+    {
       path: '/application-add',
       component: () => import('@/pages/NamespaceAddEdit.vue'),
       meta: {

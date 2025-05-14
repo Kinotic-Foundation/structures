@@ -10,7 +10,6 @@ import ToastService from 'primevue/toastservice'
 import { CONTINUUM_UI } from '@/IContinuumUI'
 import 'primeicons/primeicons.css'
 
-
 const app = createApp(App);
 app.use(PrimeVue, {
     theme: {
