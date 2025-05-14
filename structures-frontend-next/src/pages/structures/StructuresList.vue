@@ -106,6 +106,9 @@ export default class StructuresList extends Vue {
   closeModal() {
     STRUCTURES_STATE.closeModal()
   }
+  unmounted() {
+    this.closeModal()
+  }
   formatDate(dateStr: string): string {
   const date = new Date(dateStr)
   return new Intl.DateTimeFormat('en-US', {

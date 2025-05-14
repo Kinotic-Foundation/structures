@@ -49,5 +49,4 @@ const isCollapsed = ref(false)
 
 const applicationState = StructuresStates.getApplicationState()
 
-
 </script>
