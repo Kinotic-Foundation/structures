@@ -83,6 +83,12 @@ public interface StructuresSQLVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitDeleteStatement(StructuresSQLParser.DeleteStatementContext ctx);
 	/**
+	 * Visit a parse tree produced by {@link StructuresSQLParser#insertStatement}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitInsertStatement(StructuresSQLParser.InsertStatementContext ctx);
+	/**
 	 * Visit a parse tree produced by {@link StructuresSQLParser#assignment}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
@@ -136,4 +142,16 @@ public interface StructuresSQLVisitor<T> extends ParseTreeVisitor<T> {
 	 * @return the visitor result
 	 */
 	T visitComment(StructuresSQLParser.CommentContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link StructuresSQLParser#tableName}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitTableName(StructuresSQLParser.TableNameContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link StructuresSQLParser#columnName}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitColumnName(StructuresSQLParser.ColumnNameContext ctx);
 }

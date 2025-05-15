@@ -161,6 +161,18 @@ public class StructuresSQLBaseListener implements StructuresSQLListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
+	@Override public void enterInsertStatement(StructuresSQLParser.InsertStatementContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitInsertStatement(StructuresSQLParser.InsertStatementContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
 	@Override public void enterAssignment(StructuresSQLParser.AssignmentContext ctx) { }
 	/**
 	 * {@inheritDoc}
@@ -264,6 +276,30 @@ public class StructuresSQLBaseListener implements StructuresSQLListener {
 	 * <p>The default implementation does nothing.</p>
 	 */
 	@Override public void exitComment(StructuresSQLParser.CommentContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterTableName(StructuresSQLParser.TableNameContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitTableName(StructuresSQLParser.TableNameContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterColumnName(StructuresSQLParser.ColumnNameContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitColumnName(StructuresSQLParser.ColumnNameContext ctx) { }
 
 	/**
 	 * {@inheritDoc}
