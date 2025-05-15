@@ -1,11 +1,11 @@
-package org.kinotic.structures.internal.sql.parser;
+package org.kinotic.structures.sql.parser;
 
 import lombok.RequiredArgsConstructor;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
-import org.kinotic.structures.internal.sql.domain.Migration;
-import org.kinotic.structures.internal.sql.domain.Statement;
+import org.kinotic.structures.sql.domain.Migration;
+import org.kinotic.structures.sql.domain.Statement;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;

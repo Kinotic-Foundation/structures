@@ -1,12 +1,14 @@
-package org.kinotic.structures.internal.sql;
+package org.kinotic.structures.sql;
 
-import org.kinotic.structures.api.config.StructuresProperties;
-import org.kinotic.structures.internal.sql.domain.Migration;
-import org.kinotic.structures.internal.sql.executor.MigrationExecutor;
-import org.kinotic.structures.internal.sql.parser.MigrationParser;
+import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
+import org.kinotic.structures.sql.domain.Migration;
+import org.kinotic.structures.sql.executor.MigrationExecutor;
+import org.kinotic.structures.sql.parser.MigrationParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.InitializingBean;
+import org.springframework.context.ApplicationListener;
+import org.springframework.context.event.ContextRefreshedEvent;
+import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
@@ -23,51 +25,55 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 
 /**
- * Loads system migrations from the filesystem and applies them early in application startup.
- * This component has the highest precedence to ensure migrations are applied before dependent beans are initialized.
- * Created by Navíd Mitchell 🤪🤝Grok on 5/14/25.
+ * Loads system migrations from the filesystem and applies them after the Elasticsearch client is configured
+ * but before other components are initialized.
  */
 @Component
-@Order(0) // Highest priority - ensure this runs before any other beans are initialized
-public class SystemMigrator implements InitializingBean {
+@Order(Ordered.HIGHEST_PRECEDENCE + 1) // Run after Elasticsearch client is configured
+public class SystemMigrator implements ApplicationListener<ContextRefreshedEvent> {
     private static final Logger log = LoggerFactory.getLogger(SystemMigrator.class);
-    private static final String MIGRATIONS_PATH = "classpath:migrations/system/*.sql";
+    private static final String MIGRATIONS_PATH = "classpath:migrations/*.sql";
     
     private final MigrationExecutor migrationExecutor;
     private final MigrationParser migrationParser;
     private final ResourceLoader resourceLoader;
     
-    public SystemMigrator(MigrationExecutor migrationExecutor,
-                          MigrationParser migrationParser,
-                          ResourceLoader resourceLoader) {
+    public SystemMigrator(MigrationExecutor migrationExecutor, 
+                         MigrationParser migrationParser,
+                         ResourceLoader resourceLoader) {
         this.migrationExecutor = migrationExecutor;
         this.migrationParser = migrationParser;
         this.resourceLoader = resourceLoader;
     }
     
     @Override
-    public void afterPropertiesSet() throws Exception {
+    public void onApplicationEvent(ContextRefreshedEvent event) {
         log.info("Initializing system migrations...");
         
-        // First ensure the migration index exists
-        boolean indexCreated = migrationExecutor.ensureMigrationIndexExists().get();
-        if (indexCreated) {
-            log.info("Created migration history index");
-        }
-        
-        // Load and apply system migrations
-        List<Migration> systemMigrations = loadSystemMigrations();
-        if (!systemMigrations.isEmpty()) {
-            log.info("Found {} system migrations to apply", systemMigrations.size());
-            try {
-                migrationExecutor.executeSystemMigrations(systemMigrations).get();
-                log.info("Successfully applied all system migrations");
-            } catch (ExecutionException ex) {
-                log.error("Failed to apply system migrations", ex.getCause());
-                throw new RuntimeException("Failed to apply system migrations", ex.getCause());
+        try {
+            // First ensure the migration index exists
+            boolean indexCreated = migrationExecutor.ensureMigrationIndexExists().get();
+            if (indexCreated) {
+                log.info("Created migration history index");
             }
-        } else {
-            log.info("No system migrations found");
+            
+            // Load and apply system migrations
+            List<Migration> systemMigrations = loadSystemMigrations();
+            if (!systemMigrations.isEmpty()) {
+                log.info("Found {} system migrations to apply", systemMigrations.size());
+                try {
+                    migrationExecutor.executeSystemMigrations(systemMigrations).get();
+                    log.info("Successfully applied all system migrations");
+                } catch (ExecutionException ex) {
+                    log.error("Failed to apply system migrations", ex.getCause());
+                    throw new RuntimeException("Failed to apply system migrations", ex.getCause());
+                }
+            } else {
+                log.info("No system migrations found");
+            }
+        } catch (Exception e) {
+            log.error("Error during system migration", e);
+            throw new RuntimeException("Failed to initialize system migrations", e);
         }
     }
     

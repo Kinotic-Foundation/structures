@@ -1,6 +1,6 @@
-package org.kinotic.structures.internal.sql.executor;
+package org.kinotic.structures.sql.executor;
 
-import org.kinotic.structures.internal.sql.domain.Statement;
+import org.kinotic.structures.sql.domain.Statement;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;

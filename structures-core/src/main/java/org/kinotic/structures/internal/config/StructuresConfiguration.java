@@ -29,5 +29,4 @@ public class StructuresConfiguration {
     public AuthorizationServiceFactory authorizationServiceFactory(){
         return new NoopAuthorizationServiceFactory();
     }
-
 }

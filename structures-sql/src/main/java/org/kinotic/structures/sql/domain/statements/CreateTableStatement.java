@@ -1,9 +1,9 @@
-package org.kinotic.structures.internal.sql.domain.statements;
+package org.kinotic.structures.sql.domain.statements;
 
 import java.util.List;
 
-import org.kinotic.structures.internal.sql.domain.Column;
-import org.kinotic.structures.internal.sql.domain.Statement;
+import org.kinotic.structures.sql.domain.Column;
+import org.kinotic.structures.sql.domain.Statement;
 
 /**
  * Represents a CREATE TABLE statement in the DSL.

@@ -1,10 +1,10 @@
-package org.kinotic.structures.internal.sql.parser.parsers;
+package org.kinotic.structures.sql.parser.parsers;
 
-import org.kinotic.structures.internal.sql.domain.Column;
-import org.kinotic.structures.internal.sql.domain.Statement;
-import org.kinotic.structures.internal.sql.domain.statements.CreateTableStatement;
-import org.kinotic.structures.internal.sql.parser.StatementParser;
-import org.kinotic.structures.internal.sql.parser.StructuresSQLParser;
+import org.kinotic.structures.sql.domain.Column;
+import org.kinotic.structures.sql.domain.Statement;
+import org.kinotic.structures.sql.domain.statements.CreateTableStatement;
+import org.kinotic.structures.sql.parser.StatementParser;
+import org.kinotic.structures.sql.parser.StructuresSQLParser;
 import org.springframework.stereotype.Component;
 
 import java.util.stream.Collectors;

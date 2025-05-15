@@ -1,11 +1,11 @@
-package org.kinotic.structures.internal.sql.executor;
+package org.kinotic.structures.sql.executor;
 
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.search.TotalHits;
 import co.elastic.clients.elasticsearch.indices.ExistsRequest;
-import org.kinotic.structures.internal.sql.domain.Migration;
-import org.kinotic.structures.internal.sql.domain.Statement;
+import org.kinotic.structures.sql.domain.Migration;
+import org.kinotic.structures.sql.domain.Statement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;

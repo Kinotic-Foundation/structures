@@ -1,6 +1,6 @@
-package org.kinotic.structures.internal.sql.domain.statements;
+package org.kinotic.structures.sql.domain.statements;
 
-import org.kinotic.structures.internal.sql.domain.Statement;
+import org.kinotic.structures.sql.domain.Statement;
 
 /**
  * Represents a REINDEX statement in the DSL.

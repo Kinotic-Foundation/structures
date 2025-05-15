@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.sql.domain;
+package org.kinotic.structures.sql.domain;
 
 /**
  * Represents a column definition in a CREATE TABLE statement.

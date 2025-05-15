@@ -1,6 +1,6 @@
-package org.kinotic.structures.internal.sql.parser;
+package org.kinotic.structures.sql.parser;
 
-import org.kinotic.structures.internal.sql.domain.WhereClause;
+import org.kinotic.structures.sql.domain.WhereClause;
 
 /**
  * Visitor for parsing SQL-like WHERE clauses (e.g., conditions, AND/OR combinations).

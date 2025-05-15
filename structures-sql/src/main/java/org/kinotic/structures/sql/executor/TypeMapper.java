@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.sql.executor;
+package org.kinotic.structures.sql.executor;
 
 import co.elastic.clients.elasticsearch._types.mapping.Property;
 

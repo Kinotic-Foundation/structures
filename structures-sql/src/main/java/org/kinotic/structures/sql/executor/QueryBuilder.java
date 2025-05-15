@@ -1,9 +1,9 @@
-package org.kinotic.structures.internal.sql.executor;
+package org.kinotic.structures.sql.executor;
 
 import co.elastic.clients.elasticsearch._types.FieldValue;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
-import org.kinotic.structures.internal.sql.domain.WhereClause;
+import org.kinotic.structures.sql.domain.WhereClause;
 
 import java.util.Map;
 

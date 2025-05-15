@@ -1,13 +1,13 @@
-package org.kinotic.structures.internal.sql.executor.executors;
+package org.kinotic.structures.sql.executor.executors;
 
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import co.elastic.clients.elasticsearch._types.Conflicts;
 import co.elastic.clients.elasticsearch._types.Script;
 import co.elastic.clients.elasticsearch._types.SlicesCalculation;
 import lombok.RequiredArgsConstructor;
-import org.kinotic.structures.internal.sql.domain.Statement;
-import org.kinotic.structures.internal.sql.domain.statements.ReindexStatement;
-import org.kinotic.structures.internal.sql.executor.StatementExecutor;
+import org.kinotic.structures.sql.domain.Statement;
+import org.kinotic.structures.sql.domain.statements.ReindexStatement;
+import org.kinotic.structures.sql.executor.StatementExecutor;
 import org.springframework.stereotype.Component;
 
 import java.util.Arrays;

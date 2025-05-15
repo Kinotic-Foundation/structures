@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.sql.domain.statements;
+package org.kinotic.structures.sql.domain.statements;
 
 /**
  * @param key      e.g., "NUMBER_OF_SHARDS", "NUMBER_OF_REPLICAS", or column name

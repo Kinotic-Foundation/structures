@@ -1,12 +1,12 @@
-package org.kinotic.structures.internal.sql.executor.executors;
+package org.kinotic.structures.sql.executor.executors;
 
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import co.elastic.clients.elasticsearch.core.DeleteByQueryResponse;
 import lombok.RequiredArgsConstructor;
-import org.kinotic.structures.internal.sql.domain.Statement;
-import org.kinotic.structures.internal.sql.domain.statements.DeleteStatement;
-import org.kinotic.structures.internal.sql.executor.QueryBuilder;
-import org.kinotic.structures.internal.sql.executor.StatementExecutor;
+import org.kinotic.structures.sql.domain.Statement;
+import org.kinotic.structures.sql.domain.statements.DeleteStatement;
+import org.kinotic.structures.sql.executor.QueryBuilder;
+import org.kinotic.structures.sql.executor.StatementExecutor;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;

@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.sql.domain;
+package org.kinotic.structures.sql.domain;
 
 /**
  * Marker interface for all SQL-like statements in the DSL.

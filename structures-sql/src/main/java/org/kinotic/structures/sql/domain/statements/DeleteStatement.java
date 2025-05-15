@@ -1,7 +1,7 @@
-package org.kinotic.structures.internal.sql.domain.statements;
+package org.kinotic.structures.sql.domain.statements;
 
-import org.kinotic.structures.internal.sql.domain.Statement;
-import org.kinotic.structures.internal.sql.domain.WhereClause;
+import org.kinotic.structures.sql.domain.Statement;
+import org.kinotic.structures.sql.domain.WhereClause;
 
 /**
  * Represents a DELETE statement in the DSL.

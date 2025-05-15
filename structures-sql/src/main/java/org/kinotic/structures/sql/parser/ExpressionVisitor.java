@@ -1,6 +1,6 @@
-package org.kinotic.structures.internal.sql.parser;
+package org.kinotic.structures.sql.parser;
 
-import org.kinotic.structures.internal.sql.domain.Expression;
+import org.kinotic.structures.sql.domain.Expression;
 
 /**
  * Visitor for parsing SQL-like expressions (e.g., literals, binary expressions).
