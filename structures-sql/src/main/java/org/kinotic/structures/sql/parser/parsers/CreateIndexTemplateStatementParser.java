@@ -3,7 +3,6 @@ package org.kinotic.structures.sql.parser.parsers;
 import org.kinotic.structures.sql.domain.Statement;
 import org.kinotic.structures.sql.domain.statements.ComponentDefinition;
 import org.kinotic.structures.sql.domain.statements.CreateIndexTemplateStatement;
-import org.kinotic.structures.sql.parser.StatementParser;
 import org.kinotic.structures.sql.parser.StructuresSQLParser;
 import org.springframework.stereotype.Component;
 

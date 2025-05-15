@@ -3,9 +3,7 @@ package org.kinotic.structures.sql.parser.parsers;
 import org.kinotic.structures.sql.domain.Statement;
 import org.kinotic.structures.sql.domain.WhereClause;
 import org.kinotic.structures.sql.domain.statements.DeleteStatement;
-import org.kinotic.structures.sql.parser.StatementParser;
 import org.kinotic.structures.sql.parser.StructuresSQLParser;
-import org.kinotic.structures.sql.parser.WhereClauseVisitor;
 import org.springframework.stereotype.Component;
 
 /**

@@ -12,6 +12,7 @@ statement
     | reindexStatement
     | updateStatement
     | deleteStatement
+    | insertStatement
     | comment
     ;
 
@@ -61,6 +62,10 @@ updateStatement
 
 deleteStatement
     : DELETE FROM ID WHERE whereClause SEMICOLON
+    ;
+
+insertStatement
+    : INSERT INTO tableName (LPAREN columnName (COMMA columnName)* RPAREN)? VALUES LPAREN expression (COMMA expression)* RPAREN SEMICOLON
     ;
 
 assignment
@@ -179,3 +184,8 @@ INTEGER_LITERAL: [0-9]+;
 BOOLEAN_LITERAL: 'true' | 'false';
 COMMENT: '--' ~[\r\n]* -> skip;
 WS: [ \t\r\n]+ -> skip;
+INSERT: 'INSERT';
+VALUES: 'VALUES';
+
+tableName: ID;
+columnName: ID;

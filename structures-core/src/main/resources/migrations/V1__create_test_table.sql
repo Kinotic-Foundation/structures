@@ -10,9 +10,5 @@ CREATE TABLE test_table (
 );
 
 -- Add some test data
-UPDATE test_table SET 
-    name = 'Test User',
-    age = 25,
-    is_active = true,
-    created_at = '2024-03-20'
-WHERE id = 'test-1'; 
+INSERT INTO test_table (id, name, age, is_active, created_at) 
+VALUES ('test-1', 'Test User', 25, true, '2024-03-20'); 

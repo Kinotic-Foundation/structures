@@ -93,7 +93,21 @@ Reindexes data from one index to another with optional settings.
 REINDEX users INTO users_new WITH (CONFLICTS = PROCEED, MAX_DOCS = 1000, SLICES = AUTO, QUERY = 'active:true');
 ```
 
-### 6. UPDATE
+### 6. INSERT
+Inserts new documents into an index with specified field values.
+
+- **Syntax**: `INSERT INTO <index_name> [(<column_name> [, <column_name>]*)] VALUES (<expression> [, <expression>]*) ;`
+- **Expressions**: Literals (`'value'`, `123`, `true`), parameters (`?`), binary expressions (`field + 1`)
+- **Example**:
+```sql
+-- Insert a single document
+INSERT INTO users (name, age, active) VALUES ('John', 30, true);
+
+-- Insert without specifying columns (all fields must be provided in order)
+INSERT INTO users VALUES ('Jane', 25, false);
+```
+
+### 7. UPDATE
 Updates documents in an index based on a WHERE clause and SET assignments.
 
 - **Syntax**: `UPDATE <index_name> SET <field> = <expression> [, <field> = <expression>]* WHERE <where_clause> ;`
@@ -104,7 +118,7 @@ Updates documents in an index based on a WHERE clause and SET assignments.
 UPDATE users SET status = 'active', age = age + 1 WHERE name = 'John' AND age > 30;
 ```
 
-### 7. DELETE
+### 8. DELETE
 Deletes documents from an index based on a WHERE clause.
 
 - **Syntax**: `DELETE FROM <index_name> WHERE <where_clause> ;`
@@ -113,7 +127,7 @@ Deletes documents from an index based on a WHERE clause.
 DELETE FROM users WHERE active = false;
 ```
 
-### 8. Comments
+### 9. Comments
 Ignored by the parser, used for documentation in migration scripts.
 
 - **Syntax**: `-- <comment_text>`
@@ -123,8 +137,25 @@ Ignored by the parser, used for documentation in migration scripts.
 CREATE TABLE users (name TEXT);
 ```
 
+## Example Migration
+
+Here's a complete example of a migration that creates a table and populates it with initial data:
+
+```sql
+-- Create a test table with various field types
+CREATE TABLE test_table (
+    id KEYWORD,
+    name TEXT,
+    age INTEGER,
+    is_active BOOLEAN,
+    created_at DATE
+);
+
+-- Add some test data
+INSERT INTO test_table (id, name, age, is_active, created_at) 
+VALUES ('test-1', 'Test User', 25, true, '2024-03-20');
+```
+
 ## Next Steps
 
 - **Getting Started**: Learn how to set up Structures and run migrations in [Getting Started](/guide/getting-started).
-- **Reference**: Explore the [Structures Config](/reference/structures-config) for advanced configuration options.
-- **API Details**: Check the [Javadoc](/reference/javadoc) for in-depth class documentation.
