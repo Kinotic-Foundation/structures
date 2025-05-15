@@ -6,6 +6,7 @@ import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.kinotic.structures.sql.domain.Migration;
 import org.kinotic.structures.sql.domain.Statement;
+import org.kinotic.structures.sql.parser.parsers.StatementParser;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -15,6 +16,7 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * Parses migration files (.sql) into a list of Migration objects.
@@ -61,11 +63,21 @@ public class MigrationParser {
         public List<Migration> visitMigrations(StructuresSQLParser.MigrationsContext ctx) {
             Migration migration = new Migration(version);
             for (StructuresSQLParser.StatementContext stmt : ctx.statement()) {
-                Statement parsedStatement = statementParsers.stream()
-                        .filter(parser -> parser.supports(stmt))
-                        .findFirst()
-                        .map(parser -> parser.parse(stmt))
-                        .orElseThrow(() -> new IllegalStateException("No parser found for statement"));
+                List<StatementParser> supportingParsers = statementParsers.stream()
+                        .filter(p -> p.supports(stmt))
+                        .toList();
+                
+                if (supportingParsers.isEmpty()) {
+                    throw new IllegalStateException("No parser found for statement: " + stmt.getText());
+                }
+                if (supportingParsers.size() > 1) {
+                    throw new IllegalStateException("Multiple parsers found for statement: " + stmt.getText() + 
+                        ". Parsers: " + supportingParsers.stream()
+                            .map(p -> p.getClass().getSimpleName())
+                            .collect(Collectors.joining(", ")));
+                }
+                
+                Statement parsedStatement = supportingParsers.get(0).parse(stmt);
                 migration.addStatement(parsedStatement);
             }
             return List.of(migration);

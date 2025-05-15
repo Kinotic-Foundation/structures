@@ -97,10 +97,10 @@ REINDEX users INTO users_new WITH (CONFLICTS = PROCEED, MAX_DOCS = 1000, SLICES 
 Inserts new documents into an index with specified field values.
 
 - **Syntax**: `INSERT INTO <index_name> [(<column_name> [, <column_name>]*)] VALUES (<expression> [, <expression>]*) ;`
-- **Expressions**: Literals (`'value'`, `123`, `true`), parameters (`?`), binary expressions (`field + 1`)
+- **Expressions**: Literals (`'value'`, `123`, `true`), parameters (`?`), field references (`field_name`)
 - **Example**:
 ```sql
--- Insert a single document
+-- Insert a single document with column names
 INSERT INTO users (name, age, active) VALUES ('John', 30, true);
 
 -- Insert without specifying columns (all fields must be provided in order)
