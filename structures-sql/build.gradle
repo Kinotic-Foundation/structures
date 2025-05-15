@@ -14,6 +14,13 @@ generateGrammarSource {
 	enabled = false
 }
 
+// Configure Javadoc to exclude generated files
+tasks.withType(Javadoc) {
+    exclude '**/parser/StructuresSQL*.java'
+    exclude '**/parser/StructuresSQL*.interp'
+    exclude '**/parser/StructuresSQL*.tokens'
+}
+
 dependencies {
     
     // Spring dependencies

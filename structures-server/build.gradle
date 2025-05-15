@@ -30,6 +30,6 @@ test {
 	systemProperty 'spring.profiles.active', 'test'
 }
 
-tasks.named('processResources') {
-	dependsOn ":structures-frontend:copyDist"
-}
+// tasks.named('processResources') {
+// 	dependsOn ":structures-frontend:copyDist"
+// }
