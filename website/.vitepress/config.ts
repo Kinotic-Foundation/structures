@@ -49,7 +49,8 @@ function sidebarGuide() {
       text: 'Introduction',
       items: [
         { text: 'What is Structures?', link: '/guide/overview' },
-        { text: 'Getting Started', link: '/guide/getting-started' }
+        { text: 'Getting Started', link: '/guide/getting-started' },
+        { text: 'Writing Migrations', link: '/guide/writing-migrations' }
       ]
     },
     {
