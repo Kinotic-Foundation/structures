@@ -44,6 +44,8 @@ class CrudTable extends Vue {
   @Prop({ default: true }) isShowAddNew!: boolean
   @Prop({ default: true }) isShowDelete!: boolean
   @Prop({ default: '' }) initialSearch!: string
+  @Prop({ default: '#f5f5f5' }) rowHoverColor!: string
+
 
   items: Identifiable<string>[] = []
   totalItems = 0
@@ -80,6 +82,7 @@ class CrudTable extends Vue {
   @Watch('dataSource', { immediate: true })
   onDataSourceChanged(newVal: IDataSource<any>) {
     if (newVal) {
+      this.searchText = (this.$route.query.search as string) || ''
       this.find()
     }
   }
@@ -97,11 +100,6 @@ class CrudTable extends Vue {
     this.find()
   }
 
-  // onSearchChange() {
-  //   this.options.page = 0
-  //   this.options.first = 0
-  //   this.find()
-  // }
   beforeUnmount() {
   clearTimeout(this.searchDebounceTimer)
 }
@@ -208,7 +206,7 @@ class CrudTable extends Vue {
 export default toNative(CrudTable)
 </script>
 <template>
-  <div>
+<div :style="{ '--row-hover-color': rowHoverColor }">
     <div class="flex flex-col mb-[37px] overflow-x-auto w-full">
       <span class="text-3xl font-semibold mb-4">
         {{ title }}
@@ -269,19 +267,23 @@ export default toNative(CrudTable)
     <ConfirmDialog />
   </div>
 </template>
-<style>
-.p-paginator {
+<style scoped>
+::v-deep(.p-paginator) {
   justify-content: flex-end !important
 }
 
-.p-datatable-table-container {
+::v-deep(.p-datatable-table-container) {
   overflow: auto !important;
   border: 1px solid #E2E8F0 !important;
   border-radius: 26px !important;
   padding: 20px !important;
 }
 
-.p-datatable-paginator-bottom {
+::v-deep(.p-datatable-paginator-bottom) {
   border: none !important
 }
+::v-deep(.p-datatable .p-datatable-tbody > tr:hover) {
+  background-color: var(--row-hover-color) !important;
+}
+
 </style>

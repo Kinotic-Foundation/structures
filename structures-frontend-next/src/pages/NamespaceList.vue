@@ -1,7 +1,7 @@
 <template>
   <div class="pt-4">
 
-    <CrudTable  title="Applications"
+    <CrudTable  rowHoverColor="gray" title="Applications"
   subtitle="List of all applications in the system" :data-source="dataSource"
       :headers="headers" :singleExpand="false" @add-item="onAddItem" @edit-item="onEditItem" ref="crudTable">
       <template #item.id="{ item }">
