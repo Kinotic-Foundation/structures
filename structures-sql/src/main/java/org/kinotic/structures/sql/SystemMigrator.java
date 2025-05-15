@@ -1,6 +1,5 @@
 package org.kinotic.structures.sql;
 
-import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import org.kinotic.structures.sql.domain.Migration;
 import org.kinotic.structures.sql.executor.MigrationExecutor;
 import org.kinotic.structures.sql.parser.MigrationParser;
@@ -29,7 +28,6 @@ import java.util.concurrent.ExecutionException;
  * but before other components are initialized.
  */
 @Component
-@Order(Ordered.HIGHEST_PRECEDENCE + 1) // Run after Elasticsearch client is configured
 public class SystemMigrator implements ApplicationListener<ContextRefreshedEvent> {
     private static final Logger log = LoggerFactory.getLogger(SystemMigrator.class);
     private static final String MIGRATIONS_PATH = "classpath:migrations/*.sql";
