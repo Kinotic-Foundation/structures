@@ -44,12 +44,9 @@ UPDATE users SET active = true WHERE age > 18;
 
 1. **Parsing**: The `MigrationParser` reads the script and splits it into `Migration` objects, each containing a version and a list of statements.
 2. **Execution**: The `MigrationExecutor` processes each `Migration`:
-   - Checks the `migration_history` index for the version.
    - If not applied, executes all statements in the block and records the version.
    - If already applied, skips the block.
-3. **Idempotency**: Ensures changes are applied only once, tracked via the `migration_history` index.
-
-For more details on the underlying classes, see the [Javadoc](/reference/javadoc).
+3. **Idempotency**: Ensures changes are applied only once.
 
 ## Supported Statements
 
