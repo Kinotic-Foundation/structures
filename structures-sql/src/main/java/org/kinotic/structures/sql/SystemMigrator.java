@@ -11,7 +11,7 @@ import java.util.concurrent.ExecutionException;
 
 import org.kinotic.structures.sql.domain.Migration;
 import org.kinotic.structures.sql.executor.MigrationExecutor;
-import org.kinotic.structures.sql.parser.MigrationParser;
+import org.kinotic.structures.sql.parsers.MigrationParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationListener;
@@ -91,8 +91,8 @@ public class SystemMigrator implements ApplicationListener<ContextRefreshedEvent
                 log.debug("Processing migration file: {}", resource.getFilename());
                 try {
                     Path path = Paths.get(resource.getURI());
-                    List<Migration> migrations = migrationParser.parse(path.toString());
-                    allMigrations.addAll(migrations);
+                    Migration migration = migrationParser.parse(path.toString());
+                    allMigrations.add(migration);
                 } catch (IOException e) {
                     log.warn("Failed to parse migration file: {}", resource.getFilename(), e);
                 }

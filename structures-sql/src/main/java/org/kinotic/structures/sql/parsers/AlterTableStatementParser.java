@@ -1,4 +1,4 @@
-package org.kinotic.structures.sql.parser.parsers;
+package org.kinotic.structures.sql.parsers;
 
 import org.kinotic.structures.sql.domain.Statement;
 import org.kinotic.structures.sql.domain.statements.AlterTableStatement;

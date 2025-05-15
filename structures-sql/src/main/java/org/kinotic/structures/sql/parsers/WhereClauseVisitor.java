@@ -1,4 +1,4 @@
-package org.kinotic.structures.sql.parser.parsers;
+package org.kinotic.structures.sql.parsers;
 
 import org.kinotic.structures.sql.domain.WhereClause;
 import org.kinotic.structures.sql.parser.StructuresSQLParser;
