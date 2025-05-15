@@ -29,18 +29,6 @@ public class StructuresSQLBaseListener implements StructuresSQLListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterMigrationStatement(StructuresSQLParser.MigrationStatementContext ctx) { }
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>The default implementation does nothing.</p>
-	 */
-	@Override public void exitMigrationStatement(StructuresSQLParser.MigrationStatementContext ctx) { }
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>The default implementation does nothing.</p>
-	 */
 	@Override public void enterStatement(StructuresSQLParser.StatementContext ctx) { }
 	/**
 	 * {@inheritDoc}

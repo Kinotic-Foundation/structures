@@ -17,12 +17,6 @@ public interface StructuresSQLVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitMigrations(StructuresSQLParser.MigrationsContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link StructuresSQLParser#migrationStatement}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitMigrationStatement(StructuresSQLParser.MigrationStatementContext ctx);
-	/**
 	 * Visit a parse tree produced by {@link StructuresSQLParser#statement}.
 	 * @param ctx the parse tree
 	 * @return the visitor result

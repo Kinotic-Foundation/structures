@@ -1,19 +1,5 @@
 package org.kinotic.structures.sql;
 
-import org.kinotic.structures.sql.domain.Migration;
-import org.kinotic.structures.sql.executor.MigrationExecutor;
-import org.kinotic.structures.sql.parser.MigrationParser;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationListener;
-import org.springframework.context.event.ContextRefreshedEvent;
-import org.springframework.core.Ordered;
-import org.springframework.core.annotation.Order;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.ResourceLoader;
-import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
-import org.springframework.stereotype.Component;
-
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -22,6 +8,18 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+
+import org.kinotic.structures.sql.domain.Migration;
+import org.kinotic.structures.sql.executor.MigrationExecutor;
+import org.kinotic.structures.sql.parser.MigrationParser;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationListener;
+import org.springframework.context.event.ContextRefreshedEvent;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
+import org.springframework.stereotype.Component;
 
 /**
  * Loads system migrations from the filesystem and applies them after the Elasticsearch client is configured

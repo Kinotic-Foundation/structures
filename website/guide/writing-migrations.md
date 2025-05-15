@@ -5,47 +5,40 @@ description: Learn how to write migrations in Structures to manage schema evolut
 
 # Writing Migrations
 
-Migrations in Structures allow you to define and apply changes to your Elasticsearch indices in a controlled, versioned manner. Each migration is a block of SQL-like statements identified by a unique version, ensuring idempotency and traceability. This guide explains how to write migration scripts and details the supported statements. If you're new to Structures, start with the [What is Structures?](/guide/overview) guide.
+Migrations in Structures allow you to define and apply changes to your Elasticsearch indices in a controlled, versioned manner. Each migration is a SQL-like script identified by a unique version in its filename, ensuring idempotency and traceability. This guide explains how to write migration scripts and details the supported statements. If you're new to Structures, start with the [What is Structures?](/guide/overview) guide.
 
 ## Migration Script Structure
 
-Migration scripts are written in a SQL-like syntax and consist of one or more `MIGRATION` blocks. Each block starts with a `MIGRATION` statement followed by a version identifier (a string in single quotes), a semicolon, and zero or more statements.
+Migration scripts are written in a SQL-like syntax and consist of one or more statements. The version is determined by the filename in the format `V<number>__<description>.sql`.
 
-### Syntax
+### Filename Format
 
-```sql
-MIGRATION '<version>';
-<statement>
-<statement>
-...
-
-MIGRATION '<version>';
-<statement>
-...
+```
+V<number>__<description>.sql
 ```
 
-- `<version>`: A unique identifier (e.g., `'v1'`, `'2025-03-31'`) to track applied migrations.
-- `<statement>`: A supported Structures statement (e.g., `CREATE TABLE`, `UPDATE`).
+- `<number>`: A sequential number (e.g., `1`, `2`, `3`) to track applied migrations.
+- `<description>`: A brief description of the migration's purpose.
 
 ### Example
 
 ```sql
 -- Initial schema setup
-MIGRATION 'v1';
 CREATE TABLE users (name TEXT, age INTEGER);
 
 -- Add a field and populate data
-MIGRATION 'v2';
 ALTER TABLE users ADD COLUMN active BOOLEAN;
 UPDATE users SET active = true WHERE age > 18;
 ```
 
+The above content would be saved in a file named `V1__create_users_table.sql`.
+
 ## How Migrations Work
 
-1. **Parsing**: The `MigrationParser` reads the script and splits it into `Migration` objects, each containing a version and a list of statements.
+1. **Parsing**: The `MigrationParser` reads the script and extracts the version from the filename, creating a `Migration` object containing the version and a list of statements.
 2. **Execution**: The `MigrationExecutor` processes each `Migration`:
-   - If not applied, executes all statements in the block and records the version.
-   - If already applied, skips the block.
+   - If not applied, executes all statements and records the version.
+   - If already applied, skips the migration.
 3. **Idempotency**: Ensures changes are applied only once.
 
 ## Supported Statements

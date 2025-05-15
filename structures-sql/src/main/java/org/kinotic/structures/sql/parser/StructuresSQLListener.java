@@ -18,16 +18,6 @@ public interface StructuresSQLListener extends ParseTreeListener {
 	 */
 	void exitMigrations(StructuresSQLParser.MigrationsContext ctx);
 	/**
-	 * Enter a parse tree produced by {@link StructuresSQLParser#migrationStatement}.
-	 * @param ctx the parse tree
-	 */
-	void enterMigrationStatement(StructuresSQLParser.MigrationStatementContext ctx);
-	/**
-	 * Exit a parse tree produced by {@link StructuresSQLParser#migrationStatement}.
-	 * @param ctx the parse tree
-	 */
-	void exitMigrationStatement(StructuresSQLParser.MigrationStatementContext ctx);
-	/**
 	 * Enter a parse tree produced by {@link StructuresSQLParser#statement}.
 	 * @param ctx the parse tree
 	 */

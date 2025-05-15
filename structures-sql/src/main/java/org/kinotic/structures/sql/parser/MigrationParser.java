@@ -10,68 +10,65 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Parses migration files (.sql) into a list of Migration objects.
  * Uses StatementParser implementations to process individual statements.
- * Created by Navíd Mitchell 🤝Grok on 3/31/25.
+ * The version is extracted from the filename in the format V<number>__<description>.sql
  */
 @Component
 @RequiredArgsConstructor
 public class MigrationParser {
     private final List<StatementParser> statementParsers;
+    private static final Pattern VERSION_PATTERN = Pattern.compile("V(\\d+)__.*\\.sql$");
 
     public List<Migration> parse(String filePath) throws IOException {
+        String version = extractVersionFromFilename(filePath);
         String sqlContent = new String(Files.readAllBytes(Paths.get(filePath)));
         CharStream input = CharStreams.fromString(sqlContent);
         StructuresSQLLexer lexer = new StructuresSQLLexer(input);
         CommonTokenStream tokens = new CommonTokenStream(lexer);
         StructuresSQLParser parser = new StructuresSQLParser(tokens);
         StructuresSQLParser.MigrationsContext tree = parser.migrations();
-        return new MigrationVisitor(statementParsers).visit(tree);
+        return new MigrationVisitor(statementParsers, version).visit(tree);
+    }
+
+    private String extractVersionFromFilename(String filePath) {
+        Path path = Paths.get(filePath);
+        String filename = path.getFileName().toString();
+        Matcher matcher = VERSION_PATTERN.matcher(filename);
+        if (!matcher.find()) {
+            throw new IllegalArgumentException("Invalid migration filename format. Expected V<number>__<description>.sql");
+        }
+        return "v" + matcher.group(1);
     }
 
     private static class MigrationVisitor extends StructuresSQLBaseVisitor<List<Migration>> {
         private final List<StatementParser> statementParsers;
+        private final String version;
 
-        MigrationVisitor(List<StatementParser> statementParsers) {
+        MigrationVisitor(List<StatementParser> statementParsers, String version) {
             this.statementParsers = statementParsers;
+            this.version = version;
         }
 
         @Override
         public List<Migration> visitMigrations(StructuresSQLParser.MigrationsContext ctx) {
-            List<Migration> migrations = new ArrayList<>();
-            if (ctx.migrationStatement() != null) {
-                for (StructuresSQLParser.MigrationStatementContext migrationCtx : ctx.migrationStatement()) {
-                    Migration migration = processMigrationStatement(migrationCtx);
-                    migrations.add(migration);
-                }
-            }
-            return migrations;
-        }
-
-        @Override
-        public List<Migration> visitMigrationStatement(StructuresSQLParser.MigrationStatementContext ctx) {
-            return List.of(processMigrationStatement(ctx));
-        }
-
-        private Migration processMigrationStatement(StructuresSQLParser.MigrationStatementContext ctx) {
-            String version = ctx.STRING().getText().replaceAll("'", "");
             Migration migration = new Migration(version);
-            if (ctx.statement() != null) {
-                for (StructuresSQLParser.StatementContext stmt : ctx.statement()) {
-                    Statement parsedStatement = statementParsers.stream()
-                                                                .filter(parser -> parser.supports(stmt))
-                                                                .findFirst()
-                                                                .map(parser -> parser.parse(stmt))
-                                                                .orElseThrow(() -> new IllegalStateException("No parser found for statement"));
-                    migration.addStatement(parsedStatement);
-                }
+            for (StructuresSQLParser.StatementContext stmt : ctx.statement()) {
+                Statement parsedStatement = statementParsers.stream()
+                        .filter(parser -> parser.supports(stmt))
+                        .findFirst()
+                        .map(parser -> parser.parse(stmt))
+                        .orElseThrow(() -> new IllegalStateException("No parser found for statement"));
+                migration.addStatement(parsedStatement);
             }
-            return migration;
+            return List.of(migration);
         }
     }
-}
+} 

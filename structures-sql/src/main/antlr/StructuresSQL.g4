@@ -1,17 +1,13 @@
 grammar StructuresSQL;
 
 migrations
-    : migrationStatement* EOF
-    ;
-
-migrationStatement
-    : MIGRATION STRING SEMICOLON statement*
+    : statement+ EOF
     ;
 
 statement
     : createTableStatement
-    | createComponentTemplateStatement  // New
-    | createIndexTemplateStatement      // New
+    | createComponentTemplateStatement
+    | createIndexTemplateStatement
     | alterTableStatement
     | reindexStatement
     | updateStatement
@@ -125,7 +121,6 @@ comment
     ;
 
 // Tokens
-MIGRATION: 'MIGRATION';
 CREATE: 'CREATE';
 TABLE: 'TABLE';
 COMPONENT: 'COMPONENT';
