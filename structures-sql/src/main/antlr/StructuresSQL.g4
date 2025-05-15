@@ -1,7 +1,7 @@
 grammar StructuresSQL;
 
 migrations
-    : statement+ EOF
+    : statement* EOF
     ;
 
 statement
@@ -65,7 +65,18 @@ deleteStatement
     ;
 
 insertStatement
-    : INSERT INTO tableName (LPAREN columnName (COMMA columnName)* RPAREN)? VALUES LPAREN expression (COMMA expression)* RPAREN SEMICOLON
+    : INSERT INTO tableName (LPAREN columnName (COMMA columnName)* RPAREN)? VALUES LPAREN valueList RPAREN SEMICOLON
+    ;
+
+valueList
+    : value (COMMA value)*
+    ;
+
+value
+    : STRING
+    | INTEGER_LITERAL
+    | BOOLEAN_LITERAL
+    | PARAMETER
     ;
 
 assignment
@@ -109,6 +120,14 @@ comparisonOperator
     | GREATER_THAN_EQUALS
     ;
 
+tableName
+    : ID
+    ;
+    
+columnName
+    : ID
+    ;
+
 columnDefinition
     : ID type
     ;
@@ -131,6 +150,8 @@ TABLE: 'TABLE';
 COMPONENT: 'COMPONENT';
 INDEX: 'INDEX';
 TEMPLATE: 'TEMPLATE';
+INSERT: 'INSERT';
+VALUES: 'VALUES';
 FOR: 'FOR';
 USING: 'USING';
 ALTER: 'ALTER';
@@ -184,8 +205,3 @@ INTEGER_LITERAL: [0-9]+;
 BOOLEAN_LITERAL: 'true' | 'false';
 COMMENT: '--' ~[\r\n]* -> skip;
 WS: [ \t\r\n]+ -> skip;
-INSERT: 'INSERT';
-VALUES: 'VALUES';
-
-tableName: ID;
-columnName: ID;

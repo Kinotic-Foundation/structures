@@ -34,19 +34,17 @@ public class InsertStatementParser implements StatementParser {
             insertContext.columnName().forEach(column -> columns.add(column.getText()));
         }
 
-        // Parse values
-        insertContext.expression().forEach(expr -> {
-            if (expr.STRING() != null) {
+        // Parse values from valueList
+        insertContext.valueList().value().forEach(value -> {
+            if (value.STRING() != null) {
                 // Remove quotes from string literals
-                values.add(expr.STRING().getText().substring(1, expr.STRING().getText().length() - 1));
-            } else if (expr.INTEGER_LITERAL() != null) {
-                values.add(Integer.parseInt(expr.INTEGER_LITERAL().getText()));
-            } else if (expr.BOOLEAN_LITERAL() != null) {
-                values.add(Boolean.parseBoolean(expr.BOOLEAN_LITERAL().getText()));
-            } else if (expr.PARAMETER() != null) {
+                values.add(value.STRING().getText().substring(1, value.STRING().getText().length() - 1));
+            } else if (value.INTEGER_LITERAL() != null) {
+                values.add(Integer.parseInt(value.INTEGER_LITERAL().getText()));
+            } else if (value.BOOLEAN_LITERAL() != null) {
+                values.add(Boolean.parseBoolean(value.BOOLEAN_LITERAL().getText()));
+            } else if (value.PARAMETER() != null) {
                 values.add(null); // Parameter will be set later
-            } else if (expr.ID() != null) {
-                values.add(expr.ID().getText()); // Field reference
             }
         });
 

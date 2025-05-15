@@ -18,7 +18,7 @@ import java.util.concurrent.CompletableFuture;
 /**
  * Executes UPDATE statements against Elasticsearch.
  * Applies SET assignments and evaluates WHERE clauses with comparison operators.
- * Created by Navíd Mitchell 🤪🤝Grok on 3/31/25.
+ * Created by Navíd Mitchell 🤝 Grok on 3/31/25.
  */
 @Component
 @RequiredArgsConstructor

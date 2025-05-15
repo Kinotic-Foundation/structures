@@ -138,6 +138,26 @@ public interface StructuresSQLListener extends ParseTreeListener {
 	 */
 	void exitInsertStatement(StructuresSQLParser.InsertStatementContext ctx);
 	/**
+	 * Enter a parse tree produced by {@link StructuresSQLParser#valueList}.
+	 * @param ctx the parse tree
+	 */
+	void enterValueList(StructuresSQLParser.ValueListContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link StructuresSQLParser#valueList}.
+	 * @param ctx the parse tree
+	 */
+	void exitValueList(StructuresSQLParser.ValueListContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link StructuresSQLParser#value}.
+	 * @param ctx the parse tree
+	 */
+	void enterValue(StructuresSQLParser.ValueContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link StructuresSQLParser#value}.
+	 * @param ctx the parse tree
+	 */
+	void exitValue(StructuresSQLParser.ValueContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link StructuresSQLParser#assignment}.
 	 * @param ctx the parse tree
 	 */
@@ -198,6 +218,26 @@ public interface StructuresSQLListener extends ParseTreeListener {
 	 */
 	void exitComparisonOperator(StructuresSQLParser.ComparisonOperatorContext ctx);
 	/**
+	 * Enter a parse tree produced by {@link StructuresSQLParser#tableName}.
+	 * @param ctx the parse tree
+	 */
+	void enterTableName(StructuresSQLParser.TableNameContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link StructuresSQLParser#tableName}.
+	 * @param ctx the parse tree
+	 */
+	void exitTableName(StructuresSQLParser.TableNameContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link StructuresSQLParser#columnName}.
+	 * @param ctx the parse tree
+	 */
+	void enterColumnName(StructuresSQLParser.ColumnNameContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link StructuresSQLParser#columnName}.
+	 * @param ctx the parse tree
+	 */
+	void exitColumnName(StructuresSQLParser.ColumnNameContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link StructuresSQLParser#columnDefinition}.
 	 * @param ctx the parse tree
 	 */
@@ -227,24 +267,4 @@ public interface StructuresSQLListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitComment(StructuresSQLParser.CommentContext ctx);
-	/**
-	 * Enter a parse tree produced by {@link StructuresSQLParser#tableName}.
-	 * @param ctx the parse tree
-	 */
-	void enterTableName(StructuresSQLParser.TableNameContext ctx);
-	/**
-	 * Exit a parse tree produced by {@link StructuresSQLParser#tableName}.
-	 * @param ctx the parse tree
-	 */
-	void exitTableName(StructuresSQLParser.TableNameContext ctx);
-	/**
-	 * Enter a parse tree produced by {@link StructuresSQLParser#columnName}.
-	 * @param ctx the parse tree
-	 */
-	void enterColumnName(StructuresSQLParser.ColumnNameContext ctx);
-	/**
-	 * Exit a parse tree produced by {@link StructuresSQLParser#columnName}.
-	 * @param ctx the parse tree
-	 */
-	void exitColumnName(StructuresSQLParser.ColumnNameContext ctx);
 }
