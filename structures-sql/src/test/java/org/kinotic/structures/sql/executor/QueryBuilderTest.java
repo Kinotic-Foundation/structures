@@ -48,7 +48,7 @@ class QueryBuilderTest {
         // Then
         assertTrue(query.isRange());
         RangeQuery rangeQuery = query.range();
-        assertEquals("field", rangeQuery.field());
+        assertEquals("field", rangeQuery.number().field());
         assertNotNull(rangeQuery.number().gt());
         assertEquals(10.0, rangeQuery.number().gt());
     }

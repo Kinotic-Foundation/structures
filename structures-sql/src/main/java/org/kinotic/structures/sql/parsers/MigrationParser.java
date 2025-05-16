@@ -1,9 +1,6 @@
 package org.kinotic.structures.sql.parsers;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -19,6 +16,7 @@ import org.kinotic.structures.sql.parser.StructuresSQLLexer;
 import org.kinotic.structures.sql.parser.StructuresSQLParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 
 import lombok.RequiredArgsConstructor;
@@ -35,10 +33,10 @@ public class MigrationParser {
     private static final Pattern VERSION_PATTERN = Pattern.compile("V(\\d+)__.*\\.sql$");
     private static final Logger log = LoggerFactory.getLogger(MigrationParser.class);
 
-    public Migration parse(String filePath) throws IOException {
-        String version = extractVersionFromFilename(filePath);
-        String sqlContent = new String(Files.readAllBytes(Paths.get(filePath)));
-        log.debug("Parsing migration file: {} with content:\n{}", filePath, sqlContent);
+    public Migration parse(Resource resource) throws IOException {
+        String version = extractVersionFromFilename(resource.getFilename());
+        String sqlContent = new String(resource.getInputStream().readAllBytes());
+        log.debug("Parsing migration file: {} with content:\n{}", resource.getFilename(), sqlContent);
         
         CharStream input = CharStreams.fromString(sqlContent);
         StructuresSQLLexer lexer = new StructuresSQLLexer(input);
@@ -48,9 +46,7 @@ public class MigrationParser {
         return new MigrationVisitor(statementParsers, version).visit(tree);
     }
 
-    private String extractVersionFromFilename(String filePath) {
-        Path path = Paths.get(filePath);
-        String filename = path.getFileName().toString();
+    private String extractVersionFromFilename(String filename) {
         Matcher matcher = VERSION_PATTERN.matcher(filename);
         if (!matcher.find()) {
             throw new IllegalArgumentException("Invalid migration filename format. Expected V<number>__<description>.sql");

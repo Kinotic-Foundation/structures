@@ -95,7 +95,7 @@ public class UpdateStatementExecutor implements StatementExecutor<UpdateStatemen
                     }
                     params.put(field, paramValue);
                 } else {
-                    params.put(field, QueryBuilder.parseValue(literal.getValue()).stringValue());
+                    params.put(field, QueryBuilder.parseValue(literal.getValue()));
                 }
             } else if (expr instanceof Expression.BinaryExpression binExpr) {
                 if ("?".equals(binExpr.getRight())) {
@@ -108,7 +108,7 @@ public class UpdateStatementExecutor implements StatementExecutor<UpdateStatemen
                     }
                     params.put(field, paramValue);
                 } else if (!binExpr.getRight().matches("[a-zA-Z_][a-zA-Z_0-9]*")) { // Not a field reference
-                    params.put(field, QueryBuilder.parseValue(binExpr.getRight()).stringValue());
+                    params.put(field, QueryBuilder.parseValue(binExpr.getRight()));
                 }
             }
         });

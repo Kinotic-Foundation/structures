@@ -81,7 +81,10 @@ public class SystemMigrator implements ApplicationListener<ContextRefreshedEvent
         try {
             log.debug("Loading system migrations from: {}", MIGRATIONS_PATH);
             
-            PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver(resourceLoader);
+            PathMatchingResourcePatternResolver resolver = resourceLoader instanceof PathMatchingResourcePatternResolver ?
+                (PathMatchingResourcePatternResolver) resourceLoader :
+                new PathMatchingResourcePatternResolver(resourceLoader);
+            
             Resource[] resources = resolver.getResources(MIGRATIONS_PATH);
             
             // Sort resources by filename to ensure migrations are applied in order
@@ -90,8 +93,7 @@ public class SystemMigrator implements ApplicationListener<ContextRefreshedEvent
             for (Resource resource : resources) {
                 log.debug("Processing migration file: {}", resource.getFilename());
                 try {
-                    Path path = Paths.get(resource.getURI());
-                    Migration migration = migrationParser.parse(path.toString());
+                    Migration migration = migrationParser.parse(resource);
                     allMigrations.add(migration);
                 } catch (IOException e) {
                     log.warn("Failed to parse migration file: {}", resource.getFilename(), e);
