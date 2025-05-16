@@ -48,6 +48,9 @@ public class InsertStatementParser implements StatementParser {
             }
         });
 
-        return new InsertStatement(tableName, columns, values);
+        // Check for WITH REFRESH
+        boolean refresh = insertContext.WITH() != null && insertContext.REFRESH() != null;
+
+        return new InsertStatement(tableName, columns, values, refresh);
     }
 } 

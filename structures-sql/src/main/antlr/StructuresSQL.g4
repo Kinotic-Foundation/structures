@@ -57,15 +57,15 @@ reindexOption
     ;
 
 updateStatement
-    : UPDATE ID SET assignment (COMMA assignment)* WHERE whereClause SEMICOLON
+    : UPDATE ID SET assignment (COMMA assignment)* WHERE whereClause (WITH REFRESH)? SEMICOLON
     ;
 
 deleteStatement
-    : DELETE FROM ID WHERE whereClause SEMICOLON
+    : DELETE FROM ID WHERE whereClause (WITH REFRESH)? SEMICOLON
     ;
 
 insertStatement
-    : INSERT INTO tableName (LPAREN columnName (COMMA columnName)* RPAREN)? VALUES LPAREN valueList RPAREN SEMICOLON
+    : INSERT INTO tableName (LPAREN columnName (COMMA columnName)* RPAREN)? VALUES LPAREN valueList RPAREN (WITH REFRESH)? SEMICOLON
     ;
 
 valueList
@@ -160,6 +160,7 @@ COLUMN: 'COLUMN';
 REINDEX: 'REINDEX';
 INTO: 'INTO';
 WITH: 'WITH';
+REFRESH: 'REFRESH';
 CONFLICTS: 'CONFLICTS';
 ABORT: 'ABORT';
 PROCEED: 'PROCEED';
@@ -205,3 +206,4 @@ INTEGER_LITERAL: [0-9]+;
 BOOLEAN_LITERAL: 'true' | 'false';
 COMMENT: '--' ~[\r\n]* -> skip;
 WS: [ \t\r\n]+ -> skip;
+

@@ -15,5 +15,9 @@ import org.kinotic.structures.sql.domain.WhereClause;
  */
 public record UpdateStatement(String tableName,
                               Map<String, Expression> assignments,
-                              WhereClause whereClause) implements Statement {
+                              WhereClause whereClause,
+                              boolean refresh) implements Statement {
+    public UpdateStatement(String tableName, Map<String, Expression> assignments, WhereClause whereClause) {
+        this(tableName, assignments, whereClause, false);
+    }
 }

@@ -22,9 +22,13 @@ public class DeleteStatementParser implements StatementParser {
 
     @Override
     public Statement parse(StructuresSQLParser.StatementContext ctx) {
-        StructuresSQLParser.DeleteStatementContext deleteCtx = ctx.deleteStatement();
-        String tableName = deleteCtx.ID().getText();
-        WhereClause whereClause = whereClauseVisitor.visit(deleteCtx.whereClause());
-        return new DeleteStatement(tableName, whereClause);
+        StructuresSQLParser.DeleteStatementContext deleteContext = ctx.deleteStatement();
+        String tableName = deleteContext.ID().getText();
+        WhereClause whereClause = whereClauseVisitor.visit(deleteContext.whereClause());
+
+        // Check for WITH REFRESH
+        boolean refresh = deleteContext.WITH() != null && deleteContext.REFRESH() != null;
+
+        return new DeleteStatement(tableName, whereClause, refresh);
     }
 }

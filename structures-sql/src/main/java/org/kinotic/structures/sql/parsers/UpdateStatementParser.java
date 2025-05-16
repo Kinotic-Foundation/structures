@@ -39,6 +39,9 @@ public class UpdateStatementParser implements StatementParser {
 
         WhereClause whereClause = whereClauseVisitor.visit(updateCtx.whereClause());
 
-        return new UpdateStatement(tableName, assignments, whereClause);
+        // Check for WITH REFRESH
+        boolean refresh = updateCtx.WITH() != null && updateCtx.REFRESH() != null;
+
+        return new UpdateStatement(tableName, assignments, whereClause, refresh);
     }
 }

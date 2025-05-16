@@ -11,5 +11,9 @@ import java.util.List;
  */
 public record InsertStatement(String tableName,
                             List<String> columns,
-                            List<Object> values) implements Statement {
+                            List<Object> values,
+                            boolean refresh) implements Statement {
+    public InsertStatement(String tableName, List<String> columns, List<Object> values) {
+        this(tableName, columns, values, false);
+    }
 } 

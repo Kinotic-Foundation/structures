@@ -41,6 +41,7 @@ public class DeleteStatementExecutor implements StatementExecutor<DeleteStatemen
         return client.deleteByQuery(d -> d
                 .index(statement.tableName())
                 .query(QueryBuilder.buildQuery(statement.whereClause(), parameters))
+                .refresh(statement.refresh())
         ).thenApply(DeleteByQueryResponse::deleted);
     }
 }

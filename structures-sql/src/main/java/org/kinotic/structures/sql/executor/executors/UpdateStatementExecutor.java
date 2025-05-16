@@ -49,6 +49,7 @@ public class UpdateStatementExecutor implements StatementExecutor<UpdateStatemen
                 .index(statement.tableName())
                 .query(QueryBuilder.buildQuery(statement.whereClause(), parameters))
                 .script(s -> s.source(script).params(scriptParams))
+                .refresh(statement.refresh())
         ).thenApply(UpdateByQueryResponse::updated);
     }
 

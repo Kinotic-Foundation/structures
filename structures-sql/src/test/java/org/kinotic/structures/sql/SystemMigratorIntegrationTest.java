@@ -8,13 +8,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.kinotic.structures.sql.executor.MigrationExecutor;
 import org.kinotic.structures.sql.parsers.MigrationParser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
@@ -25,7 +23,6 @@ import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.indices.GetIndexTemplateResponse;
 import co.elastic.clients.elasticsearch.indices.GetMappingResponse;
 
-@ExtendWith(SpringExtension.class)
 @SpringBootTest
 class SystemMigratorIntegrationTest extends ElasticsearchSqlTestBase {
 
@@ -177,7 +174,7 @@ class SystemMigratorIntegrationTest extends ElasticsearchSqlTestBase {
             );
             """;
         String insertContent = """
-            INSERT INTO test_table_reindex_source (id, name) VALUES ('1', 'test');
+            INSERT INTO test_table_reindex_source (id, name) VALUES ('1', 'test') WITH REFRESH;
             """;
         String reindexContent = """
             REINDEX test_table_reindex_source INTO test_table_reindex_dest WITH (
@@ -217,10 +214,10 @@ class SystemMigratorIntegrationTest extends ElasticsearchSqlTestBase {
             );
             """;
         String insertContent = """
-            INSERT INTO test_table_update (id, name, age) VALUES ('1', 'test', 20);
+            INSERT INTO test_table_update (id, name, age) VALUES ('1', 'test', 20) WITH REFRESH;
             """;
         String updateContent = """
-            UPDATE test_table_update SET age == 21 WHERE id == '1';
+            UPDATE test_table_update SET age == 21 WHERE id == '1' WITH REFRESH;
             """;
 
         PathMatchingResourcePatternResolver resourceLoader = TestResourceUtils.createResourceResolver(
@@ -252,7 +249,7 @@ class SystemMigratorIntegrationTest extends ElasticsearchSqlTestBase {
             );
             """;
         String insertContent = """
-            INSERT INTO test_table_delete (id, name) VALUES ('1', 'test');
+            INSERT INTO test_table_delete (id, name) VALUES ('1', 'test') WITH REFRESH;
             """;
         String deleteContent = """
             DELETE FROM test_table_delete WHERE id == '1';
