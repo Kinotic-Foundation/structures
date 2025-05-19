@@ -1,6 +1,6 @@
 <template>
   <div class="pt-4">
-    <CrudTable title="Structures" :initial-search="searchParam" subtitle="" :data-source="dataSource" :headers="headers" :singleExpand="false"
+    <CrudTable rowHoverColor="#f1f2f4" title="Structures" :initial-search="searchParam" subtitle="" :data-source="dataSource" :headers="headers" :singleExpand="false"
       ref="crudTable" :isShowAddNew="false" :isShowDelete="true" @onRowClick="openModal">
       <template #item.id="{ item }">
         <span>{{ item.id }}</span>
@@ -67,7 +67,7 @@ import { Structures, type IStructureService } from '@kinotic/structures-api'
 import { mdiDatabase, mdiGraphql, mdiUmbraco } from '@mdi/js'
 import { STRUCTURES_STATE } from '@/states/IStructuresState'
 import StructureItemModal from '@/components/modals/StructureItemModal.vue'
-import Dialog from 'primevue/dialog';
+// import Dialog from 'primevue/dialog';
 @Component({
   components: { CrudTable, StructureItemModal }
 })
@@ -84,6 +84,7 @@ export default class StructuresList extends Vue {
     { field: 'updated', header: 'Last Updated', sortable: false },
     { field: 'published', header: 'Published', sortable: false },
     { field: 'publishedTimestamp', header: 'Published On', sortable: false }
+    
   ]
   get isModalOpen() {
     return STRUCTURES_STATE.isModalOpen.value
