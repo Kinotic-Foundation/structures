@@ -10,10 +10,12 @@ export default defineConfig({
     /^http:\/\/localhost:/
   ],
   themeConfig: {
+
     // https://vitepress.vuejs.org/reference/default-theme-config
     nav: nav(),
-
+    outline: false,
     sidebar: {
+      
       '/guide/': sidebarGuide(),
       '/reference/': sidebarReference()
     },
