@@ -142,7 +142,7 @@ export default class Login extends Vue {
       if (this.referer) {
         await CONTINUUM_UI.navigate(this.referer);
       } else {
-        this.$router.push(`/applications`)
+        this.$route.redirectedFrom?.fullPath !== "/" && this.$route.redirectedFrom?.fullPath ? this.$router.push(this.$route.redirectedFrom?.fullPath) : this.$router.push(`/applications`)
         await CONTINUUM_UI.navigate('/applications');
 
       }
