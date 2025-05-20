@@ -155,7 +155,7 @@ class SystemMigratorIntegrationTest extends ElasticsearchSqlTestBase {
         assertNotNull(indexMapping, "Mapping for test_table_alter should exist");
         Map<String, Property> properties = indexMapping.mappings().properties();
         assertNotNull(properties.get("age"), "Property 'age' should exist");
-        assertEquals("integer", properties.get("age")._kind().name());
+        assertEquals("Integer", properties.get("age")._kind().name());
     }
 
     // @Test
