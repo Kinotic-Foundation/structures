@@ -27,10 +27,19 @@ public class QueryBuilder {
                 if (paramValue == null) {
                     throw new IllegalArgumentException("Missing parameter for " + field);
                 }
-                // Convert paramValue to String for consistency
-                return buildComparisonQuery(field, operator, paramValue.toString());
+                // Convert parameter to FieldValue
+                FieldValue fieldValue;
+                if (paramValue instanceof Number) {
+                    fieldValue = FieldValue.of(((Number) paramValue).doubleValue());
+                } else if (paramValue instanceof Boolean) {
+                    fieldValue = FieldValue.of((Boolean) paramValue);
+                } else {
+                    fieldValue = FieldValue.of(paramValue.toString());
+                }
+                return buildComparisonQuery(field, operator, fieldValue);
             } else {
-                return buildComparisonQuery(field, operator, parseValue(value).stringValue());
+                FieldValue fieldValue = parseValue(value);
+                return buildComparisonQuery(field, operator, fieldValue);
             }
         } else if (whereClause instanceof WhereClause.AndClause andClause) {
             BoolQuery.Builder boolQuery = new BoolQuery.Builder();
@@ -47,7 +56,7 @@ public class QueryBuilder {
         throw new IllegalStateException("Unsupported WHERE clause type");
     }
 
-    private static Query buildComparisonQuery(String field, String operator, String value) {
+    private static Query buildComparisonQuery(String field, String operator, FieldValue value) {
         switch (operator) {
             case "==":
                 return Query.of(q -> q.term(t -> t.field(field).value(value)));
@@ -57,9 +66,9 @@ public class QueryBuilder {
             case ">":
             case "<=":
             case ">=":
-                boolean isNumeric = isNumeric(value);
-                if (isNumeric) {
-                    double numericValue = Double.parseDouble(value);
+                if (value._kind() == FieldValue.Kind.Double || value._kind() == FieldValue.Kind.Long) {
+                    double numericValue = value._kind() == FieldValue.Kind.Double ? 
+                        value.doubleValue() : value.longValue();
                     return Query.of(q -> q.range(r -> r.number(n -> {
                         n.field(field);
                         switch (operator) {
@@ -74,25 +83,16 @@ public class QueryBuilder {
                     return Query.of(q -> q.range(r -> r.term(t -> {
                         t.field(field);
                         switch (operator) {
-                            case "<": t.lt(value); break;
-                            case ">": t.gt(value); break;
-                            case "<=": t.lte(value); break;
-                            case ">=": t.gte(value); break;
+                            case "<": t.lt(value.stringValue()); break;
+                            case ">": t.gt(value.stringValue()); break;
+                            case "<=": t.lte(value.stringValue()); break;
+                            case ">=": t.gte(value.stringValue()); break;
                         }
                         return t;
                     })));
                 }
             default:
                 throw new IllegalStateException("Unsupported operator: " + operator);
-        }
-    }
-
-    private static boolean isNumeric(String value) {
-        try {
-            Double.parseDouble(value);
-            return true;
-        } catch (NumberFormatException e) {
-            return false;
         }
     }
 

@@ -50,7 +50,7 @@ class QueryBuilderTest {
         RangeQuery rangeQuery = query.range();
         assertEquals("field", rangeQuery.number().field());
         assertNotNull(rangeQuery.number().gt());
-        assertEquals(10.0, rangeQuery.number().gt());
+        assertEquals(10.0, rangeQuery.number().gt().doubleValue());
     }
 
     @Test
@@ -143,7 +143,7 @@ class QueryBuilderTest {
         assertTrue(query.isTerm());
         TermQuery termQuery = query.term();
         assertEquals("field", termQuery.field());
-        assertEquals("value", termQuery.value().stringValue());
+        assertEquals("'value'", termQuery.value().stringValue());
     }
 
     @Test
