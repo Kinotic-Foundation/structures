@@ -1,21 +1,21 @@
 package org.kinotic.structures.sql.executor.executors;
 
-import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
-import co.elastic.clients.elasticsearch._types.mapping.Property;
-import lombok.RequiredArgsConstructor;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+
 import org.kinotic.structures.sql.domain.Statement;
-import org.kinotic.structures.sql.domain.statements.TemplatePart;
-import org.kinotic.structures.sql.domain.statements.CreateIndexTemplateStatement;
 import org.kinotic.structures.sql.domain.statements.ColumnTemplatePart;
+import org.kinotic.structures.sql.domain.statements.CreateIndexTemplateStatement;
 import org.kinotic.structures.sql.domain.statements.SettingTemplatePart;
 import org.kinotic.structures.sql.executor.StatementExecutor;
 import org.kinotic.structures.sql.executor.TypeMapper;
 import org.springframework.stereotype.Component;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
+import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
+import co.elastic.clients.elasticsearch._types.mapping.Property;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Executes CREATE INDEX TEMPLATE statements against Elasticsearch.
