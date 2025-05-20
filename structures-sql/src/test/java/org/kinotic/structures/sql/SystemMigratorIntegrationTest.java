@@ -352,4 +352,43 @@ class SystemMigratorIntegrationTest extends ElasticsearchSqlTestBase {
         assertEquals("Text", properties.get("id")._kind().name());
         assertEquals("Text", properties.get("name")._kind().name());
     }
+
+    @Test
+    void whenCreateTableWithNumericTypes_thenTableCreated() throws Exception {
+        // Given
+        String migrationContent = """
+            CREATE TABLE test_table_numeric (
+                id TEXT,
+                int_field INTEGER,
+                long_field LONG,
+                float_field FLOAT,
+                double_field DOUBLE
+            );
+            """;
+
+        PathMatchingResourcePatternResolver resourceLoader = TestResourceUtils.createResourceResolver(
+            migrationContent,
+            "V1__create_numeric_table.sql"
+        );
+        SystemMigrator systemMigrator = new SystemMigrator(migrationExecutor, migrationParser, resourceLoader);
+
+        // When
+        systemMigrator.onApplicationEvent(null);
+
+        // Then
+        assertTrue(asyncClient.indices().exists(e -> e.index("test_table_numeric")).get().value());
+        
+        // Verify mapping
+        GetMappingResponse mapping = client.indices().getMapping(m -> m.index("test_table_numeric"));
+        var indexMapping = mapping.get("test_table_numeric");
+        assertNotNull(indexMapping, "Mapping for test_table_numeric should exist");
+        Map<String, Property> properties = indexMapping.mappings().properties();
+        
+        assertNotNull(properties.get("id"), "Property 'id' should exist");
+        assertEquals("Text", properties.get("id")._kind().name());
+        assertEquals("Integer", properties.get("int_field")._kind().name());
+        assertEquals("Long", properties.get("long_field")._kind().name());
+        assertEquals("Float", properties.get("float_field")._kind().name());
+        assertEquals("Double", properties.get("double_field")._kind().name());
+    }
 } 

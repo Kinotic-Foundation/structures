@@ -9,6 +9,9 @@ public enum ColumnType {
     TEXT,
     KEYWORD,
     INTEGER,
+    LONG,
+    FLOAT,
+    DOUBLE,
     BOOLEAN,
     DATE;
 
