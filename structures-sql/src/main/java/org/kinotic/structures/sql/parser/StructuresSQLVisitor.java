@@ -41,11 +41,11 @@ public interface StructuresSQLVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitCreateIndexTemplateStatement(StructuresSQLParser.CreateIndexTemplateStatementContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link StructuresSQLParser#componentDefinition}.
+	 * Visit a parse tree produced by {@link StructuresSQLParser#templatePart}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitComponentDefinition(StructuresSQLParser.ComponentDefinitionContext ctx);
+	T visitTemplatePart(StructuresSQLParser.TemplatePartContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link StructuresSQLParser#alterTableStatement}.
 	 * @param ctx the parse tree

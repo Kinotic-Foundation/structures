@@ -5,14 +5,13 @@ import org.kinotic.structures.sql.domain.Statement;
 import java.util.List;
 
 /**
- * Represents a CREATE INDEX TEMPLATE statement in the DSL.
- * Defines an index template with a pattern and component templates for Elasticsearch.
- * Created by Navíd Mitchell 🤝 Grok on 3/31/25.
- *
- * @param indexPattern          e.g., "users-*"
- * @param componentTemplate     Primary component template via USING
- * @param additionalDefinitions Optional WITH clause
+ * Represents a CREATE INDEX TEMPLATE statement.
+ * Created by Navíd Mitchell 🤝Grok on 3/31/25.
  */
-public record CreateIndexTemplateStatement(String templateName, String indexPattern, String componentTemplate,
-                                           List<ComponentDefinition> additionalDefinitions) implements Statement {
+public record CreateIndexTemplateStatement(
+    String templateName,
+    String indexPattern,
+    String componentTemplate,
+    List<TemplatePart> parts
+) implements Statement {
 }

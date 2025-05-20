@@ -15,8 +15,8 @@ import java.util.concurrent.CompletableFuture;
 
 /**
  * Executes CREATE TABLE statements against Elasticsearch.
- * Creates indices with specified column mappings.
- * Created by Navíd Mitchell 🤪🤝Grok on 3/31/25.
+ * Creates indices with specified field mappings.
+ * Created by Navíd Mitchell 🤝Grok on 3/31/25.
  */
 @Component
 @RequiredArgsConstructor
@@ -31,21 +31,35 @@ public class CreateTableStatementExecutor implements StatementExecutor<CreateTab
     @Override
     public void executeMigration(CreateTableStatement statement) {
         try {
-            Map<String, Property> properties = new HashMap<>();
-            statement.columns().forEach(col ->
-                                                   properties.put(col.name(), TypeMapper.mapType(col.type())));
-
-            client.indices().create(c -> c
-                    .index(statement.tableName())
-                    .mappings(m -> m.properties(properties))
-            ).get();
+            executeQuery(statement, null).get();
         } catch (Exception e) {
-            throw new RuntimeException("Failed to execute CREATE TABLE migration", e);
+            throw new RuntimeException("Failed to execute migration CREATE TABLE", e);
         }
     }
 
     @Override
     public CompletableFuture<Void> executeQuery(CreateTableStatement statement, Map<String, Object> parameters) {
-        throw new UnsupportedOperationException("CREATE TABLE not supported as a named query");
+        return client.indices().exists(e -> e.index(statement.tableName()))
+            .thenCompose(exists -> {
+                if (exists.value()) {
+                    if (statement.ifNotExists()) {
+                        return CompletableFuture.completedFuture(null);
+                    } else {
+                        return CompletableFuture.failedFuture(
+                            new IllegalArgumentException("Index '" + statement.tableName() + "' already exists"));
+                    }
+                }
+
+                Map<String, Property> properties = new HashMap<>();
+                statement.columns().forEach(column -> 
+                    properties.put(column.name(), TypeMapper.mapType(column.type())));
+
+                return client.indices().create(c -> c
+                    .index(statement.tableName())
+                    .mappings(m -> m
+                        .properties(properties)
+                    )
+                ).thenApply(response -> null);
+            });
     }
 }

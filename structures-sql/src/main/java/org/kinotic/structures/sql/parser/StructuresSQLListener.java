@@ -58,15 +58,15 @@ public interface StructuresSQLListener extends ParseTreeListener {
 	 */
 	void exitCreateIndexTemplateStatement(StructuresSQLParser.CreateIndexTemplateStatementContext ctx);
 	/**
-	 * Enter a parse tree produced by {@link StructuresSQLParser#componentDefinition}.
+	 * Enter a parse tree produced by {@link StructuresSQLParser#templatePart}.
 	 * @param ctx the parse tree
 	 */
-	void enterComponentDefinition(StructuresSQLParser.ComponentDefinitionContext ctx);
+	void enterTemplatePart(StructuresSQLParser.TemplatePartContext ctx);
 	/**
-	 * Exit a parse tree produced by {@link StructuresSQLParser#componentDefinition}.
+	 * Exit a parse tree produced by {@link StructuresSQLParser#templatePart}.
 	 * @param ctx the parse tree
 	 */
-	void exitComponentDefinition(StructuresSQLParser.ComponentDefinitionContext ctx);
+	void exitTemplatePart(StructuresSQLParser.TemplatePartContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link StructuresSQLParser#alterTableStatement}.
 	 * @param ctx the parse tree

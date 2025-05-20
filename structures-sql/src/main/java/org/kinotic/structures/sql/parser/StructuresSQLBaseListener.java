@@ -77,13 +77,13 @@ public class StructuresSQLBaseListener implements StructuresSQLListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterComponentDefinition(StructuresSQLParser.ComponentDefinitionContext ctx) { }
+	@Override public void enterTemplatePart(StructuresSQLParser.TemplatePartContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitComponentDefinition(StructuresSQLParser.ComponentDefinitionContext ctx) { }
+	@Override public void exitTemplatePart(StructuresSQLParser.TemplatePartContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *

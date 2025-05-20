@@ -53,7 +53,7 @@ public class StructuresSQLBaseVisitor<T> extends AbstractParseTreeVisitor<T> imp
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitComponentDefinition(StructuresSQLParser.ComponentDefinitionContext ctx) { return visitChildren(ctx); }
+	@Override public T visitTemplatePart(StructuresSQLParser.TemplatePartContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *

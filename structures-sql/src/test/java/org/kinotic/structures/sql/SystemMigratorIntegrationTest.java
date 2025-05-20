@@ -91,7 +91,7 @@ class SystemMigratorIntegrationTest extends ElasticsearchSqlTestBase {
         assertEquals("Date", properties.get("created_at")._kind().name());
     }
 
-//    @Test
+    // @Test
     void whenCreateIndexTemplate_thenTemplateCreated() throws Exception {
         // Given
         String componentTemplateContent = """
@@ -127,7 +127,7 @@ class SystemMigratorIntegrationTest extends ElasticsearchSqlTestBase {
         assertTrue(indexTemplate.indexTemplates().stream().anyMatch(t -> t.name().equals("test_index_template_index")));
     }
 
-//    @Test
+    @Test
     void whenAlterTable_thenColumnAdded() throws Exception {
         // Given
         String createTableContent = """
@@ -158,7 +158,7 @@ class SystemMigratorIntegrationTest extends ElasticsearchSqlTestBase {
         assertEquals("integer", properties.get("age")._kind().name());
     }
 
-//    @Test
+    // @Test
     void whenReindex_thenDataReindexed() throws Exception {
         // Given
         String createSourceContent = """
@@ -318,5 +318,38 @@ class SystemMigratorIntegrationTest extends ElasticsearchSqlTestBase {
         assertThrows(IllegalStateException.class, () -> 
             systemMigrator.onApplicationEvent(null)
         );
+    }
+
+    @Test
+    void whenCreateTableIfNotExists_thenNoErrorOnSecondCreate() throws Exception {
+        // Given
+        String createTableContent = """
+            CREATE TABLE IF NOT EXISTS test_table_if_not_exists (
+                id TEXT,
+                name TEXT
+            );
+            """;
+
+        PathMatchingResourcePatternResolver resourceLoader = TestResourceUtils.createResourceResolver(
+            new TestResourceUtils.MigrationContent(createTableContent, "V1__create_test_table.sql"),
+            new TestResourceUtils.MigrationContent(createTableContent, "V2__create_test_table_again.sql")
+        );
+        SystemMigrator systemMigrator = new SystemMigrator(migrationExecutor, migrationParser, resourceLoader);
+
+        // When
+        systemMigrator.onApplicationEvent(null);
+
+        // Then
+        assertTrue(asyncClient.indices().exists(e -> e.index("test_table_if_not_exists")).get().value());
+        
+        // Verify mapping
+        GetMappingResponse mapping = client.indices().getMapping(m -> m.index("test_table_if_not_exists"));
+        var indexMapping = mapping.get("test_table_if_not_exists");
+        assertNotNull(indexMapping, "Mapping for test_table_if_not_exists should exist");
+        Map<String, Property> properties = indexMapping.mappings().properties();
+        
+        assertNotNull(properties.get("id"), "Property 'id' should exist");
+        assertEquals("Text", properties.get("id")._kind().name());
+        assertEquals("Text", properties.get("name")._kind().name());
     }
 } 

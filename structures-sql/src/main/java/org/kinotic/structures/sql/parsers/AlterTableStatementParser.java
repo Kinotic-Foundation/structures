@@ -1,5 +1,7 @@
 package org.kinotic.structures.sql.parsers;
 
+import org.kinotic.structures.sql.domain.Column;
+import org.kinotic.structures.sql.domain.ColumnType;
 import org.kinotic.structures.sql.domain.Statement;
 import org.kinotic.structures.sql.domain.statements.AlterTableStatement;
 import org.kinotic.structures.sql.parser.StructuresSQLParser;
@@ -22,7 +24,7 @@ public class AlterTableStatementParser implements StatementParser {
         StructuresSQLParser.AlterTableStatementContext alterCtx = ctx.alterTableStatement();
         String tableName = alterCtx.ID(0).getText();
         String columnName = alterCtx.ID(1).getText();
-        String type = alterCtx.type().getText();
-        return new AlterTableStatement(tableName, columnName, type);
+        ColumnType type = ColumnType.valueOf(alterCtx.type().getText());
+        return new AlterTableStatement(tableName, new Column(columnName, type));
     }
 }
