@@ -252,7 +252,7 @@ class SystemMigratorIntegrationTest extends ElasticsearchSqlTestBase {
             INSERT INTO test_table_delete (id, name) VALUES ('1', 'test') WITH REFRESH;
             """;
         String deleteContent = """
-            DELETE FROM test_table_delete WHERE id == '1';
+            DELETE FROM test_table_delete WHERE id == '1' WITH REFRESH;
             """;
 
         PathMatchingResourcePatternResolver resourceLoader = TestResourceUtils.createResourceResolver(
@@ -315,7 +315,7 @@ class SystemMigratorIntegrationTest extends ElasticsearchSqlTestBase {
         SystemMigrator systemMigrator = new SystemMigrator(migrationExecutor, migrationParser, resourceLoader);
 
         // When/Then
-        assertThrows(RuntimeException.class, () -> 
+        assertThrows(IllegalStateException.class, () -> 
             systemMigrator.onApplicationEvent(null)
         );
     }

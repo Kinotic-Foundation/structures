@@ -4,7 +4,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
 import org.kinotic.structures.sql.domain.Migration;
@@ -60,14 +62,14 @@ public class SystemMigrator implements ApplicationListener<ContextRefreshedEvent
                     log.info("Successfully applied all system migrations");
                 } catch (ExecutionException ex) {
                     log.error("Failed to apply system migrations", ex.getCause());
-                    throw new RuntimeException("Failed to apply system migrations", ex.getCause());
+                    throw new IllegalStateException("Failed to apply system migrations", ex.getCause());
                 }
             } else {
                 log.info("No system migrations found");
             }
         } catch (Exception e) {
             log.error("Error during system migration", e);
-            throw new RuntimeException("Failed to initialize system migrations", e);
+            throw new IllegalStateException("Failed to initialize system migrations", e);
         }
     }
     
@@ -88,10 +90,29 @@ public class SystemMigrator implements ApplicationListener<ContextRefreshedEvent
             // Sort resources by filename to ensure migrations are applied in order
             Arrays.sort(resources, Comparator.comparing(Resource::getFilename));
             
+            // Track versions to detect duplicates within current batch
+            Set<String> currentBatchVersions = new HashSet<>();
+            
             for (Resource resource : resources) {
                 log.debug("Processing migration file: {}", resource.getFilename());
                 try {
                     Migration migration = migrationParser.parse(resource);
+                    
+                    // Check for duplicates within current batch
+                    if (!currentBatchVersions.add(migration.getVersion())) {
+                        throw new IllegalStateException("Duplicate migration version found in current batch: " + migration.getVersion());
+                    }
+                    
+                    // Skip migrations that have already been applied
+                    try {
+                        if (migrationExecutor.isMigrationApplied(migration.getVersion(), MigrationExecutor.SYSTEM_PROJECT)) {
+                            log.debug("Skipping already applied migration: {}", migration.getVersion());
+                            continue;
+                        }
+                    } catch (Exception e) {
+                        throw new IllegalStateException("Failed to check if migration was applied: " + migration.getVersion(), e);
+                    }
+                    
                     allMigrations.add(migration);
                 } catch (IOException e) {
                     log.warn("Failed to parse migration file: {}", resource.getFilename(), e);

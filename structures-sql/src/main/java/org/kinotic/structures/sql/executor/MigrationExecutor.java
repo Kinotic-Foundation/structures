@@ -29,10 +29,11 @@ import java.util.concurrent.CompletableFuture;
 public class MigrationExecutor {
     private static final Logger log = LoggerFactory.getLogger(MigrationExecutor.class);
     private static final String MIGRATION_INDEX = "migration_history";
-    private static final String SYSTEM_PROJECT = "_structures_system";
+    public static final String SYSTEM_PROJECT = "_structures_system";
 
     private final ElasticsearchAsyncClient client;
     private final List<StatementExecutor<?, ?>> executors;
+    private String migrationIndex = MIGRATION_INDEX;
 
     public MigrationExecutor(ElasticsearchAsyncClient client, 
                              List<StatementExecutor<?, ?>> executors) {
@@ -41,16 +42,23 @@ public class MigrationExecutor {
     }
 
     /**
+     * For testing purposes - allows setting a custom migration index
+     */
+    public void setMigrationIndex(String migrationIndex) {
+        this.migrationIndex = migrationIndex;
+    }
+
+    /**
      * Ensures that the migration tracking index exists in Elasticsearch
      * @return CompletableFuture<Boolean> that completes with true if index was created, false if it already existed
      */
     public CompletableFuture<Boolean> ensureMigrationIndexExists() {
-        return client.indices().exists(ExistsRequest.of(r -> r.index(MIGRATION_INDEX)))
+        return client.indices().exists(ExistsRequest.of(r -> r.index(migrationIndex)))
             .thenCompose(exists -> {
                 if (!exists.value()) {
                     log.info("Creating migration history index...");
                     return client.indices().create(c -> c
-                            .index(MIGRATION_INDEX)
+                            .index(migrationIndex)
                             .mappings(m -> m
                                     .properties("version", p -> p.keyword(k -> k))
                                     .properties("projectId", p -> p.keyword(k -> k))
@@ -121,9 +129,9 @@ public class MigrationExecutor {
                         .orElse(null);
     }
 
-    private boolean isMigrationApplied(String version, String projectId) throws Exception {
+    public boolean isMigrationApplied(String version, String projectId) throws Exception {
         SearchResponse<Object> response = client.search(s -> s
-                .index(MIGRATION_INDEX)
+                .index(migrationIndex)
                 .query(q -> q
                         .bool(b -> b
                                 .must(m -> m.term(t -> t.field("version").value(version)))
@@ -138,7 +146,7 @@ public class MigrationExecutor {
 
     private void recordMigration(String version, String projectId) throws Exception {
         client.index(i -> i
-                .index(MIGRATION_INDEX)
+                .index(migrationIndex)
                 .document(new MigrationRecord(version, projectId, System.currentTimeMillis()))
         ).get();
     }
