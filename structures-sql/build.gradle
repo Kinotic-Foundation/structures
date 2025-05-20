@@ -11,11 +11,7 @@ generateGrammarSource {
 
 	// Output directly to the parser package
 	outputDirectory = file("${projectDir}/src/main/java/org/kinotic/structures/sql/parser")
-	enabled = false
-	// Only run if explicitly requested via command line
-	// onlyIf {
-	// 	project.gradle.startParameter.taskNames.contains('generateGrammarSource')
-	// }
+	enabled = project.gradle.startParameter.taskNames.contains(':structures-sql:generateGrammarSource')
 }
 
 // Configure Javadoc to exclude generated files
