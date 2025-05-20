@@ -66,6 +66,9 @@ public class QueryBuilder {
             case ">":
             case "<=":
             case ">=":
+                if (value._kind() == FieldValue.Kind.Boolean) {
+                    throw new IllegalArgumentException("Boolean values can only be compared with == and != operators");
+                }
                 if (value._kind() == FieldValue.Kind.Double || value._kind() == FieldValue.Kind.Long) {
                     double numericValue = value._kind() == FieldValue.Kind.Double ? 
                         value.doubleValue() : value.longValue();
