@@ -64,6 +64,12 @@ website/.vitepress/cache
 
 website/.vitepress/dist/
 
+website-nuxt/node_modules
+
+website-nuxt/.vitepress/cache
+
+website-nuxt/.vitepress/dist/
+
 structures-frontend/.env.development
 structures-frontend/.env.production
 structures-frontend/node_modules
