@@ -8,7 +8,6 @@ export function createStructuresUI(): Plugin {
             options.router.beforeEach((to: RouteLocationNormalized, _: RouteLocationNormalized, next: NavigationGuardNext) => {
 
                 const { authenticationRequired } = to.meta
-                // console.log('authenticationRequired => ', to)
                 if ((authenticationRequired === undefined || authenticationRequired)
                     && !StructuresStates.getUserState().isAuthenticated()){
                     next({ path: '/login' })

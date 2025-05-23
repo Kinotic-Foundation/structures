@@ -1,14 +1,18 @@
-// src/states/IStructuresState.ts
 import { ref, computed } from 'vue'
+export interface Structure {
+  id: string
+  name: string
+  description?: string
+}
 
 class StructuresState {
   private _modalVisible = ref(false)
-  private _selectedStructure = ref<any | null>(null)
+  private _selectedStructure = ref<Structure | null>(null)
 
   readonly selectedStructure = computed(() => this._selectedStructure.value)
   readonly isModalOpen = computed(() => this._modalVisible.value && !!this._selectedStructure.value)
 
-  openModal(item: any): void {
+  openModal(item: Structure): void {
     this._selectedStructure.value = item
     this._modalVisible.value = true
   }

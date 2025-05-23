@@ -53,14 +53,20 @@
 
 <script lang="ts">
 import { Component, Prop, Vue, Emit } from 'vue-facing-decorator'
-import {Continuum, type ICrudServiceProxy, type Identifiable} from '@kinotic/continuum-client'
+import { Continuum, type ICrudServiceProxy, type Identifiable } from '@kinotic/continuum-client'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
 import ProgressSpinner from 'primevue/progressspinner'
 import { USER_STATE } from '@/states/IUserState'
 
-type RuleValidator = (value: any) => string | boolean
+type RuleValidator = (value: string) => string | boolean
+
+interface ApplicationEntity extends Identifiable<string> {
+  id: string
+  name?: string
+  description?: string
+}
 
 @Component({
   components: {
@@ -78,48 +84,42 @@ export default class CrudEntityAddEdit extends Vue {
   @Prop({ type: Array, default: () => [] }) public identityRules!: RuleValidator[]
   @Prop({ type: Boolean, default: true }) public identityEditable!: boolean
   @Prop({ type: Boolean, default: true }) public showBasicInfoSubheader!: boolean
-  @Prop({ type: Object, default: () => ({ id: '' }) }) public entity!: Identifiable<string>
+  @Prop({ type: Object, default: () => ({ id: '' }) }) public entity!: ApplicationEntity
 
-
-  public syncedEntity: Identifiable<string> = { id: '' }
-  private crudServiceProxy!: ICrudServiceProxy<any>
+  public syncedEntity: ApplicationEntity = { id: '' }
+  private crudServiceProxy!: ICrudServiceProxy<ApplicationEntity>
   private editing = false
   public valid = true
   public loading = false
   private rulesForIdentity: RuleValidator[] = []
 
   public async mounted() {
-  if (this.identityRules.length === 0) {
-    this.rulesForIdentity = [
-      (v) => !!v || this.identityLabel + ' is required'
-    ]
-  } else {
-    this.rulesForIdentity = this.identityRules
-  }
+    this.rulesForIdentity =
+      this.identityRules.length > 0
+        ? this.identityRules
+        : [(v: string) => !!v || `${this.identityLabel} is required`]
 
-  try {
-    if (!USER_STATE.isAuthenticated()) {
-      await USER_STATE.authenticate('admin', 'structures')
-    }
+    try {
+      if (!USER_STATE.isAuthenticated()) {
+        await USER_STATE.authenticate('admin', 'structures')
+      }
 
-    this.crudServiceProxy = Continuum.crudServiceProxy(this.crudServiceIdentifier)
+      this.crudServiceProxy = Continuum.crudServiceProxy(this.crudServiceIdentifier)
 
-    if (this.identity !== null) {
-      this.editing = true
-      this.loading = true
+      if (this.identity !== null) {
+        this.editing = true
+        this.loading = true
 
-      const item = await this.crudServiceProxy.findById(this.identity)
-      this.syncedEntity = item
-      this.afterLoad(item)
+        const item = await this.crudServiceProxy.findById(this.identity)
+        this.syncedEntity = item
+        this.afterLoad(item)
+        this.loading = false
+      }
+    } catch (error: unknown) {
       this.loading = false
+      this.displayAlert((error as Error).message || 'Error connecting or loading data')
     }
-  } catch (error: any) {
-    this.loading = false
-    this.displayAlert(error.message || 'Error connecting or loading data')
   }
-}
-
-
 
   public close() {
     this.$router.back()
@@ -138,24 +138,24 @@ export default class CrudEntityAddEdit extends Vue {
 
     try {
       if (!this.editing) {
-  await this.crudServiceProxy.create(this.syncedEntity)
-} else {
-  await this.crudServiceProxy.save(this.syncedEntity)
-}
+        await this.crudServiceProxy.create(this.syncedEntity)
+      } else {
+        await this.crudServiceProxy.save(this.syncedEntity)
+      }
 
-this.$router.push({ path: '/application', query: { created: 'true' } })
-    } catch (error: any) {
-      this.displayAlert(error.message)
+      this.$router.push({ path: '/application', query: { created: 'true' } })
+    } catch (error: unknown) {
+      this.displayAlert((error as Error).message)
     }
 
     this.loading = false
   }
 
-  @Emit() public beforeSave(): Identifiable<string> {
+  @Emit() public beforeSave(): ApplicationEntity {
     return this.syncedEntity
   }
 
-  @Emit() public afterLoad(item: Identifiable<string>): Identifiable<string> {
+  @Emit() public afterLoad(item: ApplicationEntity): ApplicationEntity {
     return item
   }
 
