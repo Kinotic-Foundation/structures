@@ -1,12 +1,7 @@
-<!-- Breadcrumb.vue -->
 <template>
     <Breadcrumb :model="breadcrumbModel" class="py-2">
         <template #item="{ item }">
-            <router-link
-                :to="item.path"
-                class="p-breadcrumb-item-link"
-                @click.prevent="navigate(item)"
-            >
+            <router-link :to="item.path" class="p-breadcrumb-item-link" @click.prevent="navigate(item)">
                 <i v-if="item.icon" :class="item.icon" class="mr-2" />
                 <span>{{ item.label }}</span>
             </router-link>
@@ -15,33 +10,27 @@
 </template>
 
 <script lang="ts">
-import {StructuresStates} from '@/states/index.js'
+import { StructuresStates } from '@/states/index.js'
 import { Vue, Component } from 'vue-facing-decorator'
 import Breadcrumb from 'primevue/breadcrumb'
 import { NavItem } from '@/components/NavItem'
 import type { Router } from 'vue-router'
 
 @Component({
-               components: {
-                   Breadcrumb
-               }
-           })
+    components: {
+        Breadcrumb
+    }
+})
 export default class AppBreadcrumb extends Vue {
-    // Access router via the $router property injected by Vue Router
     private get router(): Router {
         return this.$router
     }
-
-    // Computed property for breadcrumb items
     get breadcrumbModel(): NavItem[] {
         return StructuresStates.getApplicationState().breadcrumbItems.value
     }
 
-    // Method to handle navigation
     navigate(item: NavItem): void {
         item.navigate()
-        // Alternatively, you could use the router directly:
-        // this.router.push(item.path)
     }
 }
 </script>
