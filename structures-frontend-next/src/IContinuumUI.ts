@@ -1,43 +1,45 @@
-import { createRouter, createWebHistory, type RouterOptions, type Router, type RouteLocationNormalized, type NavigationGuardNext, type NavigationFailure } from 'vue-router'
-import { reactive } from 'vue'
-import { StructuresStates } from './states'
+import { createRouter, createWebHistory, type RouterOptions, type Router } from 'vue-router';
+import { reactive } from 'vue';
+import { StructuresStates } from './states';
 
+// Interface for ContinuumUI
 export interface IContinuumUI {
-  initialize(routerOptions: Omit<RouterOptions, 'history'>): Router
-  navigate(path: string): Promise<void | NavigationFailure>
+    initialize(routerOptions: Omit<RouterOptions, 'history'>): Router;
+    navigate(path: string): Promise<void>;
 }
 
+// Class for ContinuumUI
 class ContinuumUI implements IContinuumUI {
-  private router!: Router
 
-  public initialize(routerOptions: Omit<RouterOptions, 'history'>): Router {
-    this.router = createRouter({
-      history: createWebHistory(),
-      ...routerOptions
-    })
+    private router!: Router;
 
-    this.router.beforeEach((to: RouteLocationNormalized, from: RouteLocationNormalized, next: NavigationGuardNext) => {
-      const { authenticationRequired } = to.meta as { authenticationRequired?: boolean }
+    constructor() {}
 
-      if ((authenticationRequired === undefined || authenticationRequired) &&
-        !StructuresStates.getUserState().isAuthenticated()) {
+    public initialize(routerOptions: Omit<RouterOptions, 'history'>): Router {
+        this.router = createRouter({
+            history: createWebHistory(),  // You can use createWebHashHistory() if needed
+            ...routerOptions
+        });
+        this.router.beforeEach((to, _from, next) => {
+            const { authenticationRequired } = to.meta as { authenticationRequired?: boolean };
+        
+            if ((authenticationRequired === undefined || authenticationRequired)
+                && !StructuresStates.getUserState().isAuthenticated()) {
+                
+                next({ name: 'login', params: { referer: to.path } });
+        
+            } else {
+                next();
+            }
+        });
 
-        next({ name: 'login', params: { referer: to.path } })
-      } else {
-        next()
-      }
-    })
-
-    if (StructuresStates.getFrontendState) {
-      StructuresStates.getFrontendState().initialize(this.router)
+        return this.router;
     }
 
-    return this.router
-  }
-
-  public navigate(path: string): Promise<void | NavigationFailure> {
-    return this.router.push(path)
-  }
+    public navigate(path: string): any {
+        return this.router.push(path);
+    }
 }
 
-export const CONTINUUM_UI: IContinuumUI = reactive(new ContinuumUI())
+// Export a reactive singleton
+export const CONTINUUM_UI: IContinuumUI = reactive(new ContinuumUI());

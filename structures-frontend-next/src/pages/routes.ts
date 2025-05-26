@@ -22,7 +22,7 @@ const pageRoutes: RouteRecordRaw[] = [
     {
       path: '/applications',
       component: () => import('@/layouts/MainLayout.vue'),
-      name: "Applications",
+      name: "applications",
       meta: {
         requiresAuth: true,
         showInMainNav: true,
@@ -71,6 +71,7 @@ const pageRoutes: RouteRecordRaw[] = [
     {
       path: '/structures',
       component: () => import('@/layouts/MainLayout.vue'),
+      name: "structures",
       meta: {
         authenticationRequired: true,
         showInMainNav: true,
