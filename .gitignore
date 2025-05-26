@@ -1,7 +1,8 @@
 # Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio and WebStorm
 # Reference: https://intellij-support.jetbrains.com/hc/en-us/articles/206544839
 .gradle
-/build/
+bin/
+build/
 /buildSrc/build/
 !gradle/wrapper/gradle-wrapper.jar
 
@@ -64,6 +65,12 @@ website/.vitepress/cache
 
 website/.vitepress/dist/
 
+website-nuxt/node_modules
+
+website-nuxt/.vitepress/cache
+
+website-nuxt/.vitepress/dist/
+
 structures-frontend/.env.development
 structures-frontend/.env.production
 structures-frontend/node_modules
@@ -80,3 +87,5 @@ structures-js/structures-cli/yalc.lock
 .vscode/
 
 structures-js/structures-e2e/test/services/generated/
+
+structures-sql/allure-results/

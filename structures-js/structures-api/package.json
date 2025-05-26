@@ -1,6 +1,6 @@
 {
   "name": "@kinotic/structures-api",
-  "version": "3.4.0",
+  "version": "3.4.4",
   "author": "Kinotic Foundation <develop@kinotic.org>",
   "license": "MIT",
   "homepage": "https://kinotic-foundation.github.io/structures/",
@@ -11,6 +11,7 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/structures-api.js",
       "require": "./dist/structures-api.cjs"
     }

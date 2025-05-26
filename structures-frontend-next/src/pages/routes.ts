@@ -1,54 +1,149 @@
-import { type RouteRecordRaw } from 'vue-router'
+import { type RouteMeta, type RouteRecordRaw } from 'vue-router'
 
 const pageRoutes: RouteRecordRaw[] = [
     {
-        path: '/applications', component: () => import('@/layouts/MainLayout.vue'),
-        meta: {
-            authenticationRequired: false,
-            showInNav: true,
-            icon: 'fa-sitemap',
-            title: 'Applications'
+      path: '/dashboard',
+      component: () => import('@/layouts/MainLayout.vue'),
+      name: "Dashboard",
+      meta: {
+        authenticationRequired: true,
+        showInMainNav: true,
+        icon: 'dashboard.svg',
+        label: 'Dashboard',
+      } as RouteMeta,
+      children: [
+        {
+          path: '',
+          component: () => import('@/pages/Test.vue'),
+          meta: { authenticationRequired: true }
         },
-        // children: [
-        //     {
-        //         path: '',
-        //         component: () => import('@/frontends/structures-admin/pages/structures/namespaces/NamespaceList.vue')
-        //     },
-        //     {
-        //         path: 'edit/:id', component: () => import('@/frontends/structures-admin/pages/structures/namespaces/NamespaceAddEdit.vue'), props: true
-        //     },
-        //     {
-        //         path: 'add', component: () => import('@/frontends/structures-admin/pages/structures/namespaces/NamespaceAddEdit.vue')
-        //     }
-        // ]
+      ]
+    },
+    {
+      path: '/applications',
+      component: () => import('@/layouts/MainLayout.vue'),
+      name: "Applications",
+      meta: {
+        authenticationRequired: true,
+        showInMainNav: true,
+        icon: 'microchip.svg',
+        label: 'Applications',
+      } as RouteMeta,
+      children: [
+        {
+          path: '',
+          component: () => import('@/pages/NamespaceList.vue'),
+          meta: { authenticationRequired: true }
+        }
+      ]
+    },
+    {
+      path: '/projects',
+      component: () => import('@/layouts/MainLayout.vue'),
+      meta: {
+        authenticationRequired: true,
+        showInMainNav: true,
+        icon: 'folder.svg',
+        label: 'Projects',
+      } as RouteMeta,
+    },
+    {
+      path: '/structures',
+      component: () => import('@/layouts/MainLayout.vue'),
+      meta: {
+        authenticationRequired: true,
+        showInMainNav: true,
+        icon: 'objects-column.svg',
+        label: 'Structures',
+      } as RouteMeta,
+      children: [
+        {
+          path: '',
+          component: () => import('@/pages/structures/StructuresList.vue'),
+          meta: { authenticationRequired: true }
+        }
+      ]
+    },
+    {
+      path: '/entity/:id',
+      component: () => import('@/layouts/MainLayout.vue'),
+      meta: {
+        authenticationRequired: true,
+        showInMainNav: false,
+        icon: 'objects-column.svg',
+        label: 'Structure Details',
+      } as RouteMeta,
+      children: [
+        {
+          path: '',
+          component: () => import('@/pages/structures/entity/EntityList.vue'),
+          meta: { requiresAuth: true }
+        }
+      ]
     },
     // {
-    //     path: '/structures', component: () => import('@/frontends/continuum/layouts/NestedLayout.vue'),
-    //     meta: {
-    //         authenticationRequired: true,
-    //         icon: 'fa-toolbox',
-    //         title: 'Structures'
-    //     },
-    //     children: [
-    //         {
-    //             path: '',
-    //             component: () => import('@/frontends/structures-admin/pages/structures/structures/StructuresList.vue')
-    //         },
-    //         {
-    //             path: 'edit/:id', component: () => import('@/frontends/structures-admin/pages/structures/structures/StructureAddEdit.vue'), props: true
-    //         },
-    //         {
-    //             path: 'add', component: () => import('@/frontends/structures-admin/pages/structures/structures/StructureAddEdit.vue')
-    //         },
-    //         {
-    //             path: '/entity/:structureId', component: () => import('@/frontends/structures-admin/pages/structures/entity/EntityList.vue'), props: true,
-    //             meta: {
-    //                 noShow: true,
-    //                 title: 'Entities'
-    //             }
-    //         }
-    //     ]
-    // }
-]
+    //   path: '/entity-structure/:id',
+    //   component: () => import('@/layouts/MainLayout.vue'),
+    //   meta: {
+    //     authenticationRequired: true,
+    //     showInMainNav: false,
+    //     icon: 'objects-column.svg',
+    //     label: 'Structure Details',
+    //   } as RouteMeta,
+    //   children: [
+    //     {
+    //       path: '',
+    //       component: () => import('@/pages/structures/entity/EntityList.vue'),
+    //       meta: { requiresAuth: true }
+    //     }
+    //   ]
+    // },
+    {
+      path: '/application-add',
+      component: () => import('@/pages/NamespaceAddEdit.vue'),
+      meta: {
+        authenticationRequired: true,
+        showInMainNav: false,
+        icon: 'settings.svg',
+        label: 'Add Application',
+      } as RouteMeta,
+    },
+    {
+      path: '/users',
+      component: () => import('@/layouts/MainLayout.vue'),
+      meta: {
+        authenticationRequired: true,
+        showInMainNav: true,
+        icon: 'icon-man.svg',
+        label: 'Users',
+      } as RouteMeta,
+      children: [
+        {
+          path: '',
+          component: () => import('@/pages/Users.vue'),
+          meta: { authenticationRequired: true }
+        },
+        
+      ]
+    },
+    {
+      path: '/settings',
+      component: () => import('@/layouts/MainLayout.vue'),
+      meta: {
+        authenticationRequired: true,
+        showInMainNav: true,
+        icon: 'settings.svg',
+        label: 'Settings',
+      } as RouteMeta,
+    },
+    {
+      path: '/login',
+      component: () => import('@/pages/Login.vue'),
+      meta: {
+        authenticationRequired: false,
+        showInMainNav: false,
+      } as RouteMeta,
+    },
+];
 
 export default pageRoutes

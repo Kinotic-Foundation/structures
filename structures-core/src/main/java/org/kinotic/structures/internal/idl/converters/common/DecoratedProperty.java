@@ -28,8 +28,7 @@ public class DecoratedProperty {
         if(getDecorators() != null){
             for (C3Decorator decorator : getDecorators()){
                 if(clazz.isAssignableFrom(decorator.getClass())){
-                    //noinspection unchecked
-                    ret = (T) decorator;
+                    ret = clazz.cast(decorator);
                     break;
                 }
             }

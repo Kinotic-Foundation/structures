@@ -16,6 +16,9 @@
   --vp-c-brand-darker: #454ce1;
   --vp-c-brand-dimm: rgba(100, 108, 255, 0.08);
 }
+.dark {
+  --vp-c-bg: #000 !important;
+}
 
 /**
  * Component: Button
@@ -33,12 +36,20 @@
   --vp-button-brand-active-bg: var(--vp-button-brand-bg);
 }
 
+.VPContent {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+
 /**
  * Component: Home
  * -------------------------------------------------------------------------- */
-
+:root {
+  --vp-nav-bg-color: #101010 !important;
+}
 :root {
   --vp-home-hero-name-color: transparent;
+  --vp-home-hero-height: 0px !important;
   --vp-home-hero-name-background: -webkit-linear-gradient(
     120deg,
     #bd34fe 30%,

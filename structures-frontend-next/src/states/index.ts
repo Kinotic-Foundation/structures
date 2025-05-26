@@ -1,4 +1,4 @@
-import {FRONTEND_STATE, type IFrontendState} from './IFrontendState'
+import {APPLICATION_STATE, type IApplicationState} from './IApplicationState.js'
 import {USER_STATE, type IUserState} from './IUserState'
 
 /**
@@ -6,8 +6,8 @@ import {USER_STATE, type IUserState} from './IUserState'
  */
 export namespace StructuresStates {
 
-    export function getFrontendState(): IFrontendState {
-        return FRONTEND_STATE
+    export function getApplicationState(): IApplicationState {
+        return APPLICATION_STATE
     }
 
     export function getUserState(): IUserState {
