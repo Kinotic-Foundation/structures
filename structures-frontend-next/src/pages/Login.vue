@@ -26,7 +26,7 @@
             class="!w-full max-w-[540px]"
             placeholder="Password"
             toggleMask
-            feedback="false"
+            :feedback="false"
             @focus="hideAlert"
             @keyup.enter="handleLogin"
           />
@@ -147,11 +147,15 @@ export default class Login extends Vue {
 
       }
 
-    } catch (error: any) {
-      this.displayAlert(error.message || 'Unknown login error');
-    } finally {
-      this.loading = false;
-    }
+} catch (error: unknown) {
+  if (error instanceof Error) {
+    this.displayAlert(error.message)
+  } else if (typeof error === 'string') {
+    this.displayAlert(error)
+  } else {
+    this.displayAlert('Unknown login error')
+  }
+}
   }
 
   private hideAlert() {

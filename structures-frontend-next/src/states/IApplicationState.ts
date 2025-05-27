@@ -78,11 +78,9 @@ class ApplicationState implements IApplicationState {
     }
 
     private resolveFullPath(routePath: string, parentPath: string): string {
-        // If the route path is absolute or there's no parent, use it as-is
         if (routePath.startsWith('/') || !parentPath) {
             return routePath
         }
-        // Combine parent and child paths
         return `${parentPath}${parentPath.endsWith('/') ? '' : '/'}${routePath}`
     }
 

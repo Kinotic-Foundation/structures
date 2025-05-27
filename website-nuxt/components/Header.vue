@@ -3,13 +3,13 @@
     <BaseContainer>
       <nav class="mx-auto py-3 flex justify-between items-center px-[88px]">
         <NuxtLink to="/" class="text-lg font-bold text-blue-700 dark:text-orange-700">
-          <img src="/icons/logo.svg" alt="logo" />
+          <img src="/icons/logo.svg" class="invert-100 dark:invert-0" alt="logo" />
         </NuxtLink>
         <div class="space-x-4 flex items-center">
-          <NuxtLink to="#" class="text-gray-900 hover:text-blue-500 dark:text-gray-300">Guide</NuxtLink>
-          <NuxtLink to="#" class="text-gray-900 hover:text-blue-500 dark:text-gray-300">Reference</NuxtLink>
-          <NuxtLink to="#" class="text-gray-900 hover:text-blue-500 dark:text-gray-300">Test Status</NuxtLink>
-          <NuxtLink to="#" class="text-gray-900 hover:text-blue-500 dark:text-gray-300 flex items-center gap-1">
+          <NuxtLink to="#" class="text-gray-900 hover:text-gray-700 dark:text-gray-300">Guide</NuxtLink>
+          <NuxtLink to="#" class="text-gray-900 hover:text-gray-700 dark:text-gray-300">Reference</NuxtLink>
+          <NuxtLink to="#" class="text-gray-900 hover:text-gray-700 dark:text-gray-300">Test Status</NuxtLink>
+          <NuxtLink to="#" class="text-gray-900 hover:text-gray-700 dark:text-gray-300 flex items-center gap-1">
             <img src="/icons/git.svg" alt="GitHub" class="w-5 h-5" />
             80.2K
           </NuxtLink>

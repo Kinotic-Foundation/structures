@@ -14,8 +14,11 @@
                     </Button>
                 </div>
                 <div class="flex-1">
-                    <SideNav class="flex flex-col gap-2 overflow-hidden" :nav-items="applicationState.mainNavItems"
-                        v-model="applicationState.selectedNavItem" :collapsed="isCollapsed" />
+                    <SideNav 
+                        class="flex flex-col gap-2 overflow-hidden" 
+                        :nav-items="applicationState.mainNavItems"
+                        v-model="applicationState.selectedNavItem" 
+                        :collapsed="isCollapsed" />
                 </div>
                 <div :class="[isCollapsed ? 'justify-center items-center' : '']" class="flex items-center gap-3 cursor-pointer mt-5">
                     <Avatar

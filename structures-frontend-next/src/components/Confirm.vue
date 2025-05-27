@@ -45,7 +45,7 @@
   export default class Confirm extends Vue {
     private dialog = false
     private resolve!: (value: boolean) => void
-    private reject!: (reason?: any) => void
+    public reject!: (reason?: any) => void
     private message: string | null = null
     private title: string | null = null
   
