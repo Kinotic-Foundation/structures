@@ -19,7 +19,7 @@
           </RouterLink>
         </Button>
         <Button text class="!text-[#334155] !bg-white" :title="'GraphQL'">
-          <div target="_blank" @click="() => asdasd(item.id)">
+          <div target="_blank" @click="() => toGraphql(item.id)">
             <svg width="20" height="20" viewBox="0 0 24 24">
               <path :d="icons.graph" fill="currentColor" />
             </svg>
@@ -69,7 +69,7 @@ export default class NamespaceList extends Vue {
     api: mdiApi
   }
 
-  asdasd(id: string) {
+  toGraphql(id: string) {
     const URI = graphqlURI(id)
     window.open(URI)
   }
