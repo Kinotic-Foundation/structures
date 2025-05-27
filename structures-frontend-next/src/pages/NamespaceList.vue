@@ -1,20 +1,11 @@
 <template>
   <div class="pt-4">
-    <CrudTable
-      rowHoverColor=""
-      title="Applications"
-      subtitle="List of all applications in the system"
-      :data-source="dataSource"
-      :headers="headers"
-      :singleExpand="false"
-      @add-item="onAddItem"
-      @edit-item="onEditItem"
-      ref="crudTable"
-    >
+    <CrudTable rowHoverColor="" title="Applications" subtitle="List of all applications in the system"
+      :data-source="dataSource" :headers="headers" :singleExpand="false" @add-item="onAddItem" @edit-item="onEditItem"
+      ref="crudTable">
       <template #item.id="{ item }">
         <span>{{ item.id }}</span>
       </template>
-
       <template #item.description="{ item }">
         {{ item.description }}
       </template>
@@ -27,13 +18,17 @@
             </svg>
           </RouterLink>
         </Button>
-
         <Button text class="!text-[#334155] !bg-white" :title="'GraphQL'">
-          <RouterLink target="_blank" :to="'/gql-ui.html?namespace=' + item.id">
+          <div target="_blank" @click="() => asdasd(item.id)">
             <svg width="20" height="20" viewBox="0 0 24 24">
               <path :d="icons.graph" fill="currentColor" />
             </svg>
-          </RouterLink>
+          </div>
+          <!-- <RouterLink target="_blank" to="/gql-ui">
+            <svg width="20" height="20" viewBox="0 0 24 24">
+              <path :d="icons.graph" fill="currentColor" />
+            </svg>
+          </RouterLink> -->
         </Button>
       </template>
     </CrudTable>
@@ -47,6 +42,7 @@ import { type Identifiable } from '@kinotic/continuum-client'
 import { Structures, type INamespaceService } from '@kinotic/structures-api'
 import { mdiGraphql, mdiApi } from '@mdi/js'
 import { USER_STATE } from '@/states/IUserState'
+import { graphqlURI } from '@/util/helpers'
 
 interface CrudHeader {
   field: string
@@ -58,6 +54,7 @@ interface CrudHeader {
   components: { CrudTable }
 })
 export default class NamespaceList extends Vue {
+  [x: string]: any
   headers: CrudHeader[] = [
     { field: 'id', header: 'Id', sortable: false },
     { field: 'description', header: 'Description', sortable: false },
@@ -70,6 +67,11 @@ export default class NamespaceList extends Vue {
   icons = {
     graph: mdiGraphql,
     api: mdiApi
+  }
+
+  asdasd(id: string) {
+    const URI = graphqlURI(id)
+    window.open(URI)
   }
 
   async mounted(): Promise<void> {
@@ -93,7 +95,21 @@ export default class NamespaceList extends Vue {
     const tableRef = this.$refs.crudTable as InstanceType<typeof CrudTable> | undefined
     tableRef?.find()
   }
+  // src/util/helpers.ts
+  // getQueryParam = (name: string) => {
+  //   const urlParams = new URLSearchParams(window.location.search);
+  //   return urlParams.get(name);
+  // };
 
+  // getBaseUrl = () => {
+  //   let prefix = 'http';
+  //   let port = '4000';
+  //   if (window.location.protocol.startsWith('https')) {
+  //     prefix = 'https';
+  //     port = '443';
+  //   }
+  //   return `${prefix}://${window.location.hostname}:${port}`;
+  // };
   onAddItem(): void {
     this.$router.push(`/application-add`)
   }
