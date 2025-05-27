@@ -1,7 +1,5 @@
-import {createStructuresUI} from '@/plugins/StructuresUI.js'
-import { createApp } from 'vue'
+import { createStructuresUI } from '@/plugins/StructuresUI.js'
 import './style.css'
-import App from './App.vue'
 import PrimeVue from 'primevue/config'
 import StyleClass from 'primevue/styleclass'
 import Aura from '@primeuix/themes/aura'
@@ -9,8 +7,13 @@ import router from '@/router'
 import ToastService from 'primevue/toastservice'
 import { CONTINUUM_UI } from '@/IContinuumUI'
 import 'primeicons/primeicons.css'
+import { createApp } from 'vue'
+import App from './App.vue'
+import { ApolloClients } from '@vue/apollo-composable'
+import apolloClient from './graphql/apollo'
 
-const app = createApp(App);
+const app = createApp(App)
+
 app.use(PrimeVue, {
     theme: {
         preset: Aura,
@@ -23,12 +26,16 @@ app.use(PrimeVue, {
 })
 CONTINUUM_UI.initialize({
     routes: router.options.routes
-  });
+});
 app.directive('styleclass', StyleClass)
 app.use(ToastService)
-app.use(createStructuresUI(), {router})
+app.use(createStructuresUI(), { router })
+
+app.provide(ApolloClients, {
+    default: apolloClient,
+})
 
 app.use(router)
 
-app.mount('#app')
 
+app.mount('#app')

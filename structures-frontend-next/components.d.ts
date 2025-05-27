@@ -40,8 +40,7 @@ declare module 'vue' {
     Toast: typeof import('primevue/toast')['default']
     Toolbar: typeof import('primevue/toolbar')['default']
   }
-  export interface ComponentCustomProperties {
-    StyleClass: typeof import('primevue/styleclass')['default']
+  export interface GlobalDirectives {
     Tooltip: typeof import('primevue/tooltip')['default']
   }
 }
