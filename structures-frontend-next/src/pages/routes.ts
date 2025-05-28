@@ -99,6 +99,16 @@ const pageRoutes: RouteRecordRaw[] = [
     //     }
     //   ]
     // },
+        {
+      path: '/gql-ui',
+      component: () => import('@/pages/GraphQLExplorer.vue'),
+      meta: {
+        authenticationRequired: false,
+        showInMainNav: false,
+        // icon: 'settings.svg',
+        // label: 'Add Application',
+      } as RouteMeta,
+    },
     {
       path: '/application-add',
       component: () => import('@/pages/NamespaceAddEdit.vue'),
