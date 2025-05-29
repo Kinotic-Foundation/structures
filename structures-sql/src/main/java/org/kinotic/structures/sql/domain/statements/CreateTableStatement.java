@@ -8,7 +8,7 @@ import org.kinotic.structures.sql.domain.Statement;
 /**
  * Represents a CREATE TABLE statement in the DSL.
  * Creates a new Elasticsearch index with specified field mappings.
- * Created by Navíd Mitchell 🤝Grok on 3/31/25.
+ * Created by Navíd Mitchell 🤝 Grok on 3/31/25.
  */
 public record CreateTableStatement(String tableName,
                                  List<Column> columns,

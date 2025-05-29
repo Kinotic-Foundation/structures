@@ -13,7 +13,7 @@ import java.util.Map;
 /**
  * Parses UPDATE statements into UpdateStatement objects.
  * Handles SET assignments and complex WHERE clauses for Elasticsearch updates.
- * Created by Navíd Mitchell 🤝Grok on 3/31/25.
+ * Created by Navíd Mitchell 🤝 Grok on 3/31/25.
  */
 @Component
 public class UpdateStatementParser implements StatementParser {

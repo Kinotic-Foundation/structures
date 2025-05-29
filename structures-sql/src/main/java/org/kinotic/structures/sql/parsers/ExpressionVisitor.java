@@ -7,7 +7,7 @@ import org.kinotic.structures.sql.parser.StructuresSQLParser;
 /**
  * Visitor for parsing SQL-like expressions (e.g., literals, binary expressions).
  * Reusable across statement parsers like UPDATE and DELETE.
- * Created by Navíd Mitchell 🤝Grok on 3/31/25.
+ * Created by Navíd Mitchell 🤝 Grok on 3/31/25.
  */
 public class ExpressionVisitor extends StructuresSQLBaseVisitor<Expression> {
     @Override

@@ -12,7 +12,7 @@ import java.util.List;
 
 /**
  * Helper class for parsing template parts from SQL statements.
- * Created by Navíd Mitchell 🤝Grok on 3/31/25.
+ * Created by Navíd Mitchell 🤝 Grok on 3/31/25.
  */
 public class TemplatePartParser {
     

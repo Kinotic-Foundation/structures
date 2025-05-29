@@ -1,21 +1,17 @@
 package org.kinotic.structures.sql.parsers;
 
-import org.kinotic.structures.sql.domain.Column;
-import org.kinotic.structures.sql.domain.ColumnType;
+import java.util.List;
+
 import org.kinotic.structures.sql.domain.Statement;
-import org.kinotic.structures.sql.domain.statements.TemplatePart;
 import org.kinotic.structures.sql.domain.statements.CreateIndexTemplateStatement;
-import org.kinotic.structures.sql.domain.statements.ColumnTemplatePart;
-import org.kinotic.structures.sql.domain.statements.SettingTemplatePart;
+import org.kinotic.structures.sql.domain.statements.TemplatePart;
 import org.kinotic.structures.sql.parser.StructuresSQLParser;
 import org.springframework.stereotype.Component;
-
-import java.util.List;
 
 /**
  * Parses CREATE INDEX TEMPLATE statements into CreateIndexTemplateStatement objects.
  * Handles index template creation with patterns and component templates for Elasticsearch.
- * Created by Navíd Mitchell 🤝Grok on 3/31/25.
+ * Created by Navíd Mitchell 🤝 Grok on 3/31/25.
  */
 @Component
 public class CreateIndexTemplateStatementParser implements StatementParser {

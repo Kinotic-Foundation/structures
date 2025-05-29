@@ -5,7 +5,7 @@ import org.kinotic.structures.sql.domain.ColumnType;
 
 /**
  * Utility class for mapping SQL types to Elasticsearch field types.
- * Created by Navíd Mitchell 🤝Grok on 3/31/25.
+ * Created by Navíd Mitchell 🤝 Grok on 3/31/25.
  */
 public class TypeMapper {
 

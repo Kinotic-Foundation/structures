@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 /**
  * Parses ALTER TABLE statements into AlterTableStatement objects.
  * Adds new fields to existing Elasticsearch indices.
- * Created by Navíd Mitchell 🤝Grok on 3/31/25.
+ * Created by Navíd Mitchell 🤝 Grok on 3/31/25.
  */
 @Component
 public class AlterTableStatementParser implements StatementParser {

@@ -56,6 +56,7 @@ public class NamedQueryTests extends ElasticsearchTestBase {
     private EntitiesService entitiesService;
 
     @Test
+    @SuppressWarnings("rawtypes")
     public void testNamedQuery() {
 
         EntityContext context1 = new DefaultEntityContext(new DummyParticipant("tenant1", "user1"));
@@ -74,7 +75,7 @@ public class NamedQueryTests extends ElasticsearchTestBase {
 
         FunctionDefinition countPeopleByLastNameDefinition = createCountByLastName(holder2.getStructure());
         NamedQueriesDefinition namedQueriesDefinition = createNamedQuery(holder2.getStructure(), List.of(countPeopleByLastNameDefinition));
-        StepVerifier.create(Mono.fromFuture(() -> namedQueriesService.save(namedQueriesDefinition)))
+        StepVerifier.create(Mono.fromFuture(namedQueriesService.save(namedQueriesDefinition)))
                     .expectNextCount(1)
                     .verifyComplete();
 
@@ -92,7 +93,7 @@ public class NamedQueryTests extends ElasticsearchTestBase {
                                                                              Map.class,
                                                                              context2);
 
-        StepVerifier.create(Mono.fromFuture(() -> future))
+        StepVerifier.create(Mono.fromFuture(future))
                     .expectNextMatches(maps -> {
                         Assertions.assertEquals(1, maps.size());
                         Map<?,?> map = maps.get(0);
@@ -110,7 +111,7 @@ public class NamedQueryTests extends ElasticsearchTestBase {
         // Now change the named queries and make sure the cache get invalidated properly
         FunctionDefinition countAllPeopleDefinition = createCountAll(holder2.getStructure());
         NamedQueriesDefinition namedQueriesDefinition2 = createNamedQuery(holder2.getStructure(), List.of(countAllPeopleDefinition));
-        StepVerifier.create(Mono.fromFuture(() -> namedQueriesService.save(namedQueriesDefinition2)))
+        StepVerifier.create(Mono.fromFuture(namedQueriesService.save(namedQueriesDefinition2)))
                     .expectNextCount(1)
                     .verifyComplete();
 
@@ -121,7 +122,7 @@ public class NamedQueryTests extends ElasticsearchTestBase {
                                                                              Map.class,
                                                                              context2);
 
-        StepVerifier.create(Mono.fromFuture(() -> future2))
+        StepVerifier.create(Mono.fromFuture(future2))
                     .expectNextMatches(maps -> {
                         Assertions.assertEquals(1, maps.size());
                         Map<?,?> map = maps.get(0);
@@ -142,7 +143,7 @@ public class NamedQueryTests extends ElasticsearchTestBase {
                                                                              Map.class,
                                                                              context2);
         // verify error
-        StepVerifier.create(Mono.fromFuture(() -> future3))
+        StepVerifier.create(Mono.fromFuture(future3))
                     .expectErrorMatches(throwable -> throwable instanceof IllegalArgumentException && throwable.getMessage().contains("No query found with name countPeopleByLastName"))
                     .verify();
 

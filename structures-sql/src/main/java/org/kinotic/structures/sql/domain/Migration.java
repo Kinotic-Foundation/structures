@@ -9,7 +9,7 @@ import java.util.List;
 /**
  * Represents a migration with a version and a list of statements to execute.
  * Used to manage Elasticsearch index migrations in a SQL-like DSL.
- * Created by Navíd Mitchell 🤝Grok on 3/31/25.
+ * Created by Navíd Mitchell 🤝 Grok on 3/31/25.
  */
 @Getter
 @RequiredArgsConstructor

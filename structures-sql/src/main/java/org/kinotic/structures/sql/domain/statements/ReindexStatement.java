@@ -5,7 +5,7 @@ import org.kinotic.structures.sql.domain.Statement;
 /**
  * Represents a REINDEX statement in the DSL.
  * Reindexes data from one Elasticsearch index to another with optional configurations.
- * Created by Navíd Mitchell 🤝Grok on 3/31/25.
+ * Created by Navíd Mitchell 🤝 Grok on 3/31/25.
  *
  * @param conflicts    "abort" or "proceed", null defaults to "abort"
  * @param maxDocs      null if not specified

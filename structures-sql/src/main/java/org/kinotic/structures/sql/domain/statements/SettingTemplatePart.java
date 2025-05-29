@@ -2,7 +2,7 @@ package org.kinotic.structures.sql.domain.statements;
 
 /**
  * Template part for settings.
- * Created by Navíd Mitchell 🤝Grok on 3/31/25.
+ * Created by Navíd Mitchell 🤝 Grok on 3/31/25.
  */
 public class SettingTemplatePart implements TemplatePart {
     private final String name;

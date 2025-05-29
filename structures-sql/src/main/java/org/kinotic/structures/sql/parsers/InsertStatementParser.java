@@ -11,7 +11,7 @@ import java.util.List;
 /**
  * Parses INSERT statements into InsertStatement objects.
  * Handles insertion of new documents into an Elasticsearch index.
- * Created by Navíd Mitchell 🤝Grok on 3/31/25.
+ * Created by Navíd Mitchell 🤝 Grok on 3/31/25.
  */
 @Component
 public class InsertStatementParser implements StatementParser {

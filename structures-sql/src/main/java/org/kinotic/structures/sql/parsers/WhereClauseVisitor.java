@@ -7,7 +7,7 @@ import org.kinotic.structures.sql.parser.StructuresSQLBaseVisitor;
 /**
  * Visitor for parsing SQL-like WHERE clauses (e.g., conditions, AND/OR combinations).
  * Reusable across statement parsers like UPDATE and DELETE.
- * Created by Navíd Mitchell 🤝Grok on 3/31/25.
+ * Created by Navíd Mitchell 🤝 Grok on 3/31/25.
  */
 public class WhereClauseVisitor extends StructuresSQLBaseVisitor<WhereClause> {
     @Override

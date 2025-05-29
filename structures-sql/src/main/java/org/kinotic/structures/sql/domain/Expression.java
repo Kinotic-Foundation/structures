@@ -7,7 +7,7 @@ import lombok.RequiredArgsConstructor;
  * Represents an expression in SQL-like statements, such as SET clauses.
  * Supports literals (e.g., 'active', 30) and binary expressions (e.g., age + 1).
  * Reusable for future operations like SELECT.
- * Created by Navíd Mitchell 🤝Grok on 3/31/25.
+ * Created by Navíd Mitchell 🤝 Grok on 3/31/25.
  */
 @Getter
 @RequiredArgsConstructor

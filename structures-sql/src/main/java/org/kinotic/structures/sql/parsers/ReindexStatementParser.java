@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 /**
  * Parses REINDEX statements into ReindexStatement objects.
  * Manages reindexing operations between Elasticsearch indices.
- * Created by Navíd Mitchell 🤝Grok on 3/31/25.
+ * Created by Navíd Mitchell 🤝 Grok on 3/31/25.
  */
 @Component
 public class ReindexStatementParser implements StatementParser {

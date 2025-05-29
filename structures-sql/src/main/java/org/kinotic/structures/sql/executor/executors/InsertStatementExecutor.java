@@ -18,7 +18,7 @@ import lombok.RequiredArgsConstructor;
 /**
  * Executes INSERT statements against Elasticsearch.
  * Handles insertion of documents with specified field values.
- * Created by Navíd Mitchell 🤝Grok on 3/31/25.
+ * Created by Navíd Mitchell 🤝 Grok on 3/31/25.
  */
 @Component
 @RequiredArgsConstructor

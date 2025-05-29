@@ -13,7 +13,7 @@ import java.util.List;
 /**
  * Parses CREATE TABLE statements into CreateTableStatement objects.
  * Handles creation of Elasticsearch indices with field mappings.
- * Created by Navíd Mitchell 🤝Grok on 3/31/25.
+ * Created by Navíd Mitchell 🤝 Grok on 3/31/25.
  */
 @Component
 public class CreateTableStatementParser implements StatementParser {

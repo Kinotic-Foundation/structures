@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 /**
  * Parses DELETE statements into DeleteStatement objects.
  * Handles deletion of documents from an Elasticsearch index based on a WHERE clause.
- * Created by Navíd Mitchell 🤝Grok on 3/31/25.
+ * Created by Navíd Mitchell 🤝 Grok on 3/31/25.
  */
 @Component
 public class DeleteStatementParser implements StatementParser {

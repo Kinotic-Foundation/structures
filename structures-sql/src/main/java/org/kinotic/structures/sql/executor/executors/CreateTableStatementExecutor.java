@@ -16,7 +16,7 @@ import java.util.concurrent.CompletableFuture;
 /**
  * Executes CREATE TABLE statements against Elasticsearch.
  * Creates indices with specified field mappings.
- * Created by Navíd Mitchell 🤝Grok on 3/31/25.
+ * Created by Navíd Mitchell 🤝 Grok on 3/31/25.
  */
 @Component
 @RequiredArgsConstructor

@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 /**
  * Parses CREATE COMPONENT TEMPLATE statements into CreateComponentTemplateStatement objects.
  * Handles component template creation for Elasticsearch.
- * Created by Navíd Mitchell 🤝Grok on 3/31/25.
+ * Created by Navíd Mitchell 🤝 Grok on 3/31/25.
  */
 @Component
 public class CreateComponentTemplateStatementParser implements StatementParser {

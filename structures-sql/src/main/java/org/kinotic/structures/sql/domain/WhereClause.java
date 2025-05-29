@@ -7,7 +7,7 @@ import lombok.RequiredArgsConstructor;
  * Represents a WHERE clause in SQL-like statements.
  * Supports conditions (e.g., name == 'John'), AND/OR combinations, and nested clauses with parentheses.
  * Reusable for future operations like SELECT or DELETE.
- * Created by Navíd Mitchell 🤝Grok on 3/31/25.
+ * Created by Navíd Mitchell 🤝 Grok on 3/31/25.
  */
 @Getter
 @RequiredArgsConstructor

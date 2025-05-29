@@ -9,7 +9,7 @@ import java.util.Map;
 
 /**
  * Utility class for building Elasticsearch queries from SQL WHERE clauses.
- * Created by Navíd Mitchell 🤝Grok on 3/31/25.
+ * Created by Navíd Mitchell 🤝 Grok on 3/31/25.
  */
 public class QueryBuilder {
 
