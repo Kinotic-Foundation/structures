@@ -84,8 +84,6 @@ structures-js/structures-cli/yalc.lock
 
 .idea/
 
-.vscode/
-
 structures-js/structures-e2e/test/services/generated/
 
 structures-sql/allure-results/
