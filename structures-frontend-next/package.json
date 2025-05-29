@@ -8,7 +8,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@apollo/client": "^3.13.8",
     "@headlessui/vue": "^1.7.23",
     "@heroicons/vue": "^2.2.0",
     "@kinotic/continuum-client": "^2.14.0",
@@ -21,9 +20,7 @@
     "@vue-flow/controls": "^1.1.2",
     "@vue-flow/core": "^1.43.1",
     "@vue-flow/minimap": "^1.5.3",
-    "@vue/apollo-composable": "^4.2.2",
-    "graphql": "^16.11.0",
-    "graphql-tag": "^2.12.6",
+    "dagre": "^0.8.5",
     "keycloak-js": "^26.1.5",
     "primeicons": "^7.0.0",
     "primevue": "^4.3.3",
