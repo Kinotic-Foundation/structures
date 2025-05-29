@@ -1,7 +1,8 @@
 # Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio and WebStorm
 # Reference: https://intellij-support.jetbrains.com/hc/en-us/articles/206544839
 .gradle
-/build/
+bin/
+build/
 /buildSrc/build/
 !gradle/wrapper/gradle-wrapper.jar
 
@@ -83,6 +84,6 @@ structures-js/structures-cli/yalc.lock
 
 .idea/
 
-.vscode/
-
 structures-js/structures-e2e/test/services/generated/
+
+structures-sql/allure-results/

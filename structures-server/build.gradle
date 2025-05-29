@@ -2,6 +2,14 @@ plugins {
 	id 'org.kinotic.java-application-conventions'
 }
 
+sourceSets {
+    main {
+        java {
+            exclude '**/test/**'
+        }
+    }
+}
+
 dependencies {
 	implementation project(':structures-core')
 
@@ -19,8 +27,9 @@ dependencies {
 
 test {
 	useJUnitPlatform()
+	systemProperty 'spring.profiles.active', 'test'
 }
 
-tasks.named('processResources') {
-	dependsOn ":structures-frontend:copyDist"
-}
+// tasks.named('processResources') {
+// 	dependsOn ":structures-frontend:copyDist"
+// }

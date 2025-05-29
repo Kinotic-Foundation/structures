@@ -162,15 +162,17 @@ public class DefaultElasticVertxClient implements ElasticVertxClient {
                     Buffer buffer = ar.result().body();
                     if (RawJson.class.isAssignableFrom(type)) {
                         try {
-                            //noinspection unchecked
-                            fut.complete((Page<T>) processBufferToRawJson(buffer, cursorProvided.getValue()));
+                            @SuppressWarnings("unchecked")
+                            Page<T> page = (Page<T>) processBufferToRawJson(buffer, cursorProvided.getValue());
+                            fut.complete(page);
                         } catch (Exception e) {
                             fut.completeExceptionally(e);
                         }
                     } else if (Map.class.isAssignableFrom(type)) {
                         try {
-                            //noinspection unchecked
-                            fut.complete((Page<T>) processBufferToMap(buffer, cursorProvided.getValue()));
+                            @SuppressWarnings("unchecked")
+                            Page<T> page = (Page<T>) processBufferToMap(buffer, cursorProvided.getValue());
+                            fut.complete(page);
                         } catch (Exception e) {
                             fut.completeExceptionally(e);
                         }
