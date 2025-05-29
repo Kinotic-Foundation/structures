@@ -51,7 +51,8 @@ function sidebarGuide() {
       text: 'Introduction',
       items: [
         { text: 'What is Structures?', link: '/guide/overview' },
-        { text: 'Getting Started', link: '/guide/getting-started' }
+        { text: 'Getting Started', link: '/guide/getting-started' },
+        { text: 'Writing Migrations', link: '/guide/writing-migrations' }
       ]
     },
     {
@@ -81,7 +82,6 @@ function sidebarReference() {
       text: 'API',
       items: [
         { text: 'Decorators', link: '/reference/decorators' },
-        { text: 'Javadoc', link: '/reference/javadoc' },
         { text: 'PolicyAuthorizationService', link: '/reference/graphos/policy-authorization-service' },
         { text: 'PolicyAuthorizer', link: '/reference/graphos/policy-authorizer' },
         { text: 'PolicyAuthorizationRequest', link: '/reference/graphos/policy-authorization-request' }
