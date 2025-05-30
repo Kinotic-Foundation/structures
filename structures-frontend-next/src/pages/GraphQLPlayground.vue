@@ -11,30 +11,30 @@
 
 <script setup>
 import { onMounted } from 'vue'
+import { USER_STATE } from '@/states/IUserState'
 
-onMounted(() => {
+onMounted( () => {
   const script = document.createElement('script')
   script.src = '//cdn.jsdelivr.net/npm/graphql-playground-react/build/static/js/middleware.js'
   script.onload = () => {
     const getQueryParam = (name) => new URLSearchParams(window.location.search).get(name)
     const getBaseUrl = () => {
-      
       const isHttps = window.location.protocol.startsWith('https')
       const port = isHttps ? '443' : '4000'
       return `${window.location.protocol}//${window.location.hostname}:${port}`
     }
     const namespace = getQueryParam('namespace') || 'default'
-window.GraphQLPlayground.init(document.getElementById('graphql-playground'), {
-  endpoint: `${getBaseUrl()}/graphql/${namespace}`,
-  headers: {
-    Authorization: `Basic ${btoa("admin:structures")}`
-  }
-})
-
+    window.GraphQLPlayground.init(document.getElementById('graphql-playground'), {
+      endpoint: `${getBaseUrl()}/graphql/${namespace}`,
+      headers: {
+        Authorization: `Basic ${USER_STATE.btoaToken}`
+      }
+    })
   }
   document.body.appendChild(script)
 })
 </script>
+
 
 <style >
 #graphql-playground > div:first-child {
