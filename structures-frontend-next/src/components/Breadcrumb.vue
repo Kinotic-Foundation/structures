@@ -15,7 +15,6 @@ import { Vue, Component } from 'vue-facing-decorator'
 import Breadcrumb from 'primevue/breadcrumb'
 import { NavItem } from '@/components/NavItem'
 import type { Router } from 'vue-router'
-
 @Component({
     components: {
         Breadcrumb
