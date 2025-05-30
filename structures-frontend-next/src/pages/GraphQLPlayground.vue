@@ -11,8 +11,9 @@
 
 <script setup>
 import { onMounted } from 'vue'
+import { USER_STATE } from '@/states/IUserState'
 
-onMounted(() => {
+onMounted( () => {
   const script = document.createElement('script')
   script.src = '//cdn.jsdelivr.net/npm/graphql-playground-react/build/static/js/middleware.js'
   script.onload = () => {
@@ -25,11 +26,15 @@ onMounted(() => {
     const namespace = getQueryParam('namespace') || 'default'
     window.GraphQLPlayground.init(document.getElementById('graphql-playground'), {
       endpoint: `${getBaseUrl()}/graphql/${namespace}`,
+      headers: {
+        Authorization: `Basic ${USER_STATE.btoaToken}`
+      }
     })
   }
   document.body.appendChild(script)
 })
 </script>
+
 
 <style >
 #graphql-playground > div:first-child {

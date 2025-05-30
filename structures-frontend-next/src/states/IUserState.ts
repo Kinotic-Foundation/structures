@@ -16,7 +16,7 @@ export interface IUserState {
 export class UserState implements IUserState {
 
     public connectedInfo: ConnectedInfo | null = null
-
+    public btoaToken: string = ''
     private authenticated: boolean = false
 
     private accessDenied: boolean = false
@@ -27,6 +27,7 @@ export class UserState implements IUserState {
             login,
             passcode
         }
+        this.btoaToken = btoa(`${login}:${passcode}`)
         try {
             this.connectedInfo = await Continuum.connect(connectionInfo)
             this.authenticated = true
