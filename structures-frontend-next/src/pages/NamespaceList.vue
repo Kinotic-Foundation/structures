@@ -19,11 +19,16 @@
           </RouterLink>
         </Button>
         <Button text class="!text-[#334155] !bg-white" :title="'GraphQL'">
-          <div target="_blank" @click="() => toGraphql(item.id)">
+          <RouterLink :to="{ path: '/graphql', query: { namespace: item.id } }" target="_blank">
             <svg width="20" height="20" viewBox="0 0 24 24">
               <path :d="icons.graph" fill="currentColor" />
             </svg>
-          </div>
+          </RouterLink>
+          <!-- <div target="_blank" @click="() => toGraphql(item.id)">
+            <svg width="20" height="20" viewBox="0 0 24 24">
+              <path :d="icons.graph" fill="currentColor" />
+            </svg>
+          </div> -->
           <!-- <RouterLink target="_blank" to="/gql-ui">
             <svg width="20" height="20" viewBox="0 0 24 24">
               <path :d="icons.graph" fill="currentColor" />

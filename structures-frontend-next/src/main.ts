@@ -9,8 +9,6 @@ import { CONTINUUM_UI } from '@/IContinuumUI'
 import 'primeicons/primeicons.css'
 import { createApp } from 'vue'
 import App from './App.vue'
-import { ApolloClients } from '@vue/apollo-composable'
-import apolloClient from './graphql/apollo'
 
 const app = createApp(App)
 
@@ -31,9 +29,6 @@ app.directive('styleclass', StyleClass)
 app.use(ToastService)
 app.use(createStructuresUI(), { router })
 
-app.provide(ApolloClients, {
-    default: apolloClient,
-})
 
 app.use(router)
 

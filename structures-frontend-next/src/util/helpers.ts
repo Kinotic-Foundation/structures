@@ -1,3 +1,5 @@
+import { USER_STATE } from "@/states/IUserState";
+
 // src/util/helpers.ts
 export const getQueryParam = (name: string) => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -15,5 +17,7 @@ export const getBaseUrl = () => {
 };
 
 export const graphqlURI = (id: string) => {
+    const sessionId = USER_STATE.getToken();
+    // return `${getBaseUrl()}/graphql/?namespace=${id}&sessionId=${sessionId}`
     return `${getBaseUrl()}/graphql/?namespace=${id}`
 }
