@@ -18,14 +18,19 @@ onMounted(() => {
   script.onload = () => {
     const getQueryParam = (name) => new URLSearchParams(window.location.search).get(name)
     const getBaseUrl = () => {
+      
       const isHttps = window.location.protocol.startsWith('https')
       const port = isHttps ? '443' : '4000'
       return `${window.location.protocol}//${window.location.hostname}:${port}`
     }
     const namespace = getQueryParam('namespace') || 'default'
-    window.GraphQLPlayground.init(document.getElementById('graphql-playground'), {
-      endpoint: `${getBaseUrl()}/graphql/${namespace}`,
-    })
+window.GraphQLPlayground.init(document.getElementById('graphql-playground'), {
+  endpoint: `${getBaseUrl()}/graphql/${namespace}`,
+  headers: {
+    Authorization: `Basic ${btoa("admin:structures")}`
+  }
+})
+
   }
   document.body.appendChild(script)
 })
