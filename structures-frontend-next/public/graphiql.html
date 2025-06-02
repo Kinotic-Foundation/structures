@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>GraphiQL</title>
+    <link rel="stylesheet" href="https://unpkg.com/graphiql@2.0.11/graphiql.min.css" />
+    <style>
+        html,
+        body,
+        #graphiql {
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="graphiql"></div>
+
+    <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
+
+    <script src="https://unpkg.com/graphiql@2.0.11/graphiql.min.js"></script>
+
+    <script>
+        function getQueryParam(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+        function getBaseUrl() {
+            let prefix = 'http'
+            let port = '5173'
+            if (window.location.protocol.startsWith('https')) {
+                prefix = 'https'
+                port = '443'
+            }
+            return `${prefix}://${window.location.hostname}:${port}`
+        }
+
+        const namespace = getQueryParam('namespace') || 'default'
+        const iframe = document.getElementById('gql-iframe');
+        const token = getQueryParam('token') || ''
+        const endpoint = `${getBaseUrl()}/graphql?namespace=${namespace}`
+        const graphQLFetcher = graphQLParams =>
+            fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Basic ${token}`
+                },
+                body: JSON.stringify(graphQLParams),
+            }).then(response => response.json());
+
+        //         const query = `
+        //     query GetItem($id: String!) {
+        //       item(id: $id) {
+        //         id
+        //         name
+        //         description
+        //       }
+        //     }
+        //   `;
+
+        // const variables = {
+        //     id
+        // };
+
+        ReactDOM.render(
+            React.createElement(GraphiQL, {
+                fetcher: graphQLFetcher,
+                // query,
+                // variables: JSON.stringify(variables, null, 2),
+            }),
+            document.getElementById('graphiql')
+        );
+    </script>
+</body>
+
+</html>

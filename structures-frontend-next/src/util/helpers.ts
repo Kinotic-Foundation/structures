@@ -8,7 +8,7 @@ export const getQueryParam = (name: string) => {
 
 export const getBaseUrl = () => {
     let prefix = 'http';
-    let port = '4000';
+    let port = '5173';
     if (window.location.protocol.startsWith('https')) {
         prefix = 'https';
         port = '443';
@@ -17,7 +17,7 @@ export const getBaseUrl = () => {
 };
 
 export const graphqlURI = (id: string) => {
-    const sessionId = USER_STATE.getToken();
+    const token = USER_STATE.btoaToken;
     // return `${getBaseUrl()}/graphql/?namespace=${id}&sessionId=${sessionId}`
-    return `${getBaseUrl()}/graphql/?namespace=${id}`
+    return `${getBaseUrl()}/graphql/?namespace=${id}&token=${token}`
 }
