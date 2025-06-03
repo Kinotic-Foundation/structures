@@ -203,6 +203,7 @@ class SystemMigratorIntegrationTest extends ElasticsearchSqlTestBase {
         assertEquals(1, count.count());
     }
 
+    @SuppressWarnings("null")
     @Test
     void whenUpdate_thenDataUpdated() throws Exception {
         // Given
@@ -231,6 +232,7 @@ class SystemMigratorIntegrationTest extends ElasticsearchSqlTestBase {
         systemMigrator.onApplicationEvent(null);
 
         // Then
+        @SuppressWarnings("rawtypes")
         SearchResponse<Map> response = client.search(s -> s
             .index("test_table_update")
             .query(q -> q.term(t -> t.field("id").value("1"))),
