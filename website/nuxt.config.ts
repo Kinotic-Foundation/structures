@@ -15,4 +15,7 @@ export default defineNuxtConfig({
       tailwindcss()
     ],
   },
+  app: {
+    baseURL: '/structures/website/'
+  }
 })
