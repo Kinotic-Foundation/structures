@@ -31,7 +31,7 @@
         }
         function getBaseUrl() {
             let prefix = 'http'
-            let port = '5173'
+            let port = '4000'
             if (window.location.protocol.startsWith('https')) {
                 prefix = 'https'
                 port = '443'
@@ -42,7 +42,7 @@
         const namespace = getQueryParam('namespace') || 'default'
         const iframe = document.getElementById('gql-iframe');
         const token = getQueryParam('token') || ''
-        const endpoint = `${getBaseUrl()}/graphql?namespace=${namespace}`
+        const endpoint = `${getBaseUrl()}/graphql/${namespace}`
         const graphQLFetcher = graphQLParams =>
             fetch(endpoint, {
                 method: 'POST',

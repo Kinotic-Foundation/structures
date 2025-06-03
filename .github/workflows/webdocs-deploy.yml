@@ -1,14 +1,14 @@
-name: Build and Deploy Structures Website
+name: Build and Deploy Structures Doc Site
 
 on:
   push:
     branches:
       - develop
     paths:
-      - 'website/**'
+      - 'webdocs/**'
 
 jobs:
-  build_and_deploy_website:
+  build_and_deploy_webdocs:
     runs-on: ubuntu-latest
 
     steps:
@@ -26,23 +26,23 @@ jobs:
         with:
           node-version: 22
           cache: 'pnpm'
-          cache-dependency-path: "./website/pnpm-lock.yaml"
+          cache-dependency-path: "./webdocs/pnpm-lock.yaml"
 
       - name: Install dependencies
         run: |
-          cd website
+          cd webdocs
           pnpm install
 
       - name: Build Structures site
         run: |
-          cd website
-          pnpm generate
+          cd webdocs
+          pnpm docs:build
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: website/.output/public
+          publish_dir: webdocs/.vitepress/dist
           publish_branch: gh-pages
-          destination_dir: website
+          destination_dir: webdocs
           keep_files: false

@@ -8,6 +8,7 @@ on:
       - 2.x
     paths-ignore:
       - 'website/**'
+      - 'webdocs/**'
 
 jobs:
   gradle_build_and_publish:
@@ -97,7 +98,7 @@ jobs:
           context: 'Test Report'
           description: 'Passed'
           state: 'success'
-          sha: ${{github.event.pull_request.head.sha || github.sha}}
+          sha: ${{ github.sha }}
           target_url: https://kinotic-foundation.github.io/structures/allure/${{ github.run_number }}
 
       - name: Check If Failure
@@ -113,3 +114,5 @@ jobs:
 
           # Optionally mark the job as failed
           exit 1
+
+          https://kinotic-foundation.github.io/structures/webdocs/guide/overview.html

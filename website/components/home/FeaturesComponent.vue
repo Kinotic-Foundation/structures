@@ -30,20 +30,20 @@ import BaseContainer from '~/components/BaseContainer.vue'
     {
       title: "Schema Flexibility",
       details:
-        "Structures makes schema evolution easy—letting developers adjust data schemas over time without major changes to application code. This streamlines the management of complex data and helps teams adapt their data models as business needs evolve.",
-      icon: "share.svg",
+        "Structures supports schema evolution, allowing developers to modify data schemas over time without requiring significant changes to their application code. This feature simplifies the process of managing complex data structures and enables developers to evolve their data models to meet changing business requirements.",
+      icon: "folder.svg",
     },
     {
       title: "Data Management",
       details:
-        "Structures equips developers with powerful tools to create, read, update, and delete data—making it easy to manage complex datasets and offering a flexible interface for data manipulation.",
+        "Structures provides developers with a comprehensive set of tools for managing data, including the ability to create, read, update, and delete data. This feature allows developers to easily manage complex data sets, and provides a flexible interface for data manipulation.",
       icon: "database.svg",
     },
     {
-      title: "Intuitive GUI and OpenAPI",
+      title: "Intuitive GUI",
       details:
-        "Structures offers an intuitive GUI built with Continuum and an OpenAPI interface, making it easy for developers to manage data and integrate Structures into existing applications and workflows.",
-      icon: "folder.svg",
+        "Structures provides a user-friendly graphical user interface (GUI) for data management built with Continuum, as well as an OpenAPI, and GraphQL interfaces for accessing data stored in the framework. This feature enables developers to easily interact with the data stored in Structures, and allows them to integrate Structures into their existing applications and workflows.",
+      icon: "share.svg",
     },
   ];
   </script>

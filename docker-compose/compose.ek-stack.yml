@@ -25,7 +25,7 @@ services:
     volumes:
       - ~/structures/elastic-data:/usr/share/elasticsearch/data
   structures-kibana:
-    image: docker.elastic.co/kibana/kibana:8.17.1
+    image: docker.elastic.co/kibana/kibana:8.18.1
     container_name: structures-kibana
     depends_on:
       structures-elasticsearch:

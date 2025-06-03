@@ -1,6 +1,6 @@
 # Multi-Tenant Access
 Multi-tenant field is a feature that when enabled will provide additional "Admin" level functionality. 
-This will include additional methods that allow for data to viewed and managed across all tenants. 
+This will include additional methods that allow for data to be viewed and managed across all tenants. 
 This means users will be able to view and manage data from all tenants, not just the tenant they are currently logged into.
 
 ## Enabling Multi-Tenant Access
