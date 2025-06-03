@@ -22,7 +22,6 @@
     "@vue-flow/minimap": "^1.5.3",
     "apollo-server-express": "^3.13.0",
     "dagre": "^0.8.5",
-    "express": "^5.1.0",
     "graphiql": "^4.1.1",
     "graphql": "^16.11.0",
     "keycloak-js": "^26.1.5",
@@ -38,6 +37,7 @@
   "devDependencies": {
     "@primevue/auto-import-resolver": "^4.3.3",
     "@tailwindcss/postcss": "^4.1.4",
+    "@types/dagre": "^0.7.52",
     "@types/node": "^22.14.1",
     "@vitejs/plugin-react": "^4.5.0",
     "@vitejs/plugin-vue": "^5.2.3",
