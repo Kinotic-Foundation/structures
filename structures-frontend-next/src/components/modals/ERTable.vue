@@ -14,7 +14,7 @@
       <span>{{ field }}</span>
       <Handle
         type="source"
-        :position="'right'"
+        :position="Position.Right"
         :id="`out-${index}`"
         class="w-2 h-2 bg-green-500 absolute right-[-6px] top-1/2 transform -translate-y-1/2"
       />
@@ -23,7 +23,7 @@
 </template>
 
 <script setup lang="ts">
-import { Handle } from '@vue-flow/core'
+import { Handle, Position } from '@vue-flow/core'
 
 defineProps<{ data: { label: string; fields: string[]; color: any } }>()
 </script>

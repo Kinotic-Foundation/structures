@@ -2,7 +2,7 @@
   <div>
     <Toolbar>
       <template #start>
-        <InputText v-model="searchText" placeholder="Search" @keyup.enter="search" @focus="$event.target.select()" />
+        <InputText v-model="searchText" placeholder="Search" @keyup.enter="search" @focus="($event.target as HTMLInputElement)?.select()" />
         <Button icon="pi pi-times" class="ml-2" v-if="searchText" @click="clearSearch" />
       </template>
     </Toolbar>
@@ -92,7 +92,9 @@ export default class EntityList extends Vue {
   }
 
   mounted() {
-    const id = this.structureId || this.$route.params.id
+const paramId = this.$route.params.id
+const id = this.structureId || (Array.isArray(paramId) ? paramId[0] : paramId)
+
     if (!id) {
       this.displayAlert("Missing structure ID.")
       return
@@ -137,7 +139,7 @@ export default class EntityList extends Vue {
   }
 
   isDateField(field: string): boolean {
-    return StructureUtil.getPropertyDefinition(field, this.structureProperties)?.type === 'date'
+    return StructureUtil.getPropertyDefinition(field, this.structureProperties)?.type?.type === 'date'
   }
 
   onPage(event: any) {
@@ -180,7 +182,8 @@ export default class EntityList extends Vue {
     }
 
     const pageable = Pageable.create(page, this.options.rows, { orders })
-    const id = this.structureId || this.$route.params.id
+    const paramId = this.$route.params.id
+const id = this.structureId || (Array.isArray(paramId) ? paramId[0] : paramId)
 
     const queryPromise = (this.searchText?.length)
       ? this.entitiesService.search(id, this.searchText, pageable)

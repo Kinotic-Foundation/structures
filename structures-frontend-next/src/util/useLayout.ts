@@ -1,9 +1,15 @@
 // useLayout.ts
 import dagre from 'dagre'
 import type { Node, Edge } from '@vue-flow/core'
+interface PositionedNode extends Node {
+  dimensions?: {
+    width: number
+    height: number
+  }
+}
 
 export function useLayout() {
-  function layout(nodes: Node[], edges: Edge[], direction: 'LR' | 'TB' = 'LR'): Node[] {
+function layout(nodes: PositionedNode[], edges: Edge[], direction: 'LR' | 'TB' = 'LR'): Node[] {
     const dagreGraph = new dagre.graphlib.Graph()
     dagreGraph.setDefaultEdgeLabel(() => ({}))
     dagreGraph.setGraph({ rankdir: direction })

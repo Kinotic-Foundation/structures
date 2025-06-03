@@ -100,21 +100,7 @@ export default class NamespaceList extends Vue {
     const tableRef = this.$refs.crudTable as InstanceType<typeof CrudTable> | undefined
     tableRef?.find()
   }
-  // src/util/helpers.ts
-  // getQueryParam = (name: string) => {
-  //   const urlParams = new URLSearchParams(window.location.search);
-  //   return urlParams.get(name);
-  // };
 
-  // getBaseUrl = () => {
-  //   let prefix = 'http';
-  //   let port = '4000';
-  //   if (window.location.protocol.startsWith('https')) {
-  //     prefix = 'https';
-  //     port = '443';
-  //   }
-  //   return `${prefix}://${window.location.hostname}:${port}`;
-  // };
   onAddItem(): void {
     this.$router.push(`/application-add`)
   }
