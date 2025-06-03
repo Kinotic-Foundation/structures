@@ -22,7 +22,6 @@
     "@vue-flow/minimap": "^1.5.3",
     "apollo-server-express": "^3.13.0",
     "dagre": "^0.8.5",
-    "express": "^5.1.0",
     "graphiql": "^4.1.1",
     "graphql": "^16.11.0",
     "keycloak-js": "^26.1.5",

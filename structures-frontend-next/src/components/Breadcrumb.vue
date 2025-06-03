@@ -14,16 +14,12 @@ import { StructuresStates } from '@/states/index.js'
 import { Vue, Component } from 'vue-facing-decorator'
 import Breadcrumb from 'primevue/breadcrumb'
 import { NavItem } from '@/components/NavItem'
-import type { Router } from 'vue-router'
 @Component({
     components: {
         Breadcrumb
     }
 })
 export default class AppBreadcrumb extends Vue {
-    private get router(): Router {
-        return this.$router
-    }
     get breadcrumbModel(): NavItem[] {
         return StructuresStates.getApplicationState().breadcrumbItems.value
     }

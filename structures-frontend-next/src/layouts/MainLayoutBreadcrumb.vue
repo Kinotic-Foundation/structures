@@ -11,11 +11,12 @@ defineProps<{
 const route = useRoute();
 const icons = import.meta.glob('../assets/*.svg', { eager: true, import: 'default' });
 
-const getIconUrl = (icon: string | undefined) => {
+const getIconUrl = (icon: string | undefined): string => {
   if (!icon) return ''
   const match = icons[`../assets/${icon}`]
-  return match || ''
+  return typeof match === 'string' ? match : ''
 }
+
 
 const breadcrumbs = computed<MenuItem[]>(() => {
   const matched = route.matched.filter((r) => r.meta.label);
@@ -23,14 +24,15 @@ const breadcrumbs = computed<MenuItem[]>(() => {
 
   const breadcrumbItems: MenuItem[] = [];
 
-  matched.forEach((r, index) => {
-    const isLast = index === matched.length - 1;
-    breadcrumbItems.push({
-      label: r.meta.label as string,
-      to: !isLast ? r.path : undefined,
-      icon: r.meta.icon,
-    });
+matched.forEach((r, index) => {
+  const isLast = index === matched.length - 1;
+  breadcrumbItems.push({
+    label: r.meta.label as string,
+    to: !isLast ? r.path : undefined,
+    icon: r.meta.icon as string | undefined,
   });
+});
+
 
   return breadcrumbItems;
 });

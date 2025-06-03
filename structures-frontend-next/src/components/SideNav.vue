@@ -1,6 +1,6 @@
 <template>
     <ul class="h-full">
-        <template v-for="(item, index) of navItems" :key="index">
+        <template v-for="(item) of navItems" :key="index">
             <li class="last:mt-auto">
                 <div :class="[
                     'z-30 relative flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer',
@@ -60,37 +60,39 @@
     </ul>
 </template>
 <script lang="ts">
-import { NavItem } from '@/components/NavItem.js'
-import { Vue, Component, Prop, Model } from 'vue-facing-decorator'
-import Tooltip from 'primevue/tooltip';
+import { Vue, Component, Prop } from 'vue-facing-decorator'
+import Tooltip from 'primevue/tooltip'
+import type { NavItem } from '@/components/NavItem.js'
+
 @Component({
-    tooltip: Tooltip
+    directives: {
+        tooltip: Tooltip
+    }
 })
 export default class SideNav extends Vue {
-
     @Prop({ required: true }) navItems!: NavItem[]
     @Prop({ default: false }) collapsed!: boolean
 
-    @Model
     selectedNav: NavItem | null = null
+
     async navClicked(item: NavItem) {
         this.selectedNav = item
         await item.navigate?.()
     }
-    public getIconUrl = (icon: string) => {
+
+    getIconUrl(icon: string): string {
         return new URL(`../assets/${icon}`, import.meta.url).href
     }
 
     mounted() {
         if (this.navItems && this.navItems.length > 0) {
-            this.selectedNav = this.$route.meta
+            this.selectedNav = this.$route.meta as unknown as NavItem
         }
     }
-
-
     isParentNavSelected(item: NavItem) {
         return this.selectedNav?.label === item.label || this.selectedNav?.parent?.label === item.label
     }
+
 
     getLinePath(index: number, totalItems: number) {
         if (index === 0) {

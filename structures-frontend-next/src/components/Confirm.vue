@@ -1,7 +1,7 @@
 <template>
     <Dialog
       v-model:visible="dialog"
-      :header="title"
+      :header="title ?? ''"
       :modal="true"
       :closable="false"
       :draggable="false"

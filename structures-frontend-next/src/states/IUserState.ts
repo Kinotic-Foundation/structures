@@ -11,6 +11,8 @@ export interface IUserState {
 
     authenticate(login: string, passcode: string): Promise<void>
 
+    btoaToken: string
+
 }
 
 export class UserState implements IUserState {
