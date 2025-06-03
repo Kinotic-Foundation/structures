@@ -19,7 +19,7 @@
           </RouterLink>
         </Button>
         <Button text class="!text-[#334155] !bg-white" :title="'GraphQL'">
-          <RouterLink :to="{ path: '/graphql', query: { namespace: item.id } }">
+          <RouterLink :to="{ path: '/graphql', query: { namespace: item.id, token } }">
             <svg width="20" height="20" viewBox="0 0 24 24">
               <path :d="icons.graph" fill="currentColor" />
             </svg>
@@ -68,7 +68,7 @@ export default class NamespaceList extends Vue {
   ]
 
   dataSource: INamespaceService = Structures.getNamespaceService()
-
+  token = '';
   icons = {
     graph: mdiGraphql,
     api: mdiApi
@@ -86,7 +86,7 @@ export default class NamespaceList extends Vue {
       }
 
       this.refreshTable()
-
+      this.token = USER_STATE.btoaToken;
       if (this.$route.query.created === 'true') {
         this.$router.replace({ query: {} })
       }

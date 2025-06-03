@@ -166,14 +166,23 @@ const pageRoutes: RouteRecordRaw[] = [
       showInMainNav: false,
     } as RouteMeta,
   },
-  {
+    {
     path: '/graphql',
-    component: () => import('@/pages/GraphQLPlayground.vue'),
+    component: () => import('@/layouts/MainLayout.vue'),
+    name: "GraphQLPlayground",
     meta: {
-      authenticationRequired: false,
+      authenticationRequired: true,
       showInMainNav: false,
-      label: 'GraphQL Playground',
+      icon: 'objects-column.svg',
+      label: 'GraphQLPlayground',
     } as RouteMeta,
+    children: [
+      {
+        path: '',
+        component: () => import('@/pages/GraphQLPlayground.vue'),
+        meta: { requiresAuth: true }
+      }
+    ]
   },
 ];
 
