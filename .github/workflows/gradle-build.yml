@@ -98,7 +98,7 @@ jobs:
           context: 'Test Report'
           description: 'Passed'
           state: 'success'
-          sha: ${{github.event.pull_request.head.sha || github.sha}}
+          sha: ${{ github.sha }}
           target_url: https://kinotic-foundation.github.io/structures/allure/${{ github.run_number }}
 
       - name: Check If Failure
@@ -114,3 +114,5 @@ jobs:
 
           # Optionally mark the job as failed
           exit 1
+
+          https://kinotic-foundation.github.io/structures/webdocs/guide/overview.html
