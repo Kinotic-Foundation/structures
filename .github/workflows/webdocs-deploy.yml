@@ -45,4 +45,4 @@ jobs:
           publish_dir: webdocs/.vitepress/dist
           publish_branch: gh-pages
           destination_dir: webdocs
-          keep_files: true
+          keep_files: false
