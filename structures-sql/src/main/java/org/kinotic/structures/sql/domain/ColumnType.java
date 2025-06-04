@@ -13,7 +13,13 @@ public enum ColumnType {
     FLOAT,
     DOUBLE,
     BOOLEAN,
-    DATE;
+    DATE,
+    JSON,
+    BINARY,
+    GEO_POINT,
+    GEO_SHAPE,
+    UUID,
+    DECIMAL;
 
     @Override
     public String toString() {

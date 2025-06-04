@@ -49,7 +49,7 @@ Below are the SQL-like statements supported in migration scripts, with examples.
 Creates a new Elasticsearch index with specified column mappings.
 
 - **Syntax**: `CREATE TABLE <index_name> (<column_name> <type> [, <column_name> <type>]*) ;`
-- **Types**: `TEXT`, `KEYWORD`, `INTEGER`, `BOOLEAN`, `DATE`
+- **Types**: See [Supported Types](#supported-types) for a full list and backend mappings.
 - **Example**:
 ```sql
 CREATE TABLE users (name TEXT, age INTEGER, active BOOLEAN);
@@ -136,6 +136,41 @@ Ignored by the parser, used for documentation in migration scripts.
 -- Initialize user index
 CREATE TABLE users (name TEXT);
 ```
+
+## Supported Types
+
+Structures migrations support the following column types. These types are designed to be as backend-agnostic as possible. The table below shows the SQL type, its equivalent in Elasticsearch, and the planned mapping for Apache Pinot (coming soon).
+
+> **Note:** Apache Pinot support is planned for a future release. The Pinot column below shows the intended mapping, but is not yet available.
+
+| SQL Type    | Elasticsearch Mapping | Pinot Mapping (Planned) |
+|-------------|----------------------|-------------------------|
+| `TEXT`      | `text`               | `STRING`                |
+| `KEYWORD`   | `keyword`            | `STRING`                |
+| `INTEGER`   | `integer`            | `INT`                   |
+| `LONG`      | `long`               | `LONG`                  |
+| `FLOAT`     | `float`              | `FLOAT`                 |
+| `DOUBLE`    | `double`             | `DOUBLE`                |
+| `BOOLEAN`   | `boolean`            | `BOOLEAN`               |
+| `DATE`      | `date`               | `TIMESTAMP`             |
+| `JSON`      | `flattened`          | `JSON`                  |
+| `BINARY`    | `binary`             | `BYTES`                 |
+| `GEO_POINT` | `geo_point`          | `GEOMETRY`              |
+| `GEO_SHAPE` | `geo_shape`          | `GEOMETRY`              |
+| `UUID`      | `keyword`            | `STRING` or `BYTES`     |
+| `DECIMAL`   | `scaled_float`       | `DECIMAL`               |
+
+- **TEXT**: Full-text search field.
+- **KEYWORD**: Exact value, not analyzed.
+- **INTEGER, LONG, FLOAT, DOUBLE**: Numeric types.
+- **BOOLEAN**: `true` or `false`.
+- **DATE**: Date/time value.
+- **JSON**: Arbitrary structured data (maps to `flattened` in Elasticsearch).
+- **BINARY**: Raw binary data.
+- **GEO_POINT**: Latitude/longitude point.
+- **GEO_SHAPE**: Geospatial shapes (polygons, etc.).
+- **UUID**: Universally unique identifier.
+- **DECIMAL**: High-precision decimal number.
 
 ## Example Migration
 
