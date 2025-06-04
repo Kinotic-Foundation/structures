@@ -73,7 +73,8 @@ function sidebarReference() {
     {
       text: 'Reference',
       items: [
-        { text: 'Structures Config', link: '/reference/structures-config' }
+        { text: 'Structures Config', link: '/reference/structures-config' },
+        { text: 'Migrations SQL Grammar', link: '/reference/migrations-sql-grammar' }
       ]
     },
     {

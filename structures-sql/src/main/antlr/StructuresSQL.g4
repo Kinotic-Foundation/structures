@@ -54,6 +54,7 @@ reindexOption
     | SOURCE_FIELDS EQUALS STRING
     | QUERY EQUALS STRING
     | SCRIPT EQUALS STRING
+    | WAIT EQUALS (TRUE | FALSE)
     ;
 
 updateStatement
@@ -196,6 +197,9 @@ USING: 'USING';
 VALUES: 'VALUES';
 WHERE: 'WHERE';
 WITH: 'WITH';
+WAIT: 'WAIT';
+TRUE: 'TRUE';
+FALSE: 'FALSE';
 
 // Type Keywords
 BOOLEAN: 'BOOLEAN';

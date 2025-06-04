@@ -35,11 +35,14 @@ The above content would be saved in a file named `V1__create_users_table.sql`.
 
 ## How Migrations Work
 
-1. **Parsing**: The `MigrationParser` reads the script and extracts the version from the filename, creating a `Migration` object containing the version and a list of statements.
-2. **Execution**: The `MigrationExecutor` processes each `Migration`:
-   - If not applied, executes all statements and records the version.
+1. **Discovery**: Migrations are discovered from files (or other sources) and represented as `Migration` objects. The version is extracted from the filename (e.g., `V1__desc.sql` → version 1) by the migration abstraction, not from the file content.
+2. **Parsing**: The `MigrationParser` parses the script only if the migration has not already been applied, producing a `MigrationContent` object containing the list of statements.
+3. **Execution**: The `MigrationExecutor` processes each `Migration`:
+   - If not applied, executes all statements from the `MigrationContent` and records the version.
    - If already applied, skips the migration.
-3. **Idempotency**: Ensures changes are applied only once.
+4. **Idempotency**: Ensures changes are applied only once.
+
+> **Note:** The migration system is efficient and scalable: only unapplied migrations are parsed and loaded into memory, and versioning is handled by the migration abstraction (not the script content).
 
 ## Supported Statements
 
@@ -49,7 +52,7 @@ Below are the SQL-like statements supported in migration scripts, with examples.
 Creates a new Elasticsearch index with specified column mappings.
 
 - **Syntax**: `CREATE TABLE <index_name> (<column_name> <type> [, <column_name> <type>]*) ;`
-- **Types**: See [Supported Types](#supported-types) for a full list and backend mappings.
+- **Types**: See the Supported Types table in the [Migrations SQL Grammar Reference](/reference/migrations-sql-grammar#supported-types) for a full list and backend mappings.
 - **Example**:
 ```sql
 CREATE TABLE users (name TEXT, age INTEGER, active BOOLEAN);
@@ -87,16 +90,27 @@ ALTER TABLE users ADD COLUMN active BOOLEAN;
 Reindexes data from one index to another with optional settings.
 
 - **Syntax**: `REINDEX <source_index> INTO <dest_index> [WITH (<option> [, <option>]*) ] ;`
-- **Options**: `CONFLICTS = (ABORT | PROCEED)`, `MAX_DOCS = <integer>`, `SLICES = (AUTO | <integer>)`, `SIZE = <integer>`, `SOURCE_FIELDS = '<fields>'`, `QUERY = '<lucene_query>'`, `SCRIPT = '<script>'`
+- **Options**: 
+  - `CONFLICTS = (ABORT | PROCEED)`
+  - `MAX_DOCS = <integer>`
+  - `SLICES = (AUTO | <integer>)`
+  - `SIZE = <integer>`
+  - `SOURCE_FIELDS = '<fields>'`
+  - `QUERY = '<lucene_query>'`
+  - `SCRIPT = '<script>'`
+  - `WAIT = (TRUE | FALSE)` (if `WAIT = TRUE`, the migration will poll for completion and only continue when reindexing is done; otherwise, it returns immediately with the task ID)
 - **Example**:
 ```sql
-REINDEX users INTO users_new WITH (CONFLICTS = PROCEED, MAX_DOCS = 1000, SLICES = AUTO, QUERY = 'active:true');
+REINDEX users INTO users_new WITH (CONFLICTS = PROCEED, MAX_DOCS = 1000, SLICES = AUTO, QUERY = 'active:true', WAIT = TRUE);
 ```
+> **Note:** REINDEX is always executed asynchronously at the Elasticsearch level. If `WAIT = TRUE`, Structures will poll for completion before proceeding to the next statement. If `WAIT = FALSE` or omitted, the migration continues immediately and returns the Elasticsearch task ID.
 
 ### 6. INSERT
 Inserts new documents into an index with specified field values.
 
-- **Syntax**: `INSERT INTO <index_name> [(<column_name> [, <column_name>]*)] VALUES (<expression> [, <expression>]*) ;`
+- **Syntax**: `INSERT INTO <index_name> [(<column_name> [, <column_name>]*)] VALUES (<expression> [, <expression>]*) [WITH REFRESH] ;`
+- **Options**: 
+  - `WITH REFRESH` (immediately refreshes the index after insert)
 - **Expressions**: Literals (`'value'`, `123`, `true`), parameters (`?`), field references (`field_name`)
 - **Example**:
 ```sql
@@ -105,92 +119,35 @@ INSERT INTO users (name, age, active) VALUES ('John', 30, true);
 
 -- Insert without specifying columns (all fields must be provided in order)
 INSERT INTO users VALUES ('Jane', 25, false);
+
+-- Insert and refresh the index
+INSERT INTO users (name, age) VALUES ('Alice', 22) WITH REFRESH;
 ```
 
 ### 7. UPDATE
 Updates documents in an index based on a WHERE clause and SET assignments.
 
-- **Syntax**: `UPDATE <index_name> SET <field> = <expression> [, <field> = <expression>]* WHERE <where_clause> ;`
+- **Syntax**: `UPDATE <index_name> SET <field> = <expression> [, <field> = <expression>]* WHERE <where_clause> [WITH REFRESH] ;`
+- **Options**: 
+  - `WITH REFRESH` (immediately refreshes the index after update)
 - **Expressions**: Literals (`'value'`, `123`, `true`), parameters (`?`), binary expressions (`field + 1`)
 - **Where Clause**: Conditions (`field < value`), `AND`, `OR`, parentheses
 - **Example**:
 ```sql
-UPDATE users SET status = 'active', age = age + 1 WHERE name = 'John' AND age > 30;
+UPDATE users SET status = 'active', age = age + 1 WHERE name = 'John' AND age > 30 WITH REFRESH;
 ```
 
 ### 8. DELETE
 Deletes documents from an index based on a WHERE clause.
 
-- **Syntax**: `DELETE FROM <index_name> WHERE <where_clause> ;`
+- **Syntax**: `DELETE FROM <index_name> WHERE <where_clause> [WITH REFRESH] ;`
+- **Options**: 
+  - `WITH REFRESH` (immediately refreshes the index after delete)
 - **Example**:
 ```sql
-DELETE FROM users WHERE active = false;
+DELETE FROM users WHERE active = false WITH REFRESH;
 ```
 
-### 9. Comments
-Ignored by the parser, used for documentation in migration scripts.
+## Further Reference
 
-- **Syntax**: `-- <comment_text>`
-- **Example**:
-```sql
--- Initialize user index
-CREATE TABLE users (name TEXT);
-```
-
-## Supported Types
-
-Structures migrations support the following column types. These types are designed to be as backend-agnostic as possible. The table below shows the SQL type, its equivalent in Elasticsearch, and the planned mapping for Apache Pinot (coming soon).
-
-> **Note:** Apache Pinot support is planned for a future release. The Pinot column below shows the intended mapping, but is not yet available.
-
-| SQL Type    | Elasticsearch Mapping | Pinot Mapping (Planned) |
-|-------------|----------------------|-------------------------|
-| `TEXT`      | `text`               | `STRING`                |
-| `KEYWORD`   | `keyword`            | `STRING`                |
-| `INTEGER`   | `integer`            | `INT`                   |
-| `LONG`      | `long`               | `LONG`                  |
-| `FLOAT`     | `float`              | `FLOAT`                 |
-| `DOUBLE`    | `double`             | `DOUBLE`                |
-| `BOOLEAN`   | `boolean`            | `BOOLEAN`               |
-| `DATE`      | `date`               | `TIMESTAMP`             |
-| `JSON`      | `flattened`          | `JSON`                  |
-| `BINARY`    | `binary`             | `BYTES`                 |
-| `GEO_POINT` | `geo_point`          | `GEOMETRY`              |
-| `GEO_SHAPE` | `geo_shape`          | `GEOMETRY`              |
-| `UUID`      | `keyword`            | `STRING` or `BYTES`     |
-| `DECIMAL`   | `scaled_float`       | `DECIMAL`               |
-
-- **TEXT**: Full-text search field.
-- **KEYWORD**: Exact value, not analyzed.
-- **INTEGER, LONG, FLOAT, DOUBLE**: Numeric types.
-- **BOOLEAN**: `true` or `false`.
-- **DATE**: Date/time value.
-- **JSON**: Arbitrary structured data (maps to `flattened` in Elasticsearch).
-- **BINARY**: Raw binary data.
-- **GEO_POINT**: Latitude/longitude point.
-- **GEO_SHAPE**: Geospatial shapes (polygons, etc.).
-- **UUID**: Universally unique identifier.
-- **DECIMAL**: High-precision decimal number.
-
-## Example Migration
-
-Here's a complete example of a migration that creates a table and populates it with initial data:
-
-```sql
--- Create a test table with various field types
-CREATE TABLE test_table (
-    id KEYWORD,
-    name TEXT,
-    age INTEGER,
-    is_active BOOLEAN,
-    created_at DATE
-);
-
--- Add some test data
-INSERT INTO test_table (id, name, age, is_active, created_at) 
-VALUES ('test-1', 'Test User', 25, true, '2024-03-20');
-```
-
-## Next Steps
-
-- **Getting Started**: Learn how to set up Structures and run migrations in [Getting Started](/guide/getting-started).
+For a comprehensive, technical reference of all supported statements, options, and syntax, see the [Migrations SQL Grammar Reference](/reference/migrations-sql-grammar).

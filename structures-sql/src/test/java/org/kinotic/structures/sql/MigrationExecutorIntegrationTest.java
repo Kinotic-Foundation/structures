@@ -5,14 +5,16 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
+import org.kinotic.structures.sql.domain.Migration;
+import org.kinotic.structures.sql.domain.MigrationContent;
 import org.kinotic.structures.sql.executor.MigrationExecutor;
 import org.kinotic.structures.sql.parsers.MigrationParser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
@@ -24,7 +26,7 @@ import co.elastic.clients.elasticsearch.indices.GetIndexTemplateResponse;
 import co.elastic.clients.elasticsearch.indices.GetMappingResponse;
 
 @SpringBootTest
-class SystemMigratorIntegrationTest extends ElasticsearchSqlTestBase {
+class MigrationExecutorIntegrationTest extends ElasticsearchSqlTestBase {
 
     @Autowired
     private ElasticsearchAsyncClient asyncClient;
@@ -38,15 +40,40 @@ class SystemMigratorIntegrationTest extends ElasticsearchSqlTestBase {
     @Autowired
     private MigrationParser migrationParser;
 
+    // Simple in-memory Migration implementation for tests
+    class TestMigration implements Migration {
+        private final Integer version;
+        private final String name;
+        private final String sql;
+        private final MigrationParser parser;
+        private MigrationContent content;
+        public TestMigration(Integer version, String name, String sql, MigrationParser parser) {
+            this.version = version;
+            this.name = name;
+            this.sql = sql;
+            this.parser = parser;
+        }
+        @Override public Integer getVersion() { return version; }
+        @Override public String getName() { return name; }
+        @Override public MigrationContent getContent() {
+            if (content == null) {
+                content = parser.parse(sql);
+            }
+            return content;
+        }
+    }
+
+    private Migration migration(Integer version, String name, String sql) {
+        return new TestMigration(version, name, sql, migrationParser);
+    }
 
     @Test
     void whenNoMigrations_thenNoMigrationsApplied() throws Exception {
         // Given
-        PathMatchingResourcePatternResolver resourceLoader = TestResourceUtils.createResourceResolver();
-        SystemMigrator systemMigrator = new SystemMigrator(migrationExecutor, migrationParser, resourceLoader);
+        List<Migration> migrations = List.of();
 
         // When
-        systemMigrator.onApplicationEvent(null);
+        migrationExecutor.executeProjectMigrations(migrations, "test_project_no_migrations").get();
 
         // Then
         // No exception should be thrown
@@ -65,14 +92,10 @@ class SystemMigratorIntegrationTest extends ElasticsearchSqlTestBase {
             );
             """;
 
-        PathMatchingResourcePatternResolver resourceLoader = TestResourceUtils.createResourceResolver(
-            migrationContent,
-            "V1__create_test_table.sql"
-        );
-        SystemMigrator systemMigrator = new SystemMigrator(migrationExecutor, migrationParser, resourceLoader);
+        Migration migration = migration(1, "V1__create_test_table", migrationContent);
 
         // When
-        systemMigrator.onApplicationEvent(null);
+        migrationExecutor.executeProjectMigrations(List.of(migration), "test_project_create_table").get();
 
         // Then
         assertTrue(asyncClient.indices().exists(e -> e.index("test_table_create")).get().value());
@@ -110,14 +133,12 @@ class SystemMigratorIntegrationTest extends ElasticsearchSqlTestBase {
             );
             """;
 
-        PathMatchingResourcePatternResolver resourceLoader = TestResourceUtils.createResourceResolver(
-            new TestResourceUtils.MigrationContent(componentTemplateContent, "V1__create_component_template.sql"),
-            new TestResourceUtils.MigrationContent(indexTemplateContent, "V2__create_index_template.sql")
-        );
-        SystemMigrator systemMigrator = new SystemMigrator(migrationExecutor, migrationParser, resourceLoader);
+
+        Migration componentTemplateMigration = migration(1, "V1__create_component_template", componentTemplateContent);
+        Migration indexTemplateMigration = migration(2, "V2__create_index_template", indexTemplateContent);
 
         // When
-        systemMigrator.onApplicationEvent(null);
+        migrationExecutor.executeProjectMigrations(List.of(componentTemplateMigration, indexTemplateMigration), "test_project_index_template").get();
 
         // Then
         GetComponentTemplateResponse componentTemplate = client.cluster().getComponentTemplate(g -> g.name("test_template_index"));
@@ -140,14 +161,11 @@ class SystemMigratorIntegrationTest extends ElasticsearchSqlTestBase {
             ALTER TABLE test_table_alter ADD COLUMN age INTEGER;
             """;
 
-        PathMatchingResourcePatternResolver resourceLoader = TestResourceUtils.createResourceResolver(
-            new TestResourceUtils.MigrationContent(createTableContent, "V1__create_test_table.sql"),
-            new TestResourceUtils.MigrationContent(alterTableContent, "V2__add_age_column.sql")
-        );
-        SystemMigrator systemMigrator = new SystemMigrator(migrationExecutor, migrationParser, resourceLoader);
+        Migration createTableMigration = migration(1, "V1__create_test_table", createTableContent);
+        Migration alterTableMigration = migration(2, "V2__add_age_column", alterTableContent);
 
         // When
-        systemMigrator.onApplicationEvent(null);
+        migrationExecutor.executeProjectMigrations(List.of(createTableMigration, alterTableMigration), "test_project_alter_table").get();
 
         // Then
         GetMappingResponse mapping = client.indices().getMapping(m -> m.index("test_table_alter"));
@@ -187,16 +205,16 @@ class SystemMigratorIntegrationTest extends ElasticsearchSqlTestBase {
             );
             """;
 
-        PathMatchingResourcePatternResolver resourceLoader = TestResourceUtils.createResourceResolver(
-            new TestResourceUtils.MigrationContent(createSourceContent, "V1__create_source_table.sql"),
-            new TestResourceUtils.MigrationContent(createDestContent, "V2__create_dest_table.sql"),
-            new TestResourceUtils.MigrationContent(insertContent, "V3__insert_test_data.sql"),
-            new TestResourceUtils.MigrationContent(reindexContent, "V4__reindex_data.sql")
-        );
-        SystemMigrator systemMigrator = new SystemMigrator(migrationExecutor, migrationParser, resourceLoader);
+        Migration createSourceMigration = migration(1, "V1__create_source_table", createSourceContent);
+
+        Migration createDestMigration = migration(2, "V2__create_dest_table", createDestContent);
+
+        Migration insertMigration = migration(3, "V3__insert_test_data", insertContent);
+
+        Migration reindexMigration = migration(4, "V4__reindex_data", reindexContent);
 
         // When
-        systemMigrator.onApplicationEvent(null);
+        migrationExecutor.executeProjectMigrations(List.of(createSourceMigration, createDestMigration, insertMigration, reindexMigration), "test_project_reindex").get();
 
         // Then
         CountResponse count = client.count(c -> c.index("test_table_reindex_dest"));
@@ -221,15 +239,14 @@ class SystemMigratorIntegrationTest extends ElasticsearchSqlTestBase {
             UPDATE test_table_update SET age == 21 WHERE id == '1' WITH REFRESH;
             """;
 
-        PathMatchingResourcePatternResolver resourceLoader = TestResourceUtils.createResourceResolver(
-            new TestResourceUtils.MigrationContent(createTableContent, "V1__create_test_table.sql"),
-            new TestResourceUtils.MigrationContent(insertContent, "V2__insert_test_data.sql"),
-            new TestResourceUtils.MigrationContent(updateContent, "V3__update_age.sql")
-        );
-        SystemMigrator systemMigrator = new SystemMigrator(migrationExecutor, migrationParser, resourceLoader);
+        Migration createTableMigration = migration(1, "V1__create_test_table", createTableContent);
+
+        Migration insertMigration = migration(2, "V2__insert_test_data", insertContent);
+
+        Migration updateMigration = migration(3, "V3__update_age", updateContent);
 
         // When
-        systemMigrator.onApplicationEvent(null);
+        migrationExecutor.executeProjectMigrations(List.of(createTableMigration, insertMigration, updateMigration), "test_project_update").get();
 
         // Then
         @SuppressWarnings("rawtypes")
@@ -257,15 +274,14 @@ class SystemMigratorIntegrationTest extends ElasticsearchSqlTestBase {
             DELETE FROM test_table_delete WHERE id == '1' WITH REFRESH;
             """;
 
-        PathMatchingResourcePatternResolver resourceLoader = TestResourceUtils.createResourceResolver(
-            new TestResourceUtils.MigrationContent(createTableContent, "V1__create_test_table.sql"),
-            new TestResourceUtils.MigrationContent(insertContent, "V2__insert_test_data.sql"),
-            new TestResourceUtils.MigrationContent(deleteContent, "V3__delete_data.sql")
-        );
-        SystemMigrator systemMigrator = new SystemMigrator(migrationExecutor, migrationParser, resourceLoader);
+        Migration createTableMigration = migration(1, "V1__create_test_table", createTableContent);
+
+        Migration insertMigration = migration(2, "V2__insert_test_data", insertContent);
+
+        Migration deleteMigration = migration(3, "V3__delete_data", deleteContent);
 
         // When
-        systemMigrator.onApplicationEvent(null);
+        migrationExecutor.executeProjectMigrations(List.of(createTableMigration, insertMigration, deleteMigration), "test_project_delete").get();
 
         // Then
         CountResponse count = client.count(c -> c.index("test_table_delete"));
@@ -274,51 +290,25 @@ class SystemMigratorIntegrationTest extends ElasticsearchSqlTestBase {
 
     @Test
     void whenInvalidVersionNumber_thenExceptionThrown() throws Exception {
-        // Given
-        String migrationContent = """
-            CREATE TABLE test_table (
-                id TEXT,
-                name TEXT
-            );
-            """;
 
-        PathMatchingResourcePatternResolver resourceLoader = TestResourceUtils.createResourceResolver(
-            migrationContent,
-            "Vinvalid__create_test_table.sql"
-        );
-        SystemMigrator systemMigrator = new SystemMigrator(migrationExecutor, migrationParser, resourceLoader);
+        Migration migration = migration(null, "Vinvalid__create_test_table", "");
 
         // When/Then
-        assertThrows(RuntimeException.class, () -> 
-            systemMigrator.onApplicationEvent(null)
+        assertThrows(IllegalArgumentException.class, () ->
+            migrationExecutor.executeProjectMigrations(List.of(migration), "test_project_invalid_version").get()
         );
     }
 
     @Test
     void whenDuplicateVersionNumber_thenExceptionThrown() throws Exception {
-        // Given
-        String migration1Content = """
-            CREATE TABLE test_table1 (
-                id TEXT,
-                name TEXT
-            );
-            """;
-        String migration2Content = """
-            CREATE TABLE test_table2 (
-                id TEXT,
-                name TEXT
-            );
-            """;
 
-        PathMatchingResourcePatternResolver resourceLoader = TestResourceUtils.createResourceResolver(
-            new TestResourceUtils.MigrationContent(migration1Content, "V1__create_test_table1.sql"),
-            new TestResourceUtils.MigrationContent(migration2Content, "V1__create_test_table2.sql")
-        );
-        SystemMigrator systemMigrator = new SystemMigrator(migrationExecutor, migrationParser, resourceLoader);
+        Migration migration1 = migration(1, "V1__create_test_table1", "");
+
+        Migration migration2 = migration(1, "V1__create_test_table2", "");
 
         // When/Then
         assertThrows(IllegalStateException.class, () -> 
-            systemMigrator.onApplicationEvent(null)
+            migrationExecutor.executeProjectMigrations(List.of(migration1, migration2), "test_project_duplicate_version").get()
         );
     }
 
@@ -332,14 +322,12 @@ class SystemMigratorIntegrationTest extends ElasticsearchSqlTestBase {
             );
             """;
 
-        PathMatchingResourcePatternResolver resourceLoader = TestResourceUtils.createResourceResolver(
-            new TestResourceUtils.MigrationContent(createTableContent, "V1__create_test_table.sql"),
-            new TestResourceUtils.MigrationContent(createTableContent, "V2__create_test_table_again.sql")
-        );
-        SystemMigrator systemMigrator = new SystemMigrator(migrationExecutor, migrationParser, resourceLoader);
+        Migration createTableMigration = migration(1, "V1__create_test_table", createTableContent);
+
+        Migration createTableMigrationAgain = migration(2, "V2__create_test_table_again", createTableContent);
 
         // When
-        systemMigrator.onApplicationEvent(null);
+        migrationExecutor.executeProjectMigrations(List.of(createTableMigration, createTableMigrationAgain), "test_project_if_not_exists").get();
 
         // Then
         assertTrue(asyncClient.indices().exists(e -> e.index("test_table_if_not_exists")).get().value());
@@ -368,14 +356,10 @@ class SystemMigratorIntegrationTest extends ElasticsearchSqlTestBase {
             );
             """;
 
-        PathMatchingResourcePatternResolver resourceLoader = TestResourceUtils.createResourceResolver(
-            migrationContent,
-            "V1__create_numeric_table.sql"
-        );
-        SystemMigrator systemMigrator = new SystemMigrator(migrationExecutor, migrationParser, resourceLoader);
+        Migration migration = migration(1, "V1__create_numeric_table", migrationContent);
 
         // When
-        systemMigrator.onApplicationEvent(null);
+        migrationExecutor.executeProjectMigrations(List.of(migration), "test_project_numeric_types").get();
 
         // Then
         assertTrue(asyncClient.indices().exists(e -> e.index("test_table_numeric")).get().value());
