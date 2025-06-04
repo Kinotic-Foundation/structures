@@ -19,7 +19,7 @@
           </RouterLink>
         </Button>
         <Button text class="!text-[#334155] !bg-white" :title="'GraphQL'">
-          <RouterLink :to="{ path: '/graphql', query: { namespace: item.id, token } }">
+          <RouterLink :to="{ path: '/graphql', query: { namespace: item.id } }">
             <svg width="20" height="20" viewBox="0 0 24 24">
               <path :d="icons.graph" fill="currentColor" />
             </svg>
