@@ -1,5 +1,6 @@
 import {ConnectedInfo, ConnectionInfo, Continuum} from '@kinotic/continuum-client'
 import {reactive} from 'vue'
+import Cookies from 'js-cookie'
 
 export interface IUserState {
 
@@ -24,25 +25,32 @@ export class UserState implements IUserState {
     private accessDenied: boolean = false
 
     public async authenticate(login: string, passcode: string): Promise<void> {
-        const connectionInfo: ConnectionInfo =  this.createConnectionInfo()
-        connectionInfo.connectHeaders = {
-            login,
-            passcode
-        }
-        this.btoaToken = btoa(`${login}:${passcode}`)
-        try {
-            this.connectedInfo = await Continuum.connect(connectionInfo)
-            this.authenticated = true
-            this.accessDenied = false
-        } catch(reason: any) {
-            this.accessDenied = true
-            if(reason) {
-                throw new Error(reason)
-            } else {
-                throw new Error('Credentials invalid')
-            }
+    const connectionInfo: ConnectionInfo =  this.createConnectionInfo()
+    connectionInfo.connectHeaders = {
+        login,
+        passcode
+    }
+    this.btoaToken = btoa(`${login}:${passcode}`)
+
+    try {
+        this.connectedInfo = await Continuum.connect(connectionInfo)
+        this.authenticated = true
+        this.accessDenied = false
+
+        Cookies.set('token', this.btoaToken, {
+            sameSite: 'strict',
+            secure: true,
+            expires: 1
+        })
+    } catch(reason: any) {
+        this.accessDenied = true
+        if(reason) {
+            throw new Error(reason)
+        } else {
+            throw new Error('Credentials invalid')
         }
     }
+}
 
     public isAccessDenied(): boolean  {
         return this.accessDenied
