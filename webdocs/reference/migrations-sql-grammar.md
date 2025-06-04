@@ -45,11 +45,11 @@ CREATE COMPONENT TEMPLATE <template_name> (<definition> [, <definition>]*) ;
   - `NUMBER_OF_REPLICAS = <integer>`: Sets the number of replica shards for indices using this template.
   - `<column_name> <type>`: Adds a field mapping (see Supported Types below).
 
-| Definition                | Allowed Values         | Description                                              |
+| Definition                | Allowed Values         | Description                                             |
 |---------------------------|-----------------------|----------------------------------------------------------|
 | NUMBER_OF_SHARDS          | Integer (e.g., 1, 3)  | Number of primary shards for the index                   |
 | NUMBER_OF_REPLICAS        | Integer (e.g., 0, 1)  | Number of replica shards for the index                   |
-| <column_name> <type>      | See Supported Types   | Field mapping (name and type)                            |
+| &lt;column_name&gt; &lt;type&gt;      | See Supported Types   | Field mapping (name and type)                            |
 
 ---
 
@@ -61,11 +61,11 @@ CREATE INDEX TEMPLATE <template_name> FOR '<pattern>' USING '<component_template
 ```
 - `WITH (...)` (optional): Additional definitions as in component templates.
 
-| Definition                | Allowed Values         | Description                                              |
+| Definition                | Allowed Values         | Description                                             |
 |---------------------------|-----------------------|----------------------------------------------------------|
 | NUMBER_OF_SHARDS          | Integer (e.g., 1, 3)  | Number of primary shards for the index                   |
 | NUMBER_OF_REPLICAS        | Integer (e.g., 0, 1)  | Number of replica shards for the index                   |
-| <column_name> <type>      | See Supported Types   | Field mapping (name and type)                            |
+| &lt;column_name&gt; &lt;type&gt;      | See Supported Types   | Field mapping (name and type)                            |
 
 ---
 
