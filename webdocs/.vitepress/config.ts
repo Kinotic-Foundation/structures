@@ -4,7 +4,7 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   title: "Structures",
   description: "Structures is an open-source framework for data storage and retrieval, supporting schema evolution, data management, and providing a user-friendly GUI.",
-  base: '/structures/webdocs/',
+  base: '/webdocs/',
   ignoreDeadLinks: [
     // Ignore localhost URLs
     /^http:\/\/localhost:/
