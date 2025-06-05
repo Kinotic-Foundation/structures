@@ -272,6 +272,7 @@ export default toNative(CrudTable)
         :sortField="options.sortField"
         :sortOrder="options.sortOrder"
         :scrollable="true"
+        :removableSort="true"
         scrollHeight="flex"
         dataKey="id"
         @page="onPage"
@@ -284,7 +285,7 @@ export default toNative(CrudTable)
           :key="col.field"
           :field="col.field"
           :header="col.header"
-          sortable
+          :sortable="col.sortable !== false"
         >
           <template #body="slotProps">
             <slot :name="`item.${col.field}`" :item="slotProps.data">
