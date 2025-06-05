@@ -1,7 +1,7 @@
 <template>
     <div
       class="w-full bg-cover bg-center bg-no-repeat py-1 px-4"
-      style="background-image: linear-gradient(rgba(0, 0, 0, 0.8), rgba(32, 43, 113, 0.28)), url('/images/background-home.png')"
+      style="background-image: linear-gradient(rgba(0, 0, 0, 0.8), rgba(32, 43, 113, 0.28)), url('images/background-home.png')"
 
     >
     <BaseContainer>
@@ -30,7 +30,7 @@
         </div>
         <div>
           <img 
-              src="/images/hero-section-image.png"
+              src="images/hero-section-image.png"
               alt="Hero Section Image"
               class="max-w-[700px]"
               />

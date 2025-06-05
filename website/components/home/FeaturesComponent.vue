@@ -8,7 +8,7 @@
                   class="flex-1 min-w-[250px] border border-black dark:border-white/20 bg-transparent p-8 rounded-xl"
                 >
                   <div class="flex items-center gap-5 mb-6">
-                    <img :src="'/icons/' + f.icon" class="w-10 h-10" alt="icon" />
+                    <img :src="'icons/' + f.icon" class="w-10 h-10" alt="icon" />
                     <h3 class="text-xl font-semibold dark:text-white text-[#101010]">
                       {{ f.title }}
                     </h3>
