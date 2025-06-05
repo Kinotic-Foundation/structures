@@ -2,14 +2,12 @@ package org.kinotic.structures.sql.parsers;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
-import org.kinotic.structures.sql.domain.Migration;
+import org.kinotic.structures.sql.domain.MigrationContent;
 import org.kinotic.structures.sql.domain.Statement;
 import org.kinotic.structures.sql.parser.StructuresSQLBaseVisitor;
 import org.kinotic.structures.sql.parser.StructuresSQLLexer;
@@ -30,75 +28,69 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class MigrationParser {
     private final List<StatementParser> statementParsers;
-    private static final Pattern VERSION_PATTERN = Pattern.compile("V(\\d+)__.*\\.sql$");
     private static final Logger log = LoggerFactory.getLogger(MigrationParser.class);
 
-    public Migration parse(Resource resource) throws IOException {
-        String version = extractVersionFromFilename(resource.getFilename());
-        String sqlContent = new String(resource.getInputStream().readAllBytes());
-        log.debug("Parsing migration file: {} with content:\n{}", resource.getFilename(), sqlContent);
-        
-        CharStream input = CharStreams.fromString(sqlContent);
+    public MigrationContent parse(Resource resource) throws IOException {
+        byte[] bytes = resource.getInputStream().readAllBytes();
+        return parse(bytes);
+    }
+
+    public MigrationContent parse(String sql) {
+        return parse(CharStreams.fromString(sql));
+    }
+
+    public MigrationContent parse(byte[] bytes) throws IOException {
+        return parse(CharStreams.fromStream(new java.io.ByteArrayInputStream(bytes)));
+    }
+
+    private MigrationContent parse(CharStream input) {
         StructuresSQLLexer lexer = new StructuresSQLLexer(input);
         CommonTokenStream tokens = new CommonTokenStream(lexer);
         StructuresSQLParser parser = new StructuresSQLParser(tokens);
         StructuresSQLParser.MigrationsContext tree = parser.migrations();
-        return new MigrationVisitor(statementParsers, version).visit(tree);
+        return new MigrationVisitor(statementParsers).visit(tree);
     }
 
-    private String extractVersionFromFilename(String filename) {
-        Matcher matcher = VERSION_PATTERN.matcher(filename);
-        if (!matcher.find()) {
-            throw new IllegalArgumentException("Invalid migration filename format. Expected V<number>__<description>.sql");
-        }
-        return "v" + matcher.group(1);
-    }
-
-    private static class MigrationVisitor extends StructuresSQLBaseVisitor<Migration> {
+    private static class MigrationVisitor extends StructuresSQLBaseVisitor<MigrationContent> {
         private final List<StatementParser> statementParsers;
-        private final String version;
 
-        MigrationVisitor(List<StatementParser> statementParsers, String version) {
+        MigrationVisitor(List<StatementParser> statementParsers) {
             this.statementParsers = statementParsers;
-            this.version = version;
         }
 
         @Override
-        public Migration visitMigrations(StructuresSQLParser.MigrationsContext ctx) {
-            Migration migration = new Migration(version);
+        public MigrationContent visitMigrations(StructuresSQLParser.MigrationsContext ctx) {
             List<StructuresSQLParser.StatementContext> statements = ctx.statement();
             log.debug("Found {} statements in migration file", statements.size());
+            List<Statement> parsedStatements = new java.util.ArrayList<>();
+            for (StructuresSQLParser.StatementContext stmtCtx : statements) {
+                Statement stmt = parseStatement(stmtCtx);
+                if (stmt != null) {
+                    parsedStatements.add(stmt);
+                }
+            }
+            return new MigrationContent(parsedStatements);
+        }
+
+        private Statement parseStatement(StructuresSQLParser.StatementContext stmtCtx) {
+            String statementText = stmtCtx.getText();
+            log.debug("Processing statement: {}", statementText);
             
-            for (int i = 0; i < statements.size(); i++) {
-                StructuresSQLParser.StatementContext stmt = statements.get(i);
-                String statementText = stmt.getText();
-                log.debug("Processing statement {} of {}: {}", i + 1, statements.size(), statementText);
-                
-                List<StatementParser> supportingParsers = statementParsers.stream()
-                        .filter(p -> p.supports(stmt))
-                        .toList();
-                
-                if (supportingParsers.isEmpty()) {
-                    throw new IllegalStateException("No parser found for statement: " + statementText);
-                }
-                if (supportingParsers.size() > 1) {
-                    throw new IllegalStateException("Multiple parsers found for statement: " + statementText + 
-                        ". Parsers: " + supportingParsers.stream()
-                            .map(p -> p.getClass().getSimpleName())
-                            .collect(Collectors.joining(", ")));
-                }
-                
-                Statement parsedStatement = supportingParsers.get(0).parse(stmt);
-                migration.addStatement(parsedStatement);
-                log.debug("Added statement {} to migration. Total statements: {}. Statement type: {}", 
-                    i + 1,
-                    migration.getStatements().size(), 
-                    parsedStatement.getClass().getSimpleName());
+            List<StatementParser> supportingParsers = statementParsers.stream()
+                    .filter(p -> p.supports(stmtCtx))
+                    .toList();
+            
+            if (supportingParsers.isEmpty()) {
+                throw new IllegalStateException("No parser found for statement: " + statementText);
+            }
+            if (supportingParsers.size() > 1) {
+                throw new IllegalStateException("Multiple parsers found for statement: " + statementText + 
+                    ". Parsers: " + supportingParsers.stream()
+                        .map(p -> p.getClass().getSimpleName())
+                        .collect(Collectors.joining(", ")));
             }
             
-            log.debug("Finished processing migration file. Total statements in migration: {}", 
-                migration.getStatements().size());
-            return migration;
+            return supportingParsers.get(0).parse(stmtCtx);
         }
     }
 } 

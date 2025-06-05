@@ -13,8 +13,8 @@ import java.util.concurrent.CompletableFuture;
 public interface StatementExecutor<T extends Statement, R> {
     boolean supports(Statement statement);
 
-    // For migrations (blocking, no return value)
-    void executeMigration(T statement);
+    // For migrations (async, returns a value)
+    CompletableFuture<R> executeMigration(T statement);
 
     // For named queries
     CompletableFuture<R> executeQuery(T statement, Map<String, Object> parameters);

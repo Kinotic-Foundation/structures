@@ -32,12 +32,8 @@ public class InsertStatementExecutor implements StatementExecutor<InsertStatemen
     }
 
     @Override
-    public void executeMigration(InsertStatement statement) {
-        try {
-            executeQuery(statement, null).get();
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to execute migration INSERT", e);
-        }
+    public CompletableFuture<Void> executeMigration(InsertStatement statement) {
+        return executeQuery(statement, null);
     }
 
     @Override

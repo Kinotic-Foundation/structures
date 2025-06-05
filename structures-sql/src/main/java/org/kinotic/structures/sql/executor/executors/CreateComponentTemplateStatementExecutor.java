@@ -32,37 +32,33 @@ public class CreateComponentTemplateStatementExecutor implements StatementExecut
     }
 
     @Override
-    public void executeMigration(CreateComponentTemplateStatement statement) {
-        try {
-            Map<String, Property> properties = new HashMap<>();
-            Map<String, String> settings = new HashMap<>();
+    public CompletableFuture<Void> executeMigration(CreateComponentTemplateStatement statement) {
+        Map<String, Property> properties = new HashMap<>();
+        Map<String, String> settings = new HashMap<>();
 
-            statement.parts().forEach(part -> {
-                if (part instanceof ColumnTemplatePart columnPart) {
-                    properties.put(columnPart.column().name(), TypeMapper.mapType(columnPart.column().type()));
-                } else if (part instanceof SettingTemplatePart settingPart) {
-                    settings.put(settingPart.name(), settingPart.value());
-                }
-            });
+        statement.parts().forEach(part -> {
+            if (part instanceof ColumnTemplatePart columnPart) {
+                properties.put(columnPart.column().name(), TypeMapper.mapType(columnPart.column().type()));
+            } else if (part instanceof SettingTemplatePart settingPart) {
+                settings.put(settingPart.name(), settingPart.value());
+            }
+        });
 
-            client.cluster().putComponentTemplate(t -> t
-                    .name(statement.templateName())
-                    .template(te -> te
-                            .settings(s -> {
-                                settings.forEach((key, value) -> {
-                                    switch (key) {
-                                        case "NUMBER_OF_SHARDS" -> s.numberOfShards(value);
-                                        case "NUMBER_OF_REPLICAS" -> s.numberOfReplicas(value);
-                                    }
-                                });
-                                return s;
-                            })
-                            .mappings(m -> properties.isEmpty() ? m : m.properties(properties))
-                    )
-            ).get();
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to execute CREATE COMPONENT TEMPLATE migration", e);
-        }
+        return client.cluster().putComponentTemplate(t -> t
+                .name(statement.templateName())
+                .template(te -> te
+                        .settings(s -> {
+                            settings.forEach((key, value) -> {
+                                switch (key) {
+                                    case "NUMBER_OF_SHARDS" -> s.numberOfShards(value);
+                                    case "NUMBER_OF_REPLICAS" -> s.numberOfReplicas(value);
+                                }
+                            });
+                            return s;
+                        })
+                        .mappings(m -> properties.isEmpty() ? m : m.properties(properties))
+                )
+        ).thenApply(response -> null);
     }
 
     @Override

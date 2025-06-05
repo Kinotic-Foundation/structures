@@ -29,6 +29,7 @@ public class ReindexStatementParser implements StatementParser {
         String sourceFields = null;
         String query = null;
         String script = null;
+        Boolean waitForCompletion = null;
 
         if (reindexCtx.reindexOptions() != null) {
             for (var option : reindexCtx.reindexOptions().reindexOption()) {
@@ -46,9 +47,18 @@ public class ReindexStatementParser implements StatementParser {
                     query = option.STRING().getText().replaceAll("'", "");
                 } else if (option.SCRIPT() != null) {
                     script = option.STRING().getText().replaceAll("'", "");
+                } else if (option.WAIT() != null) {
+                    if (option.TRUE() != null) {
+                        waitForCompletion = true;
+                    } else if (option.FALSE() != null) {
+                        waitForCompletion = false;
+                    }
                 }
             }
         }
-        return new ReindexStatement(source, dest, conflicts, maxDocs, slices, size, sourceFields, query, script);
+        if (waitForCompletion == null) {
+            waitForCompletion = true;
+        }
+        return new ReindexStatement(source, dest, conflicts, maxDocs, slices, size, sourceFields, query, script, waitForCompletion);
     }
 }

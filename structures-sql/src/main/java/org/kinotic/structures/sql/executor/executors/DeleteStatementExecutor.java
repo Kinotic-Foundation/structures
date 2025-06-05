@@ -28,12 +28,8 @@ public class DeleteStatementExecutor implements StatementExecutor<DeleteStatemen
     }
 
     @Override
-    public void executeMigration(DeleteStatement statement) {
-        try {
-            executeQuery(statement, null).get();
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to execute migration DELETE", e);
-        }
+    public CompletableFuture<Long> executeMigration(DeleteStatement statement) {
+        return executeQuery(statement, null);
     }
 
     @Override

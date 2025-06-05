@@ -19,6 +19,12 @@ public class TypeMapper {
             case DOUBLE -> Property.of(p -> p.double_(d -> d));
             case BOOLEAN -> Property.of(p -> p.boolean_(b -> b));
             case DATE -> Property.of(p -> p.date(d -> d));
+            case JSON -> Property.of(p -> p.flattened(f -> f));
+            case BINARY -> Property.of(p -> p.binary(b -> b));
+            case GEO_POINT -> Property.of(p -> p.geoPoint(gp -> gp));
+            case GEO_SHAPE -> Property.of(p -> p.geoShape(gs -> gs));
+            case UUID -> Property.of(p -> p.keyword(k -> k));
+            case DECIMAL -> Property.of(p -> p.scaledFloat(sf -> sf));
             default -> throw new IllegalArgumentException("Unsupported SQL type: " + type);
         };
     }

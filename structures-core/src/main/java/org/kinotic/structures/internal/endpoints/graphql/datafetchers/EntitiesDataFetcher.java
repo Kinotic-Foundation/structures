@@ -27,6 +27,7 @@ public class EntitiesDataFetcher implements DataFetcher<CompletableFuture<List<M
     private final EntitiesService entitiesService;
     private final String namespace;
 
+    @SuppressWarnings("unchecked")
     @Override
     public CompletableFuture<List<Map>> get(DataFetchingEnvironment env) throws Exception {
         List<Map<String, Object>> representations = env.getArgument(_Entity.argumentName);
@@ -42,7 +43,6 @@ public class EntitiesDataFetcher implements DataFetcher<CompletableFuture<List<M
                 String typename = (String) representation.get("__typename");
                 String id = (String) representation.get("id");
                 String structureId = StructuresUtil.structureNameToId(namespace, typename);
-                //noinspection unchecked
                 futures.add(entitiesService.findById(structureId,
                                                      id,
                                                      Map.class,

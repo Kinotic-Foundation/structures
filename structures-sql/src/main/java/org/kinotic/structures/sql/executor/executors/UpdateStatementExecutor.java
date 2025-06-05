@@ -31,12 +31,8 @@ public class UpdateStatementExecutor implements StatementExecutor<UpdateStatemen
     }
 
     @Override
-    public void executeMigration(UpdateStatement statement) {
-        try {
-            executeQuery(statement, null).get();
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to execute migration UPDATE", e);
-        }
+    public CompletableFuture<Long> executeMigration(UpdateStatement statement) {
+        return executeQuery(statement, null);
     }
 
     @Override

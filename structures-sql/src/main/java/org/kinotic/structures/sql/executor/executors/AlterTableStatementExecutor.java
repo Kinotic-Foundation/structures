@@ -27,15 +27,11 @@ public class AlterTableStatementExecutor implements StatementExecutor<AlterTable
     }
 
     @Override
-    public void executeMigration(AlterTableStatement statement) {
-        try {
-            client.indices().putMapping(m -> m
-                    .index(statement.tableName())
-                    .properties(statement.column().name(), TypeMapper.mapType(statement.column().type()))
-            ).get();
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to execute ALTER TABLE migration", e);
-        }
+    public CompletableFuture<Void> executeMigration(AlterTableStatement statement) {
+        return client.indices().putMapping(m -> m
+                .index(statement.tableName())
+                .properties(statement.column().name(), TypeMapper.mapType(statement.column().type()))
+        ).thenApply(response -> null);
     }
 
     @Override

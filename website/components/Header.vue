@@ -6,9 +6,9 @@
           <img src="/icons/logo.svg" class="invert-100 dark:invert-0" alt="logo" />
         </NuxtLink>
         <div class="space-x-4 flex items-center">
-          <NuxtLink to="https://kinotic-foundation.github.io/structures/webdocs/guide/overview.html" class="text-gray-900 hover:text-gray-700 dark:text-gray-300">Guide</NuxtLink>
-          <NuxtLink to="https://kinotic-foundation.github.io/structures/webdocs/reference/structures-config.html" class="text-gray-900 hover:text-gray-700 dark:text-gray-300">Reference</NuxtLink>
-          <NuxtLink to="https://kinotic-foundation.github.io/structures/allure/index.html" class="text-gray-900 hover:text-gray-700 dark:text-gray-300">Test Status</NuxtLink>
+          <NuxtLink to="https://structuresframework.org/webdocs/guide/overview.html" class="text-gray-900 hover:text-gray-700 dark:text-gray-300">Guide</NuxtLink>
+          <NuxtLink to="https://structuresframework.org/webdocs/reference/structures-config.html" class="text-gray-900 hover:text-gray-700 dark:text-gray-300">Reference</NuxtLink>
+          <NuxtLink to="https://structuresframework.org/allure/index.html" class="text-gray-900 hover:text-gray-700 dark:text-gray-300">Test Status</NuxtLink>
           <NuxtLink to="https://github.com/Kinotic-Foundation/structures" class="text-gray-900 hover:text-gray-700 dark:text-gray-300 flex items-center gap-1">
             <img src="/icons/git.svg" alt="GitHub" class="w-5 h-5" />
           </NuxtLink>

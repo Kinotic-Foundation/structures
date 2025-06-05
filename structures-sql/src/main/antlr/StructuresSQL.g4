@@ -54,6 +54,7 @@ reindexOption
     | SOURCE_FIELDS EQUALS STRING
     | QUERY EQUALS STRING
     | SCRIPT EQUALS STRING
+    | WAIT EQUALS (TRUE | FALSE)
     ;
 
 updateStatement
@@ -141,6 +142,12 @@ type
     | DOUBLE
     | BOOLEAN
     | DATE
+    | JSON
+    | BINARY
+    | GEO_POINT
+    | GEO_SHAPE
+    | UUID
+    | DECIMAL
     ;
 
 comment
@@ -190,12 +197,21 @@ USING: 'USING';
 VALUES: 'VALUES';
 WHERE: 'WHERE';
 WITH: 'WITH';
+WAIT: 'WAIT';
+TRUE: 'TRUE';
+FALSE: 'FALSE';
 
 // Type Keywords
 BOOLEAN: 'BOOLEAN';
 INTEGER: 'INTEGER';
 KEYWORD: 'KEYWORD';
 TEXT: 'TEXT';
+JSON: 'JSON';
+BINARY: 'BINARY';
+GEO_POINT: 'GEO_POINT';
+GEO_SHAPE: 'GEO_SHAPE';
+UUID: 'UUID';
+DECIMAL: 'DECIMAL';
 
 // Punctuation and Operators
 COMMA: ',';

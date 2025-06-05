@@ -16,6 +16,6 @@ export default defineNuxtConfig({
     ],
   },
   app: {
-    baseURL: '/structures/website/'
+    baseURL: '/website/'
   }
 })

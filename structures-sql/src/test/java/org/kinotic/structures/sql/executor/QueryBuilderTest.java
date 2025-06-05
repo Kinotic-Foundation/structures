@@ -37,6 +37,7 @@ class QueryBuilderTest {
         assertEquals("value", termQuery.value().stringValue());
     }
 
+    @SuppressWarnings("null")
     @Test
     void whenBuildingRangeQuery_thenCorrectQueryBuilt() {
         // Given

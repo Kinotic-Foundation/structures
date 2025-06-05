@@ -29,12 +29,8 @@ public class CreateTableStatementExecutor implements StatementExecutor<CreateTab
     }
 
     @Override
-    public void executeMigration(CreateTableStatement statement) {
-        try {
-            executeQuery(statement, null).get();
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to execute migration CREATE TABLE", e);
-        }
+    public CompletableFuture<Void> executeMigration(CreateTableStatement statement) {
+        return executeQuery(statement, null);
     }
 
     @Override
