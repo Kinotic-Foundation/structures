@@ -30,7 +30,7 @@
         </div>
         <div>
           <img 
-              src="images/hero-section-image.png"
+              src="/images/hero-section-image.png"
               alt="Hero Section Image"
               class="max-w-[700px]"
               />
