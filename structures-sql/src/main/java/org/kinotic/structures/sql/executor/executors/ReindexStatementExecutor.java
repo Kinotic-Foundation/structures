@@ -35,6 +35,23 @@ public class ReindexStatementExecutor implements StatementExecutor<ReindexStatem
 
     @Override
     public CompletableFuture<String> executeMigration(ReindexStatement statement) {
+        if (statement.skipIfNoSource()) {
+            // Check if source index exists first
+            return client.indices().exists(e -> e.index(statement.source()))
+                .thenCompose(exists -> {
+                    if (!exists.value()) {
+                        // Skip reindex if source does not exist
+                        return CompletableFuture.completedFuture(null);
+                    } else {
+                        return doReindex(statement);
+                    }
+                });
+        } else {
+            return doReindex(statement);
+        }
+    }
+
+    private CompletableFuture<String> doReindex(ReindexStatement statement) {
         // Always use wait_for_completion=false
         return client.reindex(r -> {
             r.source(s -> {
@@ -68,7 +85,7 @@ public class ReindexStatementExecutor implements StatementExecutor<ReindexStatem
             return r;
         }).thenCompose(response -> {
             String taskId = response.task();
-            if (statement.waitForCompletion() != null && statement.waitForCompletion()) {
+            if (statement.waitForReindex() != null && statement.waitForReindex()) {
                 // Poll for completion asynchronously
                 return pollTaskUntilComplete(taskId).thenApply(done -> null);
             } else {

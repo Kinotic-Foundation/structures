@@ -30,6 +30,7 @@ public class ReindexStatementParser implements StatementParser {
         String query = null;
         String script = null;
         Boolean waitForCompletion = null;
+        Boolean skipIfNoSource = null;
 
         if (reindexCtx.reindexOptions() != null) {
             for (var option : reindexCtx.reindexOptions().reindexOption()) {
@@ -53,12 +54,21 @@ public class ReindexStatementParser implements StatementParser {
                     } else if (option.FALSE() != null) {
                         waitForCompletion = false;
                     }
+                } else if (option.SKIP_IF_NO_SOURCE() != null) {
+                    if (option.TRUE() != null) {
+                        skipIfNoSource = true;
+                    } else if (option.FALSE() != null) {
+                        skipIfNoSource = false;
+                    }
                 }
             }
         }
         if (waitForCompletion == null) {
             waitForCompletion = true;
         }
-        return new ReindexStatement(source, dest, conflicts, maxDocs, slices, size, sourceFields, query, script, waitForCompletion);
+        if (skipIfNoSource == null) {
+            skipIfNoSource = false;
+        }
+        return new ReindexStatement(source, dest, conflicts, maxDocs, slices, size, sourceFields, query, script, waitForCompletion, skipIfNoSource);
     }
 }
