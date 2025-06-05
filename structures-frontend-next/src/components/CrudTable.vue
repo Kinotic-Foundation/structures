@@ -277,13 +277,14 @@ export default toNative(CrudTable)
         @page="onPage"
         @sort="onSort"
         @row-click="onRowClick"
+        sortMode="multiple"
       >
         <Column
           v-for="col in computedHeaders"
           :key="col.field"
           :field="col.field"
           :header="col.header"
-          :sortable="col.sortable !== false"
+          sortable
         >
           <template #body="slotProps">
             <slot :name="`item.${col.field}`" :item="slotProps.data">
