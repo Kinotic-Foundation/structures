@@ -4,6 +4,7 @@ include:
 services:
   structures-server:
     container_name: structures-server
+    pull_policy: always
     image: kinotic/structures-server:${structuresVersion:-3.5.0-SNAPSHOT}
     depends_on:
       structures-elasticsearch:

@@ -1,7 +1,7 @@
 <template>
   <iframe
     ref="iframeRef"
-    src="/public/graphiql.html"
+    src="/graphiql.html"
     width="100%"
     height="600"
     frameborder="0"
