@@ -17,7 +17,6 @@ declare module 'vue' {
     CrudTable: typeof import('./src/components/CrudTable.vue')['default']
     DataTable: typeof import('primevue/datatable')['default']
     Dialog: typeof import('primevue/dialog')['default']
-    Dropdown: typeof import('primevue/dropdown')['default']
     ERTable: typeof import('./src/components/modals/ERTable.vue')['default']
     Glitch: typeof import('./src/components/Glitch.vue')['default']
     IconField: typeof import('primevue/iconfield')['default']

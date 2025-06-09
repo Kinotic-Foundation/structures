@@ -58,7 +58,6 @@ import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
 import ProgressSpinner from 'primevue/progressspinner'
-import { USER_STATE } from '@/states/IUserState'
 
 type RuleValidator = (value: string) => string | boolean
 
@@ -100,10 +99,6 @@ export default class CrudEntityAddEdit extends Vue {
         : [(v: string) => !!v || `${this.identityLabel} is required`]
 
     try {
-      if (!USER_STATE.isAuthenticated()) {
-        await USER_STATE.authenticate('admin', 'structures')
-      }
-
       this.crudServiceProxy = Continuum.crudServiceProxy(this.crudServiceIdentifier)
 
       if (this.identity !== null) {

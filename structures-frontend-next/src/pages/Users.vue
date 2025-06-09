@@ -45,7 +45,6 @@ import CrudTable from '@/components/CrudTable.vue'
 import { type Identifiable } from '@kinotic/continuum-client'
 import { Structures, type INamespaceService } from '@kinotic/structures-api'
 import { mdiGraphql, mdiApi } from '@mdi/js'
-import { USER_STATE } from '@/states/IUserState'
 
 interface CrudHeader {
   field: string
@@ -72,10 +71,6 @@ export default class Users extends Vue {
 
   async mounted(): Promise<void> {
     try {
-      if (!USER_STATE.isAuthenticated()) {
-        await USER_STATE.authenticate('admin', 'structures')
-      }
-
       this.refreshTable()
 
       if (this.$route.query.created === 'true') {
