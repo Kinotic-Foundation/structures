@@ -8,7 +8,10 @@ export default defineNuxtConfig({
   modules: ['@nuxtjs/color-mode'],
   css: ['~/assets/css/main.css'],
   colorMode: {
-    classSuffix: '',
+    classSuffix: '',         // must be '' for Tailwind dark: to work
+    preference: 'dark',    // or 'dark' or 'light'
+    fallback: 'light',       // used if no system preference or SSR
+    storageKey: 'nuxt-color-mode',
   },
   vite: {
     plugins: [
