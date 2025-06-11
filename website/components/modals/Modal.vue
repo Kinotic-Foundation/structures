@@ -1,16 +1,28 @@
 <template>
-  <div v-if="modalState.isOpen" class="modal-overlay">
-    <div class="modal-content">
-      <slot name="header">
-        al;skdlsad;al
-        <!-- <h2>{{ modalState.title }}</h2> -->
-      </slot>
-      <slot name="body">
-        <!-- <p>{{ modalState.content }}</p> -->
-      </slot>
-      <slot name="footer">
-        <button @click="closeModal">Close</button>
-      </slot>
+  <div
+    v-if="modalState.isOpen"
+    class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-4"
+  >
+    <div
+      class="dark:bg-[#101010] bg-white text-white max-w-[800px] max-h-[90vh] w-full rounded-2xl xl:pt-[72px] pt-[54px] xl:px-[64px] px-[25px] xl:pb-[64px] pb-[35px] relative text-center"
+    >
+      <button
+        class="absolute top-5 right-5 text-white hover:text-gray-400"
+        @click="closeModal"
+      >
+        <img src="/icons/close.svg" alt="Close menu" class="w-6 h-6" />
+      </button>
+      <img
+        src="/icons/rocket.svg"
+        alt="Rocket"
+        class="xl:w-[200px] w-[136px] xl:h-[200px] h-[136px] mx-auto xl:mb-[48px] mb-6"
+      />
+      <h2 class="xl:text-[40px] text-[30px] font-normal dark:text-white/85 text-[#101010] font-[InterRegular] xl:mb-4 mb-3">Success!</h2>
+      <p class="xl:text-lg text-[17px] dark:text-white/75 text-[#2B2A32] leading-relaxed">
+        Thanks for joining the Structures Cloud early access list! We’re excited to bring
+        you a seamless, cloud-based experience for Structures. Expect an email with
+        access details and updates as we approach the launch. Stay tuned!
+      </p>
     </div>
   </div>
 </template>
@@ -19,28 +31,4 @@
 import { useModal } from '~/composables/useModal'
 
 const { modalState, closeModal } = useModal()
-console.log("ajsdkjsahdkjsahdj")
 </script>
-
-<style>
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  background: white;
-  padding: 20px;
-  border-radius: 8px;
-  min-width: 300px;
-  max-width: 500px;
-}
-</style>
