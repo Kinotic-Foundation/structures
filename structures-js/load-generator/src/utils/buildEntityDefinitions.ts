@@ -15,8 +15,8 @@ async function buildEntityDefinitions() {
     const namespaceConfig: NamespaceConfiguration = new NamespaceConfiguration()
     namespaceConfig.namespaceName = namespace
     namespaceConfig.validate = false
-    namespaceConfig.entitiesPaths = ['../entity/domain/ecommerce']
-    namespaceConfig.generatedPath = '../services/ecommerce'
+    namespaceConfig.entitiesPaths = [path.resolve(__dirname, '../entity/domain/ecommerce')]
+    namespaceConfig.generatedPath = path.resolve(__dirname, '../services/ecommerce')
 
     // Ensure output directory exists
     await fs.mkdir(outputDir, { recursive: true })

@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "NODE_ENV=development vite-node src/main.ts --mode development",
     "generate-entity-definitions": "vite-node src/utils/buildEntityDefinitions.ts",
-    "prebuild": "pnpm run generate-entity-definitions",
+    "prebuild": "rm -rf dist/* && pnpm run generate-entity-definitions",
     "build": "vite build",
     "start": "NODE_ENV=development node dist/main.mjs",
     "test": "vitest"
