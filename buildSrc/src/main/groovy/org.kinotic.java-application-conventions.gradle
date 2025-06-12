@@ -50,6 +50,7 @@ bootBuildImage {
             username = System.getenv("DOCKER_HUB_USERNAME")
             password = System.getenv("DOCKER_HUB_PASSWORD")
         }
+        platforms = ["linux/amd64", "linux/arm64"]
     }
 }
 
