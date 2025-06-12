@@ -53,7 +53,7 @@ export class EntityDefinitionLoader {
                 definitions.set(definition.name.toLowerCase(), definition)
             }
 
-            this.logger.log(`Loaded ${definitions.size} entity definitions from JSON files`)
+            this.logger.log(`Loaded ${definitions.size} entity definitions from JSON files for ${this.namespace}`)
         } catch (error) {
             this.logger.log(`Error loading JSON files: ${error}`)
             throw new Error('Failed to load entity definitions from JSON files in production environment')

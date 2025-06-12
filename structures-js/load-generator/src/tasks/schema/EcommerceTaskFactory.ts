@@ -1,6 +1,7 @@
 import { ITask } from "../ITask"
 import { IEntityService } from '@kinotic/structures-api'
 import { Structures } from '@kinotic/structures-api'
+import path from 'path'
 import { Customer } from '../../entity/domain/ecommerce/Customer'
 import { Product } from '../../entity/domain/ecommerce/Product'
 import { ProductReview } from '../../entity/domain/ecommerce/ProductReview'
@@ -9,6 +10,7 @@ import { TestDataGenerator } from '../../entity/domain/ecommerce/TestDataGenerat
 import { EntityDefinitionLoader } from '../../utils/EntityDefinitionLoader'
 import { CreateStructureTaskBuilder } from './CreateStructureTaskBuilder'
 import { ObjectC3Type } from '@kinotic/continuum-idl'
+import { createStructureTaskBuilder } from './CreateStructureTaskBuilder'
 
 export class EcommerceTaskFactory {
     private readonly namespace = 'ecommerce'
@@ -20,7 +22,7 @@ export class EcommerceTaskFactory {
     private purchaseService?: IEntityService<Purchase>
 
     constructor() {
-        this.taskBuilder = CreateStructureTaskBuilder.getInstance()
+        this.taskBuilder = createStructureTaskBuilder()
     }
 
     getTasks(): ITask[] {
@@ -38,10 +40,11 @@ export class EcommerceTaskFactory {
                 execute: async () => {
                     const loader = new EntityDefinitionLoader(
                         this.namespace,
-                        '../../entity/domain/ecommerce',
-                        '../../services/ecommerce/'
+                        path.join(__dirname, '../../entity/domain/ecommerce'),
+                        path.join(__dirname, '../../services/ecommerce')
                     )
                     this.entityDefinitions = await loader.loadDefinitions()
+                    console.log('Loaded', this.entityDefinitions.size, 'entity definitions')
                 }
             },
             // Then create structures
@@ -49,7 +52,7 @@ export class EcommerceTaskFactory {
                 namespace: this.namespace,
                 name: 'Customer',
                 description: 'Customer information and preferences',
-                entityDefinition: this.entityDefinitions.get('customer')!,
+                entityDefinitionSupplier: () => this.entityDefinitions.get('customer')!,
                 onServiceCreated: (service) => {
                     this.customerService = service as IEntityService<Customer>
                 }
@@ -58,7 +61,7 @@ export class EcommerceTaskFactory {
                 namespace: this.namespace,
                 name: 'Product',
                 description: 'Product catalog information',
-                entityDefinition: this.entityDefinitions.get('product')!,
+                entityDefinitionSupplier: () => this.entityDefinitions.get('product')!,
                 onServiceCreated: (service) => {
                     this.productService = service as IEntityService<Product>
                 }
@@ -67,7 +70,7 @@ export class EcommerceTaskFactory {
                 namespace: this.namespace,
                 name: 'ProductReview',
                 description: 'Product reviews and ratings',
-                entityDefinition: this.entityDefinitions.get('productreview')!,
+                entityDefinitionSupplier: () => this.entityDefinitions.get('productreview')!,
                 onServiceCreated: (service) => {
                     this.reviewService = service as IEntityService<ProductReview>
                 }
@@ -76,7 +79,7 @@ export class EcommerceTaskFactory {
                 namespace: this.namespace,
                 name: 'Purchase',
                 description: 'Purchase orders and transactions',
-                entityDefinition: this.entityDefinitions.get('purchase')!,
+                entityDefinitionSupplier: () => this.entityDefinitions.get('purchase')!,
                 onServiceCreated: (service) => {
                     this.purchaseService = service as IEntityService<Purchase>
                 }

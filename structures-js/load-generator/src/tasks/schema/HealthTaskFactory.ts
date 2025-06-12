@@ -9,11 +9,13 @@ import { Treatment } from '../../entity/domain/health/Treatment'
 import { Prescription } from '../../entity/domain/health/Prescription'
 import { EntityDefinitionLoader } from '../../utils/EntityDefinitionLoader'
 import { CreateStructureTaskBuilder } from './CreateStructureTaskBuilder'
+import { createStructureTaskBuilder } from './CreateStructureTaskBuilder'
 import { ObjectC3Type } from '@kinotic/continuum-idl'
 import { TestDataGenerator } from '../../entity/domain/health/TestDataGenerator'
+import path from 'path'
 
 export class HealthTaskFactory {
-    private readonly namespace = 'health'
+    private readonly namespace = 'healthcare'
     private readonly taskBuilder: CreateStructureTaskBuilder
     private entityDefinitions: Map<string, ObjectC3Type> = new Map()
     private patientService?: IEntityService<Patient>
@@ -24,7 +26,7 @@ export class HealthTaskFactory {
     private prescriptionService?: IEntityService<Prescription>
 
     constructor() {
-        this.taskBuilder = CreateStructureTaskBuilder.getInstance()
+        this.taskBuilder = createStructureTaskBuilder()
     }
 
     getTasks(): ITask[] {
@@ -42,10 +44,11 @@ export class HealthTaskFactory {
                 execute: async () => {
                     const loader = new EntityDefinitionLoader(
                         this.namespace,
-                        '../../entity/domain/health',
-                        '../../services/health/'
+                        path.join(__dirname, '../../entity/domain/health'),
+                        path.join(__dirname, '../../services/health')
                     )
                     this.entityDefinitions = await loader.loadDefinitions()
+                    console.log('Loaded', this.entityDefinitions.size, 'entity definitions')
                 }
             },
             // Then create structures
@@ -53,8 +56,8 @@ export class HealthTaskFactory {
                 namespace: this.namespace,
                 name: 'Patient',
                 description: 'Patient information and medical history',
-                entityDefinition: this.entityDefinitions.get('patient')!,
-                onServiceCreated: (service) => {
+                entityDefinitionSupplier: () => this.entityDefinitions.get('patient')!,
+                onServiceCreated: (service: IEntityService<any>) => {
                     this.patientService = service as IEntityService<Patient>
                 }
             }),
@@ -62,8 +65,8 @@ export class HealthTaskFactory {
                 namespace: this.namespace,
                 name: 'Provider',
                 description: 'Healthcare provider information',
-                entityDefinition: this.entityDefinitions.get('provider')!,
-                onServiceCreated: (service) => {
+                entityDefinitionSupplier: () => this.entityDefinitions.get('provider')!,
+                onServiceCreated: (service: IEntityService<any>) => {
                     this.providerService = service as IEntityService<Provider>
                 }
             }),
@@ -71,8 +74,8 @@ export class HealthTaskFactory {
                 namespace: this.namespace,
                 name: 'Appointment',
                 description: 'Medical appointments and scheduling',
-                entityDefinition: this.entityDefinitions.get('appointment')!,
-                onServiceCreated: (service) => {
+                entityDefinitionSupplier: () => this.entityDefinitions.get('appointment')!,
+                onServiceCreated: (service: IEntityService<any>) => {
                     this.appointmentService = service as IEntityService<Appointment>
                 }
             }),
@@ -80,8 +83,8 @@ export class HealthTaskFactory {
                 namespace: this.namespace,
                 name: 'Diagnosis',
                 description: 'Medical diagnoses and conditions',
-                entityDefinition: this.entityDefinitions.get('diagnosis')!,
-                onServiceCreated: (service) => {
+                entityDefinitionSupplier: () => this.entityDefinitions.get('diagnosis')!,
+                onServiceCreated: (service: IEntityService<any>) => {
                     this.diagnosisService = service as IEntityService<Diagnosis>
                 }
             }),
@@ -89,8 +92,8 @@ export class HealthTaskFactory {
                 namespace: this.namespace,
                 name: 'Treatment',
                 description: 'Medical treatments and procedures',
-                entityDefinition: this.entityDefinitions.get('treatment')!,
-                onServiceCreated: (service) => {
+                entityDefinitionSupplier: () => this.entityDefinitions.get('treatment')!,
+                onServiceCreated: (service: IEntityService<any>) => {
                     this.treatmentService = service as IEntityService<Treatment>
                 }
             }),
@@ -98,8 +101,8 @@ export class HealthTaskFactory {
                 namespace: this.namespace,
                 name: 'Prescription',
                 description: 'Medical prescriptions and medications',
-                entityDefinition: this.entityDefinitions.get('prescription')!,
-                onServiceCreated: (service) => {
+                entityDefinitionSupplier: () => this.entityDefinitions.get('prescription')!,
+                onServiceCreated: (service: IEntityService<any>) => {
                     this.prescriptionService = service as IEntityService<Prescription>
                 }
             }),

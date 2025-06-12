@@ -6,37 +6,32 @@ export interface CreateStructureTaskConfig {
     namespace: string
     name: string
     description: string
-    entityDefinition: ObjectC3Type
+    entityDefinitionSupplier: () => ObjectC3Type
     onServiceCreated?: (service: IEntityService<any>) => void
 }
 
 export class CreateStructureTaskBuilder {
-    private static instance: CreateStructureTaskBuilder
     private readonly structureService: IStructureService
 
-    private constructor() {
-        this.structureService = Structures.getStructureService()
-    }
-
-    static getInstance(): CreateStructureTaskBuilder {
-        if (!CreateStructureTaskBuilder.instance) {
-            CreateStructureTaskBuilder.instance = new CreateStructureTaskBuilder()
-        }
-        return CreateStructureTaskBuilder.instance
+    constructor(structureService: IStructureService) {
+        this.structureService = structureService
     }
 
     buildTask(config: CreateStructureTaskConfig): ITask {
-        return {
+    
+    return {
             name: () => `Create ${config.name} Structure`,
             execute: async () => {
                 const structureId = `${config.namespace}.${config.name.toLowerCase()}`
                 const existingStructure = await this.structureService.findById(structureId)
                 
                 if (!existingStructure) {
+                    const entityDefinition = config.entityDefinitionSupplier()
+                    
                     const structure = new Structure(
                         config.namespace,
                         config.name,
-                        config.entityDefinition,
+                        entityDefinition,
                         config.description
                     )
                     const savedStructure = await this.structureService.create(structure)
@@ -54,4 +49,8 @@ export class CreateStructureTaskBuilder {
             }
         }
     }
+}
+
+export function createStructureTaskBuilder(): CreateStructureTaskBuilder {
+    return new CreateStructureTaskBuilder(Structures.getStructureService())
 } 
