@@ -1,1 +1,0 @@
-import{_ as o,c as t,o as s,j as c}from"./AG82OHRS.js";const n={},_={class:"max-w-[1985px] mx-auto"};function r(e,a){return s(),t("div",_,[c(e.$slots,"default")])}const m=o(n,[["render",r]]);export{m as _};
