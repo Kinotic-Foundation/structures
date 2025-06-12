@@ -1,0 +1,1 @@
+import{_ as o,c as e,o as t,A as c,p as n}from"./DBIlPJml.js";const _={},a={class:"max-w-[1985px] mx-auto"};function r(s,l){return t(),e("div",a,[c(s.$slots,"default")])}const i=o(_,[["render",r]]),m=n("/icons/close.svg");export{m as _,i as a};
