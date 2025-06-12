@@ -1,43 +1,35 @@
+import { CodeGenerationService } from '@kinotic/structures-cli/dist/internal/CodeGenerationService.js'
+import { ConsoleLogger } from '@kinotic/structures-cli/dist/internal/Logger.js'
+import { NamespaceConfiguration } from '@kinotic/structures-cli/dist/internal/state/StructuresProject.js'
 import path from 'path'
-import { EntityDefinitionGenerator } from './EntityDefinitionGenerator'
-import { Constants } from './Constants'
 import fs from 'fs/promises'
 
-async function buildEntityDefinitions(): Promise<void> {
-    const outputDir = Constants.ECOMMERCE_DEFINITIONS_PATH
-    console.log('Building entity definitions...')
-    console.log('Output directory:', outputDir)
-    
-    const generator = new EntityDefinitionGenerator(
-        'ecommerce',
-        Constants.ECOMMERCE_ENTITIES_PATH,
-        Constants.ECOMMERCE_GENERATED_PATH
-    )
-    
-    try {
-        console.log('Generating definitions...')
-        const definitions = await generator.generateDefinitions()
-        console.log(`Generated ${definitions.size} definitions`)
+// Hardcode the output directory since this is only used during build
+const outputDir = path.resolve(process.cwd(), 'dist/entity-definitions')
 
-        // Ensure output directory exists
-        console.log('Creating output directory...')
-        await fs.mkdir(outputDir, { recursive: true })
-        
-        // Save definitions to JSON files
-        console.log('Writing definition files...')
-        for (const [name, definition] of definitions) {
-            const filePath = path.join(outputDir, `${name}.json`)
-            console.log(`Writing ${filePath}`)
-            await fs.writeFile(
-                filePath,
-                JSON.stringify(definition, null, 2)
-            )
+async function buildEntityDefinitions() {
+    const logger = new ConsoleLogger()
+    const namespace = 'ecommerce'
+    const codeGenerationService = new CodeGenerationService(namespace, '.js', logger)
+
+    const namespaceConfig: NamespaceConfiguration = new NamespaceConfiguration()
+    namespaceConfig.namespaceName = namespace
+    namespaceConfig.validate = false
+    namespaceConfig.entitiesPaths = ['../entity/domain/ecommerce']
+    namespaceConfig.generatedPath = '../services/ecommerce'
+
+    // Ensure output directory exists
+    await fs.mkdir(outputDir, { recursive: true })
+
+    await codeGenerationService.generateAllEntities(
+        namespaceConfig,
+        false,
+        async (entityInfo) => {
+            const outputPath = path.join(outputDir, `${entityInfo.entity.name.toLowerCase()}.json`)
+            await fs.writeFile(outputPath, JSON.stringify(entityInfo.entity, null, 2))
+            logger.log(`Generated entity definition for ${entityInfo.entity.name} at ${outputPath}`)
         }
-        console.log('Entity definitions built successfully')
-    } catch (error) {
-        console.error('Failed to build entity definitions:', error)
-        throw error
-    }
+    )
 }
 
 // Run the script

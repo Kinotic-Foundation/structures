@@ -18,8 +18,6 @@ WORKDIR /app
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/pnpm-lock.yaml ./
-COPY --from=builder /app/tsconfig.json ./
-COPY --from=builder /app/src/entity ./src/entity
 RUN pnpm install --prod
 ENV NODE_ENV production
 CMD ["node", "./dist/main.mjs"]

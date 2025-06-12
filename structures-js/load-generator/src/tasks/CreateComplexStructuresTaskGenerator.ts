@@ -9,7 +9,6 @@ import { Purchase } from '../entity/domain/ecommerce/Purchase'
 import { EntityDefinitionLoader } from '../utils/EntityDefinitionLoader'
 import { TestDataGenerator } from '../entity/domain/ecommerce/TestDataGenerator'
 import { ObjectC3Type } from '@kinotic/continuum-idl'
-import { Constants } from '../utils/Constants'
 
 export class CreateComplexStructuresTaskGenerator implements ITaskGenerator {
     private tasks: ITask[] = []
@@ -54,9 +53,8 @@ export class CreateComplexStructuresTaskGenerator implements ITaskGenerator {
                 execute: async () => {
                     const loader = new EntityDefinitionLoader(
                         'ecommerce',
-                        Constants.ECOMMERCE_ENTITIES_PATH,
-                        Constants.ECOMMERCE_GENERATED_PATH,
-                        Constants.ECOMMERCE_DEFINITIONS_PATH
+                        '../entity/domain/ecommerce',
+                        '../services/ecommerce/'
                     )
                     this.entityDefinitions = await loader.loadDefinitions()
                 }
