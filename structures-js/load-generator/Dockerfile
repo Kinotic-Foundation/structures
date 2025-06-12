@@ -19,5 +19,5 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/pnpm-lock.yaml ./
 RUN pnpm install --prod
-ENV NODE_ENV production
+ENV NODE_ENV=production
 CMD ["node", "./dist/main.mjs"]
