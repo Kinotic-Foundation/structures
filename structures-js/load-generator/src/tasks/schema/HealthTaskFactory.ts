@@ -10,6 +10,7 @@ import { Prescription } from '../../entity/domain/health/Prescription'
 import { EntityDefinitionLoader } from '../../utils/EntityDefinitionLoader'
 import { CreateStructureTaskBuilder } from './CreateStructureTaskBuilder'
 import { ObjectC3Type } from '@kinotic/continuum-idl'
+import { TestDataGenerator } from '../../entity/domain/health/TestDataGenerator'
 
 export class HealthTaskFactory {
     private readonly namespace = 'health'
@@ -101,9 +102,46 @@ export class HealthTaskFactory {
                 onServiceCreated: (service) => {
                     this.prescriptionService = service as IEntityService<Prescription>
                 }
-            })
-            // Note: We'll need to create a TestDataGenerator for health domain
-            // and add a task to generate and save test data
+            }),
+            // Generate and save test data
+            {
+                name: () => 'Generate Health Domain Test Data',
+                execute: async () => {
+                    if (!this.patientService || !this.providerService || 
+                        !this.diagnosisService || !this.treatmentService || 
+                        !this.appointmentService || !this.prescriptionService) {
+                        throw new Error('Required services not initialized')
+                    }
+
+                    const { patients, providers, diagnoses, treatments, appointments, prescriptions } = 
+                        TestDataGenerator.generateTestData(20)
+
+                    // Save all entities in sequence to maintain referential integrity
+                    for (const patient of patients) {
+                        await this.patientService.save(patient)
+                    }
+
+                    for (const provider of providers) {
+                        await this.providerService.save(provider)
+                    }
+
+                    for (const diagnosis of diagnoses) {
+                        await this.diagnosisService.save(diagnosis)
+                    }
+
+                    for (const treatment of treatments) {
+                        await this.treatmentService.save(treatment)
+                    }
+
+                    for (const prescription of prescriptions) {
+                        await this.prescriptionService.save(prescription)
+                    }
+
+                    for (const appointment of appointments) {
+                        await this.appointmentService.save(appointment)
+                    }
+                }
+            }
         ]
     }
 } 

@@ -13,6 +13,7 @@ import { AppointmentStatus } from './AppointmentStatus'
 import { AppointmentType } from './AppointmentType'
 import { DiagnosisStatus } from './DiagnosisStatus'
 import { TreatmentStatus } from './TreatmentStatus'
+import { Prescription } from './Prescription'
 
 export class TestDataGenerator {
     private static readonly SPECIALTIES = [
@@ -31,6 +32,23 @@ export class TestDataGenerator {
         'Medication', 'Physical Therapy', 'Surgery', 'Counseling',
         'Lifestyle Changes', 'Dietary Changes', 'Exercise Program',
         'Alternative Therapy', 'Rehabilitation', 'Preventive Care'
+    ]
+
+    private static readonly MEDICATIONS = [
+        'Lisinopril', 'Metformin', 'Atorvastatin', 'Levothyroxine',
+        'Amlodipine', 'Metoprolol', 'Omeprazole', 'Albuterol',
+        'Gabapentin', 'Hydrochlorothiazide', 'Sertraline', 'Simvastatin'
+    ]
+
+    private static readonly DOSAGE_FORMS = [
+        'Tablet', 'Capsule', 'Liquid', 'Injection',
+        'Inhaler', 'Cream', 'Ointment', 'Patch'
+    ]
+
+    private static readonly FREQUENCIES = [
+        'Once daily', 'Twice daily', 'Three times daily',
+        'Every 4 hours', 'Every 6 hours', 'Every 8 hours',
+        'Every 12 hours', 'As needed'
     ]
 
     static generatePatient(): Patient {
@@ -132,6 +150,33 @@ export class TestDataGenerator {
         return appointment
     }
 
+    static generatePrescription(patientId: string, providerId: string, diagnosisId: string): Prescription {
+        const startDate = faker.date.recent()
+        const duration = faker.number.int({ min: 7, max: 90 }) // Duration in days
+        const endDate = new Date(startDate.getTime() + duration * 24 * 60 * 60 * 1000)
+
+        return Prescription.builder()
+            .withPatientId(patientId)
+            .withProviderId(providerId)
+            .withDiagnosisId(diagnosisId)
+            .withMedicationName(faker.helpers.arrayElement(this.MEDICATIONS))
+            .withDosageForm(faker.helpers.arrayElement(this.DOSAGE_FORMS))
+            .withStrength(faker.helpers.arrayElement(['5mg', '10mg', '20mg', '50mg', '100mg', '250mg', '500mg']))
+            .withFrequency(faker.helpers.arrayElement(this.FREQUENCIES))
+            .withQuantity(faker.number.int({ min: 30, max: 180 }))
+            .withRefillsRemaining(faker.number.int({ min: 0, max: 5 }))
+            .withStartDate(startDate)
+            .withEndDate(endDate)
+            .withInstructions(faker.lorem.sentence())
+            .withPharmacyName(faker.company.name())
+            .withPharmacyPhone(faker.phone.number())
+            .withIsActive(faker.datatype.boolean())
+            .withNotes(faker.lorem.paragraph())
+            .withCreatedAt(faker.date.past())
+            .withUpdatedAt(faker.date.recent())
+            .build()
+    }
+
     private static generateAddress(): Address {
         return Address.builder()
             .withStreet(faker.location.streetAddress())
@@ -193,7 +238,8 @@ export class TestDataGenerator {
         providers: Provider[],
         diagnoses: Diagnosis[],
         treatments: Treatment[],
-        appointments: Appointment[]
+        appointments: Appointment[],
+        prescriptions: Prescription[]
     } {
         const patients = Array.from({ length: count }, () => this.generatePatient())
         const providers = Array.from({ length: count }, () => this.generateProvider())
@@ -219,6 +265,17 @@ export class TestDataGenerator {
             )
         )
 
+        // Generate prescriptions for each diagnosis
+        const prescriptions = diagnoses.flatMap(diagnosis => 
+            Array.from({ length: faker.number.int({ min: 1, max: 3 }) }, () => 
+                this.generatePrescription(
+                    diagnosis.patientId,
+                    diagnosis.providerId,
+                    diagnosis.id!
+                )
+            )
+        )
+
         // Generate appointments for each patient with random providers
         const appointments = patients.flatMap(patient => 
             Array.from({ length: faker.number.int({ min: 1, max: 5 }) }, () => 
@@ -234,7 +291,8 @@ export class TestDataGenerator {
             providers,
             diagnoses,
             treatments,
-            appointments
+            appointments,
+            prescriptions
         }
     }
 } 
