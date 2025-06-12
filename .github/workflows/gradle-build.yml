@@ -7,8 +7,14 @@ on:
       - main
       - 2.x
     paths-ignore:
+      - 'helm/**'
+      - 'docker-compose/**'
+      - 'structures-js/example/**'
+      - 'structures-js/load-generator/**'
+      - 'structures-js/structures-api/**'
+      - 'structures-js/structures-cli/**'
+      - 'webdocs/**' 
       - 'website/**'
-      - 'webdocs/**'
 
 jobs:
   gradle_build_and_publish:
