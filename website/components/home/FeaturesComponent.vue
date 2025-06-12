@@ -9,7 +9,7 @@
         <div v-for="(f, i) in features" :key="i"
           class="border border-black dark:border-white/20 bg-transparent xl:p-8 p-5 rounded-xl">
           <div class="flex xl:gap-7 gap-4">
-            <img :src="`/icons/${colorMode.value === 'dark' ? f.icon : f.iconLight}`" alt="icon"
+            <img :src="`icons/${colorMode.value === 'dark' ? f.icon : f.iconLight}`" alt="icon"
               class="xl:w-[56px] xl:h-[56px] w-[52px] h-[52px]" v-if="isMounted" />
             <div class="flex flex-col">
               <h3 class="xl:text-xl text-[19px] font-semibold dark:text-white text-[#101010] mb-3">

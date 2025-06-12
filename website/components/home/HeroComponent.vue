@@ -9,7 +9,7 @@
     </div>
     <div v-if="isMounted"
       class="w-full bg-cover bg-center bg-no-repeat py-1 transition-opacity duration-500 ease-in" :style="{
-        backgroundImage: `url(/images/${colorMode.value === 'dark' ? 'mask.svg' : 'mask-light.svg'})`,
+        backgroundImage: `url(images/${colorMode.value === 'dark' ? 'mask.svg' : 'mask-light.svg'})`,
         backgroundColor: colorMode.value === 'dark' ? '#000000' : '#FFFFFF'
       }">
       <BaseContainer>
