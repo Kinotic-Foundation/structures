@@ -32,6 +32,7 @@ jobs:
         with:
           context: ./structures-js/load-generator
           push: true
+          platforms: linux/amd64,linux/arm64
           tags: |
             kinotic/structures-load-generator:latest
             kinotic/structures-load-generator:${{ github.sha }}
