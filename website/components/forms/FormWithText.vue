@@ -18,7 +18,7 @@ onMounted(() => {
 
 const gradientStyle = computed(() => {
   const isDark = colorMode.value === 'dark'
-  const isSmallScreen = windowWidth.value < 1280 // xl
+  const isSmallScreen = windowWidth.value < 1280
 
   if (isSmallScreen) {
     return isDark
@@ -79,17 +79,7 @@ const gradientStyle = computed(() => {
             </button>
           </div>
         </form>
-        <Modal>
-        <template #header>
-          <h2>{{ modalState.title }}</h2>
-        </template>
-        <template #body>
-          <p>{{ modalState.content }}</p>
-        </template>
-        <template #footer>
-          <button @click="closeModal">Close</button>
-        </template>
-      </Modal>
+        <Modal />
       </div>
     </BaseContainer>
   </section>
