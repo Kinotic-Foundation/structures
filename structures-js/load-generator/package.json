@@ -9,7 +9,9 @@
   "exports": "./main.mjs",
   "scripts": {
     "dev": "NODE_ENV=development vite-node src/main.ts --mode development",
-    "build": "tsc --noEmit && NODE_ENV=production vite build --mode production",
+    "generate-entity-definitions": "vite-node src/utils/buildEntityDefinitions.ts",
+    "prebuild": "pnpm run generate-entity-definitions",
+    "build": "vite build",
     "start": "NODE_ENV=development node dist/main.mjs",
     "test": "vitest"
   },

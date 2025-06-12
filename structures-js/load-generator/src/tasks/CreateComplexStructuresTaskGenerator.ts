@@ -6,17 +6,15 @@ import { Customer } from '../entity/domain/ecommerce/Customer'
 import { Product } from '../entity/domain/ecommerce/Product'
 import { ProductReview } from '../entity/domain/ecommerce/ProductReview'
 import { Purchase } from '../entity/domain/ecommerce/Purchase'
-import { CodeGenerationService } from '@kinotic/structures-cli/dist/internal/CodeGenerationService.js'
-import { ConsoleLogger } from '@kinotic/structures-cli/dist/internal/Logger.js'
-import { NamespaceConfiguration } from '@kinotic/structures-cli/dist/internal/state/StructuresProject.js'
-import path from 'path'
-import { ObjectC3Type } from '@kinotic/continuum-idl'
+import { EntityDefinitionLoader } from '../utils/EntityDefinitionLoader'
 import { TestDataGenerator } from '../entity/domain/ecommerce/TestDataGenerator'
+import { ObjectC3Type } from '@kinotic/continuum-idl'
+import { Constants } from '../utils/Constants'
 
 export class CreateComplexStructuresTaskGenerator implements ITaskGenerator {
     private tasks: ITask[] = []
     private currentTaskIndex: number = 0
-    private readonly entityDefinitions: Map<string, ObjectC3Type> = new Map()
+    private entityDefinitions: Map<string, ObjectC3Type> = new Map()
     private readonly connectionInfoSupplier: () => Promise<ConnectionInfo>
     private readonly namespaceService: INamespaceService
     private readonly structureService: IStructureService
@@ -50,29 +48,17 @@ export class CreateComplexStructuresTaskGenerator implements ITaskGenerator {
                     await this.namespaceService.createNamespaceIfNotExist('ecommerce', 'Ecommerce Domain')
                 }
             },
-            // Initialize entity definitions
+            // Load entity definitions
             {
-                name: () => 'Initialize Entity Definitions',
+                name: () => 'Load Entity Definitions',
                 execute: async () => {
-                    const codeGenerationService = new CodeGenerationService(
+                    const loader = new EntityDefinitionLoader(
                         'ecommerce',
-                        '.js',
-                        new ConsoleLogger()
+                        Constants.ECOMMERCE_ENTITIES_PATH,
+                        Constants.ECOMMERCE_GENERATED_PATH,
+                        Constants.ECOMMERCE_DEFINITIONS_PATH
                     )
-
-                    const namespaceConfig = new NamespaceConfiguration()
-                    namespaceConfig.namespaceName = 'ecommerce'
-                    namespaceConfig.validate = false
-                    namespaceConfig.entitiesPaths = [path.resolve(__dirname, '../entity/domain/ecommerce')]
-                    namespaceConfig.generatedPath = path.resolve(__dirname, '../entity/services/ecommerce')
-
-                    await codeGenerationService.generateAllEntities(
-                        namespaceConfig,
-                        false,
-                        async (entityInfo) => {
-                            this.entityDefinitions.set(entityInfo.entity.name, entityInfo.entity)
-                        }
-                    )
+                    this.entityDefinitions = await loader.loadDefinitions()
                 }
             },
             // Create Customer structure
@@ -86,7 +72,7 @@ export class CreateComplexStructuresTaskGenerator implements ITaskGenerator {
                         const customerStructure = new Structure(
                             'ecommerce',
                             'Customer',
-                            this.entityDefinitions.get('Customer')!,
+                            this.entityDefinitions.get('customer')!,
                             'Customer information and preferences'
                         )
                         const savedStructure = await this.structureService.create(customerStructure)
@@ -111,7 +97,7 @@ export class CreateComplexStructuresTaskGenerator implements ITaskGenerator {
                         const productStructure = new Structure(
                             'ecommerce',
                             'Product',
-                            this.entityDefinitions.get('Product')!,
+                            this.entityDefinitions.get('product')!,
                             'Product catalog information'
                         )
                         const savedStructure = await this.structureService.create(productStructure)
@@ -136,7 +122,7 @@ export class CreateComplexStructuresTaskGenerator implements ITaskGenerator {
                         const reviewStructure = new Structure(
                             'ecommerce',
                             'ProductReview',
-                            this.entityDefinitions.get('ProductReview')!,
+                            this.entityDefinitions.get('productreview')!,
                             'Product reviews and ratings'
                         )
                         const savedStructure = await this.structureService.create(reviewStructure)
@@ -161,7 +147,7 @@ export class CreateComplexStructuresTaskGenerator implements ITaskGenerator {
                         const purchaseStructure = new Structure(
                             'ecommerce',
                             'Purchase',
-                            this.entityDefinitions.get('Purchase')!,
+                            this.entityDefinitions.get('purchase')!,
                             'Purchase orders and transactions'
                         )
                         const savedStructure = await this.structureService.create(purchaseStructure)
