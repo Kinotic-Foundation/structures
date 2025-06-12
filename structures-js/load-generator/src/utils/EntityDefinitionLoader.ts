@@ -6,17 +6,16 @@ import { EntityDefinitionGenerator } from './EntityDefinitionGenerator'
 
 export class EntityDefinitionLoader {
     private readonly logger: ConsoleLogger
-    private readonly generator: EntityDefinitionGenerator
     private readonly jsonDir: string
+    private generator?: EntityDefinitionGenerator
 
     constructor(
-        namespace: string,
-        entitiesPath: string,
-        generatedPath: string,
+        private readonly namespace: string,
+        private readonly entitiesPath: string,
+        private readonly generatedPath: string,
         jsonDir: string
     ) {
         this.logger = new ConsoleLogger()
-        this.generator = new EntityDefinitionGenerator(namespace, entitiesPath, generatedPath)
         this.jsonDir = jsonDir
     }
 
@@ -25,6 +24,13 @@ export class EntityDefinitionLoader {
             return this.loadFromJson()
         } else {
             this.logger.log('Development environment - generating entity definitions from source')
+            if (!this.generator) {
+                this.generator = new EntityDefinitionGenerator(
+                    this.namespace,
+                    this.entitiesPath,
+                    this.generatedPath
+                )
+            }
             return this.generator.generateDefinitions()
         }
     }
