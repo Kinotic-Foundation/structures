@@ -106,6 +106,7 @@ public metadata: Record<string, any> = {}
 
 ### @Nested
 Marks a field as a nested object in Elasticsearch.
+If you need to index arrays of objects and to maintain the independence of each object in the array, use the nested data type
 
 ```typescript
 @Nested
