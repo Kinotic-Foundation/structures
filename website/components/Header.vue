@@ -69,7 +69,7 @@ watch(isMenuOpen, (val) => {
           class="lg:hidden flex items-center"
           @click="isMenuOpen = !isMenuOpen"
         >
-          <img src="icons/burger.svg" alt="Menu" class="w-6 h-6" />
+          <img src="/icons/burger.svg" alt="Menu" class="w-6 h-6" />
         </button>
       </nav>
 
@@ -101,7 +101,7 @@ watch(isMenuOpen, (val) => {
           </label>
 
           <button @click="isMenuOpen = false">
-            <img src="icons/close.svg" alt="Close menu" class="w-6 h-6" />
+            <img src="/icons/close.svg" alt="Close menu" class="w-6 h-6" />
           </button>
         </div>
 
