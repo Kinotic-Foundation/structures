@@ -132,17 +132,25 @@ export class BasePatientEntityService extends EntityService<Patient> {
                 if (entityTreatmentsItemPrescriptionsItem) {
                   retTreatmentsValuePrescriptionsValue = (retTreatmentsValuePrescriptionsValue ? retTreatmentsValuePrescriptionsValue : {})
                   retTreatmentsValuePrescriptionsValue.id = entityTreatmentsItemPrescriptionsItem.id
+                  retTreatmentsValuePrescriptionsValue.patientId = entityTreatmentsItemPrescriptionsItem.patientId
+                  retTreatmentsValuePrescriptionsValue.providerId = entityTreatmentsItemPrescriptionsItem.providerId
+                  retTreatmentsValuePrescriptionsValue.diagnosisId = entityTreatmentsItemPrescriptionsItem.diagnosisId
                   retTreatmentsValuePrescriptionsValue.medicationName = entityTreatmentsItemPrescriptionsItem.medicationName
-                  retTreatmentsValuePrescriptionsValue.dosage = entityTreatmentsItemPrescriptionsItem.dosage
+                  retTreatmentsValuePrescriptionsValue.dosageForm = entityTreatmentsItemPrescriptionsItem.dosageForm
+                  retTreatmentsValuePrescriptionsValue.strength = entityTreatmentsItemPrescriptionsItem.strength
                   retTreatmentsValuePrescriptionsValue.frequency = entityTreatmentsItemPrescriptionsItem.frequency
+                  retTreatmentsValuePrescriptionsValue.quantity = entityTreatmentsItemPrescriptionsItem.quantity
+                  retTreatmentsValuePrescriptionsValue.refillsRemaining = entityTreatmentsItemPrescriptionsItem.refillsRemaining
                   retTreatmentsValuePrescriptionsValue.startDate = entityTreatmentsItemPrescriptionsItem.startDate
                   retTreatmentsValuePrescriptionsValue.endDate = entityTreatmentsItemPrescriptionsItem.endDate
-                  retTreatmentsValuePrescriptionsValue.refillsRemaining = entityTreatmentsItemPrescriptionsItem.refillsRemaining
-                  retTreatmentsValuePrescriptionsValue.totalRefills = entityTreatmentsItemPrescriptionsItem.totalRefills
-                  retTreatmentsValuePrescriptionsValue.status = entityTreatmentsItemPrescriptionsItem.status
                   retTreatmentsValuePrescriptionsValue.instructions = entityTreatmentsItemPrescriptionsItem.instructions
-                  retTreatmentsValuePrescriptionsValue.pharmacy = entityTreatmentsItemPrescriptionsItem.pharmacy
+                  retTreatmentsValuePrescriptionsValue.pharmacyName = entityTreatmentsItemPrescriptionsItem.pharmacyName
+                  retTreatmentsValuePrescriptionsValue.pharmacyPhone = entityTreatmentsItemPrescriptionsItem.pharmacyPhone
                   retTreatmentsValuePrescriptionsValue.isActive = entityTreatmentsItemPrescriptionsItem.isActive
+                  retTreatmentsValuePrescriptionsValue.notes = entityTreatmentsItemPrescriptionsItem.notes
+                  retTreatmentsValuePrescriptionsValue.createdAt = entityTreatmentsItemPrescriptionsItem.createdAt
+                  retTreatmentsValuePrescriptionsValue.updatedAt = entityTreatmentsItemPrescriptionsItem.updatedAt
+                  retTreatmentsValuePrescriptionsValue.status = entityTreatmentsItemPrescriptionsItem.status
                 }
                 retTreatmentsValue.prescriptions.push(retTreatmentsValuePrescriptionsValue)
               }

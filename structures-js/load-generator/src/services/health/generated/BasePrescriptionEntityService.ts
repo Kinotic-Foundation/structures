@@ -40,17 +40,25 @@ export class BasePrescriptionEntityService extends EntityService<Prescription> {
     if (entity) {
       ret = (ret ? ret : {})
       ret.id = entity.id
+      ret.patientId = entity.patientId
+      ret.providerId = entity.providerId
+      ret.diagnosisId = entity.diagnosisId
       ret.medicationName = entity.medicationName
-      ret.dosage = entity.dosage
+      ret.dosageForm = entity.dosageForm
+      ret.strength = entity.strength
       ret.frequency = entity.frequency
+      ret.quantity = entity.quantity
+      ret.refillsRemaining = entity.refillsRemaining
       ret.startDate = entity.startDate
       ret.endDate = entity.endDate
-      ret.refillsRemaining = entity.refillsRemaining
-      ret.totalRefills = entity.totalRefills
-      ret.status = entity.status
       ret.instructions = entity.instructions
-      ret.pharmacy = entity.pharmacy
+      ret.pharmacyName = entity.pharmacyName
+      ret.pharmacyPhone = entity.pharmacyPhone
       ret.isActive = entity.isActive
+      ret.notes = entity.notes
+      ret.createdAt = entity.createdAt
+      ret.updatedAt = entity.updatedAt
+      ret.status = entity.status
     }
 
     return ret

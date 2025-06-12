@@ -147,17 +147,25 @@ export class BaseAppointmentEntityService extends EntityService<Appointment> {
                   if (entityPatientTreatmentsItemPrescriptionsItem) {
                     retPatientTreatmentsValuePrescriptionsValue = (retPatientTreatmentsValuePrescriptionsValue ? retPatientTreatmentsValuePrescriptionsValue : {})
                     retPatientTreatmentsValuePrescriptionsValue.id = entityPatientTreatmentsItemPrescriptionsItem.id
+                    retPatientTreatmentsValuePrescriptionsValue.patientId = entityPatientTreatmentsItemPrescriptionsItem.patientId
+                    retPatientTreatmentsValuePrescriptionsValue.providerId = entityPatientTreatmentsItemPrescriptionsItem.providerId
+                    retPatientTreatmentsValuePrescriptionsValue.diagnosisId = entityPatientTreatmentsItemPrescriptionsItem.diagnosisId
                     retPatientTreatmentsValuePrescriptionsValue.medicationName = entityPatientTreatmentsItemPrescriptionsItem.medicationName
-                    retPatientTreatmentsValuePrescriptionsValue.dosage = entityPatientTreatmentsItemPrescriptionsItem.dosage
+                    retPatientTreatmentsValuePrescriptionsValue.dosageForm = entityPatientTreatmentsItemPrescriptionsItem.dosageForm
+                    retPatientTreatmentsValuePrescriptionsValue.strength = entityPatientTreatmentsItemPrescriptionsItem.strength
                     retPatientTreatmentsValuePrescriptionsValue.frequency = entityPatientTreatmentsItemPrescriptionsItem.frequency
+                    retPatientTreatmentsValuePrescriptionsValue.quantity = entityPatientTreatmentsItemPrescriptionsItem.quantity
+                    retPatientTreatmentsValuePrescriptionsValue.refillsRemaining = entityPatientTreatmentsItemPrescriptionsItem.refillsRemaining
                     retPatientTreatmentsValuePrescriptionsValue.startDate = entityPatientTreatmentsItemPrescriptionsItem.startDate
                     retPatientTreatmentsValuePrescriptionsValue.endDate = entityPatientTreatmentsItemPrescriptionsItem.endDate
-                    retPatientTreatmentsValuePrescriptionsValue.refillsRemaining = entityPatientTreatmentsItemPrescriptionsItem.refillsRemaining
-                    retPatientTreatmentsValuePrescriptionsValue.totalRefills = entityPatientTreatmentsItemPrescriptionsItem.totalRefills
-                    retPatientTreatmentsValuePrescriptionsValue.status = entityPatientTreatmentsItemPrescriptionsItem.status
                     retPatientTreatmentsValuePrescriptionsValue.instructions = entityPatientTreatmentsItemPrescriptionsItem.instructions
-                    retPatientTreatmentsValuePrescriptionsValue.pharmacy = entityPatientTreatmentsItemPrescriptionsItem.pharmacy
+                    retPatientTreatmentsValuePrescriptionsValue.pharmacyName = entityPatientTreatmentsItemPrescriptionsItem.pharmacyName
+                    retPatientTreatmentsValuePrescriptionsValue.pharmacyPhone = entityPatientTreatmentsItemPrescriptionsItem.pharmacyPhone
                     retPatientTreatmentsValuePrescriptionsValue.isActive = entityPatientTreatmentsItemPrescriptionsItem.isActive
+                    retPatientTreatmentsValuePrescriptionsValue.notes = entityPatientTreatmentsItemPrescriptionsItem.notes
+                    retPatientTreatmentsValuePrescriptionsValue.createdAt = entityPatientTreatmentsItemPrescriptionsItem.createdAt
+                    retPatientTreatmentsValuePrescriptionsValue.updatedAt = entityPatientTreatmentsItemPrescriptionsItem.updatedAt
+                    retPatientTreatmentsValuePrescriptionsValue.status = entityPatientTreatmentsItemPrescriptionsItem.status
                   }
                   retPatientTreatmentsValue.prescriptions.push(retPatientTreatmentsValuePrescriptionsValue)
                 }
@@ -313,17 +321,25 @@ export class BaseAppointmentEntityService extends EntityService<Appointment> {
             if (entityTreatmentPrescriptionsItem) {
               retTreatmentPrescriptionsValue = (retTreatmentPrescriptionsValue ? retTreatmentPrescriptionsValue : {})
               retTreatmentPrescriptionsValue.id = entityTreatmentPrescriptionsItem.id
+              retTreatmentPrescriptionsValue.patientId = entityTreatmentPrescriptionsItem.patientId
+              retTreatmentPrescriptionsValue.providerId = entityTreatmentPrescriptionsItem.providerId
+              retTreatmentPrescriptionsValue.diagnosisId = entityTreatmentPrescriptionsItem.diagnosisId
               retTreatmentPrescriptionsValue.medicationName = entityTreatmentPrescriptionsItem.medicationName
-              retTreatmentPrescriptionsValue.dosage = entityTreatmentPrescriptionsItem.dosage
+              retTreatmentPrescriptionsValue.dosageForm = entityTreatmentPrescriptionsItem.dosageForm
+              retTreatmentPrescriptionsValue.strength = entityTreatmentPrescriptionsItem.strength
               retTreatmentPrescriptionsValue.frequency = entityTreatmentPrescriptionsItem.frequency
+              retTreatmentPrescriptionsValue.quantity = entityTreatmentPrescriptionsItem.quantity
+              retTreatmentPrescriptionsValue.refillsRemaining = entityTreatmentPrescriptionsItem.refillsRemaining
               retTreatmentPrescriptionsValue.startDate = entityTreatmentPrescriptionsItem.startDate
               retTreatmentPrescriptionsValue.endDate = entityTreatmentPrescriptionsItem.endDate
-              retTreatmentPrescriptionsValue.refillsRemaining = entityTreatmentPrescriptionsItem.refillsRemaining
-              retTreatmentPrescriptionsValue.totalRefills = entityTreatmentPrescriptionsItem.totalRefills
-              retTreatmentPrescriptionsValue.status = entityTreatmentPrescriptionsItem.status
               retTreatmentPrescriptionsValue.instructions = entityTreatmentPrescriptionsItem.instructions
-              retTreatmentPrescriptionsValue.pharmacy = entityTreatmentPrescriptionsItem.pharmacy
+              retTreatmentPrescriptionsValue.pharmacyName = entityTreatmentPrescriptionsItem.pharmacyName
+              retTreatmentPrescriptionsValue.pharmacyPhone = entityTreatmentPrescriptionsItem.pharmacyPhone
               retTreatmentPrescriptionsValue.isActive = entityTreatmentPrescriptionsItem.isActive
+              retTreatmentPrescriptionsValue.notes = entityTreatmentPrescriptionsItem.notes
+              retTreatmentPrescriptionsValue.createdAt = entityTreatmentPrescriptionsItem.createdAt
+              retTreatmentPrescriptionsValue.updatedAt = entityTreatmentPrescriptionsItem.updatedAt
+              retTreatmentPrescriptionsValue.status = entityTreatmentPrescriptionsItem.status
             }
             ret.treatment.prescriptions.push(retTreatmentPrescriptionsValue)
           }
