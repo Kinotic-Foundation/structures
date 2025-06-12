@@ -10,11 +10,11 @@ services:
       structures-elasticsearch:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl --silent --fail 127.0.0.1:9090/health || exit 1"]
-      interval: 300s
+      test: ["CMD", "/workspace/health-check"]
+      interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 90s
+      start_period: 120s
     ports:
       - "127.0.0.1:9090:9090" # UI PORT
       - "127.0.0.1:9091:9091" # UI2 PORT
@@ -26,6 +26,7 @@ services:
       BPL_JVM_HEAD_ROOM: 10
       JAVA_TOOL_OPTIONS: -XX:MaxDirectMemorySize=512m -javaagent:/workspace/BOOT-INF/classes/opentelemetry-javaagent.jar
       CONTINUUM_MAX_OFF_HEAP_MEMORY: 419430400
+      THC_PORT: 9090 # Health check port (should match STRUCTURES_WEB_SERVER_PORT)
       SPRING_PROFILES_ACTIVE: production
       STRUCTURES_INDEX_PREFIX: struct_
       STRUCTURES_TENANT_ID_FIELD_NAME: structuresTenantId
@@ -61,3 +62,5 @@ services:
           memory: 4G
         limits:
           memory: 4G
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
