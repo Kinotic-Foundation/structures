@@ -54,12 +54,12 @@ watch(isMenuOpen, (val) => {
             </div>
           </label>
 
-          <NuxtLink to="https://structuresframework.org/webdocs/guide/overview.html" class="text-[#EDEEF2]">Guide</NuxtLink>
-          <NuxtLink to="https://structuresframework.org/webdocs/reference/structures-config.html" class="text-[#EDEEF2]">Reference</NuxtLink>
-          <NuxtLink to="https://structuresframework.org/allure/index.html" class="text-[#EDEEF2]">Test Status</NuxtLink>
+          <NuxtLink to="https://structuresframework.org/webdocs/guide/overview.html" class="text-[#EDEEF2] text-sm">Guide</NuxtLink>
+          <NuxtLink to="https://structuresframework.org/webdocs/reference/structures-config.html" class="text-[#EDEEF2] text-sm">Reference</NuxtLink>
+          <NuxtLink to="https://structuresframework.org/allure/index.html" class="text-[#EDEEF2] text-sm">Test Status</NuxtLink>
           <NuxtLink
             to="https://github.com/Kinotic-Foundation/structures"
-            class="flex items-center gap-2 rounded-lg px-3 py-2 bg-[#2B2A32]"
+            class="flex items-center gap-2 rounded-lg px-3 py-2 bg-[#2B2A32] text-sm"
           >
             <img src="/icons/git.svg" alt="GitHub" class="w-5 h-5" />
             <span class="text-[#EDEEF2]">View on GitHub</span>
@@ -105,11 +105,11 @@ watch(isMenuOpen, (val) => {
           </button>
         </div>
 
-         <div class="flex flex-col justify-between items-center gap-6 text-xl h-screen">
+         <div class="flex flex-col justify-between items-center gap-6 h-screen">
           <div class="flex flex-col justify-between items-center gap-8">
-            <NuxtLink to="https://structuresframework.org/webdocs/guide/overview.html" class="text-[#EDEEF2]" @click="isMenuOpen = false">Guide</NuxtLink>
-            <NuxtLink to="https://structuresframework.org/webdocs/reference/structures-config.html" class="text-[#EDEEF2]" @click="isMenuOpen = false">Reference</NuxtLink>
-            <NuxtLink to="https://structuresframework.org/allure/index.html" class="text-[#EDEEF2]" @click="isMenuOpen = false">Test Status</NuxtLink>
+            <NuxtLink to="https://structuresframework.org/webdocs/guide/overview.html" class="text-[#EDEEF2] text-sm" @click="isMenuOpen = false">Guide</NuxtLink>
+            <NuxtLink to="https://structuresframework.org/webdocs/reference/structures-config.html" class="text-[#EDEEF2] text-sm" @click="isMenuOpen = false">Reference</NuxtLink>
+            <NuxtLink to="https://structuresframework.org/allure/index.html" class="text-[#EDEEF2] text-sm" @click="isMenuOpen = false">Test Status</NuxtLink>
           </div>
           <NuxtLink
             to="https://github.com/Kinotic-Foundation/structures"
@@ -117,7 +117,7 @@ watch(isMenuOpen, (val) => {
             @click="isMenuOpen = false"
           >
             <img src="/icons/git.svg" alt="GitHub" class="w-5 h-5" />
-            <span class="text-[#EDEEF2]">View on GitHub</span>
+            <span class="text-[#EDEEF2] text-sm">View on GitHub</span>
           </NuxtLink>
         </div>
       </div>

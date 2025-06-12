@@ -1,5 +1,18 @@
 @import "tailwindcss";
+@layer tailwind-base, primevue, tailwind-utilities;
 
+@layer tailwind-base {
+  @tailwind base;
+}
+
+@layer tailwind-utilities {
+  @tailwind components;
+  @tailwind utilities;
+}
+
+:root {
+  --p-primary-50: #ecfdf5;
+}
 @custom-variant dark (&:where(.dark, .dark *));
 
 body {
