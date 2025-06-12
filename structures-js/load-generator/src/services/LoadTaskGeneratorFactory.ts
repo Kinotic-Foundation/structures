@@ -1,6 +1,6 @@
 import {LoadTestConfig} from '@/config/LoadTestConfig.js'
 import {StructuresConnectionConfig} from '@/config/StructuresConnectionConfig.js'
-import { CreateComplexStructuresTaskGenerator } from '@/tasks/CreateComplexStructuresTaskGenerator'
+import { CreateComplexStructuresTaskGenerator } from '@/tasks/schema/CreateComplexStructuresTaskGenerator'
 import {FindTaskGenerator} from '@/tasks/FindTaskGenerator.js'
 import {ITaskGenerator} from '@/tasks/ITaskGenerator.js'
 import {ITaskGeneratorFactory} from '@/tasks/ITaskGeneratorFactory.js'

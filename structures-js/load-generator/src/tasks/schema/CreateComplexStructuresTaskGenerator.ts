@@ -1,8 +1,8 @@
-import { ITaskGenerator } from "./ITaskGenerator"
-import { ITask } from "./ITask"
+import { ITaskGenerator } from "../ITaskGenerator"
+import { ITask } from "../ITask"
 import { ConnectionInfo, Continuum } from '@kinotic/continuum-client'
-import { EcommerceTaskFactory } from './schema/EcommerceTaskFactory'
-import { HealthTaskFactory } from './schema/HealthTaskFactory'
+import { EcommerceTaskFactory } from './EcommerceTaskFactory'
+import { HealthTaskFactory } from './HealthTaskFactory'
 
 export class CreateComplexStructuresTaskGenerator implements ITaskGenerator {
     private tasks: ITask[] = []
@@ -53,4 +53,4 @@ export class CreateComplexStructuresTaskGenerator implements ITaskGenerator {
     hasMoreTasks(): boolean {
         return this.currentTaskIndex < this.tasks.length
     }
-} 
+}
