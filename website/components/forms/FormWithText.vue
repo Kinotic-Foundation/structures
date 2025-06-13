@@ -58,7 +58,7 @@ const handleSubmit = () => {
       <div class="mx-auto rounded-xl xl:py-20 py-12 pb-5 xl:px-0 px-5 md:flex md:justify-between gap-10">
         <div class="md:w-1/2 mb-10 md:mb-0">
           <h2
-            class="text-[#101010] dark:text-white text-[30px] xl:text-4xl font-bauhaus leading-tight text-center xl:text-left">
+            class="text-[#101010] dark:text-[#EDEEF2] text-[30px] xl:text-4xl font-[BauhausNanoDisplayRegular] leading-tight text-center xl:text-left">
             Sign up to Get<br />
             Early Access to<br />
             Structures Cloud
@@ -67,7 +67,7 @@ const handleSubmit = () => {
 
         <form @submit.prevent="handleSubmit" class="md:w-1/2 grid grid-cols-1 sm:grid-cols-2 gap-6">
           <div>
-            <label class="block text-sm text-[#101010] dark:text-white mb-2">Name</label>
+            <label class="block text-sm text-[#2B2A32] dark:text-[#BBBBBF] font-[InterRegular] mb-2">Name</label>
             <InputText
               v-model="formData.name"
               placeholder="Enter name"
@@ -75,7 +75,7 @@ const handleSubmit = () => {
             />
           </div>
           <div>
-            <label class="block text-sm text-[#101010] dark:text-white mb-2">Email</label>
+            <label class="block text-sm text-[#2B2A32] dark:text-[#BBBBBF] font-[InterRegular] mb-2">Email</label>
             <InputText
               v-model="formData.email"
               type="email"
@@ -84,7 +84,7 @@ const handleSubmit = () => {
             />
           </div>
           <div>
-            <label class="block text-sm text-[#101010] dark:text-white mb-2">Company name</label>
+            <label class="block text-sm text-[#2B2A32] dark:text-[#BBBBBF] font-[InterRegular] mb-2">Company name</label>
             <InputText
               v-model="formData.company"
               placeholder="Company"
@@ -92,15 +92,15 @@ const handleSubmit = () => {
             />
           </div>
           <div>
-            <label class="block text-sm text-[#101010] dark:text-white mb-2">Number of employees</label>
+            <label class="block text-sm text-[#2B2A32] dark:text-[#BBBBBF] font-[InterRegular] mb-2">Number of employees</label>
             <Dropdown
               v-model="formData.employee"
               :options="employees"
               optionLabel="label"
               optionValue="value"
               placeholder="Select"
-              class="w-full h-[48px] px-4 border border-[#CBD5E1] dark:border-none rounded-lg bg-white dark:bg-[#FFFFFF]/10 text-black dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
-            />
+              class="w-full h-[48px] pl-4 py-3 pr-3 border border-[#CBD5E1] dark:border-none rounded-lg bg-white dark:bg-[#FFFFFF]/10 text-black dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+              />
           </div>
           <div class="col-span-1 sm:col-span-2">
             <Button
@@ -115,14 +115,7 @@ const handleSubmit = () => {
   </section>
 </template>
 <style>
-.p-placeholder, .p-select-label {
-  display: flex !important;
-  align-items: center !important;
-}
-.p-select {
-  padding-right: 20px;
-}
-.p-select-list {
-  padding: 10px;
+.p-dialog-header {
+  justify-content: flex-end !important
 }
 </style>

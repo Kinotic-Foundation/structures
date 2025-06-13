@@ -32,10 +32,12 @@ body {
 @font-face {  
   font-family: BauhausNanoDisplayMedium; 
   src: url("/fonts/BauhausNanoDisplay-Medium.woff2") format("woff2");
+  font-weight: 500;
 }
 @font-face {  
-  font-family: BauhausNanoDisplayRegular; 
+  font-family: BauhausNanoDisplayRegular;
   src: url("/fonts/BauhausNanoDisplay-Regular.woff2") format("woff2");
+  font-weight: 400;
 }
 @font-face {  
   font-family: BauhausNanoDisplaySemiBold; 
@@ -52,7 +54,7 @@ body {
   font-style: normal;
 }
 @font-face {
-  font-family: 'Inter';
+  font-family: 'InterMedium';
   src: url('/fonts/Inter-Medium.otf') format('opentype');
   font-weight: 500;
   font-style: normal;
