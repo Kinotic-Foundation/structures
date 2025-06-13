@@ -106,16 +106,11 @@ export class EcommerceTaskFactory {
                     await this.purchaseService.bulkSave(purchases)
                     await this.purchaseService.syncIndex()
 
-                    const customerCount = await this.customerService.count()
-                    const productCount = await this.productService.count()
-                    const reviewCount = await this.reviewService.count()
-                    const purchaseCount = await this.purchaseService.count()
-
                     console.log(`Generated and saved ecommerce test data:
-                        - ${customerCount} customers
-                        - ${productCount} products
-                        - ${reviewCount} reviews
-                        - ${purchaseCount} purchases`)
+                        - ${customers.length} customers
+                        - ${products.length} products
+                        - ${reviews.length} reviews
+                        - ${purchases.length} purchases`)
                 }
             }
         ]

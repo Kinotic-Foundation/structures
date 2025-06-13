@@ -14,6 +14,9 @@ import { AppointmentType } from './AppointmentType'
 import { DiagnosisStatus } from './DiagnosisStatus'
 import { TreatmentStatus } from './TreatmentStatus'
 import { Prescription } from './Prescription'
+import { PrescriptionStatus } from './PrescriptionStatus'
+import { Gender } from './Gender'
+import { BloodType } from './BloodType'
 
 export class TestDataGenerator {
     private static readonly SPECIALTIES = [
@@ -56,13 +59,14 @@ export class TestDataGenerator {
             .withFirstName(faker.person.firstName())
             .withLastName(faker.person.lastName())
             .withDateOfBirth(faker.date.birthdate({ min: 0, max: 100, mode: 'age' }))
-            .withGender(faker.helpers.arrayElement(['Male', 'Female', 'Other']))
+            .withGender(faker.helpers.arrayElement(Object.values(Gender)))
+            .withMrn(faker.string.alphanumeric(8).toUpperCase())
             .withAddresses([this.generateAddress()])
             .withContactInfo(this.generateContactInfo())
             .withInsuranceInfo(this.generateInsuranceInfo())
             .withMedicalHistory(faker.helpers.arrayElements(this.CONDITIONS, { min: 0, max: 3 }))
             .withAllergies(faker.helpers.arrayElements(['Penicillin', 'Peanuts', 'Shellfish', 'Latex', 'Pollen'], { min: 0, max: 3 }))
-            .withBloodType(faker.helpers.arrayElement(['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']))
+            .withBloodType(faker.helpers.arrayElement(Object.values(BloodType)))
             .withEmergencyContact(this.generateContactInfo())
             .withCreatedAt(faker.date.past())
             .withUpdatedAt(faker.date.recent())
@@ -150,15 +154,12 @@ export class TestDataGenerator {
         return appointment
     }
 
-    static generatePrescription(patientId: string, providerId: string, diagnosisId: string): Prescription {
+    static generatePrescription(): Prescription {
         const startDate = faker.date.recent()
         const duration = faker.number.int({ min: 7, max: 90 }) // Duration in days
         const endDate = new Date(startDate.getTime() + duration * 24 * 60 * 60 * 1000)
 
         return Prescription.builder()
-            .withPatientId(patientId)
-            .withProviderId(providerId)
-            .withDiagnosisId(diagnosisId)
             .withMedicationName(faker.helpers.arrayElement(this.MEDICATIONS))
             .withDosageForm(faker.helpers.arrayElement(this.DOSAGE_FORMS))
             .withStrength(faker.helpers.arrayElement(['5mg', '10mg', '20mg', '50mg', '100mg', '250mg', '500mg']))
@@ -170,10 +171,9 @@ export class TestDataGenerator {
             .withInstructions(faker.lorem.sentence())
             .withPharmacyName(faker.company.name())
             .withPharmacyPhone(faker.phone.number())
-            .withIsActive(faker.datatype.boolean())
+            .withStatus(faker.helpers.arrayElement(Object.values(PrescriptionStatus)))
             .withNotes(faker.lorem.paragraph())
-            .withCreatedAt(faker.date.past())
-            .withUpdatedAt(faker.date.recent())
+            .withIsActive(faker.datatype.boolean())
             .build()
     }
 
@@ -238,8 +238,7 @@ export class TestDataGenerator {
         providers: Provider[],
         diagnoses: Diagnosis[],
         treatments: Treatment[],
-        appointments: Appointment[],
-        prescriptions: Prescription[]
+        appointments: Appointment[]
     } {
         const patients = Array.from({ length: count }, () => this.generatePatient())
         const providers = Array.from({ length: count }, () => this.generateProvider())
@@ -254,36 +253,40 @@ export class TestDataGenerator {
             )
         )
 
-        // Generate treatments for each diagnosis
+        // Generate treatments for each diagnosis and associate prescriptions
         const treatments = diagnoses.flatMap(diagnosis => 
-            Array.from({ length: faker.number.int({ min: 1, max: 2 }) }, () => 
-                this.generateTreatment(
+            Array.from({ length: faker.number.int({ min: 1, max: 2 }) }, () => {
+                const treatment = this.generateTreatment(
                     diagnosis.patientId,
                     diagnosis.providerId,
                     diagnosis.id!
                 )
-            )
-        )
-
-        // Generate prescriptions for each diagnosis
-        const prescriptions = diagnoses.flatMap(diagnosis => 
-            Array.from({ length: faker.number.int({ min: 1, max: 3 }) }, () => 
-                this.generatePrescription(
-                    diagnosis.patientId,
-                    diagnosis.providerId,
-                    diagnosis.id!
+                // Generate and associate prescriptions with the treatment
+                treatment.prescriptions = Array.from(
+                    { length: faker.number.int({ min: 1, max: 3 }) }, 
+                    () => this.generatePrescription()
                 )
-            )
+                return treatment
+            })
         )
 
         // Generate appointments for each patient with random providers
+        // Some appointments can be associated with treatments
         const appointments = patients.flatMap(patient => 
-            Array.from({ length: faker.number.int({ min: 1, max: 5 }) }, () => 
-                this.generateAppointment(
+            Array.from({ length: faker.number.int({ min: 1, max: 5 }) }, () => {
+                const appointment = this.generateAppointment(
                     patient.id!,
                     faker.helpers.arrayElement(providers).id!
                 )
-            )
+                // Randomly associate some appointments with treatments
+                if (faker.datatype.boolean()) {
+                    const patientTreatments = treatments.filter(t => t.patientId === patient.id)
+                    if (patientTreatments.length > 0) {
+                        appointment.treatmentId = faker.helpers.arrayElement(patientTreatments).id!
+                    }
+                }
+                return appointment
+            })
         )
 
         return {
@@ -291,8 +294,7 @@ export class TestDataGenerator {
             providers,
             diagnoses,
             treatments,
-            appointments,
-            prescriptions
+            appointments
         }
     }
 } 

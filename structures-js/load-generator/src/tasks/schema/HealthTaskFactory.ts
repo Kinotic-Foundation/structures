@@ -6,7 +6,6 @@ import { Provider } from '../../entity/domain/health/Provider'
 import { Appointment } from '../../entity/domain/health/Appointment'
 import { Diagnosis } from '../../entity/domain/health/Diagnosis'
 import { Treatment } from '../../entity/domain/health/Treatment'
-import { Prescription } from '../../entity/domain/health/Prescription'
 import { EntityDefinitionLoader } from '../../utils/EntityDefinitionLoader'
 import { CreateStructureTaskBuilder } from './CreateStructureTaskBuilder'
 import { createStructureTaskBuilder } from './CreateStructureTaskBuilder'
@@ -23,7 +22,6 @@ export class HealthTaskFactory {
     private appointmentService?: IEntityService<Appointment>
     private diagnosisService?: IEntityService<Diagnosis>
     private treatmentService?: IEntityService<Treatment>
-    private prescriptionService?: IEntityService<Prescription>
 
     constructor() {
         this.taskBuilder = createStructureTaskBuilder()
@@ -97,52 +95,41 @@ export class HealthTaskFactory {
                     this.treatmentService = service as IEntityService<Treatment>
                 }
             }),
-            this.taskBuilder.buildTask({
-                namespace: this.namespace,
-                name: 'Prescription',
-                description: 'Medical prescriptions and medications',
-                entityDefinitionSupplier: () => this.entityDefinitions.get('prescription')!,
-                onServiceCreated: (service: IEntityService<any>) => {
-                    this.prescriptionService = service as IEntityService<Prescription>
-                }
-            }),
             // Generate and save test data
             {
-                name: () => 'Generate Health Domain Test Data',
+                name: () => 'Generate and Save Health Domain Test Data',
                 execute: async () => {
                     if (!this.patientService || !this.providerService || 
                         !this.diagnosisService || !this.treatmentService || 
-                        !this.appointmentService || !this.prescriptionService) {
+                        !this.appointmentService) {
                         throw new Error('Required services not initialized')
                     }
 
-                    const { patients, providers, diagnoses, treatments, appointments, prescriptions } = 
+                    const { patients, providers, diagnoses, treatments, appointments } = 
                         TestDataGenerator.generateTestData(20)
 
-                    // Save all entities in sequence to maintain referential integrity
-                    for (const patient of patients) {
-                        await this.patientService.save(patient)
-                    }
+                    // Save all entities in bulk to improve performance
+                    await this.patientService.bulkSave(patients)
+                    await this.patientService.syncIndex()
 
-                    for (const provider of providers) {
-                        await this.providerService.save(provider)
-                    }
+                    await this.providerService.bulkSave(providers)
+                    await this.providerService.syncIndex()
 
-                    for (const diagnosis of diagnoses) {
-                        await this.diagnosisService.save(diagnosis)
-                    }
+                    await this.diagnosisService.bulkSave(diagnoses)
+                    await this.diagnosisService.syncIndex()
 
-                    for (const treatment of treatments) {
-                        await this.treatmentService.save(treatment)
-                    }
+                    await this.treatmentService.bulkSave(treatments)
+                    await this.treatmentService.syncIndex()
 
-                    for (const prescription of prescriptions) {
-                        await this.prescriptionService.save(prescription)
-                    }
+                    await this.appointmentService.bulkSave(appointments)
+                    await this.appointmentService.syncIndex()
 
-                    for (const appointment of appointments) {
-                        await this.appointmentService.save(appointment)
-                    }
+                    console.log(`Generated and saved healthcare test data:
+                        - ${patients.length} patients
+                        - ${providers.length} providers
+                        - ${diagnoses.length} diagnoses
+                        - ${treatments.length} treatments
+                        - ${appointments.length} appointments`)
                 }
             }
         ]

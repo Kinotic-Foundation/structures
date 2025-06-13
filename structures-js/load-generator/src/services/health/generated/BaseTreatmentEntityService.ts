@@ -53,37 +53,12 @@ export class BaseTreatmentEntityService extends EntityService<Treatment> {
       ret.notes = entity.notes
       ret.createdAt = entity.createdAt
       ret.updatedAt = entity.updatedAt
-      if (entity.diagnoses) {
-        ret.diagnoses = []
-        for (let entityDiagnosesItem of entity.diagnoses) {
-          let retDiagnosesValue: any
-          if (entityDiagnosesItem) {
-            retDiagnosesValue = (retDiagnosesValue ? retDiagnosesValue : {})
-            retDiagnosesValue.id = entityDiagnosesItem.id
-            retDiagnosesValue.patientId = entityDiagnosesItem.patientId
-            retDiagnosesValue.providerId = entityDiagnosesItem.providerId
-            retDiagnosesValue.condition = entityDiagnosesItem.condition
-            retDiagnosesValue.description = entityDiagnosesItem.description
-            retDiagnosesValue.status = entityDiagnosesItem.status
-            retDiagnosesValue.diagnosisDate = entityDiagnosesItem.diagnosisDate
-            retDiagnosesValue.severity = entityDiagnosesItem.severity
-            retDiagnosesValue.notes = entityDiagnosesItem.notes
-            retDiagnosesValue.createdAt = entityDiagnosesItem.createdAt
-            retDiagnosesValue.updatedAt = entityDiagnosesItem.updatedAt
-          }
-          ret.diagnoses.push(retDiagnosesValue)
-        }
-      }
       if (entity.prescriptions) {
         ret.prescriptions = []
         for (let entityPrescriptionsItem of entity.prescriptions) {
           let retPrescriptionsValue: any
           if (entityPrescriptionsItem) {
             retPrescriptionsValue = (retPrescriptionsValue ? retPrescriptionsValue : {})
-            retPrescriptionsValue.id = entityPrescriptionsItem.id
-            retPrescriptionsValue.patientId = entityPrescriptionsItem.patientId
-            retPrescriptionsValue.providerId = entityPrescriptionsItem.providerId
-            retPrescriptionsValue.diagnosisId = entityPrescriptionsItem.diagnosisId
             retPrescriptionsValue.medicationName = entityPrescriptionsItem.medicationName
             retPrescriptionsValue.dosageForm = entityPrescriptionsItem.dosageForm
             retPrescriptionsValue.strength = entityPrescriptionsItem.strength
@@ -95,11 +70,9 @@ export class BaseTreatmentEntityService extends EntityService<Treatment> {
             retPrescriptionsValue.instructions = entityPrescriptionsItem.instructions
             retPrescriptionsValue.pharmacyName = entityPrescriptionsItem.pharmacyName
             retPrescriptionsValue.pharmacyPhone = entityPrescriptionsItem.pharmacyPhone
-            retPrescriptionsValue.isActive = entityPrescriptionsItem.isActive
-            retPrescriptionsValue.notes = entityPrescriptionsItem.notes
-            retPrescriptionsValue.createdAt = entityPrescriptionsItem.createdAt
-            retPrescriptionsValue.updatedAt = entityPrescriptionsItem.updatedAt
             retPrescriptionsValue.status = entityPrescriptionsItem.status
+            retPrescriptionsValue.notes = entityPrescriptionsItem.notes
+            retPrescriptionsValue.isActive = entityPrescriptionsItem.isActive
           }
           ret.prescriptions.push(retPrescriptionsValue)
         }
