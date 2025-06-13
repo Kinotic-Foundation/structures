@@ -26,5 +26,4 @@ import Dialog from 'primevue/dialog'
 import { useModal } from '~/composables/useModal'
 
 const { modalState, closeModal } = useModal()
-console.log("asdasdsadsadasdsa")
 </script>
