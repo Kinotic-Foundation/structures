@@ -46,8 +46,6 @@ import CrudTable from '@/components/CrudTable.vue'
 import { type Identifiable } from '@kinotic/continuum-client'
 import { Structures, type INamespaceService } from '@kinotic/structures-api'
 import { mdiGraphql, mdiApi } from '@mdi/js'
-import { USER_STATE } from '@/states/IUserState'
-import { graphqlURI } from '@/util/helpers'
 
 interface CrudHeader {
   field: string
@@ -68,25 +66,14 @@ export default class NamespaceList extends Vue {
   ]
 
   dataSource: INamespaceService = Structures.getNamespaceService()
-  token = '';
   icons = {
     graph: mdiGraphql,
     api: mdiApi
   }
 
-  toGraphql(id: string) {
-    const URI = graphqlURI(id)
-    window.open(URI)
-  }
-
   async mounted(): Promise<void> {
     try {
-      if (!USER_STATE.isAuthenticated()) {
-        await USER_STATE.authenticate('admin', 'structures')
-      }
-
       this.refreshTable()
-      this.token = USER_STATE.btoaToken;
       if (this.$route.query.created === 'true') {
         this.$router.replace({ query: {} })
       }

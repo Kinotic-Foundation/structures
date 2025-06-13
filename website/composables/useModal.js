@@ -1,4 +1,3 @@
-// ~/composables/useModal.js
 import { reactive } from 'vue'
 
 const modalState = reactive({

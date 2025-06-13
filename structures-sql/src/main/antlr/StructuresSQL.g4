@@ -55,6 +55,7 @@ reindexOption
     | QUERY EQUALS STRING
     | SCRIPT EQUALS STRING
     | WAIT EQUALS (TRUE | FALSE)
+    | SKIP_IF_NO_SOURCE EQUALS (TRUE | FALSE)
     ;
 
 updateStatement
@@ -200,6 +201,7 @@ WITH: 'WITH';
 WAIT: 'WAIT';
 TRUE: 'TRUE';
 FALSE: 'FALSE';
+SKIP_IF_NO_SOURCE: 'SKIP_IF_NO_SOURCE';
 
 // Type Keywords
 BOOLEAN: 'BOOLEAN';

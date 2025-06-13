@@ -14,7 +14,8 @@ import org.kinotic.structures.sql.domain.Statement;
  * @param sourceFields null if not specified, comma-separated list
  * @param query        JSON query payload, null if not specified
  * @param script       JSON script payload, null if not specified
- * @param waitForCompletion Boolean representing the WAIT option
+ * @param waitForReindex Boolean representing the WAIT option
+ * @param skipIfNoSource Boolean, if true, skip reindex if source index does not exist (default false)
  */
 public record ReindexStatement(String source,
                                String dest,
@@ -25,4 +26,5 @@ public record ReindexStatement(String source,
                                String sourceFields,
                                String query,
                                String script,
-                               Boolean waitForCompletion) implements Statement {}
+                               Boolean waitForReindex,
+                               Boolean skipIfNoSource) implements Statement {}

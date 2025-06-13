@@ -99,11 +99,14 @@ Reindexes data from one index to another with optional settings.
   - `QUERY = '<lucene_query>'`
   - `SCRIPT = '<script>'`
   - `WAIT = (TRUE | FALSE)` (if `WAIT = TRUE`, the migration will poll for completion and only continue when reindexing is done; otherwise, it returns immediately with the task ID)
+  - `SKIP_IF_NO_SOURCE = (TRUE | FALSE)` (if `TRUE`, the reindex will be skipped if the source index does not exist; default is `FALSE`)
 - **Example**:
 ```sql
 REINDEX users INTO users_new WITH (CONFLICTS = PROCEED, MAX_DOCS = 1000, SLICES = AUTO, QUERY = 'active:true', WAIT = TRUE);
+REINDEX users INTO users_new WITH (SKIP_IF_NO_SOURCE = TRUE);
 ```
 > **Note:** REINDEX is always executed asynchronously at the Elasticsearch level. If `WAIT = TRUE`, Structures will poll for completion before proceeding to the next statement. If `WAIT = FALSE` or omitted, the migration continues immediately and returns the Elasticsearch task ID.
+> **Note:** If `SKIP_IF_NO_SOURCE = TRUE`, the reindex operation will be skipped (no error) if the source index does not exist. This is useful for idempotent migrations or when the source may be missing in some environments.
 
 ### 6. INSERT
 Inserts new documents into an index with specified field values.

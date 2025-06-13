@@ -87,6 +87,9 @@ REINDEX <source_index> INTO <dest_index> [WITH (<option> [, <option>]*) ] ;
 | QUERY            | String (Lucene query syntax)  | Query to filter source documents                                            |
 | SCRIPT           | String (Painless script)      | Script to transform documents during reindex                                |
 | WAIT             | TRUE, FALSE                  | If TRUE, wait for completion before continuing; if FALSE, return task ID    |
+| SKIP_IF_NO_SOURCE | TRUE, FALSE                  | If TRUE, skip reindex if the source index does not exist (default FALSE)     |
+
+> **Note:** If `SKIP_IF_NO_SOURCE = TRUE`, the reindex operation will be skipped (no error) if the source index does not exist. This is useful for idempotent migrations or when the source may be missing in some environments.
 
 ---
 

@@ -9,18 +9,18 @@
     </div>
     <div v-if="isMounted"
       class="w-full bg-cover bg-center bg-no-repeat py-1 transition-opacity duration-500 ease-in" :style="{
-        backgroundImage: `url(/images/${colorMode.value === 'dark' ? 'mask.svg' : 'mask-light.svg'})`,
+        backgroundImage: `url(images/${colorMode.value === 'dark' ? 'mask.svg' : 'mask-light.svg'})`,
         backgroundColor: colorMode.value === 'dark' ? '#000000' : '#FFFFFF'
       }">
       <BaseContainer>
-        <div class="w-full flex justify-between items-center xl:px-[88px] px-5 xl:flex-row flex-col-reverse">
+        <div class="w-full flex justify-between items-center xl:px-0 px-5 xl:flex-row flex-col-reverse">
           <div class="max-w-full xl:max-w-[550px] mt-0 xl:mt-16 mb-[54px] xl:mb-0 text-white">
             <p class="flex flex-col xl:mb-10 mb-3">
               <span class="xl:text-[68px] text-4xl text-center xl:text-left font-[BauhausNanoDisplayRegular] leading-[110%] dark:text-white text-black">
                 Data Evolution Made Simple
               </span>
             </p>
-            <p class="xl:text-[22px] text-[17px] text-center xl:text-left dark:text-white text-black font-[InterRegular]">
+            <p class="xl:text-[22px] text-[17px] text-center xl:text-left dark:text-[#BBBBBF] text-black font-[InterRegular]">
               Streamline your management of complex data structures with our powerful
               open-source framework for schema evolution and data manipulation.
             </p>
@@ -34,7 +34,7 @@
             </div>
           </div>
           <div class="mb-11 xl:mb-0">
-            <img src="/public/images/hero-section-image.png" alt="Hero Section Image" class="max-w-[700px] w-full" />
+            <img src="/public/images/rectangle-cut.png" alt="Hero Section Image" class="max-w-[800px] w-full" />
           </div>
         </div>
 

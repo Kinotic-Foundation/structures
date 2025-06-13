@@ -55,4 +55,8 @@ public class StructuresVerticleFactory {
         return new WebServerVerticle(healthChecks, properties);
     }
 
+    public WebServerNextVerticle createWebServerNextVerticle(){
+        return new WebServerNextVerticle(healthChecks, properties);
+    }
+
 }

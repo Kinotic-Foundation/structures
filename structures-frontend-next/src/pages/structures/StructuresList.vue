@@ -77,7 +77,7 @@ export default class StructuresList extends Vue {
   confirmDialogAction: (() => Promise<void>) | null = null
   headers = [
     { field: 'id', header: 'Id', sortable: false },
-    { field: 'namespace', header: 'Namespace', sortable: false },
+    { field: 'namespace', header: 'Application', sortable: false },
     { field: 'name', header: 'Name', sortable: false },
     { field: 'description', header: 'Description', sortable: false },
     { field: 'created', header: 'Created', sortable: false },

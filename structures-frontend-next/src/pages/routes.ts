@@ -4,57 +4,32 @@ const pageRoutes: RouteRecordRaw[] = [
   {
     path: '/dashboard',
     component: () => import('@/layouts/MainLayout.vue'),
-    name: "Dashboard",
     meta: {
-      requiresAuth: true,
       showInMainNav: true,
       icon: 'dashboard.svg',
       label: 'Dashboard',
     } as RouteMeta,
     children: [
       {
+        name: "dashboard",
         path: '',
         component: () => import('@/pages/Test.vue'),
-        meta: { requiresAuth: false }
       },
     ]
   },
   {
     path: '/applications',
     component: () => import('@/layouts/MainLayout.vue'),
-    name: "applications",
     meta: {
-      requiresAuth: true,
       showInMainNav: true,
       icon: 'microchip.svg',
       label: 'Applications',
     } as RouteMeta,
     children: [
       {
+        name: "applications",
         path: '',
         component: () => import('@/pages/NamespaceList.vue'),
-        meta: { requiresAuth: false }
-      },
-      {
-        path: 'list',
-        name: "List",
-        component: () => import('@/pages/Test.vue'),
-        meta: {
-          authenticationRequired: true,
-          showInMainNav: true,
-          icon: '',
-          label: 'List',
-        } as RouteMeta,
-      },
-      {
-        path: 'test3',
-        component: () => import('@/pages/Test2.vue'),
-        meta: {
-          authenticationRequired: true,
-          showInMainNav: true,
-          icon: '',
-          label: 'Test Two',
-        } as RouteMeta,
       },
     ]
   },
@@ -62,7 +37,6 @@ const pageRoutes: RouteRecordRaw[] = [
     path: '/projects',
     component: () => import('@/layouts/MainLayout.vue'),
     meta: {
-      authenticationRequired: true,
       showInMainNav: true,
       icon: 'folder.svg',
       label: 'Projects',
@@ -71,18 +45,16 @@ const pageRoutes: RouteRecordRaw[] = [
   {
     path: '/structures',
     component: () => import('@/layouts/MainLayout.vue'),
-    name: "structures",
     meta: {
-      authenticationRequired: true,
       showInMainNav: true,
       icon: 'objects-column.svg',
       label: 'Structures',
     } as RouteMeta,
     children: [
       {
+            name: "structures",
         path: '',
         component: () => import('@/pages/structures/StructuresList.vue'),
-        meta: { requiresAuth: true }
       }
     ]
   },
@@ -90,7 +62,6 @@ const pageRoutes: RouteRecordRaw[] = [
     path: '/entity/:id',
     component: () => import('@/layouts/MainLayout.vue'),
     meta: {
-      authenticationRequired: true,
       showInMainNav: false,
       icon: 'objects-column.svg',
       label: 'Structure Details',
@@ -99,7 +70,6 @@ const pageRoutes: RouteRecordRaw[] = [
       {
         path: '',
         component: () => import('@/pages/structures/entity/EntityList.vue'),
-        meta: { requiresAuth: true }
       }
     ]
   },
@@ -124,7 +94,6 @@ const pageRoutes: RouteRecordRaw[] = [
     path: '/application-add',
     component: () => import('@/pages/NamespaceAddEdit.vue'),
     meta: {
-      authenticationRequired: true,
       showInMainNav: false,
       icon: 'settings.svg',
       label: 'Add Application',
@@ -134,7 +103,6 @@ const pageRoutes: RouteRecordRaw[] = [
     path: '/users',
     component: () => import('@/layouts/MainLayout.vue'),
     meta: {
-      authenticationRequired: true,
       showInMainNav: true,
       icon: 'icon-man.svg',
       label: 'Users',
@@ -143,7 +111,6 @@ const pageRoutes: RouteRecordRaw[] = [
       {
         path: '',
         component: () => import('@/pages/Users.vue'),
-        meta: { authenticationRequired: false }
       },
 
     ]
@@ -152,7 +119,6 @@ const pageRoutes: RouteRecordRaw[] = [
     path: '/settings',
     component: () => import('@/layouts/MainLayout.vue'),
     meta: {
-      authenticationRequired: true,
       showInMainNav: true,
       icon: 'settings.svg',
       label: 'Settings',
@@ -162,25 +128,23 @@ const pageRoutes: RouteRecordRaw[] = [
     path: '/login',
     component: () => import('@/pages/Login.vue'),
     meta: {
-      authenticationRequired: false,
       showInMainNav: false,
+      authenticationRequired: false
     } as RouteMeta,
   },
     {
     path: '/graphql',
     component: () => import('@/layouts/MainLayout.vue'),
-    name: "GraphQLPlayground",
     meta: {
-      authenticationRequired: true,
       showInMainNav: false,
       icon: 'objects-column.svg',
       label: 'GraphQLPlayground',
     } as RouteMeta,
     children: [
       {
+        name: "GraphQLPlayground",
         path: '',
         component: () => import('@/pages/GraphQLPlayground.vue'),
-        meta: { requiresAuth: true }
       }
     ]
   },

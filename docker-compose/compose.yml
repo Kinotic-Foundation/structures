@@ -4,6 +4,7 @@ include:
 services:
   structures-server:
     container_name: structures-server
+    pull_policy: always
     image: kinotic/structures-server:${structuresVersion:-3.5.0-SNAPSHOT}
     depends_on:
       structures-elasticsearch:
@@ -16,6 +17,7 @@ services:
       start_period: 90s
     ports:
       - "127.0.0.1:9090:9090" # UI PORT
+      - "127.0.0.1:9091:9091" # UI2 PORT
       - "127.0.0.1:4000:4000" # GraphQL Port
       - "127.0.0.1:8080:8080" # OpenAPI Port
       - "127.0.0.1:58503:58503" # Continuum Stomp Port
@@ -44,7 +46,6 @@ services:
       STRUCTURES_WEB_SERVER_PORT: 9090
       STRUCTURES_HEALTH_CHECK_PATH: /health/
       STRUCTURES_ENABLE_STATIC_FILE_SERVER: true
-      STRUCTURES_INITIALIZE_WITH_SAMPLE_DATA: true
       OTEL_SERVICE_NAME: structures-server
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       OTEL_EXPORTER_OTLP_PROTOCOL: grpc
