@@ -19,7 +19,7 @@ watch(isMenuOpen, (val) => {
 <template>
   <header
     v-if="isMounted"
-    class="bg-[#101010] text-white shadow-md sticky top-0 left-0 z-50 py-5"
+    class="bg-[#101010] text-[#EDEEF2] shadow-md sticky top-0 left-0 z-50 py-5"
   >
     <BaseContainer>
       <nav class="mx-auto flex justify-between items-center xl:px-[88px] px-5">
