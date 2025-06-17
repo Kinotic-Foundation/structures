@@ -4,7 +4,7 @@
       <ProgressSpinner class="w-10 h-10 text-white" strokeWidth="4" animationDuration="1s" />
     </div>
     <div v-if="isMounted" class="w-full bg-cover flex items-center justify-between bg-center bg-no-repeat py-1 transition-opacity duration-500 ease-in xl:pb-10" :style="{
-      backgroundImage: `url(/images/${colorMode.value === 'dark' ? 'mask.svg' : 'mask-light.svg'})`,
+      backgroundImage: `url(images/${colorMode.value === 'dark' ? 'mask.svg' : 'mask-light.svg'})`,
       backgroundColor: colorMode.value === 'dark' ? '#000000' : '#FFFFFF'
     }">
     <div class="w-full bg-cover max-w-[1700px] mx-auto flex items-center justify-between xl:flex-row flex-col-reverse bg-center bg-no-repeat py-1 transition-opacity duration-500 ease-in">
