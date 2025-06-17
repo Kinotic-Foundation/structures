@@ -98,8 +98,15 @@ public class OpenApiVertxRouterFactory {
 
         router.route().failureHandler(VertxWebUtil.createExceptionConvertingFailureHandler());
 
-        CorsHandler corsHandler = CorsHandler.create(properties.getCorsAllowedOriginPattern())
+        String allowedOriginPattern = properties.getCorsAllowedOriginPattern();
+        if ("*".equals(allowedOriginPattern)) {
+            allowedOriginPattern = ".*";
+          }
+
+        CorsHandler corsHandler = CorsHandler.create()
+                                             .addRelativeOrigin(allowedOriginPattern)
                                              .allowedHeaders(properties.getCorsAllowedHeaders());
+                                             
         if(properties.getCorsAllowCredentials() != null){
             corsHandler.allowCredentials(properties.getCorsAllowCredentials());
         }

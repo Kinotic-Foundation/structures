@@ -28,11 +28,13 @@ public class WebServerNextVerticle extends AbstractVerticle{
 
         Router router = Router.router(vertx);
 
-        //TODO: Add a failure handler that can handle broken pipe without throwing an exception
-        // the handler below cannot write a response since the connection is already closed
-//        router.route().failureHandler(VertxWebUtil.createExceptionConvertingFailureHandler());
+        String allowedOriginPattern = properties.getCorsAllowedOriginPattern();
+        if ("*".equals(allowedOriginPattern)) {
+            allowedOriginPattern = ".*";
+          }
 
-        CorsHandler corsHandler = CorsHandler.create(properties.getCorsAllowedOriginPattern())
+        CorsHandler corsHandler = CorsHandler.create()
+                                             .addRelativeOrigin(allowedOriginPattern)
                                              .allowedHeaders(properties.getCorsAllowedHeaders());
         if(properties.getCorsAllowCredentials() != null){
             corsHandler.allowCredentials(properties.getCorsAllowCredentials());

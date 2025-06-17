@@ -40,7 +40,13 @@ public class GqlVerticle extends AbstractVerticle {
 
         router.route().failureHandler(VertxWebUtil.createExceptionConvertingFailureHandler());
 
-        CorsHandler corsHandler = CorsHandler.create(properties.getCorsAllowedOriginPattern())
+        String allowedOriginPattern = properties.getCorsAllowedOriginPattern();
+        if ("*".equals(allowedOriginPattern)) {
+            allowedOriginPattern = ".*";
+          }
+
+        CorsHandler corsHandler = CorsHandler.create()
+                                             .addRelativeOrigin(allowedOriginPattern)
                                              .allowedHeaders(properties.getCorsAllowedHeaders());
 
         if(properties.getCorsAllowCredentials() != null){
