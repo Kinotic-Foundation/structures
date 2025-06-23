@@ -3,11 +3,9 @@ plugins {
 	id 'io.freefair.lombok'
 }
 
-
 dependencies {
 	implementation project(':structures-sql')
 
-	implementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-json'
 	implementation 'org.springframework.boot:spring-boot-autoconfigure'
@@ -40,6 +38,8 @@ dependencies {
 
 	implementation "io.swagger.core.v3:swagger-models:${swaggerCoreVersion}"
 	implementation "io.swagger.core.v3:swagger-core:${swaggerCoreVersion}"
+
+	implementation "com.github.slugify:slugify:${slugifyVersion}"
 
 	annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 

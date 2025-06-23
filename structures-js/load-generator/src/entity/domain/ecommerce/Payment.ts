@@ -1,6 +1,9 @@
 import { PaymentStatus } from './PaymentStatus'
 import { PaymentMethod } from './PaymentMethod'
 
+/**
+ * Represents a payment made by a customer.
+ */
 export class Payment {
     public method!: PaymentMethod
     public transactionId!: string

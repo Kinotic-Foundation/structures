@@ -2,18 +2,18 @@ import {AdminEntityService, IAdminEntityService} from '@/api/IAdminEntityService
 import {INamedQueriesService, NamedQueriesService} from '@/api/INamedQueriesService'
 import {IEntitiesService, EntitiesService} from '@/api/IEntitiesService'
 import {IStructureService, StructureService} from '@/api/IStructureService'
-import {INamespaceService, NamespaceService} from '@/api/INamespaceService'
+import {IApplicationService, ApplicationService} from '@/api/IApplicationService'
 import {EntityService, IEntityService} from '@/api/IEntityService'
 
-const NAMESPACE_SERVICE: INamespaceService = new NamespaceService()
+const APPLICATION_SERVICE: IApplicationService = new ApplicationService()
 const STRUCTURE_SERVICE: IStructureService = new StructureService()
 const ENTITIES_SERVICE: IEntitiesService = new EntitiesService()
 const NAMED_QUERIES_SERVICE: INamedQueriesService = new NamedQueriesService()
 
 export namespace Structures {
 
-    export function getNamespaceService(): INamespaceService {
-        return NAMESPACE_SERVICE
+    export function getApplicationService(): IApplicationService {
+        return APPLICATION_SERVICE
     }
 
     export function getStructureService(): IStructureService {
@@ -28,12 +28,12 @@ export namespace Structures {
         return NAMED_QUERIES_SERVICE
     }
 
-    export function createEntityService<T>(structureNamespace: string, structureName: string): IEntityService<T> {
-        return new EntityService(structureNamespace, structureName)
+    export function createEntityService<T>(structureApplicationId: string, structureName: string): IEntityService<T> {
+        return new EntityService(structureApplicationId, structureName)
     }
 
-    export function createAdminEntityService<T>(structureNamespace: string, structureName: string): IAdminEntityService<T>{
-        return new AdminEntityService(structureNamespace, structureName);
+    export function createAdminEntityService<T>(structureApplicationId: string, structureName: string): IAdminEntityService<T>{
+        return new AdminEntityService(structureApplicationId, structureName);
     }
 
 }

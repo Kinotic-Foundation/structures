@@ -60,7 +60,7 @@ public class StructuresEndpointInitializer {
         vertx.setPeriodic(properties.getElasticHealthCheckInterval().toMillis(),
                           event -> esAsyncClient
                                   .cluster()
-                                  .health(builder -> builder.index("namespace")
+                                  .health(builder -> builder.index("application")
                                                             .index("structure"))
                                   .whenComplete((health, throwable) -> {
                                       if(throwable != null){
@@ -79,10 +79,10 @@ public class StructuresEndpointInitializer {
     @EventListener
     public void onApplicationReadyEvent(ApplicationReadyEvent event) {
         log.info("Rest API listening on port {}", properties.getOpenApiPort());
-        log.info("OpenApi Json available at http://localhost:{}/api-docs/[STRUCTURE NAMESPACE]/openapi.json",
+        log.info("OpenApi Json available at http://localhost:{}/api-docs/[STRUCTURE APPLICATION]/openapi.json",
                  properties.getOpenApiPort());
         log.info("GraphQL listening on port {}", properties.getGraphqlPort());
-        log.info("GraphQL available at http://localhost:{}{}[STRUCTURE NAMESPACE]/",
+        log.info("GraphQL available at http://localhost:{}{}[STRUCTURE APPLICATION]/",
                  properties.getGraphqlPort(),
                  properties.getGraphqlPath());
         if(properties.isEnableStaticFileServer()) {

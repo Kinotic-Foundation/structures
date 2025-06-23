@@ -15,7 +15,6 @@ import org.kinotic.structures.internal.api.services.sql.ParameterHolder;
 import org.kinotic.structures.internal.api.services.sql.QueryContext;
 import org.kinotic.structures.internal.api.services.sql.QueryExecutorFactory;
 import org.kinotic.structures.internal.api.services.sql.executors.QueryExecutor;
-import org.springframework.data.elasticsearch.core.ReactiveElasticsearchOperations;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -35,18 +34,16 @@ public class DefaultNamedQueriesService extends AbstractCrudService<NamedQueries
 
     public DefaultNamedQueriesService(CrudServiceTemplate crudServiceTemplate,
                                       ElasticsearchAsyncClient esAsyncClient,
-                                      ReactiveElasticsearchOperations esOperations,
                                       QueryExecutorFactory queryExecutorFactory) {
-        super("named_query_service_definition",
+        super("struct_named_query_service_definition",
               NamedQueriesDefinition.class,
               esAsyncClient,
-              esOperations,
               crudServiceTemplate);
 
         cache = Caffeine.newBuilder()
                         .expireAfterAccess(20, TimeUnit.HOURS)
                         .maximumSize(10_000)
-                        .buildAsync((key, executor) -> findByNamespaceAndStructure(key.structure().getNamespace(),
+                        .buildAsync((key, executor) -> findByApplicationAndStructure(key.structure().getApplicationId(),
                                                                                    key.structure().getName())
                                 .thenApplyAsync(namedQueriesDefinition -> {
 
@@ -106,11 +103,11 @@ public class DefaultNamedQueriesService extends AbstractCrudService<NamedQueries
     }
 
     @Override
-    public CompletableFuture<NamedQueriesDefinition> findByNamespaceAndStructure(String namespace, String structure) {
+    public CompletableFuture<NamedQueriesDefinition> findByApplicationAndStructure(String applicationId, String structure) {
         return crudServiceTemplate.search(indexName, Pageable.ofSize(1), type, builder -> builder
                 .query(q -> q
                         .bool(b -> b
-                                .filter(TermQuery.of(tq -> tq.field("namespace").value(namespace))._toQuery(),
+                                .filter(TermQuery.of(tq -> tq.field("applicationId").value(applicationId))._toQuery(),
                                         TermQuery.of(tq -> tq.field("structure").value(structure))._toQuery())
                         )
                 )).thenApply(page -> page.getContent() != null && !page.getContent().isEmpty()

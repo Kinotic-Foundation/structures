@@ -1,8 +1,11 @@
+import { Discriminator } from "@kinotic/structures-api"
+
 export enum PetType {
     DOG = 'DOG',
     CAT = 'CAT'
 }
 
+@Discriminator("type")
 export class Pet {
     public name: string = ''
     public type: PetType = PetType.DOG

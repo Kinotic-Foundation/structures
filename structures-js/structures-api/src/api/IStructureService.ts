@@ -5,19 +5,19 @@ import {Structure} from '@/api/domain/Structure'
 export interface IStructureService extends ICrudServiceProxy<Structure> {
 
     /**
-     * Finds all published structures for the given namespace.
-     * @param namespace the namespace to find structures for
+     * Finds all published structures for the given application.
+     * @param applicationId the application to find structures for
      * @param pageable the page to return
      * @return a future that will complete with a page of structures
      */
-    findAllPublishedForNamespace(namespace: string, pageable: Pageable): Promise<Page<Structure>>
+    findAllPublishedForApplication(applicationId: string, pageable: Pageable): Promise<Page<Structure>>
 
     /**
-     * Counts all structures for the given namespace.
-     * @param namespace the namespace to find structures for
+     * Counts all structures for the given application.
+     * @param applicationId the application to find structures for
      * @return a future that will complete with a page of structures
      */
-    countForNamespace(namespace: string): Promise<number>
+    countForApplication(applicationId: string): Promise<number>
 
     /**
      * Publishes the structure with the given id.
@@ -47,12 +47,12 @@ export class StructureService extends CrudServiceProxy<Structure> implements ISt
         super(Continuum.serviceProxy('org.kinotic.structures.api.services.StructureService'))
     }
 
-    public findAllPublishedForNamespace(namespace: string, pageable: Pageable): Promise<Page<Structure>> {
-        return this.serviceProxy.invoke('findAllPublishedForNamespace', [namespace, pageable])
+    public findAllPublishedForApplication(applicationId: string, pageable: Pageable): Promise<Page<Structure>> {
+        return this.serviceProxy.invoke('findAllPublishedForApplication', [applicationId, pageable])
     }
 
-    public countForNamespace(namespace: string): Promise<number> {
-        return this.serviceProxy.invoke('countForNamespace', [namespace])
+    public countForApplication(applicationId: string): Promise<number> {
+        return this.serviceProxy.invoke('countForApplication', [applicationId])
     }
 
     public publish(structureId: string): Promise<void> {

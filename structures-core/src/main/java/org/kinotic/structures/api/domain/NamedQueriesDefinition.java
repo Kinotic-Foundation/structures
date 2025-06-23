@@ -9,36 +9,27 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.kinotic.continuum.api.Identifiable;
 import org.kinotic.continuum.idl.api.schema.FunctionDefinition;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.elasticsearch.annotations.Document;
-import org.springframework.data.elasticsearch.annotations.Field;
-import org.springframework.data.elasticsearch.annotations.FieldType;
-import org.springframework.data.elasticsearch.annotations.Setting;
 
 import java.util.List;
 
 /**
- * Provides Metadata that represents Named Queries for a Namespace
+ * Provides Metadata that represents Named Queries for a Applicat
  * Created by Navíd Mitchell 🤪 on 3/18/24.
  */
 @Getter
 @Setter
 @Accessors(chain = true)
 @NoArgsConstructor
-@Document(indexName = "named_query_service_definition")
-@Setting(shards = 2, replicas = 2)
 public class NamedQueriesDefinition implements Identifiable<String> {
 
-    @Id
     private String id = null;
 
-    @Field(type = FieldType.Keyword)
-    private String namespace = null;
+    private String applicationId = null;
 
-    @Field(type = FieldType.Keyword)
+    private String projectId = null;
+
     private String structure = null;
 
-    @Field(type = FieldType.Flattened)
     private List<FunctionDefinition> namedQueries = null;
 
     @Override
@@ -61,7 +52,8 @@ public class NamedQueriesDefinition implements Identifiable<String> {
     public String toString() {
         return new ToStringBuilder(this)
                 .append("id", id)
-                .append("namespace", namespace)
+                .append("applicationId", applicationId)
+                .append("projectId", projectId)
                 .append("structure", structure)
                 .toString();
     }
