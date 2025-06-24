@@ -6,6 +6,7 @@ import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.structures.api.domain.Application;
 import org.kinotic.structures.api.services.ApplicationService;
 import org.kinotic.structures.api.services.StructureService;
+import org.kinotic.structures.internal.utils.StructuresUtil;
 import org.springframework.stereotype.Component;
 
 import java.util.Date;
@@ -42,13 +43,14 @@ public class DefaultApplicationService extends AbstractCrudService<Application> 
     public CompletableFuture<Void> deleteById(String id) {
         return structureService.countForApplication(id).thenAccept(count -> {
             if(count > 0){
-                throw new IllegalStateException("Cannot delete application with structures in it.");
+                throw new IllegalStateException("Cannot delete an application with structures in it.");
             }
         }).thenCompose(v -> super.deleteById(id));
     }
 
     @Override
     public CompletableFuture<Application> save(Application entity) {
+        StructuresUtil.validateApplicaitonId(entity.getId());
         entity.setUpdated(new Date());
         return super.save(entity);
     }

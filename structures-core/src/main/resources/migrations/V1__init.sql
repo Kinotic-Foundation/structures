@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS struct_project (
     applicationId KEYWORD,
     name KEYWORD,
     description TEXT,
+    sourceOfTruth KEYWORD,
     updated DATE
 );
 

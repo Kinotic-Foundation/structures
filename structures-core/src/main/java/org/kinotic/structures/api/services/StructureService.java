@@ -37,11 +37,10 @@ public interface StructureService extends IdentifiableCrudService<Structure, Str
 
     /**
      * Counts all structures for the given project.
-     * @param applicationId the application to find structures for
      * @param projectId the project to find structures for
      * @return a future that will complete with a page of structures
      */
-    CompletableFuture<Long> countForProject(String applicationId, String projectId);
+    CompletableFuture<Long> countForProject(String projectId);
 
     /**
      * Finds all published structures for the given application.
@@ -61,12 +60,11 @@ public interface StructureService extends IdentifiableCrudService<Structure, Str
 
     /**
      * Finds all structures for the given project.
-     * @param applicationId the application to find structures for
      * @param projectId the project to find structures for
      * @param pageable the page to return
      * @return a future that will complete with a page of structures
      */
-    CompletableFuture<Page<Structure>> findAllForProject(String applicationId, String projectId, Pageable pageable);
+    CompletableFuture<Page<Structure>> findAllForProject(String projectId, Pageable pageable);
 
     /**
      * Publishes thed structure with the given id.

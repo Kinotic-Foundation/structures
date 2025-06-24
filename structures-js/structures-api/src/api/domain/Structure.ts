@@ -3,8 +3,19 @@ import {Identifiable} from '@kinotic/continuum-client'
 
 export class Structure implements Identifiable<string> {
     public id!: string | null
+
+    /**
+     * The id of the application that this structure belongs to.
+     * All application ids are unique throughout the entire system.
+     */
     public applicationId!: string
+
+    /**
+     * The id of the project that this structure belongs to.
+     * All project ids are unique throughout the entire system.
+     */
     public projectId!: string
+
     public name!: string
     public entityDefinition!: ObjectC3Type
     public description?: string | null

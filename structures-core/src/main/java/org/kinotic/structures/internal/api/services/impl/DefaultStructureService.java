@@ -50,9 +50,8 @@ public class DefaultStructureService implements StructureService {
 
     @WithSpan
     @Override
-    public CompletableFuture<Long> countForProject(@SpanAttribute("applicationId") String applicationId, 
-                                                   @SpanAttribute("projectId") String projectId) {
-        return structureDAO.countForProject(applicationId, projectId);
+    public CompletableFuture<Long> countForProject(@SpanAttribute("projectId") String projectId) {
+        return structureDAO.countForProject(projectId);
     }
 
     @WithSpan
@@ -147,9 +146,8 @@ public class DefaultStructureService implements StructureService {
 
     @WithSpan
     @Override
-    public CompletableFuture<Page<Structure>> findAllForProject(@SpanAttribute("applicationId") String applicationId, 
-                                                                @SpanAttribute("projectId") String projectId, Pageable pageable) {
-        return structureDAO.findAllForProject(applicationId, projectId, pageable);
+    public CompletableFuture<Page<Structure>> findAllForProject(@SpanAttribute("projectId") String projectId, Pageable pageable) {
+        return structureDAO.findAllForProject(projectId, pageable);
     }
 
     @WithSpan

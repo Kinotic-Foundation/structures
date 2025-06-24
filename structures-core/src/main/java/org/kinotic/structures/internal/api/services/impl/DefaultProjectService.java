@@ -48,6 +48,10 @@ public class DefaultProjectService extends AbstractCrudService<Project> implemen
         Validate.notNull(project.getName(), "Project name cannot be null");
         Validate.notNull(project.getApplicationId(), "Project applicationId cannot be null");
 
+        if(project.getId() == null){
+            project.setId(project.getApplicationId()+"_"+slg.slugify(project.getName()));
+        }
+
         return findById(project.getId())
                 .thenCompose(existing -> {
                     if(existing != null){
@@ -62,7 +66,7 @@ public class DefaultProjectService extends AbstractCrudService<Project> implemen
     public CompletableFuture<Void> deleteById(String id) {
         return structureService.countForProject(id).thenAccept(count -> {
             if(count > 0){
-                throw new IllegalStateException("Cannot delete application with structures in it.");
+                throw new IllegalStateException("Cannot a delete project with structures in it.");
             }
         }).thenCompose(v -> super.deleteById(id));
     }
@@ -70,22 +74,25 @@ public class DefaultProjectService extends AbstractCrudService<Project> implemen
 
     @Override
     public CompletableFuture<Page<Project>> findAllForApplication(String applicationId, Pageable pageable) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'findAllForApplication'");
+        return crudServiceTemplate.search(indexName, pageable, type, builder -> builder
+        .query(q -> q
+                .bool(b -> b.filter(TermQuery.of(tq -> tq.field("applicationId").value(applicationId))._toQuery())
+                )
+        ));
     }
 
     @Override
-    public CompletableFuture<Project> save(Project entity) {
-        Validate.notNull(entity, "Project cannot be null");
-        Validate.notNull(entity.getApplicationId(), "Project applicationId cannot be null");
-        Validate.notNull(entity.getName(), "Project name cannot be null");
+    public CompletableFuture<Project> save(Project project) {
+        Validate.notNull(project, "Project cannot be null");
+        Validate.notNull(project.getApplicationId(), "Project applicationId cannot be null");
+        Validate.notNull(project.getName(), "Project name cannot be null");
 
-        if(entity.getId() == null){
-            entity.setId(entity.getApplicationId()+"_"+slg.slugify(entity.getName()));
+        if(project.getId() == null){
+            project.setId(project.getApplicationId()+"_"+slg.slugify(project.getName()));
         }
 
-        entity.setUpdated(new Date());
-        return super.save(entity);
+        project.setUpdated(new Date());
+        return super.save(project);
     }
 
     @Override

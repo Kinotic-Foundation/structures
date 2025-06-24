@@ -35,12 +35,11 @@ public class DefaultStructureDAO extends AbstractCrudService<Structure> implemen
     }
 
     @Override
-    public CompletableFuture<Long> countForProject(String applicationId, String projectId) {
+    public CompletableFuture<Long> countForProject(String projectId) {
         return crudServiceTemplate.count(indexName, builder -> builder
                 .query(q -> q
                         .bool(b -> b
-                                .filter(TermQuery.of(tq -> tq.field("applicationId").value(applicationId))._toQuery(),
-                                        TermQuery.of(tq -> tq.field("projectId").value(projectId))._toQuery())
+                                .filter(TermQuery.of(tq -> tq.field("projectId").value(projectId))._toQuery())
                         )));
     }
 
@@ -65,11 +64,10 @@ public class DefaultStructureDAO extends AbstractCrudService<Structure> implemen
     }
 
     @Override
-    public CompletableFuture<Page<Structure>> findAllForProject(String applicationId, String projectId, Pageable pageable) {
+    public CompletableFuture<Page<Structure>> findAllForProject(String projectId, Pageable pageable) {
         return crudServiceTemplate.search(indexName, pageable, type, builder -> builder
                 .query(q -> q
-                        .bool(b -> b.filter(TermQuery.of(tq -> tq.field("applicationId").value(applicationId))._toQuery(),
-                                            TermQuery.of(tq -> tq.field("projectId").value(projectId))._toQuery())
+                        .bool(b -> b.filter(TermQuery.of(tq -> tq.field("projectId").value(projectId))._toQuery())
                         )
                 ));
     }

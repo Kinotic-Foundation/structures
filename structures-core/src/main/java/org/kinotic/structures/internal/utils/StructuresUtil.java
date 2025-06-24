@@ -34,7 +34,7 @@ public class StructuresUtil {
 
         validateStructureName(structure.getName());
 
-        validateStructureApplicaitonId(structure.getApplicationId());
+        validateApplicaitonId(structure.getApplicationId());
 
         if (structure.getEntityDefinition() == null) {
             throw new IllegalArgumentException("Structure entityDefinition must not be null");
@@ -61,7 +61,7 @@ public class StructuresUtil {
      * @param applicationId to validate
      * @throws IllegalArgumentException will be thrown if the structure application is invalid
      */
-    public static void validateStructureApplicaitonId(String applicationId){
+    public static void validateApplicaitonId(String applicationId){
         if (applicationId == null
                 || !StructureApplicationPattern.matcher(applicationId).matches()){
             throw new IllegalArgumentException("Structure Application Id Invalid, first character must be a " +

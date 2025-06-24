@@ -2,11 +2,13 @@ package org.kinotic.structures.api.services;
 
 import java.util.concurrent.CompletableFuture;
 
+import org.kinotic.continuum.api.annotations.Publish;
 import org.kinotic.continuum.core.api.crud.IdentifiableCrudService;
 import org.kinotic.structures.api.domain.Project;
 import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
 
+@Publish
 public interface ProjectService extends IdentifiableCrudService<Project, String> {
 
     /**
@@ -19,7 +21,7 @@ public interface ProjectService extends IdentifiableCrudService<Project, String>
     /**
      * Creates a new project if it does not already exist.
      * @param project the project to create
-     * @return {@link CompletableFuture} emitting the created project
+     * @return {@link CompletableFuture} emitting the created project or the existing project if it already exists
      */
     CompletableFuture<Project> createProjectIfNotExist(Project project);
 

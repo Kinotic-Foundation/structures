@@ -22,11 +22,10 @@ public interface StructureDAO extends IdentifiableCrudService<Structure, String>
 
     /**
      * Counts all structures for the given project.
-     * @param applicationId the application to find structures for
      * @param projectId the project to find structures for
      * @return a future that will complete with a page of structures
      */
-    CompletableFuture<Long> countForProject(String applicationId, String projectId);
+    CompletableFuture<Long> countForProject(String projectId);
 
     /**
      * Finds all published structures for the given application.
@@ -39,19 +38,18 @@ public interface StructureDAO extends IdentifiableCrudService<Structure, String>
     /**
      * Finds all structures for the given application.
      * @param applicationId the application to find structures for
-     * @param pageable the page to return
+     * @param pageable the page to return«
      * @return a future that will complete with a page of structures
      */
     CompletableFuture<Page<Structure>> findAllForApplication(String applicationId, Pageable pageable);
 
     /**
      * Finds all structures for the given project.
-     * @param applicationId the application to find structures for
      * @param projectId the project to find structures for
      * @param pageable the page to return
      * @return a future that will complete with a page of structures
      */
-    CompletableFuture<Page<Structure>> findAllForProject(String applicationId, String projectId, Pageable pageable);
+    CompletableFuture<Page<Structure>> findAllForProject(String projectId, Pageable pageable);
 
     /**
      * This operation makes all the recent writes immediately available for search.

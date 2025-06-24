@@ -43,9 +43,16 @@ public class Structure implements Identifiable<String> {
     private String id = null; // do not ever set, system managed
 
     private String name = null;
-
+    /**
+     * The id of the application that this structure belongs to.
+     * All application ids are unique throughout the entire system.
+     */
     private String applicationId = null;
 
+    /**
+     * The id of the project that this structure belongs to.
+     * All project ids are unique throughout the entire system.
+     */
     private String projectId = null;
 
     private String description = null;
