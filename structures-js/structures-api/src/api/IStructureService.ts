@@ -36,12 +36,11 @@ export interface IStructureService extends ICrudServiceProxy<Structure> {
 
     /**
      * Finds all structures for the given project.
-     * @param applicationId the application to find structures for
      * @param projectId the project to find structures for
      * @param pageable the page to return
      * @return Promise emitting a page of structures
      */
-    findAllForProject(applicationId: string, projectId: string, pageable: Pageable): Promise<Page<Structure>>
+    findAllForProject(projectId: string, pageable: Pageable): Promise<Page<Structure>>
 
     /**
      * Publishes the structure with the given id.
@@ -87,8 +86,8 @@ export class StructureService extends CrudServiceProxy<Structure> implements ISt
         return this.serviceProxy.invoke('findAllPublishedForApplication', [applicationId, pageable])
     }
 
-    public findAllForProject(applicationId: string, projectId: string, pageable: Pageable): Promise<Page<Structure>> {
-        return this.serviceProxy.invoke('findAllForProject', [applicationId, projectId, pageable])
+    public findAllForProject(projectId: string, pageable: Pageable): Promise<Page<Structure>> {
+        return this.serviceProxy.invoke('findAllForProject', [projectId, pageable])
     }
 
     public publish(structureId: string): Promise<void> {

@@ -163,7 +163,7 @@ export class AdminEntityService<T> implements IAdminEntityService<T>{
 
     public findById(id: TenantSpecificId): Promise<T>{
         return this.adminEntitiesService.findById(this.structureId, id)
-    }
+    } 
 
     public findByIds(ids: TenantSpecificId[]): Promise<T[]>{
         return this.adminEntitiesService.findByIds(this.structureId, ids)
