@@ -36,7 +36,7 @@ import jakarta.annotation.PostConstruct;
 public class MigrationExecutor {
     private static final Logger log = LoggerFactory.getLogger(MigrationExecutor.class);
     private static final String MIGRATION_INDEX = "migration_history";
-    public static final String SYSTEM_PROJECT = "_structures_system";
+    public static final String SYSTEM_PROJECT = "structures_system";
 
     private final ElasticsearchAsyncClient client;
     private final List<StatementExecutor<?, ?>> executors;

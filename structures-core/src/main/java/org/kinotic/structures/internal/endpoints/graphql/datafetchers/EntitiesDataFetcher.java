@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
 public class EntitiesDataFetcher implements DataFetcher<CompletableFuture<List<Map>>> {
 
     private final EntitiesService entitiesService;
-    private final String namespace;
+    private final String application;
 
     @SuppressWarnings("unchecked")
     @Override
@@ -42,7 +42,7 @@ public class EntitiesDataFetcher implements DataFetcher<CompletableFuture<List<M
             for (Map<String, Object> representation : representations) {
                 String typename = (String) representation.get("__typename");
                 String id = (String) representation.get("id");
-                String structureId = StructuresUtil.structureNameToId(namespace, typename);
+                String structureId = StructuresUtil.structureNameToId(application, typename);
                 futures.add(entitiesService.findById(structureId,
                                                      id,
                                                      Map.class,

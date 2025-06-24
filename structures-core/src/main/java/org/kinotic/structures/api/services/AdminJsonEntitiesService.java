@@ -31,7 +31,7 @@ public interface AdminJsonEntitiesService {
     /**
      * Returns the number of entities available for the given query.
      *
-     * @param structureId the id of the structure to count. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * @param structureId the id of the structure to count. (this is the {@link Structure#getApplicationId()} + "." + {@link Structure#getName()})
      * @param query       the query used to limit result
      * @param tenantSelection the list of tenants to use when retrieving the entity records
      * @param participant the participant of the logged-in user
@@ -52,7 +52,7 @@ public interface AdminJsonEntitiesService {
     /**
      * Deletes any entities that match the given query.
      *
-     * @param structureId the id of the structure to delete the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * @param structureId the id of the structure to delete the entity for. (this is the {@link Structure#getApplicationId()} + "." + {@link Structure#getName()})
      * @param query       the query used to filter records to delete, must not be {@literal null}
      * @param tenantSelection the list of tenants to use when deleting entities by the given query
      * @param participant the participant of the logged-in user
@@ -84,7 +84,7 @@ public interface AdminJsonEntitiesService {
     /**
      * Retrieves a list of entities by their id.
      *
-     * @param structureId the id of the structure to find the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * @param structureId the id of the structure to find the entity for. (this is the {@link Structure#getApplicationId()} + "." + {@link Structure#getName()})
      * @param ids         must not be {@literal null}
      * @param participant the participant of the logged-in user
      * @return {@link CompletableFuture} with the list of matched entities with the given ids or {@link CompletableFuture} emitting an empty list if none found

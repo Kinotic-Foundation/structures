@@ -53,7 +53,7 @@ public interface JsonEntitiesService {
     /**
      * Returns the number of entities available for the given query.
      *
-     * @param structureId the id of the structure to count. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * @param structureId the id of the structure to count. (this is the {@link Structure#getApplicationId()} + "." + {@link Structure#getName()})
      * @param query       the query used to limit result
      * @param participant the participant of the logged-in user
      * @return {@link CompletableFuture} emitting the number of entities.
@@ -73,7 +73,7 @@ public interface JsonEntitiesService {
     /**
      * Deletes any entities that match the given query.
      *
-     * @param structureId the id of the structure to delete the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * @param structureId the id of the structure to delete the entity for. (this is the {@link Structure#getApplicationId()} + "." + {@link Structure#getName()})
      * @param query       the query used to filter records to delete, must not be {@literal null}
      * @param participant the participant of the logged-in user
      * @return {@link CompletableFuture} emitting when delete is complete
@@ -103,7 +103,7 @@ public interface JsonEntitiesService {
     /**
      * Retrieves a list of entities by their id.
      *
-     * @param structureId the id of the structure to find the entity for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * @param structureId the id of the structure to find the entity for. (this is the {@link Structure#getApplicationId()} + "." + {@link Structure#getName()})
      * @param ids         must not be {@literal null}
      * @param participant the participant of the logged-in user
      * @return {@link CompletableFuture} with the list of matched entities with the given ids or {@link CompletableFuture} emitting an empty list if none found
@@ -166,7 +166,7 @@ public interface JsonEntitiesService {
 
     /**
      * This operation makes all the recent writes immediately available for search.
-     * @param structureId the id of the structure to sync the index for. (this is the {@link Structure#getNamespace()} + "." + {@link Structure#getName()})
+     * @param structureId the id of the structure to sync the index for. (this is the {@link Structure#getApplicationId()} + "." + {@link Structure#getName()})
      * @param participant     the participant of the logged-in user
      * @return a {@link CompletableFuture} that will complete when the operation is complete
      */

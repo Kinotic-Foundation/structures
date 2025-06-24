@@ -34,7 +34,7 @@ public class DefaultCacheEvictionService implements CacheEvictionService {
 
     @Override
     public void evictCachesFor(NamedQueriesDefinition namedQueriesDefinition) {
-        String structureId = StructuresUtil.structureNameToId(namedQueriesDefinition.getNamespace(), namedQueriesDefinition.getStructure());
+        String structureId = StructuresUtil.structureNameToId(namedQueriesDefinition.getApplicationId(), namedQueriesDefinition.getStructure());
         structureDAO.findById(structureId)
                     .thenAccept(structure -> {
                         gqlOperationDefinitionService.evictCachesFor(structure);
