@@ -24,16 +24,6 @@
               <path :d="icons.graph" fill="currentColor" />
             </svg>
           </RouterLink>
-          <!-- <div target="_blank" @click="() => toGraphql(item.id)">
-            <svg width="20" height="20" viewBox="0 0 24 24">
-              <path :d="icons.graph" fill="currentColor" />
-            </svg>
-          </div> -->
-          <!-- <RouterLink target="_blank" to="/gql-ui">
-            <svg width="20" height="20" viewBox="0 0 24 24">
-              <path :d="icons.graph" fill="currentColor" />
-            </svg>
-          </RouterLink> -->
         </Button>
       </template>
     </CrudTable>
@@ -44,7 +34,7 @@
 import { Component, Vue } from 'vue-facing-decorator'
 import CrudTable from '@/components/CrudTable.vue'
 import { type Identifiable } from '@kinotic/continuum-client'
-import { Structures, type INamespaceService } from '@kinotic/structures-api'
+import { Structures, type IApplicationService } from '@kinotic/structures-api'
 import { mdiGraphql, mdiApi } from '@mdi/js'
 
 interface CrudHeader {
@@ -56,7 +46,7 @@ interface CrudHeader {
 @Component({
   components: { CrudTable }
 })
-export default class NamespaceList extends Vue {
+export default class ApplicationList extends Vue {
   [x: string]: any
   headers: CrudHeader[] = [
     { field: 'id', header: 'Id', sortable: false },
@@ -65,7 +55,7 @@ export default class NamespaceList extends Vue {
     { field: 'updated', header: 'Updated', sortable: false },
   ]
 
-  dataSource: INamespaceService = Structures.getNamespaceService()
+  dataSource: IApplicationService = Structures.getApplicationService()
   icons = {
     graph: mdiGraphql,
     api: mdiApi
@@ -79,7 +69,7 @@ export default class NamespaceList extends Vue {
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown error'
-      console.error('[NamespaceList] Auth or connection failed:', message)
+      console.error('[ApplicationList] Auth or connection failed:', message)
     }
   }
 

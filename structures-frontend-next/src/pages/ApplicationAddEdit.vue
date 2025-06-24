@@ -1,6 +1,6 @@
 <template>
-  <CrudEntityAddEdit :crud-service-identifier="crudServiceIdentifier" title="Namespace" :identity="id"
-    :identityRules="namespaceRules" :entity.sync="namespace" update:entity="handleEntityUpdate">
+  <CrudEntityAddEdit :crud-service-identifier="crudServiceIdentifier" title="Application" :identity="id"
+    :identityRules="applicationRules" :entity.sync="application" update:entity="handleEntityUpdate">
     <template #basic-info="{ entity }">
       <div class="mb-4">
         <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
@@ -16,7 +16,7 @@
 import { Component, Prop, Vue } from 'vue-facing-decorator'
 import InputText from 'primevue/inputtext'
 import CrudEntityAddEdit from '@/components/CrudEntityAddEdit.vue'
-import { Namespace } from '@kinotic/structures-api'
+import { Application } from '@kinotic/structures-api'
 import { IndexNameHelper } from '@/util/IndexNameHelper'
 
 type RuleValidator = (value: string) => string | boolean
@@ -27,15 +27,15 @@ type RuleValidator = (value: string) => string | boolean
     InputText,
   },
 })
-export default class NamespaceAddEdit extends Vue {
+export default class ApplicationAddEdit extends Vue {
   @Prop({ type: String, required: false, default: null })
   public id!: string | null
 
-  private crudServiceIdentifier = 'org.kinotic.structures.api.services.NamespaceService'
+  private crudServiceIdentifier = 'org.kinotic.structures.api.services.ApplicationService'
 
-  private namespace: Namespace = new Namespace('', '', 0)
+  private application: Application = new Application('', '')
 
-  private namespaceRules: RuleValidator[] = [
+  private applicationRules: RuleValidator[] = [
     (v: string) => !!v || 'Name is required',
     (v: string) => {
       const result: string = IndexNameHelper.checkNameAndNamespace(v, 'Name')
@@ -43,8 +43,8 @@ export default class NamespaceAddEdit extends Vue {
     }
   ]
 
-  handleEntityUpdate(updated: Namespace): void {
-    this.namespace = updated
+  handleEntityUpdate(updated: Application): void {
+    this.application = updated
   }
 }
 </script>
