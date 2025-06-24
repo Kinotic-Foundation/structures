@@ -90,9 +90,7 @@ public class DefaultStructureService implements StructureService {
                     structure.setCreated(new Date());
                     structure.setUpdated(structure.getCreated());
                     // Store name of the elastic search index for items
-                    structure.setItemIndex(this.structuresProperties.getIndexPrefix()
-                                                                    .trim()
-                                                                    .toLowerCase() + logicalIndexName);
+                    structure.setItemIndex(this.structuresProperties.getIndexPrefix() + logicalIndexName);
 
                     ElasticConversionResult result = structureConversionService.convertToElasticMapping(structure);
 
@@ -221,6 +219,7 @@ public class DefaultStructureService implements StructureService {
                     structure.setCreated(existingStructure.getCreated());
                     structure.setName(existingStructure.getName());
                     structure.setApplicationId(existingStructure.getApplicationId());
+                    structure.setProjectId(existingStructure.getProjectId());
                     structure.setItemIndex(existingStructure.getItemIndex());
                     structure.setPublished(existingStructure.isPublished());
                     structure.setPublishedTimestamp(existingStructure.getPublishedTimestamp());

@@ -42,11 +42,11 @@ public class DefaultNamedQueriesService extends AbstractCrudService<NamedQueries
 
         cache = Caffeine.newBuilder()
                         .expireAfterAccess(20, TimeUnit.HOURS)
-                        .maximumSize(10_000)
+                        .maximumSize(10_000) 
                         .buildAsync((key, executor) -> findByApplicationAndStructure(key.structure().getApplicationId(),
-                                                                                   key.structure().getName())
+                                                                                     key.structure().getName())
                                 .thenApplyAsync(namedQueriesDefinition -> {
-
+ 
                                     Validate.notNull(namedQueriesDefinition, "No Named Query found for Structure: "
                                             + key.structure()
                                             + " and Query: "

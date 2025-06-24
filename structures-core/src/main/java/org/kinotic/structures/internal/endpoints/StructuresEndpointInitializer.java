@@ -60,8 +60,8 @@ public class StructuresEndpointInitializer {
         vertx.setPeriodic(properties.getElasticHealthCheckInterval().toMillis(),
                           event -> esAsyncClient
                                   .cluster()
-                                  .health(builder -> builder.index("application")
-                                                            .index("structure"))
+                                  .health(builder -> builder.index(properties.getIndexPrefix() + "application")
+                                                            .index(properties.getIndexPrefix() + "structure"))
                                   .whenComplete((health, throwable) -> {
                                       if(throwable != null){
                                           log.error("Elasticsearch cluster health check failed", throwable);
