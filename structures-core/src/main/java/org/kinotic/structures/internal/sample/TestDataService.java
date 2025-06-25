@@ -17,6 +17,7 @@ import org.kinotic.structures.api.services.ApplicationService;
 import org.kinotic.structures.api.services.StructureService;
 import org.kinotic.structures.internal.utils.StructuresUtil;
 import org.springframework.core.io.ResourceLoader;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
@@ -265,7 +266,9 @@ public class TestDataService {
 
         public PeopleCacheLoader(ResourceLoader resourceLoader,
                                  ObjectMapper objectMapper) {
-            this.resourceLoader = resourceLoader;
+
+            this.resourceLoader = resourceLoader instanceof PathMatchingResourcePatternResolver 
+            ? (PathMatchingResourcePatternResolver) resourceLoader : new PathMatchingResourcePatternResolver(resourceLoader);
             this.objectMapper = objectMapper;
         }
 
