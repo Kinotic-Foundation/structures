@@ -148,7 +148,15 @@ public class MigrationExecutor {
     private CompletableFuture<Void> executeStatement(Statement statement) {
         StatementExecutor<Statement, ?> executor = (StatementExecutor<Statement, ?>) findExecutor(statement);
         if (executor != null) {
-            return executor.executeMigration(statement).thenApply(r -> null);
+            return executor.executeMigration(statement)
+                .thenApply(r -> null)
+                .handle((result, ex) -> {
+                    if (ex != null) {
+                        log.error("Failed to execute statement: {} - Error: {}", statement.getClass().getSimpleName(), ex.getMessage(), ex);
+                        throw new RuntimeException("Statement execution failed: " + statement.getClass().getSimpleName() + " - " + ex.getMessage(), ex);
+                    }
+                    return null;
+                });
         } else {
             CompletableFuture<Void> failed = new CompletableFuture<>();
             failed.completeExceptionally(new IllegalStateException("No executor found for statement: " + statement.getClass().getSimpleName()));

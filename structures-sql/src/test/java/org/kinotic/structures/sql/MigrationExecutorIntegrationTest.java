@@ -176,7 +176,7 @@ class MigrationExecutorIntegrationTest extends ElasticsearchSqlTestBase {
         assertEquals("Integer", properties.get("age")._kind().name());
     }
 
-    // @Test
+    @Test
     void whenReindex_thenDataReindexed() throws Exception {
         // Given
         String createSourceContent = """
@@ -201,7 +201,8 @@ class MigrationExecutorIntegrationTest extends ElasticsearchSqlTestBase {
                 SLICES == AUTO,
                 SIZE == 1000,
                 SOURCE_FIELDS == 'id,name',
-                QUERY == 'name:test'
+                QUERY == 'name:test',
+                WAIT == TRUE
             );
             """;
 
@@ -219,6 +220,62 @@ class MigrationExecutorIntegrationTest extends ElasticsearchSqlTestBase {
         // Then
         CountResponse count = client.count(c -> c.index("test_table_reindex_dest"));
         assertEquals(1, count.count());
+    }
+
+    @SuppressWarnings({ "unchecked", "null" })
+    @Test
+    void whenReindexWithScript_thenDataTransformed() throws Exception {
+        // Given
+        String createSourceContent = """
+            CREATE TABLE test_table_reindex_script_source (
+                id TEXT,
+                name TEXT,
+                age INTEGER
+            );
+            """;
+        String createDestContent = """
+            CREATE TABLE test_table_reindex_script_dest (
+                id TEXT,
+                name TEXT,
+                age INTEGER,
+                status TEXT
+            );
+            """;
+        String insertContent = """
+            INSERT INTO test_table_reindex_script_source (id, name, age) VALUES ('1', 'john', 25) WITH REFRESH;
+            """;
+        String reindexContent = """
+            REINDEX test_table_reindex_script_source INTO test_table_reindex_script_dest WITH (
+                CONFLICTS == PROCEED,
+                SCRIPT == 'ctx._source.status = ctx._source.age >= 18 ? "adult" : "minor"',
+                WAIT == TRUE
+            );
+            """;
+
+        Migration createSourceMigration = migration(1, "V1__create_source_table", createSourceContent);
+        Migration createDestMigration = migration(2, "V2__create_dest_table", createDestContent);
+        Migration insertMigration = migration(3, "V3__insert_test_data", insertContent);
+        Migration reindexMigration = migration(4, "V4__reindex_with_script", reindexContent);
+
+        // When
+        migrationExecutor.executeProjectMigrations(List.of(createSourceMigration, createDestMigration, insertMigration, reindexMigration), "test_project_reindex_script").get();
+
+        // Then
+        CountResponse count = client.count(c -> c.index("test_table_reindex_script_dest"));
+        assertEquals(1, count.count());
+        
+        // Verify the script transformation was applied
+        @SuppressWarnings("rawtypes")
+        SearchResponse<Map> response = client.search(s -> s
+            .index("test_table_reindex_script_dest")
+            .query(q -> q.term(t -> t.field("id").value("1"))),
+            Map.class
+        );
+        
+        Map<String, Object> document = response.hits().hits().get(0).source();
+        assertEquals("john", document.get("name"));
+        assertEquals(25, document.get("age"));
+        assertEquals("adult", document.get("status")); // This field was added by the script
     }
 
     @SuppressWarnings("null")

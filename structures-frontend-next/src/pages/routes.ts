@@ -29,7 +29,7 @@ const pageRoutes: RouteRecordRaw[] = [
       {
         name: "applications",
         path: '',
-        component: () => import('@/pages/NamespaceList.vue'),
+        component: () => import('@/pages/ApplicationList.vue'),
       },
     ]
   },
@@ -92,7 +92,7 @@ const pageRoutes: RouteRecordRaw[] = [
   // },
   {
     path: '/application-add',
-    component: () => import('@/pages/NamespaceAddEdit.vue'),
+    component: () => import('@/pages/ApplicationAddEdit.vue'),
     meta: {
       showInMainNav: false,
       icon: 'settings.svg',
