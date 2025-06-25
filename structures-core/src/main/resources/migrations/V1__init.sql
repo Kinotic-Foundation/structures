@@ -49,36 +49,37 @@ CREATE TABLE IF NOT EXISTS struct_structure (
 
 -- Reindex data from namespace index to struct_application index
 REINDEX namespace INTO struct_application 
-WITH (SCRIPT == 'ctx._source.enableGraphQL = true; ctx._source.enableOpenAPI = true;',
+WITH (SCRIPT == 'ctx._source.enableGraphQL = true;
+                 ctx._source.enableOpenAPI = true;',
       SKIP_IF_NO_SOURCE == TRUE, 
       WAIT == TRUE);
 
 -- Reindex data from named_query_service_definition index to struct_named_query_service_definition index
 REINDEX named_query_service_definition INTO struct_named_query_service_definition 
-WITH (SCRIPT == 'ctx._source.applicationId = ctx._source.namespace; 
-                 ctx._source.projectId = ctx._source.namespace + "_default"; 
-                 ctx._source.remove("namespace");', 
+WITH (SCRIPT == 'ctx._source.applicationId = ctx._source.namespace;
+                 ctx._source.projectId = ctx._source.namespace + "_default";
+                 ctx._source.remove("namespace");',
       SKIP_IF_NO_SOURCE == TRUE, 
       WAIT == TRUE);
 
 -- Create default project records from namespace records
-REINDEX namespace INTO struct_project 
-WITH (SCRIPT == 'ctx._source.applicationId = ctx._source.id; 
-                 ctx._source.id = ctx._source.id + "_default"; 
+REINDEX namespace INTO struct_project
+WITH (SCRIPT == 'ctx._source.applicationId = ctx._source.id;
+                 ctx._source.id = ctx._source.id + "_default";
                  ctx._id = ctx._source.id;
-                 ctx._source.name = "Default"; 
-                 ctx._source.description = "Default project"; 
-                 ctx._source.sourceOfTruth = "TYPESCRIPT"; 
+                 ctx._source.name = "Default";
+                 ctx._source.description = "Default project";
+                 ctx._source.sourceOfTruth = "TYPESCRIPT";
                  ctx._source.updated = new Date().getTime();',
       SKIP_IF_NO_SOURCE == TRUE,
       WAIT == TRUE);
 
 -- Reindex data from structures index to struct_structure table
 REINDEX structure INTO struct_structure 
-WITH (SCRIPT == 'ctx._source.applicationId = ctx._source.namespace; 
-                 ctx._source.projectId = ctx._source.namespace + "_default"; 
-                 ctx._source.remove("namespace");', 
-      SKIP_IF_NO_SOURCE == TRUE, 
+WITH (SCRIPT == 'ctx._source.applicationId = ctx._source.namespace;
+                 ctx._source.projectId = ctx._source.namespace + "_default";
+                 ctx._source.remove("namespace");',
+      SKIP_IF_NO_SOURCE == TRUE,
       WAIT == TRUE);
 
 
