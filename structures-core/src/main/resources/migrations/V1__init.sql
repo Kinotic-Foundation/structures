@@ -48,7 +48,10 @@ CREATE TABLE IF NOT EXISTS struct_structure (
 );
 
 -- Reindex data from namespace index to struct_application index
-REINDEX namespace INTO struct_application WITH (SKIP_IF_NO_SOURCE == TRUE, WAIT == TRUE);
+REINDEX namespace INTO struct_application 
+WITH (SCRIPT == 'ctx._source.enableGraphQL = true; ctx._source.enableOpenAPI = true;',
+      SKIP_IF_NO_SOURCE == TRUE, 
+      WAIT == TRUE);
 
 -- Reindex data from named_query_service_definition index to struct_named_query_service_definition index
 REINDEX named_query_service_definition INTO struct_named_query_service_definition 
