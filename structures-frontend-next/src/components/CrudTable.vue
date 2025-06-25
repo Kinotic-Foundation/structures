@@ -253,9 +253,7 @@ export default toNative(CrudTable)
         <Button
           v-if="editable && !disableModifications && isShowAddNew"
           label="Add New"
-          @click="addItem"
-          severity="secondary"
-          class="!bg-[#3651ED] !text-white hover:!bg-[#274bcc]" />
+          @click="addItem" />
       </template>
     </Toolbar>
 

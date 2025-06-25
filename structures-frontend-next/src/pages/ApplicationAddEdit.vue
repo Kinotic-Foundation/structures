@@ -5,7 +5,7 @@
       <div class="mb-4">
         <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
         <InputText id="description" v-model="entity.description"
-          class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+          class="w-full p-2 border rounded-m"
           placeholder="Enter description" />
       </div>
     </template>
