@@ -13,7 +13,8 @@ import { ObjectC3Type } from '@kinotic/continuum-idl'
 import { createStructureTaskBuilder } from './CreateStructureTaskBuilder'
 
 export class EcommerceTaskFactory {
-    private readonly namespace = 'ecommerce'
+    private readonly applicaitonId = 'ecommerce'
+    private readonly projectId = 'ecommerce_default'
     private readonly taskBuilder: CreateStructureTaskBuilder
     private entityDefinitions: Map<string, ObjectC3Type> = new Map()
     private customerService?: IEntityService<Customer>
@@ -31,7 +32,7 @@ export class EcommerceTaskFactory {
             {
                 name: () => 'Create Ecommerce Namespace',
                 execute: async () => {
-                    await Structures.getNamespaceService().createNamespaceIfNotExist(this.namespace, 'Ecommerce Domain')
+                    await Structures.getApplicationService().createApplicationIfNotExist(this.applicaitonId, 'Ecommerce Domain')
                 }
             },
             // Then load entity definitions
@@ -39,7 +40,7 @@ export class EcommerceTaskFactory {
                 name: () => 'Load Ecommerce Entity Definitions',
                 execute: async () => {
                     const loader = new EntityDefinitionLoader(
-                        this.namespace,
+                        this.applicaitonId,
                         path.join(__dirname, '../../entity/domain/ecommerce'),
                         path.join(__dirname, '../../services/ecommerce')
                     )
@@ -49,7 +50,8 @@ export class EcommerceTaskFactory {
             },
             // Then create structures
             this.taskBuilder.buildTask({
-                namespace: this.namespace,
+                applicationId: this.applicaitonId,
+                projectId: this.projectId,
                 name: 'Customer',
                 description: 'Customer information and preferences',
                 entityDefinitionSupplier: () => this.entityDefinitions.get('customer')!,
@@ -58,7 +60,8 @@ export class EcommerceTaskFactory {
                 }
             }),
             this.taskBuilder.buildTask({
-                namespace: this.namespace,
+                applicationId: this.applicaitonId,
+                projectId: this.projectId,
                 name: 'Product',
                 description: 'Product catalog information',
                 entityDefinitionSupplier: () => this.entityDefinitions.get('product')!,
@@ -67,7 +70,8 @@ export class EcommerceTaskFactory {
                 }
             }),
             this.taskBuilder.buildTask({
-                namespace: this.namespace,
+                applicationId: this.applicaitonId,
+                projectId: this.projectId,
                 name: 'ProductReview',
                 description: 'Product reviews and ratings',
                 entityDefinitionSupplier: () => this.entityDefinitions.get('productreview')!,
@@ -76,7 +80,8 @@ export class EcommerceTaskFactory {
                 }
             }),
             this.taskBuilder.buildTask({
-                namespace: this.namespace,
+                applicationId: this.applicaitonId,
+                projectId: this.projectId,
                 name: 'Purchase',
                 description: 'Purchase orders and transactions',
                 entityDefinitionSupplier: () => this.entityDefinitions.get('purchase')!,

@@ -3,7 +3,8 @@ import { IStructureService, IEntityService, Structures, Structure } from '@kinot
 import { ObjectC3Type } from '@kinotic/continuum-idl'
 
 export interface CreateStructureTaskConfig {
-    namespace: string
+    applicationId: string
+    projectId: string
     name: string
     description: string
     entityDefinitionSupplier: () => ObjectC3Type
@@ -22,14 +23,15 @@ export class CreateStructureTaskBuilder {
     return {
             name: () => `Create ${config.name} Structure`,
             execute: async () => {
-                const structureId = `${config.namespace}.${config.name.toLowerCase()}`
+                const structureId = `${config.applicationId}.${config.name.toLowerCase()}`
                 const existingStructure = await this.structureService.findById(structureId)
                 
                 if (!existingStructure) {
                     const entityDefinition = config.entityDefinitionSupplier()
                     
                     const structure = new Structure(
-                        config.namespace,
+                        config.applicationId,
+                        config.projectId,
                         config.name,
                         entityDefinition,
                         config.description
@@ -43,7 +45,7 @@ export class CreateStructureTaskBuilder {
                 }
                 
                 if (config.onServiceCreated) {
-                    const service = Structures.createEntityService(config.namespace, config.name)
+                    const service = Structures.createEntityService(config.applicationId, config.name)
                     config.onServiceCreated(service)
                 }
             }
