@@ -66,7 +66,8 @@ WITH (SCRIPT == 'ctx._source.applicationId = ctx._source.id;
                  ctx._source.name = "Default"; 
                  ctx._source.description = "Default project"; 
                  ctx._source.sourceOfTruth = "TYPESCRIPT"; 
-                 ctx._source.updated = new Date().getTime();', 
+                 ctx._source.updated = new Date().getTime();',
+      SKIP_IF_NO_SOURCE == TRUE,
       WAIT == TRUE);
 
 -- Reindex data from structures index to struct_structure table
