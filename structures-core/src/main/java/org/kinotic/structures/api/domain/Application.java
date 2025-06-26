@@ -19,9 +19,9 @@ public class Application implements Identifiable<String> {
 
     private Date updated = null;
 
-    private boolean enableGraphQL = false;
+    private boolean enableGraphQL = true;
 
-    private boolean enableOpenAPI = false;
+    private boolean enableOpenAPI = true;
 
     public Application(String id, String description) {
         this.id = id;
