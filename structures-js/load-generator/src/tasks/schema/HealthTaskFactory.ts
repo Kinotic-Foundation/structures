@@ -1,5 +1,5 @@
 import { ITask } from "../ITask"
-import { IEntityService } from '@kinotic/structures-api'
+import { IEntityService, Project, ProjectType } from '@kinotic/structures-api'
 import { Structures } from '@kinotic/structures-api'
 import { Patient } from '../../entity/domain/health/Patient'
 import { Provider } from '../../entity/domain/health/Provider'
@@ -15,7 +15,7 @@ import path from 'path'
 
 export class HealthTaskFactory {
     private readonly applicationId = 'healthcare'
-    private readonly projectId = 'healthcare_default'
+    private projectId = ''
     private readonly taskBuilder: CreateStructureTaskBuilder
     private entityDefinitions: Map<string, ObjectC3Type> = new Map()
     private patientService?: IEntityService<Patient>
@@ -35,6 +35,10 @@ export class HealthTaskFactory {
                 name: () => 'Create Health Namespace',
                 execute: async () => {
                     await Structures.getApplicationService().createApplicationIfNotExist(this.applicationId, 'Healthcare Domain')
+                    let project = new Project(null, this.applicationId, 'Main Project', 'Healthcare Main Project')
+                    project.sourceOfTruth = ProjectType.TYPESCRIPT
+                    project = await Structures.getProjectService().createProjectIfNotExist(project)
+                    this.projectId = project.id!
                 }
             },
             // Then load entity definitions
