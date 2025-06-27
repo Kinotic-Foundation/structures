@@ -25,7 +25,6 @@
 
                     <div>
                         <label class="block text-sm font-semibold text-[#101010] mb-2">Source of truth</label>
-
                         <div class="p-1 bg-[#F4F5F9] rounded-xl w-full flex gap-2">
                             <button type="button" @click="form.source = 'GUI'"
                                 class="w-1/2 text-sm font-bold py-[10px] rounded-lg transition" :class="form.source === 'GUI'
@@ -59,7 +58,13 @@
                         class="px-[10px] py-[7px] rounded-lg text-sm bg-[#F0F1F5] text-[#4F5159]">
                         Cancel
                     </button>
-                    <button type="submit" class="px-[10px] py-[7px] bg-[#3651ED]/70 text-white rounded-lg text-sm">
+                    <button type="submit" :disabled="loading"
+                        class="px-[10px] py-[7px] bg-[#3651ED]/70 text-white rounded-lg text-sm flex items-center gap-2">
+                        <svg v-if="loading" class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                            </circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                        </svg>
                         Create project
                     </button>
                 </div>
@@ -69,7 +74,9 @@
 </template>
 
 <script lang="ts">
-import { Component, Vue, Prop, Emit } from 'vue-facing-decorator'
+import { Component, Vue, Prop } from 'vue-facing-decorator'
+import { Structures, Project, ProjectType } from '@kinotic/structures-api'
+import { APPLICATION_STATE } from '@/states/IApplicationState'
 
 interface ProjectForm {
     name: string
@@ -89,16 +96,57 @@ export default class NewProjectSidebar extends Vue {
         language: ''
     }
 
-    @Emit('close')
-    handleClose(): void {
-        this.resetForm()
+    loading = false
+
+    async handleSubmit(): Promise<void> {
+        this.loading = true
+        try {
+            const app = APPLICATION_STATE.currentApplication
+            if (!app) {
+                throw new Error('No current application selected')
+            }
+
+            const project = new Project(
+                null,
+                app.id,
+                this.form.name,
+                this.form.description
+            )
+
+            if (this.form.source === 'GUI') {
+                project.sourceOfTruth = ProjectType.GUI
+            } else if (this.form.source === 'Code') {
+                switch (this.form.language) {
+                    case 'typescript':
+                        project.sourceOfTruth = ProjectType.TYPESCRIPT
+                        break
+                    case 'javascript':
+                        project.sourceOfTruth = ProjectType.JAVASCRIPT
+                        break
+                    case 'python':
+                        project.sourceOfTruth = ProjectType.PYTHON
+                        break
+                    default:
+                        throw new Error('Please select a language for Code projects.')
+                }
+            }
+
+            const createdProject = await Structures.getProjectService().create(project)
+
+            this.$toast?.success?.('Project created successfully.')
+            this.resetForm()
+            this.$emit('submit', createdProject) // 🚀 Emit the created project back
+        } catch (error) {
+            console.error('[NewProjectSidebar] Failed to create project:', error)
+            this.$toast?.error?.('Failed to create project.')
+        } finally {
+            this.loading = false
+        }
     }
 
-    @Emit('submit')
-    handleSubmit(): ProjectForm {
-        const data = { ...this.form }
+    handleClose(): void {
         this.resetForm()
-        return data
+        this.$emit('close')
     }
 
     private resetForm(): void {

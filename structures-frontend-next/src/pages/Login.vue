@@ -37,7 +37,7 @@
 
         <Button
           label="Login"
-          class="text-white rounded-[10px] max-h-[56px] !bg-[#3651ED] !py-[18px] !w-full !text-base hover:bg-[#274bcc] border-none"
+          class="rounded-[10px] max-h-[56px] !py-[18px] !w-full !text-base"
           :loading="loading"
           @click="handleLogin"
         />

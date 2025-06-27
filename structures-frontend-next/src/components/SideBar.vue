@@ -1,5 +1,6 @@
 <script setup>
 
+
 </script>
 <template>
     <div class="w-[256px] h-screen px-7 py-8 bg-[#F5F7FA] flex flex-col">

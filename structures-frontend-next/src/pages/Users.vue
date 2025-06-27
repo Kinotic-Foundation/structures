@@ -43,7 +43,7 @@
 import { Component, Vue } from 'vue-facing-decorator'
 import CrudTable from '@/components/CrudTable.vue'
 import { type Identifiable } from '@kinotic/continuum-client'
-import { Structures, type INamespaceService } from '@kinotic/structures-api'
+import { Structures, type IApplicationService } from '@kinotic/structures-api'
 import { mdiGraphql, mdiApi } from '@mdi/js'
 
 interface CrudHeader {
@@ -62,7 +62,7 @@ export default class Users extends Vue {
     { field: 'surname', header: 'Surname', sortable: false },
   ]
 
-  dataSource: INamespaceService = Structures.getNamespaceService()
+  dataSource: IApplicationService = Structures.getApplicationService()
 
   icons = {
     graph: mdiGraphql,
