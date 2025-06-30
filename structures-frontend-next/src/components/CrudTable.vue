@@ -33,6 +33,11 @@ interface CrudHeader {
   header: string
   sortable?: boolean
 }
+interface DescriptiveIdentifiable extends Identifiable<string> {
+    description?: string
+    name?: string
+    [key: string]: any
+}
 
 @Component
 class CrudTable extends Vue {
@@ -47,7 +52,7 @@ class CrudTable extends Vue {
     InputGroupAddon
   }
 
-  @Prop({ required: true }) dataSource!: IDataSource<Identifiable<string>>
+  @Prop({ required: true }) dataSource!: IDataSource<DescriptiveIdentifiable>
   @Prop({ required: true }) headers!: CrudHeader[]
   @Prop({ default: false }) multiSort!: boolean
   @Prop({ default: true }) mustSort!: boolean
@@ -60,7 +65,7 @@ class CrudTable extends Vue {
   @Prop({ default: 'Add new' }) createNewButtonText!: string
   @Prop({ default: false }) enableViewSwitcher!: boolean
 
-  items: Identifiable<string>[] = []
+  items: DescriptiveIdentifiable[] = []
   totalItems = 0
   loading = false
   finishedInitialLoad = false
@@ -271,7 +276,7 @@ export default toNative(CrudTable)
       <div v-if="isColumnView" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
       <div
         v-for="(item, index) in items"
-        :key="item.id"
+        :key="item.id || index"
         class="bg-white rounded-xl p-4 shadow-sm h-[152px] border border-gray-200 flex flex-col justify-between cursor-pointer hover:shadow-md transition"
         @click="handleCardClick(item, index)"
       >

@@ -4,7 +4,7 @@
             <div class="flex justify-between items-center border-b border-[#E6E7EB] p-4">
                 <div class="flex items-center gap-3">
                     <img src="@/assets/action-plus-icon.svg" />
-                    <h2 class="text-lg font-semibold text-[#101010]">New project</h2>
+                    <h2 class="text-lg font-semibold text-[#101010]">New Project</h2>
                 </div>
                 <button @click="handleClose" class="w-[11px] h-[11px] cursor-pointer">
                     <img src="@/assets/close-icon.svg" />
@@ -22,29 +22,24 @@
                         <textarea v-model="form.description" class="w-full p-2 border border-[#D2D3D9] rounded-lg"
                             rows="3" placeholder="Optional description" />
                     </div>
-
                     <div>
                         <label class="block text-sm font-semibold text-[#101010] mb-2">Source of truth</label>
                         <div class="p-1 bg-[#F4F5F9] rounded-xl w-full flex gap-2">
                             <button type="button" @click="form.source = 'GUI'"
-                                class="w-1/2 text-sm font-bold py-[10px] rounded-lg transition" :class="form.source === 'GUI'
-                                    ? 'bg-white text-[#101010]'
-                                    : 'bg-transparent text-[#5F6165]'">
+                                class="w-1/2 text-sm font-bold py-[10px] rounded-lg transition"
+                                :class="form.source === 'GUI' ? 'bg-white text-[#101010]' : 'bg-transparent text-[#5F6165]'">
                                 GUI
                             </button>
                             <button type="button" @click="form.source = 'Code'"
-                                class="w-1/2 text-sm font-bold py-[10px] rounded-lg transition" :class="form.source === 'Code'
-                                    ? 'bg-white text-[#101010]'
-                                    : 'bg-transparent text-[#5F6165]'">
+                                class="w-1/2 text-sm font-bold py-[10px] rounded-lg transition"
+                                :class="form.source === 'Code' ? 'bg-white text-[#101010]' : 'bg-transparent text-[#5F6165]'">
                                 Code
                             </button>
                         </div>
                     </div>
-
                     <div v-if="form.source === 'Code'">
                         <label class="block text-sm font-semibold text-[#101010] mb-2">Language</label>
-                        <select v-model="form.language"
-                            class="w-full p-2 border border-[#D2D3D9] rounded-lg text-sm text-[#101010]">
+                        <select v-model="form.language" class="w-full p-2 border border-[#D2D3D9] rounded-lg text-sm text-[#101010]">
                             <option value="" disabled>Select language</option>
                             <option value="typescript">TypeScript</option>
                             <option value="javascript">JavaScript</option>
@@ -55,17 +50,15 @@
 
                 <div class="flex justify-end gap-2 mt-6">
                     <button type="button" @click="handleClose"
-                        class="px-[10px] py-[7px] rounded-lg text-sm bg-[#F0F1F5] text-[#4F5159]">
-                        Cancel
-                    </button>
+                        class="px-[10px] py-[7px] rounded-lg text-sm bg-[#F0F1F5] text-[#4F5159]">Cancel</button>
                     <button type="submit" :disabled="loading"
                         class="px-[10px] py-[7px] bg-[#3651ED]/70 text-white rounded-lg text-sm flex items-center gap-2">
                         <svg v-if="loading" class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
-                            </circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor"
+                                d="M4 12a8 8 0 018-8v8H4z"></path>
                         </svg>
-                        Create project
+                        Create Project
                     </button>
                 </div>
             </form>
@@ -102,43 +95,41 @@ export default class NewProjectSidebar extends Vue {
         this.loading = true
         try {
             const app = APPLICATION_STATE.currentApplication
-            if (!app) {
-                throw new Error('No current application selected')
-            }
+            if (!app) throw new Error('No current application selected')
 
-            const project = new Project(
-                null,
-                app.id,
-                this.form.name,
-                this.form.description
-            )
+            const project = new Project(null, app.id, this.form.name, this.form.description)
 
             if (this.form.source === 'GUI') {
                 project.sourceOfTruth = ProjectType.GUI
             } else if (this.form.source === 'Code') {
                 switch (this.form.language) {
-                    case 'typescript':
-                        project.sourceOfTruth = ProjectType.TYPESCRIPT
-                        break
-                    case 'javascript':
-                        project.sourceOfTruth = ProjectType.JAVASCRIPT
-                        break
-                    case 'python':
-                        project.sourceOfTruth = ProjectType.PYTHON
-                        break
-                    default:
-                        throw new Error('Please select a language for Code projects.')
+                    case 'typescript': project.sourceOfTruth = ProjectType.TYPESCRIPT; break
+                    case 'javascript': project.sourceOfTruth = ProjectType.JAVASCRIPT; break
+                    case 'python': project.sourceOfTruth = ProjectType.PYTHON; break
+                    default: throw new Error('Please select a language for Code projects.')
                 }
             }
 
             const createdProject = await Structures.getProjectService().create(project)
 
-            this.$toast?.success?.('Project created successfully.')
+            this.$toast.add({
+                severity: 'success',
+                summary: 'Success',
+                detail: 'Project successfully added',
+                life: 3000
+            })
+
             this.resetForm()
-            this.$emit('submit', createdProject) // 🚀 Emit the created project back
+            this.$emit('submit', createdProject)
+
         } catch (error) {
             console.error('[NewProjectSidebar] Failed to create project:', error)
-            this.$toast?.error?.('Failed to create project.')
+            this.$toast.add({
+                severity: 'error',
+                summary: 'Error',
+                detail: 'Failed to create project.',
+                life: 3000
+            })
         } finally {
             this.loading = false
         }
@@ -165,19 +156,15 @@ export default class NewProjectSidebar extends Vue {
 .slide-leave-active {
     transition: transform 0.3s ease;
 }
-
 .slide-enter-from {
     transform: translateX(100%);
 }
-
 .slide-enter-to {
     transform: translateX(0%);
 }
-
 .slide-leave-from {
     transform: translateX(0%);
 }
-
 .slide-leave-to {
     transform: translateX(100%);
 }

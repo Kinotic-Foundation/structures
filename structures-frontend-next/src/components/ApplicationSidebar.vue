@@ -29,6 +29,7 @@
             <textarea
               v-model="form.description"
               class="w-full p-2 border border-[#D2D3D9] rounded-lg"
+              rows="3"
             />
           </div>
           <div>
@@ -120,8 +121,7 @@
 
 <script lang="ts">
 import { Component, Vue, Prop } from 'vue-facing-decorator'
-import { Structures } from '@kinotic/structures-api'
-import { APPLICATION_STATE } from '@/states/IApplicationState'
+import { Structures, type Application } from '@kinotic/structures-api'
 
 interface ApplicationForm {
   name: string
@@ -143,36 +143,46 @@ export default class ApplicationSidebar extends Vue {
 
   loading = false
 
+  private sanitizeId(name: string): string {
+    let sanitized = name.trim()
+      .replace(/\s+/g, '-')                  // Replace spaces with dashes
+      .replace(/[^a-zA-Z0-9._-]/g, '')       // Remove invalid characters
+
+    if (!/^[a-zA-Z]/.test(sanitized)) {
+      sanitized = 'app-' + sanitized
+    }
+    return sanitized.toLowerCase()
+  }
+
   async handleSubmit(): Promise<void> {
     this.loading = true
     try {
-      const application = {
-        id: this.form.name,
+      const applicationData: Application = {
+        id: this.sanitizeId(this.form.name),
         description: this.form.description,
         enableGraphQL: this.form.graphql,
-        enableOpenAPI: this.form.openapi
+        enableOpenAPI: this.form.openapi,
+        updated: null
       }
+      const createdApplication: Application = await Structures.getApplicationService().create(applicationData)
 
-      await Structures.getApplicationService().create(application)
+      this.$toast.add({
+        severity: 'success',
+        summary: 'Success',
+        detail: 'Application successfully added',
+        life: 3000
+      })
 
-      await APPLICATION_STATE.loadAllApplications()
-
-    this.$toast.add({
-      severity: 'success',
-      summary: 'Success',
-      detail: "Application successfully added",
-      life: 3000
-    })
       this.resetForm()
-      this.$emit('close')
+      this.$emit('submit', createdApplication)
     } catch (error) {
       console.error('[ApplicationSidebar] Failed to create application:', error)
-    this.$toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: "Failed to create application.",
-      life: 3000
-    })
+      this.$toast.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'Failed to create application. Please check name validity.',
+        life: 3000
+      })
     } finally {
       this.loading = false
     }
