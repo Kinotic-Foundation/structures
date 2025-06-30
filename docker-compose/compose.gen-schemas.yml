@@ -20,7 +20,8 @@ services:
       - MAX_REQUESTS_PER_SECOND=100 
       
       # OpenTelemetry settings
-      - OTEL_EXPORTER_TYPE=CONSOLE
+      - OTEL_EXPORTER_TYPE=OTLP
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
     depends_on:
       structures-server:
         condition: service_healthy

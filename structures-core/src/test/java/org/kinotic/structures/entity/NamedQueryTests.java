@@ -151,16 +151,16 @@ public class NamedQueryTests extends ElasticsearchTestBase {
 
     private NamedQueriesDefinition createNamedQuery(Structure structure, List<FunctionDefinition> queries){
 
-        return new NamedQueriesDefinition().setNamespace(structure.getNamespace())
+        return new NamedQueriesDefinition().setApplicationId(structure.getApplicationId())
                                            .setStructure(structure.getName())
-                                           .setId((structure.getNamespace() + "." + structure.getName()).toLowerCase())
+                                           .setId((structure.getApplicationId() + "." + structure.getName()).toLowerCase())
                                            .setNamedQueries(queries);
     }
 
     @NotNull
     private static FunctionDefinition createCountAll(Structure structure) {
         ObjectC3Type resultType = new ObjectC3Type().setName("Count")
-                                                    .setNamespace(structure.getNamespace())
+                                                    .setNamespace(structure.getApplicationId())
                                                     .addProperty("count", new LongC3Type());
 
         QueryDecorator queryDecorator = new QueryDecorator()
@@ -174,7 +174,7 @@ public class NamedQueryTests extends ElasticsearchTestBase {
     @NotNull
     private static FunctionDefinition createCountByLastName(Structure structure) {
         ObjectC3Type resultType = new ObjectC3Type().setName("CountByLastName")
-                                                    .setNamespace(structure.getNamespace())
+                                                    .setNamespace(structure.getApplicationId())
                                                     .addProperty("count", new LongC3Type())
                                                     .addProperty("lastName", new StringC3Type());
 

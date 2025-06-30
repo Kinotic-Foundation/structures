@@ -1,6 +1,5 @@
 <script setup>
 import BaseContainer from '~/components/BaseContainer.vue'
-import Card from 'primevue/card'
 import { ref, onMounted } from 'vue'
 
 const colorMode = useColorMode()
@@ -52,7 +51,7 @@ const features = [
         <div v-for="(f, i) in features" :key="i"
           class="border border-[#EDEEF2] dark:border-[#2B2A32] bg-transparent xl:p-8 p-5 rounded-3xl">
           <div class="flex xl:gap-7 gap-4">
-            <img v-if="isMounted" :src="`/website/icons/${colorMode.value === 'dark' ? f.icon : f.iconLight}`"
+            <img v-if="isMounted" :src="`icons/${colorMode.value === 'dark' ? f.icon : f.iconLight}`"
               :alt="f.title" class="xl:w-[56px] xl:h-[56px] w-[52px] h-[52px]" />
             <div class="flex flex-col">
               <h3

@@ -3,7 +3,7 @@
     ref="iframeRef"
     src="/graphiql.html"
     width="100%"
-    height="600"
+    height="100%"
     frameborder="0"
   ></iframe>
 </template>

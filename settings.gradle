@@ -8,5 +8,3 @@ rootDir.listFiles().each {
     }
 }
 
-//include 'structures-js:structures-data'
-//include 'structures-js:structures-cli'

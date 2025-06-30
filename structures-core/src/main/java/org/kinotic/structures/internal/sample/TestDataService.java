@@ -13,7 +13,7 @@ import org.kinotic.continuum.idl.api.schema.StringC3Type;
 import org.kinotic.continuum.internal.utils.ContinuumUtil;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.domain.idl.decorators.*;
-import org.kinotic.structures.api.services.NamespaceService;
+import org.kinotic.structures.api.services.ApplicationService;
 import org.kinotic.structures.api.services.StructureService;
 import org.kinotic.structures.internal.utils.StructuresUtil;
 import org.springframework.core.io.ResourceLoader;
@@ -35,17 +35,17 @@ public class TestDataService {
     private static final String PEOPLE_KEY = "people";
     private static final String PEOPLE_WITH_ID_KEY = "people-with-id";
 
-    private final NamespaceService namespaceService;
+    private final ApplicationService applicationService;
     private final StructureService structureService;
 
     private final AsyncLoadingCache<String, List<Person>> peopleCache;
 
-    public TestDataService(NamespaceService namespaceService,
+    public TestDataService(ApplicationService applicationService,
                            StructureService structureService,
                            ResourceLoader resourceLoader,
                            ObjectMapper objectMapper) {
 
-        this.namespaceService = namespaceService;
+        this.applicationService = applicationService;
         this.structureService = structureService;
 
         peopleCache = Caffeine.newBuilder()
@@ -94,14 +94,14 @@ public class TestDataService {
     public CompletableFuture<Structure> createCarStructure(String structureNameSuffix) {
         Structure structure = new Structure();
         structure.setName("Car"+(structureNameSuffix != null ? structureNameSuffix : ""));
-        structure.setNamespace("org.kinotic.sample");
+        structure.setApplicationId("org.kinotic.sample");
         structure.setDescription("Defines a Car");
 
         ObjectC3Type carType = createCarSchema(MultiTenancyType.SHARED);
 
         structure.setEntityDefinition(carType);
 
-        return namespaceService.createNamespaceIfNotExist("org.kinotic.sample", "Sample namespace")
+        return applicationService.createApplicationIfNotExist("org.kinotic.sample", "Sample application")
                                .thenCompose(v -> structureService.create(structure)
                                                                  .thenCompose(saved -> structureService.publish(saved.getId())
                                                                                                        .thenApply(published -> saved)));
@@ -177,14 +177,14 @@ public class TestDataService {
     public CompletableFuture<Structure> createPersonStructure(String structureNameSuffix) {
         Structure structure = new Structure();
         structure.setName("Person"+(structureNameSuffix != null ? structureNameSuffix : ""));
-        structure.setNamespace("org.kinotic.sample");
+        structure.setApplicationId("org.kinotic.sample");
         structure.setDescription("Defines a Person");
 
         ObjectC3Type personType = createPersonSchema(MultiTenancyType.SHARED);
 
         structure.setEntityDefinition(personType);
 
-        return namespaceService.createNamespaceIfNotExist("org.kinotic.sample", "Sample namespace")
+        return applicationService.createApplicationIfNotExist("org.kinotic.sample", "Sample application")
                                .thenCompose(v -> structureService.create(structure)
                                                                  .thenCompose(saved -> structureService.publish(saved.getId())
                                                                                                        .thenApply(published -> saved)));
