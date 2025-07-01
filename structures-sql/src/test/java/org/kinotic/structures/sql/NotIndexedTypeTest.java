@@ -76,7 +76,8 @@ class NotIndexedTypeTest extends ElasticsearchSqlTestBase {
                 age INTEGER NOT INDEXED,
                 score DOUBLE NOT INDEXED,
                 active BOOLEAN NOT INDEXED,
-                created_at DATE NOT INDEXED
+                created_at DATE NOT INDEXED,
+                config JSON NOT INDEXED
             );
             """;
 
@@ -104,6 +105,7 @@ class NotIndexedTypeTest extends ElasticsearchSqlTestBase {
         assertNotNull(properties.get("score"), "Property 'score' should exist");
         assertNotNull(properties.get("active"), "Property 'active' should exist");
         assertNotNull(properties.get("created_at"), "Property 'created_at' should exist");
+        assertNotNull(properties.get("config"), "Property 'config' should exist");
         
         // Note: We can't easily verify index=false and docValues=false from the mapping response
         // without parsing the raw mapping JSON, but the fact that the fields exist and the

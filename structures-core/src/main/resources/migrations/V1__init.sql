@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS struct_named_query_service_definition (
     applicationId KEYWORD,
     projectId KEYWORD,
     structure KEYWORD,
-    namedQueries JSON
+    namedQueries JSON NOT INDEXED
 ); 
 
 -- Create the project table if it does not exist
@@ -35,16 +35,16 @@ CREATE TABLE IF NOT EXISTS struct_structure (
     description TEXT,
     multiTenancyType KEYWORD,
     entityType KEYWORD,
-    entityDefinition KEYWORD NOT INDEXED,
+    entityDefinition JSON NOT INDEXED,
     created DATE,
     updated DATE,
     published BOOLEAN,
     publishedTimestamp DATE,
     itemIndex KEYWORD,
-    decoratedProperties JSON,
-    versionFieldName KEYWORD,
-    tenantIdFieldName KEYWORD,
-    timeReferenceFieldName KEYWORD
+    decoratedProperties JSON NOT INDEXED,
+    versionFieldName KEYWORD NOT INDEXED,
+    tenantIdFieldName KEYWORD NOT INDEXED,
+    timeReferenceFieldName KEYWORD NOT INDEXED
 );
 
 -- Reindex data from namespace index to struct_application index

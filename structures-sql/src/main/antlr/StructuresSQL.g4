@@ -143,7 +143,7 @@ type
     | DOUBLE (NOT INDEXED)?
     | BOOLEAN (NOT INDEXED)?
     | DATE (NOT INDEXED)?
-    | JSON
+    | JSON (NOT INDEXED)?
     | BINARY
     | GEO_POINT
     | GEO_SHAPE

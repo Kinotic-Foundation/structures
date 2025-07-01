@@ -17,6 +17,7 @@
 
 package org.kinotic.structures.api.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -108,14 +109,17 @@ public class Structure implements Identifiable<String> {
         return new HashCodeBuilder(17, 37).append(id).toHashCode();
     }
 
+    @JsonIgnore
     public boolean isOptimisticLockingEnabled(){
         return versionFieldName != null;
     }
 
+    @JsonIgnore
     public boolean isMultiTenantSelectionEnabled() {
         return tenantIdFieldName != null;
     }
 
+    @JsonIgnore
     public boolean isStream() {
         return timeReferenceFieldName != null;
     }

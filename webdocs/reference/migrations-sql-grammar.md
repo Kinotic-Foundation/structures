@@ -171,7 +171,8 @@ Where clauses are used in `UPDATE` and `DELETE` statements.
 | BOOLEAN NOT INDEXED | boolean (not indexed, no doc_values) |
 | DATE        | date                   |
 | DATE NOT INDEXED | date (not indexed, no doc_values) |
-| JSON        | object                 |
+| JSON        | object (flattened)     |
+| JSON NOT INDEXED | object (not indexed) |
 | BINARY      | binary                 |
 | GEO_POINT   | geo_point              |
 | GEO_SHAPE   | geo_shape              |

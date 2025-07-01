@@ -1,7 +1,9 @@
 package org.kinotic.structures.sql.executor.executors;
 
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
+import co.elastic.clients.elasticsearch._types.mapping.DynamicMapping;
 import co.elastic.clients.elasticsearch._types.mapping.Property;
+import co.elastic.clients.elasticsearch.indices.StorageType;
 import lombok.RequiredArgsConstructor;
 import org.kinotic.structures.sql.domain.Statement;
 import org.kinotic.structures.sql.domain.statements.CreateTableStatement;
@@ -52,7 +54,13 @@ public class CreateTableStatementExecutor implements StatementExecutor<CreateTab
 
                 return client.indices().create(c -> c
                     .index(statement.tableName())
+                    .settings(s -> s
+                            .numberOfShards("3")
+                            .numberOfReplicas("2")
+                            .store(st -> st.type(StorageType.Fs))
+                    )
                     .mappings(m -> m
+                        .dynamic(DynamicMapping.Strict)
                         .properties(properties)
                     )
                 ).thenApply(response -> null);
