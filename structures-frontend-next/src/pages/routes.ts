@@ -34,6 +34,22 @@ const pageRoutes: RouteRecordRaw[] = [
     ]
   },
   {
+    path: '/application/:name',
+    component: () => import('@/layouts/LayoutForPage.vue'),
+    meta: {
+      showInMainNav: false,
+      label: 'Application Details',
+      icon: 'microchip.svg'
+    } as RouteMeta,
+    children: [
+      {
+        name: 'application-details',
+        path: '',
+        component: () => import('@/pages/ApplicationDetails.vue'),
+      }
+    ]
+  },
+  {
     path: '/projects',
     component: () => import('@/layouts/MainLayout.vue'),
     meta: {

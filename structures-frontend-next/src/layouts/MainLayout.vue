@@ -1,6 +1,6 @@
 <template>
-    <div class="relative flex h-screen bg-surface-0 dark:bg-surface-950 w-full">
-        <div id="app-sidebar" class="h-full hidden lg:block lg:sticky absolute left-0 top-0 z-50">
+    <div class="h-screen bg-surface-0 dark:bg-surface-950 w-full">
+        <!-- <div id="app-sidebar" class="h-full hidden lg:block lg:sticky absolute left-0 top-0 z-50">
             <div :class="[
                 isCollapsed ? 'w-[72px] px-3' : 'w-[258px] px-8',
                 'h-full flex flex-col py-6 transition-all duration-300 ease-in-out'
@@ -29,11 +29,12 @@
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="flex-1 flex flex-col gap-6 overflow-y-auto"
-        :style="[isCollapsed ? {'width' :'calc(100% - 72px)'}: {'width' :'calc(100% - 250px)'}]"
+        </div> -->
+        <Header />
+        <div class="py-10"
         >
-            <MainLayoutBreadcrumb separator-icon="pi pi-chevron-right" />
+        <!-- :style="[isCollapsed ? {'width' :'calc(100% - 72px)'}: {'width' :'calc(100% - 250px)'}]" -->
+            <!-- <MainLayoutBreadcrumb separator-icon="pi pi-chevron-right" /> -->
             <div class="flex-1 px-[33px] overflow-y-auto">
                 <router-view />
             </div>
@@ -42,14 +43,15 @@
 </template>
 
 <script setup lang="ts">
-import SideNav from '@/components/SideNav.vue'
-import { StructuresStates } from '@/states/index.js'
-import Avatar from 'primevue/avatar'
-import MainLayoutBreadcrumb from './MainLayoutBreadcrumb.vue'
-import { ref } from 'vue'
+// import SideNav from '@/components/SideNav.vue'
+import Header from '@/layouts/Header.vue'
+// import { StructuresStates } from '@/states/index.js'
+// import Avatar from 'primevue/avatar'
+// import MainLayoutBreadcrumb from './MainLayoutBreadcrumb.vue'
+// import { ref } from 'vue'
 
-const isCollapsed = ref(false)
+// const isCollapsed = ref(false)
 
-const applicationState = StructuresStates.getApplicationState()
+// const applicationState = StructuresStates.getApplicationState()
 
 </script>
