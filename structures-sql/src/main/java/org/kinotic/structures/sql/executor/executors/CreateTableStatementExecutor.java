@@ -48,7 +48,7 @@ public class CreateTableStatementExecutor implements StatementExecutor<CreateTab
 
                 Map<String, Property> properties = new HashMap<>();
                 statement.columns().forEach(column -> 
-                    properties.put(column.name(), TypeMapper.mapType(column.type())));
+                    properties.put(column.name(), TypeMapper.mapType(column)));
 
                 return client.indices().create(c -> c
                     .index(statement.tableName())

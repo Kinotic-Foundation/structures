@@ -30,7 +30,7 @@ public class AlterTableStatementExecutor implements StatementExecutor<AlterTable
     public CompletableFuture<Void> executeMigration(AlterTableStatement statement) {
         return client.indices().putMapping(m -> m
                 .index(statement.tableName())
-                .properties(statement.column().name(), TypeMapper.mapType(statement.column().type()))
+                .properties(statement.column().name(), TypeMapper.mapType(statement.column()))
         ).thenApply(response -> null);
     }
 

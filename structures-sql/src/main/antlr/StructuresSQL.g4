@@ -136,19 +136,19 @@ columnDefinition
 
 type
     : TEXT
-    | KEYWORD
-    | INTEGER
-    | LONG
-    | FLOAT
-    | DOUBLE
-    | BOOLEAN
-    | DATE
+    | KEYWORD (NOT INDEXED)?
+    | INTEGER (NOT INDEXED)?
+    | LONG (NOT INDEXED)?
+    | FLOAT (NOT INDEXED)?
+    | DOUBLE (NOT INDEXED)?
+    | BOOLEAN (NOT INDEXED)?
+    | DATE (NOT INDEXED)?
     | JSON
     | BINARY
     | GEO_POINT
     | GEO_SHAPE
-    | UUID
-    | DECIMAL
+    | UUID (NOT INDEXED)?
+    | DECIMAL (NOT INDEXED)?
     ;
 
 comment
@@ -174,6 +174,7 @@ FOR: 'FOR';
 FROM: 'FROM';
 IF: 'IF';
 INDEX: 'INDEX';
+INDEXED: 'INDEXED';
 INSERT: 'INSERT';
 INTO: 'INTO';
 LONG: 'LONG';

@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS struct_structure (
     description TEXT,
     multiTenancyType KEYWORD,
     entityType KEYWORD,
-    entityDefinition JSON,
+    entityDefinition KEYWORD NOT INDEXED,
     created DATE,
     updated DATE,
     published BOOLEAN,

@@ -1,6 +1,7 @@
 package org.kinotic.structures.sql.executor;
 
 import co.elastic.clients.elasticsearch._types.mapping.Property;
+import org.kinotic.structures.sql.domain.Column;
 import org.kinotic.structures.sql.domain.ColumnType;
 
 /**
@@ -9,22 +10,26 @@ import org.kinotic.structures.sql.domain.ColumnType;
  */
 public class TypeMapper {
 
-    public static Property mapType(ColumnType type) {
+    public static Property mapType(Column column) {
+        return mapType(column.type(), column.indexed());
+    }
+
+    private static Property mapType(ColumnType type, boolean indexed) {
         return switch (type) {
             case TEXT -> Property.of(p -> p.text(t -> t));
-            case KEYWORD -> Property.of(p -> p.keyword(k -> k));
-            case INTEGER -> Property.of(p -> p.integer(i -> i));
-            case LONG -> Property.of(p -> p.long_(l -> l));
-            case FLOAT -> Property.of(p -> p.float_(f -> f));
-            case DOUBLE -> Property.of(p -> p.double_(d -> d));
-            case BOOLEAN -> Property.of(p -> p.boolean_(b -> b));
-            case DATE -> Property.of(p -> p.date(d -> d));
+            case KEYWORD -> Property.of(p -> p.keyword(k -> indexed ? k : k.index(false).docValues(false)));
+            case INTEGER -> Property.of(p -> p.integer(i -> indexed ? i : i.index(false).docValues(false)));
+            case LONG -> Property.of(p -> p.long_(l -> indexed ? l : l.index(false).docValues(false)));
+            case FLOAT -> Property.of(p -> p.float_(f -> indexed ? f : f.index(false).docValues(false)));
+            case DOUBLE -> Property.of(p -> p.double_(d -> indexed ? d : d.index(false).docValues(false)));
+            case BOOLEAN -> Property.of(p -> p.boolean_(b -> indexed ? b : b.index(false).docValues(false)));
+            case DATE -> Property.of(p -> p.date(d -> indexed ? d : d.index(false).docValues(false)));
             case JSON -> Property.of(p -> p.flattened(f -> f));
             case BINARY -> Property.of(p -> p.binary(b -> b));
             case GEO_POINT -> Property.of(p -> p.geoPoint(gp -> gp));
             case GEO_SHAPE -> Property.of(p -> p.geoShape(gs -> gs));
-            case UUID -> Property.of(p -> p.keyword(k -> k));
-            case DECIMAL -> Property.of(p -> p.scaledFloat(sf -> sf));
+            case UUID -> Property.of(p -> p.keyword(k -> indexed ? k : k.index(false).docValues(false)));
+            case DECIMAL -> Property.of(p -> p.scaledFloat(sf -> indexed ? sf : sf.index(false).docValues(false)));
             default -> throw new IllegalArgumentException("Unsupported SQL type: " + type);
         };
     }
