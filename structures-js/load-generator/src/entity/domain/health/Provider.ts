@@ -7,7 +7,7 @@ import {
 import { Address } from './Address'
 import { ContactInfo } from './ContactInfo'
 import { Specialty } from './Specialty'
-import { Qualification } from './Qualification'
+import { Qualifications} from './Qualifications'
 
 @Entity(MultiTenancyType.SHARED)
 export class Provider {
@@ -15,7 +15,7 @@ export class Provider {
     public id: string | null = null
 
     @NotNull
-    public firstName!: string
+    public firstName!: string 
 
     @NotNull
     public lastName!: string
@@ -24,7 +24,7 @@ export class Provider {
 
     public specialties!: Specialty[]
 
-    public qualifications!: Qualification[]
+    public qualifications!: Qualifications
 
     public addresses!: Address[]
 
@@ -82,18 +82,10 @@ export class ProviderBuilder {
         return this
     }
 
-    withQualifications(qualifications: Qualification[]): ProviderBuilder {
+    withQualifications(qualifications: Qualifications): ProviderBuilder {
         this.provider.qualifications = qualifications
         return this
-    }
-
-    withQualification(qualification: Qualification): ProviderBuilder {
-        if (!this.provider.qualifications) {
-            this.provider.qualifications = []
-        }
-        this.provider.qualifications.push(qualification)
-        return this
-    }
+    }   
 
     withAddresses(addresses: Address[]): ProviderBuilder {
         this.provider.addresses = addresses
