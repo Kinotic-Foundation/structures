@@ -67,15 +67,6 @@ jreleaser {
                 enabled = true
                 groupId = 'org.kinotic'
                 artifactId = project.name
-                mainJar {
-                    path = 'build/libs/{{distributionName}}-{{projectVersion}}.jar'
-                }
-                javadocJar {
-                    path = 'build/libs/{{distributionName}}-{{projectVersion}}-javadoc.jar'
-                }
-                sourcesJar {
-                    path = 'build/libs/{{distributionName}}-{{projectVersion}}-sources.jar'
-                }
             }
         }
     }
