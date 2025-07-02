@@ -64,6 +64,8 @@ export default class ProjectList extends Vue {
                 tableRef.items.unshift(createdProject)
                 tableRef.totalItems += 1
             }
+            
+            APPLICATION_STATE.projectsCount += 1
 
         } catch (error) {
             console.error('[ProjectList] Refresh after project creation failed:', error)
