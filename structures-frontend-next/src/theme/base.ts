@@ -505,15 +505,15 @@ export default {
             },
             navigation: {
                 item: {
-                    focusBackground: "{surface.100}",
-                    activeBackground: "{surface.100}",
-                    color: "{text.color}",
+                    focusBackground: "{surface.50}",
+                    activeBackground: "{surface.50}",
+                    color: "{surface.500}",
                     focusColor: "{text.hover.color}",
                     activeColor: "{text.hover.color}",
                     icon: {
-                        color: "{surface.400}",
-                        focusColor: "{surface.500}",
-                        activeColor: "{surface.500}"
+                        color: "{surface.500}",
+                        focusColor: "{primary.color}",
+                        activeColor: "{primary.color}"
                     }
                 },
                 submenuLabel: {
@@ -564,8 +564,8 @@ export default {
                 filledBackground: "{surface.800}",
                 filledHoverBackground: "{surface.800}",
                 filledFocusBackground: "{surface.800}",
-                borderColor: "{surface.600}",
-                hoverBorderColor: "{surface.500}",
+                borderColor: "{surface.700}",
+                hoverBorderColor: "{surface.600}",
                 focusBorderColor: "{primary.color}",
                 invalidBorderColor: "{red.300}",
                 color: "{surface.0}",
@@ -580,7 +580,7 @@ export default {
                 shadow: "0 1px 2px 0 rgba(18, 18, 23, 0.05)"
             },
             text: {
-                color: "{surface.0}",
+                color: "{surface.100}",
                 hoverColor: "{surface.0}",
                 mutedColor: "{surface.400}",
                 hoverMutedColor: "{surface.300}"
