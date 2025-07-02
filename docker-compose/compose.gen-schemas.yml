@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   load-generator:
     image: kinotic/structures-load-generator:latest

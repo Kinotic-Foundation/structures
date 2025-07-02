@@ -50,7 +50,7 @@ public class DefaultProjectService extends AbstractCrudService<Project> implemen
         Validate.notNull(project.getApplicationId(), "Project applicationId cannot be null");
 
         if(project.getId() == null){
-            String projectId = project.getApplicationId()+"_"+slg.slugify(project.getName()).toLowerCase();
+            String projectId = (project.getApplicationId()+"_"+slg.slugify(project.getName())).toLowerCase();
             project.setId(projectId);
         }
         // Sanity check
@@ -92,7 +92,8 @@ public class DefaultProjectService extends AbstractCrudService<Project> implemen
         Validate.notNull(project.getName(), "Project name cannot be null");
 
         if(project.getId() == null){
-            project.setId(project.getApplicationId()+"_"+slg.slugify(project.getName()));
+            String projectId = (project.getApplicationId()+"_"+slg.slugify(project.getName())).toLowerCase();
+            project.setId(projectId);
         }
 
         project.setUpdated(new Date());

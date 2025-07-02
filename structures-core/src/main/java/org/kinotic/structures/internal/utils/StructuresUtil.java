@@ -54,7 +54,7 @@ public class StructuresUtil {
         if (structureName == null
                 || !IdentifierNamePattern.matcher(structureName).matches()){
             throw new IllegalArgumentException("Structure Name Invalid, first character must be a " +
-                                               "letter, number or underscore. And contain only letters, numbers or underscores");
+                                               "letter, number or underscore. And contain only letters, numbers or underscores. Got "+ structureName);
         }
     }
 
@@ -68,7 +68,7 @@ public class StructuresUtil {
         if (applicationId == null
                 || !StructureApplicationPattern.matcher(applicationId).matches()){
             throw new IllegalArgumentException("Structure Application Id Invalid, first character must be a " +
-                                               "letter. And contain only letters, numbers, periods, underscores or dashes");
+                                               "letter. And contain only letters, numbers, periods, underscores or dashes. Got "+ applicationId);
         }
     }
 
@@ -76,7 +76,7 @@ public class StructuresUtil {
         if (projectId == null
                 || !StructureProjectIdPattern.matcher(projectId).matches()){
             throw new IllegalArgumentException("Structure Project Id Invalid, first character must be a " +
-                                               "letter. And contain only letters, numbers, periods, underscores or dashes");
+                                               "letter. And contain only letters, numbers, periods, underscores or dashes. Got "+ projectId);
         }
     }
 
@@ -91,7 +91,7 @@ public class StructuresUtil {
             || propertyName.length() > 255
             || !IdentifierNamePattern.matcher(propertyName).matches()){
             throw new IllegalArgumentException("Property Name Invalid, first character must be a " +
-                                               "letter, number or underscore. And contain only letters, numbers or underscores");
+                                               "letter, number or underscore. And contain only letters, numbers or underscores. Got "+ propertyName);
         }
     }
 

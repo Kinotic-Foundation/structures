@@ -254,8 +254,7 @@ export default toNative(CrudTable)
               <img src="@/assets/column.svg" />
             </div>
           </div>
-          <Button v-if="!disableModifications && isShowAddNew" @click="addItem" severity="secondary"
-            class="!bg-[#3651ED] !text-white hover:!bg-[#274bcc]">
+          <Button v-if="!disableModifications && isShowAddNew" @click="addItem" severity="primary">
             <img src="@/assets/plus.svg" />
             <span>{{ createNewButtonText }}</span>
           </Button>
