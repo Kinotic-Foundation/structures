@@ -1,10 +1,8 @@
 plugins {
     // Apply the common convention plugin for shared build configuration between library and application projects.
     id 'org.kinotic.java-common-conventions'
-
     id 'java-library'
-    id 'maven-publish'
-    id 'signing'
+    id 'org.jreleaser'
 }
 
 dependencies {
@@ -13,73 +11,75 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-autoconfigure'
 }
 
-
 java {
     withJavadocJar()
     withSourcesJar()
 }
 
-publishing {
-    publications {
-        mavenJava(MavenPublication) {
-
-            from components.java
-
-            // Use resolved versions since we are not directly depending on the spring POM
-            versionMapping {
-                usage('java-api') {
-                    fromResolutionOf('runtimeClasspath')
-                }
-                usage('java-runtime') {
-                    fromResolutionResult()
-                }
-            }
-
-            pom {
-                name = 'Structures Framework'
-                description = 'Framework for data storage and retrieval, supporting schema evolution!'
-                url = 'https://continuumframework.org'
-
-                licenses {
-                    license {
-                        name = 'The Apache License, Version 2.0'
-                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
-                    }
-                }
-                developers {
-                    developer {
-                        name = 'Kinotic Developers'
-                        email = 'develop@kinotic.org'
-                    }
-                }
-                scm {
-                    connection = 'scm:git:https://github.com/Kinotic-Foundation/structures.git'
-                    developerConnection = 'scm:git:https://github.com/Kinotic-Foundation/structures.git'
-                    url = 'https://github.com/Kinotic-Foundation/structures'
-                }
-            }
+jreleaser {
+    project {
+        authors = ['Kinotic Developers']
+        license = 'Apache-2.0'
+        links {
+            homepage = 'https://continuumframework.org'
         }
+        inceptionYear = '2021'
+        description = 'Framework for data storage and retrieval, supporting schema evolution!'
     }
-    repositories {
+
+    signing {
+        active = 'ALWAYS'
+        armored = true
+        verify = false
+    }
+
+    deploy {
         maven {
-            // def releasesRepoUrl = 'https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/'
-            // def snapshotsRepoUrl = 'https://central.sonatype.com/repository/maven-snapshots/'
-            // url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
-            name = 'ossrh-staging-api'
-            url = "https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/"
-            credentials {
-                username = System.getenv('MAVEN_USERNAME')
-                password = System.getenv('MAVEN_PASSWORD')
+            mavenCentral {
+                'release-deploy' {
+                    active = 'RELEASE'
+                    url = 'https://central.sonatype.com/api/v1/publisher'
+                    stagingRepository('target/staging-deploy')
+                }
+            }
+            nexus2 {
+                'snapshot-deploy' {
+                    active = 'SNAPSHOT'
+                    snapshotUrl = 'https://central.sonatype.com/repository/maven-snapshots/'
+                    applyMavenCentralRules = true
+                    snapshotSupported = true
+                    closeRepository = true
+                    releaseRepository = true
+                    stagingRepository('target/staging-deploy')
+                }
+            }
+        }
+    }
+
+    distributions {
+        main {
+            artifact {
+                path = 'build/libs/{{distributionName}}-{{projectVersion}}.jar'
+            }
+            extraProperties.put('includeJavadocJar', true)
+            extraProperties.put('includeSourcesJar', true)
+            java {
+                enabled = true
+                groupId = 'org.kinotic'
+                artifactId = project.name
+                mainJar {
+                    path = 'build/libs/{{distributionName}}-{{projectVersion}}.jar'
+                }
+                javadocJar {
+                    path = 'build/libs/{{distributionName}}-{{projectVersion}}-javadoc.jar'
+                }
+                sourcesJar {
+                    path = 'build/libs/{{distributionName}}-{{projectVersion}}-sources.jar'
+                }
             }
         }
     }
 }
-
-signing {
-    useGpgCmd()
-    sign publishing.publications.mavenJava
-}
-
 
 javadoc {
     // suppress warnings
@@ -88,4 +88,17 @@ javadoc {
     if(JavaVersion.current().isJava9Compatible()) {
         options.addBooleanOption('html5', true)
     }
+}
+
+// Add JReleaser validation task
+tasks.register('validateJreleaser') {
+    dependsOn 'jreleaser:config'
+    doLast {
+        println "JReleaser configuration validated successfully"
+    }
+}
+
+// Make build depend on JReleaser validation
+tasks.named('build') {
+    dependsOn 'validateJreleaser'
 }
