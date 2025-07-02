@@ -8,12 +8,7 @@ import { mdiGraphql, mdiApi } from '@mdi/js'
 import GraphQLModal from '@/components/modals/GraphQLModal.vue'
 import { Structures, type IApplicationService } from '@kinotic/structures-api'
 import { APPLICATION_STATE } from '@/states/IApplicationState'
-
-interface CrudHeader {
-    field: string
-    header: string
-    sortable?: boolean
-}
+import type { CrudHeader } from '@/types/CrudHeader'
 
 @Component({
     components: {
@@ -69,7 +64,7 @@ async toApplicationPage(item: Identifiable<string>): Promise<void> {
     try {
         const appId = item.id ?? ''
         const app = await this.dataSource.findById(appId)
-        APPLICATION_STATE.setCurrentApplication(app)
+        APPLICATION_STATE.currentApplication = app
         this.$router.push(`/application/${encodeURIComponent(appId)}`)
     } catch (e) {
         console.error('[NamespaceList] Failed to navigate to application:', e)

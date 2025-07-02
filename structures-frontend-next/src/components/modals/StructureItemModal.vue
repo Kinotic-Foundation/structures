@@ -229,7 +229,7 @@ export default class StructureItemModal extends Vue {
       </div>
 
       <div class="h-full">
-        <VueFlow ref="flow" :nodes="flowNodes" :edges="flowEdges" :node-types="nodeTypes">
+        <VueFlow ref="flow" :nodes="flowNodes" :edges="flowEdges" :node-types="nodeTypes" :minZoom="0.01" >
           <Background pattern-color="#ccc" :gap="20" />
           <MiniMap />
           <Controls position="top-left" />

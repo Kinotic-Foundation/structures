@@ -15,7 +15,7 @@ import path from 'path'
 
 export class HealthTaskFactory {
     private readonly applicationId = 'healthcare'
-    private projectId = ''
+    private projectId = 'healthcare_main_project'
     private readonly taskBuilder: CreateStructureTaskBuilder
     private entityDefinitions: Map<string, ObjectC3Type> = new Map()
     private patientService?: IEntityService<Patient>
@@ -38,7 +38,6 @@ export class HealthTaskFactory {
                     let project = new Project(null, this.applicationId, 'Main Project', 'Healthcare Main Project')
                     project.sourceOfTruth = ProjectType.TYPESCRIPT
                     project = await Structures.getProjectService().createProjectIfNotExist(project)
-                    this.projectId = project.id!
                 }
             },
             // Then load entity definitions

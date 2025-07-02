@@ -34,7 +34,7 @@ const pageRoutes: RouteRecordRaw[] = [
     ]
   },
   {
-    path: '/application/:name',
+    path: '/application/:applicationId',
     component: () => import('@/layouts/LayoutForPage.vue'),
     meta: {
       showInMainNav: false,
@@ -46,6 +46,7 @@ const pageRoutes: RouteRecordRaw[] = [
         name: 'application-details',
         path: '',
         component: () => import('@/pages/ApplicationDetails.vue'),
+        props: (route) => ({ applicationId: route.params.applicationId })
       }
     ]
   },

@@ -14,7 +14,7 @@ import { createStructureTaskBuilder } from './CreateStructureTaskBuilder'
 
 export class EcommerceTaskFactory {
     private readonly applicationId = 'ecommerce'
-    private projectId = ''
+    private projectId = 'ecommerce_main_project'
     private readonly taskBuilder: CreateStructureTaskBuilder
     private entityDefinitions: Map<string, ObjectC3Type> = new Map()
     private customerService?: IEntityService<Customer>
@@ -35,8 +35,7 @@ export class EcommerceTaskFactory {
                     await Structures.getApplicationService().createApplicationIfNotExist(this.applicationId, 'Ecommerce Domain')
                     let project = new Project(null, this.applicationId, 'Main Project', 'Ecommerce Main Project')
                     project.sourceOfTruth = ProjectType.TYPESCRIPT
-                    project = await Structures.getProjectService().createProjectIfNotExist(project)
-                    this.projectId = project.id!
+                    project = await Structures.getProjectService().createProjectIfNotExist(project)    
                 }
             },
             // Then load entity definitions

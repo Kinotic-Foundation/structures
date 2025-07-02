@@ -45,12 +45,7 @@ import CrudTable from '@/components/CrudTable.vue'
 import { type Identifiable } from '@kinotic/continuum-client'
 import { Structures, type IApplicationService } from '@kinotic/structures-api'
 import { mdiGraphql, mdiApi } from '@mdi/js'
-
-interface CrudHeader {
-  field: string
-  header: string
-  sortable?: boolean
-}
+import type { CrudHeader } from '@/types/CrudHeader'
 
 @Component({
   components: { CrudTable }

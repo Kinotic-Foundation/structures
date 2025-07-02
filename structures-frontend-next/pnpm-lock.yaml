@@ -21,14 +21,14 @@ importers:
         specifier: ^2.0.3
         version: 2.0.3
       '@kinotic/structures-api':
-        specifier: ^3.5.0-beta.2
-        version: 3.5.0-beta.2(@kinotic/continuum-client@2.14.0(reflect-metadata@0.2.2))
+        specifier: ^3.5.0-beta.4
+        version: 3.5.0-beta.4(@kinotic/continuum-client@2.14.0(reflect-metadata@0.2.2))
       '@mdi/js':
         specifier: ^7.4.47
         version: 7.4.47
       '@primeuix/themes':
-        specifier: ^1.1.1
-        version: 1.1.1
+        specifier: ^1.1.2
+        version: 1.1.2
       '@primevue/themes':
         specifier: ^4.3.5
         version: 4.3.5
@@ -339,8 +339,8 @@ packages:
   '@kinotic/continuum-idl@2.0.3':
     resolution: {integrity: sha512-aqW9j5hmhrhP2gGBfbdi+4N/IkbmnNsL8u9Jkrdn3g/pSgkDn+BUq8kC8vn1eBjMy70200MQmPPXVVeswfrM1Q==}
 
-  '@kinotic/structures-api@3.5.0-beta.2':
-    resolution: {integrity: sha512-iw2IUubOB7/qfSN5cATeBVWeeI1aBAFgpn15haIZAR0FFeYJVEE8X2y30V4z1BUn2pvXVm49gaCAWIF82e1zrw==}
+  '@kinotic/structures-api@3.5.0-beta.4':
+    resolution: {integrity: sha512-o4oi2ltaIVPcD+ytIAEyoRQTc15hzAAQ0olXWxIOvnH10ECPIWmmA4clb0tS9bkYsMPOM0Cv77gQa91tVWSS/w==}
     peerDependencies:
       '@kinotic/continuum-client': ^2.14.0
 
@@ -362,8 +362,8 @@ packages:
   '@primeuix/styles@1.1.1':
     resolution: {integrity: sha512-oguFY2Rs4ZqdcFqEKxBt2d8trTkAjJ5BGTaDV0zbwdqRCRcZp9+di3K3Wv57CW/+tFDA0z1Dg7Dpm7wmkOII9Q==}
 
-  '@primeuix/themes@1.1.1':
-    resolution: {integrity: sha512-fcHPLfw73cOApPovtA+D9wf3N7FBruU/6oTRt+AcTK754mHhnTza9kC2jiFQfq5HnWF0u0J/5Pb943fNsnxVVA==}
+  '@primeuix/themes@1.1.2':
+    resolution: {integrity: sha512-yxnmMqMct6RYWX6m9gS9AIG8QArjnROQzBqQf8UDQggAedX3My1fxr9FKEpvZMoY39WD494kG0pU9zIa1k2XyA==}
 
   '@primeuix/utils@0.5.3':
     resolution: {integrity: sha512-7SGh7734wcF1/uK6RzO6Z6CBjGQ97GDHfpyl2F1G/c7R0z9hkT/V72ypDo82AWcCS7Ta07oIjDpOCTkSVZuEGQ==}
@@ -1543,7 +1543,7 @@ snapshots:
 
   '@kinotic/continuum-idl@2.0.3': {}
 
-  '@kinotic/structures-api@3.5.0-beta.2(@kinotic/continuum-client@2.14.0(reflect-metadata@0.2.2))':
+  '@kinotic/structures-api@3.5.0-beta.4(@kinotic/continuum-client@2.14.0(reflect-metadata@0.2.2))':
     dependencies:
       '@kinotic/continuum-client': 2.14.0(reflect-metadata@0.2.2)
       '@kinotic/continuum-idl': 2.0.3
@@ -1563,7 +1563,7 @@ snapshots:
     dependencies:
       '@primeuix/styled': 0.6.4
 
-  '@primeuix/themes@1.1.1':
+  '@primeuix/themes@1.1.2':
     dependencies:
       '@primeuix/styled': 0.6.4
 
@@ -1591,7 +1591,7 @@ snapshots:
   '@primevue/themes@4.3.5':
     dependencies:
       '@primeuix/styled': 0.6.4
-      '@primeuix/themes': 1.1.1
+      '@primeuix/themes': 1.1.2
 
   '@rollup/rollup-android-arm-eabi@4.36.0':
     optional: true

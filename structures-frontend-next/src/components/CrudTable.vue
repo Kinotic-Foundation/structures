@@ -27,17 +27,8 @@ import {
   DataSourceUtils,
   type IEditableDataSource,
 } from '@kinotic/continuum-client'
-
-interface CrudHeader {
-  field: string
-  header: string
-  sortable?: boolean
-}
-interface DescriptiveIdentifiable extends Identifiable<string> {
-    description?: string
-    name?: string
-    [key: string]: any
-}
+import type { CrudHeader } from '@/types/CrudHeader'
+import type { DescriptiveIdentifiable } from '@/types/DescriptiveIdentifiable'
 
 @Component
 class CrudTable extends Vue {

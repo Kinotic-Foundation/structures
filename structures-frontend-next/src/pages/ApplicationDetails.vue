@@ -1,54 +1,25 @@
 <script lang="ts">
-import { Component, Vue, Watch } from 'vue-facing-decorator'
 import CrudTable from '@/components/CrudTable.vue'
-import { mdiGraphql, mdiApi } from '@mdi/js'
-import NewProjectSidebar from '@/components/NewProjectSidebar.vue'
-import type { Identifiable } from '@kinotic/continuum-client'
-import { APPLICATION_STATE } from '@/states/IApplicationState'
 import GraphQLModal from '@/components/modals/GraphQLModal.vue'
-import { Project } from '@kinotic/structures-api'
-import { STRUCTURES_STATE } from '@/states/IStructuresState'
-
-interface CrudHeader {
-    field: string
-    header: string
-    sortable?: boolean
-}
+import NewProjectSidebar from '@/components/NewProjectSidebar.vue'
+import { APPLICATION_STATE } from '@/states/IApplicationState'
+import { mdiApi, mdiGraphql } from '@mdi/js'
+import { Component, Prop, Vue } from 'vue-facing-decorator'
 
 @Component({
     components: { CrudTable, NewProjectSidebar, GraphQLModal }
 })
 export default class ApplicationDetails extends Vue {
+    @Prop({ required: true }) applicationId!: string
+    
     activeTab = 'projects'
-    showProjectSidebar = false
-    showSidebar = false
+
     showGraphQLModal = false
-
-    projectTableHeaders: CrudHeader[] = [
-        { field: 'name', header: 'Project name', sortable: false },
-        { field: 'sourceOfTruth', header: 'Source of truth', sortable: false },
-        { field: 'description', header: 'Description', sortable: false },
-        { field: 'created', header: 'Created', sortable: false },
-        { field: 'updated', header: 'Updated', sortable: false }
-    ]
-
-    structureTableHeaders: CrudHeader[] = [
-        { field: 'name', header: 'Project name', sortable: false },
-        { field: 'description', header: 'Description', sortable: false },
-        { field: 'created', header: 'Created', sortable: false },
-        { field: 'updated', header: 'Updated', sortable: false }
-    ]
 
     icons = { graph: mdiGraphql, api: mdiApi }
 
     get applicationName(): string {
         return APPLICATION_STATE.currentApplication?.id || 'Application'
-    }
-
-    get dataSource() {
-        return this.activeTab === 'projects'
-            ? APPLICATION_STATE.projectSource
-            : APPLICATION_STATE.structureSource
     }
 
     get projectsCount() {
@@ -58,65 +29,9 @@ export default class ApplicationDetails extends Vue {
     get structuresCount() {
         return APPLICATION_STATE.structuresCount
     }
-    get isModalOpen() {
-        return STRUCTURES_STATE.isModalOpen.value
-    }
-
-    get selectedStructure() {
-        return STRUCTURES_STATE.selectedStructure.value
-    }
-
-    @Watch('$route.params.name', { immediate: true })
-    async onAppIdChange(): Promise<void> {
-        const appIdRaw = this.$route.params.name
-        const appId = Array.isArray(appIdRaw) ? appIdRaw[0] : appIdRaw
-
-        try {
-            if (!APPLICATION_STATE.currentApplication || APPLICATION_STATE.currentApplication.id !== appId) {
-                await APPLICATION_STATE.fetchAndSetCurrentApplication(appId)
-            }
-            await Promise.all([
-                APPLICATION_STATE.loadProjects(appId),
-                APPLICATION_STATE.loadStructures(appId)
-            ])
-            this.refreshTable()
-        } catch (error) {
-            console.error('[ApplicationDetails] Initialization error on route change:', error)
-            this.$toast.add({
-                severity: 'error',
-                summary: 'Error',
-                detail: 'Failed to load application data.',
-                life: 3000
-            })
-        }
-    }
-
-    refreshTable(): void {
-        const tableRef = this.$refs.crudTable as InstanceType<typeof CrudTable> | undefined
-        tableRef?.find()
-    }
 
     async switchTab(tab: string): Promise<void> {
         this.activeTab = tab
-        const appIdRaw = this.$route.params.name
-        const appId = Array.isArray(appIdRaw) ? appIdRaw[0] : appIdRaw
-
-        try {
-            if (tab === 'projects') {
-                await APPLICATION_STATE.loadProjects(appId)
-            } else if (tab === 'structures') {
-                await APPLICATION_STATE.loadStructures(appId)
-            }
-            this.refreshTable()
-        } catch (error) {
-            console.error('[ApplicationDetails] Tab switch error:', error)
-            this.$toast.add({
-                severity: 'error',
-                summary: 'Error',
-                detail: 'Failed to switch tab.',
-                life: 3000
-            })
-        }
     }
 
     openGraphQL(): void {
@@ -127,79 +42,6 @@ export default class ApplicationDetails extends Vue {
         this.showGraphQLModal = false
     }
 
-    onAddProject(): void {
-        this.showProjectSidebar = true
-    }
-
-    onProjectSidebarClose(): void {
-        this.showProjectSidebar = false
-    }
-    openModal(item: any) {
-        STRUCTURES_STATE.openModal(item)
-    }
-
-    closeModal() {
-        STRUCTURES_STATE.closeModal()
-    }
-    handleRowClick(item: any): void {
-    if (this.activeTab === 'projects') {
-        this.toApplicationPage(item)
-    } else if (this.activeTab === 'structures') {
-        this.openModal(item)
-    }
-}
-
-    async onProjectSubmit(createdProject: Project): Promise<void> {
-        try {
-            const appIdRaw = this.$route.params.name
-            const appId = Array.isArray(appIdRaw) ? appIdRaw[0] : appIdRaw
-
-            await APPLICATION_STATE.loadProjects(appId)
-
-            const tableRef = this.$refs.crudTable as InstanceType<typeof CrudTable> | undefined
-            if (tableRef) {
-                tableRef.items.unshift(createdProject)
-                tableRef.totalItems += 1
-            }
-
-        } catch (error) {
-            console.error('[ApplicationDetails] Refresh after project creation failed:', error)
-            this.$toast.add({
-                severity: 'error',
-                summary: 'Error',
-                detail: 'Failed to refresh project list.',
-                life: 3000
-            })
-        } finally {
-            this.showProjectSidebar = false
-        }
-    }
-
-    onAddItem(): void {
-        this.showSidebar = true
-    }
-
-    onSidebarClose(): void {
-        this.showSidebar = false
-    }
-
-    onApplicationSubmit(): void {
-        this.refreshTable()
-        this.showSidebar = false
-    }
-
-    onEditItem(item: Identifiable<string>): void {
-        this.$router.push(`${this.$route.path}/edit/${item.id}`)
-    }
-
-    toApplicationPage(item: Identifiable<string>): void {
-        if (!item.id) {
-            console.error('[ApplicationDetails] Cannot navigate: item.id is null')
-            return
-        }
-        this.$router.push(`/application/${encodeURIComponent(item.id)}`)
-        this.showSidebar = false
-    }
 }
 </script>
 
@@ -233,68 +75,11 @@ export default class ApplicationDetails extends Vue {
             </button>
         </div>
 
-        <CrudTable
-            v-if="activeTab === 'projects' && dataSource"
-            rowHoverColor=""
-            :data-source="dataSource"
-            :headers="projectTableHeaders"
-            :singleExpand="false"
-            @add-item="onAddProject"
-            @edit-item="onEditItem"
-            ref="crudTable"
-            @onRowClick="toApplicationPage"
-            createNewButtonText="New project"
-            :isShowAddNew="true"
-        >
-            <template #item.id="{ item }">
-                <span>{{ item.id }}</span>
-            </template>
-            <template #additional-actions="{ item }">
-                <Button text class="!text-[#334155] !bg-white" title="GraphQL">
-                    <RouterLink :to="{ path: '/graphql', query: { namespace: item.id } }">
-                        <img src="@/assets/graphql.svg" />
-                    </RouterLink>
-                </Button>
-                <Button text class="!text-[#334155] !bg-white" title="OpenAPI">
-                    <RouterLink target="_blank" :to="'/scalar-ui.html?namespace=' + item.id">
-                        <img src="@/assets/scalar.svg" />
-                    </RouterLink>
-                </Button>
-            </template>
-        </CrudTable>
+        <ProjectList v-if="activeTab === 'projects'" :applicationId="applicationId" />
 
-        <CrudTable
-            v-else-if="activeTab === 'structures' && dataSource"
-            rowHoverColor=""
-            :data-source="dataSource"
-            :headers="structureTableHeaders"
-            :singleExpand="false"
-            @add-item="onAddItem"
-            @edit-item="onEditItem"
-            ref="crudTable"
-            @onRowClick="handleRowClick"
-            createNewButtonText="New Structure"
-        >
-            <template #item.id="{ item }">
-                <span>{{ item.id }}</span>
-            </template>
-            <template #additional-actions="{ item }">
-                <Button text class="!text-[#334155] !bg-white" title="GraphQL">
-                    <RouterLink :to="{ path: '/graphql', query: { namespace: item.id } }">
-                        <img src="@/assets/graphql.svg" />
-                    </RouterLink>
-                </Button>
-                <Button text class="!text-[#334155] !bg-white" title="OpenAPI">
-                    <RouterLink target="_blank" :to="'/scalar-ui.html?namespace=' + item.id">
-                        <img src="@/assets/scalar.svg" />
-                    </RouterLink>
-                </Button>
-            </template>
-        </CrudTable>
+        <StructuresList v-else-if="activeTab === 'structures'" :applicationId="applicationId" />
 
         <GraphQLModal :visible="showGraphQLModal" @close="closeGraphQL" />
-        <NewProjectSidebar :visible="showProjectSidebar" @close="onProjectSidebarClose" @submit="onProjectSubmit" />
-        <StructureItemModal v-if="isModalOpen" :item="selectedStructure" @close="closeModal" />
 
     </div>
 </template>
