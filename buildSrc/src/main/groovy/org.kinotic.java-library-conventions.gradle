@@ -81,15 +81,3 @@ javadoc {
     }
 }
 
-// Add JReleaser validation task
-tasks.register('validateJreleaser') {
-    dependsOn 'jreleaser:config'
-    doLast {
-        println "JReleaser configuration validated successfully"
-    }
-}
-
-// Make build depend on JReleaser validation
-tasks.named('build') {
-    dependsOn 'validateJreleaser'
-}
