@@ -1,5 +1,5 @@
 <script lang="ts">
-import { Component, Vue } from 'vue-facing-decorator'
+import { Component, Vue, Watch } from 'vue-facing-decorator'
 import CrudTable from '@/components/CrudTable.vue'
 import { mdiGraphql, mdiApi } from '@mdi/js'
 import NewProjectSidebar from '@/components/NewProjectSidebar.vue'
@@ -7,6 +7,7 @@ import type { Identifiable } from '@kinotic/continuum-client'
 import { APPLICATION_STATE } from '@/states/IApplicationState'
 import GraphQLModal from '@/components/modals/GraphQLModal.vue'
 import { Project } from '@kinotic/structures-api'
+import { STRUCTURES_STATE } from '@/states/IStructuresState'
 
 interface CrudHeader {
     field: string
@@ -57,16 +58,16 @@ export default class ApplicationDetails extends Vue {
     get structuresCount() {
         return APPLICATION_STATE.structuresCount
     }
-
-    openGraphQL(): void {
-        this.showGraphQLModal = true
+    get isModalOpen() {
+        return STRUCTURES_STATE.isModalOpen.value
     }
 
-    closeGraphQL(): void {
-        this.showGraphQLModal = false
+    get selectedStructure() {
+        return STRUCTURES_STATE.selectedStructure.value
     }
 
-    async mounted() {
+    @Watch('$route.params.name', { immediate: true })
+    async onAppIdChange(): Promise<void> {
         const appIdRaw = this.$route.params.name
         const appId = Array.isArray(appIdRaw) ? appIdRaw[0] : appIdRaw
 
@@ -80,11 +81,17 @@ export default class ApplicationDetails extends Vue {
             ])
             this.refreshTable()
         } catch (error) {
-            console.error('[ApplicationDetails] Initialization error:', error)
+            console.error('[ApplicationDetails] Initialization error on route change:', error)
+            this.$toast.add({
+                severity: 'error',
+                summary: 'Error',
+                detail: 'Failed to load application data.',
+                life: 3000
+            })
         }
     }
 
-    private refreshTable(): void {
+    refreshTable(): void {
         const tableRef = this.$refs.crudTable as InstanceType<typeof CrudTable> | undefined
         tableRef?.find()
     }
@@ -103,7 +110,21 @@ export default class ApplicationDetails extends Vue {
             this.refreshTable()
         } catch (error) {
             console.error('[ApplicationDetails] Tab switch error:', error)
+            this.$toast.add({
+                severity: 'error',
+                summary: 'Error',
+                detail: 'Failed to switch tab.',
+                life: 3000
+            })
         }
+    }
+
+    openGraphQL(): void {
+        this.showGraphQLModal = true
+    }
+
+    closeGraphQL(): void {
+        this.showGraphQLModal = false
     }
 
     onAddProject(): void {
@@ -113,6 +134,20 @@ export default class ApplicationDetails extends Vue {
     onProjectSidebarClose(): void {
         this.showProjectSidebar = false
     }
+    openModal(item: any) {
+        STRUCTURES_STATE.openModal(item)
+    }
+
+    closeModal() {
+        STRUCTURES_STATE.closeModal()
+    }
+    handleRowClick(item: any): void {
+    if (this.activeTab === 'projects') {
+        this.toApplicationPage(item)
+    } else if (this.activeTab === 'structures') {
+        this.openModal(item)
+    }
+}
 
     async onProjectSubmit(createdProject: Project): Promise<void> {
         try {
@@ -163,6 +198,7 @@ export default class ApplicationDetails extends Vue {
             return
         }
         this.$router.push(`/application/${encodeURIComponent(item.id)}`)
+        this.showSidebar = false
     }
 }
 </script>
@@ -236,7 +272,7 @@ export default class ApplicationDetails extends Vue {
             @add-item="onAddItem"
             @edit-item="onEditItem"
             ref="crudTable"
-            @onRowClick="toApplicationPage"
+            @onRowClick="handleRowClick"
             createNewButtonText="New Structure"
         >
             <template #item.id="{ item }">
@@ -258,6 +294,8 @@ export default class ApplicationDetails extends Vue {
 
         <GraphQLModal :visible="showGraphQLModal" @close="closeGraphQL" />
         <NewProjectSidebar :visible="showProjectSidebar" @close="onProjectSidebarClose" @submit="onProjectSubmit" />
+        <StructureItemModal v-if="isModalOpen" :item="selectedStructure" @close="closeModal" />
+
     </div>
 </template>
 

@@ -9,15 +9,15 @@
           <img src="@/assets/action-plus-icon.svg" />
           <h2 class="text-lg font-semibold">New Application</h2>
         </div>
-        <button @click="handleClose" class="w-[11px] h-[11px] cursor-pointer">
+        <span @click="handleClose" class="w-[11px] h-[11px] cursor-pointer">
           <img src="@/assets/close-icon.svg" />
-        </button>
+        </span>
       </div>
       <form @submit.prevent="handleSubmit" class="flex flex-col h-[calc(100vh-100px)] justify-between gap-4 p-4">
         <div>
           <div>
             <label class="block text-sm text-[#101010] mb-3 font-semibold">Name</label>
-            <input
+            <Input
               v-model="form.name"
               type="text"
               class="w-full p-2 border border-[#D2D3D9] rounded-lg"
@@ -26,9 +26,9 @@
           </div>
           <div>
             <label class="block text-sm text-[#101010] mb-3 font-semibold">Description</label>
-            <textarea
+            <Textarea
               v-model="form.description"
-              class="w-full p-2 border border-[#D2D3D9] rounded-lg"
+              class="w-full"
               rows="3"
             />
           </div>
@@ -41,18 +41,18 @@
                   <span class="text-[#3F424D] text-sm font-normal">GraphQL</span>
                 </div>
                 <div class="w-[56px] p-1 bg-[#F4F6FA] rounded-lg flex justify-center items-center">
-                  <button
+                  <Button
                     type="button"
                     @click="form.graphql = !form.graphql"
                     :class="[
-                      'px-3 py-1 text-sm font-medium rounded-lg',
+                      '!px-3 !py-1 !text-sm !font-medium !rounded-lg !border-none',
                       form.graphql
                         ? '!bg-white text-[#101010]'
                         : '!bg-[#F4F6FA] text-[#999CA0]'
                     ]"
                   >
                     {{ form.graphql ? 'On' : 'Off' }}
-                  </button>
+                  </Button>
                 </div>
               </div>
               <div class="flex items-center justify-between p-4">
@@ -61,35 +61,37 @@
                   <span class="text-[#3F424D] text-sm font-normal">OpenAPI</span>
                 </div>
                 <div class="w-[56px] p-1 bg-[#F4F6FA] rounded-lg flex justify-center items-center">
-                  <button
+                  <Button
                     type="button"
                     @click="form.openapi = !form.openapi"
                     :class="[
-                      'px-3 py-1 text-sm font-medium rounded-lg',
+                      '!px-3 !py-1 !text-sm !font-medium !rounded-lg !border-none',
                       form.openapi
-                        ? '!bg-white text-[#101010]'
-                        : '!bg-[#F4F6FA] text-[#999CA0]'
+                        ? '!bg-white !text-[#101010]'
+                        : '!bg-[#F4F6FA] !text-[#999CA0]'
                     ]"
                   >
                     {{ form.openapi ? 'On' : 'Off' }}
-                  </button>
+                </Button>
                 </div>
               </div>
             </div>
           </div>
         </div>
         <div class="flex justify-end gap-2 mt-6">
-          <button
+          <Button
             type="button"
             @click="handleClose"
-            class="px-[10px] py-[7px] rounded-lg text-sm bg-[#F0F1F5] text-[#4F5159]"
+            class="px-[10px] py-[7px]"
+            severity="secondary"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
             :disabled="loading"
-            class="px-[10px] py-[7px] bg-[#3651ED]/70 text-white rounded-lg text-sm flex items-center gap-2"
+            severity="primary"
+            class="px-[10px] py-[7px] flex items-center gap-2"
           >
             <svg
               v-if="loading"
@@ -112,7 +114,7 @@
               ></path>
             </svg>
             Create Application
-          </button>
+          </Button>
         </div>
       </form>
     </div>
@@ -122,6 +124,10 @@
 <script lang="ts">
 import { Component, Vue, Prop } from 'vue-facing-decorator'
 import { Structures, type Application } from '@kinotic/structures-api'
+import InputText from 'primevue/inputtext';
+import Textarea from 'primevue/textarea';
+import Button from 'primevue/button';
+import Select from 'primevue/select';
 
 interface ApplicationForm {
   name: string
@@ -130,7 +136,14 @@ interface ApplicationForm {
   openapi: boolean
 }
 
-@Component
+@Component({
+    components: {
+        InputText,
+        Textarea,
+        Button,
+        Select
+    }
+})
 export default class ApplicationSidebar extends Vue {
   @Prop({ required: true }) readonly visible!: boolean
 
@@ -145,8 +158,8 @@ export default class ApplicationSidebar extends Vue {
 
   private sanitizeId(name: string): string {
     let sanitized = name.trim()
-      .replace(/\s+/g, '-')                  // Replace spaces with dashes
-      .replace(/[^a-zA-Z0-9._-]/g, '')       // Remove invalid characters
+      .replace(/\s+/g, '-')
+      .replace(/[^a-zA-Z0-9._-]/g, '')
 
     if (!/^[a-zA-Z]/.test(sanitized)) {
       sanitized = 'app-' + sanitized
