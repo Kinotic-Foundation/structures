@@ -34,7 +34,9 @@ public class StructuresUtil {
 
         validateStructureName(structure.getName());
 
-        validateApplicaitonId(structure.getApplicationId());
+        validateApplicationId(structure.getApplicationId());
+
+        validateProjectId(structure.getProjectId());
 
         if (structure.getEntityDefinition() == null) {
             throw new IllegalArgumentException("Structure entityDefinition must not be null");
@@ -61,10 +63,18 @@ public class StructuresUtil {
      * @param applicationId to validate
      * @throws IllegalArgumentException will be thrown if the structure application is invalid
      */
-    public static void validateApplicaitonId(String applicationId){
+    public static void validateApplicationId(String applicationId){
         if (applicationId == null
                 || !StructureApplicationPattern.matcher(applicationId).matches()){
             throw new IllegalArgumentException("Structure Application Id Invalid, first character must be a " +
+                                               "letter. And contain only letters, numbers, periods, underscores or dashes");
+        }
+    }
+
+    private static void validateProjectId(String projectId){
+        if (projectId == null
+                || !StructureApplicationPattern.matcher(projectId).matches()){
+            throw new IllegalArgumentException("Structure Project Id Invalid, first character must be a " +
                                                "letter. And contain only letters, numbers, periods, underscores or dashes");
         }
     }

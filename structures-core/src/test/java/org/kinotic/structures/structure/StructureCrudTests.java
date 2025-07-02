@@ -51,6 +51,7 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 		Structure structure = new Structure();
 		structure.setName("PersonWat")
 				 .setApplicationId("org.kinotic.sample")
+				 .setProjectId("org.kinotic.sample_default")
 				 .setDescription("Defines a Person")
 				 .setEntityDefinition(testDataService.createPersonSchema(MultiTenancyType.NONE, false));
 
@@ -93,6 +94,7 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 		Structure structure = new Structure();
 		structure.setName("PersonBum")
 				 .setApplicationId("org.kinotic.sample")
+				 .setProjectId("org.kinotic.sample_default")
 				 .setDescription("Defines a Person")
 				 .setEntityDefinition(testDataService.createPersonSchema(MultiTenancyType.NONE, false));
 
@@ -131,6 +133,7 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 		Structure structure = new Structure();
 		structure.setName("PersonStupid")
 				 .setApplicationId("org.kinotic.sample")
+				 .setProjectId("org.kinotic.sample_default")
 				 .setDescription("Defines a Person")
 				 .setEntityDefinition(testDataService.createPersonSchema(MultiTenancyType.NONE, true));
 
@@ -146,6 +149,7 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 		Structure structure = new Structure();
 		structure.setName("PersonHomer")
 				 .setApplicationId("org.kinotic.sample")
+				 .setProjectId("org.kinotic.sample_default")
 				 .setDescription("Defines a Person")
 				 .setEntityDefinition(testDataService.createPersonSchema(MultiTenancyType.NONE, false));
 
@@ -182,6 +186,7 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 		Structure structure = new Structure();
 		structure.setName("PersonStoned")
 				 .setApplicationId("org.kinotic.sample")
+				 .setProjectId("org.kinotic.sample_default")
 				 .setDescription("Defines a Person")
 				 .setEntityDefinition(testDataService.createPersonSchema(MultiTenancyType.NONE, false));
 

@@ -96,6 +96,7 @@ public class TestDataService {
         Structure structure = new Structure();
         structure.setName("Car"+(structureNameSuffix != null ? structureNameSuffix : ""));
         structure.setApplicationId("org.kinotic.sample");
+        structure.setProjectId("org.kinotic.sample_default");
         structure.setDescription("Defines a Car");
 
         ObjectC3Type carType = createCarSchema(MultiTenancyType.SHARED);
@@ -179,6 +180,7 @@ public class TestDataService {
         Structure structure = new Structure();
         structure.setName("Person"+(structureNameSuffix != null ? structureNameSuffix : ""));
         structure.setApplicationId("org.kinotic.sample");
+        structure.setProjectId("org.kinotic.sample_default");
         structure.setDescription("Defines a Person");
 
         ObjectC3Type personType = createPersonSchema(MultiTenancyType.SHARED);
