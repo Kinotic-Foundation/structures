@@ -41,7 +41,7 @@ jobs:
       - name: Build with Gradle
         id: gradle_build
         continue-on-error: true
-        run: ./gradlew build -x test
+        run: ./gradlew build
 
       - name: Publish to Maven Central with JReleaser
         if: ${{ steps.gradle_build.outcome == 'success' }}
