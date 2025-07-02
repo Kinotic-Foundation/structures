@@ -9,6 +9,7 @@ import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.structures.api.domain.Project;
 import org.kinotic.structures.api.services.ProjectService;
 import org.kinotic.structures.api.services.StructureService;
+import org.kinotic.structures.internal.utils.StructuresUtil;
 import org.springframework.stereotype.Component;
 
 import com.github.slugify.Slugify;
@@ -51,6 +52,8 @@ public class DefaultProjectService extends AbstractCrudService<Project> implemen
         if(project.getId() == null){
             project.setId(project.getApplicationId()+"_"+slg.slugify(project.getName()));
         }
+        // Sanity check
+        StructuresUtil.validateProjectId(project.getId());
 
         return findById(project.getId())
                 .thenCompose(existing -> {

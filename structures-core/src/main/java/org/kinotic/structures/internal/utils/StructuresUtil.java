@@ -13,6 +13,7 @@ public class StructuresUtil {
 
     private static final Pattern IdentifierNamePattern = Pattern.compile("^[A-Za-z_][A-Za-z0-9_]*$");
     private static final Pattern StructureApplicationPattern = Pattern.compile("^[A-Za-z][A-Za-z0-9._-]*$");
+    private static final Pattern StructureProjectIdPattern = Pattern.compile("^[a-z][a-z0-9._-]*$");
 
     /**
      * Function will convert a structure applicationId and name to a valid
@@ -71,9 +72,9 @@ public class StructuresUtil {
         }
     }
 
-    private static void validateProjectId(String projectId){
+    public static void validateProjectId(String projectId){
         if (projectId == null
-                || !StructureApplicationPattern.matcher(projectId).matches()){
+                || !StructureProjectIdPattern.matcher(projectId).matches()){
             throw new IllegalArgumentException("Structure Project Id Invalid, first character must be a " +
                                                "letter. And contain only letters, numbers, periods, underscores or dashes");
         }
