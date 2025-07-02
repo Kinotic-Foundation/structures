@@ -75,10 +75,15 @@ export default class Header extends Vue {
     this.dropdownOpen = !this.dropdownOpen
   }
 
-  async selectApp(app) {
-    APPLICATION_STATE.setCurrentApplication(app)
-    this.dropdownOpen = false
-    await this.$router.push(`/application/${encodeURIComponent(app.id)}`)
+  async selectApp(app: { id: string }) {
+        try {
+        const appId = app.id ?? ''
+        APPLICATION_STATE.setCurrentApplication(app)
+        this.$router.push(`/application/${encodeURIComponent(appId)}`)
+        this.dropdownOpen = false
+    } catch (e) {
+        console.error('[NamespaceList] Failed to navigate to application:', e)
+    }
   }
 }
 </script>

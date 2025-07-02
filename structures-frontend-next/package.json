@@ -14,7 +14,6 @@
     "@kinotic/continuum-idl": "^2.0.3",
     "@kinotic/structures-api": "^3.5.0-beta.2",
     "@mdi/js": "^7.4.47",
-    "@primeuix/themes": "^1.1.1",
     "@primevue/themes": "^4.3.5",
     "@vue-flow/background": "^1.3.2",
     "@vue-flow/controls": "^1.1.2",
