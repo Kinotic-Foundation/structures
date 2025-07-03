@@ -1,5 +1,6 @@
 import { createStructuresUI } from '@/plugins/StructuresUI.js'
 import './style.css'
+import './theme.css'
 import PrimeVue from 'primevue/config'
 import StyleClass from 'primevue/styleclass'
 import StructuresTheme from '@/theme'

@@ -37,6 +37,7 @@ export default class StructuresList extends Vue {
         return {
             findAll: async (pageable: Pageable): Promise<IterablePage<Structure>> => {
                 if (this.projectId) {
+                    console
                     return Structures.getStructureService().findAllForProject(this.projectId, pageable)
                 }else{
                     return Structures.getStructureService().findAllForApplication(this.applicationId, pageable)
@@ -79,7 +80,6 @@ export default class StructuresList extends Vue {
     }
 
     onAddItem(): void {
-        // Handle adding new structure
         console.log('[StructuresList] Add new structure')
     }
 
@@ -106,18 +106,6 @@ export default class StructuresList extends Vue {
             <template #item.id="{ item }">
                 <span>{{ item.id }}</span>
             </template>
-            <!-- <template #additional-actions="{ item }">
-                <Button text class="!text-[#334155] !bg-white" title="GraphQL">
-                    <RouterLink :to="{ path: '/graphql', query: { namespace: item.id } }">
-                        <img src="@/assets/graphql.svg" />
-                    </RouterLink>
-                </Button>
-                <Button text class="!text-[#334155] !bg-white" title="OpenAPI">
-                    <RouterLink target="_blank" :to="'/scalar-ui.html?namespace=' + item.id">
-                        <img src="@/assets/scalar.svg" />
-                    </RouterLink>
-                </Button>
-            </template> -->
         </CrudTable>
 
         <StructureItemModal v-if="isModalOpen" :item="selectedStructure" @close="closeModal" />
