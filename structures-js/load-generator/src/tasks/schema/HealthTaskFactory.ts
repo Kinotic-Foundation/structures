@@ -1,5 +1,5 @@
 import { ITask } from "../ITask"
-import { IEntityService } from '@kinotic/structures-api'
+import { IEntityService, Project, ProjectType } from '@kinotic/structures-api'
 import { Structures } from '@kinotic/structures-api'
 import { Patient } from '../../entity/domain/health/Patient'
 import { Provider } from '../../entity/domain/health/Provider'
@@ -14,7 +14,8 @@ import { TestDataGenerator } from '../../entity/domain/health/TestDataGenerator'
 import path from 'path'
 
 export class HealthTaskFactory {
-    private readonly namespace = 'healthcare'
+    private readonly applicationId = 'healthcare'
+    private projectId = 'healthcare_main_project'
     private readonly taskBuilder: CreateStructureTaskBuilder
     private entityDefinitions: Map<string, ObjectC3Type> = new Map()
     private patientService?: IEntityService<Patient>
@@ -33,7 +34,10 @@ export class HealthTaskFactory {
             {
                 name: () => 'Create Health Namespace',
                 execute: async () => {
-                    await Structures.getNamespaceService().createNamespaceIfNotExist(this.namespace, 'Healthcare Domain')
+                    await Structures.getApplicationService().createApplicationIfNotExist(this.applicationId, 'Healthcare Domain')
+                    let project = new Project(null, this.applicationId, 'Main Project', 'Healthcare Main Project')
+                    project.sourceOfTruth = ProjectType.TYPESCRIPT
+                    project = await Structures.getProjectService().createProjectIfNotExist(project)
                 }
             },
             // Then load entity definitions
@@ -41,7 +45,7 @@ export class HealthTaskFactory {
                 name: () => 'Load Health Entity Definitions',
                 execute: async () => {
                     const loader = new EntityDefinitionLoader(
-                        this.namespace,
+                        this.applicationId,
                         path.join(__dirname, '../../entity/domain/health'),
                         path.join(__dirname, '../../services/health')
                     )
@@ -51,7 +55,8 @@ export class HealthTaskFactory {
             },
             // Then create structures
             this.taskBuilder.buildTask({
-                namespace: this.namespace,
+                applicationId: this.applicationId,
+                projectId: this.projectId,
                 name: 'Patient',
                 description: 'Patient information and medical history',
                 entityDefinitionSupplier: () => this.entityDefinitions.get('patient')!,
@@ -60,7 +65,8 @@ export class HealthTaskFactory {
                 }
             }),
             this.taskBuilder.buildTask({
-                namespace: this.namespace,
+                applicationId: this.applicationId,
+                projectId: this.projectId,
                 name: 'Provider',
                 description: 'Healthcare provider information',
                 entityDefinitionSupplier: () => this.entityDefinitions.get('provider')!,
@@ -69,7 +75,8 @@ export class HealthTaskFactory {
                 }
             }),
             this.taskBuilder.buildTask({
-                namespace: this.namespace,
+                applicationId: this.applicationId,
+                projectId: this.projectId,
                 name: 'Appointment',
                 description: 'Medical appointments and scheduling',
                 entityDefinitionSupplier: () => this.entityDefinitions.get('appointment')!,
@@ -78,7 +85,8 @@ export class HealthTaskFactory {
                 }
             }),
             this.taskBuilder.buildTask({
-                namespace: this.namespace,
+                applicationId: this.applicationId,
+                projectId: this.projectId,
                 name: 'Diagnosis',
                 description: 'Medical diagnoses and conditions',
                 entityDefinitionSupplier: () => this.entityDefinitions.get('diagnosis')!,
@@ -87,7 +95,8 @@ export class HealthTaskFactory {
                 }
             }),
             this.taskBuilder.buildTask({
-                namespace: this.namespace,
+                applicationId: this.applicationId,
+                projectId: this.projectId,
                 name: 'Treatment',
                 description: 'Medical treatments and procedures',
                 entityDefinitionSupplier: () => this.entityDefinitions.get('treatment')!,

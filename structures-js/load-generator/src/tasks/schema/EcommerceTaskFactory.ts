@@ -1,5 +1,5 @@
 import { ITask } from "../ITask"
-import { IEntityService } from '@kinotic/structures-api'
+import { IEntityService, Project, ProjectType } from '@kinotic/structures-api'
 import { Structures } from '@kinotic/structures-api'
 import path from 'path'
 import { Customer } from '../../entity/domain/ecommerce/Customer'
@@ -13,7 +13,8 @@ import { ObjectC3Type } from '@kinotic/continuum-idl'
 import { createStructureTaskBuilder } from './CreateStructureTaskBuilder'
 
 export class EcommerceTaskFactory {
-    private readonly namespace = 'ecommerce'
+    private readonly applicationId = 'ecommerce'
+    private projectId = 'ecommerce_main_project'
     private readonly taskBuilder: CreateStructureTaskBuilder
     private entityDefinitions: Map<string, ObjectC3Type> = new Map()
     private customerService?: IEntityService<Customer>
@@ -31,7 +32,10 @@ export class EcommerceTaskFactory {
             {
                 name: () => 'Create Ecommerce Namespace',
                 execute: async () => {
-                    await Structures.getNamespaceService().createNamespaceIfNotExist(this.namespace, 'Ecommerce Domain')
+                    await Structures.getApplicationService().createApplicationIfNotExist(this.applicationId, 'Ecommerce Domain')
+                    let project = new Project(null, this.applicationId, 'Main Project', 'Ecommerce Main Project')
+                    project.sourceOfTruth = ProjectType.TYPESCRIPT
+                    project = await Structures.getProjectService().createProjectIfNotExist(project)    
                 }
             },
             // Then load entity definitions
@@ -39,7 +43,7 @@ export class EcommerceTaskFactory {
                 name: () => 'Load Ecommerce Entity Definitions',
                 execute: async () => {
                     const loader = new EntityDefinitionLoader(
-                        this.namespace,
+                        this.applicationId,
                         path.join(__dirname, '../../entity/domain/ecommerce'),
                         path.join(__dirname, '../../services/ecommerce')
                     )
@@ -49,7 +53,8 @@ export class EcommerceTaskFactory {
             },
             // Then create structures
             this.taskBuilder.buildTask({
-                namespace: this.namespace,
+                applicationId: this.applicationId,
+                projectId: this.projectId,
                 name: 'Customer',
                 description: 'Customer information and preferences',
                 entityDefinitionSupplier: () => this.entityDefinitions.get('customer')!,
@@ -58,7 +63,8 @@ export class EcommerceTaskFactory {
                 }
             }),
             this.taskBuilder.buildTask({
-                namespace: this.namespace,
+                applicationId: this.applicationId,
+                projectId: this.projectId,
                 name: 'Product',
                 description: 'Product catalog information',
                 entityDefinitionSupplier: () => this.entityDefinitions.get('product')!,
@@ -67,7 +73,8 @@ export class EcommerceTaskFactory {
                 }
             }),
             this.taskBuilder.buildTask({
-                namespace: this.namespace,
+                applicationId: this.applicationId,
+                projectId: this.projectId,
                 name: 'ProductReview',
                 description: 'Product reviews and ratings',
                 entityDefinitionSupplier: () => this.entityDefinitions.get('productreview')!,
@@ -76,7 +83,8 @@ export class EcommerceTaskFactory {
                 }
             }),
             this.taskBuilder.buildTask({
-                namespace: this.namespace,
+                applicationId: this.applicationId,
+                projectId: this.projectId,
                 name: 'Purchase',
                 description: 'Purchase orders and transactions',
                 entityDefinitionSupplier: () => this.entityDefinitions.get('purchase')!,

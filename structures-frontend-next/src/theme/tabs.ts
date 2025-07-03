@@ -19,7 +19,7 @@ import type { TabsDesignTokens } from '@primeuix/themes/types/tabs';
         activeBorderColor: "{primary.color}",
         color: "{text.muted.color}",
         hoverColor: "{text.color}",
-        activeColor: "{primary.color}",
+        activeColor: "{text.color}",
         padding: "1rem 1.125rem",
         fontWeight: "600",
         margin: "0 0 -1px 0",

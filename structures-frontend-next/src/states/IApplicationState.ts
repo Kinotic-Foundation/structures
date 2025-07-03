@@ -1,51 +1,44 @@
-import { markRaw, computed, type ComputedRef, reactive } from 'vue'
-import type { Router, RouteRecordRaw, RouteLocationNormalized, NavigationGuardNext } from 'vue-router'
 import { NavItem } from '@/components/NavItem'
-import { createSimpleDataSource } from '@/util/dataSource'
-import { ProjectService, StructureService, Structures, type ApplicationDTO } from '@kinotic/structures-api'
-import type { IDataSource, Identifiable } from '@kinotic/continuum-client'
 import { Pageable } from '@kinotic/continuum-client'
+import { Application, Structures } from '@kinotic/structures-api'
+import { computed, type ComputedRef, markRaw, reactive, type Reactive } from 'vue'
+import type { NavigationGuardNext, RouteLocationNormalized, Router, RouteRecordRaw } from 'vue-router'
 
 export interface IApplicationState {
     mainNavItems: NavItem[]
     bottomNavItems: NavItem[]
     selectedNavItem: NavItem | null
+    allApplications: Application[]
     breadcrumbItems: ComputedRef<NavItem[]>
 
-    projectSource: IDataSource<Identifiable<string>> | null
-    structureSource: IDataSource<Identifiable<string>> | null
+    countsLoaded: boolean
     projectsCount: number
     structuresCount: number
 
-    currentApplication: ApplicationDTO | null
-    setCurrentApplication(app: ApplicationDTO): void
-    fetchAndSetCurrentApplication(applicationId: string): Promise<void>
+    currentApplication: Application | null
 
-    loadProjects(applicationId: string): Promise<void>
-    loadStructures(applicationId: string): Promise<void>
     loadAllApplications(): Promise<void>
 
     initialize(router: Router): void
 }
 
 class ApplicationState implements IApplicationState {
-    public mainNavItems: NavItem[] = markRaw([])
-    public bottomNavItems: NavItem[] = markRaw([])
+    public mainNavItems: NavItem[] = markRaw<NavItem[]>([])
+    public bottomNavItems: NavItem[] = markRaw<NavItem[]>([])
     public selectedNavItem: NavItem | null = null
     private router!: Router
     private allNavItems: NavItem[] = []
-    public allApplications: ApplicationDTO[] = []
+    public allApplications: Application[] = []
     public breadcrumbItems: ComputedRef<NavItem[]>
 
-    public projectSource: IDataSource<Identifiable<string>> | null = null
-    public structureSource: IDataSource<Identifiable<string>> | null = null
+    public countsLoaded = false
     public projectsCount = 0
     public structuresCount = 0
 
-    public currentApplication: ApplicationDTO | null = null
+    public _currentApplication: Application | null = null
 
     constructor() {
-        this.breadcrumbItems = computed(() => this.getBreadcrumbItems())
+        this.breadcrumbItems = computed<NavItem[]>(() => this.getBreadcrumbItems())
     }
 
     public initialize(router: Router): void {
@@ -77,44 +70,39 @@ class ApplicationState implements IApplicationState {
         this.updateSelectedNavItem(router.currentRoute.value.path)
     }
 
-    public async loadProjects(applicationId: string): Promise<void> {
-        const pageable = Pageable.create(0, 1000)
-        const service = new ProjectService()
-        const result = await service.findAllForApplication(applicationId, pageable)
-
-        this.projectsCount = result.totalElements ?? 0
-        this.projectSource = createSimpleDataSource(result.content ?? [])
+    public set currentApplication(app: Application) {
+        this._currentApplication = app
+        this.countsLoaded = false
+        Promise.all([
+            Structures.getProjectService().countForApplication(app.id),
+            Structures.getStructureService().countForApplication(app.id)
+        ]).then(([projectsCount, structuresCount]) => {
+            this.projectsCount = projectsCount
+            this.structuresCount = structuresCount
+            this.countsLoaded = true
+        }).catch(error => {
+            console.error('[ApplicationState] Failed to load counts:', error)
+            this.projectsCount = -1
+            this.structuresCount = -1
+            this.countsLoaded = true
+        })
     }
 
-    public async loadStructures(applicationId: string): Promise<void> {
-        const pageable = Pageable.create(0, 1000)
-        const service = new StructureService()
-        const result = await service.findAllForApplication(applicationId, pageable)
-
-        this.structuresCount = result.totalElements ?? 0
-        this.structureSource = createSimpleDataSource(result.content ?? [])
+    public get currentApplication(): Application | null {
+        return this._currentApplication
     }
 
     public async loadAllApplications(): Promise<void> {
         try {
+            // TODO: add virtual scroll to the list of applications
             const service = Structures.getApplicationService()
             const pageable = Pageable.create(0, 1000)
             const result = await service.findAll(pageable)
             this.allApplications = result.content ?? []
-        } catch (e) {
-            console.error('[ApplicationState] Failed to load all applications:', e)
+        } catch (error) {
+            console.error('[ApplicationState] Failed to load all applications:', error)
             this.allApplications = []
         }
-    }
-
-    public setCurrentApplication(app: ApplicationDTO): void {
-        this.currentApplication = app
-    }
-
-    public async fetchAndSetCurrentApplication(applicationId: string): Promise<void> {
-        const service = Structures.getApplicationService()
-        const app = await service.findById(applicationId)
-        this.currentApplication = app
     }
 
     // ---------- Utility methods ----------
@@ -195,4 +183,4 @@ class ApplicationState implements IApplicationState {
     }
 }
 
-export const APPLICATION_STATE: IApplicationState = reactive(new ApplicationState())
+export const APPLICATION_STATE: Reactive<IApplicationState> = reactive<IApplicationState>(new ApplicationState())

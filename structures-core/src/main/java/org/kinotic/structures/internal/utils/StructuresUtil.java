@@ -13,6 +13,7 @@ public class StructuresUtil {
 
     private static final Pattern IdentifierNamePattern = Pattern.compile("^[A-Za-z_][A-Za-z0-9_]*$");
     private static final Pattern StructureApplicationPattern = Pattern.compile("^[A-Za-z][A-Za-z0-9._-]*$");
+    private static final Pattern StructureProjectIdPattern = Pattern.compile("^[a-z][a-z0-9._-]*$");
 
     /**
      * Function will convert a structure applicationId and name to a valid
@@ -34,7 +35,9 @@ public class StructuresUtil {
 
         validateStructureName(structure.getName());
 
-        validateApplicaitonId(structure.getApplicationId());
+        validateApplicationId(structure.getApplicationId());
+
+        validateProjectId(structure.getProjectId());
 
         if (structure.getEntityDefinition() == null) {
             throw new IllegalArgumentException("Structure entityDefinition must not be null");
@@ -51,7 +54,7 @@ public class StructuresUtil {
         if (structureName == null
                 || !IdentifierNamePattern.matcher(structureName).matches()){
             throw new IllegalArgumentException("Structure Name Invalid, first character must be a " +
-                                               "letter, number or underscore. And contain only letters, numbers or underscores");
+                                               "letter, number or underscore. And contain only letters, numbers or underscores. Got "+ structureName);
         }
     }
 
@@ -61,11 +64,19 @@ public class StructuresUtil {
      * @param applicationId to validate
      * @throws IllegalArgumentException will be thrown if the structure application is invalid
      */
-    public static void validateApplicaitonId(String applicationId){
+    public static void validateApplicationId(String applicationId){
         if (applicationId == null
                 || !StructureApplicationPattern.matcher(applicationId).matches()){
             throw new IllegalArgumentException("Structure Application Id Invalid, first character must be a " +
-                                               "letter. And contain only letters, numbers, periods, underscores or dashes");
+                                               "letter. And contain only letters, numbers, periods, underscores or dashes. Got "+ applicationId);
+        }
+    }
+
+    public static void validateProjectId(String projectId){
+        if (projectId == null
+                || !StructureProjectIdPattern.matcher(projectId).matches()){
+            throw new IllegalArgumentException("Structure Project Id Invalid, first character must be a " +
+                                               "letter. And contain only letters, numbers, periods, underscores or dashes. Got "+ projectId);
         }
     }
 
@@ -80,7 +91,7 @@ public class StructuresUtil {
             || propertyName.length() > 255
             || !IdentifierNamePattern.matcher(propertyName).matches()){
             throw new IllegalArgumentException("Property Name Invalid, first character must be a " +
-                                               "letter, number or underscore. And contain only letters, numbers or underscores");
+                                               "letter, number or underscore. And contain only letters, numbers or underscores. Got "+ propertyName);
         }
     }
 

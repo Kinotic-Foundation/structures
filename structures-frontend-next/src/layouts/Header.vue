@@ -36,6 +36,7 @@
 <script lang="ts">
 import { Component, Vue, Watch } from 'vue-facing-decorator'
 import { APPLICATION_STATE } from '@/states/IApplicationState'
+import type { Application } from '@kinotic/structures-api'
 
 @Component
 export default class Header extends Vue {
@@ -75,10 +76,10 @@ export default class Header extends Vue {
     this.dropdownOpen = !this.dropdownOpen
   }
 
-  async selectApp(app: { id: string }) {
+  async selectApp(app: Application) {
         try {
         const appId = app.id ?? ''
-        APPLICATION_STATE.setCurrentApplication(app)
+        APPLICATION_STATE.currentApplication  = app
         this.$router.push(`/application/${encodeURIComponent(appId)}`)
         this.dropdownOpen = false
     } catch (e) {

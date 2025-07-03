@@ -63,6 +63,7 @@ public class DefaultStructureService implements StructureService {
             StructuresUtil.validateStructure(structure);
 
             structure.setApplicationId(structure.getApplicationId().trim());
+            structure.setProjectId(structure.getProjectId().trim());
             structure.setName(structure.getName().trim());
             logicalIndexName = StructuresUtil.structureNameToId(structure.getApplicationId(), structure.getName());
 

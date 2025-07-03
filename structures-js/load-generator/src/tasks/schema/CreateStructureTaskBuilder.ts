@@ -3,8 +3,9 @@ import { IStructureService, IEntityService, Structures, Structure } from '@kinot
 import { ObjectC3Type } from '@kinotic/continuum-idl'
 
 export interface CreateStructureTaskConfig {
-    namespace: string
-    name: string
+    applicationId: string
+    projectId: string
+    name: string    
     description: string
     entityDefinitionSupplier: () => ObjectC3Type
     onServiceCreated?: (service: IEntityService<any>) => void
@@ -22,28 +23,33 @@ export class CreateStructureTaskBuilder {
     return {
             name: () => `Create ${config.name} Structure`,
             execute: async () => {
-                const structureId = `${config.namespace}.${config.name.toLowerCase()}`
+                const structureId = `${config.applicationId}.${config.name.toLowerCase()}`
                 const existingStructure = await this.structureService.findById(structureId)
                 
-                if (!existingStructure) {
-                    const entityDefinition = config.entityDefinitionSupplier()
-                    
-                    const structure = new Structure(
-                        config.namespace,
-                        config.name,
-                        entityDefinition,
-                        config.description
-                    )
-                    const savedStructure = await this.structureService.create(structure)
-                    if (savedStructure.id) {
-                        await this.structureService.publish(savedStructure.id)
+                if (existingStructure) {
+                    if (existingStructure.published) {
+                        await this.structureService.unPublish(existingStructure.id!)
                     }
-                } else {
-                    console.log(`${config.name} structure already exists, skipping creation`)
+                    await this.structureService.deleteById(existingStructure.id!)
+                    await this.structureService.syncIndex()
+                }
+
+                const entityDefinition = config.entityDefinitionSupplier()
+                
+                const structure = new Structure(
+                    config.applicationId,
+                    config.projectId,
+                    config.name,
+                    entityDefinition,
+                    config.description
+                )
+                const savedStructure = await this.structureService.create(structure)
+                if (savedStructure.id) {
+                    await this.structureService.publish(savedStructure.id)
                 }
                 
                 if (config.onServiceCreated) {
-                    const service = Structures.createEntityService(config.namespace, config.name)
+                    const service = Structures.createEntityService(config.applicationId, config.name)
                     config.onServiceCreated(service)
                 }
             }

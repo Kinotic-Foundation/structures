@@ -17,6 +17,7 @@ import org.kinotic.structures.api.services.ApplicationService;
 import org.kinotic.structures.api.services.StructureService;
 import org.kinotic.structures.internal.utils.StructuresUtil;
 import org.springframework.core.io.ResourceLoader;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
@@ -95,6 +96,7 @@ public class TestDataService {
         Structure structure = new Structure();
         structure.setName("Car"+(structureNameSuffix != null ? structureNameSuffix : ""));
         structure.setApplicationId("org.kinotic.sample");
+        structure.setProjectId("org.kinotic.sample_default");
         structure.setDescription("Defines a Car");
 
         ObjectC3Type carType = createCarSchema(MultiTenancyType.SHARED);
@@ -178,6 +180,7 @@ public class TestDataService {
         Structure structure = new Structure();
         structure.setName("Person"+(structureNameSuffix != null ? structureNameSuffix : ""));
         structure.setApplicationId("org.kinotic.sample");
+        structure.setProjectId("org.kinotic.sample_default");
         structure.setDescription("Defines a Person");
 
         ObjectC3Type personType = createPersonSchema(MultiTenancyType.SHARED);
@@ -265,7 +268,9 @@ public class TestDataService {
 
         public PeopleCacheLoader(ResourceLoader resourceLoader,
                                  ObjectMapper objectMapper) {
-            this.resourceLoader = resourceLoader;
+
+            this.resourceLoader = resourceLoader instanceof PathMatchingResourcePatternResolver 
+            ? (PathMatchingResourcePatternResolver) resourceLoader : new PathMatchingResourcePatternResolver(resourceLoader);
             this.objectMapper = objectMapper;
         }
 

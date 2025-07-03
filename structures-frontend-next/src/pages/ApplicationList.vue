@@ -8,13 +8,8 @@ import { mdiGraphql, mdiApi } from '@mdi/js'
 import GraphQLModal from '@/components/modals/GraphQLModal.vue'
 import { Structures, type IApplicationService } from '@kinotic/structures-api'
 import { APPLICATION_STATE } from '@/states/IApplicationState'
-
-interface CrudHeader {
-    field: string
-    header: string
-    sortable?: boolean
-}
-
+import type { CrudHeader } from '@/types/CrudHeader'
+import SelectButton from 'primevue/selectbutton';
 @Component({
     components: {
         CrudTable,
@@ -69,7 +64,7 @@ async toApplicationPage(item: Identifiable<string>): Promise<void> {
     try {
         const appId = item.id ?? ''
         const app = await this.dataSource.findById(appId)
-        APPLICATION_STATE.setCurrentApplication(app)
+        APPLICATION_STATE.currentApplication = app
         this.$router.push(`/application/${encodeURIComponent(appId)}`)
     } catch (e) {
         console.error('[NamespaceList] Failed to navigate to application:', e)
@@ -97,8 +92,7 @@ async toApplicationPage(item: Identifiable<string>): Promise<void> {
 
 <template>
     <ContainerMedium>
-        <h1 class="text-2xl font-semibold mb-5">Applications</h1>
-
+        <h1 class="text-2xl font-semibold mb-5 text-[color:var(--surface-950)]">Applications</h1>
         <CrudTable
             createNewButtonText="New application"
             rowHoverColor=""
@@ -119,7 +113,6 @@ async toApplicationPage(item: Identifiable<string>): Promise<void> {
                 <Button
                     v-if="item.enableGraphQL"
                     text
-                    class="!text-[#334155] !bg-white"
                     title="GraphQL"
                     @click="openGraphQL"
                 >
@@ -129,7 +122,6 @@ async toApplicationPage(item: Identifiable<string>): Promise<void> {
                 <Button
                     v-if="item.enableOpenAPI"
                     text
-                    class="!text-[#334155] !bg-white"
                     title="OpenAPI"
                 >
                     <RouterLink target="_blank" :to="'/scalar-ui.html?namespace=' + item.id">

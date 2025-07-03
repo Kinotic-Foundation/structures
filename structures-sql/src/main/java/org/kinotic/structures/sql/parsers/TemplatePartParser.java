@@ -1,14 +1,12 @@
 package org.kinotic.structures.sql.parsers;
 
-import org.kinotic.structures.sql.domain.Column;
-import org.kinotic.structures.sql.domain.ColumnType;
-import org.kinotic.structures.sql.domain.statements.TemplatePart;
-import org.kinotic.structures.sql.domain.statements.ColumnTemplatePart;
-import org.kinotic.structures.sql.domain.statements.SettingTemplatePart;
-import org.kinotic.structures.sql.parser.StructuresSQLParser;
-
 import java.util.ArrayList;
 import java.util.List;
+
+import org.kinotic.structures.sql.domain.statements.ColumnTemplatePart;
+import org.kinotic.structures.sql.domain.statements.SettingTemplatePart;
+import org.kinotic.structures.sql.domain.statements.TemplatePart;
+import org.kinotic.structures.sql.parser.StructuresSQLParser;
 
 /**
  * Helper class for parsing template parts from SQL statements.
@@ -32,8 +30,7 @@ public class TemplatePartParser {
                 ));
             } else if (part.columnDefinition() != null) {
                 var name = part.columnDefinition().ID().getText();
-                var type = ColumnType.valueOf(part.columnDefinition().type().getText().toUpperCase());
-                result.add(new ColumnTemplatePart(new Column(name, type)));
+                result.add(new ColumnTemplatePart(TypeParser.parseColumnType(name, part.columnDefinition().type())));
             }
         }
         

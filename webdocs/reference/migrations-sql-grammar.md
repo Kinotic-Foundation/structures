@@ -158,18 +158,28 @@ Where clauses are used in `UPDATE` and `DELETE` statements.
 |-------------|------------------------|
 | TEXT        | text                   |
 | KEYWORD     | keyword                |
+| KEYWORD NOT INDEXED | keyword (not indexed, no doc_values) |
 | INTEGER     | integer                |
+| INTEGER NOT INDEXED | integer (not indexed, no doc_values) |
 | LONG        | long                   |
+| LONG NOT INDEXED | long (not indexed, no doc_values) |
 | FLOAT       | float                  |
+| FLOAT NOT INDEXED | float (not indexed, no doc_values) |
 | DOUBLE      | double                 |
+| DOUBLE NOT INDEXED | double (not indexed, no doc_values) |
 | BOOLEAN     | boolean                |
+| BOOLEAN NOT INDEXED | boolean (not indexed, no doc_values) |
 | DATE        | date                   |
-| JSON        | object                 |
+| DATE NOT INDEXED | date (not indexed, no doc_values) |
+| JSON        | object (flattened)     |
+| JSON NOT INDEXED | object (not indexed) |
 | BINARY      | binary                 |
 | GEO_POINT   | geo_point              |
 | GEO_SHAPE   | geo_shape              |
 | UUID        | keyword                |
+| UUID NOT INDEXED | keyword (not indexed, no doc_values) |
 | DECIMAL     | double                 |
+| DECIMAL NOT INDEXED | double (not indexed, no doc_values) |
 
 ---
 

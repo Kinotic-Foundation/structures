@@ -1,4 +1,4 @@
-import {Continuum, CrudServiceProxy, ICrudServiceProxy, Page, Pageable} from '@kinotic/continuum-client'
+import {Continuum, CrudServiceProxy, FunctionalIterablePage, ICrudServiceProxy, IterablePage, Page, Pageable} from '@kinotic/continuum-client'
 import {Structure} from '@/api/domain/Structure'
 
 
@@ -24,7 +24,7 @@ export interface IStructureService extends ICrudServiceProxy<Structure> {
      * @param pageable the page to return
      * @return Promise emitting a page of structures
      */
-    findAllForApplication(applicationId: string, pageable: Pageable): Promise<Page<Structure>>
+    findAllForApplication(applicationId: string, pageable: Pageable): Promise<IterablePage<Structure>>
 
     /**
      * Finds all published structures for the given application.
@@ -40,7 +40,7 @@ export interface IStructureService extends ICrudServiceProxy<Structure> {
      * @param pageable the page to return
      * @return Promise emitting a page of structures
      */
-    findAllForProject(projectId: string, pageable: Pageable): Promise<Page<Structure>>
+    findAllForProject(projectId: string, pageable: Pageable): Promise<IterablePage<Structure>>
 
     /**
      * Publishes the structure with the given id.
@@ -78,15 +78,27 @@ export class StructureService extends CrudServiceProxy<Structure> implements ISt
         return this.serviceProxy.invoke('countForProject', [projectId])
     }
 
-    public findAllForApplication(applicationId: string, pageable: Pageable): Promise<Page<Structure>> {
+    public findAllForApplicationSinglePage(applicationId: string, pageable: Pageable): Promise<Page<Structure>> {
         return this.serviceProxy.invoke('findAllForApplication', [applicationId, pageable])
+    }
+
+    public async findAllForApplication(applicationId: string, pageable: Pageable): Promise<IterablePage<Structure>> {
+        const page: Page<Structure> = await this.findAllForApplicationSinglePage(applicationId, pageable)
+        return new FunctionalIterablePage(pageable, page,
+            (pageable: Pageable) => this.findAllForApplicationSinglePage(applicationId, pageable))
     }
 
     public findAllPublishedForApplication(applicationId: string, pageable: Pageable): Promise<Page<Structure>> {
         return this.serviceProxy.invoke('findAllPublishedForApplication', [applicationId, pageable])
     }
 
-    public findAllForProject(projectId: string, pageable: Pageable): Promise<Page<Structure>> {
+    public async findAllForProject(projectId: string, pageable: Pageable): Promise<IterablePage<Structure>> {
+        const page: Page<Structure> = await this.findAllForProjectSinglePage(projectId, pageable)
+        return new FunctionalIterablePage(pageable, page,
+            (pageable: Pageable) => this.findAllForProjectSinglePage(projectId, pageable))
+    }
+
+    public findAllForProjectSinglePage(projectId: string, pageable: Pageable): Promise<Page<Structure>> {
         return this.serviceProxy.invoke('findAllForProject', [projectId, pageable])
     }
 

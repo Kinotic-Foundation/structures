@@ -1,4 +1,4 @@
-import {Continuum, CrudServiceProxy, ICrudServiceProxy, Page, Pageable} from '@kinotic/continuum-client'
+import {Continuum, CrudServiceProxy, FunctionalIterablePage, ICrudServiceProxy, IterablePage, Page, Pageable} from '@kinotic/continuum-client'
 import {Project} from '@/api/domain/Project'
 
 export interface IProjectService extends ICrudServiceProxy<Project> {
@@ -23,7 +23,7 @@ export interface IProjectService extends ICrudServiceProxy<Project> {
      * @param pageable the page to return
      * @return Promise emitting a page of projects
      */
-    findAllForApplication(applicationId: string, pageable: Pageable): Promise<Page<Project>>
+    findAllForApplication(applicationId: string, pageable: Pageable): Promise<IterablePage<Project>>
 
     /**
      * This operation makes all the recent writes immediately available for search.
@@ -47,7 +47,13 @@ export class ProjectService extends CrudServiceProxy<Project> implements IProjec
         return this.serviceProxy.invoke('createProjectIfNotExist', [project])
     }
 
-    public findAllForApplication(applicationId: string, pageable: Pageable): Promise<Page<Project>> {
+    public async findAllForApplication(applicationId: string, pageable: Pageable): Promise<IterablePage<Project>> {
+        const page: Page<Project> = await this.findAllForApplicationSinglePage(applicationId, pageable)
+        return new FunctionalIterablePage(pageable, page,
+            (pageable: Pageable) => this.findAllForApplicationSinglePage(applicationId, pageable))
+    }
+
+    public findAllForApplicationSinglePage(applicationId: string, pageable: Pageable): Promise<IterablePage<Project>> {
         return this.serviceProxy.invoke('findAllForApplication', [applicationId, pageable])
     }
 

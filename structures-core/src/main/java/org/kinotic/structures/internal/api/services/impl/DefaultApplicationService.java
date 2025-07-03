@@ -50,7 +50,7 @@ public class DefaultApplicationService extends AbstractCrudService<Application> 
 
     @Override
     public CompletableFuture<Application> save(Application entity) {
-        StructuresUtil.validateApplicaitonId(entity.getId());
+        StructuresUtil.validateApplicationId(entity.getId());
         entity.setUpdated(new Date());
         return super.save(entity);
     }

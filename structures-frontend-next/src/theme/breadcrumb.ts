@@ -8,7 +8,7 @@ import type { BreadcrumbDesignTokens } from '@primeuix/themes/types/breadcrumb';
         transitionDuration: "{transition.duration}"
     },
     item: {
-        color: "{text.muted.color}",
+        color: "{surface.400}",
         hoverColor: "{text.color}",
         borderRadius: "{content.border.radius}",
         gap: "{navigation.item.gap}",
