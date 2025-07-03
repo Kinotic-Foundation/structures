@@ -30,7 +30,8 @@ export default class ProjectList extends Vue {
     get dataSource(): IDataSource<Project> {
         return {
             findAll: async (pageable: Pageable): Promise<IterablePage<Project>> => {
-                return Structures.getProjectService().findAllForApplication(this.applicationId, pageable)
+                const result = await Structures.getProjectService().findAllForApplication(this.applicationId, pageable)
+                return result
             },
             search: async (searchText: string, pageable: Pageable): Promise<IterablePage<Project>> => {
                 const search = `applicationId:${this.applicationId} && ${searchText}`

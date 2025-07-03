@@ -1,37 +1,50 @@
 <script lang="ts">
-import CrudTable from '@/components/CrudTable.vue'
+import { Component, Vue } from 'vue-facing-decorator'
+
+import ProjectList from '@/components/ProjectList.vue'
+import StructuresList from '@/components/StructuresList.vue'
 import GraphQLModal from '@/components/modals/GraphQLModal.vue'
-import NewProjectSidebar from '@/components/NewProjectSidebar.vue'
-import { APPLICATION_STATE } from '@/states/IApplicationState'
-import { mdiApi, mdiGraphql } from '@mdi/js'
-import { Component, Prop, Vue } from 'vue-facing-decorator'
+import StructureItemModal from '@/components/modals/StructureItemModal.vue'
+import { STRUCTURES_STATE } from '@/states/IStructuresState'
+import Tabs from 'primevue/tabs'
+import TabList from 'primevue/tablist'
+import Tab from 'primevue/tab'
+import TabPanels from 'primevue/tabpanels'
+import TabPanel from 'primevue/tabpanel'
 
 @Component({
-    components: { CrudTable, NewProjectSidebar, GraphQLModal }
+    components: {
+        ProjectList,
+        StructuresList,
+        GraphQLModal,
+        StructureItemModal,
+        Tabs,
+        TabList,
+        Tab,
+        TabPanels,
+        TabPanel
+    }
 })
 export default class ApplicationDetails extends Vue {
-    @Prop({ required: true }) applicationId!: string
-    
-    activeTab = 'projects'
+    activeTab: number = 0
 
-    showGraphQLModal = false
+    tabs = [
+        { title: 'Projects', value: 0 },
+        { title: 'Structures', value: 1 }
+    ]
 
-    icons = { graph: mdiGraphql, api: mdiApi }
+    showGraphQLModal: boolean = false
 
-    get applicationName(): string {
-        return APPLICATION_STATE.currentApplication?.id || 'Application'
+    get applicationId(): string | string[] {
+        return this.$route.params.applicationId
     }
 
-    get projectsCount() {
-        return APPLICATION_STATE.projectsCount
+    get isModalOpen(): boolean {
+        return STRUCTURES_STATE.isModalOpen.value
     }
 
-    get structuresCount() {
-        return APPLICATION_STATE.structuresCount
-    }
-
-    async switchTab(tab: string): Promise<void> {
-        this.activeTab = tab
+    get selectedStructure() {
+        return STRUCTURES_STATE.selectedStructure.value
     }
 
     openGraphQL(): void {
@@ -42,6 +55,9 @@ export default class ApplicationDetails extends Vue {
         this.showGraphQLModal = false
     }
 
+    closeModal(): void {
+        STRUCTURES_STATE.closeModal()
+    }
 }
 </script>
 
@@ -49,11 +65,13 @@ export default class ApplicationDetails extends Vue {
     <div class="p-10">
         <div class="flex justify-between items-center mb-6">
             <div>
-                <h1 class="font-semibold text-2xl text-[#101010] mb-3">{{ applicationName }}</h1>
-                <p class="text-[#101010] text-sm">{{ projectsCount }} projects, {{ structuresCount }} structures</p>
+                <h1 class="font-semibold text-2xl text-[#101010] mb-3">{{ applicationId }}</h1>
             </div>
             <div class="flex gap-3">
-                <div @click="openGraphQL" class="border border-[#E6E7EB] rounded-xl flex items-center gap-2 py-3 px-8 cursor-pointer">
+                <div
+                    @click="openGraphQL"
+                    class="border border-[#E6E7EB] rounded-xl flex items-center gap-2 py-3 px-8 cursor-pointer"
+                >
                     <img src="@/assets/graphql.svg" class="w-6 h-6" />
                     <span class="text-sm font-semibold">GraphQL</span>
                 </div>
@@ -64,23 +82,41 @@ export default class ApplicationDetails extends Vue {
             </div>
         </div>
 
-        <div class="flex gap-6 border-b border-[#E6E7EB] mb-6">
-            <button @click="switchTab('projects')"
-                :class="['text-sm font-semibold pb-3 border-b-2', activeTab === 'projects' ? 'border-[#3D5ACC] text-[#101010]' : 'border-transparent text-[#999CA0]']">
-                Projects
-            </button>
-            <button @click="switchTab('structures')"
-                :class="['text-sm font-semibold pb-3 border-b-2', activeTab === 'structures' ? 'border-[#3D5ACC] text-[#101010]' : 'border-transparent text-[#999CA0]']">
-                Structures
-            </button>
-        </div>
+        <Tabs :activeIndex="activeTab" class="w-full">
+            <TabList>
+                <Tab
+                    v-for="tab in tabs"
+                    :key="tab.title"
+                    :value="tab.value"
+                >
+                    {{ tab.title }}
+                </Tab>
+            </TabList>
 
-        <ProjectList v-if="activeTab === 'projects'" :applicationId="applicationId" />
-
-        <StructuresList v-else-if="activeTab === 'structures'" :applicationId="applicationId" />
+            <TabPanels>
+                <TabPanel
+                    v-for="tab in tabs"
+                    :key="tab.title"
+                    :value="tab.value"
+                >
+                    <ProjectList
+                        v-if="tab.value === 0"
+                        :applicationId="applicationId"
+                    />
+                    <StructuresList
+                        v-else-if="tab.value === 1"
+                        :applicationId="applicationId"
+                    />
+                </TabPanel>
+            </TabPanels>
+        </Tabs>
 
         <GraphQLModal :visible="showGraphQLModal" @close="closeGraphQL" />
-
+        <StructureItemModal
+            v-if="isModalOpen"
+            :item="selectedStructure"
+            @close="closeModal"
+        />
     </div>
 </template>
 
