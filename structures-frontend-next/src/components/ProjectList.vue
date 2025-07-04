@@ -30,8 +30,9 @@ export default class ProjectList extends Vue {
     get dataSource(): IDataSource<Project> {
         return {
             findAll: async (pageable: Pageable): Promise<IterablePage<Project>> => {
-                const result = await Structures.getProjectService().findAllForApplication(this.applicationId, pageable)
-                return result
+                const result = await Structures.getProjectService().findAllForApplication(this.applicationId, pageable);
+                APPLICATION_STATE.projectsCount = result.totalElements ?? 0; // ✅ update count
+                return result;
             },
             search: async (searchText: string, pageable: Pageable): Promise<IterablePage<Project>> => {
                 const search = `applicationId:${this.applicationId} && ${searchText}`
@@ -108,6 +109,7 @@ export default class ProjectList extends Vue {
             @onRowClick="toProjectPage"
             createNewButtonText="New project"
             :isShowAddNew="true"
+            emptyStateText="No projects yet"
         >
             <template #item.id="{ item }">
                 <span>{{ item.id }}</span>

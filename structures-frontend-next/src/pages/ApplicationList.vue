@@ -104,6 +104,7 @@ async toApplicationPage(item: Identifiable<string>): Promise<void> {
             ref="crudTable"
             @onRowClick="toApplicationPage"
             :enableViewSwitcher="true"
+            emptyStateText="No applications yet"
         >
             <template #item.id="{ item }">
                 <span>{{ item.id }}</span>
