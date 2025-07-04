@@ -1,21 +1,39 @@
-import tailwindcss from "@tailwindcss/vite";
+import Aura from '@primeuix/themes/aura';
 
-// https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   ssr: true,
   compatibilityDate: '2025-05-15',
   devtools: { enabled: true },
-  modules: ['@nuxtjs/color-mode'],
-  css: ['~/assets/css/main.css'],
+  modules: ['@nuxtjs/color-mode', '@primevue/nuxt-module', '@nuxtjs/tailwindcss'],
+  css: [
+    '~/assets/css/main.css',
+    'primeicons/primeicons.css',
+  ],
   colorMode: {
     classSuffix: '',
+    preference: 'dark',
+    fallback: 'light',
+    storageKey: 'nuxt-color-mode',
   },
-  vite: {
-    plugins: [
-      tailwindcss()
-    ],
+  primevue: {
+    options: {
+      theme: {
+        preset: Aura,
+        options: {
+          prefix: 'p',
+          darkModeSelector: '.dark',
+          cssLayer: {
+            name: 'primevue',
+            order: 'tailwind-base, primevue, tailwind-utilities',
+          },
+        },
+      },
+    },
+  },
+  build: {
+    transpile: ['primevue'],
   },
   app: {
-    baseURL: '/website/'
-  }
+    baseURL: '/website/',
+  },
 })

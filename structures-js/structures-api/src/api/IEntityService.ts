@@ -9,9 +9,9 @@ import {EntitiesServiceSingleton, IEntitiesService} from '@/api/IEntitiesService
 export interface IEntityService<T> {
 
     /**
-     * The namespace of the structure this service is for
+     * The applicationId of the structure this service is for
      */
-    structureNamespace: string
+    structureApplicationId: string
 
     /**
      * The name of the structure this service is for
@@ -20,7 +20,7 @@ export interface IEntityService<T> {
 
     /**
      * The id of the structure this service is for
-     * Which is the namespace + '.' + name
+     * Which is the applicationId + '.' + name
      */
     structureId: string
 
@@ -159,18 +159,18 @@ export interface IEntityService<T> {
  */
 export class EntityService<T> implements IEntityService<T>{
 
-    public structureNamespace: string
+    public structureApplicationId: string
     public structureName: string
     public structureId: string
 
     private readonly entitiesService: IEntitiesService
 
-    public constructor(structureNamespace: string,
+    public constructor(structureApplicationId: string,
                        structureName: string,
                        entitiesService?: IEntitiesService) {
-        this.structureNamespace = structureNamespace
+        this.structureApplicationId = structureApplicationId
         this.structureName = structureName
-        this.structureId = (structureNamespace + '.' + structureName).toLowerCase()
+        this.structureId = (structureApplicationId + '.' + structureName).toLowerCase()
         this.entitiesService = entitiesService || EntitiesServiceSingleton
     }
 

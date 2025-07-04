@@ -7,8 +7,14 @@ on:
       - main
       - 2.x
     paths-ignore:
+      - 'helm/**'
+      - 'docker-compose/**'
+      - 'structures-js/example/**'
+      - 'structures-js/load-generator/**'
+      - 'structures-js/structures-api/**'
+      - 'structures-js/structures-cli/**'
+      - 'webdocs/**' 
       - 'website/**'
-      - 'webdocs/**'
 
 jobs:
   gradle_build_and_publish:
@@ -27,7 +33,7 @@ jobs:
           distribution: 'zulu'
           java-version: 21
           gpg-private-key: ${{ secrets.GPG_KEY_NEW }}
-          gpg-passphrase: GPG_KEY_PASS_NEW
+          gpg-passphrase: ${{ secrets.GPG_KEY_PASS_NEW }}
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -37,13 +43,16 @@ jobs:
         continue-on-error: true
         run: ./gradlew build
 
-      - name: Publish to Maven Central
+      - name: Publish to Maven Central with JReleaser
         if: ${{ steps.gradle_build.outcome == 'success' }}
-        # We must -Psigning.gnupg.executable=gpg since setup-java provides gpg2 as gpg
-        run: ./gradlew publish -Psigning.gnupg.executable=gpg -Psigning.gnupg.keyName="${{ secrets.GPG_KEY_ID_NEW }}" -Psigning.gnupg.passphrase="${{ secrets.GPG_KEY_PASS_NEW }}"
+        run: ./gradlew publish && ./gradlew jreleaserDeploy
         env:
-          MAVEN_USERNAME: ${{ secrets.MAVEN_TOKEN_USERNAME }}
-          MAVEN_PASSWORD: ${{ secrets.MAVEN_TOKEN_PASSWORD }}
+          JRELEASER_MAVENCENTRAL_USERNAME: ${{ secrets.MAVEN_TOKEN_USERNAME }}
+          JRELEASER_MAVENCENTRAL_TOKEN: ${{ secrets.MAVEN_TOKEN_PASSWORD }}
+          JRELEASER_NEXUS2_USERNAME: ${{ secrets.MAVEN_TOKEN_USERNAME }}
+          JRELEASER_NEXUS2_TOKEN: ${{ secrets.MAVEN_TOKEN_PASSWORD }}
+          JRELEASER_GPG_SECRET_KEY: ${{ secrets.GPG_KEY_NEW }}
+          JRELEASER_GPG_PASSPHRASE: ${{ secrets.GPG_KEY_PASS_NEW }}
 
       - name: Publish to Docker Hub
         if: ${{ steps.gradle_build.outcome == 'success' }}

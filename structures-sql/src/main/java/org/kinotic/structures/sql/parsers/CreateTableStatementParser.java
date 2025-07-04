@@ -1,14 +1,13 @@
 package org.kinotic.structures.sql.parsers;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.kinotic.structures.sql.domain.Column;
-import org.kinotic.structures.sql.domain.ColumnType;
 import org.kinotic.structures.sql.domain.Statement;
 import org.kinotic.structures.sql.domain.statements.CreateTableStatement;
 import org.kinotic.structures.sql.parser.StructuresSQLParser;
 import org.springframework.stereotype.Component;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Parses CREATE TABLE statements into CreateTableStatement objects.
@@ -32,8 +31,7 @@ public class CreateTableStatementParser implements StatementParser {
         // Parse column definitions
         for (StructuresSQLParser.ColumnDefinitionContext columnDef : createContext.columnDefinition()) {
             String name = columnDef.ID().getText();
-            ColumnType type = ColumnType.valueOf(columnDef.type().getText());
-            columns.add(new Column(name, type));
+            columns.add(TypeParser.parseColumnType(name, columnDef.type()));
         }
 
         // Check for IF NOT EXISTS

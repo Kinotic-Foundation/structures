@@ -29,8 +29,25 @@ const pageRoutes: RouteRecordRaw[] = [
       {
         name: "applications",
         path: '',
-        component: () => import('@/pages/NamespaceList.vue'),
+        component: () => import('@/pages/ApplicationList.vue'),
       },
+    ]
+  },
+  {
+    path: '/application/:applicationId',
+    component: () => import('@/layouts/LayoutForPage.vue'),
+    meta: {
+      showInMainNav: false,
+      label: 'Application Details',
+      icon: 'microchip.svg'
+    } as RouteMeta,
+    children: [
+      {
+        name: 'application-details',
+        path: '',
+        component: () => import('@/pages/ApplicationDetails.vue'),
+        props: (route) => ({ applicationId: route.params.applicationId })
+      }
     ]
   },
   {
@@ -92,7 +109,7 @@ const pageRoutes: RouteRecordRaw[] = [
   // },
   {
     path: '/application-add',
-    component: () => import('@/pages/NamespaceAddEdit.vue'),
+    component: () => import('@/pages/ApplicationAddEdit.vue'),
     meta: {
       showInMainNav: false,
       icon: 'settings.svg',

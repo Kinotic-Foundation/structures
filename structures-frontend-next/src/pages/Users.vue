@@ -43,15 +43,9 @@
 import { Component, Vue } from 'vue-facing-decorator'
 import CrudTable from '@/components/CrudTable.vue'
 import { type Identifiable } from '@kinotic/continuum-client'
-import { Structures, type INamespaceService } from '@kinotic/structures-api'
+import { Structures, type IApplicationService } from '@kinotic/structures-api'
 import { mdiGraphql, mdiApi } from '@mdi/js'
-import { USER_STATE } from '@/states/IUserState'
-
-interface CrudHeader {
-  field: string
-  header: string
-  sortable?: boolean
-}
+import type { CrudHeader } from '@/types/CrudHeader'
 
 @Component({
   components: { CrudTable }
@@ -63,7 +57,7 @@ export default class Users extends Vue {
     { field: 'surname', header: 'Surname', sortable: false },
   ]
 
-  dataSource: INamespaceService = Structures.getNamespaceService()
+  dataSource: IApplicationService = Structures.getApplicationService()
 
   icons = {
     graph: mdiGraphql,
@@ -72,10 +66,6 @@ export default class Users extends Vue {
 
   async mounted(): Promise<void> {
     try {
-      if (!USER_STATE.isAuthenticated()) {
-        await USER_STATE.authenticate('admin', 'structures')
-      }
-
       this.refreshTable()
 
       if (this.$route.query.created === 'true') {

@@ -21,7 +21,7 @@ import { NavItem } from '@/components/NavItem'
 })
 export default class AppBreadcrumb extends Vue {
     get breadcrumbModel(): NavItem[] {
-        return StructuresStates.getApplicationState().breadcrumbItems.value
+        return StructuresStates.getApplicationState().breadcrumbItems
     }
 
     navigate(item: NavItem): void {

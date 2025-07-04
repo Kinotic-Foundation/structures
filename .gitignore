@@ -77,3 +77,5 @@ structures-js/structures-cli/yalc.lock
 structures-js/structures-e2e/test/services/generated/
 
 structures-sql/allure-results/
+
+structures-server/src/main/resources/webroot2/

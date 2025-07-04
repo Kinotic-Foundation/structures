@@ -1,26 +1,44 @@
-import { markRaw, shallowReactive, computed, type ComputedRef } from 'vue'
-import type { Router, RouteRecordRaw, RouteLocationNormalized, NavigationGuardNext } from 'vue-router'
 import { NavItem } from '@/components/NavItem'
+import { Pageable } from '@kinotic/continuum-client'
+import { Application, Structures } from '@kinotic/structures-api'
+import { computed, type ComputedRef, markRaw, reactive, type Reactive } from 'vue'
+import type { NavigationGuardNext, RouteLocationNormalized, Router, RouteRecordRaw } from 'vue-router'
 
 export interface IApplicationState {
     mainNavItems: NavItem[]
     bottomNavItems: NavItem[]
     selectedNavItem: NavItem | null
+    allApplications: Application[]
     breadcrumbItems: ComputedRef<NavItem[]>
+
+    countsLoaded: boolean
+    projectsCount: number
+    structuresCount: number
+
+    currentApplication: Application | null
+
+    loadAllApplications(): Promise<void>
+
     initialize(router: Router): void
 }
 
 class ApplicationState implements IApplicationState {
-    public mainNavItems: NavItem[] = markRaw([])
-    public bottomNavItems: NavItem[] = markRaw([])
+    public mainNavItems: NavItem[] = markRaw<NavItem[]>([])
+    public bottomNavItems: NavItem[] = markRaw<NavItem[]>([])
     public selectedNavItem: NavItem | null = null
     private router!: Router
     private allNavItems: NavItem[] = []
-
+    public allApplications: Application[] = []
     public breadcrumbItems: ComputedRef<NavItem[]>
 
+    public countsLoaded = false
+    public projectsCount = 0
+    public structuresCount = 0
+
+    public _currentApplication: Application | null = null
+
     constructor() {
-        this.breadcrumbItems = computed(() => this.getBreadcrumbItems())
+        this.breadcrumbItems = computed<NavItem[]>(() => this.getBreadcrumbItems())
     }
 
     public initialize(router: Router): void {
@@ -44,7 +62,7 @@ class ApplicationState implements IApplicationState {
             })
         }
 
-        router.beforeResolve((to: RouteLocationNormalized, _: RouteLocationNormalized, next: NavigationGuardNext) => {
+        router.beforeResolve((to: RouteLocationNormalized, _, next: NavigationGuardNext) => {
             this.updateSelectedNavItem(to.path)
             next()
         })
@@ -52,16 +70,49 @@ class ApplicationState implements IApplicationState {
         this.updateSelectedNavItem(router.currentRoute.value.path)
     }
 
+    public set currentApplication(app: Application) {
+        this._currentApplication = app
+        this.countsLoaded = false
+        Promise.all([
+            Structures.getProjectService().countForApplication(app.id),
+            Structures.getStructureService().countForApplication(app.id)
+        ]).then(([projectsCount, structuresCount]) => {
+            this.projectsCount = projectsCount
+            this.structuresCount = structuresCount
+            this.countsLoaded = true
+        }).catch(error => {
+            console.error('[ApplicationState] Failed to load counts:', error)
+            this.projectsCount = -1
+            this.structuresCount = -1
+            this.countsLoaded = true
+        })
+    }
+
+    public get currentApplication(): Application | null {
+        return this._currentApplication
+    }
+
+    public async loadAllApplications(): Promise<void> {
+        try {
+            // TODO: add virtual scroll to the list of applications
+            const service = Structures.getApplicationService()
+            const pageable = Pageable.create(0, 1000)
+            const result = await service.findAll(pageable)
+            this.allApplications = result.content ?? []
+        } catch (error) {
+            console.error('[ApplicationState] Failed to load all applications:', error)
+            this.allApplications = []
+        }
+    }
+
+    // ---------- Utility methods ----------
     private createNavItem(route: RouteRecordRaw, parentPath: string): NavItem {
         const fullPath = this.resolveFullPath(route.path, parentPath)
-
         const navItem = new NavItem(
             route.meta?.icon as string || '',
             route.meta?.label as string || route.name?.toString() || '',
             fullPath,
-            async () => {
-                await this.router.push(fullPath)
-            }
+            async () => { await this.router.push(fullPath) }
         )
 
         if (route.children?.length) {
@@ -85,28 +136,23 @@ class ApplicationState implements IApplicationState {
     }
 
     private updateSelectedNavItem(path: string): void {
-        const normalizedPath = path
         let bestMatch: NavItem | null = null
         let longestMatchLength = 0
 
         const checkNavItem = (navItem: NavItem): void => {
-            const navPath = navItem.path
-
-            if (normalizedPath.startsWith(navPath) && navPath.length > longestMatchLength) {
+            if (path.startsWith(navItem.path) && navItem.path.length > longestMatchLength) {
                 bestMatch = navItem
-                longestMatchLength = navPath.length
+                longestMatchLength = navItem.path.length
             }
-
-            navItem.children.forEach(child => checkNavItem(child))
+            navItem.children.forEach(checkNavItem)
         }
 
-        [...this.mainNavItems, ...this.bottomNavItems].forEach(navItem => checkNavItem(navItem))
+        [...this.mainNavItems, ...this.bottomNavItems].forEach(checkNavItem)
         this.selectedNavItem = bestMatch
     }
 
     private getBreadcrumbItems(): NavItem[] {
         if (!this.router) return []
-
         const currentPath = this.router.currentRoute.value.path
         const items: NavItem[] = []
 
@@ -120,15 +166,15 @@ class ApplicationState implements IApplicationState {
     }
 
     private showInMainNav(routeConfig: RouteRecordRaw): boolean {
-        return routeConfig?.meta?.showInMainNav === true
+        return routeConfig.meta?.showInMainNav === true
     }
 
     private showInBottomNav(routeConfig: RouteRecordRaw): boolean {
-        return routeConfig?.meta?.showInBottomNav === true
+        return routeConfig.meta?.showInBottomNav === true
     }
 
     private showInBreadcrumbs(routeConfig: RouteRecordRaw): boolean {
-        return routeConfig?.meta?.showInBreadcrumbs === true
+        return routeConfig.meta?.showInBreadcrumbs === true
     }
 
     private showInBreadcrumbsForPath(path: string): boolean {
@@ -137,4 +183,4 @@ class ApplicationState implements IApplicationState {
     }
 }
 
-export const APPLICATION_STATE: IApplicationState = shallowReactive(new ApplicationState())
+export const APPLICATION_STATE: Reactive<IApplicationState> = reactive<IApplicationState>(new ApplicationState())

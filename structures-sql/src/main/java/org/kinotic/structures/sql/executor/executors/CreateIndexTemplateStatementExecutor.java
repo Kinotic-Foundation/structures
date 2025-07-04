@@ -39,7 +39,7 @@ public class CreateIndexTemplateStatementExecutor implements StatementExecutor<C
 
         statement.parts().forEach(part -> {
             if (part instanceof ColumnTemplatePart columnPart) {
-                properties.put(columnPart.column().name(), TypeMapper.mapType(columnPart.column().type()));
+                properties.put(columnPart.column().name(), TypeMapper.mapType(columnPart.column()));
             } else if (part instanceof SettingTemplatePart settingPart) {
                 settings.put(settingPart.name(), settingPart.value());
             }

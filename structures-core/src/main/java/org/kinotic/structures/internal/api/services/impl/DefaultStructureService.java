@@ -44,8 +44,14 @@ public class DefaultStructureService implements StructureService {
 
     @WithSpan
     @Override
-    public CompletableFuture<Long> countForNamespace(@SpanAttribute("namespace") String namespace) {
-        return structureDAO.countForNamespace(namespace);
+    public CompletableFuture<Long> countForApplication(@SpanAttribute("applicationId") String applicationId) {
+        return structureDAO.countForApplication(applicationId);
+    }
+
+    @WithSpan
+    @Override
+    public CompletableFuture<Long> countForProject(@SpanAttribute("projectId") String projectId) {
+        return structureDAO.countForProject(projectId);
     }
 
     @WithSpan
@@ -56,12 +62,13 @@ public class DefaultStructureService implements StructureService {
             // will throw an exception if invalid
             StructuresUtil.validateStructure(structure);
 
-            structure.setNamespace(structure.getNamespace().trim());
+            structure.setApplicationId(structure.getApplicationId().trim());
+            structure.setProjectId(structure.getProjectId().trim());
             structure.setName(structure.getName().trim());
-            logicalIndexName = StructuresUtil.structureNameToId(structure.getNamespace(), structure.getName());
+            logicalIndexName = StructuresUtil.structureNameToId(structure.getApplicationId(), structure.getName());
 
             if(logicalIndexName.length() > 255){
-                throw new IllegalArgumentException("Structure Id is too long, 'namespace.name' must be less than 256 characters");
+                throw new IllegalArgumentException("Structure Id is too long, 'applicationId.name' must be less than 256 characters");
             }
 
         } catch (IllegalArgumentException e) {
@@ -74,19 +81,17 @@ public class DefaultStructureService implements StructureService {
                     // Check if this is an existing structure or new one
                     if (existingStructure != null) {
                         return CompletableFuture.failedFuture(new IllegalArgumentException(
-                                "Structure Namespace+Name must be unique, '" + logicalIndexName + "' already exists."));
+                                "Structure Application+Name must be unique, '" + logicalIndexName + "' already exists."));
                     }
 
-                    // TODO: how to ensure structures namespace name match the C3Type name
+                    // TODO: how to ensure structures application name match the C3Type name
                     // Should we just use the Structures one?
 
                     structure.setId(logicalIndexName);
                     structure.setCreated(new Date());
                     structure.setUpdated(structure.getCreated());
                     // Store name of the elastic search index for items
-                    structure.setItemIndex(this.structuresProperties.getIndexPrefix()
-                                                                    .trim()
-                                                                    .toLowerCase() + logicalIndexName);
+                    structure.setItemIndex(this.structuresProperties.getIndexPrefix() + logicalIndexName);
 
                     ElasticConversionResult result = structureConversionService.convertToElasticMapping(structure);
 
@@ -128,8 +133,20 @@ public class DefaultStructureService implements StructureService {
 
     @WithSpan
     @Override
-    public CompletableFuture<Page<Structure>> findAllPublishedForNamespace(@SpanAttribute("namespace") String namespace, Pageable pageable) {
-        return structureDAO.findAllPublishedForNamespace(namespace, pageable);
+    public CompletableFuture<Page<Structure>> findAllPublishedForApplication(@SpanAttribute("applicationId") String applicationId, Pageable pageable) {
+        return structureDAO.findAllPublishedForApplication(applicationId, pageable);
+    }
+
+    @WithSpan
+    @Override
+    public CompletableFuture<Page<Structure>> findAllForApplication(@SpanAttribute("applicationId") String applicationId, Pageable pageable) {
+        return structureDAO.findAllForApplication(applicationId, pageable);
+    }
+
+    @WithSpan
+    @Override
+    public CompletableFuture<Page<Structure>> findAllForProject(@SpanAttribute("projectId") String projectId, Pageable pageable) {
+        return structureDAO.findAllForProject(projectId, pageable);
     }
 
     @WithSpan
@@ -202,7 +219,8 @@ public class DefaultStructureService implements StructureService {
                     structure.setUpdated(new Date());
                     structure.setCreated(existingStructure.getCreated());
                     structure.setName(existingStructure.getName());
-                    structure.setNamespace(existingStructure.getNamespace());
+                    structure.setApplicationId(existingStructure.getApplicationId());
+                    structure.setProjectId(existingStructure.getProjectId());
                     structure.setItemIndex(existingStructure.getItemIndex());
                     structure.setPublished(existingStructure.isPublished());
                     structure.setPublishedTimestamp(existingStructure.getPublishedTimestamp());

@@ -32,7 +32,7 @@ public class StructurePolicyAuthorizationService implements AuthorizationService
     public StructurePolicyAuthorizationService(Structure structure,
                                                PolicyAuthorizer policyAuthorizer) {
 
-        this.structureId = StructuresUtil.structureNameToId(structure.getNamespace(), structure.getName());
+        this.structureId = StructuresUtil.structureNameToId(structure.getApplicationId(), structure.getName());
         ObjectC3Type entityDefinition = structure.getEntityDefinition();
 
         // Get any Policies to apply to the Entity and its fields
