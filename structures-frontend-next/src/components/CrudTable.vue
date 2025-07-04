@@ -56,6 +56,7 @@ class CrudTable extends Vue {
   @Prop({ default: '#f5f5f5' }) rowHoverColor!: string
   @Prop({ default: 'Add new' }) createNewButtonText!: string
   @Prop({ default: false }) enableViewSwitcher!: boolean
+  @Prop({ default: 'No items yet' }) emptyStateText!: string
 
   items: DescriptiveIdentifiable[] = []
   totalItems = 0
@@ -167,7 +168,7 @@ class CrudTable extends Vue {
         .then((page: Page<Identifiable<string>>) => {
           this.loading = false
           this.totalItems = page.totalElements ?? 0
-          this.items = page.content ?? []
+          this.items = []
         })
         .catch((error: unknown) => {
           this.loading = false
@@ -188,26 +189,25 @@ export default toNative(CrudTable)
           <InputIcon class="pi pi-search" />
           <InputText v-model="searchText" placeholder="Search" @input="onSearchChange" @keyup.enter="find" />
         </IconField>
-
       </template>
 
       <template #end>
-        <div class="flex items-center gap-2">
-          <SelectButton v-if="enableViewSwitcher" v-model="activeView" :options="viewOptions" optionValue="value"
-            dataKey="value">
+        <div class="flex items-center gap-2 h-[33px]">
+          <SelectButton v-if="enableViewSwitcher" v-model="activeView" :options="viewOptions"
+            optionValue="value" dataKey="value" class="h-[33px]">
             <template #option="slotProps">
               <i :class="slotProps.option.icon"></i>
             </template>
           </SelectButton>
-          <Button v-if="!disableModifications && isShowAddNew" @click="addItem" label="New application"
-            icon="pi pi-plus" size="small" />
+          <Button v-if="!disableModifications && isShowAddNew" @click="addItem" :label="createNewButtonText"
+            icon="pi pi-plus" class="h-[33px]" />
         </div>
       </template>
     </Toolbar>
 
     <div class="mb-6">
       <div v-if="isColumnView">
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div v-if="items.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <Card v-for="(item, index) in items" :key="item.id || index"
             class="cursor-pointer hover:shadow-md transition-shadow h-[152px] flex flex-col justify-between"
             @click="handleCardClick(item, index)">
@@ -217,20 +217,28 @@ export default toNative(CrudTable)
                 <p class="text-sm text-gray-500 truncate">{{ item?.description }}</p>
               </div>
               <div class="flex gap-2 mt-3">
-                <Button icon="pi pi-sitemap" severity="secondary" text
-                  @click.stop="$router.push({ path: '/graphql', query: { namespace: item.id } })" />
-                <Button icon="pi pi-link" severity="secondary" text
-                  @click.stop="$router.push('/scalar-ui.html?namespace=' + item.id)" />
+                <Button severity="secondary" text class="p-2"
+                  @click.stop="$router.push({ path: '/graphql', query: { namespace: item.id } })">
+                  <img src="@/assets/graphql.svg" alt="GraphQL" class="w-5 h-5" />
+                </Button>
+                <Button severity="secondary" text class="p-2"
+                  @click.stop="$router.push('/scalar-ui.html?namespace=' + item.id)">
+                  <img src="@/assets/scalar.svg" alt="OpenAPI" class="w-5 h-5" />
+                </Button>
               </div>
             </template>
           </Card>
         </div>
-        <Paginator :rows="options.rows" :totalRecords="totalItems" @page="onPage" class="mt-4" />
-      </div>
-      <div class="p-4 border text-[color:var(--surface-200)] rounded-xl">
+        <div v-else class="flex flex-col items-center justify-center text-gray-500 py-20 h-[calc(100vh-300px)]">
+          <p class="text-sm">{{ emptyStateText }}</p>
+        </div>
 
-        <DataTable v-if="isBurgerView" :value="items" :rows="options.rows" :totalRecords="totalItems" :lazy="true"
-          :loading="loading" :paginator="true" :first="options.first" :rowsPerPageOptions="[5, 10, 20]" dataKey="id"
+        <Paginator :rows="options.rows" :totalRecords="totalItems" @page="onPage" class="mt-4" v-if="items.length !== 0" />
+      </div>
+
+      <div v-if="isBurgerView" class="p-4 border text-[color:var(--surface-200)] rounded-xl">
+        <DataTable :value="items" :rows="options.rows" :totalRecords="totalItems" :lazy="true" :loading="loading"
+          :paginator="items.length > 0" :first="options.first" :rowsPerPageOptions="[5, 10, 20]" dataKey="id"
           @page="onPage" @row-click="onRowClick" sortMode="multiple" table>
           <Column v-for="col in computedHeaders" :key="col.field" :field="col.field" :header="col.header"
             :sortable="col.sortable !== false">
@@ -240,6 +248,7 @@ export default toNative(CrudTable)
               </slot>
             </template>
           </Column>
+
           <Column v-if="editable" header="">
             <template #body="slotProps">
               <div class="flex justify-center">
@@ -247,6 +256,12 @@ export default toNative(CrudTable)
               </div>
             </template>
           </Column>
+
+          <template #empty>
+            <div class="flex justify-center items-center text-gray-500 py-8 h-[calc(100vh-450px)] w-full">
+              {{ emptyStateText }}
+            </div>
+          </template>
         </DataTable>
       </div>
     </div>
@@ -254,6 +269,7 @@ export default toNative(CrudTable)
     <ConfirmDialog />
   </div>
 </template>
+
 <style>
 .p-datatable-paginator-bottom {
   border: none !important;
