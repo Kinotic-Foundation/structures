@@ -36,12 +36,14 @@ export default class StructuresList extends Vue {
     get dataSource() {
         return {
             findAll: async (pageable: Pageable): Promise<IterablePage<Structure>> => {
+                let result;
                 if (this.projectId) {
-                    console
-                    return Structures.getStructureService().findAllForProject(this.projectId, pageable)
-                }else{
-                    return Structures.getStructureService().findAllForApplication(this.applicationId, pageable)
-                }    
+                    result = await Structures.getStructureService().findAllForProject(this.projectId, pageable);
+                } else {
+                    result = await Structures.getStructureService().findAllForApplication(this.applicationId, pageable);
+                }
+                APPLICATION_STATE.structuresCount = result.totalElements ?? 0; // ✅ update count
+                return result;
             },
             search: async (searchText: string, pageable: Pageable): Promise<IterablePage<Structure>> => {
                 const search = `${this.projectId ? `projectId:${this.projectId}` : `applicationId:${this.applicationId}`} && ${searchText}`
@@ -102,6 +104,7 @@ export default class StructuresList extends Vue {
             ref="crudTable"
             @onRowClick="handleRowClick"
             createNewButtonText="New Structure"
+            emptyStateText="No structures yet"
         >
             <template #item.id="{ item }">
                 <span>{{ item.id }}</span>

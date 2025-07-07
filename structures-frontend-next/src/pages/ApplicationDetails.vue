@@ -1,5 +1,5 @@
 <script lang="ts">
-import { Component, Vue } from 'vue-facing-decorator'
+import { Component, Vue, Watch } from 'vue-facing-decorator'
 
 import ProjectList from '@/components/ProjectList.vue'
 import StructuresList from '@/components/StructuresList.vue'
@@ -11,6 +11,7 @@ import TabList from 'primevue/tablist'
 import Tab from 'primevue/tab'
 import TabPanels from 'primevue/tabpanels'
 import TabPanel from 'primevue/tabpanel'
+import { APPLICATION_STATE } from '@/states/IApplicationState'
 
 @Component({
     components: {
@@ -47,6 +48,14 @@ export default class ApplicationDetails extends Vue {
         return STRUCTURES_STATE.selectedStructure.value
     }
 
+    get projectsCount(): number {
+        return APPLICATION_STATE.projectsCount ?? 0
+    }
+
+    get structuresCount(): number {
+        return APPLICATION_STATE.structuresCount ?? 0
+    }
+
     openGraphQL(): void {
         this.showGraphQLModal = true
     }
@@ -58,6 +67,11 @@ export default class ApplicationDetails extends Vue {
     closeModal(): void {
         STRUCTURES_STATE.closeModal()
     }
+
+    @Watch('activeTab')
+    onActiveTabChange(newTab: number) {
+        console.log('Active tab changed:', newTab)
+    }
 }
 </script>
 
@@ -66,12 +80,11 @@ export default class ApplicationDetails extends Vue {
         <div class="flex justify-between items-center mb-6">
             <div>
                 <h1 class="font-semibold text-2xl text-[#101010] mb-3">{{ applicationId }}</h1>
+                <span>{{ projectsCount }} projects, {{ structuresCount }} structures</span>
             </div>
             <div class="flex gap-3">
-                <div
-                    @click="openGraphQL"
-                    class="border border-[#E6E7EB] rounded-xl flex items-center gap-2 py-3 px-8 cursor-pointer"
-                >
+                <div @click="openGraphQL"
+                    class="border border-[#E6E7EB] rounded-xl flex items-center gap-2 py-3 px-8 cursor-pointer">
                     <img src="@/assets/graphql.svg" class="w-6 h-6" />
                     <span class="text-sm font-semibold">GraphQL</span>
                 </div>
@@ -81,48 +94,21 @@ export default class ApplicationDetails extends Vue {
                 </div>
             </div>
         </div>
-
-        <Tabs :activeIndex="activeTab" class="w-full">
+        <Tabs value="0">
             <TabList>
-                <Tab
-                    v-for="tab in tabs"
-                    :key="tab.title"
-                    :value="tab.value"
-                >
-                    {{ tab.title }}
-                </Tab>
+                <Tab value="0">Projects</Tab>
+                <Tab value="1">Structures</Tab>
             </TabList>
-
             <TabPanels>
-                <TabPanel
-                    v-for="tab in tabs"
-                    :key="tab.title"
-                    :value="tab.value"
-                >
-                    <ProjectList
-                        v-if="tab.value === 0"
-                        :applicationId="applicationId"
-                    />
-                    <StructuresList
-                        v-else-if="tab.value === 1"
-                        :applicationId="applicationId"
-                    />
+                <TabPanel value="0">
+                    <ProjectList :applicationId="applicationId" />
+                </TabPanel>
+                <TabPanel value="1">
+                    <StructuresList :applicationId="applicationId" />
                 </TabPanel>
             </TabPanels>
         </Tabs>
-
         <GraphQLModal :visible="showGraphQLModal" @close="closeGraphQL" />
-        <StructureItemModal
-            v-if="isModalOpen"
-            :item="selectedStructure"
-            @close="closeModal"
-        />
+        <StructureItemModal v-if="isModalOpen" :item="selectedStructure" @close="closeModal" />
     </div>
 </template>
-
-<style scoped>
-.p-row-even,
-.p-row-odd {
-    cursor: pointer;
-}
-</style>
