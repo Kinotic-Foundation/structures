@@ -168,7 +168,7 @@ class CrudTable extends Vue {
         .then((page: Page<Identifiable<string>>) => {
           this.loading = false
           this.totalItems = page.totalElements ?? 0
-          this.items = []
+          this.items = page.content ?? []
         })
         .catch((error: unknown) => {
           this.loading = false
