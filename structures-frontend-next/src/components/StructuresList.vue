@@ -42,7 +42,7 @@ export default class StructuresList extends Vue {
                 } else {
                     result = await Structures.getStructureService().findAllForApplication(this.applicationId, pageable);
                 }
-                APPLICATION_STATE.structuresCount = result.totalElements ?? 0; // ✅ update count
+                APPLICATION_STATE.structuresCount = result.totalElements ?? 0;
                 return result;
             },
             search: async (searchText: string, pageable: Pageable): Promise<IterablePage<Structure>> => {
