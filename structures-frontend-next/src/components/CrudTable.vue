@@ -15,7 +15,7 @@ import Toolbar from 'primevue/toolbar'
 import InputText from 'primevue/inputtext'
 import ConfirmDialog from 'primevue/confirmdialog'
 import Card from 'primevue/card'
-import Paginator from 'primevue/paginator'
+import Paginator, { type PageState } from 'primevue/paginator'
 import SelectButton from 'primevue/selectbutton'
 
 import {
@@ -27,6 +27,7 @@ import {
   Direction,
   DataSourceUtils,
 } from '@kinotic/continuum-client'
+
 import type { CrudHeader } from '@/types/CrudHeader'
 import type { DescriptiveIdentifiable } from '@/types/DescriptiveIdentifiable'
 
@@ -113,7 +114,15 @@ class CrudTable extends Vue {
     }
   }
 
-  onPage(event: DataTablePageEvent) {
+  // Split handlers:
+  onDataTablePage(event: DataTablePageEvent) {
+    this.options.page = event.page
+    this.options.rows = event.rows
+    this.options.first = event.first
+    this.find()
+  }
+
+  onPaginatorPage(event: PageState) {
     this.options.page = event.page
     this.options.rows = event.rows
     this.options.first = event.first
@@ -233,13 +242,13 @@ export default toNative(CrudTable)
           <p class="text-sm">{{ emptyStateText }}</p>
         </div>
 
-        <Paginator :rows="options.rows" :totalRecords="totalItems" @page="onPage" class="mt-4" v-if="items.length !== 0" />
+        <Paginator :rows="options.rows" :totalRecords="totalItems" @page="onPaginatorPage" class="mt-4" v-if="items.length !== 0" />
       </div>
 
       <div v-if="isBurgerView" class="p-4 border text-[color:var(--surface-200)] rounded-xl">
         <DataTable :value="items" :rows="options.rows" :totalRecords="totalItems" :lazy="true" :loading="loading"
           :paginator="items.length > 0" :first="options.first" :rowsPerPageOptions="[5, 10, 20]" dataKey="id"
-          @page="onPage" @row-click="onRowClick" sortMode="multiple" table>
+          @page="onDataTablePage" @row-click="onRowClick" sortMode="multiple" table>
           <Column v-for="col in computedHeaders" :key="col.field" :field="col.field" :header="col.header"
             :sortable="col.sortable !== false">
             <template #body="slotProps">

@@ -1,11 +1,9 @@
 <script lang="ts">
 import { Component, Vue, Watch } from 'vue-facing-decorator'
-
 import ProjectList from '@/components/ProjectList.vue'
 import StructuresList from '@/components/StructuresList.vue'
 import GraphQLModal from '@/components/modals/GraphQLModal.vue'
 import StructureItemModal from '@/components/modals/StructureItemModal.vue'
-import { STRUCTURES_STATE } from '@/states/IStructuresState'
 import Tabs from 'primevue/tabs'
 import TabList from 'primevue/tablist'
 import Tab from 'primevue/tab'
@@ -40,14 +38,6 @@ export default class ApplicationDetails extends Vue {
         return this.$route.params.applicationId
     }
 
-    get isModalOpen(): boolean {
-        return STRUCTURES_STATE.isModalOpen.value
-    }
-
-    get selectedStructure() {
-        return STRUCTURES_STATE.selectedStructure.value
-    }
-
     get projectsCount(): number {
         return APPLICATION_STATE.projectsCount ?? 0
     }
@@ -62,10 +52,6 @@ export default class ApplicationDetails extends Vue {
 
     closeGraphQL(): void {
         this.showGraphQLModal = false
-    }
-
-    closeModal(): void {
-        STRUCTURES_STATE.closeModal()
     }
 
     @Watch('activeTab')
@@ -109,6 +95,5 @@ export default class ApplicationDetails extends Vue {
             </TabPanels>
         </Tabs>
         <GraphQLModal :visible="showGraphQLModal" @close="closeGraphQL" />
-        <StructureItemModal v-if="isModalOpen" :item="selectedStructure" @close="closeModal" />
     </div>
 </template>
