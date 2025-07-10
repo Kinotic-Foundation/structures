@@ -1,14 +1,14 @@
 <script lang="ts">
 import { Component, Vue, Prop, Watch } from 'vue-facing-decorator'
 import CrudTable from '@/components/CrudTable.vue'
+import StructureItemModal from '@/components/modals/StructureItemModal.vue'
 import type { Identifiable, IterablePage, Pageable } from '@kinotic/continuum-client'
 import { APPLICATION_STATE } from '@/states/IApplicationState'
 import { Structure, Structures } from '@kinotic/structures-api'
-import { STRUCTURES_STATE } from '@/states/IStructuresState'
 import type { CrudHeader } from '@/types/CrudHeader'
 
 @Component({
-    components: { CrudTable }
+    components: { CrudTable, StructureItemModal }
 })
 export default class StructuresList extends Vue {
     @Prop({ required: true }) applicationId!: string
@@ -22,6 +22,9 @@ export default class StructuresList extends Vue {
         { field: 'updated', header: 'Updated', sortable: false },
         { field: 'published', header: 'Status', sortable: false }
     ]
+
+    showModal = false
+    selectedStructure: Structure | null = null
 
     @Watch('applicationId', { immediate: true })
     onApplicationIdChange(): void {
@@ -56,28 +59,22 @@ export default class StructuresList extends Vue {
         return APPLICATION_STATE.structuresCount
     }
 
-    get isModalOpen() {
-        return STRUCTURES_STATE.isModalOpen.value
-    }
-
-    get selectedStructure() {
-        return STRUCTURES_STATE.selectedStructure.value
-    }
-
     refreshTable(): void {
         const tableRef = this.$refs.crudTable as InstanceType<typeof CrudTable> | undefined
         tableRef?.find()
     }
 
-    openModal(item: any) {
-        STRUCTURES_STATE.openModal(item)
+    openModal(item: Structure) {
+        this.selectedStructure = item
+        this.showModal = true
     }
 
     closeModal() {
-        STRUCTURES_STATE.closeModal()
+        this.showModal = false
+        this.selectedStructure = null
     }
 
-    handleRowClick(item: any): void {
+    handleRowClick(item: Structure): void {
         this.openModal(item)
     }
 
@@ -111,7 +108,11 @@ export default class StructuresList extends Vue {
             </template>
         </CrudTable>
 
-        <StructureItemModal v-if="isModalOpen" :item="selectedStructure" @close="closeModal" />
+        <StructureItemModal
+            v-if="showModal && selectedStructure"
+            :item="selectedStructure"
+            @close="closeModal"
+        />
     </div>
 </template>
 
@@ -120,4 +121,4 @@ export default class StructuresList extends Vue {
 .p-row-odd {
     cursor: pointer;
 }
-</style> 
+</style>

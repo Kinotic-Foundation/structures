@@ -7,8 +7,11 @@
   </div>
 </template>
 
-<script setup lang="ts">
-const props = defineProps<{
-  message: string
-}>()
+<script lang="ts">
+import { Component, Vue, Prop } from 'vue-facing-decorator'
+
+@Component
+export default class EmptyState extends Vue {
+  @Prop({ required: true }) message!: string
+}
 </script>

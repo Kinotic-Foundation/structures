@@ -9,7 +9,6 @@ import GraphQLModal from '@/components/modals/GraphQLModal.vue'
 import { Structures, type IApplicationService } from '@kinotic/structures-api'
 import { APPLICATION_STATE } from '@/states/IApplicationState'
 import type { CrudHeader } from '@/types/CrudHeader'
-import SelectButton from 'primevue/selectbutton';
 @Component({
     components: {
         CrudTable,
