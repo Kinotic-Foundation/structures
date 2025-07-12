@@ -33,6 +33,7 @@ const pageRoutes: RouteRecordRaw[] = [
       },
     ]
   },
+
   {
     path: '/application/:applicationId',
     component: () => import('@/layouts/LayoutForPage.vue'),
@@ -60,6 +61,27 @@ const pageRoutes: RouteRecordRaw[] = [
     } as RouteMeta,
   },
   {
+    path: '/application/:applicationId/project/:projectId/structures',
+    name: 'project-structures-wrapper',
+    component: () => import('@/layouts/LayoutForPage.vue'),
+    meta: {
+      showInMainNav: false,
+      icon: 'objects-column.svg',
+      label: 'Project Structures',
+    } as RouteMeta,
+    children: [
+      {
+        name: 'project-structures',
+        path: '',
+        component: () => import('@/pages/ProjectStructuresPage.vue'),
+        props: (route) => ({
+          applicationId: route.params.applicationId,
+          projectId: route.params.projectId,
+        }),
+      },
+    ],
+  },
+  {
     path: '/structures',
     component: () => import('@/layouts/MainLayout.vue'),
     meta: {
@@ -69,7 +91,7 @@ const pageRoutes: RouteRecordRaw[] = [
     } as RouteMeta,
     children: [
       {
-            name: "structures",
+        name: "structures",
         path: '',
         component: () => import('@/pages/structures/StructuresList.vue'),
       }
@@ -90,23 +112,6 @@ const pageRoutes: RouteRecordRaw[] = [
       }
     ]
   },
-  // {
-  //   path: '/entity-structure/:id',
-  //   component: () => import('@/layouts/MainLayout.vue'),
-  //   meta: {
-  //     authenticationRequired: true,
-  //     showInMainNav: false,
-  //     icon: 'objects-column.svg',
-  //     label: 'Structure Details',
-  //   } as RouteMeta,
-  //   children: [
-  //     {
-  //       path: '',
-  //       component: () => import('@/pages/structures/entity/EntityList.vue'),
-  //       meta: { requiresAuth: true }
-  //     }
-  //   ]
-  // },
   {
     path: '/application-add',
     component: () => import('@/pages/ApplicationAddEdit.vue'),
@@ -149,7 +154,7 @@ const pageRoutes: RouteRecordRaw[] = [
       authenticationRequired: false
     } as RouteMeta,
   },
-    {
+  {
     path: '/graphql',
     component: () => import('@/layouts/MainLayout.vue'),
     meta: {
