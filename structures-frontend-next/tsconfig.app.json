@@ -11,6 +11,7 @@
     "noUncheckedSideEffectImports": true,
     "experimentalDecorators": true,
     "module": "ESNext",
+    "types": ["node"],
     "paths": {
       "@/*": [
         "./src/*"

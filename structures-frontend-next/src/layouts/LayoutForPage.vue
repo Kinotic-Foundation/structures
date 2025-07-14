@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import SideBar from '@/components/SideBar.vue'
 import Header from './Header.vue'
 

@@ -48,7 +48,7 @@
                   <InputText v-model="searchTextProject" placeholder="Search projects" class="w-full" />
                 </IconField>
               </div>
-              <div v-for="proj in filteredProjects" :key="proj.id" @click="selectProject(proj)"
+              <div v-for="proj in filteredProjects" :key="proj.id ?? ''" @click="selectProject(proj)"
                 class="px-4 py-2 hover:bg-gray-100 cursor-pointer text-[#101010] text-sm rounded">
                 {{ proj.name }}
               </div>

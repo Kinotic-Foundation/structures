@@ -1,0 +1,30 @@
+{
+    "npm.packageManager": "pnpm",
+    "spring-boot.ls.java.home": "${userHome}/.sdkman/candidates/java/21.0.7-ms",
+    "java.configuration.runtimes": [
+        {
+            "name": "JavaSE-21",
+            "path": "${userHome}/.sdkman/candidates/java/21.0.7-ms",
+            "default": true
+        },
+        {
+            "name": "JavaSE-23",
+            "path": "${userHome}/.sdkman/candidates/java/23.0.2-amzn"
+        }
+    ],
+    "gradle.debug": true,
+    "gradle.autoDetect": "on",
+    "gradle.nestedProjects": false,
+    "java.compile.nullAnalysis.mode": "automatic",
+    "java.configuration.updateBuildConfiguration": "automatic",
+    "java.import.gradle.wrapper.enabled": true,
+    "java.test.config": {
+        "name": "testConfig",
+        "testKind": "junit",
+        "env": {
+            "JAVA_HOME": "${workspaceFolder}/.sdkman/candidates/java/21.0.7-ms",
+            "SPRING_PROFILES_ACTIVE": "development"
+        }
+    },
+    "java.test.defaultConfig": "testConfig"
+}

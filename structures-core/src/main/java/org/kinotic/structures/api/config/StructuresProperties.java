@@ -44,6 +44,8 @@ public class StructuresProperties {
     @NotNull
     private List<ElasticConnectionInfo> elasticConnections = List.of(new ElasticConnectionInfo());
 
+    private OidcAuthVerifierProperties oidcAuthVerifier = new OidcAuthVerifierProperties();
+
     private String elasticUsername = null;
 
     private String elasticPassword = null;

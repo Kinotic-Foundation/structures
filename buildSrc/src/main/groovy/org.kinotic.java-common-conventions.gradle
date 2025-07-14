@@ -75,9 +75,15 @@ dependencyManagement {
         dependency "org.kinotic:continuum-core-vertx:${continuumVersion}"
         dependency "org.kinotic:continuum-gateway:${continuumVersion}"
         dependency "org.kinotic:continuum-idl:${continuumVersion}"
+        dependency "org.kinotic:continuum-security:${continuumVersion}"
 
         // must be overridden for the elastic client
         dependency 'jakarta.json:jakarta.json-api:2.0.1'
+
+        // JWT and OIDC dependencies
+        dependency "io.jsonwebtoken:jjwt-api:${jsonwebtokenVersion}"
+        dependency "io.jsonwebtoken:jjwt-impl:${jsonwebtokenVersion}"
+        dependency "io.jsonwebtoken:jjwt-jackson:${jsonwebtokenVersion}"
     }
 }
 
@@ -103,4 +109,12 @@ dependencies {
 test {
     useJUnitPlatform()
     environment("JAVA_TOOL_OPTIONS", "-javaagent:${configurations.agent.singleFile} --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED --add-opens=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED")
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+    withJavadocJar()
+    withSourcesJar()
 }

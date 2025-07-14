@@ -41,6 +41,11 @@ dependencies {
 
 	implementation "com.github.slugify:slugify:${slugifyVersion}"
 
+	// JWT and OIDC dependencies
+	implementation 'io.jsonwebtoken:jjwt-api'
+	implementation 'io.jsonwebtoken:jjwt-impl'
+	implementation 'io.jsonwebtoken:jjwt-jackson'
+
 	annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'

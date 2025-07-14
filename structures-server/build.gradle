@@ -15,6 +15,7 @@ dependencies {
 
 	// Additional Continuum Dependencies
 	implementation "org.kinotic:continuum-gateway"
+	implementation "org.kinotic:continuum-core"
 
 	implementation 'com.github.ben-manes.caffeine:caffeine'
 
@@ -31,5 +32,9 @@ test {
 }
 
 tasks.named('processResources') {
+	dependsOn ":structures-frontend-next:copyDist"
+}
+
+tasks.named('sourcesJar') {
 	dependsOn ":structures-frontend-next:copyDist"
 }

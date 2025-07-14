@@ -58,7 +58,11 @@ export default class ProjectStructuresTable extends Vue {
     }
 
     openModal(item: Structure) {
-        STRUCTURES_STATE.openModal(item)
+        STRUCTURES_STATE.openModal({
+            id: item.id ?? '',
+            name: item.name,
+            description: item.description ?? ''
+        })
     }
 
     closeModal() {
@@ -90,7 +94,7 @@ export default class ProjectStructuresTable extends Vue {
      */
     async markProjectAsActive() {
         try {
-            const header = this.$root.$refs.header as any
+            const header = this.$root!.$refs.header as any
             if (header && header.setActiveProjectById) {
                 await header.setActiveProjectById(this.applicationId, this.projectId)
             }

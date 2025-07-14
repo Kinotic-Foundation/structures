@@ -1,6 +1,21 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+
+dependencyResolutionManagement {
+    repositories {
+        mavenCentral()
+        maven {
+            url = uri('https://s01.oss.sonatype.org/content/repositories/snapshots/')
+        }
+    }
+}
+
 rootProject.name = 'structures'
 
-//includeBuild('../continuum-framework')
 
 rootDir.listFiles().each {
     if (it.directory && new File(it, 'settings.gradle').exists()) {

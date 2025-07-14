@@ -1,11 +1,11 @@
-import { createRouter, createWebHistory, type RouterOptions, type Router } from 'vue-router';
+import { type Router } from 'vue-router';
 import { reactive } from 'vue';
 import { StructuresStates } from './states';
 
 // Interface for ContinuumUI
 export interface IContinuumUI {
-    initialize(routerOptions: Omit<RouterOptions, 'history'>): Router;
-    navigate(path: string): Promise<void>;
+    initialize(router: Router): void;
+    navigate(path: string): Promise<any>;
 }
 
 // Class for ContinuumUI
@@ -15,28 +15,26 @@ class ContinuumUI implements IContinuumUI {
 
     constructor() {}
 
-    public initialize(routerOptions: Omit<RouterOptions, 'history'>): Router {
-        this.router = createRouter({
-            history: createWebHistory(),  // You can use createWebHashHistory() if needed
-            ...routerOptions
-        });
+    public initialize(router: Router): void {
+        this.router = router;
+        
+        // Add navigation guard to the existing router
         this.router.beforeEach((to, _from, next) => {
             const { authenticationRequired } = to.meta as { authenticationRequired?: boolean };
         
             if ((authenticationRequired === undefined || authenticationRequired)
                 && !StructuresStates.getUserState().isAuthenticated()) {
                 
-                next({ name: 'login', params: { referer: to.path } });
+                next({ path: '/login', query: { referer: to.path } });
         
             } else {
                 next();
             }
         });
-
-        return this.router;
     }
 
-    public navigate(path: string): any {
+    public navigate(path: string): Promise<any> {
+        console.log('CONTINUUM_UI.navigate called with path:', path);
         return this.router.push(path);
     }
 }

@@ -233,7 +233,7 @@ export default toNative(CrudTable)
           <p class="text-sm">{{ emptyStateText }}</p>
         </div>
 
-        <Paginator :rows="options.rows" :totalRecords="totalItems" @page="onPage" class="mt-4" v-if="items.length !== 0" />
+        <Paginator :rows="options.rows" :totalRecords="totalItems" page="onPage" class="mt-4" v-if="items.length !== 0" />
       </div>
 
       <div v-if="isBurgerView" class="p-4 border text-[color:var(--surface-200)] rounded-xl">
