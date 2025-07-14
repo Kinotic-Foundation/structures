@@ -1,7 +1,7 @@
 <template>
   <div class="pt-4">
     <CrudTable rowHoverColor="#f1f2f4" title="Structures" :initial-search="searchParam" subtitle="" :data-source="dataSource" :headers="headers" :singleExpand="false"
-      ref="crudTable" :isShowAddNew="false" :isShowDelete="true" @onRowClick="openModal">
+      ref="crudTable" :isShowAddNew="false" :isShowDelete="true">
       <template #item.id="{ item }">
         <span>{{ item.id }}</span>
       </template>
@@ -49,7 +49,6 @@
         </Button>
       </template>
     </CrudTable>
-    <StructureItemModal v-if="isModalOpen" :item="selectedStructure" @close="closeModal" />
     <Dialog v-model:visible="confirmDialogVisible" modal header="Confirm Action" :closable="false">
       <div class="p-3 text-gray-800 whitespace-pre-line">{{ confirmDialogMessage }}</div>
       <template #footer>
@@ -65,11 +64,9 @@ import { Component, Vue } from 'vue-facing-decorator'
 import CrudTable from '@/components/CrudTable.vue'
 import { Structures, type IStructureService } from '@kinotic/structures-api'
 import { mdiDatabase, mdiGraphql, mdiUmbraco } from '@mdi/js'
-import { STRUCTURES_STATE } from '@/states/IStructuresState'
-import StructureItemModal from '@/components/modals/StructureItemModal.vue'
 // import Dialog from 'primevue/dialog';
 @Component({
-  components: { CrudTable, StructureItemModal }
+  components: { CrudTable }
 })
 export default class StructuresList extends Vue {
   confirmDialogVisible = false
@@ -86,12 +83,6 @@ export default class StructuresList extends Vue {
     { field: 'publishedTimestamp', header: 'Published On', sortable: false }
     
   ]
-  get isModalOpen() {
-    return STRUCTURES_STATE.isModalOpen.value
-  }
-  get selectedStructure() {
-    return STRUCTURES_STATE.selectedStructure.value
-  }
   public icons = {
     database: mdiDatabase,
     unpublish: mdiUmbraco,
@@ -101,15 +92,6 @@ export default class StructuresList extends Vue {
     return this.$route.query.search as string || ''
   }
   private dataSource: IStructureService = Structures.getStructureService()
-  openModal(item: any) {
-    STRUCTURES_STATE.openModal(item)
-  }
-  closeModal() {
-    STRUCTURES_STATE.closeModal()
-  }
-  unmounted() {
-    this.closeModal()
-  }
   formatDate(dateStr: string): string {
   const date = new Date(dateStr)
   return new Intl.DateTimeFormat('en-US', {

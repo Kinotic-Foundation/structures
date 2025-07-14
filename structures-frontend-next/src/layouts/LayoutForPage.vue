@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import SideBar from '@/components/SideBar.vue'
 import Header from './Header.vue'
 
@@ -13,15 +13,10 @@ const isSidebarCollapsed = computed(() => {
 
 <template>
     <div class="h-screen w-screen bg-white">
-        <!-- Header -->
         <div class="fixed top-0 left-0 right-0 h-[64px] bg-white z-50">
             <Header />
         </div>
-
-        <!-- Sidebar -->
         <SideBar ref="sidebarRef" />
-
-        <!-- Main Content -->
         <div
             :class="[
                 'pt-[64px] h-full transition-all duration-300',
