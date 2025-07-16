@@ -29,9 +29,6 @@ importers:
       '@primeuix/themes':
         specifier: ^1.2.1
         version: 1.2.1
-      '@primevue/themes':
-        specifier: ^4.3.6
-        version: 4.3.6
       '@vue-flow/background':
         specifier: ^1.3.2
         version: 1.3.2(@vue-flow/core@1.45.0(vue@3.5.16(typescript@5.8.3)))(vue@3.5.16(typescript@5.8.3))
@@ -393,10 +390,6 @@ packages:
 
   '@primevue/metadata@4.3.6':
     resolution: {integrity: sha512-dncVsMYxFvrx7FYDH8MQMtd6xkNQMVuCwpnTMLIOf9BRC7zVhRQug/IWZzsbS3jgVrPsTI3KmOn4LMDhH+fapg==}
-    engines: {node: '>=12.11.0'}
-
-  '@primevue/themes@4.3.6':
-    resolution: {integrity: sha512-2yxfBZCuXU10pPfS6lysJpP1RqAwZVD+9tQi0cTieshD7Rq9HTZfInuJzqIfBcxGns2rolARi3+B3RQ53NBz1A==}
     engines: {node: '>=12.11.0'}
 
   '@rollup/rollup-android-arm-eabi@4.36.0':
@@ -1604,11 +1597,6 @@ snapshots:
       - vue
 
   '@primevue/metadata@4.3.6': {}
-
-  '@primevue/themes@4.3.6':
-    dependencies:
-      '@primeuix/styled': 0.7.0
-      '@primeuix/themes': 1.2.1
 
   '@rollup/rollup-android-arm-eabi@4.36.0':
     optional: true
