@@ -246,7 +246,7 @@ export default toNative(CrudTable)
       </div>
 
       <div v-if="isBurgerView" class="p-4 border text-[color:var(--surface-200)] rounded-xl">
-        <DataTable :value="items" :rows="options.rows" :totalRecords="totalItems" :lazy="true" :loading="loading"
+        <DataTable :value="items" :rows="options.rows" :totalRecords="totalItems" :loading="loading"
           :paginator="items.length > 0" :first="options.first" :rowsPerPageOptions="[5, 10, 20]" dataKey="id"
           @page="onDataTablePage" @row-click="onRowClick" sortMode="multiple" table>
           <Column v-for="col in computedHeaders" :key="col.field" :field="col.field" :header="col.header"
@@ -265,7 +265,11 @@ export default toNative(CrudTable)
               </div>
             </template>
           </Column>
-
+          <template #loading>
+            <div class="flex justify-center bg-white h-full items-center py-20 text-gray-500 w-full">
+              <i class="pi pi-spin pi-spinner text-2xl text-primary" />
+            </div>
+          </template>
           <template #empty>
             <div class="flex justify-center items-center text-gray-500 py-8 h-[calc(100vh-450px)] w-full">
               {{ emptyStateText }}

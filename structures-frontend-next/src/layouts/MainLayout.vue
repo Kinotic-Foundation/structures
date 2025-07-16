@@ -1,5 +1,5 @@
 <template>
-    <div class="h-screen bg-surface-0 dark:bg-surface-950 w-full">
+    <div class="h-screen bg-surface-0  w-full">
         <!-- <div id="app-sidebar" class="h-full hidden lg:block lg:sticky absolute left-0 top-0 z-50">
             <div :class="[
                 isCollapsed ? 'w-[72px] px-3' : 'w-[258px] px-8',
