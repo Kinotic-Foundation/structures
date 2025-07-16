@@ -10,9 +10,7 @@ import { CONTINUUM_UI } from '@/IContinuumUI'
 import 'primeicons/primeicons.css'
 import { createApp } from 'vue'
 import App from './App.vue'
-
 const app = createApp(App)
-
 app.use(PrimeVue, {
     theme: {
         preset: StructuresPreset,

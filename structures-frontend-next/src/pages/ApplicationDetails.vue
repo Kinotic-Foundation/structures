@@ -65,16 +65,16 @@ export default class ApplicationDetails extends Vue {
     <div class="p-10">
         <div class="flex justify-between items-center mb-6">
             <div>
-                <h1 class="font-semibold text-2xl text-[#101010] mb-3">{{ applicationId }}</h1>
+                <h1 class="font-semibold text-2xl text-surface-950 mb-3">{{ applicationId }}</h1>
                 <span>{{ projectsCount }} projects, {{ structuresCount }} structures</span>
             </div>
             <div class="flex gap-3">
                 <div @click="openGraphQL"
-                    class="border border-[#E6E7EB] rounded-xl flex items-center gap-2 py-3 px-8 cursor-pointer">
+                    class="border border-surface-200 rounded-xl flex items-center gap-2 py-3 px-8 cursor-pointer">
                     <img src="@/assets/graphql.svg" class="w-6 h-6" />
                     <span class="text-sm font-semibold">GraphQL</span>
                 </div>
-                <div class="border border-[#E6E7EB] rounded-xl flex items-center gap-2 py-3 px-8">
+                <div class="border border-surface-200 rounded-xl flex items-center gap-2 py-3 px-8 cursor-pointer">
                     <img src="@/assets/scalar.svg" class="w-6 h-6" />
                     <span class="text-sm font-semibold">OpenAPI</span>
                 </div>

@@ -30,6 +30,7 @@ declare module 'vue' {
     NewProjectSidebar: typeof import('./src/components/NewProjectSidebar.vue')['default']
     Paginator: typeof import('primevue/paginator')['default']
     Password: typeof import('primevue/password')['default']
+    ProgressSpinner: typeof import('primevue/progressspinner')['default']
     ProjectList: typeof import('./src/components/ProjectList.vue')['default']
     ProjectStructuresTable: typeof import('./src/components/ProjectStructuresTable.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']

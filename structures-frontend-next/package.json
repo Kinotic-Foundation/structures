@@ -19,6 +19,8 @@
     "@vue-flow/controls": "^1.1.2",
     "@vue-flow/core": "^1.45.0",
     "@vue-flow/minimap": "^1.5.3",
+    "@vueuse/core": "^13.5.0",
+    "d": "^1.0.2",
     "dagre": "^0.8.5",
     "js-cookie": "^3.0.5",
     "keycloak-js": "^26.2.0",

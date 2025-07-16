@@ -1,15 +1,17 @@
 <template>
-  <div class="px-6 py-4 bg-[#101010] flex justify-between items-center sticky top-0 left-0 z-50">
+  <div ref="headerRef" class="px-6 py-4 bg-surface-950 flex justify-between items-center sticky top-0 left-0 z-50">
     <div class="flex items-center gap-2 text-white relative">
       <RouterLink to="/applications" class="flex items-center gap-2">
         <img v-if="!isApplicationDetailsPage && !isProjectStructuresPage" src="@/assets/logo.svg" class="h-8" />
         <img v-else src="@/assets/sidebar-logo.svg" class="h-8 w-8" />
       </RouterLink>
+
       <template v-if="isApplicationDetailsPage || isProjectStructuresPage">
-        <span class="text-[#AFB0B8] text-lg">/</span>
-        <div class="relative inline-block w-48">
+        <span class="text-surface-400 text-lg">/</span>
+
+        <div ref="appDropdownRef" class="relative inline-block w-48">
           <button @click="toggleAppDropdown"
-            class="flex items-center gap-1 text-[#AFB0B8] font-medium text-sm hover:opacity-80 w-full justify-between">
+            class="flex items-center gap-1 text-surface-400 font-medium text-sm hover:opacity-80 w-full justify-between">
             {{ currentAppName }}
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
@@ -24,16 +26,17 @@
               </IconField>
             </div>
             <div v-for="app in filteredApplications" :key="app.id" @click="selectApp(app)"
-              class="px-4 py-2 hover:bg-gray-100 cursor-pointer text-[#101010] text-sm rounded">
+              class="px-4 py-2 hover:bg-gray-100 cursor-pointer text-surface-950 text-sm rounded">
               {{ app.id }}
             </div>
           </div>
         </div>
+
         <template v-if="isProjectStructuresPage && currentApp">
-          <span class="text-[#AFB0B8] text-lg">/</span>
-          <div class="relative inline-block w-48">
+          <span class="text-surface-400 text-lg">/</span>
+          <div ref="projectDropdownRef" class="relative inline-block w-48">
             <button @click="toggleProjectDropdown"
-              class="flex items-center gap-1 text-[#AFB0B8] font-medium text-sm hover:opacity-80 w-full justify-between">
+              class="flex items-center gap-1 text-surface-400 font-medium text-sm hover:opacity-80 w-full justify-between">
               {{ currentProjectName }}
               <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
@@ -49,7 +52,7 @@
                 </IconField>
               </div>
               <div v-for="proj in filteredProjects" :key="proj.id ?? ''" @click="selectProject(proj)"
-                class="px-4 py-2 hover:bg-gray-100 cursor-pointer text-[#101010] text-sm rounded">
+                class="px-4 py-2 hover:bg-gray-100 cursor-pointer text-surface-950 text-sm rounded">
                 {{ proj.name }}
               </div>
             </div>
@@ -94,6 +97,17 @@ export default class Header extends Vue {
   currentApp: Application | null = null;
   currentProject: Project | null = null;
 
+  mounted() {
+    this.updateRouteState();
+    this.loadApplicationsIfNeeded();
+    this.tryAutoSelectAppAndProject();
+    document.addEventListener('click', this.handleClickOutside);
+  }
+
+  beforeUnmount() {
+    document.removeEventListener('click', this.handleClickOutside);
+  }
+
   get allApplications() {
     return APPLICATION_STATE.allApplications;
   }
@@ -118,12 +132,6 @@ export default class Header extends Vue {
     return this.currentProject?.name || 'Select Project';
   }
 
-  mounted() {
-    this.updateRouteState();
-    this.loadApplicationsIfNeeded();
-    this.tryAutoSelectAppAndProject();
-  }
-
   @Watch('$route.fullPath', { immediate: true })
   onRouteChange() {
     this.updateRouteState();
@@ -144,13 +152,13 @@ export default class Header extends Vue {
 
   toggleAppDropdown() {
     this.appDropdownOpen = !this.appDropdownOpen;
-    this.projectDropdownOpen = false;
+    if (this.appDropdownOpen) this.projectDropdownOpen = false;
   }
 
   toggleProjectDropdown() {
     if (!this.currentApp) return;
     this.projectDropdownOpen = !this.projectDropdownOpen;
-    this.appDropdownOpen = false;
+    if (this.projectDropdownOpen) this.appDropdownOpen = false;
 
     if (this.projectsForCurrentApp.length === 0) {
       this.loadProjectsForCurrentApp();
@@ -169,6 +177,8 @@ export default class Header extends Vue {
   }
 
   selectApp(app: Application) {
+    const appId = encodeURIComponent(app.id);
+
     this.currentApp = app;
     APPLICATION_STATE.currentApplication = app;
     this.appDropdownOpen = false;
@@ -176,23 +186,7 @@ export default class Header extends Vue {
     this.currentProject = null;
     this.searchTextApp = '';
 
-    if (this.isApplicationDetailsPage) {
-      this.$router.push(`/application/${encodeURIComponent(app.id)}`);
-    }
-    if (this.isProjectStructuresPage) {
-      this.loadProjectsForCurrentApp();
-    }
-  }
-
-  async setActiveAppById(applicationId: string) {
-    const app = this.allApplications.find(a => a.id === applicationId);
-    if (app) {
-      this.currentApp = app;
-      APPLICATION_STATE.currentApplication = app;
-    } else {
-      console.warn('[Header] Application not found:', applicationId, 'Retrying in 500ms');
-      setTimeout(() => this.setActiveAppById(applicationId), 500);
-    }
+    this.$router.push(`/application/${appId}`);
   }
 
   selectProject(proj: Project) {
@@ -202,6 +196,16 @@ export default class Header extends Vue {
     this.$router.push(`/application/${encodeURIComponent(applicationId)}/project/${encodeURIComponent(projectId)}/structures`);
     this.projectDropdownOpen = false;
     this.searchTextProject = '';
+  }
+
+  async setActiveAppById(applicationId: string) {
+    const app = this.allApplications.find(a => a.id === applicationId);
+    if (app) {
+      this.currentApp = app;
+      APPLICATION_STATE.currentApplication = app;
+    } else {
+      setTimeout(() => this.setActiveAppById(applicationId), 500);
+    }
   }
 
   async setActiveProjectById(applicationId: string, projectId: string) {
@@ -233,6 +237,21 @@ export default class Header extends Vue {
     } else if (this.isApplicationDetailsPage) {
       const applicationId = this.$route.params.applicationId as string;
       await this.setActiveAppById(applicationId);
+    }
+  }
+
+  handleClickOutside(event: MouseEvent) {
+    const appDropdownEl = this.$refs.appDropdownRef as HTMLElement;
+    const projectDropdownEl = this.$refs.projectDropdownRef as HTMLElement;
+
+    const clickedOutsideApp = appDropdownEl && !appDropdownEl.contains(event.target as Node);
+    const clickedOutsideProject = projectDropdownEl && !projectDropdownEl.contains(event.target as Node);
+
+    if (this.appDropdownOpen && clickedOutsideApp) {
+      this.appDropdownOpen = false;
+    }
+    if (this.projectDropdownOpen && clickedOutsideProject) {
+      this.projectDropdownOpen = false;
     }
   }
 }
