@@ -3,7 +3,7 @@ import './style.css'
 import './theme.css'
 import PrimeVue from 'primevue/config'
 import StyleClass from 'primevue/styleclass'
-import StructuresTheme from '@/theme'
+import { StructuresPreset } from '@/theme/base'
 import router from '@/router'
 import ToastService from 'primevue/toastservice'
 import { CONTINUUM_UI } from '@/IContinuumUI'
@@ -14,10 +14,9 @@ import { Log } from 'oidc-client-ts'
 Log.setLogger(console)
 
 const app = createApp(App)
-
 app.use(PrimeVue, {
     theme: {
-        preset: StructuresTheme,
+        preset: StructuresPreset,
         options: {
             darkModeSelector: '.structures-admin-dark',
             cssLayer: false,

@@ -60,38 +60,38 @@ export default class ProjectList extends Vue {
         this.showProjectSidebar = false
     }
 
-async onProjectSubmit(): Promise<void> {
-    try {
-        const tableRef = this.$refs.crudTable as InstanceType<typeof CrudTable>
-        if (tableRef) {
-            tableRef.find()
+    async onProjectSubmit(): Promise<void> {
+        try {
+            const tableRef = this.$refs.crudTable as InstanceType<typeof CrudTable>
+            if (tableRef) {
+                tableRef.find()
+            }
+        } catch (error) {
+            console.error('[ProjectList] Refresh after project creation failed:', error)
+            this.$toast.add({
+                severity: 'error',
+                summary: 'Error',
+                detail: 'Failed to refresh project list.',
+                life: 3000
+            })
+        } finally {
+            this.showProjectSidebar = false
         }
-    } catch (error) {
-        console.error('[ProjectList] Refresh after project creation failed:', error)
-        this.$toast.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: 'Failed to refresh project list.',
-            life: 3000
-        })
-    } finally {
-        this.showProjectSidebar = false
     }
-}
 
 
     onEditItem(item: Identifiable<string>): void {
         this.$router.push(`${this.$route.path}/edit/${item.id}`)
     }
-toProjectPage(item: Identifiable<string>): void {
-    if (!item.id) {
-        console.error('[ProjectList] Cannot navigate: item.id is null')
-        return
+    toProjectPage(item: Identifiable<string>): void {
+        if (!item.id) {
+            console.error('[ProjectList] Cannot navigate: item.id is null')
+            return
+        }
+        const appId = this.applicationId
+        const projectId = item.id
+        this.$router.push(`/application/${encodeURIComponent(appId)}/project/${encodeURIComponent(projectId)}/structures`)
     }
-    const appId = this.applicationId
-    const projectId = item.id
-    this.$router.push(`/application/${encodeURIComponent(appId)}/project/${encodeURIComponent(projectId)}/structures`)
-}
     clearSelectedProject() {
         this.selectedProjectId = null
     }

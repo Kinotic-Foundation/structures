@@ -1,14 +1,16 @@
 <script lang="ts">
-import { Component, Vue } from 'vue-facing-decorator'
+import { Component, Vue, Ref } from 'vue-facing-decorator'
 import CrudTable from '@/components/CrudTable.vue'
 import ContainerMedium from '@/components/ContainerMedium.vue'
 import ApplicationSidebar from '@/components/ApplicationSidebar.vue'
-import { type Identifiable } from '@kinotic/continuum-client'
-import { mdiGraphql, mdiApi } from '@mdi/js'
 import GraphQLModal from '@/components/modals/GraphQLModal.vue'
 import { Structures, type IApplicationService } from '@kinotic/structures-api'
 import { APPLICATION_STATE } from '@/states/IApplicationState'
+import { mdiGraphql, mdiApi } from '@mdi/js'
+import { onClickOutside } from '@vueuse/core'
 import type { CrudHeader } from '@/types/CrudHeader'
+import type { Identifiable } from '@kinotic/continuum-client'
+import { shallowRef } from 'vue'
 
 @Component({
     components: {
@@ -31,6 +33,9 @@ export default class NamespaceList extends Vue {
     showGraphQLModal = false
     showSidebar = false
 
+    @Ref('sidebarWrapper') sidebarWrapper!: HTMLElement
+    @Ref('crudTable') crudTable!: InstanceType<typeof CrudTable>
+
     openGraphQL(): void {
         this.showGraphQLModal = true
     }
@@ -39,48 +44,55 @@ export default class NamespaceList extends Vue {
         this.showGraphQLModal = false
     }
 
-    async mounted(): Promise<void> {
-        try {
-            this.refreshTable()
-            if (this.$route.query.created === 'true') {
-                this.$router.replace({ query: {} })
+async mounted(): Promise<void> {
+    try {
+        this.refreshTable()
+        const el = shallowRef<HTMLElement | null>(this.sidebarWrapper)
+
+        onClickOutside(
+            el,
+            () => {
+                if (this.showSidebar) {
+                    this.onSidebarClose()
+                }
             }
-        } catch (error) {
-            const message = error instanceof Error ? error.message : 'Unknown error'
-            console.error('[NamespaceList] Initialization error:', message)
+        )
+
+        if (this.$route.query.created === 'true') {
+            this.$router.replace({ query: {} })
         }
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error'
+        console.error('[NamespaceList] Initialization error:', message)
     }
+}
+
 
     private refreshTable(): void {
-        const tableRef = this.$refs.crudTable as InstanceType<typeof CrudTable> | undefined
-        tableRef?.find()
+        this.crudTable?.find()
     }
 
     onAddItem(): void {
         this.showSidebar = true
     }
 
-async toApplicationPage(item: Identifiable<string>): Promise<void> {
-    try {
-        const appId = item.id ?? ''
-        const app = await this.dataSource.findById(appId)
-        APPLICATION_STATE.currentApplication = app
-        this.$router.push(`/application/${encodeURIComponent(appId)}`)
-    } catch (e) {
-        console.error('[NamespaceList] Failed to navigate to application:', e)
+    async toApplicationPage(item: Identifiable<string>): Promise<void> {
+        try {
+            const appId = item.id ?? ''
+            const app = await this.dataSource.findById(appId)
+            APPLICATION_STATE.currentApplication = app
+            this.$router.push(`/application/${encodeURIComponent(appId)}`)
+        } catch (e) {
+            console.error('[NamespaceList] Failed to navigate to application:', e)
+        }
     }
-}
-
 
     onSidebarClose(): void {
         this.showSidebar = false
     }
 
     onApplicationSubmit(): void {
-        const tableRef = this.$refs.crudTable as InstanceType<typeof CrudTable> | undefined
-        if (tableRef) {
-            tableRef.find()
-        }
+        this.refreshTable()
         this.showSidebar = false
     }
 
@@ -93,18 +105,19 @@ async toApplicationPage(item: Identifiable<string>): Promise<void> {
 <template>
     <ContainerMedium>
         <h1 class="text-2xl font-semibold mb-5 text-[color:var(--surface-950)]">Applications</h1>
+
         <CrudTable
+            ref="crudTable"
             createNewButtonText="New application"
             rowHoverColor=""
             :data-source="dataSource"
             :headers="headers"
             :singleExpand="false"
-            @add-item="onAddItem"
-            @edit-item="onEditItem"
-            ref="crudTable"
-            @onRowClick="toApplicationPage"
             :enableViewSwitcher="true"
             emptyStateText="No applications yet"
+            @add-item="onAddItem"
+            @edit-item="onEditItem"
+            @onRowClick="toApplicationPage"
         >
             <template #item.id="{ item }">
                 <span>{{ item.id }}</span>
@@ -133,7 +146,15 @@ async toApplicationPage(item: Identifiable<string>): Promise<void> {
         </CrudTable>
 
         <GraphQLModal :visible="showGraphQLModal" @close="closeGraphQL" />
-        <ApplicationSidebar :visible="showSidebar" @close="onSidebarClose" @submit="onApplicationSubmit" />
+
+        <!-- Wrapped in div with ref + v-show -->
+        <div v-show="showSidebar" ref="sidebarWrapper">
+            <ApplicationSidebar
+                :visible="showSidebar"
+                @close="onSidebarClose"
+                @submit="onApplicationSubmit"
+            />
+        </div>
     </ContainerMedium>
 </template>
 

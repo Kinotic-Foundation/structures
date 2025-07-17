@@ -5,7 +5,6 @@ import StructureItemModal from '@/components/modals/StructureItemModal.vue'
 import { Structure, Structures } from '@kinotic/structures-api'
 import type { CrudHeader } from '@/types/CrudHeader'
 import { APPLICATION_STATE } from '@/states/IApplicationState'
-import { STRUCTURES_STATE } from '@/states/IStructuresState'
 import type { Identifiable, IterablePage, Pageable } from '@kinotic/continuum-client'
 
 @Component({
@@ -26,6 +25,9 @@ export default class ProjectStructuresTable extends Vue {
         { field: 'updated', header: 'Updated', sortable: false },
         { field: 'published', header: 'Status', sortable: false }
     ]
+
+    showModal = false
+    selectedStructure: Structure | null = null
 
     mounted() {
         this.refreshTable()
@@ -58,15 +60,17 @@ export default class ProjectStructuresTable extends Vue {
     }
 
     openModal(item: Structure) {
-        STRUCTURES_STATE.openModal({
-            id: item.id ?? '',
-            name: item.name,
-            description: item.description ?? ''
-        })
+        try {
+            this.selectedStructure = item
+            this.showModal = true
+        } catch (e) {
+            console.error('[ProjectStructuresTable] Failed to open modal with structure:', e)
+        }
     }
 
     closeModal() {
-        STRUCTURES_STATE.closeModal()
+        this.showModal = false
+        this.selectedStructure = null
     }
 
     onAddItem() {
@@ -81,21 +85,10 @@ export default class ProjectStructuresTable extends Vue {
         this.openModal(item)
     }
 
-    get isModalOpen() {
-        return STRUCTURES_STATE.isModalOpen.value
-    }
-
-    get selectedStructure() {
-        return STRUCTURES_STATE.selectedStructure.value
-    }
-
-    /**
-     * Marks the correct project as active in the header when landing directly on this page
-     */
     async markProjectAsActive() {
         try {
-            const header = this.$root!.$refs.header as any
-            if (header && header.setActiveProjectById) {
+            const header = this.$root?.$refs?.header as { setActiveProjectById?: (appId: string, projId: string) => Promise<void> } | undefined
+            if (header?.setActiveProjectById) {
                 await header.setActiveProjectById(this.applicationId, this.projectId)
             }
         } catch (e) {
@@ -127,7 +120,7 @@ export default class ProjectStructuresTable extends Vue {
         </CrudTable>
 
         <StructureItemModal
-            v-if="isModalOpen"
+            v-if="showModal && selectedStructure"
             :item="selectedStructure"
             @close="closeModal"
         />
