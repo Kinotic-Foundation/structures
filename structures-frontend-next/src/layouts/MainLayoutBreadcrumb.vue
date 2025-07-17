@@ -47,21 +47,21 @@ matched.forEach((r, index) => {
         <div class="flex items-center gap-2">
           <img v-if="item.icon" :src="getIconUrl(item.icon)" class="filter-(--filter-home) h-5 w-5" />
           <img v-if="item.icon && item.label" src="@/assets/chevron-right.svg" class="filter-(--filter-home) h-4 w-4" />
-          <router-link v-if="item.to" :to="item.to" class="text-[#64748B] text-[14px]">
+          <router-link v-if="item.to" :to="item.to" class="text-slate-500 text-[14px]">
             {{ item.label }}
           </router-link>
-          <span v-else class="text-[#64748B] text-[14px]">{{ item.label }}</span>
+          <span v-else class="text-slate-500 text-[14px]">{{ item.label }}</span>
         </div>
       </template>
     </Breadcrumb>
     <div class="flex justify-between items-center gap-16">
-      <div class="text-[#64748B] text-[14px] flex gap-4">
+      <div class="text-slate-500 text-[14px] flex gap-4">
         <router-link to="#">FeedBack</router-link>
         <router-link to="#">Changelog</router-link>
         <router-link to="#">Help</router-link>
         <router-link to="#">Docs</router-link>
       </div>
-      <div class="w-8 h-8 rounded-full border border-text-[#64748B] flex justify-center items-center cursor-pointer">
+      <div class="w-8 h-8 rounded-full border border-text-slate-500 flex justify-center items-center cursor-pointer">
         <i class="pi pi-bell"></i>
       </div>
     </div>

@@ -1,7 +1,7 @@
 export class NavItem {
     public icon: string
     public label: string
-    public path: string  // Added path property
+    public path: string
     public parent: NavItem | null = null
     public children: NavItem[] = []
     public readonly navigateFunction: () => Promise<void>
