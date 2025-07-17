@@ -1,28 +1,46 @@
-<script setup lang="ts">
-import { ref, defineExpose } from 'vue'
+<script lang="ts">
+import { Component, Vue } from 'vue-facing-decorator'
 import SidebarItem from './SidebarItem.vue'
+
+// ✅ Standard ES imports (works with Vite and Webpack 5+)
 import overviewIcon from '@/assets/overview-icon.svg'
 import authIcon from '@/assets/union.svg'
 import settingsIcon from '@/assets/settings-gray.svg'
 import strCollapse from '@/assets/str-collapse.svg'
 import strExpand from '@/assets/str-expand.svg'
 
-const collapsed = ref(false)
+const COLLAPSE_KEY = 'sidebar-collapsed'
 
-function toggleSidebar() {
-    collapsed.value = !collapsed.value
-}
-
-defineExpose({
-    collapsed,
-    toggleSidebar
+@Component({
+    components: {
+        SidebarItem
+    }
 })
-</script>
+export default class Sidebar extends Vue {
+    collapsed = false
 
+    // ✅ Class properties used in template
+    overviewIcon = overviewIcon
+    authIcon = authIcon
+    settingsIcon = settingsIcon
+    strCollapse = strCollapse
+    strExpand = strExpand
+
+    mounted() {
+        const stored = localStorage.getItem(COLLAPSE_KEY)
+        this.collapsed = stored === 'true'
+    }
+
+    toggleSidebar() {
+        this.collapsed = !this.collapsed
+        localStorage.setItem(COLLAPSE_KEY, String(this.collapsed))
+    }
+}
+</script>
 <template>
     <div
         :class="[
-            'bg-[#F5F7FA] fixed top-[64px] left-0 z-40 flex flex-col justify-between px-4 py-4 h-[calc(100vh-64px)]',
+            'bg-surface-50 fixed top-[64px] left-0 z-40 flex flex-col justify-between px-4 py-4 h-[calc(100vh-64px)]',
             'transition-[width] duration-300 ease-in-out',
             collapsed ? 'w-[64px]' : 'w-[256px]'
         ]"

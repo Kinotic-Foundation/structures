@@ -62,10 +62,9 @@ class CrudTable extends Vue {
   items: DescriptiveIdentifiable[] = []
   totalItems = 0
   loading = false
-  finishedInitialLoad = false
+  initialSearchCompleted = false
   searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
   activeView: 'burger' | 'column' = 'burger'
-
   searchText: string | null = ''
   options = {
     page: 0,
@@ -97,24 +96,52 @@ class CrudTable extends Vue {
   }
 
   mounted() {
-    this.searchText = (this.$route.query.search as string) || ''
+    const urlSearch = (this.$route.query.search as string) || ''
+    this.loading = true
+    this.initialSearchCompleted = false
+    if (urlSearch) {
+      this.searchText = urlSearch
+    }
+    this.options.page = 0
+    this.options.first = 0
     this.find()
   }
 
-  @Watch('searchText')
-  onSearchTextChanged(newVal: string) {
-    const query = { ...this.$route.query, search: newVal || undefined }
-    this.$router.replace({ query })
+  updateUrlSearchParam(value: string) {
+    const newQuery = { ...this.$route.query }
+    if (value) {
+      newQuery.search = value
+    } else {
+      delete newQuery.search
+    }
+    this.$router.replace({ query: newQuery })
   }
 
-  @Watch('dataSource', { immediate: true })
-  onDataSourceChanged(newVal: IDataSource<Identifiable<string>>) {
-    if (newVal) {
+  @Watch('$route.query.search')
+  onRouteSearchChanged(newVal: string) {
+    const newSearch = newVal || ''
+    if (this.searchText !== newSearch) {
+      this.searchText = newSearch
+      this.options.page = 0
+      this.options.first = 0
       this.find()
     }
   }
 
-  // Split handlers:
+  @Watch('searchText')
+  onSearchTextChanged(newVal: string) {
+    const currentSearch = this.$route.query.search || ''
+    if (newVal !== currentSearch) {
+      this.updateUrlSearchParam(newVal)
+    }
+
+    if (this.searchDebounceTimer) clearTimeout(this.searchDebounceTimer)
+    this.searchDebounceTimer = setTimeout(() => {
+      this.options.page = 0
+      this.options.first = 0
+      this.find()
+    }, 400)
+  }
   onDataTablePage(event: DataTablePageEvent) {
     this.options.page = event.page
     this.options.rows = event.rows
@@ -143,7 +170,7 @@ class CrudTable extends Vue {
   }
 
   @Emit()
-  addItem(): void { }
+  addItem(): void {}
 
   @Emit()
   editItem(item: Identifiable<string>): Identifiable<string> {
@@ -162,28 +189,30 @@ class CrudTable extends Vue {
   find() {
     if (!this.loading && this.dataSource) {
       this.loading = true
-      const orders: Order[] = []
-
-      if (this.options.sortField) {
-        orders.push(new Order(this.options.sortField, this.options.sortOrder === -1 ? Direction.DESC : Direction.ASC))
-      }
-
-      const pageable = Pageable.create(this.options.page, this.options.rows, { orders })
-      const queryPromise: Promise<Page<Identifiable<string>>> = this.searchText
-        ? this.dataSource.search(this.searchText, pageable)
-        : this.dataSource.findAll(pageable)
-
-      queryPromise
-        .then((page: Page<Identifiable<string>>) => {
-          this.loading = false
-          this.totalItems = page.totalElements ?? 0
-          this.items = page.content ?? []
-        })
-        .catch((error: unknown) => {
-          this.loading = false
-          console.error('[CRUD Table Alert]:', error)
-        })
     }
+
+    const orders: Order[] = []
+    if (this.options.sortField) {
+      orders.push(new Order(this.options.sortField, this.options.sortOrder === -1 ? Direction.DESC : Direction.ASC))
+    }
+
+    const pageable = Pageable.create(this.options.page, this.options.rows, { orders })
+    const queryPromise: Promise<Page<Identifiable<string>>> = this.searchText
+      ? this.dataSource.search(this.searchText, pageable)
+      : this.dataSource.findAll(pageable)
+
+    queryPromise
+      .then((page: Page<Identifiable<string>>) => {
+        this.loading = false
+        this.totalItems = page.totalElements ?? 0
+        this.items = page.content ?? []
+        this.initialSearchCompleted = true
+      })
+      .catch((error: unknown) => {
+        console.error('[CRUD Table Alert]:', error)
+        this.loading = false
+        this.initialSearchCompleted = true
+      })
   }
 }
 
