@@ -9,7 +9,7 @@ const projectId = computed(() => route.params.projectId as string)
 
 <template>
   <div class="p-6">
-    <h1 class="text-2xl font-semibold mb-4 text-[#101010]">
+    <h1 class="text-2xl font-semibold mb-4 text-surface-950">
       {{ projectId }}
     </h1>
     <ProjectStructuresTable :projectId="projectId" />
