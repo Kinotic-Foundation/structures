@@ -2,22 +2,6 @@ import { type RouteMeta, type RouteRecordRaw } from 'vue-router'
 
 const pageRoutes: RouteRecordRaw[] = [
   {
-    path: '/dashboard',
-    component: () => import('@/layouts/MainLayout.vue'),
-    meta: {
-      showInMainNav: true,
-      icon: 'dashboard.svg',
-      label: 'Dashboard',
-    } as RouteMeta,
-    children: [
-      {
-        name: "dashboard",
-        path: '',
-        component: () => import('@/pages/Test.vue'),
-      },
-    ]
-  },
-  {
     path: '/applications',
     component: () => import('@/layouts/MainLayout.vue'),
     meta: {
@@ -80,37 +64,6 @@ const pageRoutes: RouteRecordRaw[] = [
         }),
       },
     ],
-  },
-  {
-    path: '/structures',
-    component: () => import('@/layouts/MainLayout.vue'),
-    meta: {
-      showInMainNav: true,
-      icon: 'objects-column.svg',
-      label: 'Structures',
-    } as RouteMeta,
-    children: [
-      {
-        name: "structures",
-        path: '',
-        component: () => import('@/pages/structures/StructuresList.vue'),
-      }
-    ]
-  },
-  {
-    path: '/entity/:id',
-    component: () => import('@/layouts/MainLayout.vue'),
-    meta: {
-      showInMainNav: false,
-      icon: 'objects-column.svg',
-      label: 'Structure Details',
-    } as RouteMeta,
-    children: [
-      {
-        path: '',
-        component: () => import('@/pages/structures/entity/EntityList.vue'),
-      }
-    ]
   },
   {
     path: '/application-add',

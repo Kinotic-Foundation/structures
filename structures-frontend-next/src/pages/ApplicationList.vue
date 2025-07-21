@@ -104,7 +104,7 @@ async mounted(): Promise<void> {
 
 <template>
     <ContainerMedium>
-        <h1 class="text-2xl font-semibold mb-5 text-[color:var(--surface-950)]">Applications</h1>
+        <h1 class="text-2xl font-semibold mb-5 text-surface-950">Applications</h1>
 
         <CrudTable
             ref="crudTable"
@@ -144,10 +144,7 @@ async mounted(): Promise<void> {
                 </Button>
             </template>
         </CrudTable>
-
         <GraphQLModal :visible="showGraphQLModal" @close="closeGraphQL" />
-
-        <!-- Wrapped in div with ref + v-show -->
         <div v-show="showSidebar" ref="sidebarWrapper">
             <ApplicationSidebar
                 :visible="showSidebar"
