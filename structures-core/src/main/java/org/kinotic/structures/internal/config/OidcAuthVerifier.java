@@ -164,13 +164,18 @@ public class OidcAuthVerifier implements SecurityService {
         String preferredUsername = claims.get("preferred_username", String.class);
         
         // Extract tenant ID from claims or use a default
-        String tenantId = claims.get("tenant_id", String.class);
+        String tenantId = claims.get(properties.getTenantIdFieldName(), String.class);
+        
+        if(tenantId == null){
+            tenantId = claims.get("tenant_id", String.class);
+        }
         if (tenantId == null) {
             tenantId = claims.get("tid", String.class); // Alternative claim name for tenant
         }
         if (tenantId == null) {
             tenantId = "default"; // Default tenant if not specified
         }
+        // TODO: does it make sense to try and support pulling a "tenant" from the issuer url - like for keycloak?
 
         // Extract roles from claims
         List<String> roles = extractRolesFromClaims(claims);
