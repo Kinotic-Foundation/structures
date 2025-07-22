@@ -1,5 +1,5 @@
 <script lang="ts">
-import { Component, Vue, Ref } from 'vue-facing-decorator'
+import { Component, Vue, Ref, Watch } from 'vue-facing-decorator'
 import CrudTable from '@/components/CrudTable.vue'
 import ContainerMedium from '@/components/ContainerMedium.vue'
 import ApplicationSidebar from '@/components/ApplicationSidebar.vue'
@@ -32,44 +32,50 @@ export default class NamespaceList extends Vue {
     icons = { graph: mdiGraphql, api: mdiApi }
     showGraphQLModal = false
     showSidebar = false
+    searchText: string = this?.$route?.query.search as string || ''
 
     @Ref('sidebarWrapper') sidebarWrapper!: HTMLElement
     @Ref('crudTable') crudTable!: InstanceType<typeof CrudTable>
 
-    openGraphQL(): void {
-        this.showGraphQLModal = true
-    }
+    async mounted(): Promise<void> {
+        try {
+            this.refreshTable()
+            const el = shallowRef<HTMLElement | null>(this.sidebarWrapper)
 
-    closeGraphQL(): void {
-        this.showGraphQLModal = false
-    }
-
-async mounted(): Promise<void> {
-    try {
-        this.refreshTable()
-        const el = shallowRef<HTMLElement | null>(this.sidebarWrapper)
-
-        onClickOutside(
-            el,
-            () => {
+            onClickOutside(el, () => {
                 if (this.showSidebar) {
                     this.onSidebarClose()
                 }
+            })
+
+            if (this?.$route?.query.created === 'true') {
+                this.$router.replace({ query: {} })
             }
-        )
-
-        if (this.$route.query.created === 'true') {
-            this.$router.replace({ query: {} })
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Unknown error'
+            console.error('[NamespaceList] Initialization error:', message)
         }
-    } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unknown error'
-        console.error('[NamespaceList] Initialization error:', message)
     }
-}
 
+    @Watch('$route.query.search')
+    onRouteSearchQueryChanged(newVal: string) {
+        this.searchText = newVal || ''
+    }
 
     private refreshTable(): void {
         this.crudTable?.find()
+    }
+
+    updateRouteQuery(search: string) {
+        const query = { ...this?.$route?.query }
+
+        if (search) {
+            query.search = search
+        } else {
+            delete query.search
+        }
+
+        this.$router.replace({ query })
     }
 
     onAddItem(): void {
@@ -99,6 +105,14 @@ async mounted(): Promise<void> {
     onEditItem(item: Identifiable<string>): void {
         this.$router.push(`${this.$route.path}/edit/${item.id}`)
     }
+
+    openGraphQL(): void {
+        this.showGraphQLModal = true
+    }
+
+    closeGraphQL(): void {
+        this.showGraphQLModal = false
+    }
 }
 </script>
 
@@ -115,6 +129,8 @@ async mounted(): Promise<void> {
             :singleExpand="false"
             :enableViewSwitcher="true"
             emptyStateText="No applications yet"
+            :search="searchText"
+            @update:search="updateRouteQuery"
             @add-item="onAddItem"
             @edit-item="onEditItem"
             @onRowClick="toApplicationPage"
@@ -144,7 +160,9 @@ async mounted(): Promise<void> {
                 </Button>
             </template>
         </CrudTable>
+
         <GraphQLModal :visible="showGraphQLModal" @close="closeGraphQL" />
+
         <div v-show="showSidebar" ref="sidebarWrapper">
             <ApplicationSidebar
                 :visible="showSidebar"
