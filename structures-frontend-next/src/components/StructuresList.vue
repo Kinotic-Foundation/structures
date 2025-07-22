@@ -1,5 +1,5 @@
 <script lang="ts">
-import { Component, Vue, Prop, Watch } from 'vue-facing-decorator'
+import { Component, Vue, Prop, Ref, Watch } from 'vue-facing-decorator'
 import CrudTable from '@/components/CrudTable.vue'
 import StructureItemModal from '@/components/modals/StructureItemModal.vue'
 import type { Identifiable, IterablePage, Pageable } from '@kinotic/continuum-client'
@@ -8,117 +8,145 @@ import { Structure, Structures } from '@kinotic/structures-api'
 import type { CrudHeader } from '@/types/CrudHeader'
 
 @Component({
-    components: { CrudTable, StructureItemModal }
+  components: { CrudTable, StructureItemModal }
 })
 export default class StructuresList extends Vue {
-    @Prop({ required: true }) applicationId!: string
-    @Prop({ required: false, default: undefined }) projectId?: string
+  @Prop({ required: true }) applicationId!: string
+  @Prop({ required: false, default: undefined }) projectId?: string
+  @Prop({ required: false, default: '' }) initialSearch!: string
 
-    structureTableHeaders: CrudHeader[] = [
-        { field: 'name', header: 'Structure name', sortable: true },
-        { field: 'projectId', header: 'Project', sortable: true },
-        { field: 'description', header: 'Description', sortable: false },
-        { field: 'created', header: 'Created', sortable: false },
-        { field: 'updated', header: 'Updated', sortable: false },
-        { field: 'published', header: 'Status', sortable: false }
-    ]
+  @Ref('crudTable') crudTable!: InstanceType<typeof CrudTable>
 
-    showModal = false
-    selectedStructure: Structure | null = null
+  structureTableHeaders: CrudHeader[] = [
+    { field: 'name', header: 'Structure name', sortable: true },
+    { field: 'projectId', header: 'Project', sortable: true },
+    { field: 'description', header: 'Description', sortable: false },
+    { field: 'created', header: 'Created', sortable: false },
+    { field: 'updated', header: 'Updated', sortable: false },
+    { field: 'published', header: 'Status', sortable: false }
+  ]
 
-    @Watch('applicationId', { immediate: true })
-    onApplicationIdChange(): void {
-        this.refreshTable()
+  showModal = false
+  selectedStructure: Structure | null = null
+
+  searchText = ''
+  isInitialized = false
+
+  mounted(): void {
+    this.searchText = this.initialSearch || ''
+    this.isInitialized = true
+  }
+
+  @Watch('initialSearch')
+  onInitialSearchChanged(newVal: string) {
+    if (this.isInitialized) {
+      this.searchText = newVal || ''
+      this.refreshTable()
+    }
+  }
+
+  @Watch('applicationId')
+  onApplicationIdChanged() {
+    this.refreshTable()
+  }
+
+  @Watch('projectId')
+  onProjectIdChanged() {
+    this.refreshTable()
+  }
+
+  get dataSource() {
+    return {
+      findAll: async (pageable: Pageable): Promise<IterablePage<Structure>> => {
+        const service = Structures.getStructureService()
+        const result = this.projectId
+          ? await service.findAllForProject(this.projectId, pageable)
+          : await service.findAllForApplication(this.applicationId, pageable)
+
+        APPLICATION_STATE.structuresCount = result.totalElements ?? 0
+        return result
+      },
+      search: async (_searchText: string, pageable: Pageable): Promise<IterablePage<Structure>> => {
+        const filter = this.projectId ? `projectId:${this.projectId}` : `applicationId:${this.applicationId}`
+        const query = `${filter} && ${this.searchText}`
+        return Structures.getStructureService().search(query, pageable)
+      }
+    }
+  }
+
+  get structuresCount() {
+    return APPLICATION_STATE.structuresCount
+  }
+
+  refreshTable(): void {
+    if (this.crudTable?.find) {
+      this.crudTable.find()
+    }
+  }
+
+  updateRouteQuery(newSearch: string): void {
+    this.searchText = newSearch
+    const query = { ...this.$route.query }
+
+    if (newSearch) {
+      query['search-structure'] = newSearch
+    } else {
+      delete query['search-structure']
     }
 
-    @Watch('projectId', { immediate: true })
-    onProjectIdChange(): void {
-        this.refreshTable()
-    }
+    this.$router.replace({ query }).catch(() => {})
+    this.refreshTable()
+  }
 
-    get dataSource() {
-        return {
-            findAll: async (pageable: Pageable): Promise<IterablePage<Structure>> => {
-                let result;
-                if (this.projectId) {
-                    result = await Structures.getStructureService().findAllForProject(this.projectId, pageable);
-                } else {
-                    result = await Structures.getStructureService().findAllForApplication(this.applicationId, pageable);
-                }
-                APPLICATION_STATE.structuresCount = result.totalElements ?? 0;
-                return result;
-            },
-            search: async (searchText: string, pageable: Pageable): Promise<IterablePage<Structure>> => {
-                const search = `${this.projectId ? `projectId:${this.projectId}` : `applicationId:${this.applicationId}`} && ${searchText}`
-                return Structures.getStructureService().search(search, pageable)
-            }
-        }
-    }
+  openModal(item: Structure) {
+    this.selectedStructure = item
+    this.showModal = true
+  }
 
-    get structuresCount() {
-        return APPLICATION_STATE.structuresCount
-    }
+  closeModal() {
+    this.showModal = false
+    this.selectedStructure = null
+  }
 
-    refreshTable(): void {
-        const tableRef = this.$refs.crudTable as InstanceType<typeof CrudTable> | undefined
-        tableRef?.find()
-    }
+  handleRowClick(item: Structure): void {
+    this.openModal(item)
+  }
 
-    openModal(item: Structure) {
-        this.selectedStructure = item
-        this.showModal = true
-    }
+  onAddItem(): void {
+    console.log('[StructuresList] Add new structure')
+  }
 
-    closeModal() {
-        this.showModal = false
-        this.selectedStructure = null
-    }
-
-    handleRowClick(item: Structure): void {
-        this.openModal(item)
-    }
-
-    onAddItem(): void {
-        console.log('[StructuresList] Add new structure')
-    }
-
-    onEditItem(item: Identifiable<string>): void {
-        this.$router.push(`${this.$route.path}/edit/${item.id}`)
-    }
+  onEditItem(item: Identifiable<string>): void {
+    this.$router.push(`${this.$route.path}/edit/${item.id}`)
+  }
 }
 </script>
 
 <template>
-    <div>
-        <CrudTable
-            v-if="dataSource"
-            rowHoverColor=""
-            :data-source="dataSource"
-            :headers="structureTableHeaders"
-            :singleExpand="false"
-            @add-item="onAddItem"
-            @edit-item="onEditItem"
-            ref="crudTable"
-            @onRowClick="handleRowClick"
-            createNewButtonText="New Structure"
-            emptyStateText="No structures yet"
-        >
-            <template #item.id="{ item }">
-                <span>{{ item.id }}</span>
-            </template>
-        </CrudTable>
+  <div>
+    <CrudTable
+      ref="crudTable"
+      rowHoverColor=""
+      :data-source="dataSource"
+      :headers="structureTableHeaders"
+      :singleExpand="false"
+      :search="searchText"
+      @update:search="updateRouteQuery"
+      @add-item="onAddItem"
+      @edit-item="onEditItem"
+      @onRowClick="handleRowClick"
+      createNewButtonText="New Structure"
+      emptyStateText="No structures yet"
+    >
+      <template #item.id="{ item }">
+        <span>{{ item.id }}</span>
+      </template>
+    </CrudTable>
 
-        <StructureItemModal
-            v-if="showModal && selectedStructure"
-            :item="selectedStructure"
-            @close="closeModal"
-        />
-    </div>
+    <StructureItemModal
+      v-if="showModal && selectedStructure"
+      :item="selectedStructure"
+      @close="closeModal"
+    />
+  </div>
 </template>
-
-<style scoped>
-.p-row-even,
-.p-row-odd {
-    cursor: pointer;
-}
-</style>

@@ -58,6 +58,7 @@ class CrudTable extends Vue {
   @Prop({ default: 'Add new' }) createNewButtonText!: string
   @Prop({ default: false }) enableViewSwitcher!: boolean
   @Prop({ default: 'No items yet' }) emptyStateText!: string
+  @Prop({ default: '' }) search!: string
 
   items: DescriptiveIdentifiable[] = []
   totalItems = 0
@@ -117,23 +118,33 @@ class CrudTable extends Vue {
     this.$router.replace({ query: newQuery })
   }
 
-  @Watch('$route.query.search')
-  onRouteSearchChanged(newVal: string) {
-    const newSearch = newVal || ''
-    if (this.searchText !== newSearch) {
-      this.searchText = newSearch
-      this.options.page = 0
-      this.options.first = 0
-      this.find()
-    }
+  @Watch('search', { immediate: true })
+  onSearchPropChange(newVal: string) {
+    this.searchText = newVal
+    this.options.page = 0
+    this.options.first = 0
+    this.find()
   }
 
+  @Emit('update:search')
+  emitSearchUpdate(val: string): string {
+    return val
+  }
+  @Emit()
+  addItem(): void { }
+
+  @Emit()
+  editItem(item: Identifiable<string>): Identifiable<string> {
+    return { ...item }
+  }
+
+  @Emit()
+  onRowClick(event: { data: Identifiable<string>; index: number }): Identifiable<string> {
+    return { ...event.data }
+  }
   @Watch('searchText')
   onSearchTextChanged(newVal: string) {
-    const currentSearch = this.$route.query.search || ''
-    if (newVal !== currentSearch) {
-      this.updateUrlSearchParam(newVal)
-    }
+    this.emitSearchUpdate(newVal)
 
     if (this.searchDebounceTimer) clearTimeout(this.searchDebounceTimer)
     this.searchDebounceTimer = setTimeout(() => {
@@ -167,19 +178,6 @@ class CrudTable extends Vue {
       this.options.first = 0
       this.find()
     }, 400)
-  }
-
-  @Emit()
-  addItem(): void {}
-
-  @Emit()
-  editItem(item: Identifiable<string>): Identifiable<string> {
-    return { ...item }
-  }
-
-  @Emit()
-  onRowClick(event: { data: Identifiable<string>; index: number }): Identifiable<string> {
-    return { ...event.data }
   }
 
   handleCardClick(item: Identifiable<string>, index: number) {
@@ -231,8 +229,8 @@ export default toNative(CrudTable)
 
       <template #end>
         <div class="flex items-center gap-2 h-[33px]">
-          <SelectButton v-if="enableViewSwitcher" v-model="activeView" :options="viewOptions"
-            optionValue="value" dataKey="value" class="h-[33px]">
+          <SelectButton v-if="enableViewSwitcher" v-model="activeView" :options="viewOptions" optionValue="value"
+            dataKey="value" class="h-[33px]">
             <template #option="slotProps">
               <i :class="slotProps.option.icon"></i>
             </template>
@@ -271,7 +269,8 @@ export default toNative(CrudTable)
           <p class="text-sm">{{ emptyStateText }}</p>
         </div>
 
-        <Paginator :rows="options.rows" :totalRecords="totalItems" @page="onPaginatorPage" class="mt-4" v-if="items.length !== 0" />
+        <Paginator :rows="options.rows" :totalRecords="totalItems" @page="onPaginatorPage" class="mt-4"
+          v-if="items.length !== 0" />
       </div>
 
       <div v-if="isBurgerView" class="p-4 border text-[color:var(--surface-200)] rounded-xl">
