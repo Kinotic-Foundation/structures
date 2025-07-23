@@ -1,3 +1,4 @@
+
 import { type RouteMeta, type RouteRecordRaw } from 'vue-router'
 
 const pageRoutes: RouteRecordRaw[] = [
@@ -24,7 +25,24 @@ const pageRoutes: RouteRecordRaw[] = [
     meta: {
       showInMainNav: false,
       label: 'Application Details',
-      icon: 'microchip.svg'
+      icon: 'microchip.svg',
+      sidebarItems: (route: { params: { applicationId: any } }) => [
+        {
+          label: 'Overview',
+          icon: 'pi-objects-column',
+          path: `/application/${route.params.applicationId}`
+        },
+        {
+          label: 'Authentication',
+          icon: 'pi pi-key',
+          path: `/application/${route.params.applicationId}/auth`
+        },
+        {
+          label: 'Application settings',
+          icon: 'pi pi-cog',
+          path: `/application/${route.params.applicationId}/settings`
+        }
+      ]
     } as RouteMeta,
     children: [
       {
@@ -52,6 +70,23 @@ const pageRoutes: RouteRecordRaw[] = [
       showInMainNav: false,
       icon: 'objects-column.svg',
       label: 'Project Structures',
+      sidebarItems: (route: { params: { applicationId: any; projectId: any; }; }) => [
+        {
+          label: 'Structures',
+          icon: 'pi pi-table',
+          path: `/application/${route.params.applicationId}/project/${route.params.projectId}/structures/overview`
+        },
+        {
+          label: 'Lambdas',
+          icon: 'pi pi-key',
+          path: `/application/${route.params.applicationId}/project/${route.params.projectId}/structures/sections`
+        },
+        {
+          label: 'Project settings',
+          icon: 'pi pi-cog',
+          path: `/application/${route.params.applicationId}/project/${route.params.projectId}/structures/settings`
+        }
+      ]
     } as RouteMeta,
     children: [
       {
@@ -87,7 +122,6 @@ const pageRoutes: RouteRecordRaw[] = [
         path: '',
         component: () => import('@/pages/Users.vue'),
       },
-
     ]
   },
   {
