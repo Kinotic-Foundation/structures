@@ -114,7 +114,7 @@ export default class ApplicationDetails extends Vue {
       </div>
     </div>
 
-    <Tabs :value="activeTab" @update:value="activeTab = $event">
+    <Tabs :value="activeTab" @update:value="+activeTab === $event">
       <TabList>
         <Tab :value="0">Projects</Tab>
         <Tab :value="1">Structures</Tab>
