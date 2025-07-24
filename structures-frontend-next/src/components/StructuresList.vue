@@ -112,10 +112,6 @@ export default class StructuresList extends Vue {
     this.openModal(item)
   }
 
-  onAddItem(): void {
-    console.log('[StructuresList] Add new structure')
-  }
-
   onEditItem(item: Identifiable<string>): void {
     this.$router.push(`${this.$route.path}/edit/${item.id}`)
   }
@@ -132,7 +128,6 @@ export default class StructuresList extends Vue {
       :singleExpand="false"
       :search="searchText"
       @update:search="updateRouteQuery"
-      @add-item="onAddItem"
       @edit-item="onEditItem"
       @onRowClick="handleRowClick"
       createNewButtonText="New Structure"
