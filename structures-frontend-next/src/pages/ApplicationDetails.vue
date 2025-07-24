@@ -25,7 +25,7 @@ import { APPLICATION_STATE } from '@/states/IApplicationState'
   }
 })
 export default class ApplicationDetails extends Vue {
-  activeTab: number = 0
+  activeTab: string | number  = 0
   showGraphQLModal: boolean = false
   isInitialized: boolean = false
 
@@ -78,7 +78,6 @@ export default class ApplicationDetails extends Vue {
     const query = { ...this.$route.query }
     query.tab = String(newTab)
 
-    // ✅ Do NOT delete the search-product or search-structure params
     this.$router.replace({ query }).catch(() => {})
   }
 
@@ -114,14 +113,13 @@ export default class ApplicationDetails extends Vue {
       </div>
     </div>
 
-    <Tabs :value="activeTab" @update:value="+activeTab === $event">
+    <Tabs :value="activeTab" @update:value="activeTab = $event">
       <TabList>
         <Tab :value="0">Projects</Tab>
         <Tab :value="1">Structures</Tab>
       </TabList>
       <TabPanels>
         <TabPanel :value="0">
-          <!-- Always mounted, conditionally visible -->
           <div v-show="activeTab === 0">
             <ProjectList
               :applicationId="applicationId"
