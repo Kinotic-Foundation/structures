@@ -67,7 +67,7 @@ export default class Sidebar extends Vue {
           icon: r.meta.icon,
           label: r.meta.label,
           path: r.path
-        }))
+        })) as Array<{ icon: string; label: string; path: string }>
     }
   }
 }
