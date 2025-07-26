@@ -51,8 +51,19 @@ export class UserState implements IUserState {
 
     public async handleOidcLogin(user: User): Promise<void> {
         const connectionInfo: ConnectionInfo = this.createConnectionInfo()
+        
+        // Determine which token to use
+        let tokenToUse = user.access_token;
+        
+        // For Microsoft social login, check if access_token is a valid JWT
+        // If not, use the ID token instead
+        if (user.access_token && !this.isValidJWT(user.access_token)) {
+            console.log('Access token is not a valid JWT, using ID token for Microsoft social login');
+            tokenToUse = user.id_token || user.access_token;
+        }
+        
         connectionInfo.connectHeaders = {
-            Authorization: `Bearer ${user.access_token}`
+            Authorization: `Bearer ${tokenToUse}`
         }
 
         try {
@@ -61,8 +72,8 @@ export class UserState implements IUserState {
             this.accessDenied = false
             this.oidcUser = user
 
-            // Store the access token in a cookie
-            Cookies.set('token', user.access_token, {
+            // Store the token in a cookie
+            Cookies.set('token', tokenToUse, {
                 sameSite: 'strict',
                 secure: true,
                 expires: new Date(user.expires_at! * 1000) // Convert Unix timestamp to Date
@@ -142,6 +153,27 @@ export class UserState implements IUserState {
         return connectionInfo
     }
 
+    /**
+     * Check if a token is a valid JWT format
+     */
+    private isValidJWT(token: string): boolean {
+        try {
+            // Check if token has the JWT format (3 parts separated by dots)
+            const parts = token.split('.');
+            if (parts.length !== 3) {
+                return false;
+            }
+            
+            // Try to decode the header and payload
+            const header = JSON.parse(atob(parts[0]));
+            const payload = JSON.parse(atob(parts[1]));
+            
+            // Check for required JWT claims
+            return !!(header.alg && payload.iss && payload.aud);
+        } catch (error) {
+            return false;
+        }
+    }
 }
 
 export const USER_STATE: IUserState = reactive(new UserState())

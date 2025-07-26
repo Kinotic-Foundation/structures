@@ -1,15 +1,9 @@
 import { type UserManagerSettings, WebStorageStateStore, UserManager } from 'oidc-client-ts';
 
-export type OidcProvider = 'okta' | 'keycloak' | 'google' | 'github' | 'microsoft' | 'custom';
-
-// Configuration specific to public clients
-export interface PublicClientConfig {
-  isPublicClient: boolean;
-  responseType: string;
-  responseMode?: string;
-}
+export type OidcProvider = 'okta' | 'keycloak' | 'google' | 'github' | 'microsoft' | 'microsoftSocial' | 'custom';
 
 export interface OidcProviderConfig extends Partial<UserManagerSettings> {
+  enabled: boolean;
   client_id: string;
   client_secret?: string;
   authority: string;
@@ -24,17 +18,15 @@ export interface OidcProviderConfig extends Partial<UserManagerSettings> {
     end_session_endpoint?: string;
     jwks_uri?: string;
   };
-  // Public client specific settings
   publicClient?: PublicClientConfig;
   customParams?: Record<string, string>;
 }
 
-// so we should have an organization object that 
-// has exactly one provider for the org - with the original default admin account
-// and then an Application - which might have a single provider or multiple
-// we could also think about a user which can use a social provider individually
-// we will need to figure out the best workflow but i believe the same config can 
-// be used for all of these use cases
+export interface PublicClientConfig {
+  isPublicClient: boolean;
+  responseType: string;
+  responseMode?: string;
+}
 
 export interface OidcConfiguration {
   defaultProvider: OidcProvider;
@@ -42,9 +34,21 @@ export interface OidcConfiguration {
   defaultSettings: Partial<UserManagerSettings>;
 }
 
-// Default settings that work across providers
+const env = import.meta.env;
+
+// Debug: Log environment variables for troubleshooting
+if (env.VITE_DEBUG === 'true') {
+  console.log('OIDC Environment Variables:', {
+    VITE_OIDC_OKTA_ENABLED: env.VITE_OIDC_OKTA_ENABLED,
+    VITE_OKTA_CLIENT_ID: env.VITE_OKTA_CLIENT_ID,
+    VITE_OKTA_AUTHORITY: env.VITE_OKTA_AUTHORITY,
+    VITE_OIDC_KEYCLOAK_ENABLED: env.VITE_OIDC_KEYCLOAK_ENABLED,
+    VITE_KEYCLOAK_CLIENT_ID: env.VITE_KEYCLOAK_CLIENT_ID,
+    VITE_KEYCLOAK_AUTHORITY: env.VITE_KEYCLOAK_AUTHORITY,
+  });
+}
+
 const DEFAULT_SETTINGS: Partial<UserManagerSettings> = {
-  // For PKCE, we use 'code' response type and 'query' response mode
   response_type: 'code',
   response_mode: 'query',
   scope: 'openid profile email offline_access',
@@ -52,106 +56,134 @@ const DEFAULT_SETTINGS: Partial<UserManagerSettings> = {
   monitorSession: true,
   userStore: new WebStorageStateStore({ store: window.localStorage }),
   stateStore: new WebStorageStateStore({ store: window.localStorage }),
-  // Remove default metadata to allow automatic discovery
 };
 
-// Base configuration that can be extended for specific providers
 export const baseOidcConfig: OidcConfiguration = {
-  defaultProvider: 'okta',
+  defaultProvider: 'keycloak',
   defaultSettings: DEFAULT_SETTINGS,
   providers: {
     okta: {
-      client_id: '0oaowrlsm5Ua1vWD85d7',
+      enabled: env.VITE_OIDC_OKTA_ENABLED === 'true',
+      client_id: env.VITE_OKTA_CLIENT_ID || '',
       client_secret: '',
-      authority: 'https://dev-39125344.okta.com/oauth2/default',
-      redirect_uri: 'http://localhost:5173/login',
-      post_logout_redirect_uri: 'http://localhost:5173',
-      silent_redirect_uri: 'http://localhost:5173/login/silent-renew',
+      authority: env.VITE_OKTA_AUTHORITY || '',
+      redirect_uri: env.VITE_OKTA_REDIRECT_URI || 'http://localhost:5173/login',
+      post_logout_redirect_uri: env.VITE_OKTA_POST_LOGOUT_REDIRECT_URI || 'http://localhost:5173',
+      silent_redirect_uri: env.VITE_OKTA_SILENT_REDIRECT_URI || 'http://localhost:5173/login/silent-renew',
       loadUserInfo: true,
       publicClient: {
         isPublicClient: true,
         responseType: 'code',
         responseMode: 'query'
       },
-      metadata: {
-        authorization_endpoint: 'https://dev-39125344.okta.com/oauth2/default/v1/authorize',
-        token_endpoint: 'https://dev-39125344.okta.com/oauth2/default/v1/token',
-        userinfo_endpoint: 'https://dev-39125344.okta.com/oauth2/default/v1/userinfo',
-        end_session_endpoint: 'https://dev-39125344.okta.com/oauth2/default/v1/logout',
-        jwks_uri: 'https://dev-39125344.okta.com/oauth2/default/v1/keys'
-      },
-      stateStore: new WebStorageStateStore({ store: window.localStorage }),
-      userStore: new WebStorageStateStore({ store: window.localStorage }),
+      // metadata: {
+      //   authorization_endpoint: '',
+      //   token_endpoint: '',
+      //   userinfo_endpoint: '',
+      //   end_session_endpoint: '',
+      //   jwks_uri: ''
+      // },
+      // stateStore: new WebStorageStateStore({ store: window.localStorage }),
+      // userStore: new WebStorageStateStore({ store: window.localStorage }),
       monitorSession: true
     },
     keycloak: {
-      client_id: 'structures-client',
+      enabled: env.VITE_OIDC_KEYCLOAK_ENABLED === 'true',
+      client_id: env.VITE_KEYCLOAK_CLIENT_ID || '',
       client_secret: '',
-      authority: 'http://localhost:8888/auth/realms/master',
-      redirect_uri: 'http://localhost:5173/login',
-      post_logout_redirect_uri: 'http://localhost:5173',
-      silent_redirect_uri: 'http://localhost:5173/login/silent-renew',
+      authority: env.VITE_KEYCLOAK_AUTHORITY || '',
+      redirect_uri: env.VITE_KEYCLOAK_REDIRECT_URI || 'http://localhost:5173/login',
+      post_logout_redirect_uri: env.VITE_KEYCLOAK_POST_LOGOUT_REDIRECT_URI || 'http://localhost:5173',
+      silent_redirect_uri: env.VITE_KEYCLOAK_SILENT_REDIRECT_URI || 'http://localhost:5173/login/silent-renew',
       loadUserInfo: true,
       publicClient: {
         isPublicClient: true,
         responseType: 'code',
         responseMode: 'query'
       },
-      // Remove explicit metadata to let oidc-client-ts discover endpoints automatically
-      // This prevents authority mismatch issues
+      // No explicit metadata - uses automatic discovery
     },
     google: {
-      client_id: '',
+      enabled: env.VITE_OIDC_GOOGLE_ENABLED === 'true',
+      client_id: env.VITE_GOOGLE_CLIENT_ID || '',
       client_secret: '',
-      authority: 'https://accounts.google.com',
-      redirect_uri: '',
-      post_logout_redirect_uri: '',
-      silent_redirect_uri: '',
+      authority: env.VITE_GOOGLE_AUTHORITY || 'https://accounts.google.com',
+      redirect_uri: env.VITE_GOOGLE_REDIRECT_URI || '',
+      post_logout_redirect_uri: env.VITE_GOOGLE_POST_LOGOUT_REDIRECT_URI || '',
+      silent_redirect_uri: env.VITE_GOOGLE_SILENT_REDIRECT_URI || '',
       loadUserInfo: true,
-      metadata: {
-        authorization_endpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
-        token_endpoint: 'https://oauth2.googleapis.com/token',
-        userinfo_endpoint: 'https://openidconnect.googleapis.com/v1/userinfo',
-        jwks_uri: 'https://www.googleapis.com/oauth2/v3/certs',
-      },
+      // metadata: {
+      //   authorization_endpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
+      //   token_endpoint: 'https://oauth2.googleapis.com/token',
+      //   userinfo_endpoint: 'https://openidconnect.googleapis.com/v1/userinfo',
+      //   jwks_uri: 'https://www.googleapis.com/oauth2/v3/certs',
+      // },
     },
     github: {
-      client_id: '',
+      enabled: env.VITE_OIDC_GITHUB_ENABLED === 'true',
+      client_id: env.VITE_GITHUB_CLIENT_ID || '',
       client_secret: '',
-      authority: 'https://github.com',
-      redirect_uri: '',
-      post_logout_redirect_uri: '',
-      silent_redirect_uri: '',
+      authority: env.VITE_GITHUB_AUTHORITY || 'https://github.com',
+      redirect_uri: env.VITE_GITHUB_REDIRECT_URI || '',
+      post_logout_redirect_uri: env.VITE_GITHUB_POST_LOGOUT_REDIRECT_URI || '',
+      silent_redirect_uri: env.VITE_GITHUB_SILENT_REDIRECT_URI || '',
       loadUserInfo: true,
-      metadata: {
-        authorization_endpoint: 'https://github.com/login/oauth/authorize',
-        token_endpoint: 'https://github.com/login/oauth/access_token',
-        userinfo_endpoint: 'https://api.github.com/user',
-      },
+      // metadata: {
+      //   authorization_endpoint: 'https://github.com/login/oauth/authorize',
+      //   token_endpoint: 'https://github.com/login/oauth/access_token',
+      //   userinfo_endpoint: 'https://api.github.com/user',
+      // },
     },
     microsoft: {
-      client_id: '',
+      enabled: env.VITE_OIDC_MICROSOFT_ENABLED === 'true',
+      client_id: env.VITE_MICROSOFT_CLIENT_ID || '',
       client_secret: '',
-      authority: 'https://login.microsoftonline.com/common/v2.0',
-      redirect_uri: '',
-      post_logout_redirect_uri: '',
-      silent_redirect_uri: '',
+      authority: env.VITE_MICROSOFT_AUTHORITY || 'https://login.microsoftonline.com/common/v2.0',
+      redirect_uri: env.VITE_MICROSOFT_REDIRECT_URI || '',
+      post_logout_redirect_uri: env.VITE_MICROSOFT_POST_LOGOUT_REDIRECT_URI || '',
+      silent_redirect_uri: env.VITE_MICROSOFT_SILENT_REDIRECT_URI || '',
       loadUserInfo: true,
-      metadata: {
-        authorization_endpoint: 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
-        token_endpoint: 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
-        userinfo_endpoint: 'https://graph.microsoft.com/oidc/userinfo',
-        end_session_endpoint: 'https://login.microsoftonline.com/common/oauth2/v2.0/logout',
-        jwks_uri: 'https://login.microsoftonline.com/common/discovery/v2.0/keys',
-      },
+      // Add custom scope if specified (for custom audience in v2.0)
+      ...(env.VITE_MICROSOFT_RESOURCE && {
+        scope: `openid profile email ${env.VITE_MICROSOFT_RESOURCE}`
+      }),
+      // metadata: {
+      //   // Use dynamic endpoints based on authority
+      //   authorization_endpoint: env.VITE_MICROSOFT_AUTHORITY?.replace('/v2.0', '/oauth2/v2.0/authorize') || 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
+      //   token_endpoint: env.VITE_MICROSOFT_AUTHORITY?.replace('/v2.0', '/oauth2/v2.0/token') || 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
+      //   userinfo_endpoint: 'https://graph.microsoft.com/oidc/userinfo',
+      //   end_session_endpoint: env.VITE_MICROSOFT_AUTHORITY?.replace('/v2.0', '/oauth2/v2.0/logout') || 'https://login.microsoftonline.com/common/oauth2/v2.0/logout',
+      //   jwks_uri: env.VITE_MICROSOFT_AUTHORITY?.replace('/v2.0', '/discovery/v2.0/keys') || 'https://login.microsoftonline.com/common/discovery/v2.0/keys',
+      // },
+    },
+    microsoftSocial: {
+      enabled: env.VITE_OIDC_MICROSOFT_SOCIAL_ENABLED === 'true',
+      client_id: env.VITE_MICROSOFT_SOCIAL_CLIENT_ID || '',
+      client_secret: '',
+      authority: env.VITE_MICROSOFT_SOCIAL_AUTHORITY || 'https://login.microsoftonline.com/consumers/v2.0',
+      redirect_uri: env.VITE_MICROSOFT_SOCIAL_REDIRECT_URI || '',
+      post_logout_redirect_uri: env.VITE_MICROSOFT_SOCIAL_POST_LOGOUT_REDIRECT_URI || '',
+      silent_redirect_uri: env.VITE_MICROSOFT_SOCIAL_SILENT_REDIRECT_URI || '',
+      loadUserInfo: true,
+      scope: 'openid profile email',
+      response_type: 'code', // Use Authorization Code flow with PKCE
+      response_mode: 'query',
+      // metadata: {
+      //   authorization_endpoint: 'https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize',
+      //   token_endpoint: 'https://login.microsoftonline.com/consumers/oauth2/v2.0/token',
+      //   userinfo_endpoint: 'https://graph.microsoft.com/oidc/userinfo',
+      //   end_session_endpoint: 'https://login.microsoftonline.com/consumers/oauth2/v2.0/logout',
+      //   jwks_uri: 'https://login.microsoftonline.com/consumers/discovery/v2.0/keys',
+      // },
     },
     custom: {
-      client_id: '',
+      enabled: env.VITE_OIDC_CUSTOM_ENABLED === 'true',
+      client_id: env.VITE_CUSTOM_CLIENT_ID || '',
       client_secret: '',
-      authority: '',
-      redirect_uri: '',
-      post_logout_redirect_uri: '',
-      silent_redirect_uri: '',
+      authority: env.VITE_CUSTOM_AUTHORITY || '',
+      redirect_uri: env.VITE_CUSTOM_REDIRECT_URI || '',
+      post_logout_redirect_uri: env.VITE_CUSTOM_POST_LOGOUT_REDIRECT_URI || '',
+      silent_redirect_uri: env.VITE_CUSTOM_SILENT_REDIRECT_URI || '',
       loadUserInfo: true,
       metadata: {
         authorization_endpoint: '',
@@ -164,29 +196,22 @@ export const baseOidcConfig: OidcConfiguration = {
   }
 };
 
-// Helper function to get provider-specific configuration
 export const getProviderConfig = (provider: OidcProvider): OidcProviderConfig => {
   return baseOidcConfig.providers[provider];
 };
 
-// Helper function to create UserManager settings for a specific provider
 export const createUserManagerSettings = (provider: OidcProvider): UserManagerSettings => {
   const config = getProviderConfig(provider);
   const defaultSettings = baseOidcConfig.defaultSettings;
   
-  // Merge settings with public client configuration if applicable
   const settings = {
     ...defaultSettings,
     ...config,
-    // If it's a public client, ensure proper PKCE settings
     ...(config.publicClient?.isPublicClient ? {
       response_type: config.publicClient.responseType,
       response_mode: config.publicClient.responseMode,
-      // Remove client_secret if it exists
       client_secret: undefined
     } : {}),
-    // Only include metadata if it's explicitly provided in the config
-    // This allows automatic discovery for providers without explicit metadata
     ...(config.metadata ? {
       metadata: {
         ...defaultSettings.metadata,
@@ -198,14 +223,10 @@ export const createUserManagerSettings = (provider: OidcProvider): UserManagerSe
   return settings;
 };
 
-// Helper function to create a UserManager instance for a specific provider
 export const createUserManager = (provider: OidcProvider) => {
   const settings = createUserManagerSettings(provider);
-  
-  // Clear any cached metadata for this provider to force fresh discovery
   const cacheKey = `oidc.user.${settings.authority}.${settings.client_id}`;
   localStorage.removeItem(cacheKey);
-  
   console.log('Creating UserManager with settings:', {
     authority: settings.authority,
     client_id: settings.client_id,
@@ -213,7 +234,6 @@ export const createUserManager = (provider: OidcProvider) => {
     response_type: settings.response_type,
     response_mode: settings.response_mode
   });
-  
   return new UserManager(settings);
 };
 

@@ -1,84 +1,167 @@
 <template>
   <div class="flex w-full justify-center items-center h-screen max-w-[1440px] mx-auto">
-      <div class="hidden md:block w-1/2 h-full bg-[url(@/assets/login-page-image.png)] bg-no-repeat bg-cover bg-bottom-left">
+    <!-- OIDC Callback Loading Overlay -->
+    <div v-if="oidcCallbackLoading" class="fixed inset-0 bg-white bg-opacity-90 flex items-center justify-center z-50">
+      <div class="text-center">
+        <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <h2 class="text-xl font-semibold text-gray-800 mb-2">Validating Login...</h2>
+        <p class="text-gray-600">Please wait while we complete your authentication.</p>
+      </div>
+    </div>
+
+    <div class="hidden md:block w-1/2 h-full bg-[url(@/assets/login-page-image.png)] bg-no-repeat bg-cover bg-bottom-left">
     </div>
     <div class="w-1/2 h-full flex flex-col justify-around items-center bg-center bg-cover">
       <div class="w-[320px] flex flex-col items-center">
 
         <img src="@/assets/login-page-logo.svg" class="w-[218px] h-[45px] mb-[53px]" />
 
-        <IconField class="!mb-4 !flex !items-center !relative !w-full">
-          <InputText
-            v-model="login"
-            class="w-full max-w-[540px] h-[56px] !pl-4"
-            placeholder="Username or Email"
-            @focus="hideAlert"
-          />
-          <InputIcon class="!mt-0 -translate-y-1/2">
-            <img src="@/assets/input-hide.svg" />
-          </InputIcon>
-        </IconField>
+        <!-- Show login form only when not in OIDC callback -->
+        <div v-if="shouldShowLoginForm">
+          <!-- Basic Username/Password Form - Only show if enabled -->
+          <div v-if="isBasicAuthEnabled">
+            <IconField class="!mb-4 !flex !items-center !relative !w-full">
+              <InputText
+                v-model="login"
+                class="w-full max-w-[540px] h-[56px] !pl-4"
+                placeholder="Username or Email"
+                @focus="hideAlert"
+              />
+              <InputIcon class="!mt-0 -translate-y-1/2">
+                <img src="@/assets/input-hide.svg" />
+              </InputIcon>
+            </IconField>
 
-        <IconField class="!mb-8 !flex !items-center !relative !w-full">
-          <Password
-            v-model="password"
-            input-class="w-full h-[56px]"
-            class="!w-full max-w-[540px]"
-            placeholder="Password"
-            toggleMask
-            :feedback="false"
-            @focus="hideAlert"
-            @keyup.enter="handleLogin"
-          />
-          <InputIcon class="!mt-0 -translate-y-1/2">
-            <img src="@/assets/input-hide.svg" />
-          </InputIcon>
-        </IconField>
+            <IconField class="!mb-8 !flex !items-center !relative !w-full">
+              <Password
+                v-model="password"
+                input-class="w-full h-[56px]"
+                class="!w-full max-w-[540px]"
+                placeholder="Password"
+                toggleMask
+                :feedback="false"
+                @focus="hideAlert"
+                @keyup.enter="handleLogin"
+              />
+              <InputIcon class="!mt-0 -translate-y-1/2">
+                <img src="@/assets/input-hide.svg" />
+              </InputIcon>
+            </IconField>
 
-        <Button
-          label="Login"
-          class="rounded-[10px] max-h-[56px] !py-[18px] !w-full !text-base"
-          :loading="loading"
-          @click="handleLogin"
-        />
+            <Button
+              label="Login"
+              class="rounded-[10px] max-h-[56px] !py-[18px] !w-full !text-base"
+              :loading="loading"
+              @click="handleLogin"
+            />
 
-        <div class="flex justify-center items-center w-full mt-10 mb-8">
-          <p class="border border-gray-300 w-full"></p>
-          <span class="text-gray-300 mx-3">OR</span>
-          <p class="border border-gray-300 w-full"></p>
-        </div>
+            <!-- Only show OIDC section if any providers are enabled -->
+            <div v-if="hasEnabledOidcProviders" class="flex justify-center items-center w-full mt-10 mb-8">
+              <p class="border border-gray-300 w-full"></p>
+              <span class="text-gray-300 mx-3">OR</span>
+              <p class="border border-gray-300 w-full"></p>
+            </div>
+          </div>
 
-        <div class="flex border border-[#B8BCBD] w-full p-4 mb-4 rounded-[5px] text-black/50 cursor-pointer"
-             @click="handleOktaLogin">
-          <img src="@/assets/okta-icon.svg" class="mr-6" />
-          <span>Continue with Okta</span>
-        </div>
+          <!-- Show OIDC section without "OR" separator if basic auth is disabled -->
+          <div v-else-if="hasEnabledOidcProviders" class="w-full">
+            <!-- OIDC providers will be shown below -->
+          </div>
 
-        <div class="flex border border-[#B8BCBD] w-full p-4 mb-4 rounded-[5px] text-black/50 cursor-pointer"
-             @click="handleGoogleLogin">
-          <img src="@/assets/google-icon.svg" class="mr-6" />
-          <span>Continue with Google</span>
-        </div>
+          <!-- Okta Login Button -->
+          <div v-if="isProviderEnabled('okta')" 
+               class="flex border border-[#B8BCBD] w-full p-4 mb-4 rounded-[5px] text-black/50 cursor-pointer hover:bg-gray-50 transition-colors"
+               :class="{ 'opacity-50 cursor-not-allowed': loading }"
+               @click="handleOktaLogin">
+            <img src="@/assets/okta-icon.svg" class="mr-6" />
+            <span v-if="!loading">Continue with Okta</span>
+            <span v-else class="flex items-center">
+              <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+              Connecting...
+            </span>
+          </div>
 
-        <div class="flex border border-[#B8BCBD] w-full p-4 mb-4 rounded-[5px] text-black/50 cursor-pointer"
-             @click="handleMicrosoftLogin">
-          <img src="@/assets/microsoft_online-icon.svg" class="mr-6" />
-          <span>Continue with Microsoft</span>
-        </div>
+          <!-- Google Login Button -->
+          <div v-if="isProviderEnabled('google')" 
+               class="flex border border-[#B8BCBD] w-full p-4 mb-4 rounded-[5px] text-black/50 cursor-pointer hover:bg-gray-50 transition-colors"
+               :class="{ 'opacity-50 cursor-not-allowed': loading }"
+               @click="handleGoogleLogin">
+            <img src="@/assets/google-icon.svg" class="mr-6" />
+            <span v-if="!loading">Continue with Google</span>
+            <span v-else class="flex items-center">
+              <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+              Connecting...
+            </span>
+          </div>
 
-        <div class="flex border border-[#B8BCBD] w-full p-4 mb-4 rounded-[5px] text-black/50 cursor-pointer"
-             @click="handleKeycloakLogin">
-          <img src="@/assets/keycloak-icon.svg" class="mr-6" />
-          <span>Continue with Keycloak</span>
-        </div>
+          <!-- Microsoft Login Button (Enterprise) -->
+          <div v-if="isProviderEnabled('microsoft')" 
+               class="flex border border-[#B8BCBD] w-full p-4 mb-4 rounded-[5px] text-black/50 cursor-pointer hover:bg-gray-50 transition-colors"
+               :class="{ 'opacity-50 cursor-not-allowed': loading }"
+               @click="handleMicrosoftLogin">
+            <img src="@/assets/microsoft_online-icon.svg" class="mr-6" />
+            <span v-if="!loading">Continue with Microsoft (Work)</span>
+            <span v-else class="flex items-center">
+              <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+              Connecting...
+            </span>
+          </div>
 
-        <div class="flex border border-[#B8BCBD] w-full p-4 mb-4 rounded-[5px] text-black/50 cursor-pointer"
-             @click="handleAppleLogin">
-          <img src="@/assets/apple-logo.svg" class="mr-6" />
-          <span>Continue with Apple</span>
-        </div>
-        <div class="text-[#212121] cursor-pointer">
-          Forgot Password
+          <!-- Microsoft Social Login Button (Personal) -->
+          <div v-if="isProviderEnabled('microsoftSocial')" 
+               class="flex border border-[#B8BCBD] w-full p-4 mb-4 rounded-[5px] text-black/50 cursor-pointer hover:bg-gray-50 transition-colors"
+               :class="{ 'opacity-50 cursor-not-allowed': loading }"
+               @click="handleMicrosoftSocialLogin">
+            <img src="@/assets/microsoft_online-icon.svg" class="mr-6" />
+            <span v-if="!loading">Continue with Microsoft (Personal)</span>
+            <span v-else class="flex items-center">
+              <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+              Connecting...
+            </span>
+          </div>
+
+          <!-- Keycloak Login Button -->
+          <div v-if="isProviderEnabled('keycloak')" 
+               class="flex border border-[#B8BCBD] w-full p-4 mb-4 rounded-[5px] text-black/50 cursor-pointer hover:bg-gray-50 transition-colors"
+               :class="{ 'opacity-50 cursor-not-allowed': loading }"
+               @click="handleKeycloakLogin">
+            <img src="@/assets/keycloak-icon.svg" class="mr-6" />
+            <span v-if="!loading">Continue with Keycloak</span>
+            <span v-else class="flex items-center">
+              <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+              Connecting...
+            </span>
+          </div>
+
+          <!-- GitHub Login Button -->
+          <div v-if="isProviderEnabled('github')" 
+               class="flex border border-[#B8BCBD] w-full p-4 mb-4 rounded-[5px] text-black/50 cursor-pointer hover:bg-gray-50 transition-colors"
+               :class="{ 'opacity-50 cursor-not-allowed': loading }"
+               @click="handleGithubLogin">
+            <img src="@/assets/github-icon.svg" class="mr-6" />
+            <span v-if="!loading">Continue with GitHub</span>
+            <span v-else class="flex items-center">
+              <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+              Connecting...
+            </span>
+          </div>
+
+          <!-- Apple Login Button (not OIDC - static for now) -->
+          <div class="flex border border-[#B8BCBD] w-full p-4 mb-4 rounded-[5px] text-black/50 cursor-pointer hover:bg-gray-50 transition-colors"
+               :class="{ 'opacity-50 cursor-not-allowed': loading }"
+               @click="handleAppleLogin">
+            <img src="@/assets/apple-logo.svg" class="mr-6" />
+            <span v-if="!loading">Continue with Apple</span>
+            <span v-else class="flex items-center">
+              <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+              Connecting...
+            </span>
+          </div>
+
+          <!-- Only show forgot password if basic auth is enabled -->
+          <div v-if="isBasicAuthEnabled" class="text-[#212121] cursor-pointer">
+            Forgot Password
+          </div>
         </div>
       </div>
       <div class="flex gap-2">
@@ -105,7 +188,7 @@ import Password from 'primevue/password'
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
 import { useToast } from 'primevue/usetoast'
-import { createUserManager, type OidcProvider } from './OidcConfiguration'
+import { createUserManager, type OidcProvider, getProviderConfig } from './OidcConfiguration'
 
 import { type IUserState } from "@/states/IUserState"
 import { CONTINUUM_UI } from "@/IContinuumUI"
@@ -123,6 +206,7 @@ export default class Login extends Vue {
   login: string = ''
   password: string = ''
   loading: boolean = false
+  oidcCallbackLoading: boolean = false
   valid: boolean = true
 
   toast = useToast()
@@ -131,6 +215,11 @@ export default class Login extends Vue {
 
   private loginRules = [(v: string) => !!v || 'Login required']
   private passwordRules = [(v: string) => !!v || 'Password required']
+
+  // Check if basic username/password authentication is enabled
+  get isBasicAuthEnabled(): boolean {
+    return import.meta.env.VITE_BASIC_AUTH_ENABLED !== 'false'
+  }
 
   get loginValid(): boolean {
     return this.loginRules.every(rule => rule(this.login) === true)
@@ -143,6 +232,33 @@ export default class Login extends Vue {
   get referer(): string | null {
     const r = this.$route.query.referer;
     return typeof r === 'string' ? r : null;
+  }
+
+  // Check if a specific provider is enabled
+  isProviderEnabled(provider: OidcProvider): boolean {
+    try {
+      const config = getProviderConfig(provider);
+      return config.enabled;
+    } catch (error) {
+      console.warn(`Provider ${provider} not found in configuration`);
+      return false;
+    }
+  }
+
+  // Check if any OIDC providers are enabled
+  get hasEnabledOidcProviders(): boolean {
+    const providers: OidcProvider[] = ['okta', 'keycloak', 'google', 'microsoft', 'microsoftSocial', 'github', 'custom'];
+    return providers.some(provider => this.isProviderEnabled(provider));
+  }
+
+  // Check if we're in an OIDC callback (have code and state parameters)
+  get isOidcCallback(): boolean {
+    return !!(this.$route.query.code && this.$route.query.state);
+  }
+
+  // Check if we should show the login form (not during OIDC callback)
+  get shouldShowLoginForm(): boolean {
+    return !this.isOidcCallback;
   }
 
   async handleLogin() {
@@ -200,12 +316,38 @@ export default class Login extends Vue {
   }
 
   private async handleOidcLogin(provider: OidcProvider) {
+    // Prevent multiple clicks
+    if (this.loading) {
+      console.log('OIDC login already in progress, ignoring click');
+      return;
+    }
+    
     this.loading = true;
     try {
       console.log(`Starting OIDC login for provider: ${provider}`);
+      
+      // Validate provider configuration
+      const config = getProviderConfig(provider);
+      if (!config.enabled) {
+        throw new Error(`Provider ${provider} is not enabled`);
+      }
+      
+      if (!config.client_id) {
+        throw new Error(`Client ID not configured for ${provider}`);
+      }
+      
+      if (!config.authority) {
+        throw new Error(`Authority URL not configured for ${provider}`);
+      }
+      
       const userManager = createUserManager(provider);
       
       console.log('UserManager created, starting signinRedirect...');
+      console.log('Provider configuration:', {
+        authority: config.authority,
+        client_id: config.client_id,
+        redirect_uri: config.redirect_uri
+      });
       
       // Create state object that includes both referer and provider
       const stateObj = {
@@ -231,11 +373,24 @@ export default class Login extends Vue {
     } catch (error: unknown) {
       console.error('OIDC login error:', error);
       this.loading = false;
+      
+      let errorMessage = 'OIDC login failed';
+      
       if (error instanceof Error) {
-        this.displayAlert(`OIDC login failed: ${error.message}`);
-      } else {
-        this.displayAlert('OIDC login failed');
+        if (error.message.includes('NetworkError') || error.message.includes('fetch')) {
+          errorMessage = `Network error: Unable to connect to ${provider}. Please check your internet connection and try again.`;
+        } else if (error.message.includes('redirect_uri_mismatch')) {
+          errorMessage = `Configuration error: Redirect URI mismatch for ${provider}. Please contact your administrator.`;
+        } else if (error.message.includes('client_id') || error.message.includes('authority')) {
+          errorMessage = `Configuration error: ${error.message}. Please contact your administrator.`;
+        } else {
+          errorMessage = `OIDC login failed: ${error.message}`;
+        }
+      } else if (typeof error === 'string') {
+        errorMessage = `OIDC login failed: ${error}`;
       }
+      
+      this.displayAlert(errorMessage);
     }
   }
 
@@ -251,6 +406,10 @@ export default class Login extends Vue {
     await this.handleOidcLogin('microsoft');
   }
 
+  private async handleMicrosoftSocialLogin() {
+    await this.handleOidcLogin('microsoftSocial');
+  }
+
   private async handleKeycloakLogin() {
     console.log('Starting Keycloak login...');
     try {
@@ -261,15 +420,62 @@ export default class Login extends Vue {
     }
   }
 
+  private async handleGithubLogin() {
+    await this.handleOidcLogin('github');
+  }
+
   private async handleAppleLogin() {
     // Note: Apple login might need special handling as it's not a standard OIDC provider
     this.displayAlert('Apple login not implemented yet');
   }
 
   async mounted() {
+    // Check if we're returning from an OIDC login with an error
+    if (this.$route.query.error) {
+      this.loading = false;
+      console.error('OIDC login error detected:', this.$route.query);
+      
+      const error = this.$route.query.error as string;
+      const errorDescription = this.$route.query.error_description as string;
+      
+      // Decode URL-encoded error description
+      const decodedErrorDescription = errorDescription ? decodeURIComponent(errorDescription) : '';
+      
+      console.error('OIDC Error:', error);
+      console.error('OIDC Error Description:', decodedErrorDescription);
+      
+      // Display user-friendly error message
+      let userMessage = 'OIDC login failed';
+      
+      if (error === 'invalid_request') {
+        if (decodedErrorDescription.includes('AADSTS50194')) {
+          userMessage = 'Microsoft Azure configuration error: Application is not configured as multi-tenant. Please contact your administrator.';
+        } else if (decodedErrorDescription.includes('redirect_uri_mismatch')) {
+          userMessage = 'OIDC configuration error: Redirect URI mismatch. Please contact your administrator.';
+        } else {
+          userMessage = `OIDC configuration error: ${decodedErrorDescription}`;
+        }
+      } else if (error === 'access_denied') {
+        userMessage = 'Access denied by OIDC provider. Please try again or contact your administrator.';
+      } else if (error === 'unauthorized_client') {
+        userMessage = 'OIDC client not authorized. Please contact your administrator.';
+      } else if (error === 'unsupported_response_type') {
+        userMessage = 'OIDC response type not supported. Please contact your administrator.';
+      } else if (error === 'server_error') {
+        userMessage = 'OIDC server error. Please try again later.';
+      } else if (error === 'temporarily_unavailable') {
+        userMessage = 'OIDC service temporarily unavailable. Please try again later.';
+      } else if (decodedErrorDescription) {
+        userMessage = `OIDC login failed: ${decodedErrorDescription}`;
+      }
+      
+      this.displayAlert(userMessage);
+      return;
+    }
+    
     // Check if we're returning from an OIDC login
     if (this.$route.query.code && this.$route.query.state) {
-      this.loading = true;
+      this.oidcCallbackLoading = true; // Show loading overlay
       try {
         console.log('OIDC callback detected, processing...');
         console.log('Query parameters:', this.$route.query);
@@ -324,6 +530,7 @@ export default class Login extends Vue {
           this.displayAlert('OIDC callback failed');
         }
       } finally {
+        this.oidcCallbackLoading = false; // Hide loading overlay
         this.loading = false;
       }
     }

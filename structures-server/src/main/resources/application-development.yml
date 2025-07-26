@@ -15,16 +15,7 @@ logging:
         util: DEBUG
         buffer: DEBUG
 
-
 structures:
-  oidc-auth-verifier:
-      enabled: true
-      allowedIssuers:
-        - "https://dev-39125344.okta.com/oauth2/default"
-        - "http://localhost:8888/auth/realms/master"
-      authorizationAudiences:
-        - "api://default"
-        - "structures-client"
   initializeWithSampleData: true
   corsAllowedOriginPattern: "https:\\/\\/studio.apollographql.com|http:\\/\\/localhost:\\d+|http:\\/\\/121.0.0.1:\\d+"
   corsAllowedHeaders:

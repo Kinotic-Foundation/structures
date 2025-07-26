@@ -19,7 +19,6 @@ declare module 'vue' {
     CrudEntityAddEdit: typeof import('./src/components/CrudEntityAddEdit.vue')['default']
     CrudTable: typeof import('./src/components/CrudTable.vue')['default']
     DataTable: typeof import('primevue/datatable')['default']
-    Dialog: typeof import('primevue/dialog')['default']
     EmptyState: typeof import('./src/components/EmptyState.vue')['default']
     ERTable: typeof import('./src/components/modals/ERTable.vue')['default']
     Glitch: typeof import('./src/components/Glitch.vue')['default']
