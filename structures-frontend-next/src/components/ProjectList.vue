@@ -7,6 +7,7 @@ import type { IDataSource, Identifiable, IterablePage, Pageable } from '@kinotic
 import { APPLICATION_STATE } from '@/states/IApplicationState'
 import { Project, Structures } from '@kinotic/structures-api'
 import type { CrudHeader } from '@/types/CrudHeader'
+import DatetimeUtil from "@/util/DatetimeUtil"
 
 @Component({
   components: { CrudTable, NewProjectSidebar, ProjectStructuresTable }
@@ -63,7 +64,7 @@ export default class ProjectList extends Vue {
   get projectsCount() {
     return APPLICATION_STATE.projectsCount
   }
-
+  public DatetimeUtil = DatetimeUtil
   refreshTable(): void {
     this.crudTable?.find?.()
   }
@@ -144,7 +145,11 @@ export default class ProjectList extends Vue {
       <template #item.id="{ item }">
         <span>{{ item.id }}</span>
       </template>
-
+      <template #item.updated="{ item }">
+        <span>
+          {{ DatetimeUtil.formatRelativeDate(item.updated) }}
+        </span>
+      </template>
       <template #additional-actions="{ item }">
         <Button text class="!text-[#334155] !bg-white" title="GraphQL">
           <RouterLink :to="{ path: '/graphql', query: { namespace: item.id } }">

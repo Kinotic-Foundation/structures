@@ -6,6 +6,7 @@ import type { Identifiable, IterablePage, Pageable } from '@kinotic/continuum-cl
 import { APPLICATION_STATE } from '@/states/IApplicationState'
 import { Structure, Structures } from '@kinotic/structures-api'
 import type { CrudHeader } from '@/types/CrudHeader'
+import DatetimeUtil from "@/util/DatetimeUtil"
 
 @Component({
   components: { CrudTable, StructureItemModal }
@@ -77,7 +78,7 @@ export default class StructuresList extends Vue {
   get structuresCount() {
     return APPLICATION_STATE.structuresCount
   }
-
+  public DatetimeUtil = DatetimeUtil
   refreshTable(): void {
     if (this.crudTable?.find) {
       this.crudTable.find()
@@ -94,7 +95,7 @@ export default class StructuresList extends Vue {
       delete query['search-structure']
     }
 
-    this.$router.replace({ query }).catch(() => {})
+    this.$router.replace({ query }).catch(() => { })
     this.refreshTable()
   }
 
@@ -120,28 +121,24 @@ export default class StructuresList extends Vue {
 
 <template>
   <div>
-    <CrudTable
-      ref="crudTable"
-      rowHoverColor=""
-      :data-source="dataSource"
-      :headers="structureTableHeaders"
-      :singleExpand="false"
-      :search="searchText"
-      @update:search="updateRouteQuery"
-      @edit-item="onEditItem"
-      @onRowClick="handleRowClick"
-      createNewButtonText="New Structure"
-      emptyStateText="No structures yet"
-    >
+    <CrudTable ref="crudTable" rowHoverColor="" :data-source="dataSource" :headers="structureTableHeaders"
+      :singleExpand="false" :search="searchText" @update:search="updateRouteQuery" @edit-item="onEditItem"
+      @onRowClick="handleRowClick" createNewButtonText="New Structure" emptyStateText="No structures yet">
       <template #item.id="{ item }">
         <span>{{ item.id }}</span>
       </template>
+            <template #item.created="{ item }">
+        <span>
+          {{ DatetimeUtil.formatMonthDayYear(item.created) }}
+        </span>
+      </template>
+      <template #item.updated="{ item }">
+        <span>
+          {{ DatetimeUtil.formatRelativeDate(item.updated) }}
+        </span>
+      </template>
     </CrudTable>
 
-    <StructureItemModal
-      v-if="showModal && selectedStructure"
-      :item="selectedStructure"
-      @close="closeModal"
-    />
+    <StructureItemModal v-if="showModal && selectedStructure" :item="selectedStructure" @close="closeModal" />
   </div>
 </template>

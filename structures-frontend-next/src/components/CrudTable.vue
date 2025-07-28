@@ -30,6 +30,7 @@ import {
 
 import type { CrudHeader } from '@/types/CrudHeader'
 import type { DescriptiveIdentifiable } from '@/types/DescriptiveIdentifiable'
+import DatetimeUtil  from '@/util/DatetimeUtil'
 
 @Component({
   components: {
@@ -223,20 +224,20 @@ export default toNative(CrudTable)
       <template #start>
         <IconField class="w-full max-w-sm">
           <InputIcon class="pi pi-search" />
-          <InputText v-model="searchText" placeholder="Search" @input="onSearchChange" @keyup.enter="find" />
+          <InputText v-model="searchText" placeholder="Search" size="small" @input="onSearchChange" @keyup.enter="find" />
         </IconField>
       </template>
 
       <template #end>
         <div class="flex items-center gap-2 h-[33px]">
-          <SelectButton v-if="enableViewSwitcher" v-model="activeView" :options="viewOptions" optionValue="value"
-            dataKey="value" class="h-[33px]">
+          <SelectButton size="small" v-if="enableViewSwitcher" v-model="activeView" :options="viewOptions" optionValue="value"
+            dataKey="value">
             <template #option="slotProps">
               <i :class="slotProps.option.icon"></i>
             </template>
           </SelectButton>
-          <Button v-if="!disableModifications && isShowAddNew" @click="addItem" :label="createNewButtonText"
-            icon="pi pi-plus" class="h-[33px]" />
+          <Button size="small" v-if="!disableModifications && isShowAddNew" @click="addItem" :label="createNewButtonText"
+            icon="pi pi-plus" />
         </div>
       </template>
     </Toolbar>
@@ -263,6 +264,7 @@ export default toNative(CrudTable)
                 </Button>
               </div>
             </template>
+
           </Card>
         </div>
         <div v-else class="flex flex-col items-center justify-center text-gray-500 py-20 h-[calc(100vh-300px)]">

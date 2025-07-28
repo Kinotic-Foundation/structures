@@ -141,3 +141,12 @@ export default class ApplicationDetails extends Vue {
     <GraphQLModal :visible="showGraphQLModal" @close="closeGraphQL" />
   </div>
 </template>
+<style>
+.p-tabpanels {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+.p-tab {
+  padding-left: 0 !important;
+}
+</style>

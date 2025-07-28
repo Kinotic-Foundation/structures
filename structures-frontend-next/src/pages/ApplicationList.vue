@@ -11,6 +11,7 @@ import { onClickOutside } from '@vueuse/core'
 import type { CrudHeader } from '@/types/CrudHeader'
 import type { Identifiable } from '@kinotic/continuum-client'
 import { shallowRef } from 'vue'
+import DatetimeUtil from "@/util/DatetimeUtil"
 
 @Component({
     components: {
@@ -22,7 +23,7 @@ import { shallowRef } from 'vue'
 })
 export default class NamespaceList extends Vue {
     headers: CrudHeader[] = [
-        { field: 'id', header: 'Id', sortable: false },
+        { field: 'id', header: 'Name', sortable: false },
         { field: 'description', header: 'Description', sortable: false },
         { field: 'created', header: 'Created', sortable: false },
         { field: 'updated', header: 'Updated', sortable: false }
@@ -36,6 +37,7 @@ export default class NamespaceList extends Vue {
 
     @Ref('sidebarWrapper') sidebarWrapper!: HTMLElement
     @Ref('crudTable') crudTable!: InstanceType<typeof CrudTable>
+  public DatetimeUtil = DatetimeUtil
 
     async mounted(): Promise<void> {
         try {
@@ -138,7 +140,16 @@ export default class NamespaceList extends Vue {
             <template #item.id="{ item }">
                 <span>{{ item.id }}</span>
             </template>
-
+                    <template #item.created="{ item }">
+                <span>
+                {{ DatetimeUtil.formatMonthDayYear(item.created) }}
+                </span>
+            </template>
+            <template #item.updated="{ item }">
+                <span>
+                {{ DatetimeUtil.formatRelativeDate(item.updated) }}
+                </span>
+            </template>
             <template #additional-actions="{ item }">
                 <Button
                     v-if="item.enableGraphQL"
