@@ -139,6 +139,7 @@ export default class ProjectStructuresTable extends Vue {
       @onRowClick="handleRowClick"
       createNewButtonText="New Structure"
       emptyStateText="No structures yet for this project"
+      class="!text-sm"
     >
       <template #item.name="{ item }">
         <span class="font-semibold">{{ item.name }}</span>

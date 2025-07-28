@@ -141,6 +141,7 @@ export default class ProjectList extends Vue {
       createNewButtonText="New Project"
       emptyStateText="No projects yet"
       :isShowAddNew="true"
+      class="!text-sm"
     >
       <template #item.id="{ item }">
         <span>{{ item.id }}</span>

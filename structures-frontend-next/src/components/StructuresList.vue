@@ -123,7 +123,7 @@ export default class StructuresList extends Vue {
   <div>
     <CrudTable ref="crudTable" rowHoverColor="" :data-source="dataSource" :headers="structureTableHeaders"
       :singleExpand="false" :search="searchText" @update:search="updateRouteQuery" @edit-item="onEditItem"
-      @onRowClick="handleRowClick" createNewButtonText="New Structure" emptyStateText="No structures yet">
+      @onRowClick="handleRowClick" createNewButtonText="New Structure" class="!text-sm" emptyStateText="No structures yet">
       <template #item.id="{ item }">
         <span>{{ item.id }}</span>
       </template>

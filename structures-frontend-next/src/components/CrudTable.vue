@@ -30,7 +30,6 @@ import {
 
 import type { CrudHeader } from '@/types/CrudHeader'
 import type { DescriptiveIdentifiable } from '@/types/DescriptiveIdentifiable'
-import DatetimeUtil  from '@/util/DatetimeUtil'
 
 @Component({
   components: {
@@ -60,6 +59,16 @@ class CrudTable extends Vue {
   @Prop({ default: false }) enableViewSwitcher!: boolean
   @Prop({ default: 'No items yet' }) emptyStateText!: string
   @Prop({ default: '' }) search!: string
+  @Prop({ default: true }) showPagination!: boolean
+@Prop({ default: true }) enableRowHover!: boolean;
+
+getRowClass() {
+  return {
+    'dynamic-hover': this.enableRowHover,
+    'transition-all': true,
+  };
+}
+
 
   items: DescriptiveIdentifiable[] = []
   totalItems = 0
@@ -98,6 +107,8 @@ class CrudTable extends Vue {
   }
 
   mounted() {
+    console.log(this.showPagination, "VVVVVVVVVVVVVVVVV")
+    console.log(this.items.length, "kasjdlsajdksajdl")
     const urlSearch = (this.$route.query.search as string) || ''
     this.loading = true
     this.initialSearchCompleted = false
@@ -206,7 +217,10 @@ class CrudTable extends Vue {
         this.totalItems = page.totalElements ?? 0
         this.items = page.content ?? []
         this.initialSearchCompleted = true
+
+        this.$emit('items-count', this.items.length)
       })
+
       .catch((error: unknown) => {
         console.error('[CRUD Table Alert]:', error)
         this.loading = false
@@ -224,20 +238,21 @@ export default toNative(CrudTable)
       <template #start>
         <IconField class="w-full max-w-sm">
           <InputIcon class="pi pi-search" />
-          <InputText v-model="searchText" placeholder="Search" size="small" @input="onSearchChange" @keyup.enter="find" />
+          <InputText v-model="searchText" placeholder="Search" size="small" @input="onSearchChange"
+            @keyup.enter="find" />
         </IconField>
       </template>
 
       <template #end>
         <div class="flex items-center gap-2 h-[33px]">
-          <SelectButton size="small" v-if="enableViewSwitcher" v-model="activeView" :options="viewOptions" optionValue="value"
-            dataKey="value">
+          <SelectButton size="small" v-if="enableViewSwitcher" v-model="activeView" :options="viewOptions"
+            optionValue="value" dataKey="value">
             <template #option="slotProps">
               <i :class="slotProps.option.icon"></i>
             </template>
           </SelectButton>
-          <Button size="small" v-if="!disableModifications && isShowAddNew" @click="addItem" :label="createNewButtonText"
-            icon="pi pi-plus" />
+          <Button size="small" v-if="!disableModifications && isShowAddNew" @click="addItem"
+            :label="createNewButtonText" icon="pi pi-plus" />
         </div>
       </template>
     </Toolbar>
@@ -246,39 +261,56 @@ export default toNative(CrudTable)
       <div v-if="isColumnView">
         <div v-if="items.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <Card v-for="(item, index) in items" :key="item.id || index"
-            class="cursor-pointer hover:shadow-md transition-shadow h-[152px] flex flex-col justify-between"
+            class="cursor-pointer relative hover:shadow-md transition-shadow h-[170px] flex flex-col justify-between"
             @click="handleCardClick(item, index)">
+            <template #title>
+              <h3 class="">{{ item?.id }}</h3>
+            </template>
+
             <template #content>
-              <div>
-                <h3 class="font-semibold text-[#101010] mb-1">{{ item?.id }}</h3>
-                <p class="text-sm text-gray-500 truncate">{{ item?.description }}</p>
-              </div>
-              <div class="flex gap-2 mt-3">
-                <Button severity="secondary" text class="p-2"
+              <p class="truncate-multiline max-h-[46px]">{{ item?.description }}</p>
+
+            </template>
+
+            <template #footer>
+              <div class="flex p-5 gap-4 absolute bottom-0 left-0">
+                <Button severity="secondary" text class="!p-0"
                   @click.stop="$router.push({ path: '/graphql', query: { namespace: item.id } })">
                   <img src="@/assets/graphql.svg" alt="GraphQL" class="w-5 h-5" />
                 </Button>
-                <Button severity="secondary" text class="p-2"
+                <Button severity="secondary" text class="!p-0"
                   @click.stop="$router.push('/scalar-ui.html?namespace=' + item.id)">
                   <img src="@/assets/scalar.svg" alt="OpenAPI" class="w-5 h-5" />
                 </Button>
               </div>
             </template>
-
           </Card>
+
         </div>
         <div v-else class="flex flex-col items-center justify-center text-gray-500 py-20 h-[calc(100vh-300px)]">
           <p class="text-sm">{{ emptyStateText }}</p>
         </div>
 
         <Paginator :rows="options.rows" :totalRecords="totalItems" @page="onPaginatorPage" class="mt-4"
-          v-if="items.length !== 0" />
+          v-if="showPagination" />
       </div>
 
       <div v-if="isBurgerView" class="p-4 border text-[color:var(--surface-200)] rounded-xl">
-        <DataTable :value="items" :rows="options.rows" :totalRecords="totalItems" :loading="loading"
-          :paginator="items.length > 0" :first="options.first" :rowsPerPageOptions="[5, 10, 20]" dataKey="id"
-          @page="onDataTablePage" @row-click="onRowClick" sortMode="multiple" table>
+ <DataTable 
+    :value="items" 
+    :rows="options.rows" 
+    :totalRecords="totalItems" 
+    :loading="loading"
+    :paginator="showPagination" 
+    :first="options.first" 
+    :rowsPerPageOptions="[5, 10, 20]" 
+    dataKey="id"
+    @page="onDataTablePage"
+    @row-click="onRowClick" 
+    sortMode="multiple"
+    :rowClass="getRowClass"
+    
+  >
           <Column v-for="col in computedHeaders" :key="col.field" :field="col.field" :header="col.header"
             :sortable="col.sortable !== false">
             <template #body="slotProps">
@@ -317,5 +349,18 @@ export default toNative(CrudTable)
 .p-datatable-paginator-bottom {
   border: none !important;
   box-shadow: none !important;
+}
+
+.truncate-multiline {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.dynamic-hover:hover {
+  cursor: pointer;
+  background-color: var(--row-hover-color, #eff6ff) !important;
+  transition: background-color 0.3s ease !important;
 }
 </style>

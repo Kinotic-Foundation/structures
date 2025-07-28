@@ -34,7 +34,7 @@ export default class NamespaceList extends Vue {
     showGraphQLModal = false
     showSidebar = false
     searchText: string = this?.$route?.query.search as string || ''
-
+    itemCount: number = 0
     @Ref('sidebarWrapper') sidebarWrapper!: HTMLElement
     @Ref('crudTable') crudTable!: InstanceType<typeof CrudTable>
   public DatetimeUtil = DatetimeUtil
@@ -67,6 +67,11 @@ export default class NamespaceList extends Vue {
     private refreshTable(): void {
         this.crudTable?.find()
     }
+onItemsCount(count: number): void {
+  this.itemCount = count
+  console.log('ITEM COUNT =', count)
+}
+
 
     updateRouteQuery(search: string) {
         const query = { ...this?.$route?.query }
@@ -79,6 +84,10 @@ export default class NamespaceList extends Vue {
 
         this.$router.replace({ query })
     }
+get shouldShowPagination(): boolean {
+  return this.itemCount > 3  // 👈 change 10 → 3 here
+}
+
 
     onAddItem(): void {
         this.showSidebar = true
@@ -115,13 +124,13 @@ export default class NamespaceList extends Vue {
     closeGraphQL(): void {
         this.showGraphQLModal = false
     }
+    
 }
 </script>
 
 <template>
     <ContainerMedium>
         <h1 class="text-2xl font-semibold mb-5 text-surface-950">Applications</h1>
-
         <CrudTable
             ref="crudTable"
             createNewButtonText="New application"
@@ -136,10 +145,18 @@ export default class NamespaceList extends Vue {
             @add-item="onAddItem"
             @edit-item="onEditItem"
             @onRowClick="toApplicationPage"
+            class="!text-sm"
+            :show-pagination="false"
         >
             <template #item.id="{ item }">
                 <span>{{ item.id }}</span>
             </template>
+      <template #item.description="{ item }">
+        <!-- Truncate description text with dynamic width and ellipsis -->
+        <span class="block max-w-[300px] sm:max-w-[500px] md:max-w-[190px] lg:max-w-[390px] xl:max-w-[590px] truncate">
+          {{ item.description }}
+        </span>
+      </template>
                     <template #item.created="{ item }">
                 <span>
                 {{ DatetimeUtil.formatMonthDayYear(item.created) }}
@@ -157,7 +174,7 @@ export default class NamespaceList extends Vue {
                     title="GraphQL"
                     @click="openGraphQL"
                 >
-                    <img src="@/assets/graphql.svg" />
+                    <img class="!w-[24px] !h-[24px]" src="@/assets/graphql.svg" />
                 </Button>
 
                 <Button
@@ -166,7 +183,7 @@ export default class NamespaceList extends Vue {
                     title="OpenAPI"
                 >
                     <RouterLink target="_blank" :to="'/scalar-ui.html?namespace=' + item.id">
-                        <img src="@/assets/scalar.svg" />
+                        <img class="!w-[24px] !h-[24px]" src="@/assets/scalar.svg" />
                     </RouterLink>
                 </Button>
             </template>

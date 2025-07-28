@@ -43,12 +43,18 @@ const pageRoutes: RouteRecordRaw[] = [
           path: `/application/${route.params.applicationId}/settings`
         }
       ]
-    } as RouteMeta,
+    }  as RouteMeta,
     children: [
       {
         name: 'application-details',
         path: '',
         component: () => import('@/pages/ApplicationDetails.vue'),
+        props: (route) => ({ applicationId: route.params.applicationId })
+      },
+      {
+        name: 'application-settings', // Add this child route for the "Settings" page
+        path: 'settings',
+        component: () => import('@/pages/ApplicationSettings.vue'),  // Application settings component
         props: (route) => ({ applicationId: route.params.applicationId })
       }
     ]
