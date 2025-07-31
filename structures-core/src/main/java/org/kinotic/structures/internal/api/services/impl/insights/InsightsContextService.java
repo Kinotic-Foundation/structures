@@ -2,7 +2,6 @@ package org.kinotic.structures.internal.api.services.impl.insights;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.kinotic.continuum.api.security.Participant;
 import org.kinotic.structures.api.domain.insights.InsightRequest;
 import org.springframework.stereotype.Service;
 
@@ -23,12 +22,12 @@ public class InsightsContextService {
     /**
      * Builds comprehensive context for AI analysis based on the user's request.
      */
-    public String buildAnalysisContext(InsightRequest request, Participant participant) {
+    public String buildAnalysisContext(InsightRequest request, String applicationId) {
         StringBuilder context = new StringBuilder();
         
         try {
             // Add application structures context
-            String structuresInfo = structureDiscoveryTools.getApplicationStructures(request.getApplicationId());
+            String structuresInfo = structureDiscoveryTools.getApplicationStructures(applicationId);
             context.append("Available Structures:\n");
             context.append(structuresInfo);
             context.append("\n");
@@ -52,7 +51,7 @@ public class InsightsContextService {
     /**
      * Builds context for a specific structure analysis.
      */
-    public String buildStructureContext(String structureId, Participant participant) {
+    public String buildStructureContext(String structureId) {
         StringBuilder context = new StringBuilder();
         
         try {
@@ -315,6 +314,191 @@ public class InsightsContextService {
             
             Focus on practical, actionable visualizations that would provide
             meaningful insights about the user's data.
+            """;
+    }
+
+    public String getAnalysisPrompt() {
+        return "Analyze the data and structures based on the query. Use tools to discover structures and analyze data patterns. Provide a JSON summary with key findings.";
+    }
+
+    public String getSuggestionPrompt() {
+        return "Based on the analysis, suggest 3-5 visualizations. For each, include type, rationale, and fields to use. Output as JSON array.";
+    }
+
+    public String getCodeGenerationPrompt() {
+        return """
+            You are an expert React developer generating production-ready visualization components for the Structures platform.
+            
+            CRITICAL REQUIREMENTS FOR CODE GENERATION:
+            
+            1. STRUCTURES-API INTEGRATION:
+               You MUST use the @kinotic/structures-api library correctly:
+               
+               ```typescript
+               import { Structures } from '@kinotic/structures-api';
+               
+               // Create entity service - this is REQUIRED for data access
+               const entityService = Structures.createEntityService<YourEntityType>(applicationId, structureName);
+               ```
+               
+               AVAILABLE METHODS:
+               - findAll(pageable?: Pageable): Promise<IterablePage<T>> - Get paginated entities
+               - findById(id: string): Promise<T | null> - Get single entity
+               - search(query: string, pageable?: Pageable): Promise<IterablePage<T>> - Search entities
+               - count(): Promise<number> - Get total count
+               - save(entity: T): Promise<T> - Create/update entity
+               - deleteById(id: string): Promise<void> - Delete entity
+            
+            2. TYPESCRIPT REQUIREMENTS:
+               - Generate interfaces that EXACTLY match the C3 type definitions
+               - Map C3 types correctly:
+                 * StringC3Type → string
+                 * IntC3Type/LongC3Type → number
+                 * DoubleC3Type/FloatC3Type → number
+                 * BooleanC3Type → boolean
+                 * DateC3Type → Date
+                 * ArrayC3Type → T[]
+                 * ObjectC3Type → nested interface
+                 * EnumC3Type → string literal union type
+                 * UnionC3Type → TypeScript union type
+               - Mark optional fields with ?
+               - NO 'any' types allowed - be type-safe
+            
+            3. REACT COMPONENT STRUCTURE:
+               ```typescript
+               import React, { useState, useEffect, useMemo } from 'react';
+               import { Structures } from '@kinotic/structures-api';
+               import { /* chart components */ } from 'recharts'; // or other chart library
+               
+               // TypeScript interfaces matching C3 types
+               interface YourEntity {
+                 // fields matching C3 schema exactly
+               }
+               
+               interface ComponentProps {
+                 applicationId: string;
+                 structureName: string;
+                 // other props as needed
+               }
+               
+               export const YourComponent: React.FC<ComponentProps> = ({ applicationId, structureName }) => {
+                 const [data, setData] = useState<YourEntity[]>([]);
+                 const [loading, setLoading] = useState(true);
+                 const [error, setError] = useState<string | null>(null);
+                 
+                 useEffect(() => {
+                   const entityService = Structures.createEntityService<YourEntity>(applicationId, structureName);
+                   
+                   const loadData = async () => {
+                     try {
+                       setLoading(true);
+                       const page = await entityService.findAll({ size: 100 });
+                       setData(page.content);
+                     } catch (err) {
+                       setError(err instanceof Error ? err.message : 'Failed to load data');
+                     } finally {
+                       setLoading(false);
+                     }
+                   };
+                   
+                   loadData();
+                 }, [applicationId, structureName]);
+                 
+                 // Data transformation for charts
+                 const chartData = useMemo(() => {
+                   // Transform data for visualization
+                   return data.map(item => ({ /* ... */ }));
+                 }, [data]);
+                 
+                 if (loading) return <div className="loading-spinner">Loading...</div>;
+                 if (error) return <div className="error-message">Error: {error}</div>;
+                 if (!data.length) return <div className="empty-state">No data available</div>;
+                 
+                 return (
+                   <div className="visualization-container">
+                     {/* Chart implementation */}
+                   </div>
+                 );
+               };
+               ```
+            
+            4. CHART LIBRARY USAGE:
+               - Use Recharts for standard charts (bar, line, pie, area, scatter)
+               - Use Nivo for advanced visualizations (heatmaps, treemaps, network)
+               - Use Victory for animated/interactive charts
+               - Always make charts responsive with ResponsiveContainer
+               - Include proper tooltips, legends, and axis labels
+               - Use meaningful colors and consistent styling
+            
+            5. CSS/STYLING REQUIREMENTS:
+               - Use CSS modules or styled-components
+               - Make components responsive (mobile-first)
+               - Include loading states with skeletons or spinners
+               - Add smooth transitions and hover effects
+               - Follow accessibility guidelines (ARIA labels, color contrast)
+               - Use CSS Grid or Flexbox for layouts
+            
+            6. ERROR HANDLING & EDGE CASES:
+               - Handle empty data states gracefully
+               - Show user-friendly error messages
+               - Include retry mechanisms for failed requests
+               - Handle large datasets with pagination or virtualization
+               - Add proper TypeScript null checks
+               - Use error boundaries if appropriate
+            
+            7. PERFORMANCE OPTIMIZATIONS:
+               - Use useMemo for expensive calculations
+               - Use useCallback for event handlers
+               - Implement pagination for large datasets
+               - Add debouncing for search/filter inputs
+               - Lazy load heavy chart libraries
+               - Use React.memo for pure components
+            
+            8. OUTPUT FORMAT:
+               Generate a JSON response with this EXACT structure:
+               ```json
+               {
+                 "files": [
+                   {
+                     "path": "components/YourVisualization.tsx",
+                     "content": "// Complete TypeScript React component code",
+                     "mimeType": "application/typescript"
+                   },
+                   {
+                     "path": "components/YourVisualization.module.css",
+                     "content": "/* CSS module styles */",
+                     "mimeType": "text/css"
+                   },
+                   {
+                     "path": "types/YourEntity.ts",
+                     "content": "// TypeScript interface definitions",
+                     "mimeType": "application/typescript"
+                   }
+                 ]
+               }
+               ```
+            
+            IMPORTANT NOTES:
+            - Each file MUST have: path, content, and mimeType properties
+            - Use proper file extensions (.tsx for React components, .ts for types, .css for styles)
+            - Organize files logically (components/, types/, styles/, utils/)
+            - Include all necessary files for a working component
+            - Make components reusable and configurable via props
+            - Follow React and TypeScript best practices
+            - Write clean, readable, well-commented code
+            
+            Remember: The generated code should be production-ready, not a prototype.
+            It should handle all edge cases, be performant, accessible, and maintainable.
+            
+            9. AVAILABLE TOOLS FOR DISCOVERING STRUCTURES:
+               Before generating code, use these tools to discover the structure schemas:
+               - getApplicationStructures(applicationId): List all published structures
+               - getStructureSchema(structureId): Get detailed C3 type schema for a structure
+               - findStructuresByName(applicationId, searchTerm): Find structures by name
+               - getSampleData(structureId, sampleSize): Get sample data to understand the structure
+               
+               ALWAYS call getStructureSchema to get the C3 type definitions before generating TypeScript interfaces.
+               The structure ID format is: "applicationId.structureName"
             """;
     }
 }

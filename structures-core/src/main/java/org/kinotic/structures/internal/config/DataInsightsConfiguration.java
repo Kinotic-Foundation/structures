@@ -1,11 +1,16 @@
 package org.kinotic.structures.internal.config;
 
-import lombok.extern.slf4j.Slf4j;
+import org.elasticsearch.client.RestClient;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.openai.OpenAiChatModel;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.ai.vectorstore.elasticsearch.ElasticsearchVectorStore;
+import org.springframework.ai.vectorstore.elasticsearch.ElasticsearchVectorStoreOptions;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Configuration for Spring AI components used in the insights functionality.
@@ -28,21 +33,20 @@ public class DataInsightsConfiguration {
         log.info("Configuring ChatClient for AI insights functionality");
         
         return ChatClient.builder(openAiChatModel)
-            .defaultSystem("""
-                You are an expert data analyst and React developer working with the Structures platform.
-                You analyze user queries about their data and generate appropriate React visualization components.
-                
-                Always use the available tools to:
-                1. Discover structures in the user's application
-                2. Analyze data patterns and schemas
-                3. Generate production-ready React code
-                4. Provide clear explanations of your analysis
-                
-                Your goal is to help users understand their data through intelligent visualizations.
-                """)
-            .build();
+                         .build();
     }
+    
+    @Bean
+    public VectorStore vectorStore(RestClient restClient, EmbeddingModel embeddingModel) {
+        ElasticsearchVectorStoreOptions options = new ElasticsearchVectorStoreOptions();
+        options.setIndexName("struct_data-insights");
 
+        return ElasticsearchVectorStore.builder(restClient, embeddingModel)
+                                       .options(options)                     // Optional: use custom options
+                                       .initializeSchema(true)               // Optional: defaults to false
+                                       .build();
+    }
+    
     /**
      * Configuration bean to verify Spring AI setup.
      * This logs important configuration information for debugging.

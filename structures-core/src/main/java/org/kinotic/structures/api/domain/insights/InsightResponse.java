@@ -54,6 +54,17 @@ public class InsightResponse {
     private String analysisSummary;
     
     /**
+     * List of paths to newly generated or updated files in the project.
+     */
+    private List<String> generatedFiles;
+    
+    /**
+     * Map of file paths to their modification diffs (for refinements).
+     * Key: file path, Value: diff string or patch.
+     */
+    private Map<String, String> modificationDiffs;
+
+    /**
      * Key insights and findings from the data analysis.
      * Each item represents a specific observation or pattern discovered.
      */

@@ -17,6 +17,7 @@ dependencies {
 
 	implementation 'org.springframework.ai:spring-ai-core'
 	implementation 'org.springframework.ai:spring-ai-openai-spring-boot-starter'
+	implementation 'org.springframework.ai:spring-ai-elasticsearch-store-spring-boot-starter'
 
 	implementation "io.vertx:vertx-web"
 	implementation "io.vertx:vertx-web-graphql"

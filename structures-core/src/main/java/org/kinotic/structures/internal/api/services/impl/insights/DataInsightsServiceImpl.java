@@ -4,20 +4,28 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.kinotic.continuum.api.security.Participant;
 import org.kinotic.structures.api.domain.insights.*;
-import org.kinotic.structures.api.domain.Project;
 import org.kinotic.structures.api.domain.ProjectType;
 import org.kinotic.structures.api.services.insights.DataInsightsService;
 import org.kinotic.structures.api.services.EntitiesService;
 import org.kinotic.structures.api.services.ProjectService;
 import org.kinotic.structures.internal.api.services.impl.insights.blobstore.InsightsBlobStorage;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.document.Document;
+import org.springframework.ai.vectorstore.VectorStore;
+
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+import java.util.ArrayList;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.type.TypeReference;
+import java.util.Collections;
+import java.util.HashMap;
 
 /**
  * Implementation of AiInsightsService that uses Spring AI to analyze structure data
@@ -41,312 +49,177 @@ public class DataInsightsServiceImpl implements DataInsightsService {
     private final EntitiesService entitiesService;
     private final InsightsBlobStorage blobStorage;
     private final ProjectService projectService;
+    private final VectorStore vectorStore;
+    private final ObjectMapper objectMapper;
+
+    private CompletableFuture<String> validateProjectAndGetApplicationId(String projectId, Participant participant) {
+        return projectService.findById(projectId).thenApply(project -> {
+            if (project == null) {
+                throw new IllegalArgumentException("Project not found: " + projectId);
+            }
+            if (project.getSourceOfTruth() != ProjectType.DATA_INSIGHTS) {
+                throw new IllegalArgumentException("Project must be of type DATA_INSIGHTS, but was " + project.getSourceOfTruth());
+            }
+            // TODO: Validate user access via participant
+            return project.getApplicationId();
+        });
+    }
 
     @Override
     public CompletableFuture<InsightResponse> analyzeAndVisualize(InsightRequest request, Participant participant) {
-        log.info("Starting AI analysis for query: '{}' in application: {}", request.getQuery(), request.getApplicationId());
+        log.info("Starting AI analysis for query: '{}' in project: {}", request.getQuery(), request.getProjectId());
+        
+        return validateProjectAndGetApplicationId(request.getProjectId(), participant)
+            .thenCompose(applicationId -> performAnalysisStep(request, applicationId, participant)
+                .thenCompose(analysisSummary -> performSuggestionStep(analysisSummary, request, participant)
+                    .thenCompose(suggestions -> performCodeGenerationStep(suggestions, request, participant)
+                        .thenApply(generatedFiles -> assembleResponse(request, generatedFiles, analysisSummary, suggestions)))));
+    }
+
+
+
+    private CompletableFuture<String> performAnalysisStep(InsightRequest request, String applicationId, Participant participant) {
+        DataAnalysisTools dataAnalysisTools = new DataAnalysisTools(entitiesService, participant);
+        
+        String systemPrompt = contextService.getAnalysisPrompt();
+        String userPrompt = buildUserPrompt(request, applicationId); // Use a helper to build prompt
+        
+        return CompletableFuture.supplyAsync(() -> 
+            chatClient.prompt()
+                .system(systemPrompt)
+                .user(userPrompt)
+                .tools(structureDiscoveryTools, dataAnalysisTools)
+                .call()
+                .content()
+        );
+    }
+
+    private CompletableFuture<List<VisualizationSuggestion>> performSuggestionStep(String analysisSummary, InsightRequest request, Participant participant) {
+        DataAnalysisTools dataAnalysisTools = new DataAnalysisTools(entitiesService, participant);
+        
+        String systemPrompt = contextService.getSuggestionPrompt();
+        String userPrompt = "Analysis Summary: " + analysisSummary;
         
         return CompletableFuture.supplyAsync(() -> {
+            String response = chatClient.prompt()
+                .system(systemPrompt)
+                .user(userPrompt)
+                .tools(structureDiscoveryTools, dataAnalysisTools)
+                .call()
+                .content();
             try {
-                long startTime = System.currentTimeMillis();
-                String analysisId = UUID.randomUUID().toString();
-                
-                // Create or get existing project for this analysis
-                String projectId = getOrCreateProject(request, participant).join();
-                
-                // Create new DataAnalysisTools instance with participant context
-                // StructureDiscoveryTools is autowired since it doesn't need participant context
-                DataAnalysisTools dataAnalysisTools = new DataAnalysisTools(entitiesService, participant);
-                
-                // Build context for Spring AI
-                String context = contextService.buildAnalysisContext(request, participant);
-                
-                // Create the prompt for Spring AI
-                String systemPrompt = contextService.getSystemPrompt();
-                String userPrompt = buildUserPrompt(request, context);
-                
-                log.debug("Sending request to Spring AI with {} characters of context", context.length());
-                
-                // Let Spring AI orchestrate the entire analysis using available tools
-                String aiResponse = chatClient
-                    .prompt()
-                    .system(systemPrompt)
-                    .user(userPrompt)
-                    .tools(structureDiscoveryTools, dataAnalysisTools) // Spring AI can call these tools
-                    .call()
-                    .content();
-                
-                // Store generated code in blob storage
-                storeGeneratedCode(projectId, aiResponse, request).join();
-                
-                // Parse AI response into structured result
-                InsightResponse response = parseAiResponse(aiResponse, analysisId, request, startTime, projectId);
-                
-                log.info("AI analysis completed in {}ms for analysis ID: {} (project: {})", 
-                    System.currentTimeMillis() - startTime, analysisId, projectId);
-                
-                return response;
-                
+                return objectMapper.readValue(response, new TypeReference<List<VisualizationSuggestion>>(){});
             } catch (Exception e) {
-                log.error("Error during AI analysis for query: '{}'", request.getQuery(), e);
-                return createErrorResponse(request, e);
+                log.error("Parsing error", e);
+                return Collections.emptyList();
             }
         });
     }
 
-    @Override
-    public CompletableFuture<List<VisualizationSuggestion>> suggestVisualizations(String structureId, Participant participant) {
-        log.info("Generating visualization suggestions for structure: {}", structureId);
+    private CompletableFuture<Map<String, String>> performCodeGenerationStep(List<VisualizationSuggestion> suggestions, InsightRequest request, Participant participant) {
+        DataAnalysisTools dataAnalysisTools = new DataAnalysisTools(entitiesService, participant);
+        
+        // Vector retrieval for relevant existing code
+        String retrievalQuery = "relevant code for: " + request.getQuery();
+        List<Document> relevantDocs = vectorStore.similaritySearch(retrievalQuery);
+        String existingCodeContext = relevantDocs.stream()
+            .map(doc -> doc.getMetadata().get("filePath") + ": " + doc.getText())
+            .collect(Collectors.joining("\n"));
+        
+        String systemPrompt = contextService.getCodeGenerationPrompt();
+        String userPrompt = "Suggestions: " + suggestions.toString() + "\nExisting Code: " + existingCodeContext;
         
         return CompletableFuture.supplyAsync(() -> {
+            String response = chatClient.prompt()
+                .system(systemPrompt)
+                .user(userPrompt)
+                .tools(structureDiscoveryTools, dataAnalysisTools)
+                .call()
+                .content();
             try {
-                // Create new tool instances with participant context
-
-                DataAnalysisTools dataAnalysisTools = new DataAnalysisTools(entitiesService, participant);
+                // Parse the response to get files with their content and MIME types
+                Map<String, Object> responseData = objectMapper.readValue(response, new TypeReference<Map<String, Object>>(){});
+                List<Map<String, String>> files = (List<Map<String, String>>) responseData.get("files");
                 
-                // Build context about the specific structure
-                String context = contextService.buildStructureContext(structureId, participant);
-                
-                String systemPrompt = contextService.getVisualizationSuggestionPrompt();
-                String userPrompt = String.format(
-                    "Analyze the structure '%s' and suggest appropriate visualizations. Context: %s", 
-                    structureId, context
-                );
-                
-                String aiResponse = chatClient
-                    .prompt()
-                    .system(systemPrompt)
-                    .user(userPrompt)
-                    .tools(structureDiscoveryTools, dataAnalysisTools)
-                    .call()
-                    .content();
-                
-                return parseSuggestionsResponse(aiResponse);
-                
+                Map<String, String> generatedFiles = new HashMap<>();
+                if (files != null) {
+                    for (Map<String, String> file : files) {
+                        String filePath = file.get("path");
+                        String content = file.get("content");
+                        String mimeType = file.getOrDefault("mimeType", "application/octet-stream");
+                        
+                        if (filePath != null && content != null) {
+                            generatedFiles.put(filePath, content);
+                            
+                            // Store with the correct MIME type
+                            blobStorage.store(request.getProjectId(), filePath, content.getBytes(), mimeType).join();
+                            
+                            // Add to vector store for semantic search
+                            vectorStore.add(List.of(new Document(content, Map.of(
+                                "filePath", filePath, 
+                                "projectId", request.getProjectId(),
+                                "mimeType", mimeType
+                            ))));
+                        }
+                    }
+                }
+                return generatedFiles;
             } catch (Exception e) {
-                log.error("Error generating visualization suggestions for structure: {}", structureId, e);
-                return List.of(); // Return empty list on error
+                log.error("Error parsing generated code response", e);
+                return Collections.emptyMap();
             }
         });
     }
 
-    @Override
-    public CompletableFuture<InsightResponse> refineAnalysis(String analysisId, String refinementQuery, Participant participant) {
-        log.info("Refining analysis {} with query: '{}'", analysisId, refinementQuery);
-        
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                // Create new tool instances with participant context
-
-                DataAnalysisTools dataAnalysisTools = new DataAnalysisTools(entitiesService, participant);
-                
-                // TODO: Retrieve previous analysis from storage
-                // For now, create a new analysis with refinement context
-                
-                String systemPrompt = contextService.getSystemPrompt();
-                String userPrompt = String.format(
-                    "This is a refinement request for analysis ID: %s. " +
-                    "User refinement: '%s'. Please modify the previous analysis accordingly.",
-                    analysisId, refinementQuery
-                );
-                
-                String aiResponse = chatClient
-                    .prompt()
-                    .system(systemPrompt)
-                    .user(userPrompt)
-                    .tools(structureDiscoveryTools, dataAnalysisTools)
-                    .call()
-                    .content();
-                
-                return parseAiResponse(aiResponse, analysisId, null, System.currentTimeMillis(), "unknown-project");
-                
-            } catch (Exception e) {
-                log.error("Error refining analysis {}: {}", analysisId, e.getMessage(), e);
-                return createErrorResponse(null, e);
-            }
-        });
+    private InsightResponse assembleResponse(InsightRequest request, Map<String, String> generatedFiles, String analysisSummary, List<VisualizationSuggestion> suggestions) {
+        String analysisId = UUID.randomUUID().toString();
+        return InsightResponse.builder()
+            .analysisId(analysisId)
+            .projectId(request.getProjectId())
+            .originalQuery(request.getQuery())
+            .analysisSummary(analysisSummary)
+            .alternativeVisualizations(suggestions)
+            .generatedFiles(new ArrayList<>(generatedFiles.keySet()))
+            .status(AnalysisStatus.SUCCESS)
+            .createdAt(Instant.now())
+            .build();
     }
 
     @Override
-    public CompletableFuture<InsightResponse> getAnalysis(String analysisId, Participant participant) {
-        log.info("Retrieving analysis: {}", analysisId);
-        
-        return CompletableFuture.supplyAsync(() -> {
-            // TODO: Implement analysis storage and retrieval
-            // For now, return a placeholder response
-            return InsightResponse.builder()
-                .analysisId(analysisId)
-                .status(AnalysisStatus.ERROR)
-                .analysisSummary("Analysis retrieval not yet implemented")
-                .createdAt(Instant.now())
-                .build();
-        });
+    public CompletableFuture<List<VisualizationSuggestion>> suggestVisualizations(String projectId, String structureId, Participant participant) {
+        return validateProjectAndGetApplicationId(projectId, participant)
+            .thenCompose(appId -> {
+                // Implement suggestion logic similar to Step 2
+                return performSuggestionStep("Suggest visualizations for structure " + structureId, new InsightRequest("", projectId), participant);
+            });
+    }
+
+    @Override
+    public CompletableFuture<InsightResponse> getAnalysis(String analysisId, String projectId, Participant participant) {
+        return validateProjectAndGetApplicationId(projectId, participant)
+            .thenApply(appId -> {
+                // TODO: Retrieve from storage or blob
+                return InsightResponse.builder().analysisId(analysisId).projectId(projectId).build();
+            });
+    }
+
+    @Override
+    public CompletableFuture<InsightResponse> refineAnalysis(String analysisId, String refinementQuery, String projectId, Participant participant) {
+        log.info("Refining analysis {} in project {} with query: '{}'", analysisId, projectId, refinementQuery);
+        InsightRequest refinementRequest = new InsightRequest(refinementQuery, projectId);
+        return validateProjectAndGetApplicationId(projectId, participant)
+            .thenCompose(applicationId -> performAnalysisStep(refinementRequest, applicationId, participant)
+                .thenCompose(analysisSummary -> performSuggestionStep(analysisSummary, refinementRequest, participant)
+                    .thenCompose(suggestions -> performCodeGenerationStep(suggestions, refinementRequest, participant)
+                        .thenApply(generatedFiles -> assembleResponse(refinementRequest, generatedFiles, analysisSummary, suggestions)))));
     }
 
     /**
      * Builds the user prompt that will be sent to Spring AI along with the context.
      */
-    private String buildUserPrompt(InsightRequest request, String context) {
-        StringBuilder prompt = new StringBuilder();
-        prompt.append("User Query: ").append(request.getQuery()).append("\n\n");
-        prompt.append("Application Context:\n").append(context).append("\n\n");
-        
-        if (request.getFocusStructureId() != null) {
-            prompt.append("Focus Structure: ").append(request.getFocusStructureId()).append("\n");
-        }
-        
-        if (request.getPreferredVisualization() != null) {
-            prompt.append("Preferred Visualization: ").append(request.getPreferredVisualization()).append("\n");
-        }
-        
-        if (request.getAdditionalContext() != null) {
-            prompt.append("Additional Context: ").append(request.getAdditionalContext()).append("\n");
-        }
-        
-        prompt.append("\nPlease analyze this request and generate appropriate visualization code.");
-        
-        return prompt.toString();
+    private String buildUserPrompt(InsightRequest request, String applicationId) {
+        return "Query: " + request.getQuery() + "\nApplication ID: " + applicationId;
     }
 
-    /**
-     * Gets or creates a project for storing the generated code.
-     */
-    private CompletableFuture<String> getOrCreateProject(InsightRequest request, Participant participant) {
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                // Create a new project for each analysis (could be modified to reuse projects)
-                String projectId = "insights-" + UUID.randomUUID().toString();
-                
-                Project project = new Project()
-                    .setId(projectId)
-                    .setApplicationId(request.getApplicationId())
-                    .setName("Data Insights: " + request.getQuery())
-                    .setDescription("Generated visualization project from AI analysis")
-                    .setSourceOfTruth(ProjectType.DATA_INSIGHTS)
-                    .setUpdated(new Date());
-                
-                // Create project in the system  
-                projectService.create(project).join();
-                
-                // Initialize project structure in blob storage
-                blobStorage.initializeProject(projectId, "typescript-react").join();
-                
-                log.info("Created new DATA_INSIGHTS project: {} for application: {}", projectId, request.getApplicationId());
-                
-                return projectId;
-                
-            } catch (Exception e) {
-                log.error("Failed to create project for request: {}", request.getQuery(), e);
-                throw new RuntimeException("Failed to create project", e);
-            }
-        });
-    }
-    
-    /**
-     * Stores the generated code from AI response in blob storage.
-     */
-    private CompletableFuture<Void> storeGeneratedCode(String projectId, String aiResponse, InsightRequest request) {
-        return CompletableFuture.runAsync(() -> {
-            try {
-                // TODO: Parse AI response to extract generated components
-                // For now, store the raw response as a markdown file
-                
-                String timestamp = Instant.now().toString().replaceAll("[:\\-.]", "_");
-                String filename = "generated/analysis_" + timestamp + ".md";
-                
-                String content = String.format("""
-                    # AI Analysis Results
-                    
-                    **Query:** %s
-                    **Generated:** %s
-                    **Application:** %s
-                    
-                    ## AI Response
-                    
-                    ```
-                    %s
-                    ```
-                    
-                    ## Next Steps
-                    
-                    This response should be parsed to extract:
-                    - Generated React components (.tsx files)
-                    - TypeScript interfaces (.ts files) 
-                    - Configuration updates (package.json dependencies)
-                    - Styling files (.css files)
-                    """, 
-                    request.getQuery(),
-                    Instant.now(),
-                    request.getApplicationId(),
-                    aiResponse
-                );
-                
-                blobStorage.store(projectId, filename, content.getBytes(), "text/markdown").join();
-                
-                log.debug("Stored generated code for project: {} at path: {}", projectId, filename);
-                
-            } catch (Exception e) {
-                log.error("Failed to store generated code for project: {}", projectId, e);
-                throw new RuntimeException("Failed to store generated code", e);
-            }
-        });
-    }
 
-    /**
-     * Parses the AI response into a structured InsightResponse object.
-     * This is a simplified implementation - in practice, you might want more
-     * sophisticated parsing or use structured output from Spring AI.
-     */
-    private InsightResponse parseAiResponse(String aiResponse, String analysisId, InsightRequest request, long startTime, String projectId) {
-        // TODO: Implement sophisticated AI response parsing
-        // For now, create a basic response structure
-        
-        return InsightResponse.builder()
-            .analysisId(analysisId)
-            .originalQuery(request != null ? request.getQuery() : "Unknown")
-            .applicationId(request != null ? request.getApplicationId() : "Unknown")
-            .projectId(projectId) // Include project ID in response
-            .createdAt(Instant.now())
-            .analysisSummary("AI analysis completed and code stored in project: " + projectId)
-            .status(AnalysisStatus.PARTIAL_SUCCESS)
-            .keyFindings(List.of("Generated code stored in blob storage", "Project created: " + projectId))
-            .warnings(List.of("Response parsing is currently simplified"))
-            .metadata(AnalysisMetadata.builder()
-                .processingTime(java.time.Duration.ofMillis(System.currentTimeMillis() - startTime))
-                .aiModel("gpt-4") // TODO: Get from configuration
-                .qualityScore(75) // Placeholder
-                .build())
-            .build();
-    }
-
-    /**
-     * Parses visualization suggestions from AI response.
-     */
-    private List<VisualizationSuggestion> parseSuggestionsResponse(String aiResponse) {
-        // TODO: Implement parsing of visualization suggestions
-        return List.of(
-            VisualizationSuggestion.builder()
-                .visualizationType("bar-chart")
-                .title("Sample Suggestion")
-                .description("Placeholder suggestion - parsing needs implementation")
-                .complexity(VisualizationSuggestion.ComplexityLevel.SIMPLE)
-                .confidenceScore(50)
-                .build()
-        );
-    }
-
-    /**
-     * Creates an error response when analysis fails.
-     */
-    private InsightResponse createErrorResponse(InsightRequest request, Exception error) {
-        return InsightResponse.builder()
-            .analysisId(UUID.randomUUID().toString())
-            .originalQuery(request != null ? request.getQuery() : "Unknown")
-            .applicationId(request != null ? request.getApplicationId() : "Unknown")
-            .createdAt(Instant.now())
-            .status(AnalysisStatus.ERROR)
-            .analysisSummary("Analysis failed due to error: " + error.getMessage())
-            .warnings(List.of("Error occurred during analysis: " + error.getClass().getSimpleName()))
-            .build();
-    }
 }

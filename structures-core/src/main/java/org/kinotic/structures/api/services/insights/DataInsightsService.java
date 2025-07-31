@@ -39,11 +39,12 @@ public interface DataInsightsService {
      * Suggests appropriate visualization types for a specific structure
      * based on its schema and data patterns.
      * 
+     * @param projectId the ID of the project to associate suggestions with
      * @param structureId the id of the structure to analyze (applicationId.structureName)
      * @param participant the participant of the logged-in user
      * @return CompletableFuture with list of visualization suggestions
      */
-    CompletableFuture<List<VisualizationSuggestion>> suggestVisualizations(String structureId, Participant participant);
+    CompletableFuture<List<VisualizationSuggestion>> suggestVisualizations(String projectId, String structureId, Participant participant);
 
     /**
      * Refines or modifies a previously generated analysis based on user feedback.
@@ -51,18 +52,20 @@ public interface DataInsightsService {
      * 
      * @param analysisId the id of the previous analysis to refine
      * @param refinementQuery user's refinement instructions (e.g., "make it a pie chart", "add more details")
+     * @param projectId the ID of the project to refine
      * @param participant the participant of the logged-in user
      * @return CompletableFuture with refined analysis and updated code
      */
-    CompletableFuture<InsightResponse> refineAnalysis(String analysisId, String refinementQuery, Participant participant);
+    CompletableFuture<InsightResponse> refineAnalysis(String analysisId, String refinementQuery, String projectId, Participant participant);
 
     /**
      * Gets the current status and details of a previous analysis.
      * Useful for retrieving analysis results or checking processing status.
      * 
      * @param analysisId the id of the analysis to retrieve
+     * @param projectId the ID of the project associated with the analysis
      * @param participant the participant of the logged-in user
      * @return CompletableFuture with the analysis details
      */
-    CompletableFuture<InsightResponse> getAnalysis(String analysisId, Participant participant);
+    CompletableFuture<InsightResponse> getAnalysis(String analysisId, String projectId, Participant participant);
 }

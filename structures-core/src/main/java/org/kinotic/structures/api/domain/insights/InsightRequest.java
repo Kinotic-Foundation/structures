@@ -15,6 +15,14 @@ import lombok.AllArgsConstructor;
 public class InsightRequest {
     
     /**
+     * Constructor for creating a request with just query and projectId
+     */
+    public InsightRequest(String query, String projectId) {
+        this.query = query;
+        this.projectId = projectId;
+    }
+    
+    /**
      * The user's natural language query about their data.
      * Examples:
      * - "Show me my products grouped by category"
@@ -24,11 +32,10 @@ public class InsightRequest {
     private String query;
     
     /**
-     * The application ID to search for structures within.
-     * All analysis will be limited to structures in this application.
+     * The ID of the project to use for this request. The project must already exist and be of type DATA_INSIGHTS.
      */
-    private String applicationId;
-    
+    private String projectId;
+
     /**
      * Optional: Specific structure ID to focus the analysis on.
      * If provided, will prioritize this structure in the analysis.
