@@ -3,15 +3,15 @@
     <div class="flex items-center gap-2 text-white relative">
       <RouterLink to="/applications" class="flex items-center gap-2">
         <img v-if="!isApplicationDetailsPage && !isProjectStructuresPage" src="@/assets/logo.svg" class="h-8" />
-        <img v-else src="@/assets/sidebar-logo.svg" class="h-8 w-8" />
+        <img v-else src="@/assets/sidebar-logo.svg" class="!h-8 !w-8" />
       </RouterLink>
 
       <template v-if="isApplicationDetailsPage || isProjectStructuresPage">
         <span class="text-surface-400 text-lg">/</span>
 
-        <div ref="appDropdownRef" class="relative inline-block w-48">
+        <div ref="appDropdownRef" class="relative inline-block mr-8">
           <button @click="toggleAppDropdown"
-            class="flex items-center gap-1 text-surface-400 font-medium text-sm hover:opacity-80 w-full justify-between">
+            class="flex items-center gap-2 text-surface-400 font-medium text-sm hover:opacity-80 w-full justify-between">
             {{ currentAppName }}
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
@@ -34,9 +34,9 @@
 
         <template v-if="isProjectStructuresPage && currentApp">
           <span class="text-surface-400 text-lg">/</span>
-          <div ref="projectDropdownRef" class="relative inline-block w-48">
+          <div ref="projectDropdownRef" class="relative inline-block">
             <button @click="toggleProjectDropdown"
-              class="flex items-center gap-1 text-surface-400 font-medium text-sm hover:opacity-80 w-full justify-between">
+              class="flex items-center gap-2 text-surface-400 font-medium text-sm hover:opacity-80 w-full justify-between">
               {{ currentProjectName }}
               <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />

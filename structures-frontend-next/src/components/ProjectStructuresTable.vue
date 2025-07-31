@@ -6,6 +6,7 @@ import { Structure, Structures } from '@kinotic/structures-api'
 import type { CrudHeader } from '@/types/CrudHeader'
 import { APPLICATION_STATE } from '@/states/IApplicationState'
 import type { Identifiable, IterablePage, Pageable } from '@kinotic/continuum-client'
+import DatetimeUtil from "@/util/DatetimeUtil"
 
 @Component({
   components: { CrudTable, StructureItemModal }
@@ -30,6 +31,7 @@ export default class ProjectStructuresTable extends Vue {
   showModal = false
   selectedStructure: Structure | null = null
   isInitialized = false
+  public DatetimeUtil = DatetimeUtil
 
   mounted() {
     this.searchText = (this.$route.query['search-structure'] as string) || ''
@@ -137,9 +139,20 @@ export default class ProjectStructuresTable extends Vue {
       @onRowClick="handleRowClick"
       createNewButtonText="New Structure"
       emptyStateText="No structures yet for this project"
+      class="!text-sm"
     >
       <template #item.name="{ item }">
         <span class="font-semibold">{{ item.name }}</span>
+      </template>
+      <template #item.created="{ item }">
+        <span>
+          {{ DatetimeUtil.formatMonthDayYear(item.created) }}
+        </span>
+      </template>
+      <template #item.updated="{ item }">
+        <span>
+          {{ DatetimeUtil.formatRelativeDate(item.updated) }}
+        </span>
       </template>
       <template #item.description="{ item }">
         <span>{{ item.description }}</span>
