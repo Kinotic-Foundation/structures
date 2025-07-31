@@ -52,9 +52,9 @@ const pageRoutes: RouteRecordRaw[] = [
         props: (route) => ({ applicationId: route.params.applicationId })
       },
       {
-        name: 'application-settings', // Add this child route for the "Settings" page
+        name: 'application-settings',
         path: 'settings',
-        component: () => import('@/pages/ApplicationSettings.vue'),  // Application settings component
+        component: () => import('@/pages/ApplicationSettings.vue'),
         props: (route) => ({ applicationId: route.params.applicationId })
       }
     ]
@@ -113,6 +113,14 @@ const pageRoutes: RouteRecordRaw[] = [
       showInMainNav: false,
       icon: 'settings.svg',
       label: 'Add Application',
+    } as RouteMeta,
+  },
+    {
+    path: '/new-structure',
+    component: () => import('@/pages/NewStructure.vue'),
+    meta: {
+      showInMainNav: false,
+      label: 'New Structure',
     } as RouteMeta,
   },
   {
