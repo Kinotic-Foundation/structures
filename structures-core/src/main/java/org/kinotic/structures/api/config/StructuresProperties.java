@@ -112,6 +112,12 @@ public class StructuresProperties {
      */
     private boolean initializeWithSampleData = false;
 
+    /**
+     * Root path for blob storage of insights data.
+     * Defaults to /tmp/blobs
+     */
+    private String blobStoreRoot = "/tmp/blobs";
+
     public boolean hasElasticUsernameAndPassword(){
         return elasticUsername != null && !elasticUsername.isBlank() && elasticPassword != null && !elasticPassword.isBlank();
     }
