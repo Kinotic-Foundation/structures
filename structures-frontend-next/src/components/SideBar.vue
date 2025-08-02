@@ -46,7 +46,7 @@ export default class Sidebar extends Vue {
 
   navigateTo(path: string) {
     if (this.route.path !== path) {
-      this.router.push(path)
+      this.router.push(path) 
     }
   }
 
@@ -70,38 +70,33 @@ export default class Sidebar extends Vue {
         })) as Array<{ icon: string; label: string; path: string }>
     }
   }
+
+  isActive(path: string): boolean {
+    return this.route.path === path
+  }
 }
 </script>
 
 <template>
-  <div
-    :class="[
-      'bg-surface-50 fixed top-[64px] left-0 z-40 flex flex-col justify-between px-4 py-4 h-[calc(100vh-64px)]',
-      'transition-[width] duration-300 ease-in-out',
-      collapsed ? 'w-[64px]' : 'w-[256px]'
-    ]"
-  >
-    <div class="flex flex-col gap-2 w-full">
-      <SidebarItem
-        v-for="item in sidebarItems"
-        :key="item.path"
-        :icon="item.icon"
-        :label="item.label"
-        :collapsed="collapsed"
-        @click="navigateTo(item.path)"
-      />
-    </div>
+  <div class="p-2 fixed rounded-xl top-[64px] left-0 z-40 h-[calc(100vh-64px)]"
+    :class="[collapsed ? 'w-[64px]' : 'w-[256px]']">
+    <div :class="['bg-surface-50 rounded-xl flex flex-col justify-between px-2 py-2 h-full', 'transition-[width] duration-300 ease-in-out w-full']">
+      <div class="flex flex-col w-full">
+        <SidebarItem
+          v-for="item in sidebarItems"
+          :key="item.path"
+          :icon="item.icon"
+          :label="item.label"
+          :collapsed="collapsed"
+          :path="item.path"
+          :isActive="isActive(item.path)"
+          @click="navigateTo(item.path)"
+        />
+      </div>
 
-    <div
-      @click="toggleSidebar"
-      class="cursor-pointer p-2 hover:bg-gray-200 rounded-lg transition max-w-max"
-    >
-      <img
-        :src="collapsed ? strExpand : strCollapse"
-        alt="Toggle Sidebar"
-        class="w-5 h-5 transition-transform duration-300"
-        :class="collapsed ? 'rotate-180' : ''"
-      />
+      <div @click="toggleSidebar" class="cursor-pointer p-2 hover:bg-gray-200 rounded-lg transition max-w-max">
+        <img :src="collapsed ? strExpand : strCollapse" alt="Toggle Sidebar" class="w-5 h-5 transition-transform duration-300" :class="collapsed ? 'rotate-180' : ''"/>
+      </div>
     </div>
   </div>
 </template>

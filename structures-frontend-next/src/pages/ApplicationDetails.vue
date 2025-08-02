@@ -93,20 +93,20 @@ export default class ApplicationDetails extends Vue {
 
 <template>
   <div class="p-10">
-    <div class="flex justify-between items-center mb-6">
+    <div class="flex justify-between items-center mb-6 h-[58px]">
       <div>
         <h1 class="font-semibold text-2xl text-surface-950 mb-3">{{ applicationId }}</h1>
         <span>{{ projectsCount }} projects, {{ structuresCount }} structures</span>
       </div>
-      <div class="flex gap-3">
+      <div class="flex gap-3 h-full">
         <div
           @click="openGraphQL"
-          class="border border-surface-200 rounded-xl flex items-center gap-2 py-3 px-8 cursor-pointer"
+          class="border border-surface-200 rounded-xl flex items-center gap-2 px-16 cursor-pointer"
         >
           <img src="@/assets/graphql.svg" class="w-6 h-6" />
           <span class="text-sm font-semibold">GraphQL</span>
         </div>
-        <div class="border border-surface-200 rounded-xl flex items-center gap-2 py-3 px-8 cursor-pointer">
+        <div class="border border-surface-200 rounded-xl flex items-center gap-2 px-16 cursor-pointer">
           <img src="@/assets/scalar.svg" class="w-6 h-6" />
           <span class="text-sm font-semibold">OpenAPI</span>
         </div>
@@ -141,3 +141,12 @@ export default class ApplicationDetails extends Vue {
     <GraphQLModal :visible="showGraphQLModal" @close="closeGraphQL" />
   </div>
 </template>
+<style>
+.p-tabpanels {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+.p-tab {
+  padding-left: 0 !important;
+}
+</style>
