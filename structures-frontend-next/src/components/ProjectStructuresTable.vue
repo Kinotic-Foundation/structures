@@ -101,7 +101,8 @@ export default class ProjectStructuresTable extends Vue {
   }
 
   onAddItem() {
-    console.log('[ProjectStructuresTable] Add new structure to project:', this.projectId)
+    this.$router.push("/new-structure")
+    // console.log('[ProjectStructuresTable] Add new structure to project:', this.projectId)
   }
 
   onEditItem(item: Identifiable<string>) {

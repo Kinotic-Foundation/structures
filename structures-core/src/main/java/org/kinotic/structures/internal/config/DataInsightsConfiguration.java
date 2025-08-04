@@ -25,44 +25,8 @@ public class DataInsightsConfiguration {
      */
     @Bean
     public ChatClient insightsChatClient(OpenAiChatModel openAiChatModel) {
-        log.info("Configuring ChatClient for AI insights functionality");
-        
         return ChatClient.builder(openAiChatModel)
-            .defaultSystem("""
-                You are an expert data analyst and React developer working with the Structures platform.
-                You analyze user queries about their data and generate appropriate React visualization components.
-                
-                Always use the available tools to:
-                1. Discover structures in the user's application
-                2. Analyze data patterns and schemas
-                3. Generate production-ready React code
-                4. Provide clear explanations of your analysis
-                
-                Your goal is to help users understand their data through intelligent visualizations.
-                """)
-            .build();
+                         .build();
     }
 
-    /**
-     * Configuration bean to verify Spring AI setup.
-     * This logs important configuration information for debugging.
-     */
-    @Bean
-    public DataInsightsConfigurationInfo configurationInfo() {
-        log.info("Spring AI Insights configuration loaded successfully");
-        log.info("Available tools will be automatically registered with ChatClient");
-        
-        return new DataInsightsConfigurationInfo();
-    }
-    
-    /**
-     * Simple info class to track configuration status.
-     */
-    public static class DataInsightsConfigurationInfo {
-        private final long configuredAt = System.currentTimeMillis();
-        
-        public long getConfiguredAt() {
-            return configuredAt;
-        }
-    }
 }

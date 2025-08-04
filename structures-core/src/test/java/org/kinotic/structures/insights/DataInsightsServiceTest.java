@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.kinotic.structures.ElasticsearchTestBase;
 import org.kinotic.structures.api.domain.DefaultEntityContext;
 import org.kinotic.structures.api.domain.EntityContext;
+import org.kinotic.structures.api.domain.insights.AnalysisStatus;
 import org.kinotic.structures.api.domain.insights.InsightRequest;
 import org.kinotic.structures.api.domain.insights.InsightResponse;
 import org.kinotic.structures.api.services.EntitiesService;
@@ -52,7 +53,7 @@ public class DataInsightsServiceTest extends ElasticsearchTestBase {
     private String openAiApiKey;
 
     @Test
-    public void testAnalyzeAndVisualizeWithBasicQuery() {
+    public void testProcessRequestWithNewVisualization() {
         // Skip test if OpenAI API key is not configured
         Assumptions.assumeTrue(openAiApiKey != null && !"test-key-placeholder".equals(openAiApiKey), 
                              "OpenAI API key not configured - skipping AI insights test");
@@ -71,35 +72,45 @@ public class DataInsightsServiceTest extends ElasticsearchTestBase {
 
         // Create an insight request for analyzing the test data
         InsightRequest request = new InsightRequest();
-        request.setQuery("Show me a summary of the people data with their demographics");
+        request.setQuery("Create a bar chart showing the distribution of people by age groups");
         request.setApplicationId(holder.getStructure().getApplicationId());
         request.setFocusStructureId(holder.getStructure().getId());
 
-        // Test the analyzeAndVisualize method
+        // Test the processRequest method
         DummyParticipant participant = new DummyParticipant("testTenant", "testUser");
-        CompletableFuture<InsightResponse> analysisResult = dataInsightsService.analyzeAndVisualize(request, participant);
+        CompletableFuture<InsightResponse> analysisResult = dataInsightsService.processRequest(request, participant);
 
         // Verify the response using StepVerifier
         StepVerifier.create(reactor.core.publisher.Mono.fromFuture(analysisResult))
                 .expectNextMatches(response -> {
                     // Verify basic properties of the response
-                    boolean isValid = response != null &&
-                                    response.getAnalysisId() != null &&
-                                    response.getOriginalQuery() != null &&
-                                    response.getAnalysisSummary() != null &&
-                                    response.getGeneratedComponent() != null &&
-                                    response.getStatus() != null;
+                    if (response == null) {
+                        log.error("AI Analysis response is null");
+                        return false;
+                    }
+                    
+                    boolean isValid = response.getComponents() != null &&
+                                    !response.getComponents().isEmpty() &&
+                                    response.getStatus() == AnalysisStatus.SUCCESS;
 
                     if (isValid) {
-                        log.info("AI Analysis completed successfully:");
-                        log.info("- Analysis ID: {}", response.getAnalysisId());
+                        log.info("Components generated successfully:");
                         log.info("- Status: {}", response.getStatus());
-                        log.info("- Summary: {}", response.getAnalysisSummary());
+                        log.info("- Created At: {}", response.getCreatedAt());
+                        log.info("- Number of components: {}", response.getComponents().size());
                         
-                        if (response.getGeneratedComponent() != null) {
-                            log.info("- Generated React Component: {} characters", 
-                                   response.getGeneratedComponent().getReactCode() != null ? 
-                                   response.getGeneratedComponent().getReactCode().length() : 0);
+                        for (int i = 0; i < response.getComponents().size(); i++) {
+                            var component = response.getComponents().get(i);
+                            log.info("- Component {}: {} ({})", i + 1, component.getName(), component.getDescription());
+                            
+                            if (component.getRawHtml() != null) {
+                                log.info("  - HTML size: {} characters", component.getRawHtml().length());
+                                // Verify it's valid JavaScript web component
+                                boolean isValidJs = component.getRawHtml().contains("class") &&
+                                                 component.getRawHtml().contains("extends HTMLElement") &&
+                                                 component.getRawHtml().contains("customElements.define");
+                                log.info("  - JavaScript validation: {}", isValidJs ? "PASS" : "FAIL");
+                            }
                         }
                     } else {
                         log.error("AI Analysis response validation failed: {}", response);
@@ -111,7 +122,7 @@ public class DataInsightsServiceTest extends ElasticsearchTestBase {
     }
 
     @Test
-    public void testAnalyzeAndVisualizeWithSpecificVisualization() {
+    public void testProcessRequestWithModificationRequest() {
         // Skip test if OpenAI API key is not configured
         Assumptions.assumeTrue(openAiApiKey != null && !"test-key-placeholder".equals(openAiApiKey), 
                              "OpenAI API key not configured - skipping AI insights test");
@@ -126,40 +137,54 @@ public class DataInsightsServiceTest extends ElasticsearchTestBase {
         EntityContext context = new DefaultEntityContext(new DummyParticipant("testTenant2", "testUser2"));
         entitiesService.syncIndex(holder.getStructure().getId(), context).join();
 
-        // Create a more specific insight request
+        // Create a modification request
         InsightRequest request = new InsightRequest();
-        request.setQuery("Create a bar chart showing the distribution of people by age groups");
+        request.setQuery("Make the chart a pie chart instead");
         request.setApplicationId(holder.getStructure().getApplicationId());
         request.setFocusStructureId(holder.getStructure().getId());
-        request.setPreferredVisualization("bar");
-        request.setAdditionalContext("Group ages into ranges like 18-30, 31-50, 51+");
+        request.setAdditionalContext("Change the visualization type to pie chart");
 
-        // Test the analyzeAndVisualize method
+        // Test the processRequest method
         DummyParticipant participant = new DummyParticipant("testTenant2", "testUser2");
-        CompletableFuture<InsightResponse> analysisResult = dataInsightsService.analyzeAndVisualize(request, participant);
+        CompletableFuture<InsightResponse> analysisResult = dataInsightsService.processRequest(request, participant);
 
         // Verify the response
         StepVerifier.create(reactor.core.publisher.Mono.fromFuture(analysisResult))
                 .expectNextMatches(response -> {
-                    boolean isValid = response != null &&
-                                    response.getGeneratedComponent() != null &&
-                                    response.getGeneratedComponent().getReactCode() != null &&
-                                    !response.getGeneratedComponent().getReactCode().isEmpty();
+                    if (response == null) {
+                        log.error("AI Analysis response is null");
+                        return false;
+                    }
+                    
+                    boolean isValid = response.getComponents() != null &&
+                                    !response.getComponents().isEmpty() &&
+                                    response.getStatus() == AnalysisStatus.SUCCESS;
 
                     if (isValid) {
-                        log.info("Generated React Code Preview:");
-                        String reactCode = response.getGeneratedComponent().getReactCode();
-                        String preview = reactCode.length() > 200 ? 
-                                       reactCode.substring(0, 200) + "..." : reactCode;
-                        log.info(preview);
+                        log.info("Modified components generated:");
+                        log.info("- Status: {}", response.getStatus());
+                        log.info("- Created At: {}", response.getCreatedAt());
+                        log.info("- Number of components: {}", response.getComponents().size());
                         
-                        // Check that the generated code contains expected patterns
-                        boolean containsExpectedPatterns = 
-                            reactCode.contains("React") || reactCode.contains("import") ||
-                            reactCode.contains("chart") || reactCode.contains("Bar");
-                        
-                        if (!containsExpectedPatterns) {
-                            log.warn("Generated code doesn't seem to contain expected React/chart patterns");
+                        for (int i = 0; i < response.getComponents().size(); i++) {
+                            var component = response.getComponents().get(i);
+                            log.info("- Component {}: {} ({})", i + 1, component.getName(), component.getDescription());
+                            
+                            if (component.getRawHtml() != null) {
+                                String preview = component.getRawHtml().length() > 200 ? 
+                                               component.getRawHtml().substring(0, 200) + "..." : component.getRawHtml();
+                                log.info("  - JavaScript Preview: {}", preview);
+                                
+                                // Check that the generated JavaScript contains expected patterns
+                                boolean containsExpectedPatterns = 
+                                    component.getRawHtml().contains("class") &&
+                                    component.getRawHtml().contains("extends HTMLElement") &&
+                                    component.getRawHtml().contains("customElements.define");
+                                
+                                if (!containsExpectedPatterns) {
+                                    log.warn("Generated JavaScript doesn't seem to contain expected web component patterns");
+                                }
+                            }
                         }
                     }
 
@@ -169,7 +194,7 @@ public class DataInsightsServiceTest extends ElasticsearchTestBase {
     }
 
     @Test
-    public void testSuggestVisualizations() {
+    public void testProcessRequestWithComplexQuery() {
         // Skip test if OpenAI API key is not configured
         Assumptions.assumeTrue(openAiApiKey != null && !"test-key-placeholder".equals(openAiApiKey), 
                              "OpenAI API key not configured - skipping AI insights test");
@@ -184,25 +209,55 @@ public class DataInsightsServiceTest extends ElasticsearchTestBase {
         EntityContext context = new DefaultEntityContext(new DummyParticipant("testTenant3", "testUser3"));
         entitiesService.syncIndex(holder.getStructure().getId(), context).join();
 
-        // Test the suggestVisualizations method
-        DummyParticipant participant = new DummyParticipant("testTenant3", "testUser3");
-        var suggestionsResult = dataInsightsService.suggestVisualizations(holder.getStructure().getId(), participant);
+        // Create a complex query that should trigger new visualization
+        InsightRequest request = new InsightRequest();
+        request.setQuery("Create a comprehensive dashboard showing multiple charts with demographics, age distribution, and summary statistics");
+        request.setApplicationId(holder.getStructure().getApplicationId());
+        request.setFocusStructureId(holder.getStructure().getId());
+        request.setAdditionalContext("Include multiple visualization types and interactive elements");
 
-        // Verify the suggestions
-        StepVerifier.create(reactor.core.publisher.Mono.fromFuture(suggestionsResult))
-                .expectNextMatches(suggestions -> {
-                    boolean isValid = suggestions != null && !suggestions.isEmpty();
+        // Test the processRequest method
+        DummyParticipant participant = new DummyParticipant("testTenant3", "testUser3");
+        CompletableFuture<InsightResponse> analysisResult = dataInsightsService.processRequest(request, participant);
+
+        // Verify the response
+        StepVerifier.create(reactor.core.publisher.Mono.fromFuture(analysisResult))
+                .expectNextMatches(response -> {
+                    if (response == null) {
+                        log.error("AI Analysis response is null");
+                        return false;
+                    }
                     
+                    boolean isValid = response.getComponents() != null &&
+                                    !response.getComponents().isEmpty() &&
+                                    response.getStatus() == AnalysisStatus.SUCCESS;
+
                     if (isValid) {
-                        log.info("Received {} visualization suggestions:", suggestions.size());
-                        suggestions.forEach(suggestion -> {
-                            log.info("- {}: {} (confidence: {})", 
-                                   suggestion.getVisualizationType(), 
-                                   suggestion.getDescription(),
-                                   suggestion.getConfidenceScore());
-                        });
+                        log.info("Complex components generated:");
+                        log.info("- Status: {}", response.getStatus());
+                        log.info("- Created At: {}", response.getCreatedAt());
+                        log.info("- Number of components: {}", response.getComponents().size());
+                        
+                        for (int i = 0; i < response.getComponents().size(); i++) {
+                            var component = response.getComponents().get(i);
+                            log.info("- Component {}: {} ({})", i + 1, component.getName(), component.getDescription());
+                            
+                            if (component.getRawHtml() != null) {
+                                log.info("  - JavaScript size: {} characters", component.getRawHtml().length());
+                                
+                                // Check that the generated JavaScript contains expected patterns
+                                boolean containsExpectedPatterns = 
+                                    component.getRawHtml().contains("class") &&
+                                    component.getRawHtml().contains("extends HTMLElement") &&
+                                    component.getRawHtml().contains("customElements.define");
+                                
+                                if (!containsExpectedPatterns) {
+                                    log.warn("Generated JavaScript doesn't seem to contain expected web component patterns");
+                                }
+                            }
+                        }
                     } else {
-                        log.error("No visualization suggestions received");
+                        log.error("AI Analysis response validation failed: {}", response);
                     }
 
                     return isValid;
