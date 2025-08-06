@@ -217,12 +217,8 @@ export default class DataInsights extends Vue {
             dashboardContainer.appendChild(element)
             console.log('Added element to dashboard:', elementName)
             
-            // Check if ApexCharts is available
-            if (typeof (window as any).ApexCharts === 'undefined') {
-              console.warn('ApexCharts not loaded yet, chart may not render')
-            } else {
-              console.log('ApexCharts is available')
-            }
+            // Chart library availability is handled by each web component
+            console.log('Web component added to dashboard:', elementName)
           } else {
             console.error('Dashboard container not found')
           }

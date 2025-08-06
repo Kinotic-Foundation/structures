@@ -110,7 +110,7 @@ public class InsightsContextService {
                - Each component should be a separate class extending HTMLElement
                - Include ALL JavaScript for each component inline
                - Include ALL CSS inline within each component's shadow DOM
-               - Use ApexCharts CDN for chart library (dynamically loaded)
+               - Use ECharts CDN for chart library (dynamically loaded)
                - Each component should be completely self-contained and work without any attributes
                - HARDCODE the structure ID and application ID in each component's data loading logic
                - Components should work when dropped into any page without configuration
@@ -199,10 +199,10 @@ public class InsightsContextService {
                    }
                    
                    loadChartLibrary() {
-                                               // Load ApexCharts (default) if not already loaded
-                        if (typeof ApexCharts === 'undefined') {
+                        // Load ECharts (default) if not already loaded
+                        if (typeof echarts === 'undefined') {
                             const script = document.createElement('script');
-                            script.src = 'https://cdn.jsdelivr.net/npm/apexcharts';
+                            script.src = 'https://cdn.jsdelivr.net/npm/echarts';
                            script.onload = () => this.loadData();
                            document.head.appendChild(script);
                        } else {
@@ -243,14 +243,14 @@ public class InsightsContextService {
                                return;
                            }
                            
-                           // Create ApexCharts instance
+                           // Create ECharts instance
                            const options = {
                                // Chart options here (NO title or subtitle - they're in the HTML structure)
                                // ... other options
                            };
                            
-                           const chart = new ApexCharts(chartElement, options);
-                           chart.render();
+                           const chart = echarts.init(chartElement);
+                           chart.setOption(options);
                        }, 100); // Small delay to ensure DOM is ready
                    }
                }
@@ -293,8 +293,8 @@ public class InsightsContextService {
                - CRITICAL: Each component MUST have unique positioning and spacing
                - Use margin-bottom, padding, and proper spacing to prevent overlap
                - Each component should have its own visual container with borders/backgrounds
-                               - CRITICAL: Use ApexCharts (SVG-based) for perfect container fitting
-                - ApexCharts automatically scales to fit containers and works perfectly with resizable widgets
+                               - CRITICAL: Use ECharts (SVG-based) for perfect container fitting
+                - ECharts automatically scales to fit containers and works perfectly with resizable widgets
                 - Set width: 100% and height: 100% for responsive behavior
                 - ALWAYS include a descriptive title and subtitle for each chart
                 - Use meaningful titles that explain what the chart shows
@@ -302,7 +302,7 @@ public class InsightsContextService {
                
             6. JAVASCRIPT STRUCTURE:
                - Use class-based custom elements extending HTMLElement
-               - Load ApexCharts dynamically if not already available
+                               - Load ECharts dynamically if not already available
                - Structure code with clear methods for each component
                - Include comprehensive error handling
                - Use async/await for API calls
@@ -313,25 +313,22 @@ public class InsightsContextService {
                - Each component should work independently without any external dependencies
             
             7. CHART LIBRARY SELECTION:
-               - APEXCHARTS: DEFAULT CHOICE - SVG-based, stable, responsive, perfect for dashboards
-               - D3.js: EXPERIMENTAL - For complex custom visualizations (advanced users only)
-               - ECharts: EXPERIMENTAL - For advanced chart types (advanced users only)
-               - CRITICAL: DEFAULT TO APEXCHARTS unless user specifically requests D3.js or ECharts
-               - ApexCharts provides the most stable and consistent experience
+               - ECHARTS: DEFAULT CHOICE - SVG-based, stable, responsive, perfect for dashboards, Apache 2.0 license
+               - ECharts provides the most powerful and beautiful chart library with unlimited possibilities
+               - CRITICAL: ALWAYS USE ECHARTS for all visualizations
+               - ECharts provides the most stable and consistent experience with no licensing restrictions
                - SVG charts automatically scale to fit containers and work perfectly with resizable widgets
                - CRITICAL: ALWAYS include the chart library CDN script before using any chart library
-                    - For ApexCharts: Add <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script> before using ApexCharts
-                    - For D3.js: Add <script src="https://d3js.org/d3.v7.min.js"></script> before using d3
                     - For ECharts: Add <script src="https://cdn.jsdelivr.net/npm/echarts"></script> before using echarts
                - CRITICAL: Use responsive: true and autoRedraw: true for SVG charts
                - Set width: 100% and height: 100% for perfect container fitting
-               - DO NOT include chart titles and subtitles in ApexCharts options (they're already in the HTML structure)
-               - Remove title and subtitle from ApexCharts configuration to avoid duplication
+               - DO NOT include chart titles and subtitles in ECharts options (they're already in the HTML structure)
+               - Remove title and subtitle from ECharts configuration to avoid duplication
                - The chart titles and descriptions are already displayed in the HTML structure above the chart
-               - CRITICAL: Always call new ApexCharts(container, options).render() to render the chart
+               - CRITICAL: Always call echarts.init(container).setOption(options) to render the chart
                - CRITICAL: Make sure the chart container has sufficient height (min-height: 300px)
-               - CRITICAL: Wait for ApexCharts to load before creating chart instances
-               - CRITICAL: Ensure the chart container element exists before creating ApexCharts instance
+               - CRITICAL: Wait for ECharts to load before creating chart instances
+               - CRITICAL: Ensure the chart container element exists before creating ECharts instance
                - CRITICAL: Use setTimeout or requestAnimationFrame to ensure DOM is ready before rendering
             
             8. STRUCTURES API USAGE:
@@ -523,7 +520,7 @@ public class InsightsContextService {
                - Keep the same data loading and processing logic
                - Maintain the same structure and component architecture
                - Preserve existing styling and layout patterns
-               - Keep the same chart library usage (ApexCharts)
+               - Keep the same chart library usage (ECharts)
             
             2. APPLY REQUESTED CHANGES:
                - Change chart types when requested (bar → pie, line → area, etc.)
@@ -540,8 +537,8 @@ public class InsightsContextService {
                - Ensure accessibility features remain intact
             
             4. COMMON MODIFICATIONS:
-               - Chart type changes: "make it a pie chart" → change ApexCharts type
-               - Color changes: "use blue colors" → update ApexCharts color schemes
+               - Chart type changes: "make it a pie chart" → change ECharts type
+               - Color changes: "use blue colors" → update ECharts color schemes
                - Size changes: "make it bigger" → adjust dimensions
                - Data changes: "add more data" → modify data loading
                - Style changes: "make it more modern" → update CSS
