@@ -21,8 +21,8 @@ importers:
         specifier: ^2.0.3
         version: 2.0.3
       '@kinotic/structures-api':
-        specifier: ^3.5.0-beta.4
-        version: 3.5.0-beta.4(@kinotic/continuum-client@2.14.0(reflect-metadata@0.2.2))
+        specifier: ^3.5.0-beta.6
+        version: 3.5.0-beta.6(@kinotic/continuum-client@2.14.0(reflect-metadata@0.2.2))
       '@mdi/js':
         specifier: ^7.4.47
         version: 7.4.47
@@ -342,8 +342,8 @@ packages:
   '@kinotic/continuum-idl@2.0.3':
     resolution: {integrity: sha512-aqW9j5hmhrhP2gGBfbdi+4N/IkbmnNsL8u9Jkrdn3g/pSgkDn+BUq8kC8vn1eBjMy70200MQmPPXVVeswfrM1Q==}
 
-  '@kinotic/structures-api@3.5.0-beta.4':
-    resolution: {integrity: sha512-o4oi2ltaIVPcD+ytIAEyoRQTc15hzAAQ0olXWxIOvnH10ECPIWmmA4clb0tS9bkYsMPOM0Cv77gQa91tVWSS/w==}
+  '@kinotic/structures-api@3.5.0-beta.6':
+    resolution: {integrity: sha512-nmtu7cd59rrqD5kuYcyToCynV0hRF3ptRkrG8kZafWGIqxhWnMr/zZm9CItlX2yqiRdObHKJTQsykn1PchIuBg==}
     peerDependencies:
       '@kinotic/continuum-client': ^2.14.0
 
@@ -1600,11 +1600,12 @@ snapshots:
 
   '@kinotic/continuum-idl@2.0.3': {}
 
-  '@kinotic/structures-api@3.5.0-beta.4(@kinotic/continuum-client@2.14.0(reflect-metadata@0.2.2))':
+  '@kinotic/structures-api@3.5.0-beta.6(@kinotic/continuum-client@2.14.0(reflect-metadata@0.2.2))':
     dependencies:
       '@kinotic/continuum-client': 2.14.0(reflect-metadata@0.2.2)
       '@kinotic/continuum-idl': 2.0.3
       reflect-metadata: 0.2.2
+      rxjs: 7.8.2
 
   '@mdi/js@7.4.47': {}
 

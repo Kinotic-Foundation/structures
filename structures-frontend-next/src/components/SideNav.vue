@@ -47,7 +47,7 @@
                             <p class="leading-relaxed font-medium text-sm transition-all rounded-lg ml-3 w-full px-3 py-2"
                                 :class="[
                                     selectedNav?.label === subItem.label
-                                        ? 'text-white/60 bg-[#2D2F39] text-white/80'
+                                        ? 'bg-[#2D2F39] text-white/80'
                                         : 'text-white/50 hover:text-white/80 hover:bg-[#2D2F39]'
                                 ]">
                                 {{ subItem.label }}

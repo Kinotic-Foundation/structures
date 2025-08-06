@@ -139,14 +139,14 @@ export interface IEntityService<T> {
      */
     syncIndex(): Promise<void>
 
-    /**
-     * Executes a SQL query.
-     * You can not execute any queries that will modify data.
-     * @param query the SQL query to execute
-     * @param parameters the parameters to pass to the query
-     * @returns Promise with the result of the query
-     */
-    sqlQuery<U>(query: string, parameters: any[]): Promise<U>
+    // /**
+    //  * Executes a SQL query.
+    //  * You can not execute any queries that will modify data.
+    //  * @param query the SQL query to execute
+    //  * @param parameters the parameters to pass to the query
+    //  * @returns Promise with the result of the query
+    //  */
+    // sqlQuery<U>(query: string, parameters: any[]): Promise<U>
 
     /**
      * Updates a given entity. This will only override the fields that are present in the given entity.

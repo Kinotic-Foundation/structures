@@ -1,5 +1,6 @@
 package org.kinotic.structures.internal.api.services.impl.insights;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -10,26 +11,32 @@ import org.kinotic.continuum.idl.api.schema.C3Type;
 import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
 import org.kinotic.continuum.idl.api.schema.PropertyDefinition;
 import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.api.domain.insights.InsightProgress;
 import org.kinotic.structures.api.services.StructureService;
 import org.springframework.ai.tool.annotation.Tool;
-import org.springframework.stereotype.Component;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.FluxSink;
 
 /**
  * Spring AI Tools for discovering and analyzing structure schemas.
  * These tools allow the AI to understand the available data models
  * and their C3 type definitions.
- * 
- * 
  */
-@Component
 @Slf4j
-@RequiredArgsConstructor
 public class StructureDiscoveryTools {
 
     private final StructureService structureService;
+    private final FluxSink<InsightProgress> progressSink;
+
+    public StructureDiscoveryTools(StructureService structureService, FluxSink<InsightProgress> progressSink) {
+        this.structureService = structureService;
+        this.progressSink = progressSink;
+    }
+
+    public StructureService getStructureService() {
+        return structureService;
+    }
 
     /**
      * Tool that allows Spring AI to discover all published structures available in an application.
@@ -39,6 +46,14 @@ public class StructureDiscoveryTools {
     @Tool
     public String getApplicationStructures(String applicationId) {
         log.debug("AI requesting structures for application: {}", applicationId);
+        
+        if (progressSink != null) {
+            progressSink.next(InsightProgress.builder()
+                .type(InsightProgress.ProgressType.DISCOVERING_DATA)
+                .message("Discovering data structures")
+                .timestamp(Instant.now())
+                .build());
+        }
         
         try {
             // Get all published structures for the application
@@ -61,6 +76,14 @@ public class StructureDiscoveryTools {
                 result.append("\n");
             }
             
+            if (progressSink != null) {
+                progressSink.next(InsightProgress.builder()
+                    .type(InsightProgress.ProgressType.DISCOVERING_DATA)
+                    .message("Data structures discovered")
+                    .timestamp(Instant.now())
+                    .build());
+            }
+            
             return result.toString();
             
         } catch (Exception e) {
@@ -76,6 +99,14 @@ public class StructureDiscoveryTools {
     @Tool  
     public String getStructureSchema(String structureId) {
         log.debug("AI requesting schema for structure: {}", structureId);
+        
+        if (progressSink != null) {
+            progressSink.next(InsightProgress.builder()
+                .type(InsightProgress.ProgressType.DISCOVERING_DATA)
+                .message("Analyzing structure schema: " + structureId)
+                .timestamp(Instant.now())
+                .build());
+        }
         
         try {
             CompletableFuture<Structure> structureFuture = structureService.findById(structureId);
@@ -96,6 +127,14 @@ public class StructureDiscoveryTools {
                 analyzeC3TypeProperties(entityDef, result, 0);
             } else {
                 result.append("No entity definition found.\n");
+            }
+            
+            if (progressSink != null) {
+                progressSink.next(InsightProgress.builder()
+                    .type(InsightProgress.ProgressType.DISCOVERING_DATA)
+                    .message("Schema analyzed: " + structureId)
+                    .timestamp(Instant.now())
+                    .build());
             }
             
             return result.toString();

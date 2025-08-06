@@ -1,18 +1,20 @@
 package org.kinotic.structures.internal.api.services.impl.insights;
 
+import java.time.Instant;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+
 import lombok.extern.slf4j.Slf4j;
 import org.kinotic.continuum.api.security.Participant;
 import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.structures.api.domain.DefaultEntityContext;
 import org.kinotic.structures.api.domain.EntityContext;
-
+import org.kinotic.structures.api.domain.insights.InsightProgress;
 import org.kinotic.structures.api.services.EntitiesService;
 import org.springframework.ai.tool.annotation.Tool;
-
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
+import reactor.core.publisher.FluxSink;
 
 /**
  * Spring AI Tools for analyzing actual data from structures using EntitiesService.
@@ -25,10 +27,12 @@ public class DataAnalysisTools {
 
     private final EntitiesService entitiesService;
     private final Participant participant;
+    private final FluxSink<InsightProgress> progressSink;
     
-    public DataAnalysisTools(EntitiesService entitiesService, Participant participant) {
+    public DataAnalysisTools(EntitiesService entitiesService, Participant participant, FluxSink<InsightProgress> progressSink) {
         this.entitiesService = entitiesService;
         this.participant = participant;
+        this.progressSink = progressSink;
     }
 
     /**
@@ -42,6 +46,12 @@ public class DataAnalysisTools {
     @SuppressWarnings("unchecked")
     public String getSampleData(String structureId, int sampleSize) {
         log.debug("AI requesting {} sample records from structure: {}", sampleSize, structureId);
+        
+        progressSink.next(InsightProgress.builder()
+            .type(InsightProgress.ProgressType.DISCOVERING_DATA)
+            .message("Analyzing data from: " + structureId)
+            .timestamp(Instant.now())
+            .build());
         
         try {
             // Limit sample size to prevent overwhelming responses
@@ -75,6 +85,12 @@ public class DataAnalysisTools {
             result.append(String.format("- Total records available: %d\n", dataPage.getTotalElements()));
             result.append(String.format("- Sample size: %d\n", content.size()));
             result.append(String.format("- Fields detected: %s\n", detectFields(content)));
+            
+            progressSink.next(InsightProgress.builder()
+                .type(InsightProgress.ProgressType.DISCOVERING_DATA)
+                .message("Data analysis completed creating visualizations: " + structureId)
+                .timestamp(Instant.now())
+                .build());
             
             return result.toString();
             

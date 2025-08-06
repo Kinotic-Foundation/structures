@@ -13,6 +13,15 @@ import App from './App.vue'
 import { Log } from 'oidc-client-ts'
 Log.setLogger(console)
 
+import { Structures } from '@kinotic/structures-api'
+
+// Make Structures globally available for web components
+declare global {
+  interface Window {
+    Structures: typeof Structures
+  }
+}
+window.Structures = Structures
 const app = createApp(App)
 app.use(PrimeVue, {
     theme: {

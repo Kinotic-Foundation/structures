@@ -5,12 +5,14 @@ import {IStructureService, StructureService} from '@/api/IStructureService'
 import {IApplicationService, ApplicationService} from '@/api/IApplicationService'
 import {EntityService, IEntityService} from '@/api/IEntityService'
 import { IProjectService, ProjectService } from '@/api/IProjectService'
+import { IDataInsightsService, DataInsightsService } from '@/api/IDataInsightsService'
 
 const APPLICATION_SERVICE: IApplicationService = new ApplicationService()
 const PROJECT_SERVICE: IProjectService = new ProjectService()
 const STRUCTURE_SERVICE: IStructureService = new StructureService()
 const ENTITIES_SERVICE: IEntitiesService = new EntitiesService()
 const NAMED_QUERIES_SERVICE: INamedQueriesService = new NamedQueriesService()
+const DATA_INSIGHTS_SERVICE: IDataInsightsService = new DataInsightsService()
 
 export namespace Structures {
 
@@ -32,6 +34,10 @@ export namespace Structures {
 
     export function getNamedQueriesService(): INamedQueriesService {
         return NAMED_QUERIES_SERVICE
+    }
+
+    export function getDataInsightsService(): IDataInsightsService {
+        return DATA_INSIGHTS_SERVICE
     }
 
     export function createEntityService<T>(structureApplicationId: string, structureName: string): IEntityService<T> {
