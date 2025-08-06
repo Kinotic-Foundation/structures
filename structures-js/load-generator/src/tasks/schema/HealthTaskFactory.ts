@@ -115,7 +115,7 @@ export class HealthTaskFactory {
                     }
 
                     const { patients, providers, diagnoses, treatments, appointments } = 
-                        TestDataGenerator.generateTestData(20)
+                        TestDataGenerator.generateTestData(500)
 
                     // Save all entities in bulk to improve performance
                     await this.patientService.bulkSave(patients)

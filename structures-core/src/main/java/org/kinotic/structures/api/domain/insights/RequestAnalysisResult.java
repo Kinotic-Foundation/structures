@@ -1,6 +1,5 @@
 package org.kinotic.structures.api.domain.insights;
 
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;

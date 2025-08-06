@@ -10,6 +10,15 @@ import { CONTINUUM_UI } from '@/IContinuumUI'
 import 'primeicons/primeicons.css'
 import { createApp } from 'vue'
 import App from './App.vue'
+import { Structures } from '@kinotic/structures-api'
+
+// Make Structures globally available for web components
+declare global {
+  interface Window {
+    Structures: typeof Structures
+  }
+}
+window.Structures = Structures
 const app = createApp(App)
 app.use(PrimeVue, {
     theme: {

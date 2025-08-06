@@ -1,10 +1,11 @@
 package org.kinotic.structures.internal.api.services.impl.insights;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.kinotic.continuum.api.security.Participant;
 import org.kinotic.structures.api.domain.insights.InsightRequest;
 import org.springframework.stereotype.Service;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Service responsible for building context and managing prompts for Spring AI.
@@ -17,8 +18,6 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @RequiredArgsConstructor
 public class InsightsContextService {
-
-    private final StructureDiscoveryTools structureDiscoveryTools;
     
     /**
      * Builds comprehensive context for AI analysis based on the user's request.
@@ -26,29 +25,13 @@ public class InsightsContextService {
     public String buildAnalysisContext(InsightRequest request, Participant participant) {
         StringBuilder context = new StringBuilder();
         
-        try {
-            // If there's a focus structure, provide detailed schema
-            if (request.getFocusStructureId() != null) {
-                String schemaInfo = structureDiscoveryTools.getStructureSchema(request.getFocusStructureId());
-                context.append("FOCUS STRUCTURE SCHEMA:\n");
-                context.append(schemaInfo);
-                context.append("\n");
-                
-                // Note: The AI can use getApplicationStructures() tool if it needs to compare 
-                // with other structures or perform cross-structure analysis
-                context.append("NOTE: If you need to compare with other structures or perform cross-structure analysis, ");
-                context.append("use the getApplicationStructures() tool to discover available structures.\n\n");
-            } else {
-                // No focus structure - include all structures for discovery
-                String structuresInfo = structureDiscoveryTools.getApplicationStructures(request.getApplicationId());
-                context.append("AVAILABLE STRUCTURES:\n");
-                context.append(structuresInfo);
-                context.append("\n");
-            }
-            
-        } catch (Exception e) {
-            log.warn("Error building analysis context: {}", e.getMessage());
-            context.append("Error gathering full context: ").append(e.getMessage());
+        context.append("Application ID: ").append(request.getApplicationId()).append("\n");
+        
+        if (request.getFocusStructureId() != null) {
+            context.append("Focus Structure ID: ").append(request.getFocusStructureId()).append("\n");
+            context.append("NOTE: Use the getStructureSchema() tool to get detailed schema information.\n\n");
+        } else {
+            context.append("NOTE: Use the getApplicationStructures() tool to discover available structures.\n\n");
         }
         
         return context.toString();
@@ -59,16 +42,8 @@ public class InsightsContextService {
      */
     public String buildStructureContext(String structureId, Participant participant) {
         StringBuilder context = new StringBuilder();
-        
-        try {
-            String schemaInfo = structureDiscoveryTools.getStructureSchema(structureId);
-            context.append(schemaInfo);
-            
-        } catch (Exception e) {
-            log.warn("Error building structure context for {}: {}", structureId, e.getMessage());
-            context.append("Error gathering structure context: ").append(e.getMessage());
-        }
-        
+        context.append("Structure ID: ").append(structureId).append("\n");
+        context.append("NOTE: Use the getStructureSchema() tool to get detailed schema information.\n\n");
         return context.toString();
     }
     
@@ -235,8 +210,8 @@ public class InsightsContextService {
                - Use Continuum RPC service calls through the Structures factory
                - HARDCODE the application ID and structure name in each component
                - Create service: Structures.createEntityService('appId', 'structureName')
-               - Find all: await entityService.findAll({ size: 100, page: 0 })
-               - Search with Lucene syntax: await entityService.search('fieldName:value OR category:active', { size: 20 })
+               - CRITICAL: findAll() REQUIRES pagination parameters - ALWAYS use: await entityService.findAll({ pageNumber: 0, pageSize: 1000 })
+               - Search with Lucene syntax: await entityService.search('fieldName:value OR category:active', { pageNumber: 0, pageSize: 1000 })
                - Get by ID: await entityService.findById('entityId')
                - Get multiple by IDs: await entityService.findByIds(['id1', 'id2', 'id3'])
                - Save entity: await entityService.save(entityData)
@@ -248,6 +223,7 @@ public class InsightsContextService {
                - Authentication is handled automatically by the Continuum RPC connection
                - Search supports full Lucene query syntax for complex filtering
                - All API calls are RPC methods, not HTTP requests
+               - PAGINATION IS MANDATORY: Never call findAll() or search() without { pageNumber: X, pageSize: Y } parameters
             
             9. LUCENE SEARCH EXAMPLES:
                - Simple field search: 'name:John'
@@ -303,13 +279,13 @@ public class InsightsContextService {
                {
                  "name": "Age Distribution Bar Chart",
                  "description": "Shows the distribution of people across different age groups using a bar chart",
-                 "rawHtml": "class AgeDistributionBarChart extends HTMLElement { constructor() { super(); this.attachShadow({ mode: 'open' }); this.applicationId = 'org.kinotic.sample'; this.structureName = 'person_datainsightstest'; this.structureId = 'org.kinotic.sample.person_datainsightstest'; } connectedCallback() { this.render(); this.loadData(); } render() { this.shadowRoot.innerHTML = `<style>...</style><div>...</div>`; } async loadData() { const entityService = Structures.createEntityService('org.kinotic.sample', 'person_datainsightstest'); const response = await entityService.findAll({ size: 1000, page: 0 }); // ... rest of data loading and chart creation logic } } customElements.define('age-distribution-bar-chart', AgeDistributionBarChart);",
+                 "rawHtml": "class AgeDistributionBarChart extends HTMLElement { constructor() { super(); this.attachShadow({ mode: 'open' }); this.applicationId = 'org.kinotic.sample'; this.structureName = 'person_datainsightstest'; this.structureId = 'org.kinotic.sample.person_datainsightstest'; } connectedCallback() { this.render(); this.loadData(); } render() { this.shadowRoot.innerHTML = `<style>...</style><div>...</div>`; } async loadData() { const entityService = Structures.createEntityService('org.kinotic.sample', 'person_datainsightstest'); const response = await entityService.findAll({ pageNumber: 0, pageSize: 1000 }); // ALWAYS use { pageNumber: X, pageSize: Y } // ... rest of data loading and chart creation logic } } customElements.define('age-distribution-bar-chart', AgeDistributionBarChart);",
                  "applicationId": "org.kinotic.sample"
                },
                {
                  "name": "Gender Distribution Pie Chart", 
                  "description": "Displays gender distribution using a pie chart with percentage breakdowns",
-                 "rawHtml": "class GenderDistributionPieChart extends HTMLElement { constructor() { super(); this.attachShadow({ mode: 'open' }); this.applicationId = 'org.kinotic.sample'; this.structureName = 'person_datainsightstest'; this.structureId = 'org.kinotic.sample.person_datainsightstest'; } connectedCallback() { this.render(); this.loadData(); } render() { this.shadowRoot.innerHTML = `<style>...</style><div>...</div>`; } async loadData() { const entityService = Structures.createEntityService('org.kinotic.sample', 'person_datainsightstest'); const response = await entityService.findAll({ size: 1000, page: 0 }); // ... rest of data loading and chart creation logic } } customElements.define('gender-distribution-pie-chart', GenderDistributionPieChart);",
+                 "rawHtml": "class GenderDistributionPieChart extends HTMLElement { constructor() { super(); this.attachShadow({ mode: 'open' }); this.applicationId = 'org.kinotic.sample'; this.structureName = 'person_datainsightstest'; this.structureId = 'org.kinotic.sample.person_datainsightstest'; } connectedCallback() { this.render(); this.loadData(); } render() { this.shadowRoot.innerHTML = `<style>...</style><div>...</div>`; } async loadData() { const entityService = Structures.createEntityService('org.kinotic.sample', 'person_datainsightstest'); const response = await entityService.findAll({ pageNumber: 0, pageSize: 1000 }); // ALWAYS use { pageNumber: X, pageSize: Y } // ... rest of data loading and chart creation logic } } customElements.define('gender-distribution-pie-chart', GenderDistributionPieChart);",
                  "applicationId": "org.kinotic.sample"
                }
              ]

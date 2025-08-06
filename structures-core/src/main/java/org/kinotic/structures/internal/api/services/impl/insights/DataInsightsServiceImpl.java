@@ -1,21 +1,27 @@
 package org.kinotic.structures.internal.api.services.impl.insights;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.type.CollectionType;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
+
 import org.kinotic.continuum.api.security.Participant;
-import org.kinotic.structures.api.domain.insights.*;
+import org.kinotic.structures.api.domain.insights.DataInsightsComponent;
+import org.kinotic.structures.api.domain.insights.InsightProgress;
+import org.kinotic.structures.api.domain.insights.InsightRequest;
+import org.kinotic.structures.api.domain.insights.RequestAnalysisResult;
 import org.kinotic.structures.api.services.EntitiesService;
+import org.kinotic.structures.api.services.StructureService;
 import org.kinotic.structures.api.services.insights.DataInsightsService;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
 
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.type.CollectionType;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.FluxSink;
 
 /**
  * Implementation of DataInsightsService that processes user requests through a chain of steps:
@@ -30,30 +36,49 @@ public class DataInsightsServiceImpl implements DataInsightsService {
 
     private final ChatClient chatClient;
     private final InsightsContextService contextService;
-    private final StructureDiscoveryTools structureDiscoveryTools;
     private final EntitiesService entitiesService;
+    private final StructureService structureService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
-    public CompletableFuture<InsightResponse> processRequest(InsightRequest request, Participant participant) {
+    public Flux<InsightProgress> processRequest(InsightRequest request, Participant participant) {
         log.info("Processing data insights request: '{}'", request.getQuery());
 
-        return CompletableFuture.supplyAsync(() -> {
+        return Flux.create(sink -> {
             try {
+                // Emit start progress
+                sink.next(InsightProgress.builder()
+                    .type(InsightProgress.ProgressType.STARTED)
+                    .message("Starting data insights analysis.")
+                    .timestamp(Instant.now())
+                    .build());
+
                 // Step 1: Analyze the request to determine intent
+                sink.next(InsightProgress.builder()
+                    .type(InsightProgress.ProgressType.ANALYZING)
+                    .message("Analyzing your request.")
+                    .timestamp(Instant.now())
+                    .build());
+
                 RequestAnalysisResult analysisResult = analyzeRequest(request, participant);
                 log.info("Request analysis result: {}", analysisResult);
 
                 // Step 2: Route to appropriate processing path
                 if (analysisResult.getRequestType() == RequestAnalysisResult.RequestType.NEW_VISUALIZATION) {
-                    return generateNewVisualization(request, participant);
+                    generateNewVisualization(request, participant, sink);
                 } else {
-                    return modifyExistingVisualization(request, participant, analysisResult);
+                    modifyExistingVisualization(request, participant, analysisResult, sink);
                 }
 
             } catch (Exception e) {
                 log.error("Error processing request: {}", e.getMessage(), e);
-                return createErrorResponse(e.getMessage());
+                sink.next(InsightProgress.builder()
+                    .type(InsightProgress.ProgressType.ERROR)
+                    .message("An error occurred during analysis")
+                    .errorMessage(e.getMessage())
+                    .timestamp(Instant.now())
+                    .build());
+                sink.complete();
             }
         });
     }
@@ -86,46 +111,94 @@ public class DataInsightsServiceImpl implements DataInsightsService {
     }
 
     /**
-     * Step 2a: Generates a new visualization using the existing AI pipeline.
+     * Step 2a: Generates a new visualization using the existing AI pipeline with progress updates.
      */
-    private InsightResponse generateNewVisualization(InsightRequest request, Participant participant) {
+    private void generateNewVisualization(InsightRequest request, Participant participant, 
+                                          FluxSink<InsightProgress> sink) {
         log.info("Generating new visualization for query: '{}'", request.getQuery());
 
         try {
-            // Create tools with participant context
-            DataAnalysisTools dataAnalysisTools = new DataAnalysisTools(entitiesService, participant);
+            // Create tools with participant context and progress reporting
+            StructureDiscoveryTools progressStructureTools = new StructureDiscoveryTools(structureService, sink);
+            DataAnalysisTools progressDataTools = new DataAnalysisTools(entitiesService, participant, sink);
 
             // Build context
             String context = contextService.buildAnalysisContext(request, participant);
             String systemPrompt = contextService.getHtmlGenerationSystemPrompt();
             String userPrompt = buildUserPrompt(request, context);
 
-            // Generate visualization with AI
+            // Emit code generation progress
+            sink.next(InsightProgress.builder()
+                .type(InsightProgress.ProgressType.GENERATING_CODE)
+                .message("Generating web components with AI")
+                .timestamp(Instant.now())
+                .build());
+
+            // Generate visualization with AI (non-streaming)
             String aiResponse = chatClient
                     .prompt()
                     .system(systemPrompt)
                     .user(userPrompt)
-                    .tools(structureDiscoveryTools, dataAnalysisTools)
+                    .tools(progressStructureTools, progressDataTools)
                     .call()
                     .content();
 
-            // Create response
-            return createVisualizationResponse(aiResponse, request);
+            // Emit parsing progress
+            sink.next(InsightProgress.builder()
+                .type(InsightProgress.ProgressType.GENERATING_CODE)
+                .message("Parsing generated components")
+                .timestamp(Instant.now())
+                .build());
+
+            // Parse components from AI response
+            List<DataInsightsComponent> components = parseComponentsFromResponse(aiResponse, request);
+            
+            // Emit all components at once since they're all ready
+            sink.next(InsightProgress.builder()
+                .type(InsightProgress.ProgressType.COMPONENTS_READY)
+                .message("Generated " + components.size() + " visualization(s)")
+                .components(components)
+                .timestamp(Instant.now())
+                .build());
+            
+            // Emit completion
+            sink.next(InsightProgress.builder()
+                .type(InsightProgress.ProgressType.COMPLETED)
+                .message("Analysis completed successfully")
+                .timestamp(Instant.now())
+                .build());
+            
+            sink.complete();
 
         } catch (Exception e) {
             log.error("Error generating new visualization: {}", e.getMessage(), e);
-            return createErrorResponse(e.getMessage());
+            sink.next(InsightProgress.builder()
+                .type(InsightProgress.ProgressType.ERROR)
+                .message("Error during analysis")
+                .errorMessage(e.getMessage())
+                .timestamp(Instant.now())
+                .build());
+            sink.complete();
         }
     }
 
     /**
      * Step 2b: Modifies an existing visualization based on user feedback.
      */
-    private InsightResponse modifyExistingVisualization(InsightRequest request, Participant participant, RequestAnalysisResult analysisResult) {
+    private void modifyExistingVisualization(InsightRequest request, Participant participant, 
+                                          RequestAnalysisResult analysisResult, 
+                                          FluxSink<InsightProgress> sink) {
         log.info("Modifying existing visualization: '{}' with request: '{}'",
                  analysisResult.getVisualizationName(), request.getQuery());
 
         try {
+            // Emit modification progress
+            sink.next(InsightProgress.builder()
+                .type(InsightProgress.ProgressType.GENERATING_CODE)
+                .message("Modifying existing visualization.")
+                .timestamp(Instant.now())
+                .build());
+
             // TODO: Load the existing visualization code
             // For now, this is a no-op placeholder
             String existingVisualizationCode = loadExistingVisualization(analysisResult.getVisualizationName());
@@ -133,11 +206,13 @@ public class DataInsightsServiceImpl implements DataInsightsService {
             if (existingVisualizationCode == null) {
                 log.warn("Could not load existing visualization '{}', falling back to new visualization",
                          analysisResult.getVisualizationName());
-                return generateNewVisualization(request, participant);
+                generateNewVisualization(request, participant, sink);
+                return;
             }
 
-            // Create tools with participant context
-            DataAnalysisTools dataAnalysisTools = new DataAnalysisTools(entitiesService, participant);
+            // Create tools with participant context and progress reporting
+            StructureDiscoveryTools progressStructureTools = new StructureDiscoveryTools(structureService, sink);
+            DataAnalysisTools progressDataTools = new DataAnalysisTools(entitiesService, participant, sink);
 
             // Build context
             String context = contextService.buildAnalysisContext(request, participant);
@@ -149,16 +224,39 @@ public class DataInsightsServiceImpl implements DataInsightsService {
                     .prompt()
                     .system(systemPrompt)
                     .user(userPrompt)
-                    .tools(structureDiscoveryTools, dataAnalysisTools)
+                    .tools(progressStructureTools, progressDataTools)
                     .call()
                     .content();
 
-            // Create response
-            return createVisualizationResponse(aiResponse, request);
+            // Parse components and emit progress
+            List<DataInsightsComponent> components = parseComponentsFromResponse(aiResponse, request);
+            
+            // Emit all components at once since they're all ready
+            sink.next(InsightProgress.builder()
+                .type(InsightProgress.ProgressType.COMPONENTS_READY)
+                .message("Modified " + components.size() + " visualization(s)")
+                .components(components)
+                .timestamp(Instant.now())
+                .build());
+            
+            // Emit completion
+            sink.next(InsightProgress.builder()
+                .type(InsightProgress.ProgressType.COMPLETED)
+                .message("Modification completed successfully")
+                .timestamp(Instant.now())
+                .build());
+            
+            sink.complete();
 
         } catch (Exception e) {
             log.error("Error modifying existing visualization: {}", e.getMessage(), e);
-            return createErrorResponse(e.getMessage());
+            sink.next(InsightProgress.builder()
+                .type(InsightProgress.ProgressType.ERROR)
+                .message("Error during modification")
+                .errorMessage(e.getMessage())
+                .timestamp(Instant.now())
+                .build());
+            sink.complete();
         }
     }
 
@@ -230,30 +328,7 @@ public class DataInsightsServiceImpl implements DataInsightsService {
         return prompt.toString();
     }
 
-    /**
-     * Creates a visualization response from the AI-generated code.
-     */
-    private InsightResponse createVisualizationResponse(String aiResponse, InsightRequest request) {
-        try {
-            // Parse the AI response to extract multiple components
-            List<DataInsightsComponent> components = parseComponentsFromResponse(aiResponse, request);
 
-            return InsightResponse.builder()
-                                  .components(components)
-                                  .createdAt(Instant.now())
-                                  .status(AnalysisStatus.SUCCESS)
-                                  .build();
-
-        } catch (Exception e) {
-            log.error("Error parsing components from AI response: {}", e.getMessage());
-            return InsightResponse.builder()
-                                  .components(List.of())
-                                  .createdAt(Instant.now())
-                                  .status(AnalysisStatus.ERROR)
-                                  .errorMessage("Failed to parse components: " + e.getMessage())
-                                  .build();
-        }
-    }
 
     /**
      * Parses the AI response to extract multiple DataInsightsComponent objects from JSON.
@@ -303,14 +378,5 @@ public class DataInsightsServiceImpl implements DataInsightsService {
 
 
 
-    /**
-     * Creates an error response when visualization generation fails.
-     */
-    private InsightResponse createErrorResponse(String errorMessage) {
-        return InsightResponse.builder()
-                              .createdAt(Instant.now())
-                              .status(AnalysisStatus.ERROR)
-                              .errorMessage(errorMessage)
-                              .build();
-    }
+
 }
