@@ -38,7 +38,7 @@ public class DataInsightsServiceImpl implements DataInsightsService {
     private final InsightsContextService contextService;
     private final EntitiesService entitiesService;
     private final StructureService structureService;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
 
     @Override
     public Flux<InsightProgress> processRequest(InsightRequest request, Participant participant) {
@@ -150,8 +150,8 @@ public class DataInsightsServiceImpl implements DataInsightsService {
                 .timestamp(Instant.now())
                 .build());
 
-            // Parse components from AI response
-            List<DataInsightsComponent> components = parseComponentsFromResponse(aiResponse, request);
+            // Parse components from AI response with retry logic
+            List<DataInsightsComponent> components = parseComponentsFromResponseWithRetry(aiResponse, request, systemPrompt, userPrompt, progressStructureTools, progressDataTools);
             
             // Emit all components at once since they're all ready
             sink.next(InsightProgress.builder()
@@ -308,7 +308,7 @@ public class DataInsightsServiceImpl implements DataInsightsService {
             prompt.append("\n- Use '").append(structureName).append("' as the structureName");
             prompt.append("\n- Use '").append(request.getFocusStructureId()).append("' as the structureId");
         }
-        prompt.append("\n\nPlease analyze this request and generate a custom web component that visualizes the data. The response should be ONLY the JavaScript code for the web component.");
+        prompt.append("\n\nPlease analyze this request and generate multiple web components that visualize the data. Return your response as a JSON array of DataInsightsComponent objects as specified in the system prompt.");
 
         return prompt.toString();
     }
@@ -323,7 +323,7 @@ public class DataInsightsServiceImpl implements DataInsightsService {
         prompt.append("Visualization to Modify: ").append(analysisResult.getVisualizationName()).append("\n");
         prompt.append("Additional Context: ").append(analysisResult.getAdditionalContext()).append("\n\n");
         prompt.append("Existing Visualization Code:\n").append(existingCode).append("\n\n");
-        prompt.append("Please modify the existing visualization according to the user's request. Return ONLY the complete modified JavaScript code.");
+        prompt.append("Please modify the existing visualization according to the user's request. Return your response as a JSON array of DataInsightsComponent objects as specified in the system prompt.");
 
         return prompt.toString();
     }
@@ -331,10 +331,47 @@ public class DataInsightsServiceImpl implements DataInsightsService {
 
 
     /**
+     * Parses the AI response to extract multiple DataInsightsComponent objects from JSON with retry logic.
+     */
+    private List<DataInsightsComponent> parseComponentsFromResponseWithRetry(String aiResponse, InsightRequest request, 
+                                                                          String systemPrompt, String userPrompt,
+                                                                          StructureDiscoveryTools structureTools, 
+                                                                          DataAnalysisTools dataTools) {
+        try {
+            return parseComponentsFromResponse(aiResponse, request);
+        } catch (Exception e) {
+            log.warn("Failed to parse AI response, retrying with explicit instruction: {}", e.getMessage());
+            
+            // Retry with explicit JSON instruction
+            String retryPrompt = userPrompt + "\n\nCRITICAL: You must respond with ONLY a JSON array of DataInsightsComponent objects. Do not include any other text, explanations, or markdown formatting.";
+            
+            String retryResponse = chatClient
+                    .prompt()
+                    .system(systemPrompt)
+                    .user(retryPrompt)
+                    .tools(structureTools, dataTools)
+                    .call()
+                    .content();
+            
+            return parseComponentsFromResponse(retryResponse, request);
+        }
+    }
+
+    /**
      * Parses the AI response to extract multiple DataInsightsComponent objects from JSON.
      */
     private List<DataInsightsComponent> parseComponentsFromResponse(String aiResponse, InsightRequest request) {
         try {
+            // Validate AI response is not empty
+            if (aiResponse == null || aiResponse.trim().isEmpty()) {
+                throw new RuntimeException("AI response was empty");
+            }
+            
+            // Check if response is a tool call result (XML format)
+            if (aiResponse.trim().startsWith("<xai:function_call_result")) {
+                throw new RuntimeException("AI returned tool call result instead of JSON components. Retrying with explicit instruction.");
+            }
+            
             // Clean the response and try to parse as JSON array
             String cleanedResponse = aiResponse.trim();
 
@@ -350,6 +387,10 @@ public class DataInsightsServiceImpl implements DataInsightsService {
             }
 
             cleanedResponse = cleanedResponse.trim();
+            
+            if (cleanedResponse.isEmpty()) {
+                throw new RuntimeException("AI response was empty after cleaning");
+            }
 
             // Parse JSON array directly into DataInsightsComponent objects
             CollectionType collectionType = objectMapper.getTypeFactory()
@@ -357,13 +398,26 @@ public class DataInsightsServiceImpl implements DataInsightsService {
                                                                                  DataInsightsComponent.class);
             List<DataInsightsComponent> components = objectMapper.readValue(cleanedResponse, collectionType);
 
-            // Set system-generated fields for each component
+            // Validate and set system-generated fields for each component
             for (DataInsightsComponent component : components) {
                 if (component.getId() == null) {
                     component.setId(UUID.randomUUID().toString());
                 }
+                if (component.getName() == null || component.getName().trim().isEmpty()) {
+                    component.setName("Generated Visualization");
+                }
+                if (component.getDescription() == null || component.getDescription().trim().isEmpty()) {
+                    component.setDescription("Data visualization component");
+                }
+                if (component.getRawHtml() == null || component.getRawHtml().trim().isEmpty()) {
+                    throw new RuntimeException("Component rawHtml cannot be null or empty");
+                }
                 component.setApplicationId(request.getApplicationId());
                 component.setModifiedAt(Instant.now());
+            }
+
+            if (components.isEmpty()) {
+                throw new RuntimeException("No components were generated");
             }
 
             return components;

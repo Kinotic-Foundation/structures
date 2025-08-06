@@ -79,11 +79,6 @@ public class InsightsContextService {
                - findById(id): Get a single entity by its ID
                - findByIds(ids[]): Get multiple entities by their IDs
                - search(searchText, pageable): Search entities using Lucene query syntax
-               - save(entity): Create or update an entity
-               - update(entity): Update an existing entity (partial updates)
-               - deleteById(id): Delete an entity by ID
-               - deleteByQuery(query): Delete entities matching a Lucene query
-               - syncIndex(): Ensure recent writes are available for search
                - namedQuery(queryName, parameters): Execute custom named queries
                - namedQueryPage(queryName, parameters, pageable): Execute named queries with pagination
             
@@ -95,10 +90,18 @@ public class InsightsContextService {
                - Use namedQuery() for complex business logic and custom aggregations
                - Always include proper error handling and loading states
                - Consider pagination for large datasets (use Pageable with size and page parameters)
-               - Use syncIndex() after data modifications to ensure search consistency
             
             YOUR TASK: Generate MULTIPLE SEPARATE WEB COMPONENTS that each create a different data visualization.
             Each component should be completely self-contained and work independently.
+            
+            CRITICAL: Return your response as a JSON array of DataInsightsComponent objects.
+            Each DataInsightsComponent should contain:
+            - id: unique identifier (UUID)
+            - name: descriptive name for the component
+            - description: what the component shows
+            - rawHtml: the complete JavaScript code for the web component
+            - applicationId: the application ID
+            - modifiedAt: timestamp
             
             CRITICAL REQUIREMENTS:
             
@@ -107,7 +110,7 @@ public class InsightsContextService {
                - Each component should be a separate class extending HTMLElement
                - Include ALL JavaScript for each component inline
                - Include ALL CSS inline within each component's shadow DOM
-               - Use CDN links for chart libraries (Chart.js, D3.js, Plotly, etc.)
+               - Use ApexCharts CDN for chart library (dynamically loaded)
                - Each component should be completely self-contained and work without any attributes
                - HARDCODE the structure ID and application ID in each component's data loading logic
                - Components should work when dropped into any page without configuration
@@ -115,6 +118,9 @@ public class InsightsContextService {
             2. DATA FETCHING:
                - Use the Structures API directly from JavaScript
                - Include proper error handling and loading states
+               - CRITICAL: Each component MUST have a unique tag name and name in the JSON
+               - Use descriptive, unique names like 'customer-age-chart', 'order-status-pie', 'revenue-trend-line'
+               - Avoid generic names like 'chart', 'visualization', 'component'
             
             3. MULTIPLE COMPONENT REQUIREMENTS:
                - Create 2-4 separate web components, each showing a different perspective of the data
@@ -131,9 +137,9 @@ public class InsightsContextService {
                - Components should be responsive and work on different screen sizes
             
             4. WEB COMPONENT STRUCTURE:
-               Each component should follow this pattern:
+               Each component should follow this pattern with UNIQUE names:
                ```javascript
-               class DataInsightsChart extends HTMLElement {
+               class CustomerAgeDistributionChart extends HTMLElement {
                    constructor() {
                        super();
                        this.attachShadow({ mode: 'open' });
@@ -145,7 +151,7 @@ public class InsightsContextService {
                    
                    connectedCallback() {
                        this.render();
-                       this.loadData();
+                       // loadData() is called from loadChartLibrary() after script loads
                    }
                    
                    render() {
@@ -156,23 +162,122 @@ public class InsightsContextService {
                                    font-family: Arial, sans-serif;
                                    width: 100%;
                                    height: 400px;
+                                   margin-bottom: 20px;
+                                   border-radius: 8px;
+                                   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                                   position: relative;
+                                   padding: 16px;
+                                   box-sizing: border-box;
+                                   background-color: white;
                                }
-                               /* Component-specific styles here */
+                               .chart-title {
+                                   font-size: 18px;
+                                   font-weight: bold;
+                                   margin-bottom: 8px;
+                                   color: #333;
+                               }
+                               .chart-subtitle {
+                                   font-size: 14px;
+                                   color: #666;
+                                   margin-bottom: 16px;
+                                   line-height: 1.4;
+                               }
+                               .chart-container {
+                                   width: 100%;
+                                   height: calc(100% - 80px);
+                                   min-height: 300px;
+                               }
                            </style>
+                           <div class="chart-title">Chart Title</div>
+                           <div class="chart-subtitle">Chart description and insights</div>
                            <div class="chart-container">
-                               <!-- Chart HTML here -->
+                               <!-- SVG chart will automatically fit this container -->
                            </div>
                        `;
+                       // Load chart library if needed
+                       this.loadChartLibrary();
+                   }
+                   
+                   loadChartLibrary() {
+                                               // Load ApexCharts (default) if not already loaded
+                        if (typeof ApexCharts === 'undefined') {
+                            const script = document.createElement('script');
+                            script.src = 'https://cdn.jsdelivr.net/npm/apexcharts';
+                           script.onload = () => this.loadData();
+                           document.head.appendChild(script);
+                       } else {
+                           this.loadData();
+                       }
                    }
                    
                    async loadData() {
-                       // Use HARDCODED values directly in API calls
-                       const entityService = Structures.createEntityService('org.kinotic.sample', 'person_datainsightstest');
-                       // ... rest of data loading logic
+                       try {
+                           // Use HARDCODED values directly in API calls
+                           const entityService = Structures.createEntityService('org.kinotic.sample', 'person_datainsightstest');
+                           const response = await entityService.findAll({ pageNumber: 0, pageSize: 1000 });
+                           const data = response.content;
+                           
+                           // Process data and create chart
+                           this.createChart(data);
+                       } catch (error) {
+                           console.error('Error loading data:', error);
+                           this.shadowRoot.querySelector('.chart-container').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Error loading data: ' + error.message + '</div>';
+                       }
+                   }
+                   
+                   createChart(data) {
+                       // Ensure DOM is ready before creating chart
+                       setTimeout(() => {
+                           const container = this.shadowRoot.querySelector('.chart-container');
+                           if (!container) {
+                               console.error('Chart container not found');
+                               return;
+                           }
+                           
+                           // Clear container and create chart element
+                           container.innerHTML = '<div id="chart"></div>';
+                           const chartElement = container.querySelector('#chart');
+                           
+                           if (!chartElement) {
+                               console.error('Chart element not found');
+                               return;
+                           }
+                           
+                           // Create ApexCharts instance
+                           const options = {
+                               // Chart options here (NO title or subtitle - they're in the HTML structure)
+                               // ... other options
+                           };
+                           
+                           const chart = new ApexCharts(chartElement, options);
+                           chart.render();
+                       }, 100); // Small delay to ensure DOM is ready
                    }
                }
                
-               customElements.define('data-insights-chart', DataInsightsChart);
+               customElements.define('customer-age-distribution-chart', CustomerAgeDistributionChart);
+               ```
+               
+               EXAMPLE JSON RESPONSE FORMAT:
+               ```json
+               [
+                 {
+                   "id": "550e8400-e29b-41d4-a716-446655440000",
+                   "name": "Customer Age Distribution",
+                   "description": "Bar chart showing the distribution of customers across different age groups",
+                   "rawHtml": "class CustomerAgeDistributionChart extends HTMLElement { ... }",
+                   "applicationId": "org.kinotic.sample",
+                   "modifiedAt": "2024-01-01T00:00:00Z"
+                 },
+                 {
+                   "id": "550e8400-e29b-41d4-a716-446655440001", 
+                   "name": "Revenue Trend Analysis",
+                   "description": "Line chart showing revenue trends over time",
+                   "rawHtml": "class RevenueTrendChart extends HTMLElement { ... }",
+                   "applicationId": "org.kinotic.sample",
+                   "modifiedAt": "2024-01-01T00:00:00Z"
+                 }
+               ]
                ```
                
             5. COMPONENT DESIGN PRINCIPLES:
@@ -185,10 +290,19 @@ public class InsightsContextService {
                - Add interactive elements where appropriate (hover effects, tooltips)
                - Consider accessibility (proper contrast, semantic HTML)
                - Each component should be completely independent and self-contained
+               - CRITICAL: Each component MUST have unique positioning and spacing
+               - Use margin-bottom, padding, and proper spacing to prevent overlap
+               - Each component should have its own visual container with borders/backgrounds
+                               - CRITICAL: Use ApexCharts (SVG-based) for perfect container fitting
+                - ApexCharts automatically scales to fit containers and works perfectly with resizable widgets
+                - Set width: 100% and height: 100% for responsive behavior
+                - ALWAYS include a descriptive title and subtitle for each chart
+                - Use meaningful titles that explain what the chart shows
+                - Add subtitles with additional context or data insights
                
             6. JAVASCRIPT STRUCTURE:
                - Use class-based custom elements extending HTMLElement
-               - Load chart libraries dynamically or assume they're available globally
+               - Load ApexCharts dynamically if not already available
                - Structure code with clear methods for each component
                - Include comprehensive error handling
                - Use async/await for API calls
@@ -199,11 +313,26 @@ public class InsightsContextService {
                - Each component should work independently without any external dependencies
             
             7. CHART LIBRARY SELECTION:
-               - Chart.js: For simple bar, line, pie charts
-               - D3.js: For complex, custom visualizations
-               - Plotly: For scientific/3D plots
-               - ApexCharts: For modern, interactive charts
-               - Choose based on the complexity and type of visualization needed
+               - APEXCHARTS: DEFAULT CHOICE - SVG-based, stable, responsive, perfect for dashboards
+               - D3.js: EXPERIMENTAL - For complex custom visualizations (advanced users only)
+               - ECharts: EXPERIMENTAL - For advanced chart types (advanced users only)
+               - CRITICAL: DEFAULT TO APEXCHARTS unless user specifically requests D3.js or ECharts
+               - ApexCharts provides the most stable and consistent experience
+               - SVG charts automatically scale to fit containers and work perfectly with resizable widgets
+               - CRITICAL: ALWAYS include the chart library CDN script before using any chart library
+                    - For ApexCharts: Add <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script> before using ApexCharts
+                    - For D3.js: Add <script src="https://d3js.org/d3.v7.min.js"></script> before using d3
+                    - For ECharts: Add <script src="https://cdn.jsdelivr.net/npm/echarts"></script> before using echarts
+               - CRITICAL: Use responsive: true and autoRedraw: true for SVG charts
+               - Set width: 100% and height: 100% for perfect container fitting
+               - DO NOT include chart titles and subtitles in ApexCharts options (they're already in the HTML structure)
+               - Remove title and subtitle from ApexCharts configuration to avoid duplication
+               - The chart titles and descriptions are already displayed in the HTML structure above the chart
+               - CRITICAL: Always call new ApexCharts(container, options).render() to render the chart
+               - CRITICAL: Make sure the chart container has sufficient height (min-height: 300px)
+               - CRITICAL: Wait for ApexCharts to load before creating chart instances
+               - CRITICAL: Ensure the chart container element exists before creating ApexCharts instance
+               - CRITICAL: Use setTimeout or requestAnimationFrame to ensure DOM is ready before rendering
             
             8. STRUCTURES API USAGE:
                - The Structures API is available globally in the browser (no CDN import needed)
@@ -277,15 +406,15 @@ public class InsightsContextService {
                          CORRECT OUTPUT FORMAT:
              [
                {
-                 "name": "Age Distribution Bar Chart",
-                 "description": "Shows the distribution of people across different age groups using a bar chart",
-                 "rawHtml": "class AgeDistributionBarChart extends HTMLElement { constructor() { super(); this.attachShadow({ mode: 'open' }); this.applicationId = 'org.kinotic.sample'; this.structureName = 'person_datainsightstest'; this.structureId = 'org.kinotic.sample.person_datainsightstest'; } connectedCallback() { this.render(); this.loadData(); } render() { this.shadowRoot.innerHTML = `<style>...</style><div>...</div>`; } async loadData() { const entityService = Structures.createEntityService('org.kinotic.sample', 'person_datainsightstest'); const response = await entityService.findAll({ pageNumber: 0, pageSize: 1000 }); // ALWAYS use { pageNumber: X, pageSize: Y } // ... rest of data loading and chart creation logic } } customElements.define('age-distribution-bar-chart', AgeDistributionBarChart);",
+                 "name": "Customer Age Distribution Bar Chart",
+                 "description": "Shows the distribution of customers across different age groups using a bar chart",
+                 "rawHtml": "class CustomerAgeDistributionChart extends HTMLElement { constructor() { super(); this.attachShadow({ mode: 'open' }); this.applicationId = 'org.kinotic.sample'; this.structureName = 'person_datainsightstest'; this.structureId = 'org.kinotic.sample.person_datainsightstest'; } connectedCallback() { this.render(); } render() { this.shadowRoot.innerHTML = `<style>:host { display: block; width: 100%; height: 400px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); position: relative; } .chart-container { width: 100%; height: 100%; }</style><div class=\"chart-container\"><div id=\"chart\"></div></div>`; this.loadChartLibrary(); } loadChartLibrary() { if (typeof ApexCharts === 'undefined') { const script = document.createElement('script'); script.src = 'https://cdn.jsdelivr.net/npm/apexcharts@3.45.1/dist/apexcharts.min.js'; script.onload = () => this.loadData(); document.head.appendChild(script); } else { this.loadData(); } } async loadData() { const entityService = Structures.createEntityService('org.kinotic.sample', 'person_datainsightstest'); const response = await entityService.findAll({ pageNumber: 0, pageSize: 1000 }); // ALWAYS use { pageNumber: X, pageSize: Y } // ... rest of data loading and ApexCharts creation logic } } customElements.define('customer-age-distribution-chart', CustomerAgeDistributionChart);",
                  "applicationId": "org.kinotic.sample"
                },
                {
-                 "name": "Gender Distribution Pie Chart", 
-                 "description": "Displays gender distribution using a pie chart with percentage breakdowns",
-                 "rawHtml": "class GenderDistributionPieChart extends HTMLElement { constructor() { super(); this.attachShadow({ mode: 'open' }); this.applicationId = 'org.kinotic.sample'; this.structureName = 'person_datainsightstest'; this.structureId = 'org.kinotic.sample.person_datainsightstest'; } connectedCallback() { this.render(); this.loadData(); } render() { this.shadowRoot.innerHTML = `<style>...</style><div>...</div>`; } async loadData() { const entityService = Structures.createEntityService('org.kinotic.sample', 'person_datainsightstest'); const response = await entityService.findAll({ pageNumber: 0, pageSize: 1000 }); // ALWAYS use { pageNumber: X, pageSize: Y } // ... rest of data loading and chart creation logic } } customElements.define('gender-distribution-pie-chart', GenderDistributionPieChart);",
+                 "name": "Customer Gender Distribution Pie Chart", 
+                 "description": "Displays customer gender distribution using a pie chart with percentage breakdowns",
+                 "rawHtml": "class CustomerGenderDistributionChart extends HTMLElement { constructor() { super(); this.attachShadow({ mode: 'open' }); this.applicationId = 'org.kinotic.sample'; this.structureName = 'person_datainsightstest'; this.structureId = 'org.kinotic.sample.person_datainsightstest'; } connectedCallback() { this.render(); } render() { this.shadowRoot.innerHTML = `<style>:host { display: block; width: 100%; height: 400px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); position: relative; } .chart-container { width: 100%; height: 100%; }</style><div class=\"chart-container\"><div id=\"chart\"></div></div>`; this.loadChartLibrary(); } loadChartLibrary() { if (typeof ApexCharts === 'undefined') { const script = document.createElement('script'); script.src = 'https://cdn.jsdelivr.net/npm/apexcharts@3.45.1/dist/apexcharts.min.js'; script.onload = () => this.loadData(); document.head.appendChild(script); } else { this.loadData(); } } async loadData() { const entityService = Structures.createEntityService('org.kinotic.sample', 'person_datainsightstest'); const response = await entityService.findAll({ pageNumber: 0, pageSize: 1000 }); // ALWAYS use { pageNumber: X, pageSize: Y } // ... rest of data loading and ApexCharts creation logic } } customElements.define('customer-gender-distribution-chart', CustomerGenderDistributionChart);",
                  "applicationId": "org.kinotic.sample"
                }
              ]
@@ -394,7 +523,7 @@ public class InsightsContextService {
                - Keep the same data loading and processing logic
                - Maintain the same structure and component architecture
                - Preserve existing styling and layout patterns
-               - Keep the same chart library usage (Chart.js, D3.js, etc.)
+               - Keep the same chart library usage (ApexCharts)
             
             2. APPLY REQUESTED CHANGES:
                - Change chart types when requested (bar → pie, line → area, etc.)
@@ -411,8 +540,8 @@ public class InsightsContextService {
                - Ensure accessibility features remain intact
             
             4. COMMON MODIFICATIONS:
-               - Chart type changes: "make it a pie chart" → change chart type
-               - Color changes: "use blue colors" → update color schemes
+               - Chart type changes: "make it a pie chart" → change ApexCharts type
+               - Color changes: "use blue colors" → update ApexCharts color schemes
                - Size changes: "make it bigger" → adjust dimensions
                - Data changes: "add more data" → modify data loading
                - Style changes: "make it more modern" → update CSS

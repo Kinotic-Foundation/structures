@@ -88,7 +88,7 @@ public class DataAnalysisTools {
             
             progressSink.next(InsightProgress.builder()
                 .type(InsightProgress.ProgressType.DISCOVERING_DATA)
-                .message("Data analysis completed: " + structureId)
+                .message("Data analysis completed creating visualizations: " + structureId)
                 .timestamp(Instant.now())
                 .build());
             

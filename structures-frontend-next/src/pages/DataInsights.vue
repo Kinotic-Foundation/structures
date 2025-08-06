@@ -116,7 +116,7 @@ export default class DataInsights extends Vue {
           }
           
           // Handle components ready events
-          if (progress.type === ProgressType.COMPONENTS_READY && progress.components) {
+          if (progress.type === ProgressType.COMPONENTS_READY && progress.components && progress.components.length > 0) {
             // Add each component to dashboard
             progress.components.forEach((component: DataInsightsComponent) => {
               this.visualizations.push({
@@ -129,6 +129,8 @@ export default class DataInsights extends Vue {
               // Execute the web component code
               this.executeVisualization(component.rawHtml)
             })
+          } else if (progress.type === ProgressType.COMPONENTS_READY) {
+            console.warn('COMPONENTS_READY event received but no components found')
           }
           
           // Handle completion
@@ -182,6 +184,8 @@ export default class DataInsights extends Vue {
 
   executeVisualization(htmlContent: string) {
     try {
+      console.log('Executing visualization with content length:', htmlContent.length)
+      
       // Execute the web component code (it should define itself)
       const script = document.createElement('script')
       script.textContent = htmlContent
@@ -195,8 +199,15 @@ export default class DataInsights extends Vue {
       console.log('Extracted element name:', elementName)
       
       // Wait a bit for the script to execute and register the custom element
+      // Increased timeout to allow ApexCharts to load
       setTimeout(() => {
         try {
+          // Check if the custom element is defined
+          if (!customElements.get(elementName)) {
+            console.error('Custom element not defined:', elementName)
+            return
+          }
+          
           // Create an instance of the defined web component
           const element = document.createElement(elementName)
           
@@ -205,13 +216,20 @@ export default class DataInsights extends Vue {
           if (dashboardContainer) {
             dashboardContainer.appendChild(element)
             console.log('Added element to dashboard:', elementName)
+            
+            // Check if ApexCharts is available
+            if (typeof (window as any).ApexCharts === 'undefined') {
+              console.warn('ApexCharts not loaded yet, chart may not render')
+            } else {
+              console.log('ApexCharts is available')
+            }
           } else {
             console.error('Dashboard container not found')
           }
         } catch (error) {
           console.error('Error creating element:', error)
         }
-      }, 100)
+      }, 1000) // Increased timeout for ApexCharts loading and DOM initialization
     } catch (error) {
       console.error('Error executing visualization:', error)
     }
