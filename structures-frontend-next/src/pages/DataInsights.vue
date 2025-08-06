@@ -49,11 +49,13 @@ export default class DataInsights extends Vue {
     this.chatMessages.push({
       id: 'welcome',
       type: 'assistant',
-      content: `Hello! I'm your data insights assistant. Ask me questions about your data in application "${this.currentApplicationId}" and I'll create visualizations for you. Try asking things like:
+      content: `Hello! I'm your data insights assistant. 
 
-• "Show me a summary of my data"
-• "Create a chart showing trends over time"
-• "Display the most important metrics"`,
+Ask me questions about your data in application "${this.currentApplicationId}" and I'll create visualizations for you. Try asking things like:
+
+• Show me a summary of my data
+• Create a chart showing trends over time
+• Display the most important metrics`,
       timestamp: new Date()
     })
   }
