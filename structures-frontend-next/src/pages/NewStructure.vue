@@ -1,17 +1,28 @@
 <script lang="ts">
-import { Vue, Prop, Emit, Component, Ref } from "vue-facing-decorator";
+import { Vue, Prop, Emit, Component, Ref, Watch } from "vue-facing-decorator";
 import { VueFlow, type Node, type Edge } from "@vue-flow/core";
 import { Background } from "@vue-flow/background";
 import { Controls } from "@vue-flow/controls";
+import '@vue-flow/controls/dist/style.css'
 import { MiniMap } from "@vue-flow/minimap";
 import Button from "primevue/button";
 import InputText from "primevue/inputtext";
 import "@vue-flow/core/dist/style.css";
 import "@vue-flow/core/dist/theme-default.css";
 import StructureSidebarDashboard from "@/components/structures/StructureSidebarDashboard.vue"
+import Structure from "@/components/structures/flow-components/Structure.vue";
 
 @Component({
-  components: { Button, VueFlow, Background, Controls, MiniMap, InputText },
+  components: {
+    Structure,
+    StructureSidebarDashboard,
+    Button,
+    VueFlow,
+    Background,
+    Controls,
+    MiniMap,
+    InputText,
+  },
 })
 export default class StructureItemModal extends Vue {
   @Prop({ default: null }) item!: any;
@@ -24,8 +35,35 @@ export default class StructureItemModal extends Vue {
 
   @Ref("nameTextEl") readonly nameTextEl!: HTMLElement;
 
+  @Watch('name')
+  onNameChange(newName: string) {
+    if (this.flowNodes.length > 0) {
+      this.flowNodes[0].data.label = newName
+    }
+  }
+
   flowNodes: Node[] = [];
+
+  created() {
+    this.flowNodes = [
+      {
+        id: '1',
+        type: 'structure',
+        position: { x: 250, y: 100 },
+        data: {
+          label: this.name,
+          fields: [],
+          color: null,
+        },
+      },
+    ];
+  }
+
   flowEdges: Edge[] = [];
+
+  nodeTypes = {
+    structure: Structure,
+  };
 
   @Emit("close") closeModal() {
     return true;
@@ -103,7 +141,6 @@ export default class StructureItemModal extends Vue {
                   icon="pi pi-replay"
                   severity="secondary"
                   size="small"
-                  rounded
                   aria-label="Undo"
                   variant="text"
                 />
@@ -111,7 +148,6 @@ export default class StructureItemModal extends Vue {
                   icon="pi pi-refresh"
                   severity="secondary"
                   size="small"
-                  rounded
                   aria-label="Redo"
                   variant="text"
                 />
@@ -119,17 +155,22 @@ export default class StructureItemModal extends Vue {
                   icon="pi pi-sitemap"
                   severity="secondary"
                   size="small"
-                  rounded
                   aria-label="Undo"
                 />
               </div>
             </div>
           </div>
           <div class="flex-1 bg-surface-50">
-            <VueFlow ref="flow" :minZoom="0.01">
+            <VueFlow
+                ref="flow"
+                :nodeTypes="nodeTypes"
+                :nodes="flowNodes"
+                :edges="flowEdges"
+                :minZoom="0.01"
+            >
               <Background pattern-color="red" color="black" :gap="20" />
               <MiniMap />
-              <Controls position="top-left" />
+              <Controls position="bottom-left" :show-fit-view="false" :show-interactive="false" />
             </VueFlow>
           </div>
         </div>
@@ -143,5 +184,8 @@ export default class StructureItemModal extends Vue {
 .p-row-even,
 .p-row-odd {
   cursor: pointer !important;
+}
+.p-button-sm.p-button-icon-only {
+  width: 44px;
 }
 </style>

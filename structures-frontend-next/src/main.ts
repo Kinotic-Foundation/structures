@@ -4,6 +4,7 @@ import './theme.css'
 import PrimeVue from 'primevue/config'
 import StyleClass from 'primevue/styleclass'
 import { StructuresPreset } from '@/theme/base'
+import { pt } from '@/theme/pt.config'
 import router from '@/router'
 import ToastService from 'primevue/toastservice'
 import { CONTINUUM_UI } from '@/IContinuumUI'
@@ -19,7 +20,8 @@ app.use(PrimeVue, {
             cssLayer: false,
             prefix: 'p',
         }
-    }
+    },
+    pt
 })
 CONTINUUM_UI.initialize({
     routes: router.options.routes
