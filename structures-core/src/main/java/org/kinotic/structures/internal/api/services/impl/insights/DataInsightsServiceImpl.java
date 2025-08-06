@@ -13,6 +13,7 @@ import org.kinotic.structures.api.services.EntitiesService;
 import org.kinotic.structures.api.services.StructureService;
 import org.kinotic.structures.api.services.insights.DataInsightsService;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -32,6 +33,7 @@ import reactor.core.publisher.FluxSink;
 @Service
 @Slf4j
 @RequiredArgsConstructor
+@Profile("!test")
 public class DataInsightsServiceImpl implements DataInsightsService {
 
     private final ChatClient chatClient;
