@@ -100,7 +100,7 @@ export class EcommerceTaskFactory {
                         throw new Error('Entity services not initialized')
                     }
 
-                    const { customers, products, reviews, purchases } = TestDataGenerator.generateTestData(20)
+                    const { customers, products, reviews, purchases } = TestDataGenerator.generateTestData(500)
 
                     await this.customerService.bulkSave(customers)
                     await this.customerService.syncIndex()
