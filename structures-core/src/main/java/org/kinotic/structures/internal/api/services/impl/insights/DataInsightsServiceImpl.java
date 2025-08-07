@@ -98,13 +98,8 @@ public class DataInsightsServiceImpl implements DataInsightsService {
         String aiResponse = chatClient.prompt()
                                       .system(systemPrompt)
                                       .user(userPrompt)
-                                      .stream()
-                                      .content()
-                                      .collectList()
-                                      .block()
-                                      .stream()
-                                      .collect(Collectors.joining());
-
+                                      .call()
+                                      .content();
 
         // Parse the JSON response from the AI
         try {
