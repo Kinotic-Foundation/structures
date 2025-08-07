@@ -5,6 +5,7 @@ import Button from 'primevue/button'
 import Card from 'primevue/card'
 import ScrollPanel from 'primevue/scrollpanel'
 import Divider from 'primevue/divider'
+import Calendar from 'primevue/calendar'
 import { Structures, ProgressType } from '@kinotic/structures-api'
 import type { InsightRequest, DataInsightsComponent, InsightProgress } from '@kinotic/structures-api'
 
@@ -23,6 +24,48 @@ interface VisualizationComponent {
   htmlContent: string
   createdAt: Date
   status: string
+  supportsDateRangeFiltering?: boolean
+}
+
+interface DateRange {
+  startDate: Date | null
+  endDate: Date | null
+}
+
+// Global date range observable system
+class DateRangeObservable {
+  private subscribers: Set<(dateRange: DateRange) => void> = new Set()
+  private currentDateRange: DateRange = {
+    startDate: null,
+    endDate: null
+  }
+
+  subscribe(callback: (dateRange: DateRange) => void): () => void {
+    this.subscribers.add(callback)
+    // Immediately call with current value
+    callback(this.currentDateRange)
+    
+    // Return unsubscribe function
+    return () => {
+      this.subscribers.delete(callback)
+    }
+  }
+
+  updateDateRange(dateRange: DateRange) {
+    this.currentDateRange = dateRange
+    this.subscribers.forEach(callback => callback(dateRange))
+  }
+
+  getCurrentDateRange(): DateRange {
+    return { ...this.currentDateRange }
+  }
+}
+
+// Global instance
+declare global {
+  interface Window {
+    globalDateRangeObservable: DateRangeObservable
+  }
 }
 
 @Component({
@@ -31,7 +74,8 @@ interface VisualizationComponent {
     Button,
     Card,
     ScrollPanel,
-    Divider
+    Divider,
+    Calendar
   }
 })
 export default class DataInsights extends Vue {
@@ -40,8 +84,18 @@ export default class DataInsights extends Vue {
   isLoading: boolean = false
   visualizations: VisualizationComponent[] = []
   currentApplicationId: string = ''
+  dateRange: DateRange = {
+    startDate: null,
+    endDate: null
+  }
+  showDateRangePicker: boolean = false
 
   created() {
+    // Initialize global date range observable
+    if (!window.globalDateRangeObservable) {
+      window.globalDateRangeObservable = new DateRangeObservable()
+    }
+    
     // Get application ID from route params or default
     this.currentApplicationId = this.$route.params.applicationId as string || 'default'
     
@@ -55,9 +109,20 @@ Ask me questions about your data in application "${this.currentApplicationId}" a
 
 • Show me a summary of my data
 • Create a chart showing trends over time
-• Display the most important metrics`,
+• Display the most important metrics
+
+Components that support date filtering will automatically respond to the global date range picker.`,
       timestamp: new Date()
     })
+  }
+
+  updateDateRange() {
+    console.log('Date range updated:', this.dateRange)
+    window.globalDateRangeObservable.updateDateRange(this.dateRange)
+  }
+
+  toggleDateRangePicker() {
+    this.showDateRangePicker = !this.showDateRangePicker
   }
 
   async sendMessage() {
@@ -125,7 +190,8 @@ Ask me questions about your data in application "${this.currentApplicationId}" a
                 id: component.id,
                 htmlContent: component.rawHtml,
                 createdAt: new Date(component.modifiedAt),
-                status: 'success'
+                status: 'success',
+                supportsDateRangeFiltering: component.supportsDateRangeFiltering || false
               })
 
               // Execute the web component code
@@ -240,7 +306,6 @@ Ask me questions about your data in application "${this.currentApplicationId}" a
     }
   }
 
-
 }
 </script>
 
@@ -250,10 +315,57 @@ Ask me questions about your data in application "${this.currentApplicationId}" a
     <div class="w-2/3 flex flex-col">
       <!-- Header -->
       <div class="p-4 border-b border-surface-200 bg-surface-50 rounded-t-lg">
-        <h2 class="text-xl font-semibold text-surface-900">Visualization Dashboard</h2>
-        <p class="text-sm text-surface-600 mt-1">
-          {{ visualizations.length }} visualization{{ visualizations.length !== 1 ? 's' : '' }} created
-        </p>
+        <div class="flex justify-between items-center">
+          <div>
+            <h2 class="text-xl font-semibold text-surface-900">Visualization Dashboard</h2>
+            <p class="text-sm text-surface-600 mt-1">
+              {{ visualizations.length }} visualization{{ visualizations.length !== 1 ? 's' : '' }} created
+            </p>
+          </div>
+          
+          <!-- Global Date Range Picker -->
+          <div class="flex items-center gap-2">
+            <Button
+              @click="toggleDateRangePicker"
+              :class="showDateRangePicker ? 'p-button-primary' : 'p-button-outlined'"
+              icon="pi pi-calendar"
+              size="small"
+              :label="showDateRangePicker ? 'Hide Date Range' : 'Set Date Range'"
+            />
+            
+            <div v-if="showDateRangePicker" class="flex items-center gap-2 bg-white p-2 rounded border">
+              <div class="flex items-center gap-2">
+                <label class="text-sm font-medium text-surface-700">From:</label>
+                <Calendar
+                  v-model="dateRange.startDate"
+                  @date-select="updateDateRange"
+                  placeholder="Start Date"
+                  size="small"
+                  showIcon
+                />
+              </div>
+              
+              <div class="flex items-center gap-2">
+                <label class="text-sm font-medium text-surface-700">To:</label>
+                <Calendar
+                  v-model="dateRange.endDate"
+                  @date-select="updateDateRange"
+                  placeholder="End Date"
+                  size="small"
+                  showIcon
+                />
+              </div>
+              
+              <Button
+                @click="dateRange = { startDate: null, endDate: null }; updateDateRange()"
+                icon="pi pi-times"
+                size="small"
+                class="p-button-text"
+                title="Clear date range"
+              />
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Dashboard Content -->

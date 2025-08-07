@@ -34,4 +34,10 @@ export interface DataInsightsComponent {
      * The application ID this component belongs to.
      */
     applicationId: string;
+    
+    /**
+     * Whether this component supports date range filtering.
+     * Components that return true will subscribe to global date range changes.
+     */
+    supportsDateRangeFiltering?: boolean;
 } 
