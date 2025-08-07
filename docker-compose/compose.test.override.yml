@@ -1,0 +1,4 @@
+services:
+  structures-server:
+    environment:
+      SPRING_PROFILES_ACTIVE: test
