@@ -142,6 +142,10 @@ public class InsightsContextService {
                - Avoid generic names like 'chart', 'visualization', 'component'
                - CRITICAL: findAll() REQUIRES pagination parameters - ALWAYS use: await entityService.findAll({ pageNumber: 0, pageSize: 1000 })
                - Search with Lucene syntax: await entityService.search('fieldName:value OR category:active', { pageNumber: 0, pageSize: 1000 })
+               - CRITICAL: Always check for undefined/null response.content: if (!response.content || !Array.isArray(response.content)) { this.showNoDataMessage(); return; }
+               - CRITICAL: Always check for empty arrays: if (data.length === 0) { this.showNoDataMessage(); return; }
+               - CRITICAL: Use defensive programming - validate data before processing
+               - CRITICAL: Show user-friendly "no data" message instead of errors when no data exists
             
             3. DESIGN PRINCIPLES:
                - Create professional, responsive components within shadow DOM
@@ -262,6 +266,13 @@ public class InsightsContextService {
                     response = await entityService.findAll({ pageNumber: 0, pageSize: 1000 });
                   }
                   
+                  // Handle case where response.content might be undefined (no data)
+                  if (!response.content || !Array.isArray(response.content)) {
+                    console.log('No data available for visualization');
+                    this.showNoDataMessage();
+                    return;
+                  }
+                  
                   console.log('Raw data count:', response.content.length);
                   
                   // Additional client-side filtering for safety
@@ -280,10 +291,24 @@ public class InsightsContextService {
                     console.log('Filtered data count:', filteredData.length);
                   }
                   
+                  // Check if we have any data after filtering
+                  if (filteredData.length === 0) {
+                    console.log('No data available after filtering');
+                    this.showNoDataMessage();
+                    return;
+                  }
+                  
                   this.createChart(filteredData);
                 } catch (error) {
                   console.error('Error loading data:', error);
                   this.showError('Error loading data: ' + error.message);
+                }
+              }
+              
+              showNoDataMessage() {
+                const container = this.shadowRoot.querySelector('.chart-container');
+                if (container) {
+                  container.innerHTML = '<div style="text-align: center; padding: 40px; color: #666;"><i class="pi pi-info-circle" style="font-size: 2rem; margin-bottom: 1rem;"></i><p>No data available for this visualization</p><p style="font-size: 0.875rem; margin-top: 0.5rem;">Try adjusting your date range or check if data exists for this structure.</p></div>';
                 }
               }
               
@@ -311,12 +336,34 @@ public class InsightsContextService {
                 try {
                   const entityService = Structures.createEntityService(this.applicationId, this.structureName);
                   const response = await entityService.findAll({ pageNumber: 0, pageSize: 1000 });
+                  
+                  // Handle case where response.content might be undefined (no data)
+                  if (!response.content || !Array.isArray(response.content)) {
+                    console.log('No data available for visualization');
+                    this.showNoDataMessage();
+                    return;
+                  }
+                  
                   const data = response.content;
+                  
+                  // Check if we have any data
+                  if (data.length === 0) {
+                    console.log('No data available for visualization');
+                    this.showNoDataMessage();
+                    return;
+                  }
                   
                   this.createChart(data);
                 } catch (error) {
                   console.error('Error loading data:', error);
                   this.shadowRoot.querySelector('.chart-container').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Error loading data: ' + error.message + '</div>';
+                }
+              }
+              
+              showNoDataMessage() {
+                const container = this.shadowRoot.querySelector('.chart-container');
+                if (container) {
+                  container.innerHTML = '<div style="text-align: center; padding: 40px; color: #666;"><i class="pi pi-info-circle" style="font-size: 2rem; margin-bottom: 1rem;"></i><p>No data available for this visualization</p><p style="font-size: 0.875rem; margin-top: 0.5rem;">Check if data exists for this structure.</p></div>';
                 }
               }
               
