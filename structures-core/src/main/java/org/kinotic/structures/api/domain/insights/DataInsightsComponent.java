@@ -47,4 +47,10 @@ public class DataInsightsComponent {
      * The application ID this component belongs to.
      */
     private String applicationId;
+    
+    /**
+     * Whether this component supports date range filtering.
+     * Components that return true will subscribe to global date range changes.
+     */
+    private Boolean supportsDateRangeFiltering;
 } 

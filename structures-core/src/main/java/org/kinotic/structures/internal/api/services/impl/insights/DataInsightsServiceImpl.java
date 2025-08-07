@@ -1,9 +1,9 @@
 package org.kinotic.structures.internal.api.services.impl.insights;
 
-import java.time.Instant;
-import java.util.List;
-import java.util.UUID;
-
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.type.CollectionType;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.kinotic.continuum.api.security.Participant;
 import org.kinotic.structures.api.domain.insights.DataInsightsComponent;
 import org.kinotic.structures.api.domain.insights.InsightProgress;
@@ -15,14 +15,13 @@ import org.kinotic.structures.api.services.insights.DataInsightsService;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.type.CollectionType;
-
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Implementation of DataInsightsService that processes user requests through a chain of steps:
@@ -42,6 +41,7 @@ public class DataInsightsServiceImpl implements DataInsightsService {
     private final StructureService structureService;
     private final ObjectMapper objectMapper;
 
+
     @Override
     public Flux<InsightProgress> processRequest(InsightRequest request, Participant participant) {
         log.info("Processing data insights request: '{}'", request.getQuery());
@@ -50,19 +50,19 @@ public class DataInsightsServiceImpl implements DataInsightsService {
             try {
                 // Emit start progress
                 sink.next(InsightProgress.builder()
-                    .type(InsightProgress.ProgressType.STARTED)
-                    .message("Starting data insights analysis.")
-                    .timestamp(Instant.now())
-                    .build());
+                                         .type(InsightProgress.ProgressType.STARTED)
+                                         .message("Starting data insights analysis.")
+                                         .timestamp(Instant.now())
+                                         .build());
 
                 // Step 1: Analyze the request to determine intent
                 sink.next(InsightProgress.builder()
-                    .type(InsightProgress.ProgressType.ANALYZING)
-                    .message("Analyzing your request.")
-                    .timestamp(Instant.now())
-                    .build());
+                                         .type(InsightProgress.ProgressType.ANALYZING)
+                                         .message("Analyzing your request.")
+                                         .timestamp(Instant.now())
+                                         .build());
 
-                RequestAnalysisResult analysisResult = analyzeRequest(request, participant);
+                RequestAnalysisResult analysisResult = analyzeRequest(request);
                 log.info("Request analysis result: {}", analysisResult);
 
                 // Step 2: Route to appropriate processing path
@@ -75,11 +75,11 @@ public class DataInsightsServiceImpl implements DataInsightsService {
             } catch (Exception e) {
                 log.error("Error processing request: {}", e.getMessage(), e);
                 sink.next(InsightProgress.builder()
-                    .type(InsightProgress.ProgressType.ERROR)
-                    .message("An error occurred during analysis")
-                    .errorMessage(e.getMessage())
-                    .timestamp(Instant.now())
-                    .build());
+                                         .type(InsightProgress.ProgressType.ERROR)
+                                         .message("An error occurred during analysis")
+                                         .errorMessage(e.getMessage())
+                                         .timestamp(Instant.now())
+                                         .build());
                 sink.complete();
             }
         });
@@ -89,18 +89,17 @@ public class DataInsightsServiceImpl implements DataInsightsService {
      * Step 1: Analyzes the user's request to determine if they want a new visualization
      * or to modify an existing one.
      */
-    private RequestAnalysisResult analyzeRequest(InsightRequest request, Participant participant) throws Exception {
+    private RequestAnalysisResult analyzeRequest(InsightRequest request) throws Exception {
         log.debug("Analyzing request intent for query: '{}'", request.getQuery());
 
         String systemPrompt = contextService.getRequestAnalysisPrompt();
         String userPrompt = String.format("User request: %s", request.getQuery());
 
-        String aiResponse = chatClient
-                .prompt()
-                .system(systemPrompt)
-                .user(userPrompt)
-                .call()
-                .content();
+        String aiResponse = chatClient.prompt()
+                                      .system(systemPrompt)
+                                      .user(userPrompt)
+                                      .call()
+                                      .content();
 
         // Parse the JSON response from the AI
         try {
@@ -115,7 +114,7 @@ public class DataInsightsServiceImpl implements DataInsightsService {
     /**
      * Step 2a: Generates a new visualization using the existing AI pipeline with progress updates.
      */
-    private void generateNewVisualization(InsightRequest request, Participant participant, 
+    private void generateNewVisualization(InsightRequest request, Participant participant,
                                           FluxSink<InsightProgress> sink) {
         log.info("Generating new visualization for query: '{}'", request.getQuery());
 
@@ -131,10 +130,10 @@ public class DataInsightsServiceImpl implements DataInsightsService {
 
             // Emit code generation progress
             sink.next(InsightProgress.builder()
-                .type(InsightProgress.ProgressType.GENERATING_CODE)
-                .message("Generating web components with AI")
-                .timestamp(Instant.now())
-                .build());
+                                     .type(InsightProgress.ProgressType.GENERATING_CODE)
+                                     .message("Generating web components with AI")
+                                     .timestamp(Instant.now())
+                                     .build());
 
             // Generate visualization with AI (non-streaming)
             String aiResponse = chatClient
@@ -147,39 +146,39 @@ public class DataInsightsServiceImpl implements DataInsightsService {
 
             // Emit parsing progress
             sink.next(InsightProgress.builder()
-                .type(InsightProgress.ProgressType.GENERATING_CODE)
-                .message("Parsing generated components")
-                .timestamp(Instant.now())
-                .build());
+                                     .type(InsightProgress.ProgressType.GENERATING_CODE)
+                                     .message("Parsing generated components")
+                                     .timestamp(Instant.now())
+                                     .build());
 
             // Parse components from AI response with retry logic
             List<DataInsightsComponent> components = parseComponentsFromResponseWithRetry(aiResponse, request, systemPrompt, userPrompt, progressStructureTools, progressDataTools);
-            
+
             // Emit all components at once since they're all ready
             sink.next(InsightProgress.builder()
-                .type(InsightProgress.ProgressType.COMPONENTS_READY)
-                .message("Generated " + components.size() + " visualization(s)")
-                .components(components)
-                .timestamp(Instant.now())
-                .build());
-            
+                                     .type(InsightProgress.ProgressType.COMPONENTS_READY)
+                                     .message("Generated " + components.size() + " visualization(s)")
+                                     .components(components)
+                                     .timestamp(Instant.now())
+                                     .build());
+
             // Emit completion
             sink.next(InsightProgress.builder()
-                .type(InsightProgress.ProgressType.COMPLETED)
-                .message("Analysis completed successfully")
-                .timestamp(Instant.now())
-                .build());
-            
+                                     .type(InsightProgress.ProgressType.COMPLETED)
+                                     .message("Analysis completed successfully")
+                                     .timestamp(Instant.now())
+                                     .build());
+
             sink.complete();
 
         } catch (Exception e) {
             log.error("Error generating new visualization: {}", e.getMessage(), e);
             sink.next(InsightProgress.builder()
-                .type(InsightProgress.ProgressType.ERROR)
-                .message("Error during analysis")
-                .errorMessage(e.getMessage())
-                .timestamp(Instant.now())
-                .build());
+                                     .type(InsightProgress.ProgressType.ERROR)
+                                     .message("Error during analysis")
+                                     .errorMessage(e.getMessage())
+                                     .timestamp(Instant.now())
+                                     .build());
             sink.complete();
         }
     }
@@ -187,19 +186,19 @@ public class DataInsightsServiceImpl implements DataInsightsService {
     /**
      * Step 2b: Modifies an existing visualization based on user feedback.
      */
-    private void modifyExistingVisualization(InsightRequest request, Participant participant, 
-                                          RequestAnalysisResult analysisResult, 
-                                          FluxSink<InsightProgress> sink) {
+    private void modifyExistingVisualization(InsightRequest request, Participant participant,
+                                             RequestAnalysisResult analysisResult,
+                                             FluxSink<InsightProgress> sink) {
         log.info("Modifying existing visualization: '{}' with request: '{}'",
                  analysisResult.getVisualizationName(), request.getQuery());
 
         try {
             // Emit modification progress
             sink.next(InsightProgress.builder()
-                .type(InsightProgress.ProgressType.GENERATING_CODE)
-                .message("Modifying existing visualization.")
-                .timestamp(Instant.now())
-                .build());
+                                     .type(InsightProgress.ProgressType.GENERATING_CODE)
+                                     .message("Modifying existing visualization.")
+                                     .timestamp(Instant.now())
+                                     .build());
 
             // TODO: Load the existing visualization code
             // For now, this is a no-op placeholder
@@ -232,32 +231,32 @@ public class DataInsightsServiceImpl implements DataInsightsService {
 
             // Parse components and emit progress
             List<DataInsightsComponent> components = parseComponentsFromResponse(aiResponse, request);
-            
+
             // Emit all components at once since they're all ready
             sink.next(InsightProgress.builder()
-                .type(InsightProgress.ProgressType.COMPONENTS_READY)
-                .message("Modified " + components.size() + " visualization(s)")
-                .components(components)
-                .timestamp(Instant.now())
-                .build());
-            
+                                     .type(InsightProgress.ProgressType.COMPONENTS_READY)
+                                     .message("Modified " + components.size() + " visualization(s)")
+                                     .components(components)
+                                     .timestamp(Instant.now())
+                                     .build());
+
             // Emit completion
             sink.next(InsightProgress.builder()
-                .type(InsightProgress.ProgressType.COMPLETED)
-                .message("Modification completed successfully")
-                .timestamp(Instant.now())
-                .build());
-            
+                                     .type(InsightProgress.ProgressType.COMPLETED)
+                                     .message("Modification completed successfully")
+                                     .timestamp(Instant.now())
+                                     .build());
+
             sink.complete();
 
         } catch (Exception e) {
             log.error("Error modifying existing visualization: {}", e.getMessage(), e);
             sink.next(InsightProgress.builder()
-                .type(InsightProgress.ProgressType.ERROR)
-                .message("Error during modification")
-                .errorMessage(e.getMessage())
-                .timestamp(Instant.now())
-                .build());
+                                     .type(InsightProgress.ProgressType.ERROR)
+                                     .message("Error during modification")
+                                     .errorMessage(e.getMessage())
+                                     .timestamp(Instant.now())
+                                     .build());
             sink.complete();
         }
     }
@@ -283,13 +282,13 @@ public class DataInsightsServiceImpl implements DataInsightsService {
         // Add hardcoded values for the web components
         prompt.append("HARDCODED VALUES FOR WEB COMPONENTS:\n");
         prompt.append("Application ID: ").append(request.getApplicationId()).append("\n");
-        
+
         if (request.getFocusStructureId() != null) {
             prompt.append("Structure ID: ").append(request.getFocusStructureId()).append("\n");
             // Extract structure name from the structure ID
-            String structureName = request.getFocusStructureId().contains(".") ? 
-                request.getFocusStructureId().substring(request.getFocusStructureId().indexOf(".") + 1) : 
-                request.getFocusStructureId();
+            String structureName = request.getFocusStructureId().contains(".") ?
+                    request.getFocusStructureId().substring(request.getFocusStructureId().indexOf(".") + 1) :
+                    request.getFocusStructureId();
             prompt.append("Structure Name: ").append(structureName).append("\n");
         }
 
@@ -304,9 +303,9 @@ public class DataInsightsServiceImpl implements DataInsightsService {
         prompt.append("\nIMPORTANT: In your JavaScript code, hardcode these values directly:");
         prompt.append("\n- Use '").append(request.getApplicationId()).append("' as the applicationId");
         if (request.getFocusStructureId() != null) {
-            String structureName = request.getFocusStructureId().contains(".") ? 
-                request.getFocusStructureId().substring(request.getFocusStructureId().indexOf(".") + 1) : 
-                request.getFocusStructureId();
+            String structureName = request.getFocusStructureId().contains(".") ?
+                    request.getFocusStructureId().substring(request.getFocusStructureId().indexOf(".") + 1) :
+                    request.getFocusStructureId();
             prompt.append("\n- Use '").append(structureName).append("' as the structureName");
             prompt.append("\n- Use '").append(request.getFocusStructureId()).append("' as the structureId");
         }
@@ -319,15 +318,12 @@ public class DataInsightsServiceImpl implements DataInsightsService {
      * Builds the user prompt for visualization modification.
      */
     private String buildModificationPrompt(InsightRequest request, String context, String existingCode, RequestAnalysisResult analysisResult) {
-        StringBuilder prompt = new StringBuilder();
-        prompt.append("User Modification Request: ").append(request.getQuery()).append("\n\n");
-        prompt.append("Application Context:\n").append(context).append("\n\n");
-        prompt.append("Visualization to Modify: ").append(analysisResult.getVisualizationName()).append("\n");
-        prompt.append("Additional Context: ").append(analysisResult.getAdditionalContext()).append("\n\n");
-        prompt.append("Existing Visualization Code:\n").append(existingCode).append("\n\n");
-        prompt.append("Please modify the existing visualization according to the user's request. Return your response as a JSON array of DataInsightsComponent objects as specified in the system prompt.");
-
-        return prompt.toString();
+        return "User Modification Request: " + request.getQuery() + "\n\n" +
+                "Application Context:\n" + context + "\n\n" +
+                "Visualization to Modify: " + analysisResult.getVisualizationName() + "\n" +
+                "Additional Context: " + analysisResult.getAdditionalContext() + "\n\n" +
+                "Existing Visualization Code:\n" + existingCode + "\n\n" +
+                "Please modify the existing visualization according to the user's request. Return your response as a JSON array of DataInsightsComponent objects as specified in the system prompt.";
     }
 
 
@@ -335,18 +331,18 @@ public class DataInsightsServiceImpl implements DataInsightsService {
     /**
      * Parses the AI response to extract multiple DataInsightsComponent objects from JSON with retry logic.
      */
-    private List<DataInsightsComponent> parseComponentsFromResponseWithRetry(String aiResponse, InsightRequest request, 
-                                                                          String systemPrompt, String userPrompt,
-                                                                          StructureDiscoveryTools structureTools, 
-                                                                          DataAnalysisTools dataTools) {
+    private List<DataInsightsComponent> parseComponentsFromResponseWithRetry(String aiResponse, InsightRequest request,
+                                                                             String systemPrompt, String userPrompt,
+                                                                             StructureDiscoveryTools structureTools,
+                                                                             DataAnalysisTools dataTools) {
         try {
             return parseComponentsFromResponse(aiResponse, request);
         } catch (Exception e) {
             log.warn("Failed to parse AI response, retrying with explicit instruction: {}", e.getMessage());
-            
+
             // Retry with explicit JSON instruction
             String retryPrompt = userPrompt + "\n\nCRITICAL: You must respond with ONLY a JSON array of DataInsightsComponent objects. Do not include any other text, explanations, or markdown formatting.";
-            
+
             String retryResponse = chatClient
                     .prompt()
                     .system(systemPrompt)
@@ -354,7 +350,7 @@ public class DataInsightsServiceImpl implements DataInsightsService {
                     .tools(structureTools, dataTools)
                     .call()
                     .content();
-            
+
             return parseComponentsFromResponse(retryResponse, request);
         }
     }
@@ -368,12 +364,12 @@ public class DataInsightsServiceImpl implements DataInsightsService {
             if (aiResponse == null || aiResponse.trim().isEmpty()) {
                 throw new RuntimeException("AI response was empty");
             }
-            
+
             // Check if response is a tool call result (XML format)
             if (aiResponse.trim().startsWith("<xai:function_call_result")) {
                 throw new RuntimeException("AI returned tool call result instead of JSON components. Retrying with explicit instruction.");
             }
-            
+
             // Clean the response and try to parse as JSON array
             String cleanedResponse = aiResponse.trim();
 
@@ -389,7 +385,7 @@ public class DataInsightsServiceImpl implements DataInsightsService {
             }
 
             cleanedResponse = cleanedResponse.trim();
-            
+
             if (cleanedResponse.isEmpty()) {
                 throw new RuntimeException("AI response was empty after cleaning");
             }
@@ -430,9 +426,5 @@ public class DataInsightsServiceImpl implements DataInsightsService {
             throw new RuntimeException("AI response was not in the expected JSON format. Expected an array of DataInsightsComponent objects.", e);
         }
     }
-    
-
-
-
 
 }

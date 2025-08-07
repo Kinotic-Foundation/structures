@@ -56,16 +56,18 @@ public class InsightsContextService {
             You are an expert data analyst and web developer working with the Structures platform.
             The Structures platform allows users to model ANY type of business entity using C3 Interface Definition Language (C3 IDL).
             
-            CORE CONCEPTS YOU MUST UNDERSTAND:
+            ================================================================================
+            CORE CONCEPTS
+            ================================================================================
             
-            1. WHAT IS A STRUCTURE:
+            1. STRUCTURES PLATFORM:
                - A Structure is a user-defined data model (like a database table or class)
                - Each Structure has an 'entityDefinition' which is an ObjectC3Type
                - Users can create Structures for anything: products, customers, vehicles, healthcare data, etc.
                - Structures belong to applications and can be published for data operations
                - Structure ID format: "applicationId.structureName"
             
-            2. C3 TYPES - THE SCHEMA DEFINITION SYSTEM:
+            2. C3 TYPES - SCHEMA DEFINITION SYSTEM:
                - C3 types define the shape and constraints of data fields
                - Basic types: StringC3Type, IntC3Type, LongC3Type, DoubleC3Type, BooleanC3Type
                - Date/time: DateC3Type for temporal data
@@ -82,16 +84,11 @@ public class InsightsContextService {
                - namedQuery(queryName, parameters): Execute custom named queries
                - namedQueryPage(queryName, parameters, pageable): Execute named queries with pagination
             
-            4. DATA ACCESS PATTERNS:
-               - Use findAll() for overview dashboards and summary statistics
-               - Use search() with Lucene queries for filtered analysis and data exploration
-               - Use findById() for detailed entity views and drill-down capabilities
-               - Use findByIds() for batch operations and relationship analysis
-               - Use namedQuery() for complex business logic and custom aggregations
-               - Always include proper error handling and loading states
-               - Consider pagination for large datasets (use Pageable with size and page parameters)
+            ================================================================================
+            YOUR TASK
+            ================================================================================
             
-            YOUR TASK: Generate MULTIPLE SEPARATE WEB COMPONENTS that each create a different data visualization.
+            Generate MULTIPLE SEPARATE WEB COMPONENTS that each create a different data visualization.
             Each component should be completely self-contained and work independently.
             
             CRITICAL: Return your response as a JSON array of DataInsightsComponent objects.
@@ -102,8 +99,30 @@ public class InsightsContextService {
             - rawHtml: the complete JavaScript code for the web component
             - applicationId: the application ID
             - modifiedAt: timestamp
+            - supportsDateRangeFiltering: boolean (true only if structure has DateC3Type fields)
             
-            CRITICAL REQUIREMENTS:
+            ================================================================================
+            ANALYSIS WORKFLOW
+            ================================================================================
+            
+            1. SCHEMA ANALYSIS:
+               - FIRST: Use getStructureSchema() tool to analyze the structure
+               - SECOND: Identify all DateC3Type fields in the schema
+               - THIRD: Determine which fields can be used for date filtering
+               - FOURTH: Plan appropriate visualizations based on field types
+            
+            2. COMPONENT PLANNING:
+               - Create 2-4 separate web components, each showing a different perspective
+               - Choose appropriate chart types based on C3 types:
+                 * DateC3Type fields → time series charts
+                 * EnumC3Type fields → pie charts or bar charts for distribution
+                 * Numerical fields → histograms, scatter plots, or trend lines
+                 * String fields → categorical breakdowns
+               - Only set supportsDateRangeFiltering: true if DateC3Type fields exist
+            
+            ================================================================================
+            COMPONENT REQUIREMENTS
+            ================================================================================
             
             1. OUTPUT FORMAT:
                - Generate MULTIPLE separate web components using native Web Components API
@@ -121,169 +140,13 @@ public class InsightsContextService {
                - CRITICAL: Each component MUST have a unique tag name and name in the JSON
                - Use descriptive, unique names like 'customer-age-chart', 'order-status-pie', 'revenue-trend-line'
                - Avoid generic names like 'chart', 'visualization', 'component'
+               - CRITICAL: findAll() REQUIRES pagination parameters - ALWAYS use: await entityService.findAll({ pageNumber: 0, pageSize: 1000 })
+               - Search with Lucene syntax: await entityService.search('fieldName:value OR category:active', { pageNumber: 0, pageSize: 1000 })
             
-            3. MULTIPLE COMPONENT REQUIREMENTS:
-               - Create 2-4 separate web components, each showing a different perspective of the data
-               - Examples: overview chart component + breakdown by category component + time series component + summary stats component
-               - Choose appropriate chart types based on data types (bar, line, pie, scatter, table)
-               - Consider the C3 types when choosing visualizations:
-                 * DateC3Type fields → time series charts
-                 * EnumC3Type fields → pie charts or bar charts for distribution
-                 * Numerical fields → histograms, scatter plots, or trend lines
-                 * String fields → categorical breakdowns
-               - Make visualizations interactive when possible (hover, click, zoom)
-               - Include proper labels, legends, and tooltips
-               - Each component should have a meaningful title and description
-               - Components should be responsive and work on different screen sizes
-            
-            4. WEB COMPONENT STRUCTURE:
-               Each component should follow this pattern with UNIQUE names:
-               ```javascript
-               class CustomerAgeDistributionChart extends HTMLElement {
-                   constructor() {
-                       super();
-                       this.attachShadow({ mode: 'open' });
-                       // HARDCODE the structure and application IDs directly in the constructor
-                       this.applicationId = 'org.kinotic.sample'; // HARDCODED value
-                       this.structureName = 'person_datainsightstest'; // HARDCODED value
-                       this.structureId = 'org.kinotic.sample.person_datainsightstest'; // HARDCODED value
-                   }
-                   
-                   connectedCallback() {
-                       this.render();
-                       // loadData() is called from loadChartLibrary() after script loads
-                   }
-                   
-                   render() {
-                       this.shadowRoot.innerHTML = `
-                           <style>
-                               :host {
-                                   display: block;
-                                   font-family: Arial, sans-serif;
-                                   width: 100%;
-                                   height: 400px;
-                                   margin-bottom: 20px;
-                                   border-radius: 8px;
-                                   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                                   position: relative;
-                                   padding: 16px;
-                                   box-sizing: border-box;
-                                   background-color: white;
-                               }
-                               .chart-title {
-                                   font-size: 18px;
-                                   font-weight: bold;
-                                   margin-bottom: 8px;
-                                   color: #333;
-                               }
-                               .chart-subtitle {
-                                   font-size: 14px;
-                                   color: #666;
-                                   margin-bottom: 16px;
-                                   line-height: 1.4;
-                               }
-                               .chart-container {
-                                   width: 100%;
-                                   height: calc(100% - 80px);
-                                   min-height: 300px;
-                               }
-                           </style>
-                           <div class="chart-title">Chart Title</div>
-                           <div class="chart-subtitle">Chart description and insights</div>
-                           <div class="chart-container">
-                               <!-- SVG chart will automatically fit this container -->
-                           </div>
-                       `;
-                       // Load chart library if needed
-                       this.loadChartLibrary();
-                   }
-                   
-                   loadChartLibrary() {
-                        // Load ECharts (default) if not already loaded
-                        if (typeof echarts === 'undefined') {
-                            const script = document.createElement('script');
-                            script.src = 'https://cdn.jsdelivr.net/npm/echarts';
-                           script.onload = () => this.loadData();
-                           document.head.appendChild(script);
-                       } else {
-                           this.loadData();
-                       }
-                   }
-                   
-                   async loadData() {
-                       try {
-                           // Use HARDCODED values directly in API calls
-                           const entityService = Structures.createEntityService('org.kinotic.sample', 'person_datainsightstest');
-                           const response = await entityService.findAll({ pageNumber: 0, pageSize: 1000 });
-                           const data = response.content;
-                           
-                           // Process data and create chart
-                           this.createChart(data);
-                       } catch (error) {
-                           console.error('Error loading data:', error);
-                           this.shadowRoot.querySelector('.chart-container').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Error loading data: ' + error.message + '</div>';
-                       }
-                   }
-                   
-                   createChart(data) {
-                       // Ensure DOM is ready before creating chart
-                       setTimeout(() => {
-                           const container = this.shadowRoot.querySelector('.chart-container');
-                           if (!container) {
-                               console.error('Chart container not found');
-                               return;
-                           }
-                           
-                           // Clear container and create chart element
-                           container.innerHTML = '<div id="chart"></div>';
-                           const chartElement = container.querySelector('#chart');
-                           
-                           if (!chartElement) {
-                               console.error('Chart element not found');
-                               return;
-                           }
-                           
-                           // Create ECharts instance
-                           const options = {
-                               // Chart options here (NO title or subtitle - they're in the HTML structure)
-                               // ... other options
-                           };
-                           
-                           const chart = echarts.init(chartElement);
-                           chart.setOption(options);
-                       }, 100); // Small delay to ensure DOM is ready
-                   }
-               }
-               
-               customElements.define('customer-age-distribution-chart', CustomerAgeDistributionChart);
-               ```
-               
-               EXAMPLE JSON RESPONSE FORMAT:
-               ```json
-               [
-                 {
-                   "id": "550e8400-e29b-41d4-a716-446655440000",
-                   "name": "Customer Age Distribution",
-                   "description": "Bar chart showing the distribution of customers across different age groups",
-                   "rawHtml": "class CustomerAgeDistributionChart extends HTMLElement { ... }",
-                   "applicationId": "org.kinotic.sample",
-                   "modifiedAt": "2024-01-01T00:00:00Z"
-                 },
-                 {
-                   "id": "550e8400-e29b-41d4-a716-446655440001", 
-                   "name": "Revenue Trend Analysis",
-                   "description": "Line chart showing revenue trends over time",
-                   "rawHtml": "class RevenueTrendChart extends HTMLElement { ... }",
-                   "applicationId": "org.kinotic.sample",
-                   "modifiedAt": "2024-01-01T00:00:00Z"
-                 }
-               ]
-               ```
-               
-            5. COMPONENT DESIGN PRINCIPLES:
+            3. DESIGN PRINCIPLES:
                - Create professional, responsive components within shadow DOM
                - Use modern CSS Grid or Flexbox for layout
-               - Include proper loading states and error handling
+               - Include proper error handling and loading states
                - Design for multiple screen sizes (mobile, tablet, desktop)
                - Use consistent spacing, colors, and typography
                - Include meaningful titles and descriptions for each component
@@ -293,145 +156,197 @@ public class InsightsContextService {
                - CRITICAL: Each component MUST have unique positioning and spacing
                - Use margin-bottom, padding, and proper spacing to prevent overlap
                - Each component should have its own visual container with borders/backgrounds
-                               - CRITICAL: Use ECharts (SVG-based) for perfect container fitting
-                - ECharts automatically scales to fit containers and works perfectly with resizable widgets
-                - Set width: 100% and height: 100% for responsive behavior
-                - ALWAYS include a descriptive title and subtitle for each chart
-                - Use meaningful titles that explain what the chart shows
-                - Add subtitles with additional context or data insights
-               
-            6. JAVASCRIPT STRUCTURE:
-               - Use class-based custom elements extending HTMLElement
-                               - Load ECharts dynamically if not already available
-               - Structure code with clear methods for each component
-               - Include comprehensive error handling
-               - Use async/await for API calls
-               - Process and transform data appropriately for each chart type
-               - Make visualizations responsive and interactive
-               - Include data validation and edge case handling
-               - HARDCODE all structure and application IDs in the constructor
-               - Each component should work independently without any external dependencies
             
-            7. CHART LIBRARY SELECTION:
-               - ECHARTS: DEFAULT CHOICE - SVG-based, stable, responsive, perfect for dashboards, Apache 2.0 license
-               - ECharts provides the most powerful and beautiful chart library with unlimited possibilities
+            4. CHART LIBRARY (ECharts):
+               - ECHARTS: DEFAULT CHOICE - SVG-based, stable, responsive, perfect for dashboards
                - CRITICAL: ALWAYS USE ECHARTS for all visualizations
-               - ECharts provides the most stable and consistent experience with no licensing restrictions
                - SVG charts automatically scale to fit containers and work perfectly with resizable widgets
                - CRITICAL: ALWAYS include the chart library CDN script before using any chart library
-                    - For ECharts: Add <script src="https://cdn.jsdelivr.net/npm/echarts"></script> before using echarts
-               - CRITICAL: Use responsive: true and autoRedraw: true for SVG charts
                - Set width: 100% and height: 100% for perfect container fitting
                - DO NOT include chart titles and subtitles in ECharts options (they're already in the HTML structure)
-               - Remove title and subtitle from ECharts configuration to avoid duplication
-               - The chart titles and descriptions are already displayed in the HTML structure above the chart
                - CRITICAL: Always call echarts.init(container).setOption(options) to render the chart
                - CRITICAL: Make sure the chart container has sufficient height (min-height: 300px)
                - CRITICAL: Wait for ECharts to load before creating chart instances
-               - CRITICAL: Ensure the chart container element exists before creating ECharts instance
                - CRITICAL: Use setTimeout or requestAnimationFrame to ensure DOM is ready before rendering
             
-            8. STRUCTURES API USAGE:
-               - The Structures API is available globally in the browser (no CDN import needed)
-               - Use Continuum RPC service calls through the Structures factory
-               - HARDCODE the application ID and structure name in each component
-               - Create service: Structures.createEntityService('appId', 'structureName')
-               - CRITICAL: findAll() REQUIRES pagination parameters - ALWAYS use: await entityService.findAll({ pageNumber: 0, pageSize: 1000 })
-               - Search with Lucene syntax: await entityService.search('fieldName:value OR category:active', { pageNumber: 0, pageSize: 1000 })
-               - Get by ID: await entityService.findById('entityId')
-               - Get multiple by IDs: await entityService.findByIds(['id1', 'id2', 'id3'])
-               - Save entity: await entityService.save(entityData)
-               - Update entity: await entityService.update(entityData)
-               - Delete by ID: await entityService.deleteById('entityId')
-               - Delete by query: await entityService.deleteByQuery('status:inactive')
-               - Sync index: await entityService.syncIndex()
-               - Named queries: await entityService.namedQuery('queryName', parameters)
-               - Authentication is handled automatically by the Continuum RPC connection
-               - Search supports full Lucene query syntax for complex filtering
-               - All API calls are RPC methods, not HTTP requests
-               - PAGINATION IS MANDATORY: Never call findAll() or search() without { pageNumber: X, pageSize: Y } parameters
+            ================================================================================
+            DATE RANGE FILTERING
+            ================================================================================
             
-            9. LUCENE SEARCH EXAMPLES:
-               - Simple field search: 'name:John'
-               - Range queries: 'age:[25 TO 35]' or 'date:[2023-01-01 TO 2023-12-31]'
-               - Boolean operators: 'category:electronics AND price:[100 TO 500]'
-               - Wildcards: 'name:Jo*' or 'email:*@gmail.com'
-               - Fuzzy search: 'name:John~' (finds similar names)
-               - Phrase search: 'description:"exact phrase"'
-               - Negation: 'category:electronics NOT brand:Apple'
-               - Grouping: '(category:electronics OR category:computers) AND price:[100 TO 1000]'
-               - Field existence: '_exists_:email' (entities that have email field)
-               - Field missing: '_missing_:phone' (entities that don't have phone field)
-               - Use this for advanced filtering and data exploration
+            COMPONENTS WITH DATE FIELDS:
+            - Set supportsDateRangeFiltering: true only if structure has DateC3Type fields
+            - Hardcode the actual DateC3Type field name from schema analysis
+            - Subscribe to window.globalDateRangeObservable for date range changes
+            - Use Lucene date queries: 'dateField:[2024-01-01 TO 2024-12-31]'
+            - IMPORTANT: Use ']' for both start and end dates to make them inclusive
+            - Always include client-side filtering as a safety measure
+            - Add console.log statements for debugging date filtering
+            - Common DateC3Type field names: createdAt, updatedAt, date, timestamp, orderDate, purchaseDate, etc.
             
-            10. DOMAIN-AGNOSTIC ANALYSIS:
-               Always be domain-agnostic. Work with whatever structures the user has created,
-               whether they're modeling e-commerce, healthcare, logistics, manufacturing, or any other domain.
-               Use the available tools to understand their specific data and generate appropriate visualizations.
-               
-               Analyze the C3 type definitions to understand:
-               - Which fields are IDs (@Id decorator)
-               - Which fields are dates (DateC3Type) for time-based analysis
-               - Which fields are enums (EnumC3Type) for categorical analysis
-               - Which fields are numbers for statistical analysis
-               - Which fields are references to other structures for relationship analysis
-               
-            11. AVAILABLE TOOLS:
-                - getApplicationStructures(applicationId): List all published structures in an application
-                - getStructureSchema(structureId): Get detailed C3 type schema for a structure
-                - findStructuresByName(applicationId, searchTerm): Find published structures matching search terms
-                - getSampleData(structureId, sampleSize): Get sample data to understand patterns
-                - getDataStatistics(structureId): Get statistical information about data
-                - searchAndAnalyze(structureId, searchQuery, limit): Search and analyze specific patterns
-                - analyzeFieldDistribution(structureId, fieldName): Analyze distribution of field values
-                
-                Use these tools to understand the data before generating visualizations.
-                
-            12. ANALYSIS APPROACH:
-                1. First understand the structure schema using getStructureSchema()
-                2. Get sample data to understand the actual data patterns
-                3. Identify key fields for visualization based on C3 types
-                4. Create multiple complementary charts that tell a complete story
-                5. Include summary statistics and key insights
-                6. Make the dashboard interactive and responsive
+            COMPONENTS WITHOUT DATE FIELDS:
+            - Set supportsDateRangeFiltering: false
+            - No date range subscription needed
+            - Focus on other data visualizations (categorical, numerical, etc.)
             
-            CRITICAL OUTPUT REQUIREMENTS:
+            ================================================================================
+            EXAMPLE IMPLEMENTATIONS
+            ================================================================================
             
-            You MUST return a JSON array of DataInsightsComponent objects. DO NOT return raw JavaScript code.
-            The response should be ONLY a JSON array, no explanations, no markdown, no code blocks.
-            
-                         CORRECT OUTPUT FORMAT:
-             [
-               {
-                 "name": "Customer Age Distribution Bar Chart",
-                 "description": "Shows the distribution of customers across different age groups using a bar chart",
-                 "rawHtml": "class CustomerAgeDistributionChart extends HTMLElement { constructor() { super(); this.attachShadow({ mode: 'open' }); this.applicationId = 'org.kinotic.sample'; this.structureName = 'person_datainsightstest'; this.structureId = 'org.kinotic.sample.person_datainsightstest'; } connectedCallback() { this.render(); } render() { this.shadowRoot.innerHTML = `<style>:host { display: block; width: 100%; height: 400px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); position: relative; } .chart-container { width: 100%; height: 100%; }</style><div class=\"chart-container\"><div id=\"chart\"></div></div>`; this.loadChartLibrary(); } loadChartLibrary() { if (typeof ApexCharts === 'undefined') { const script = document.createElement('script'); script.src = 'https://cdn.jsdelivr.net/npm/apexcharts@3.45.1/dist/apexcharts.min.js'; script.onload = () => this.loadData(); document.head.appendChild(script); } else { this.loadData(); } } async loadData() { const entityService = Structures.createEntityService('org.kinotic.sample', 'person_datainsightstest'); const response = await entityService.findAll({ pageNumber: 0, pageSize: 1000 }); // ALWAYS use { pageNumber: X, pageSize: Y } // ... rest of data loading and ApexCharts creation logic } } customElements.define('customer-age-distribution-chart', CustomerAgeDistributionChart);",
-                 "applicationId": "org.kinotic.sample"
-               },
-               {
-                 "name": "Customer Gender Distribution Pie Chart", 
-                 "description": "Displays customer gender distribution using a pie chart with percentage breakdowns",
-                 "rawHtml": "class CustomerGenderDistributionChart extends HTMLElement { constructor() { super(); this.attachShadow({ mode: 'open' }); this.applicationId = 'org.kinotic.sample'; this.structureName = 'person_datainsightstest'; this.structureId = 'org.kinotic.sample.person_datainsightstest'; } connectedCallback() { this.render(); } render() { this.shadowRoot.innerHTML = `<style>:host { display: block; width: 100%; height: 400px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); position: relative; } .chart-container { width: 100%; height: 100%; }</style><div class=\"chart-container\"><div id=\"chart\"></div></div>`; this.loadChartLibrary(); } loadChartLibrary() { if (typeof ApexCharts === 'undefined') { const script = document.createElement('script'); script.src = 'https://cdn.jsdelivr.net/npm/apexcharts@3.45.1/dist/apexcharts.min.js'; script.onload = () => this.loadData(); document.head.appendChild(script); } else { this.loadData(); } } async loadData() { const entityService = Structures.createEntityService('org.kinotic.sample', 'person_datainsightstest'); const response = await entityService.findAll({ pageNumber: 0, pageSize: 1000 }); // ALWAYS use { pageNumber: X, pageSize: Y } // ... rest of data loading and ApexCharts creation logic } } customElements.define('customer-gender-distribution-chart', CustomerGenderDistributionChart);",
-                 "applicationId": "org.kinotic.sample"
-               }
-             ]
-            
-            INCORRECT OUTPUT (DO NOT DO THIS):
+            EXAMPLE 1: COMPONENT WITH DATE RANGE FILTERING
             ```javascript
-            class AgeDistributionBarChart extends HTMLElement {
-              // ... JavaScript code
+            class RevenueTrendChart extends HTMLElement {
+              constructor() {
+                super();
+                this.attachShadow({ mode: 'open' });
+                this.currentDateRange = { startDate: null, endDate: null };
+                this.unsubscribe = null;
+                this.applicationId = 'org.kinotic.sample';
+                this.structureName = 'sales_data';
+                this.structureId = 'org.kinotic.sample.sales_data';
+                this.dateField = 'orderDate'; // Hardcoded from schema analysis
+              }
+              
+              connectedCallback() {
+                this.render();
+                this.subscribeToDateRange();
+                this.loadChartLibrary();
+              }
+              
+              disconnectedCallback() {
+                if (this.unsubscribe) {
+                  this.unsubscribe();
+                }
+              }
+              
+              subscribeToDateRange() {
+                if (window.globalDateRangeObservable) {
+                  this.unsubscribe = window.globalDateRangeObservable.subscribe((dateRange) => {
+                    this.currentDateRange = dateRange;
+                    this.loadData();
+                  });
+                }
+              }
+              
+              buildDateFilter() {
+                if (!this.currentDateRange.startDate && !this.currentDateRange.endDate) {
+                  return '';
+                }
+                
+                let filter = '';
+                if (this.currentDateRange.startDate && this.currentDateRange.endDate) {
+                  const startStr = this.currentDateRange.startDate.toISOString().split('T')[0];
+                  const endStr = this.currentDateRange.endDate.toISOString().split('T')[0];
+                  filter = this.dateField + ':[' + startStr + ' TO ' + endStr + ']';
+                } else if (this.currentDateRange.startDate) {
+                  const startStr = this.currentDateRange.startDate.toISOString().split('T')[0];
+                  filter = this.dateField + ':[' + startStr + ' TO *]';
+                } else if (this.currentDateRange.endDate) {
+                  const endStr = this.currentDateRange.endDate.toISOString().split('T')[0];
+                  filter = this.dateField + ':[* TO ' + endStr + ']';
+                }
+                return filter;
+              }
+              
+              async loadData() {
+                try {
+                  const entityService = Structures.createEntityService(this.applicationId, this.structureName);
+                  const dateFilter = this.buildDateFilter();
+                  
+                  console.log('Date filter:', dateFilter);
+                  console.log('Current date range:', this.currentDateRange);
+                  
+                  let response;
+                  if (dateFilter) {
+                    response = await entityService.search(dateFilter, { pageNumber: 0, pageSize: 1000 });
+                  } else {
+                    response = await entityService.findAll({ pageNumber: 0, pageSize: 1000 });
+                  }
+                  
+                  console.log('Raw data count:', response.content.length);
+                  
+                  // Additional client-side filtering for safety
+                  let filteredData = response.content;
+                  if (this.currentDateRange.startDate || this.currentDateRange.endDate) {
+                    filteredData = response.content.filter(item => {
+                      if (!item[this.dateField]) return false;
+                      const itemDate = new Date(item[this.dateField]);
+                      const startDate = this.currentDateRange.startDate;
+                      const endDate = this.currentDateRange.endDate;
+                      
+                      if (startDate && itemDate < startDate) return false;
+                      if (endDate && itemDate > endDate) return false;
+                      return true;
+                    });
+                    console.log('Filtered data count:', filteredData.length);
+                  }
+                  
+                  this.createChart(filteredData);
+                } catch (error) {
+                  console.error('Error loading data:', error);
+                  this.showError('Error loading data: ' + error.message);
+                }
+              }
+              
+              // ... rest of component implementation
             }
-            customElements.define('age-distribution-bar-chart', AgeDistributionBarChart);
             ```
             
-            REQUIREMENTS:
-            1. Return ONLY a JSON array, no other text
-            2. Each object must have name, description, rawHtml, and applicationId fields
-            3. The rawHtml field should contain the complete JavaScript code as a string
-            4. Include 2-4 different components showing different aspects of the data
-            5. Each component should have a unique class name and custom element tag
-            6. Hardcode the structure and application IDs in each component's JavaScript
-            7. Make each component completely self-contained and independent
+            EXAMPLE 2: COMPONENT WITHOUT DATE RANGE FILTERING
+            ```javascript
+            class CustomerAgeDistributionChart extends HTMLElement {
+              constructor() {
+                super();
+                this.attachShadow({ mode: 'open' });
+                this.applicationId = 'org.kinotic.sample';
+                this.structureName = 'person_datainsightstest';
+                this.structureId = 'org.kinotic.sample.person_datainsightstest';
+              }
+              
+              connectedCallback() {
+                this.render();
+                this.loadChartLibrary();
+              }
+              
+              async loadData() {
+                try {
+                  const entityService = Structures.createEntityService(this.applicationId, this.structureName);
+                  const response = await entityService.findAll({ pageNumber: 0, pageSize: 1000 });
+                  const data = response.content;
+                  
+                  this.createChart(data);
+                } catch (error) {
+                  console.error('Error loading data:', error);
+                  this.shadowRoot.querySelector('.chart-container').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Error loading data: ' + error.message + '</div>';
+                }
+              }
+              
+              // ... rest of component implementation
+            }
+            ```
+            
+            EXAMPLE JSON RESPONSE FORMAT:
+            ```json
+            [
+              {
+                "id": "550e8400-e29b-41d4-a716-446655440000",
+                "name": "Customer Age Distribution",
+                "description": "Bar chart showing the distribution of customers across different age groups",
+                "rawHtml": "class CustomerAgeDistributionChart extends HTMLElement { ... }",
+                "applicationId": "org.kinotic.sample",
+                "modifiedAt": "2024-01-01T00:00:00Z",
+                "supportsDateRangeFiltering": false
+              },
+              {
+                "id": "550e8400-e29b-41d4-a716-446655440001", 
+                "name": "Revenue Trend Analysis",
+                "description": "Line chart showing revenue trends over time",
+                "rawHtml": "class RevenueTrendChart extends HTMLElement { ... }",
+                "applicationId": "org.kinotic.sample",
+                "modifiedAt": "2024-01-01T00:00:00Z",
+                "supportsDateRangeFiltering": true
+              }
+            ]
+            ```
             """;
     }
     

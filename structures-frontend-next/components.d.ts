@@ -11,6 +11,7 @@ declare module 'vue' {
     ApplicationSidebar: typeof import('./src/components/ApplicationSidebar.vue')['default']
     Breadcrumb: typeof import('./src/components/Breadcrumb.vue')['default']
     Button: typeof import('primevue/button')['default']
+    Calendar: typeof import('primevue/calendar')['default']
     Card: typeof import('primevue/card')['default']
     Column: typeof import('primevue/column')['default']
     Confirm: typeof import('./src/components/Confirm.vue')['default']

@@ -11,30 +11,30 @@
   "dependencies": {
     "@kinotic/continuum-client": "^2.14.0",
     "@kinotic/continuum-idl": "^2.0.3",
-    "@kinotic/structures-api": "^3.5.0-beta.2",
+    "@kinotic/structures-api": "^3.5.0-beta.7",
     "reflect-metadata": "^0.2.2",
-    "vue": "^3.5.13"
+    "vue": "^3.5.18"
   },
   "devDependencies": {
-    "@faker-js/faker": "^9.6.0",
+    "@faker-js/faker": "^9.9.0",
     "@kinotic/structures-cli": "^3.4.0",
-    "@types/node": "^22.13.10",
-    "@types/ws": "^8.18.0",
-    "@vitejs/plugin-vue": "^5.2.1",
-    "@vitest/coverage-v8": "3.0.8",
-    "@vitest/runner": "^3.0.8",
-    "@vitest/ui": "^3.0.8",
+    "@types/node": "^24.2.0",
+    "@types/ws": "^8.18.1",
+    "@vitejs/plugin-vue": "^6.0.1",
+    "@vitest/coverage-v8": "3.2.4",
+    "@vitest/runner": "^3.2.4",
+    "@vitest/ui": "^3.2.4",
     "@vue/tsconfig": "^0.7.0",
-    "allure-js-commons": "^3.2.0",
-    "allure-vitest": "^3.2.0",
-    "axios": "^1.8.3",
-    "testcontainers": "^10.19.0",
+    "allure-js-commons": "^3.3.3",
+    "allure-vitest": "^3.3.3",
+    "axios": "^1.11.0",
+    "testcontainers": "^11.5.1",
     "tslib": "^2.8.1",
-    "typescript": "~5.8.2",
-    "vite": "^6.2.1",
-    "vitest": "^3.0.8",
-    "vue-tsc": "^2.2.8",
-    "ws": "^8.18.1"
+    "typescript": "~5.9.2",
+    "vite": "^7.0.6",
+    "vitest": "^3.2.4",
+    "vue-tsc": "^3.0.5",
+    "ws": "^8.18.3"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
