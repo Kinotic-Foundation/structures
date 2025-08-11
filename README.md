@@ -59,3 +59,16 @@ STRUCTURES_ENABLE_STATIC_FILE_SERVER: true
 STRUCTURES_INITIALIZE_WITH_SAMPLE_DATA: false
 ```
 
+### Testing Requirements
+When running tests locally or in CI/CD environments, the following environment variable is required:
+
+```bash
+export TESTCONTAINERS_RYUK_DISABLED=true
+```
+
+**Why this is needed:** TestContainers uses a Ryuk container for resource cleanup, which can cause connectivity issues on certain systems (particularly macOS with Docker Desktop). Disabling Ryuk ensures reliable test execution.
+
+**CI/CD Consideration:** Add this environment variable to your CI/CD pipeline configuration to ensure tests run successfully.
+
+**For detailed testing information:** See [TESTING.md](TESTING.md) for comprehensive testing setup, troubleshooting, and CI/CD configuration examples.
+

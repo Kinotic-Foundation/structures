@@ -28,14 +28,19 @@ brew install jq  # macOS
 sudo apt-get install jq  # Ubuntu/Debian
 ```
 
-### 2. Start the Complete Stack
+### 2. Start the Complete Stack (recommended)
 
 ```bash
 # Make scripts executable
 chmod +x docker-compose/*.sh
 
-# Start everything with one command
+# Start everything with one command (includes Keycloak bootstrap)
 ./docker-compose/start-with-keycloak.sh
+
+# Or manually:
+cd structures/docker-compose && \
+docker compose -f compose.yml -f compose.ek-m4.override.yml -f compose.gen-schemas.yml up -d && \
+docker compose -f compose.keycloak.yml up -d keycloak-db keycloak keycloak-setup
 ```
 
 This script will:
@@ -72,17 +77,11 @@ If you prefer to set up manually:
 # Create network
 docker network create structures-network
 
-# Start Keycloak
-docker-compose -f docker-compose/compose-keycloak.yml up -d
+# Start Keycloak (DB, server, and one-shot bootstrapper)
+docker compose -f docker-compose/compose.keycloak.yml up -d keycloak-db keycloak keycloak-setup
 
-# Wait for Keycloak to be ready
-until curl -f http://localhost:8080/auth/health/ready; do
-    echo "Waiting for Keycloak..."
-    sleep 5
-done
-
-# Run setup script
-./docker-compose/setup-keycloak.sh
+# Optionally wait for bootstrapper to complete
+docker wait keycloak-setup
 ```
 
 ### 2. Start Backend
@@ -143,7 +142,7 @@ The client includes these protocol mappers:
 ## Admin Credentials
 
 ### Keycloak Admin Console
-- **URL**: http://localhost:8080/auth/admin
+- **URL**: http://localhost:8888/auth/admin
 - **Username**: `admin`
 - **Password**: `admin`
 
@@ -156,29 +155,20 @@ The client includes these protocol mappers:
 
 ## Frontend Configuration
 
-The frontend is pre-configured with Keycloak settings in `structures-frontend-next/src/pages/login/OidcConfiguration.ts`:
+The frontend is configured via runtime JSON. Update `structures-frontend-next/public/app-config.json` (or serve `/config/app-config.json`). See `structures-frontend-next/CONFIGURATION.md` for full details. Example Keycloak section:
 
-```typescript
-keycloak: {
-  client_id: 'structures-client',
-  client_secret: '',
-  authority: 'http://localhost:8888/auth/realms/master',
-  redirect_uri: 'http://localhost:5173/login',
-  post_logout_redirect_uri: 'http://localhost:5173',
-  silent_redirect_uri: 'http://localhost:5173/login/silent-renew',
-  loadUserInfo: true,
-  publicClient: {
-    isPublicClient: true,
-    responseType: 'code',
-    responseMode: 'query'
-  },
-  metadata: {
-    authorization_endpoint: 'http://localhost:8888/auth/realms/master/protocol/openid-connect/auth',
-    token_endpoint: 'http://localhost:8888/auth/realms/master/protocol/openid-connect/token',
-    userinfo_endpoint: 'http://localhost:8888/auth/realms/master/protocol/openid-connect/userinfo',
-    end_session_endpoint: 'http://localhost:8888/auth/realms/master/protocol/openid-connect/logout',
-    jwks_uri: 'http://localhost:8888/auth/realms/master/protocol/openid-connect/certs',
-  },
+```json
+{
+  "oidc": {
+    "keycloak": {
+      "enabled": true,
+      "client_id": "structures-client",
+      "authority": "http://localhost:8888/auth/realms/master",
+      "redirect_uri": "http://localhost:5173/login",
+      "post_logout_redirect_uri": "http://localhost:5173",
+      "silent_redirect_uri": "http://localhost:5173/login/silent-renew"
+    }
+  }
 }
 ```
 
@@ -240,19 +230,19 @@ curl -H "Authorization: Bearer $TOKEN" \
 1. **Keycloak Not Starting**
    ```bash
    # Check logs
-   docker-compose -f docker-compose/compose-keycloak.yml logs keycloak
+   docker compose -f docker-compose/compose.keycloak.yml logs keycloak
    
-       # Check if port 8888 is available
-    lsof -i :8888
+   # Check if port 8888 is available
+   lsof -i :8888
    ```
 
-2. **Setup Script Fails**
+2. **Bootstrapper Fails**
    ```bash
-   # Ensure jq is installed
-   which jq
-   
-       # Check if Keycloak is ready
-    curl http://localhost:8888/auth/health/ready
+   # Show bootstrap container logs
+   docker logs keycloak-setup | tail -n 200
+
+   # Check if Keycloak is ready
+   curl -sf http://localhost:8888/auth/health/ready
    ```
 
 3. **Frontend Connection Issues**
@@ -367,6 +357,6 @@ For issues or questions:
 | `docker-compose/compose-keycloak.yml` | Keycloak and PostgreSQL services |
 | `docker-compose/setup-keycloak.sh` | Automated Keycloak configuration |
 | `docker-compose/start-with-keycloak.sh` | Complete stack startup script |
-| `docker-compose/KEYCLOAK_README.md` | Detailed Keycloak documentation |
+| (removed) `docker-compose/KEYCLOAK_README.md` | Consolidated into this guide |
 | `structures-frontend-next/src/pages/login/OidcConfiguration.ts` | Frontend OIDC configuration |
 | `structures-server/src/main/resources/application-development.yml` | Backend OIDC configuration | 

@@ -15,6 +15,15 @@ logging:
         util: DEBUG
         buffer: DEBUG
 
+spring:
+  ai:
+    openai:
+      api-key: "-"
+      base-url: https://api.x.ai
+      chat:
+        options:
+          model: grok-4
+
 structures:
   initializeWithSampleData: true
   corsAllowedOriginPattern: "https:\\/\\/studio.apollographql.com|http:\\/\\/localhost:\\d+|http:\\/\\/121.0.0.1:\\d+"
@@ -25,12 +34,13 @@ structures:
    - scheme: "http"
      host: "localhost"
      port: "9200"
-#  elastic-connections:
-#    - scheme: "https"
-#      host: "test.com"
-#      port: "443"
-#    - scheme: "http"
-#      host: "host2.com"
-#      port: "9200"
-#  elastic-password: "test"
-#  elastic-username: "bob"
+
+## Configured for the Keycloak docker-compose setup
+## Defaults to Basic Auth using the TemporarySecurityService
+# oidc-security-service:
+#   enabled: true
+#   allowed-issuers:
+#     - "http://localhost:8888/auth/realms/master"  
+#   authorization-audiences:
+#     - "structures-client"
+

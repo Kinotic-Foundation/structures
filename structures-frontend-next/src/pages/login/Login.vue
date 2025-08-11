@@ -19,7 +19,7 @@
         <!-- Show login form only when not in OIDC callback -->
         <div v-if="shouldShowLoginForm">
           <!-- Basic Username/Password Form - Only show if enabled -->
-          <div v-if="isBasicAuthEnabled">
+          <div v-if="configLoaded && basicAuthEnabled">
             <IconField class="!mb-4 !flex !items-center !relative !w-full">
               <InputText
                 v-model="login"
@@ -56,7 +56,7 @@
             />
 
             <!-- Only show OIDC section if any providers are enabled -->
-            <div v-if="hasEnabledOidcProviders" class="flex justify-center items-center w-full mt-10 mb-8">
+            <div v-if="configLoaded && enabledProviders.size > 0" class="flex justify-center items-center w-full mt-10 mb-8">
               <p class="border border-gray-300 w-full"></p>
               <span class="text-gray-300 mx-3">OR</span>
               <p class="border border-gray-300 w-full"></p>
@@ -64,12 +64,12 @@
           </div>
 
           <!-- Show OIDC section without "OR" separator if basic auth is disabled -->
-          <div v-else-if="hasEnabledOidcProviders" class="w-full">
+          <div v-else-if="configLoaded && enabledProviders.size > 0" class="w-full">
             <!-- OIDC providers will be shown below -->
           </div>
 
           <!-- Okta Login Button -->
-          <div v-if="isProviderEnabled('okta')" 
+          <div v-if="configLoaded && enabledProviders.has('okta')" 
                class="flex border border-[#B8BCBD] w-full p-4 mb-4 rounded-[5px] text-black/50 cursor-pointer hover:bg-gray-50 transition-colors"
                :class="{ 'opacity-50 cursor-not-allowed': loading }"
                @click="handleOktaLogin">
@@ -82,7 +82,7 @@
           </div>
 
           <!-- Google Login Button -->
-          <div v-if="isProviderEnabled('google')" 
+          <div v-if="configLoaded && enabledProviders.has('google')" 
                class="flex border border-[#B8BCBD] w-full p-4 mb-4 rounded-[5px] text-black/50 cursor-pointer hover:bg-gray-50 transition-colors"
                :class="{ 'opacity-50 cursor-not-allowed': loading }"
                @click="handleGoogleLogin">
@@ -95,7 +95,7 @@
           </div>
 
           <!-- Microsoft Login Button (Enterprise) -->
-          <div v-if="isProviderEnabled('microsoft')" 
+          <div v-if="configLoaded && enabledProviders.has('microsoft')" 
                class="flex border border-[#B8BCBD] w-full p-4 mb-4 rounded-[5px] text-black/50 cursor-pointer hover:bg-gray-50 transition-colors"
                :class="{ 'opacity-50 cursor-not-allowed': loading }"
                @click="handleMicrosoftLogin">
@@ -108,7 +108,7 @@
           </div>
 
           <!-- Microsoft Social Login Button (Personal) -->
-          <div v-if="isProviderEnabled('microsoftSocial')" 
+          <div v-if="configLoaded && enabledProviders.has('microsoftSocial')" 
                class="flex border border-[#B8BCBD] w-full p-4 mb-4 rounded-[5px] text-black/50 cursor-pointer hover:bg-gray-50 transition-colors"
                :class="{ 'opacity-50 cursor-not-allowed': loading }"
                @click="handleMicrosoftSocialLogin">
@@ -121,7 +121,7 @@
           </div>
 
           <!-- Keycloak Login Button -->
-          <div v-if="isProviderEnabled('keycloak')" 
+          <div v-if="configLoaded && enabledProviders.has('keycloak')" 
                class="flex border border-[#B8BCBD] w-full p-4 mb-4 rounded-[5px] text-black/50 cursor-pointer hover:bg-gray-50 transition-colors"
                :class="{ 'opacity-50 cursor-not-allowed': loading }"
                @click="handleKeycloakLogin">
@@ -134,7 +134,7 @@
           </div>
 
           <!-- GitHub Login Button -->
-          <div v-if="isProviderEnabled('github')" 
+          <div v-if="configLoaded && enabledProviders.has('github')" 
                class="flex border border-[#B8BCBD] w-full p-4 mb-4 rounded-[5px] text-black/50 cursor-pointer hover:bg-gray-50 transition-colors"
                :class="{ 'opacity-50 cursor-not-allowed': loading }"
                @click="handleGithubLogin">
@@ -146,8 +146,9 @@
             </span>
           </div>
 
-          <!-- Apple Login Button (not OIDC - static for now) -->
-          <div class="flex border border-[#B8BCBD] w-full p-4 mb-4 rounded-[5px] text-black/50 cursor-pointer hover:bg-gray-50 transition-colors"
+          <!-- Apple Login Button -->
+          <div v-if="configLoaded && enabledProviders.has('apple')" 
+               class="flex border border-[#B8BCBD] w-full p-4 mb-4 rounded-[5px] text-black/50 cursor-pointer hover:bg-gray-50 transition-colors"
                :class="{ 'opacity-50 cursor-not-allowed': loading }"
                @click="handleAppleLogin">
             <img src="@/assets/apple-logo.svg" class="mr-6" />
@@ -159,7 +160,7 @@
           </div>
 
           <!-- Only show forgot password if basic auth is enabled -->
-          <div v-if="isBasicAuthEnabled" class="text-[#212121] cursor-pointer">
+          <div v-if="configLoaded && basicAuthEnabled" class="text-[#212121] cursor-pointer">
             Forgot Password
           </div>
         </div>
@@ -189,6 +190,7 @@ import Button from 'primevue/button'
 import Toast from 'primevue/toast'
 import { useToast } from 'primevue/usetoast'
 import { createUserManager, type OidcProvider, getProviderConfig } from './OidcConfiguration'
+import { configService } from '@/util/config'
 
 import { type IUserState } from "@/states/IUserState"
 import { CONTINUUM_UI } from "@/IContinuumUI"
@@ -208,6 +210,9 @@ export default class Login extends Vue {
   loading: boolean = false
   oidcCallbackLoading: boolean = false
   valid: boolean = true
+  configLoaded: boolean = false
+  basicAuthEnabled: boolean = false
+  enabledProviders: Set<string> = new Set()
 
   toast = useToast()
 
@@ -216,9 +221,145 @@ export default class Login extends Vue {
   private loginRules = [(v: string) => !!v || 'Login required']
   private passwordRules = [(v: string) => !!v || 'Password required']
 
+  async mounted() {
+    await this.loadConfiguration();
+    
+    // Check if we're returning from an OIDC login with an error
+    if (this.$route.query.error) {
+      this.loading = false;
+      console.error('OIDC login error detected:', this.$route.query);
+      
+      const error = this.$route.query.error as string;
+      const errorDescription = this.$route.query.error_description as string;
+      
+      // Decode URL-encoded error description
+      const decodedErrorDescription = errorDescription ? decodeURIComponent(errorDescription) : '';
+      
+      console.error('OIDC Error:', error);
+      console.error('OIDC Error Description:', decodedErrorDescription);
+      
+      // Display user-friendly error message
+      let userMessage = 'OIDC login failed';
+      
+      if (error === 'invalid_request') {
+        if (decodedErrorDescription.includes('AADSTS50194')) {
+          userMessage = 'Microsoft Azure configuration error: Application is not configured as multi-tenant. Please contact your administrator.';
+        } else if (decodedErrorDescription.includes('redirect_uri_mismatch')) {
+          userMessage = 'OIDC configuration error: Redirect URI mismatch. Please contact your administrator.';
+        } else {
+          userMessage = `OIDC configuration error: ${decodedErrorDescription}`;
+        }
+      } else if (error === 'access_denied') {
+        userMessage = 'Access denied by OIDC provider. Please try again or contact your administrator.';
+      } else if (error === 'unauthorized_client') {
+        userMessage = 'OIDC client not authorized. Please contact your administrator.';
+      } else if (error === 'unsupported_response_type') {
+        userMessage = 'OIDC response type not supported. Please contact your administrator.';
+      } else if (error === 'server_error') {
+        userMessage = 'OIDC server error. Please try again later.';
+      } else if (error === 'temporarily_unavailable') {
+        userMessage = 'OIDC service temporarily unavailable. Please try again later.';
+      } else if (decodedErrorDescription) {
+        userMessage = `OIDC login failed: ${decodedErrorDescription}`;
+      }
+      
+      this.displayAlert(userMessage);
+      return;
+    }
+    
+    // Check if we're returning from an OIDC login
+    if (this.$route.query.code && this.$route.query.state) {
+      this.oidcCallbackLoading = true; // Show loading overlay
+      try {
+        console.log('OIDC callback detected, processing...');
+        console.log('Query parameters:', this.$route.query);
+        
+        // First, we need to determine which provider was used
+        // We'll try to find the provider by checking localStorage for stored state
+        let provider: OidcProvider = 'okta'; // default fallback
+        let referer: string | null = null;
+        
+        // Check localStorage for stored state to determine provider
+        const stateKey = `oidc.${this.$route.query.state}`;
+        const storedState = localStorage.getItem(stateKey);
+        
+        if (storedState) {
+          try {
+            // Parse the stored state to get our custom data
+            const sessionState = JSON.parse(storedState);
+            const stateObj = JSON.parse(atob(sessionState.data));
+            console.log(`Found stored state : ${JSON.stringify(stateObj)}`);
+            provider = stateObj.provider || 'okta';
+            referer = stateObj.referer || null;
+            console.log('Parsed stored state:', { provider, referer });
+          } catch (parseError) {
+            console.warn(`Failed to parse stored state for ${storedState}:`, parseError);
+          }
+        }
+        
+        console.log(`Using provider: ${provider}`);
+        const userManager = await createUserManager(provider);
+        
+        // Complete the OIDC login
+        console.log('Starting signinRedirectCallback...');
+        const user = await userManager.signinRedirectCallback();
+        console.log('OIDC callback completed successfully');
+        console.log('User state from callback:', user.state);
+        
+        // The library automatically validates the state parameter
+        // If validation fails, it throws an error before reaching this point
+        
+        // Store the user info in your state management
+        await this.userState.handleOidcLogin(user);
+        
+        // Redirect to the original destination or default
+        const redirectPath = referer || '/applications';
+        console.log(`Navigating to: ${redirectPath}`);
+        await CONTINUUM_UI.navigate(redirectPath);
+      } catch (error: unknown) {
+        console.error('OIDC callback error:', error);
+        if (error instanceof Error) {
+          this.displayAlert(`OIDC callback failed: ${error.message}`);
+        } else {
+          this.displayAlert('OIDC callback failed');
+        }
+      } finally {
+        this.oidcCallbackLoading = false; // Hide loading overlay
+        this.loading = false;
+      }
+    }
+  }
+
+  private async loadConfiguration() {
+    try {
+      // Load basic auth configuration
+      this.basicAuthEnabled = await configService.isBasicAuthEnabled();
+      
+      // Load OIDC provider configurations
+      const providers: OidcProvider[] = ['okta', 'keycloak', 'google', 'microsoft', 'microsoftSocial', 'github', 'custom', 'apple'];
+      for (const provider of providers) {
+        try {
+          const config = await getProviderConfig(provider);
+          if (config.enabled) {
+            this.enabledProviders.add(provider);
+          }
+        } catch (error) {
+          console.warn(`Failed to load configuration for provider ${provider}:`, error);
+        }
+      }
+      
+      this.configLoaded = true;
+    } catch (error) {
+      console.error('Failed to load configuration:', error);
+      // Set defaults if configuration loading fails
+      this.basicAuthEnabled = true;
+      this.configLoaded = true;
+    }
+  }
+
   // Check if basic username/password authentication is enabled
-  get isBasicAuthEnabled(): boolean {
-    return import.meta.env.VITE_BASIC_AUTH_ENABLED !== 'false'
+  async isBasicAuthEnabled(): Promise<boolean> {
+    return await configService.isBasicAuthEnabled();
   }
 
   get loginValid(): boolean {
@@ -235,9 +376,9 @@ export default class Login extends Vue {
   }
 
   // Check if a specific provider is enabled
-  isProviderEnabled(provider: OidcProvider): boolean {
+  async isProviderEnabled(provider: OidcProvider): Promise<boolean> {
     try {
-      const config = getProviderConfig(provider);
+      const config = await getProviderConfig(provider);
       return config.enabled;
     } catch (error) {
       console.warn(`Provider ${provider} not found in configuration`);
@@ -246,9 +387,12 @@ export default class Login extends Vue {
   }
 
   // Check if any OIDC providers are enabled
-  get hasEnabledOidcProviders(): boolean {
+  async hasEnabledOidcProviders(): Promise<boolean> {
     const providers: OidcProvider[] = ['okta', 'keycloak', 'google', 'microsoft', 'microsoftSocial', 'github', 'custom'];
-    return providers.some(provider => this.isProviderEnabled(provider));
+    const enabledProviders = await Promise.all(
+      providers.map(provider => this.isProviderEnabled(provider))
+    );
+    return enabledProviders.some(enabled => enabled);
   }
 
   // Check if we're in an OIDC callback (have code and state parameters)
@@ -327,7 +471,7 @@ export default class Login extends Vue {
       console.log(`Starting OIDC login for provider: ${provider}`);
       
       // Validate provider configuration
-      const config = getProviderConfig(provider);
+      const config = await getProviderConfig(provider);
       if (!config.enabled) {
         throw new Error(`Provider ${provider} is not enabled`);
       }
@@ -340,7 +484,7 @@ export default class Login extends Vue {
         throw new Error(`Authority URL not configured for ${provider}`);
       }
       
-      const userManager = createUserManager(provider);
+      const userManager = await createUserManager(provider);
       
       console.log('UserManager created, starting signinRedirect...');
       console.log('Provider configuration:', {
@@ -425,115 +569,9 @@ export default class Login extends Vue {
   }
 
   private async handleAppleLogin() {
-    // Note: Apple login might need special handling as it's not a standard OIDC provider
-    this.displayAlert('Apple login not implemented yet');
+    await this.handleOidcLogin('apple');
   }
 
-  async mounted() {
-    // Check if we're returning from an OIDC login with an error
-    if (this.$route.query.error) {
-      this.loading = false;
-      console.error('OIDC login error detected:', this.$route.query);
-      
-      const error = this.$route.query.error as string;
-      const errorDescription = this.$route.query.error_description as string;
-      
-      // Decode URL-encoded error description
-      const decodedErrorDescription = errorDescription ? decodeURIComponent(errorDescription) : '';
-      
-      console.error('OIDC Error:', error);
-      console.error('OIDC Error Description:', decodedErrorDescription);
-      
-      // Display user-friendly error message
-      let userMessage = 'OIDC login failed';
-      
-      if (error === 'invalid_request') {
-        if (decodedErrorDescription.includes('AADSTS50194')) {
-          userMessage = 'Microsoft Azure configuration error: Application is not configured as multi-tenant. Please contact your administrator.';
-        } else if (decodedErrorDescription.includes('redirect_uri_mismatch')) {
-          userMessage = 'OIDC configuration error: Redirect URI mismatch. Please contact your administrator.';
-        } else {
-          userMessage = `OIDC configuration error: ${decodedErrorDescription}`;
-        }
-      } else if (error === 'access_denied') {
-        userMessage = 'Access denied by OIDC provider. Please try again or contact your administrator.';
-      } else if (error === 'unauthorized_client') {
-        userMessage = 'OIDC client not authorized. Please contact your administrator.';
-      } else if (error === 'unsupported_response_type') {
-        userMessage = 'OIDC response type not supported. Please contact your administrator.';
-      } else if (error === 'server_error') {
-        userMessage = 'OIDC server error. Please try again later.';
-      } else if (error === 'temporarily_unavailable') {
-        userMessage = 'OIDC service temporarily unavailable. Please try again later.';
-      } else if (decodedErrorDescription) {
-        userMessage = `OIDC login failed: ${decodedErrorDescription}`;
-      }
-      
-      this.displayAlert(userMessage);
-      return;
-    }
-    
-    // Check if we're returning from an OIDC login
-    if (this.$route.query.code && this.$route.query.state) {
-      this.oidcCallbackLoading = true; // Show loading overlay
-      try {
-        console.log('OIDC callback detected, processing...');
-        console.log('Query parameters:', this.$route.query);
-        
-        // First, we need to determine which provider was used
-        // We'll try to find the provider by checking localStorage for stored state
-        let provider: OidcProvider = 'okta'; // default fallback
-        let referer: string | null = null;
-        
-        // Check localStorage for stored state to determine provider
-        const stateKey = `oidc.${this.$route.query.state}`;
-        const storedState = localStorage.getItem(stateKey);
-        
-        if (storedState) {
-          try {
-            // Parse the stored state to get our custom data
-            const sessionState = JSON.parse(storedState);
-            const stateObj = JSON.parse(atob(sessionState.data));
-            console.log(`Found stored state : ${JSON.stringify(stateObj)}`);
-            provider = stateObj.provider || 'okta';
-            referer = stateObj.referer || null;
-            console.log('Parsed stored state:', { provider, referer });
-          } catch (parseError) {
-            console.warn(`Failed to parse stored state for ${storedState}:`, parseError);
-          }
-        }
-        
-        console.log(`Using provider: ${provider}`);
-        const userManager = createUserManager(provider);
-        
-        // Complete the OIDC login
-        console.log('Starting signinRedirectCallback...');
-        const user = await userManager.signinRedirectCallback();
-        console.log('OIDC callback completed successfully');
-        console.log('User state from callback:', user.state);
-        
-        // The library automatically validates the state parameter
-        // If validation fails, it throws an error before reaching this point
-        
-        // Store the user info in your state management
-        await this.userState.handleOidcLogin(user);
-        
-        // Redirect to the original destination or default
-        const redirectPath = referer || '/applications';
-        console.log(`Navigating to: ${redirectPath}`);
-        await CONTINUUM_UI.navigate(redirectPath);
-      } catch (error: unknown) {
-        console.error('OIDC callback error:', error);
-        if (error instanceof Error) {
-          this.displayAlert(`OIDC callback failed: ${error.message}`);
-        } else {
-          this.displayAlert('OIDC callback failed');
-        }
-      } finally {
-        this.oidcCallbackLoading = false; // Hide loading overlay
-        this.loading = false;
-      }
-    }
-  }
+
 }
 </script>

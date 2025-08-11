@@ -109,6 +109,57 @@
             "description": "Test all projects"
         },
         {
+            "type": "gradle",
+            "id": "${workspaceFolder}/structures-server:test",
+            "script": "structures-server:test",
+            "group": "test",
+            "project": "structures-server",
+            "buildFile": "${workspaceFolder}/structures-server/build.gradle",
+            "projectFolder": "${workspaceFolder}",
+            "workspaceFolder": "${workspaceFolder}",
+            "rootProject": "structures",
+            "javaDebug": true,
+            "problemMatcher": [
+                "$gradle"
+            ],
+            "label": "Gradle: Test Server",
+            "description": "Test the server project"
+        },
+        {
+            "type": "gradle",
+            "id": "${workspaceFolder}/structures-core:test",
+            "script": "structures-core:test",
+            "group": "test",
+            "project": "structures-core",
+            "buildFile": "${workspaceFolder}/structures-core/build.gradle",
+            "projectFolder": "${workspaceFolder}",
+            "workspaceFolder": "${workspaceFolder}",
+            "rootProject": "structures",
+            "javaDebug": true,
+            "problemMatcher": [
+                "$gradle"
+            ],
+            "label": "Gradle: Test Core",
+            "description": "Test the core project"
+        },
+        {
+            "type": "gradle",
+            "id": "${workspaceFolder}/structures-sql:test",
+            "script": "structures-sql:test",
+            "group": "test",
+            "project": "structures-sql",
+            "buildFile": "${workspaceFolder}/structures-sql/build.gradle",
+            "projectFolder": "${workspaceFolder}",
+            "workspaceFolder": "${workspaceFolder}",
+            "rootProject": "structures",
+            "javaDebug": true,
+            "problemMatcher": [
+                "$gradle"
+            ],
+            "label": "Gradle: Test SQL",
+            "description": "Test the sql project"
+        },
+        {
             "label": "Frontend: Install Dependencies",
             "type": "shell",
             "command": "pnpm install",

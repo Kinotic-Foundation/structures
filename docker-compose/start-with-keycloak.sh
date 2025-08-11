@@ -11,12 +11,16 @@ echo "Starting Structures with Keycloak..."
 docker network create structures-network 2>/dev/null || true
 
 # Start the main stack
-echo "Starting main stack..."
-docker-compose -f docker-compose/compose.yml up -d
+echo "Starting main stack (all services + test data)..."
+pushd docker-compose >/dev/null
+docker compose -f compose.yml -f compose.ek-m4.override.yml -f compose.gen-schemas.yml up -d
+popd >/dev/null
 
-# Start Keycloak
-echo "Starting Keycloak..."
-docker-compose -f docker-compose/compose-keycloak.yml up -d
+# Start Keycloak stack (DB, Keycloak, and bootstrapper)
+echo "Starting Keycloak (with bootstrap)..."
+pushd docker-compose >/dev/null
+docker compose -f compose.keycloak.yml up -d keycloak-db keycloak keycloak-setup
+popd >/dev/null
 
 # Wait for services to be ready
 echo "Waiting for services to be ready..."
@@ -28,19 +32,14 @@ until curl -f http://localhost:9200/_cluster/health > /dev/null 2>&1; do
     sleep 5
 done
 
-# Wait for Keycloak
-echo "Waiting for Keycloak..."
-echo "This may take a few minutes on first startup..."
-
-# Then wait for the health endpoint
-until curl -f http://localhost:8888/auth/health/ready > /dev/null 2>&1; do
-    echo "Waiting for Keycloak health endpoint..."
-    sleep 10
-done
-
-# Setup Keycloak configuration
-echo "Setting up Keycloak configuration..."
-./docker-compose/setup-keycloak.sh
+# Wait for Keycloak bootstrap (one-shot container) to complete
+echo "Waiting for Keycloak bootstrap to complete..."
+SETUP_EXIT_CODE=$(docker wait keycloak-setup || echo 1)
+if [ "$SETUP_EXIT_CODE" -ne 0 ]; then
+    echo "Keycloak bootstrap failed (exit code: $SETUP_EXIT_CODE). Showing last logs:"
+    docker logs keycloak-setup | tail -n 200
+    exit 1
+fi
 
 echo ""
 echo "=========================================="

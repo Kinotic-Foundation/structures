@@ -1,13 +1,26 @@
 spring:
+  ai:
+    openai:
+      api-key: "test-key"
+      base-url: https://api.x.ai
+      chat:
+        options:
+          model: grok-4
   main:
     allow-circular-references: true
+    allow-bean-definition-overriding: true
+    web-application-type: none
+
 
 continuum:
   discovery: sharedfs
   debug: true
+  maxNumberOfCoresToUse: 4
+
 
 continuum-gateway:
-  disableIam: true
+  disable-iam: true
+
 
 logging:
   level:
@@ -18,8 +31,6 @@ logging:
     io:
       vertx: DEBUG
 
-structures:
-  elastic-use-ssl: false
-
 server:
   port: 8989
+

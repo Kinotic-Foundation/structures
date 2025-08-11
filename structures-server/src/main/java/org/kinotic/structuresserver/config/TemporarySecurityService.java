@@ -7,6 +7,7 @@ import org.kinotic.continuum.api.security.SecurityService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 import javax.security.sasl.AuthenticationException;
@@ -18,7 +19,7 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 @Component
-@ConditionalOnProperty(prefix = "structures.oidc-auth-verifier", name = "enabled", havingValue = "false", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "oidc-security-service", name = "enabled", havingValue = "false", matchIfMissing = true)
 public class TemporarySecurityService implements SecurityService {
 
 

@@ -1,6 +1,7 @@
 import { type UserManagerSettings, WebStorageStateStore, UserManager } from 'oidc-client-ts';
+import { configService } from '@/util/config';
 
-export type OidcProvider = 'okta' | 'keycloak' | 'google' | 'github' | 'microsoft' | 'microsoftSocial' | 'custom';
+export type OidcProvider = 'okta' | 'keycloak' | 'google' | 'github' | 'microsoft' | 'microsoftSocial' | 'custom' | 'apple';
 
 export interface OidcProviderConfig extends Partial<UserManagerSettings> {
   enabled: boolean;
@@ -34,20 +35,6 @@ export interface OidcConfiguration {
   defaultSettings: Partial<UserManagerSettings>;
 }
 
-const env = import.meta.env;
-
-// Debug: Log environment variables for troubleshooting
-if (env.VITE_DEBUG === 'true') {
-  console.log('OIDC Environment Variables:', {
-    VITE_OIDC_OKTA_ENABLED: env.VITE_OIDC_OKTA_ENABLED,
-    VITE_OKTA_CLIENT_ID: env.VITE_OKTA_CLIENT_ID,
-    VITE_OKTA_AUTHORITY: env.VITE_OKTA_AUTHORITY,
-    VITE_OIDC_KEYCLOAK_ENABLED: env.VITE_OIDC_KEYCLOAK_ENABLED,
-    VITE_KEYCLOAK_CLIENT_ID: env.VITE_KEYCLOAK_CLIENT_ID,
-    VITE_KEYCLOAK_AUTHORITY: env.VITE_KEYCLOAK_AUTHORITY,
-  });
-}
-
 const DEFAULT_SETTINGS: Partial<UserManagerSettings> = {
   response_type: 'code',
   response_mode: 'query',
@@ -58,151 +45,132 @@ const DEFAULT_SETTINGS: Partial<UserManagerSettings> = {
   stateStore: new WebStorageStateStore({ store: window.localStorage }),
 };
 
-export const baseOidcConfig: OidcConfiguration = {
-  defaultProvider: 'keycloak',
-  defaultSettings: DEFAULT_SETTINGS,
-  providers: {
-    okta: {
-      enabled: env.VITE_OIDC_OKTA_ENABLED === 'true',
-      client_id: env.VITE_OKTA_CLIENT_ID || '',
-      client_secret: '',
-      authority: env.VITE_OKTA_AUTHORITY || '',
-      redirect_uri: env.VITE_OKTA_REDIRECT_URI || 'http://localhost:5173/login',
-      post_logout_redirect_uri: env.VITE_OKTA_POST_LOGOUT_REDIRECT_URI || 'http://localhost:5173',
-      silent_redirect_uri: env.VITE_OKTA_SILENT_REDIRECT_URI || 'http://localhost:5173/login/silent-renew',
-      loadUserInfo: true,
-      publicClient: {
-        isPublicClient: true,
-        responseType: 'code',
-        responseMode: 'query'
-      },
-      // metadata: {
-      //   authorization_endpoint: '',
-      //   token_endpoint: '',
-      //   userinfo_endpoint: '',
-      //   end_session_endpoint: '',
-      //   jwks_uri: ''
-      // },
-      // stateStore: new WebStorageStateStore({ store: window.localStorage }),
-      // userStore: new WebStorageStateStore({ store: window.localStorage }),
-      monitorSession: true
-    },
-    keycloak: {
-      enabled: env.VITE_OIDC_KEYCLOAK_ENABLED === 'true',
-      client_id: env.VITE_KEYCLOAK_CLIENT_ID || '',
-      client_secret: '',
-      authority: env.VITE_KEYCLOAK_AUTHORITY || '',
-      redirect_uri: env.VITE_KEYCLOAK_REDIRECT_URI || 'http://localhost:5173/login',
-      post_logout_redirect_uri: env.VITE_KEYCLOAK_POST_LOGOUT_REDIRECT_URI || 'http://localhost:5173',
-      silent_redirect_uri: env.VITE_KEYCLOAK_SILENT_REDIRECT_URI || 'http://localhost:5173/login/silent-renew',
-      loadUserInfo: true,
-      publicClient: {
-        isPublicClient: true,
-        responseType: 'code',
-        responseMode: 'query'
-      },
-      // No explicit metadata - uses automatic discovery
-    },
-    google: {
-      enabled: env.VITE_OIDC_GOOGLE_ENABLED === 'true',
-      client_id: env.VITE_GOOGLE_CLIENT_ID || '',
-      client_secret: '',
-      authority: env.VITE_GOOGLE_AUTHORITY || 'https://accounts.google.com',
-      redirect_uri: env.VITE_GOOGLE_REDIRECT_URI || '',
-      post_logout_redirect_uri: env.VITE_GOOGLE_POST_LOGOUT_REDIRECT_URI || '',
-      silent_redirect_uri: env.VITE_GOOGLE_SILENT_REDIRECT_URI || '',
-      loadUserInfo: true,
-      // metadata: {
-      //   authorization_endpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
-      //   token_endpoint: 'https://oauth2.googleapis.com/token',
-      //   userinfo_endpoint: 'https://openidconnect.googleapis.com/v1/userinfo',
-      //   jwks_uri: 'https://www.googleapis.com/oauth2/v3/certs',
-      // },
-    },
-    github: {
-      enabled: env.VITE_OIDC_GITHUB_ENABLED === 'true',
-      client_id: env.VITE_GITHUB_CLIENT_ID || '',
-      client_secret: '',
-      authority: env.VITE_GITHUB_AUTHORITY || 'https://github.com',
-      redirect_uri: env.VITE_GITHUB_REDIRECT_URI || '',
-      post_logout_redirect_uri: env.VITE_GITHUB_POST_LOGOUT_REDIRECT_URI || '',
-      silent_redirect_uri: env.VITE_GITHUB_SILENT_REDIRECT_URI || '',
-      loadUserInfo: true,
-      // metadata: {
-      //   authorization_endpoint: 'https://github.com/login/oauth/authorize',
-      //   token_endpoint: 'https://github.com/login/oauth/access_token',
-      //   userinfo_endpoint: 'https://api.github.com/user',
-      // },
-    },
-    microsoft: {
-      enabled: env.VITE_OIDC_MICROSOFT_ENABLED === 'true',
-      client_id: env.VITE_MICROSOFT_CLIENT_ID || '',
-      client_secret: '',
-      authority: env.VITE_MICROSOFT_AUTHORITY || 'https://login.microsoftonline.com/common/v2.0',
-      redirect_uri: env.VITE_MICROSOFT_REDIRECT_URI || '',
-      post_logout_redirect_uri: env.VITE_MICROSOFT_POST_LOGOUT_REDIRECT_URI || '',
-      silent_redirect_uri: env.VITE_MICROSOFT_SILENT_REDIRECT_URI || '',
-      loadUserInfo: true,
-      // Add custom scope if specified (for custom audience in v2.0)
-      ...(env.VITE_MICROSOFT_RESOURCE && {
-        scope: `openid profile email ${env.VITE_MICROSOFT_RESOURCE}`
-      }),
-      // metadata: {
-      //   // Use dynamic endpoints based on authority
-      //   authorization_endpoint: env.VITE_MICROSOFT_AUTHORITY?.replace('/v2.0', '/oauth2/v2.0/authorize') || 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
-      //   token_endpoint: env.VITE_MICROSOFT_AUTHORITY?.replace('/v2.0', '/oauth2/v2.0/token') || 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
-      //   userinfo_endpoint: 'https://graph.microsoft.com/oidc/userinfo',
-      //   end_session_endpoint: env.VITE_MICROSOFT_AUTHORITY?.replace('/v2.0', '/oauth2/v2.0/logout') || 'https://login.microsoftonline.com/common/oauth2/v2.0/logout',
-      //   jwks_uri: env.VITE_MICROSOFT_AUTHORITY?.replace('/v2.0', '/discovery/v2.0/keys') || 'https://login.microsoftonline.com/common/discovery/v2.0/keys',
-      // },
-    },
-    microsoftSocial: {
-      enabled: env.VITE_OIDC_MICROSOFT_SOCIAL_ENABLED === 'true',
-      client_id: env.VITE_MICROSOFT_SOCIAL_CLIENT_ID || '',
-      client_secret: '',
-      authority: env.VITE_MICROSOFT_SOCIAL_AUTHORITY || 'https://login.microsoftonline.com/consumers/v2.0',
-      redirect_uri: env.VITE_MICROSOFT_SOCIAL_REDIRECT_URI || '',
-      post_logout_redirect_uri: env.VITE_MICROSOFT_SOCIAL_POST_LOGOUT_REDIRECT_URI || '',
-      silent_redirect_uri: env.VITE_MICROSOFT_SOCIAL_SILENT_REDIRECT_URI || '',
-      loadUserInfo: true,
-      scope: 'openid profile email',
-      response_type: 'code', // Use Authorization Code flow with PKCE
-      response_mode: 'query',
-      // metadata: {
-      //   authorization_endpoint: 'https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize',
-      //   token_endpoint: 'https://login.microsoftonline.com/consumers/oauth2/v2.0/token',
-      //   userinfo_endpoint: 'https://graph.microsoft.com/oidc/userinfo',
-      //   end_session_endpoint: 'https://login.microsoftonline.com/consumers/oauth2/v2.0/logout',
-      //   jwks_uri: 'https://login.microsoftonline.com/consumers/discovery/v2.0/keys',
-      // },
-    },
-    custom: {
-      enabled: env.VITE_OIDC_CUSTOM_ENABLED === 'true',
-      client_id: env.VITE_CUSTOM_CLIENT_ID || '',
-      client_secret: '',
-      authority: env.VITE_CUSTOM_AUTHORITY || '',
-      redirect_uri: env.VITE_CUSTOM_REDIRECT_URI || '',
-      post_logout_redirect_uri: env.VITE_CUSTOM_POST_LOGOUT_REDIRECT_URI || '',
-      silent_redirect_uri: env.VITE_CUSTOM_SILENT_REDIRECT_URI || '',
-      loadUserInfo: true,
-      metadata: {
-        authorization_endpoint: '',
-        token_endpoint: '',
-        userinfo_endpoint: '',
-        end_session_endpoint: '',
-        jwks_uri: '',
-      },
-    }
+// Create a function to get the OIDC configuration dynamically
+export async function getOidcConfiguration(): Promise<OidcConfiguration> {
+  const oidcConfig = await configService.getOidcConfig();
+  const isDebug = await configService.isDebugEnabled();
+
+  // Debug: Log configuration for troubleshooting
+  if (isDebug) {
+    console.log('OIDC Configuration:', oidcConfig);
   }
-};
 
-export const getProviderConfig = (provider: OidcProvider): OidcProviderConfig => {
-  return baseOidcConfig.providers[provider];
-};
+  return {
+    defaultProvider: 'keycloak',
+    defaultSettings: DEFAULT_SETTINGS,
+    providers: {
+      okta: {
+        enabled: oidcConfig.okta.enabled,
+        client_id: oidcConfig.okta.client_id,
+        client_secret: '',
+        authority: oidcConfig.okta.authority,
+        redirect_uri: oidcConfig.okta.redirect_uri,
+        post_logout_redirect_uri: oidcConfig.okta.post_logout_redirect_uri,
+        silent_redirect_uri: oidcConfig.okta.silent_redirect_uri,
+        loadUserInfo: true,
+        publicClient: {
+          isPublicClient: true,
+          responseType: 'code',
+          responseMode: 'query'
+        },
+        monitorSession: true
+      },
+      keycloak: {
+        enabled: oidcConfig.keycloak.enabled,
+        client_id: oidcConfig.keycloak.client_id,
+        client_secret: '',
+        authority: oidcConfig.keycloak.authority,
+        redirect_uri: oidcConfig.keycloak.redirect_uri,
+        post_logout_redirect_uri: oidcConfig.keycloak.post_logout_redirect_uri,
+        silent_redirect_uri: oidcConfig.keycloak.silent_redirect_uri,
+        loadUserInfo: true,
+        publicClient: {
+          isPublicClient: true,
+          responseType: 'code',
+          responseMode: 'query'
+        },
+      },
+      google: {
+        enabled: oidcConfig.google.enabled,
+        client_id: oidcConfig.google.client_id,
+        client_secret: '',
+        authority: oidcConfig.google.authority,
+        redirect_uri: oidcConfig.google.redirect_uri,
+        post_logout_redirect_uri: oidcConfig.google.post_logout_redirect_uri,
+        silent_redirect_uri: oidcConfig.google.silent_redirect_uri,
+        loadUserInfo: true,
+      },
+      github: {
+        enabled: oidcConfig.github.enabled,
+        client_id: oidcConfig.github.client_id,
+        client_secret: '',
+        authority: oidcConfig.github.authority,
+        redirect_uri: oidcConfig.github.redirect_uri,
+        post_logout_redirect_uri: oidcConfig.github.post_logout_redirect_uri,
+        silent_redirect_uri: oidcConfig.github.silent_redirect_uri,
+        loadUserInfo: true,
+      },
+      microsoft: {
+        enabled: oidcConfig.microsoft.enabled,
+        client_id: oidcConfig.microsoft.client_id,
+        client_secret: '',
+        authority: oidcConfig.microsoft.authority,
+        redirect_uri: oidcConfig.microsoft.redirect_uri,
+        post_logout_redirect_uri: oidcConfig.microsoft.post_logout_redirect_uri,
+        silent_redirect_uri: oidcConfig.microsoft.silent_redirect_uri,
+        loadUserInfo: true,
+        // Add custom scope if specified (for custom audience in v2.0)
+        ...(oidcConfig.microsoft.resource && {
+          scope: `openid profile email ${oidcConfig.microsoft.resource}`
+        }),
+      },
+      microsoftSocial: {
+        enabled: oidcConfig.microsoftSocial.enabled,
+        client_id: oidcConfig.microsoftSocial.client_id,
+        client_secret: '',
+        authority: oidcConfig.microsoftSocial.authority,
+        redirect_uri: oidcConfig.microsoftSocial.redirect_uri,
+        post_logout_redirect_uri: oidcConfig.microsoftSocial.post_logout_redirect_uri,
+        silent_redirect_uri: oidcConfig.microsoftSocial.silent_redirect_uri,
+        loadUserInfo: true,
+        scope: 'openid profile email',
+        response_type: 'code', // Use Authorization Code flow with PKCE
+        response_mode: 'query',
+      },
+             custom: {
+         enabled: oidcConfig.custom.enabled,
+         client_id: oidcConfig.custom.client_id,
+         client_secret: '',
+         authority: oidcConfig.custom.authority,
+         redirect_uri: oidcConfig.custom.redirect_uri,
+         post_logout_redirect_uri: oidcConfig.custom.post_logout_redirect_uri,
+         silent_redirect_uri: oidcConfig.custom.silent_redirect_uri,
+         loadUserInfo: true,
+         metadata: oidcConfig.custom.metadata,
+       },
+       apple: {
+         enabled: oidcConfig.apple.enabled,
+         client_id: oidcConfig.apple.client_id,
+         client_secret: '',
+         authority: oidcConfig.apple.authority,
+         redirect_uri: oidcConfig.apple.redirect_uri,
+         post_logout_redirect_uri: oidcConfig.apple.post_logout_redirect_uri,
+         silent_redirect_uri: oidcConfig.apple.silent_redirect_uri,
+         loadUserInfo: true,
+       }
+    }
+  };
+}
 
-export const createUserManagerSettings = (provider: OidcProvider): UserManagerSettings => {
-  const config = getProviderConfig(provider);
-  const defaultSettings = baseOidcConfig.defaultSettings;
+export async function getProviderConfig(provider: OidcProvider): Promise<OidcProviderConfig> {
+  const config = await getOidcConfiguration();
+  return config.providers[provider];
+}
+
+export async function createUserManagerSettings(provider: OidcProvider): Promise<UserManagerSettings> {
+  const config = await getProviderConfig(provider);
+  const oidcConfig = await getOidcConfiguration();
+  const defaultSettings = oidcConfig.defaultSettings;
   
   const settings = {
     ...defaultSettings,
@@ -221,10 +189,10 @@ export const createUserManagerSettings = (provider: OidcProvider): UserManagerSe
   } as UserManagerSettings;
 
   return settings;
-};
+}
 
-export const createUserManager = (provider: OidcProvider) => {
-  const settings = createUserManagerSettings(provider);
+export async function createUserManager(provider: OidcProvider) {
+  const settings = await createUserManagerSettings(provider);
   const cacheKey = `oidc.user.${settings.authority}.${settings.client_id}`;
   localStorage.removeItem(cacheKey);
   console.log('Creating UserManager with settings:', {
@@ -235,6 +203,9 @@ export const createUserManager = (provider: OidcProvider) => {
     response_mode: settings.response_mode
   });
   return new UserManager(settings);
-};
+}
 
-export default baseOidcConfig; 
+// For backward compatibility, export a default configuration
+export async function getDefaultOidcConfig(): Promise<OidcConfiguration> {
+  return await getOidcConfiguration();
+} 
