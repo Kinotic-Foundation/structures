@@ -1,13 +1,13 @@
 package org.kinotic.structures.internal.endpoints;
 
 import io.vertx.ext.healthchecks.HealthChecks;
+import lombok.RequiredArgsConstructor;
 import org.kinotic.continuum.api.security.SecurityService;
 import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.internal.endpoints.graphql.DelegatingGqlHandler;
 import org.kinotic.structures.internal.endpoints.graphql.GqlVerticle;
 import org.kinotic.structures.internal.endpoints.openapi.OpenApiVerticle;
 import org.kinotic.structures.internal.endpoints.openapi.OpenApiVertxRouterFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
@@ -15,6 +15,7 @@ import org.springframework.stereotype.Component;
  * Created By navidmitchell 🤯on 3/6/24
  */
 @Component
+@RequiredArgsConstructor
 public class StructuresVerticleFactory {
 
     // Common Deps
@@ -29,19 +30,6 @@ public class StructuresVerticleFactory {
 
     // Web Server Deps
     private final HealthChecks healthChecks;
-
-
-    public StructuresVerticleFactory(OpenApiVertxRouterFactory openApiVertxRouterFactory,
-                                     StructuresProperties properties,
-                                     DelegatingGqlHandler delegatingGqlHandler,
-                                     HealthChecks healthChecks,
-                                     @Autowired(required = false) SecurityService securityService) {
-        this.openApiVertxRouterFactory = openApiVertxRouterFactory;
-        this.properties = properties;
-        this.securityService = securityService;
-        this.delegatingGqlHandler = delegatingGqlHandler;
-        this.healthChecks = healthChecks;
-    }
 
     public GqlVerticle createGqlVerticle(){
         return new GqlVerticle(delegatingGqlHandler, properties, securityService);

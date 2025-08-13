@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.lang3.Validate;
-import org.kinotic.structures.internal.config.OpenApiSecurityType;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
@@ -23,6 +22,8 @@ import lombok.experimental.Accessors;
 @Component
 @ConfigurationProperties(prefix = "structures")
 public class StructuresProperties {
+
+    private String structuresBaseUrl = "http://localhost";
 
     private final String indexPrefix = "struct_";
 
@@ -86,8 +87,6 @@ public class StructuresProperties {
 
     private String openApiAdminPath = "/admin/api/";
 
-    private String openApiServerUrl = "http://localhost:8080";
-
     private int graphqlPort = 4000;
 
     private String graphqlPath = "/graphql/";
@@ -117,6 +116,11 @@ public class StructuresProperties {
      * Defaults to /tmp/blobs
      */
     private String blobStoreRoot = "/tmp/blobs";
+
+    /**
+     * MCP server configuration
+     */
+    private Integer mcpPort = 3001;
 
     public boolean hasElasticUsernameAndPassword(){
         return elasticUsername != null && !elasticUsername.isBlank() && elasticPassword != null && !elasticPassword.isBlank();

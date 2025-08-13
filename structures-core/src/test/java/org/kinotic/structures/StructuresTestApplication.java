@@ -19,7 +19,7 @@ package org.kinotic.structures;
 
 import org.kinotic.continuum.api.annotations.EnableContinuum;
 import org.kinotic.structures.api.annotations.EnableStructures;
-import org.springframework.ai.autoconfigure.openai.OpenAiAutoConfiguration;
+import org.springframework.ai.model.openai.autoconfigure.OpenAiChatAutoConfiguration;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration;
@@ -35,7 +35,7 @@ import org.springframework.test.context.ActiveProfiles;
                                   GraphQlAutoConfiguration.class,
                                   GraphQlWebFluxAutoConfiguration.class,
                                   ReactiveElasticsearchClientAutoConfiguration.class,
-                                  OpenAiAutoConfiguration.class})
+                                  OpenAiChatAutoConfiguration.class})
 @EnableContinuum
 @EnableStructures
 @EnableConfigurationProperties
