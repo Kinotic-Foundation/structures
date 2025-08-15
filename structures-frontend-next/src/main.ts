@@ -10,8 +10,13 @@ import ToastService from 'primevue/toastservice'
 import { CONTINUUM_UI } from '@/IContinuumUI'
 import 'primeicons/primeicons.css'
 import { createApp } from 'vue'
+import { createPinia } from 'pinia'
 import App from './App.vue'
+
 const app = createApp(App)
+
+app.use(createPinia())
+
 app.use(PrimeVue, {
     theme: {
         preset: StructuresPreset,

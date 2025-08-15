@@ -15,3 +15,7 @@
     @apply bg-indigo-900 text-white font-semibold px-4 py-2 rounded;
   }
 }
+
+.custom-flow-controls .vue-flow__controls-button.vue-flow__controls-zoomout {
+  transform: rotate(90deg) !important;
+}
