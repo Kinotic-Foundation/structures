@@ -7,8 +7,10 @@ import org.springframework.boot.test.util.TestPropertyValues;
 import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 
 @Configuration
+@Profile("test")  // Only load this configuration during tests
 @EnableContinuum
 @EnableStructures
 @EnableContinuumGateway

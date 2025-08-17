@@ -1,0 +1,22 @@
+spring:
+  main:
+    web-application-type: none
+
+# YAML Reference http://www.yaml.org/refcard.html
+continuum:
+  discovery: sharedfs
+  debug: true
+  maxNumberOfCoresToUse: 4
+
+logging:
+  level:
+    org:
+      springframework:
+        web: DEBUG
+        ai: DEBUG
+      kinotic: TRACE
+    io:
+      vertx: DEBUG
+
+structures:
+  elastic-use-ssl: false

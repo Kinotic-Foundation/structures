@@ -28,14 +28,14 @@ public class DefaultDelegatingGqlHandler implements DelegatingGqlHandler {
 
     @Override
     public void evictCachesFor(Structure structure) {
-        graphQLHandlerCache.asMap().remove(structure.getNamespace());
+        graphQLHandlerCache.asMap().remove(structure.getApplicationId());
     }
 
     @Override
     public void handle(RoutingContext rc) {
-        String namespace = rc.pathParam(GqlVerticle.NAMESPACE_PATH_PARAMETER);
+        String application = rc.pathParam(GqlVerticle.APPLICATION_PATH_PARAMETER);
 
-        Future.fromCompletionStage(graphQLHandlerCache.get(namespace),
+        Future.fromCompletionStage(graphQLHandlerCache.get(application),
                                    rc.vertx().getOrCreateContext())
               .map(graphQLHandler -> {
                   graphQLHandler.handle(rc);

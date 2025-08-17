@@ -60,12 +60,12 @@ public interface NamedQueriesService extends IdentifiableCrudService<NamedQuerie
                                                          EntityContext context);
 
     /**
-     * Finds all {@link NamedQueriesDefinition} for a given namespace and structure.
-     * @param namespace the name of the namespace that the structure belongs to
+     * Finds all {@link NamedQueriesDefinition} for a given application and structure.
+     * @param applicationId the id of the application that the structure belongs to
      * @param structure the name of the structure that this {@link NamedQueriesDefinition} is defined for
      * @return {@link CompletableFuture} with the {@link NamedQueriesDefinition} or null if not found
      */
-    CompletableFuture<NamedQueriesDefinition> findByNamespaceAndStructure(String namespace, String structure);
+    CompletableFuture<NamedQueriesDefinition> findByApplicationAndStructure(String applicationId, String structure);
 
     /**
      * This operation makes all the recent writes immediately available for search.

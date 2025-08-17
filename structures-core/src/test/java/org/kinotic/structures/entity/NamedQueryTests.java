@@ -17,11 +17,18 @@
 
 package org.kinotic.structures.entity;
 
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.kinotic.continuum.idl.api.schema.*;
+import org.kinotic.continuum.idl.api.schema.ArrayC3Type;
+import org.kinotic.continuum.idl.api.schema.FunctionDefinition;
+import org.kinotic.continuum.idl.api.schema.LongC3Type;
+import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
+import org.kinotic.continuum.idl.api.schema.StringC3Type;
 import org.kinotic.structures.ElasticsearchTestBase;
 import org.kinotic.structures.api.domain.DefaultEntityContext;
 import org.kinotic.structures.api.domain.EntityContext;
@@ -36,15 +43,10 @@ import org.kinotic.structures.internal.sample.Person;
 import org.kinotic.structures.support.StructureAndPersonHolder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
+
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-
-@ExtendWith(SpringExtension.class)
 @SpringBootTest
 public class NamedQueryTests extends ElasticsearchTestBase {
 
@@ -54,6 +56,7 @@ public class NamedQueryTests extends ElasticsearchTestBase {
     private EntitiesService entitiesService;
 
     @Test
+    @SuppressWarnings("rawtypes")
     public void testNamedQuery() {
 
         EntityContext context1 = new DefaultEntityContext(new DummyParticipant("tenant1", "user1"));
@@ -72,7 +75,7 @@ public class NamedQueryTests extends ElasticsearchTestBase {
 
         FunctionDefinition countPeopleByLastNameDefinition = createCountByLastName(holder2.getStructure());
         NamedQueriesDefinition namedQueriesDefinition = createNamedQuery(holder2.getStructure(), List.of(countPeopleByLastNameDefinition));
-        StepVerifier.create(Mono.fromFuture(() -> namedQueriesService.save(namedQueriesDefinition)))
+        StepVerifier.create(Mono.fromFuture(namedQueriesService.save(namedQueriesDefinition)))
                     .expectNextCount(1)
                     .verifyComplete();
 
@@ -90,7 +93,7 @@ public class NamedQueryTests extends ElasticsearchTestBase {
                                                                              Map.class,
                                                                              context2);
 
-        StepVerifier.create(Mono.fromFuture(() -> future))
+        StepVerifier.create(Mono.fromFuture(future))
                     .expectNextMatches(maps -> {
                         Assertions.assertEquals(1, maps.size());
                         Map<?,?> map = maps.get(0);
@@ -108,7 +111,7 @@ public class NamedQueryTests extends ElasticsearchTestBase {
         // Now change the named queries and make sure the cache get invalidated properly
         FunctionDefinition countAllPeopleDefinition = createCountAll(holder2.getStructure());
         NamedQueriesDefinition namedQueriesDefinition2 = createNamedQuery(holder2.getStructure(), List.of(countAllPeopleDefinition));
-        StepVerifier.create(Mono.fromFuture(() -> namedQueriesService.save(namedQueriesDefinition2)))
+        StepVerifier.create(Mono.fromFuture(namedQueriesService.save(namedQueriesDefinition2)))
                     .expectNextCount(1)
                     .verifyComplete();
 
@@ -119,7 +122,7 @@ public class NamedQueryTests extends ElasticsearchTestBase {
                                                                              Map.class,
                                                                              context2);
 
-        StepVerifier.create(Mono.fromFuture(() -> future2))
+        StepVerifier.create(Mono.fromFuture(future2))
                     .expectNextMatches(maps -> {
                         Assertions.assertEquals(1, maps.size());
                         Map<?,?> map = maps.get(0);
@@ -140,7 +143,7 @@ public class NamedQueryTests extends ElasticsearchTestBase {
                                                                              Map.class,
                                                                              context2);
         // verify error
-        StepVerifier.create(Mono.fromFuture(() -> future3))
+        StepVerifier.create(Mono.fromFuture(future3))
                     .expectErrorMatches(throwable -> throwable instanceof IllegalArgumentException && throwable.getMessage().contains("No query found with name countPeopleByLastName"))
                     .verify();
 
@@ -148,16 +151,16 @@ public class NamedQueryTests extends ElasticsearchTestBase {
 
     private NamedQueriesDefinition createNamedQuery(Structure structure, List<FunctionDefinition> queries){
 
-        return new NamedQueriesDefinition().setNamespace(structure.getNamespace())
+        return new NamedQueriesDefinition().setApplicationId(structure.getApplicationId())
                                            .setStructure(structure.getName())
-                                           .setId((structure.getNamespace() + "." + structure.getName()).toLowerCase())
+                                           .setId((structure.getApplicationId() + "." + structure.getName()).toLowerCase())
                                            .setNamedQueries(queries);
     }
 
     @NotNull
     private static FunctionDefinition createCountAll(Structure structure) {
         ObjectC3Type resultType = new ObjectC3Type().setName("Count")
-                                                    .setNamespace(structure.getNamespace())
+                                                    .setNamespace(structure.getApplicationId())
                                                     .addProperty("count", new LongC3Type());
 
         QueryDecorator queryDecorator = new QueryDecorator()
@@ -171,7 +174,7 @@ public class NamedQueryTests extends ElasticsearchTestBase {
     @NotNull
     private static FunctionDefinition createCountByLastName(Structure structure) {
         ObjectC3Type resultType = new ObjectC3Type().setName("CountByLastName")
-                                                    .setNamespace(structure.getNamespace())
+                                                    .setNamespace(structure.getApplicationId())
                                                     .addProperty("count", new LongC3Type())
                                                     .addProperty("lastName", new StringC3Type());
 

@@ -27,7 +27,7 @@ public class PolicyAuthorizationServiceTest {
     @Test
     public void testAuthorizeWithNoPoliciesOnStructure() {
         Structure structure = new Structure();
-        structure.setNamespace("testNamespace");
+        structure.setApplicationId("testApplication");
         structure.setName("testName");
 
         ObjectC3Type entityDefinition = new ObjectC3Type();
@@ -43,7 +43,7 @@ public class PolicyAuthorizationServiceTest {
     @Test
     public void testAuthorizeWithEntityOnlyPolicies(){
         Structure structure = new Structure();
-        structure.setNamespace("testNamespace");
+        structure.setApplicationId("testApplication");
         structure.setName("testName");
 
         ObjectC3Type entityDefinition = new ObjectC3Type();
@@ -60,7 +60,7 @@ public class PolicyAuthorizationServiceTest {
     @Test
     public void testAuthorizeDeniedWithEntityOnlyPolicies(){
         Structure structure = new Structure();
-        structure.setNamespace("testNamespace");
+        structure.setApplicationId("testApplication");
         structure.setName("testName");
 
         ObjectC3Type entityDefinition = new ObjectC3Type();
@@ -107,7 +107,7 @@ public class PolicyAuthorizationServiceTest {
 
         Throwable exception = assertThrows(CompletionException.class, result::join);
         assertInstanceOf(AuthorizationException.class, exception.getCause());
-        assertEquals("Structure testnamespace.testname Fields [lastName] access not allowed.", exception.getCause().getMessage());
+        assertEquals("Structure testapplication.testname Fields [lastName] access not allowed.", exception.getCause().getMessage());
     }
 
     @Test
@@ -124,7 +124,7 @@ public class PolicyAuthorizationServiceTest {
 
     private Structure createStructureWithNoFieldPolicies() {
         Structure structure = new Structure();
-        structure.setNamespace("testNamespace");
+        structure.setApplicationId("testApplication");
         structure.setName("testName");
 
         ObjectC3Type entityDefinition = new ObjectC3Type();
@@ -156,7 +156,7 @@ public class PolicyAuthorizationServiceTest {
 
     private Structure createStructureWithFieldPolicies() {
         Structure structure = new Structure();
-        structure.setNamespace("testNamespace");
+        structure.setApplicationId("testApplication");
         structure.setName("testName");
 
 

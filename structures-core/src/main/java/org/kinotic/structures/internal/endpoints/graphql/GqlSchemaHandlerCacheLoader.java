@@ -94,7 +94,7 @@ public class GqlSchemaHandlerCacheLoader implements AsyncCacheLoader<String, Gra
                                                      .preparsedDocumentProvider(new CachingPreparsedDocumentProvider());
                     GraphQL graphQL = builder.build();
 
-                    log.debug("Finished creating GraphQL Schema for namespace: {} in {}ms",
+                    log.debug("Finished creating GraphQL Schema for application: {} in {}ms",
                               key,
                               TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - now));
 
@@ -103,14 +103,14 @@ public class GqlSchemaHandlerCacheLoader implements AsyncCacheLoader<String, Gra
     }
 
     @WithSpan
-    private CompletableFuture<GraphQLSchema> createGraphQlSchema(@SpanAttribute("namespace")
-                                                                 String namespace,
+    private CompletableFuture<GraphQLSchema> createGraphQlSchema(@SpanAttribute("applicationId")
+                                                                 String applicationId,
                                                                  Executor executor) {
         return structureDAO
-                .findAllPublishedForNamespace(namespace, Pageable.ofSize(500))
+                .findAllPublishedForApplication(applicationId, Pageable.ofSize(500))
                 .thenComposeAsync(structuresPage -> {
                     if(structuresPage.getTotalElements() > 0) {
-                        log.debug("Creating GraphQL Schema for namespace: {}", namespace);
+                        log.debug("Creating GraphQL Schema for application: {}", applicationId);
 
                         // Create the pageable types that are used in all queries
                         GraphQLInputObjectType sortType = createSortType();
@@ -211,19 +211,19 @@ public class GqlSchemaHandlerCacheLoader implements AsyncCacheLoader<String, Gra
                         GraphQLSchema graphQLSchema = graphQLSchemaBuilder.build();
                         graphQLSchema = Federation.transform(graphQLSchema)
                                                   .setFederation2(true)
-                                                  .fetchEntities(new EntitiesDataFetcher(entitiesService, namespace))
+                                                  .fetchEntities(new EntitiesDataFetcher(entitiesService, applicationId))
                                                   .resolveEntityType(ENTITIES_TYPE_RESOLVER)
                                                   .build();
 
                         if (log.isTraceEnabled()) {
-                            log.trace("GraphQL Schema for namespace {}\n{}",
-                                      namespace,
+                            log.trace("GraphQL Schema for application {}\n{}",
+                                      applicationId,
                                       ServiceSDLPrinter.generateServiceSDLV2(graphQLSchema));
                         }
 
                         return CompletableFuture.completedFuture(graphQLSchema);
                     }else{
-                        return CompletableFuture.failedFuture(new IllegalArgumentException("No published structures found for namespace: " + namespace));
+                        return CompletableFuture.failedFuture(new IllegalArgumentException("No published structures found for application: " + applicationId));
                     }
                 }, executor);
     }

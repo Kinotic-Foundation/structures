@@ -1,6 +1,6 @@
 import type { NavigationGuardNext, RouteLocationNormalized, Router } from 'vue-router'
 import type { App, Plugin } from 'vue'
-import {StructuresStates} from '@/states'
+import {StructuresStates} from '@/states/index'
 
 export function createStructuresUI(): Plugin {
     return {
@@ -8,7 +8,6 @@ export function createStructuresUI(): Plugin {
             options.router.beforeEach((to: RouteLocationNormalized, _: RouteLocationNormalized, next: NavigationGuardNext) => {
 
                 const { authenticationRequired } = to.meta
-
                 if ((authenticationRequired === undefined || authenticationRequired)
                     && !StructuresStates.getUserState().isAuthenticated()){
                     next({ path: '/login' })
@@ -17,7 +16,7 @@ export function createStructuresUI(): Plugin {
                 }
             })
 
-            StructuresStates.getFrontendState().initialize(options.router)
+            StructuresStates.getApplicationState().initialize(options.router)
         }
     }
 }

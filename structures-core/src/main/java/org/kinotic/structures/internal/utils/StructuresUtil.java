@@ -12,16 +12,17 @@ import java.util.regex.Pattern;
 public class StructuresUtil {
 
     private static final Pattern IdentifierNamePattern = Pattern.compile("^[A-Za-z_][A-Za-z0-9_]*$");
-    private static final Pattern StructureNamespacePattern = Pattern.compile("^[A-Za-z][A-Za-z0-9._-]*$");
+    private static final Pattern StructureApplicationPattern = Pattern.compile("^[A-Za-z][A-Za-z0-9._-]*$");
+    private static final Pattern StructureProjectIdPattern = Pattern.compile("^[a-z][a-z0-9._-]*$");
 
     /**
-     * Function will convert a structure namespace and name to a valid
-     * @param structureNamespace to convert
+     * Function will convert a structure applicationId and name to a valid
+     * @param structureApplicationId to convert
      * @param structureName to convert
      * @return a valid structure id
      */
-    public static String structureNameToId(String structureNamespace, String structureName){
-        return (structureNamespace + "." + structureName).toLowerCase();
+    public static String structureNameToId(String structureApplicationId, String structureName){
+        return (structureApplicationId + "." + structureName).toLowerCase();
     }
 
     /**
@@ -34,7 +35,9 @@ public class StructuresUtil {
 
         validateStructureName(structure.getName());
 
-        validateStructureNamespaceName(structure.getNamespace());
+        validateApplicationId(structure.getApplicationId());
+
+        validateProjectId(structure.getProjectId());
 
         if (structure.getEntityDefinition() == null) {
             throw new IllegalArgumentException("Structure entityDefinition must not be null");
@@ -51,21 +54,29 @@ public class StructuresUtil {
         if (structureName == null
                 || !IdentifierNamePattern.matcher(structureName).matches()){
             throw new IllegalArgumentException("Structure Name Invalid, first character must be a " +
-                                               "letter, number or underscore. And contain only letters, numbers or underscores");
+                                               "letter, number or underscore. And contain only letters, numbers or underscores. Got "+ structureName);
         }
     }
 
     /**
-     * Function will validate the structure namespace name
+     * Function will validate the structure application name
      *
-     * @param structureNamespace to validate
-     * @throws IllegalArgumentException will be thrown if the structure namespace is invalid
+     * @param applicationId to validate
+     * @throws IllegalArgumentException will be thrown if the structure application is invalid
      */
-    public static void validateStructureNamespaceName(String structureNamespace){
-        if (structureNamespace == null
-                || !StructureNamespacePattern.matcher(structureNamespace).matches()){
-            throw new IllegalArgumentException("Structure Namespace Invalid, first character must be a " +
-                                               "letter. And contain only letters, numbers, periods, underscores or dashes");
+    public static void validateApplicationId(String applicationId){
+        if (applicationId == null
+                || !StructureApplicationPattern.matcher(applicationId).matches()){
+            throw new IllegalArgumentException("Structure Application Id Invalid, first character must be a " +
+                                               "letter. And contain only letters, numbers, periods, underscores or dashes. Got "+ applicationId);
+        }
+    }
+
+    public static void validateProjectId(String projectId){
+        if (projectId == null
+                || !StructureProjectIdPattern.matcher(projectId).matches()){
+            throw new IllegalArgumentException("Structure Project Id Invalid, first character must be a " +
+                                               "letter. And contain only letters, numbers, periods, underscores or dashes. Got "+ projectId);
         }
     }
 
@@ -80,7 +91,7 @@ public class StructuresUtil {
             || propertyName.length() > 255
             || !IdentifierNamePattern.matcher(propertyName).matches()){
             throw new IllegalArgumentException("Property Name Invalid, first character must be a " +
-                                               "letter, number or underscore. And contain only letters, numbers or underscores");
+                                               "letter, number or underscore. And contain only letters, numbers or underscores. Got "+ propertyName);
         }
     }
 

@@ -1,26 +1,11 @@
 plugins {
 	id 'org.kinotic.java-library-conventions'
 	id 'io.freefair.lombok'
-	id 'antlr'
-}
-
-
-// Configure ANTLR plugin
-generateGrammarSource {
-	arguments += ['-package', 'org.kinotic.structures.internal.sql.parser']
-	arguments += ['-visitor']
-
-	// Output directly to the parser package
-	outputDirectory = file("${projectDir}/src/main/java/org/kinotic/structures/internal/sql/parser")
-	enabled = false
 }
 
 dependencies {
+	implementation project(':structures-sql')
 
-	implementation 'org.antlr:antlr4-runtime:4.13.2'
-	antlr 'org.antlr:antlr4:4.13.2'
-
-	implementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-json'
 	implementation 'org.springframework.boot:spring-boot-autoconfigure'
@@ -28,6 +13,12 @@ dependencies {
 	implementation 'org.reactivestreams:reactive-streams'
 	implementation 'io.projectreactor:reactor-core'
 
+	// Spring AI
+	implementation 'org.springframework.ai:spring-ai-commons'
+	implementation 'org.springframework.ai:spring-ai-model'
+	implementation 'org.springframework.ai:spring-ai-mcp'
+	implementation 'org.springframework.ai:spring-ai-starter-model-openai'
+	
 	implementation "io.vertx:vertx-web"
 	implementation "io.vertx:vertx-web-graphql"
 	implementation "io.vertx:vertx-web-client"
@@ -53,6 +44,8 @@ dependencies {
 
 	implementation "io.swagger.core.v3:swagger-models:${swaggerCoreVersion}"
 	implementation "io.swagger.core.v3:swagger-core:${swaggerCoreVersion}"
+
+	implementation "com.github.slugify:slugify:${slugifyVersion}"
 
 	annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 

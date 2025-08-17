@@ -44,7 +44,10 @@ public class StructuresEndpointInitializer {
 
         vertx.deployVerticle(verticleFactory::createGqlVerticle, options);
 
-        vertx.deployVerticle(verticleFactory::createWebServerVerticle, new DeploymentOptions()); // only 1 web server verticle
+        if(properties.isEnableStaticFileServer()){
+            vertx.deployVerticle(verticleFactory::createWebServerVerticle, new DeploymentOptions()); // only 1 web server verticle
+            vertx.deployVerticle(verticleFactory::createWebServerNextVerticle, new DeploymentOptions());
+        }
 
         healthChecks.register("elasticsearch", future -> {
             if(lastEsStatus){
@@ -57,8 +60,8 @@ public class StructuresEndpointInitializer {
         vertx.setPeriodic(properties.getElasticHealthCheckInterval().toMillis(),
                           event -> esAsyncClient
                                   .cluster()
-                                  .health(builder -> builder.index("namespace")
-                                                            .index("structure"))
+                                  .health(builder -> builder.index(properties.getIndexPrefix() + "application")
+                                                            .index(properties.getIndexPrefix() + "structure"))
                                   .whenComplete((health, throwable) -> {
                                       if(throwable != null){
                                           log.error("Elasticsearch cluster health check failed", throwable);
@@ -76,15 +79,17 @@ public class StructuresEndpointInitializer {
     @EventListener
     public void onApplicationReadyEvent(ApplicationReadyEvent event) {
         log.info("Rest API listening on port {}", properties.getOpenApiPort());
-        log.info("OpenApi Json available at http://localhost:{}/api-docs/[STRUCTURE NAMESPACE]/openapi.json",
+        log.info("OpenApi Json available at http://localhost:{}/api-docs/[STRUCTURE APPLICATION]/openapi.json",
                  properties.getOpenApiPort());
         log.info("GraphQL listening on port {}", properties.getGraphqlPort());
-        log.info("GraphQL available at http://localhost:{}{}[STRUCTURE NAMESPACE]/",
+        log.info("GraphQL available at http://localhost:{}{}[STRUCTURE APPLICATION]/",
                  properties.getGraphqlPort(),
                  properties.getGraphqlPath());
         if(properties.isEnableStaticFileServer()) {
             log.info("Web Server listening on port {}", properties.getWebServerPort());
             log.info("Web Server available at http://localhost:{}/", properties.getWebServerPort());
+            log.info("Web Server Next listening on port {}", properties.getWebServerPort() + 1);
+            log.info("Web Server Next available at http://localhost:{}/", properties.getWebServerPort() + 1);
         }
         log.info("Health checks available at http://localhost:{}{}",
                  properties.getWebServerPort(),

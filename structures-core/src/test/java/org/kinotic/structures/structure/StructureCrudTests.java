@@ -17,26 +17,24 @@
 
 package org.kinotic.structures.structure;
 
+import java.util.concurrent.CompletableFuture;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.kinotic.structures.ElasticsearchTestBase;
-import org.kinotic.structures.api.domain.idl.decorators.MultiTenancyType;
 import org.kinotic.structures.api.domain.DefaultEntityContext;
 import org.kinotic.structures.api.domain.Structure;
+import org.kinotic.structures.api.domain.idl.decorators.MultiTenancyType;
 import org.kinotic.structures.api.services.EntitiesService;
 import org.kinotic.structures.api.services.StructureService;
 import org.kinotic.structures.internal.sample.DummyParticipant;
 import org.kinotic.structures.internal.sample.TestDataService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
+
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
-import java.util.concurrent.CompletableFuture;
-
-@ExtendWith(SpringExtension.class)
 @SpringBootTest
 public class StructureCrudTests extends ElasticsearchTestBase {
 
@@ -52,7 +50,8 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 
 		Structure structure = new Structure();
 		structure.setName("PersonWat")
-				 .setNamespace("org.kinotic.sample")
+				 .setApplicationId("org.kinotic.sample")
+				 .setProjectId("org.kinotic.sample_default")
 				 .setDescription("Defines a Person")
 				 .setEntityDefinition(testDataService.createPersonSchema(MultiTenancyType.NONE, false));
 
@@ -94,7 +93,8 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 	public void tryOperationsOnPublishedStructure() throws Exception{
 		Structure structure = new Structure();
 		structure.setName("PersonBum")
-				 .setNamespace("org.kinotic.sample")
+				 .setApplicationId("org.kinotic.sample")
+				 .setProjectId("org.kinotic.sample_default")
 				 .setDescription("Defines a Person")
 				 .setEntityDefinition(testDataService.createPersonSchema(MultiTenancyType.NONE, false));
 
@@ -125,14 +125,15 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 					.expectError(IllegalStateException.class)
 					.verify();
 
-		// TODO: add rename name and namespace operations
+		// TODO: add rename name and application operations
 	}
 
 	@Test
 	public void createStructureInvalidField(){
 		Structure structure = new Structure();
 		structure.setName("PersonStupid")
-				 .setNamespace("org.kinotic.sample")
+				 .setApplicationId("org.kinotic.sample")
+				 .setProjectId("org.kinotic.sample_default")
 				 .setDescription("Defines a Person")
 				 .setEntityDefinition(testDataService.createPersonSchema(MultiTenancyType.NONE, true));
 
@@ -147,7 +148,8 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 	public void createStructureWithSameNameError() throws Exception {
 		Structure structure = new Structure();
 		structure.setName("PersonHomer")
-				 .setNamespace("org.kinotic.sample")
+				 .setApplicationId("org.kinotic.sample")
+				 .setProjectId("org.kinotic.sample_default")
 				 .setDescription("Defines a Person")
 				 .setEntityDefinition(testDataService.createPersonSchema(MultiTenancyType.NONE, false));
 
@@ -183,7 +185,8 @@ public class StructureCrudTests extends ElasticsearchTestBase {
 	public void tryOperationOnNotPublishedStructure() throws Exception {
 		Structure structure = new Structure();
 		structure.setName("PersonStoned")
-				 .setNamespace("org.kinotic.sample")
+				 .setApplicationId("org.kinotic.sample")
+				 .setProjectId("org.kinotic.sample_default")
 				 .setDescription("Defines a Person")
 				 .setEntityDefinition(testDataService.createPersonSchema(MultiTenancyType.NONE, false));
 

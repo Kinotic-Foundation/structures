@@ -1,10 +1,29 @@
 ![CI](https://github.com/kinotic-foundation/structures/actions/workflows/gradle-build.yml/badge.svg?branch=develop)
 
 # Structures
-Structures is an open-source framework for data storage and retrieval, supporting schema evolution, data management, and providing a user-friendly GUI and OpenAPI interface for data management.
+Structures is an open-source framework for data storage and retrieval, supporting schema evolution, data management, and providing a user-friendly GUI, OpenAPI, and GraphQL interface for data management.
 
-## Docs
-* [https://kinotic-foundation.github.io/structures/](https://kinotic-foundation.github.io/structures/)
+## Documentation
+For comprehensive documentation, including getting started guides, examples, and API reference, visit our documentation site:
+[https://kinotic-foundation.github.io/structures/](https://kinotic-foundation.github.io/structures/)
+
+## Quick Start
+1. Clone the repository:
+```bash
+git clone https://github.com/kinotic-foundation/structures.git
+cd structures
+```
+
+2. Start the development server:
+```bash
+cd docker-compose
+docker-compose up -d
+```
+
+3. Visit [http://localhost:9090](http://localhost:9090) to access the Structures GUI
+
+## Next Steps
+- [Getting Started Guide](https://kinotic-foundation.github.io/structures/website/guide/getting-started.html) - Complete setup instructions and prerequisites
 
 ### Projects
 * structures-core
@@ -13,28 +32,6 @@ Structures is an open-source framework for data storage and retrieval, supportin
   * Provides a GUI for interacting with Structures.
 * structures-server
   * Provides Access to the core library via a REST API and a GUI.
-
-
-
-### Basic Setup
-1. Install Docker Desktop.
-2. Install SdkMan, which makes installing/managing Java and Gradle easy.  Also can manage multiple installed versions.
-   1. `curl -s "https://get.sdkman.io" | bash`
-3. Install Java 11
-   1. `sdk install java 11.0.17-zulu`
-4. Build the Docker images (Get a cup of :coffee: this could take a bit the first time, depending on your internet connection.)
-   1. `./gradlew bootBuildImage`
-5. Publish the image to docker 
-   ```shell
-      export DOCKER_HUB_USERNAME=<your docker hub username>
-      export DOCKER_HUB_PASSWORD=<your docker hub password>
-   
-      ./gradlew bootBuildImage --publishImage
-    ```
-6. Run Docker Compose.
-   1. `cd docker-compose && docker-compose up -d` (You should see the application listed under containers in docker desktop)
-7. You can now view the application by going [here](http://localhost:9090/) in a browser. (This may not be available for at least a minute while the backend services finish starting.)
-   1. [http://localhost:9090/](http://localhost:9090/)
 
 ### Environment Variables 
 These variables are available for custom configuration, presented are the defaults.

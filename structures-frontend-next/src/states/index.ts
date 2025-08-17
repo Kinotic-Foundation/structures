@@ -1,13 +1,11 @@
-import {FRONTEND_STATE, type IFrontendState} from './IFrontendState'
+import type { Reactive } from 'vue'
+import {APPLICATION_STATE, type IApplicationState} from './IApplicationState'
 import {USER_STATE, type IUserState} from './IUserState'
 
-/**
- * Export all states
- */
 export namespace StructuresStates {
 
-    export function getFrontendState(): IFrontendState {
-        return FRONTEND_STATE
+    export function getApplicationState(): Reactive<IApplicationState> {
+        return APPLICATION_STATE
     }
 
     export function getUserState(): IUserState {

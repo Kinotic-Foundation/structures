@@ -1,11 +1,11 @@
 package org.kinotic.structures.support;
 
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.util.TokenBuffer;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+
 import org.kinotic.structures.api.domain.EntityContext;
-import org.kinotic.structures.api.domain.RawJson;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.EntitiesService;
 import org.kinotic.structures.internal.sample.Car;
@@ -13,12 +13,12 @@ import org.kinotic.structures.internal.sample.Person;
 import org.kinotic.structures.internal.sample.TestDataService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import reactor.core.publisher.Mono;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.util.TokenBuffer;
+
+import reactor.core.publisher.Mono;
 
 @Component
 public class TestHelper {
@@ -107,24 +107,23 @@ public class TestHelper {
                                                  Structure structure = pair.getLeft();
                                                  List<CompletableFuture<Person>> completableFutures = new ArrayList<>();
                                                  for(Person person : people){
-                                                     TokenBuffer tokenBuffer = new TokenBuffer(objectMapper, false);
-                                                     try {
+                                                     try (TokenBuffer tokenBuffer = new TokenBuffer(objectMapper, false)) {
                                                          tokenBuffer.writeObject(person);
+                                                         completableFutures.add(entitiesService.save(structure.getId(),
+                                                                                                     tokenBuffer,
+                                                                                                     entityContext)
+                                                                                               .thenCompose(saved -> {
+                                                                                                   try (JsonParser parser = saved.asParser()) {
+                                                                                                       Person deserializedPerson = objectMapper.readValue(parser,
+                                                                                                                                                          Person.class);
+                                                                                                       return CompletableFuture.completedFuture(deserializedPerson);
+                                                                                                   } catch (IOException e) {
+                                                                                                       return CompletableFuture.failedFuture(e);
+                                                                                                   }
+                                                                                               }));
                                                      } catch (IOException e) {
                                                          return CompletableFuture.failedFuture(e);
                                                      }
-                                                     completableFutures.add(entitiesService.save(structure.getId(),
-                                                                                                 tokenBuffer,
-                                                                                                 entityContext)
-                                                                                           .thenCompose(saved -> {
-                                                                                               try (JsonParser parser = saved.asParser()) {
-                                                                                                   Person deserializedPerson = objectMapper.readValue(parser,
-                                                                                                                                                      Person.class);
-                                                                                                   return CompletableFuture.completedFuture(deserializedPerson);
-                                                                                               } catch (IOException e) {
-                                                                                                   return CompletableFuture.failedFuture(e);
-                                                                                               }
-                                                                                           }));
                                                  }
                                                  return CompletableFuture.allOf(completableFutures.toArray(new CompletableFuture[0]))
                                                                          .thenApply(v -> {
