@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.config;
+package org.kinotic.structures.api.config;
 
 /**
  * The type of security to use for the OpenAPI spec

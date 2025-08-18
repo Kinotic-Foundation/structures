@@ -60,7 +60,7 @@ class CrudTable extends Vue {
   @Prop({ default: 'No items yet' }) emptyStateText!: string
   @Prop({ default: '' }) search!: string
   @Prop({ default: true }) showPagination!: boolean
-@Prop({ default: true }) enableRowHover!: boolean;
+  @Prop({ default: true }) enableRowHover!: boolean;
 
 getRowClass() {
   return {
@@ -107,8 +107,6 @@ getRowClass() {
   }
 
   mounted() {
-    console.log(this.showPagination, "VVVVVVVVVVVVVVVVV")
-    console.log(this.items.length, "kasjdlsajdksajdl")
     const urlSearch = (this.$route.query.search as string) || ''
     this.loading = true
     this.initialSearchCompleted = false
@@ -353,6 +351,7 @@ export default toNative(CrudTable)
 
 .truncate-multiline {
   display: -webkit-box;
+  line-clamp: 2;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;

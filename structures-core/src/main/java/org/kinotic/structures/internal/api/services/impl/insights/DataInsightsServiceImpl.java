@@ -1,9 +1,9 @@
 package org.kinotic.structures.internal.api.services.impl.insights;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.type.CollectionType;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
+
 import org.kinotic.continuum.api.security.Participant;
 import org.kinotic.structures.api.domain.insights.DataInsightsComponent;
 import org.kinotic.structures.api.domain.insights.InsightProgress;
@@ -15,13 +15,14 @@ import org.kinotic.structures.api.services.insights.DataInsightsService;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.type.CollectionType;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
-
-import java.time.Instant;
-import java.util.List;
-import java.util.UUID;
-import java.util.stream.Collectors;
 
 /**
  * Implementation of DataInsightsService that processes user requests through a chain of steps:
