@@ -1,6 +1,5 @@
 package org.kinotic.structures.auth.config;
 
-import org.springframework.boot.test.util.TestPropertyValues;
 import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.slf4j.Logger;
@@ -37,16 +36,12 @@ public class KeycloakTestContextInitializer implements ApplicationContextInitial
             log.info("TestContextInitializer: TestContainers are ready, proceeding with Spring context initialization");
 
             // Keycloak OIDC properties
-            String keycloakUrl = KeyloakTestConfiguration.getKeycloakUrl();
             String keycloakAuthUrl = KeyloakTestConfiguration.getKeycloakAuthUrl();
+
+            // Set the dynamic Keycloak URL as an environment variable that can be referenced in YAML
+            // This preserves the profile-specific configurations while allowing dynamic port usage
+            System.setProperty("keycloak.test.url", keycloakAuthUrl);
             
-            TestPropertyValues.of(
-                "oidc-security-service.enabled=true",
-                "oidc-security-service.allowed-issuers[0]=" + keycloakAuthUrl,
-                "oidc-security-service.authorization-audiences[0]=structures-client",
-                "spring.security.oauth2.resourceserver.jwt.issuer-uri=" + keycloakAuthUrl,
-                "spring.security.oauth2.resourceserver.jwt.jwk-set-uri=" + keycloakAuthUrl + "/protocol/openid-connect/certs"
-            ).applyTo(applicationContext);
             
         } catch (Exception e) {
             log.error("TestContextInitializer: Failed to ensure TestContainers are ready", e);

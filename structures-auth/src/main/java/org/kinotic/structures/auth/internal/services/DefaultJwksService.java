@@ -172,12 +172,10 @@ public class DefaultJwksService implements JwksService {
             // Parse the payload to get the issuer
             String payloadJson = new String(java.util.Base64.getUrlDecoder().decode(parts[1]));
             JsonNode payload = objectMapper.readTree(payloadJson);
-            
             String issuer = payload.get("iss") != null ? payload.get("iss").asText() : null;
             if (issuer == null) {
                 throw new RuntimeException("JWT token does not contain an issuer (iss)");
             }
-
             return getKey(issuer, kid);
         } catch (Exception e) {
             log.error("Failed to extract key information from JWT token", e);

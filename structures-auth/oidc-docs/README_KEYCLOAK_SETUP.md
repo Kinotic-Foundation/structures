@@ -64,7 +64,7 @@ npm run dev
 1. Navigate to `http://localhost:5173/login`
 2. Click "Continue with Keycloak"
 3. Login with test credentials:
-   - Username: `testuser`
+   - Username: `testuser@example.com`
    - Password: `password123`
 
 ## Manual Setup (Alternative)
@@ -147,7 +147,7 @@ The client includes these protocol mappers:
 - **Password**: `admin`
 
 ### Test User
-- **Username**: `testuser`
+- **Username**: `testuser@example.com`
 - **Email**: `testuser@example.com`
 - **Password**: `password123`
 - **First Name**: Test
@@ -196,7 +196,7 @@ structures:
 # Get a token from Keycloak
 TOKEN=$(curl -s -X POST \
   -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "username=testuser&password=password123&grant_type=password&client_id=structures-client" \
+  -d "username=testuser@example.com&password=password123&grant_type=password&client_id=structures-client" \
   http://localhost:8888/auth/realms/master/protocol/openid-connect/token | \
   jq -r '.access_token')
 
@@ -209,7 +209,7 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 1. Open `http://localhost:5173/login`
 2. Click "Continue with Keycloak"
-3. Login with `testuser` / `password123`
+3. Login with `testuser@example.com` / `password123`
 4. Verify you're redirected to the applications page
 
 ### 3. Backend Health Check

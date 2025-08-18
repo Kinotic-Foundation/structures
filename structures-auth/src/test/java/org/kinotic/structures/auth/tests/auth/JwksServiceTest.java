@@ -74,7 +74,7 @@ public class JwksServiceTest extends KeycloakTestBase {
         // Use testcontainer Keycloak started by TestConfiguration
         org.junit.jupiter.api.Assumptions.assumeTrue(KeyloakTestConfiguration.KEYCLOAK_CONTAINER != null,
                 "Keycloak container not available");
-        String token = fetchKeycloakAccessToken("testuser", "password123");
+        String token = fetchKeycloakAccessToken("testuser@example.com", "password123");
         assertNotNull(token);
         CompletableFuture<Jwk<?>> result = jwksService.getKeyFromToken(token);
         assertDoesNotThrow(() -> result.join());

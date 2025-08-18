@@ -1,4 +1,22 @@
 services:
+  structures-server:
+    environment:
+      - OIDC_SECURITY_SERVICE_ENABLED=true 
+      - OIDC_SECURITY_SERVICE_DEBUG=true
+      - OIDC_SECURITY_SERVICE_FRONTEND_CONFIGURATION_PATH=/app-config.override.json
+      - OIDC_SECURITY_SERVICE_OIDC_PROVIDERS_0_PROVIDER=keycloak
+      - OIDC_SECURITY_SERVICE_OIDC_PROVIDERS_0_DISPLAY_NAME=Keycloak
+      - OIDC_SECURITY_SERVICE_OIDC_PROVIDERS_0_ENABLED=true
+      - OIDC_SECURITY_SERVICE_OIDC_PROVIDERS_0_ROLES_CLAIM_PATH=realm_access.roles
+      - OIDC_SECURITY_SERVICE_OIDC_PROVIDERS_0_DOMAINS_0=example.com
+      - OIDC_SECURITY_SERVICE_OIDC_PROVIDERS_0_ROLES_0=admin
+      - OIDC_SECURITY_SERVICE_OIDC_PROVIDERS_0_AUDIENCE=structures-client
+      - OIDC_SECURITY_SERVICE_OIDC_PROVIDERS_0_CLIENT_ID=structures-client
+      - OIDC_SECURITY_SERVICE_OIDC_PROVIDERS_0_AUTHORITY=http://localhost:8888/auth/realms/test
+      - OIDC_SECURITY_SERVICE_OIDC_PROVIDERS_0_REDIRECT_URI=http://localhost:9090/login
+      - OIDC_SECURITY_SERVICE_OIDC_PROVIDERS_0_POST_LOGOUT_REDIRECT_URI=http://localhost:9090
+      - OIDC_SECURITY_SERVICE_OIDC_PROVIDERS_0_SILENT_REDIRECT_URI=http://localhost:9090/login/silent-renew
+
   keycloak-db:
     container_name: keycloak-db
     image: postgres:15-alpine
@@ -41,225 +59,27 @@ services:
     depends_on:
       keycloak-db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 10 bash -c '</dev/tcp/127.0.0.1/8888'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
     networks:
       - structures-network
 
-  keycloak-setup:
-    container_name: keycloak-setup
-    image: alpine:3.19
+  keycloak-init:
+    image: curlimages/curl:8.4.0
+    container_name: keycloak-init
     depends_on:
-      - keycloak
+      keycloak:
+        condition: service_healthy
+    volumes:
+      - ./keycloak-test-realm.json:/keycloak-test-realm.json:ro
+      - ./keycloak-import-test-realm.sh:/keycloak-import-test-realm.sh:ro
+    command: sh /keycloak-import-test-realm.sh
     networks:
       - structures-network
-    entrypoint: ["/bin/sh", "-c"]
-    command: |
-      set -eux
-      apk add --no-cache bash curl jq
-      echo "Waiting for Keycloak..."
-      until curl -sf http://keycloak:8888/auth/health/ready >/dev/null 2>&1; do
-        echo "Waiting for Keycloak health endpoint..."
-        sleep 10
-      done
-      echo "Getting admin token..."
-      ADMIN_TOKEN=$$(curl -s -X POST \
-        -H "Content-Type: application/x-www-form-urlencoded" \
-        -d "username=admin&password=admin&grant_type=password&client_id=admin-cli" \
-        http://keycloak:8888/auth/realms/master/protocol/openid-connect/token | jq -r '.access_token')
-      if [ -z "$$ADMIN_TOKEN" ] || [ "$$ADMIN_TOKEN" = "null" ]; then
-        echo "Failed to get admin token"; exit 1
-      fi
-      echo "Ensuring Structures client exists..."
-      EXISTING_CLIENT_ID=$$(curl -s -X GET \
-        -H "Authorization: Bearer $$ADMIN_TOKEN" \
-        "http://keycloak:8888/auth/admin/realms/master/clients?clientId=structures-client" | jq -r '.[0].id // empty')
-      if [ -z "$$EXISTING_CLIENT_ID" ]; then
-        curl -s -X POST \
-          -H "Authorization: Bearer $$ADMIN_TOKEN" \
-          -H "Content-Type: application/json" \
-          -d '{
-            "clientId": "structures-client",
-            "name": "Structures Application",
-            "description": "Structures frontend application",
-            "enabled": true,
-            "publicClient": true,
-            "standardFlowEnabled": true,
-            "directAccessGrantsEnabled": true,
-            "serviceAccountsEnabled": false,
-            "redirectUris": [
-              "http://localhost:5173/login",
-              "http://localhost:5173/login/silent-renew"
-            ],
-            "webOrigins": [
-              "http://localhost:5173"
-            ],
-            "attributes": {
-              "saml.assertion.signature": "false",
-              "saml.force.post.binding": "false",
-              "saml.multivalued.roles": "false",
-              "saml.encrypt": "false",
-              "saml.server.signature": "false",
-              "saml.server.signature.keyinfo.ext": "false",
-              "exclude.session.state.from.auth.response": "false",
-              "saml_force_name_id_format": "false",
-              "saml.client.signature": "false",
-              "tls.client.certificate.bound.access.tokens": "false",
-              "saml.authnstatement": "false",
-              "display.on.consent.screen": "false",
-              "saml.onetimeuse.condition": "false"
-            },
-            "protocol": "openid-connect",
-            "protocolMappers": [
-              {
-                "name": "email",
-                "protocol": "openid-connect",
-                "protocolMapper": "oidc-usermodel-property-mapper",
-                "config": {
-                  "userinfo.token.claim": "true",
-                  "user.attribute": "email",
-                  "id.token.claim": "true",
-                  "access.token.claim": "true",
-                  "claim.name": "email",
-                  "jsonType.label": "String"
-                }
-              },
-              {
-                "name": "name",
-                "protocol": "openid-connect",
-                "protocolMapper": "oidc-usermodel-property-mapper",
-                "config": {
-                  "userinfo.token.claim": "true",
-                  "user.attribute": "firstName",
-                  "id.token.claim": "true",
-                  "access.token.claim": "true",
-                  "claim.name": "given_name",
-                  "jsonType.label": "String"
-                }
-              },
-              {
-                "name": "family name",
-                "protocol": "openid-connect",
-                "protocolMapper": "oidc-usermodel-property-mapper",
-                "config": {
-                  "userinfo.token.claim": "true",
-                  "user.attribute": "lastName",
-                  "id.token.claim": "true",
-                  "access.token.claim": "true",
-                  "claim.name": "family_name",
-                  "jsonType.label": "String"
-                }
-              },
-              {
-                "name": "preferred_username",
-                "protocol": "openid-connect",
-                "protocolMapper": "oidc-usermodel-property-mapper",
-                "config": {
-                  "userinfo.token.claim": "true",
-                  "user.attribute": "username",
-                  "id.token.claim": "true",
-                  "access.token.claim": "true",
-                  "claim.name": "preferred_username",
-                  "jsonType.label": "String"
-                }
-              },
-              {
-                "name": "audience",
-                "protocol": "openid-connect",
-                "protocolMapper": "oidc-audience-mapper",
-                "config": {
-                  "id.token.claim": "true",
-                  "access.token.claim": "true",
-                  "userinfo.token.claim": "true",
-                  "included.client.audience": "structures-client"
-                }
-              },
-              {
-                "name": "tenantId",
-                "protocol": "openid-connect",
-                "protocolMapper": "oidc-hardcoded-claim-mapper",
-                "config": {
-                  "id.token.claim": "true",
-                  "access.token.claim": "true",
-                  "userinfo.token.claim": "true",
-                  "claim.name": "tenantId",
-                  "claim.value": "kinotic",
-                  "jsonType.label": "String"
-                }
-              }
-            ]
-          }' \
-          http://keycloak:8888/auth/admin/realms/master/clients >/dev/null
-        echo "Client created"
-      else
-        echo "Client already exists: $$EXISTING_CLIENT_ID - updating settings..."
-        # Fetch existing client, modify fields, and PUT full representation
-        curl -s -H "Authorization: Bearer $$ADMIN_TOKEN" \
-          "http://keycloak:8888/auth/admin/realms/master/clients/$$EXISTING_CLIENT_ID" \
-          | jq '.directAccessGrantsEnabled=true | .publicClient=true' \
-          > /tmp/structures-client.json
-        curl -s -X PUT \
-          -H "Authorization: Bearer $$ADMIN_TOKEN" \
-          -H "Content-Type: application/json" \
-          --data-binary @/tmp/structures-client.json \
-          "http://keycloak:8888/auth/admin/realms/master/clients/$$EXISTING_CLIENT_ID" >/dev/null
-      fi
-      # Resolve client ID after creation/update
-      CLIENT_ID=$$(curl -s -X GET -H "Authorization: Bearer $$ADMIN_TOKEN" "http://keycloak:8888/auth/admin/realms/master/clients?clientId=structures-client" | jq -r '.[0].id // empty')
-      # Ensure hardcoded tenantId protocol mapper exists
-      CLIENT_MAPPER_ID=$$(curl -s -H "Authorization: Bearer $$ADMIN_TOKEN" \
-        "http://keycloak:8888/auth/admin/realms/master/clients/$$CLIENT_ID/protocol-mappers/models" \
-        | jq -r '.[] | select(.name=="tenantId") | .id // empty')
-      if [ -z "$$CLIENT_MAPPER_ID" ]; then
-        echo "Adding tenantId hardcoded claim mapper..."
-        curl -s -X POST \
-          -H "Authorization: Bearer $$ADMIN_TOKEN" \
-          -H "Content-Type: application/json" \
-          -d '{
-            "name": "tenantId",
-            "protocol": "openid-connect",
-            "protocolMapper": "oidc-hardcoded-claim-mapper",
-            "config": {
-              "id.token.claim": "true",
-              "access.token.claim": "true",
-              "userinfo.token.claim": "true",
-              "claim.name": "tenantId",
-              "claim.value": "kinotic",
-              "jsonType.label": "String"
-            }
-          }' \
-          "http://keycloak:8888/auth/admin/realms/master/clients/$$CLIENT_ID/protocol-mappers/models" >/dev/null
-      else
-        echo "tenantId mapper already present: $$CLIENT_MAPPER_ID"
-      fi
-      echo "Ensuring test user exists..."
-      EXISTING_USER_ID=$$(curl -s -X GET \
-        -H "Authorization: Bearer $$ADMIN_TOKEN" \
-        "http://keycloak:8888/auth/admin/realms/master/users?username=testuser" | jq -r '.[0].id // empty')
-      if [ -z "$$EXISTING_USER_ID" ]; then
-        curl -s -X POST \
-          -H "Authorization: Bearer $$ADMIN_TOKEN" \
-          -H "Content-Type: application/json" \
-          -d '{
-            "username": "testuser",
-            "email": "testuser@example.com",
-            "firstName": "Test",
-            "lastName": "User",
-            "enabled": true,
-            "emailVerified": true,
-            "credentials": [
-              {
-                "type": "password",
-                "value": "password123",
-                "temporary": false
-              }
-            ]
-          }' \
-          http://keycloak:8888/auth/admin/realms/master/users >/dev/null
-        echo "User created"
-      else
-        echo "User already exists: $$EXISTING_USER_ID"
-      fi
-      echo "Keycloak bootstrap complete."
-    restart: "no"
 
 volumes:
   keycloak-db-data:

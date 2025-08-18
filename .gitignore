@@ -1,7 +1,7 @@
 # Local frontend runtime config overrides (not for source control)
-structures-frontend-next/public/app-config.local.json
+structures-frontend-next/public/app-config.override.json
 structures-frontend-next/public/app-config.json.local
-structures-frontend-next/public/config/app-config.local.json
+structures-frontend-next/public/config/app-config.override.json
 structures-frontend-next/public/config/app-config.json.local
 # Local service config overrides (not for source control)
 structures-server/src/main/resources/application-local.yml
@@ -89,5 +89,7 @@ structures-sql/allure-results/
 structures-auth/allure-results/
 
 structures-server/allure-results/
+
+structures-server/src/main/resources/webroot/
 
 structures-server/src/main/resources/webroot2/

@@ -1,17 +1,14 @@
 package org.kinotic.structuresserver.tests.config;
 
 import org.junit.jupiter.api.Test;
+import org.kinotic.structuresserver.config.ContainerHealthChecker;
 import org.kinotic.structuresserver.config.ElasticsearchTestConfiguration;
 import org.kinotic.structuresserver.ElasticTestBase;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 public class TestConfigurationTest extends ElasticTestBase {
     
-    private static final Logger log = LoggerFactory.getLogger(TestConfigurationTest.class);
-
     @Test
     public void testTestContainersStarted() {
         // Verify that TestContainers are running

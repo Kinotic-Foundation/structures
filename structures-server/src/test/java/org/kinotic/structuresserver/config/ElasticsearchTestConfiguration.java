@@ -1,16 +1,11 @@
 package org.kinotic.structuresserver.config;
 
 import java.time.Duration;
-import java.io.File;
 
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.elasticsearch.ElasticsearchContainer;
-
-import dasniko.testcontainers.keycloak.KeycloakContainer;
-
-import org.kinotic.structuresserver.tests.config.ContainerHealthChecker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -86,6 +81,9 @@ public class ElasticsearchTestConfiguration {
         }
     }
     
+    /**
+     * Wait for containers to be ready
+     */
     private static void waitForContainersToBeReady() {
         try {
             log.info("Waiting for Elasticsearch to be fully operational...");
@@ -147,12 +145,16 @@ public class ElasticsearchTestConfiguration {
         }
     }
     
-
-    
+    /**
+     * Check if containers are running
+     */
     public static boolean areContainersRunning() {
         return ELASTICSEARCH_CONTAINER.isRunning();
     }
     
+    /**
+     * Check if containers are ready
+     */
     public static boolean areContainersReady() {
         return containersReady;
     }
@@ -243,6 +245,9 @@ public class ElasticsearchTestConfiguration {
         }
     }
     
+    /**
+     * Get the Elasticsearch URL
+     */
     public static String getElasticsearchUrl() {
         return "http://" + ELASTICSEARCH_CONTAINER.getHost() + ":" + ELASTICSEARCH_CONTAINER.getMappedPort(9200);
     }

@@ -19,20 +19,20 @@ public class ElasticsearchTestContextInitializer implements ApplicationContextIn
     
     @Override
     public void initialize(ConfigurableApplicationContext applicationContext) {
-        log.info("TestContextInitializer: Ensuring TestContainers are ready before Spring context initialization...");
+        log.info("ElasticsearchTestContextInitializer: Ensuring TestContainers are ready before Spring context initialization...");
         
         try {
             // Ensure containers are started and ready before Spring context creation
             // This is a lightweight check - TestBeanPostProcessor will handle the detailed setup
             if (!ElasticsearchTestConfiguration.areContainersRunning()) {
-                log.info("TestContextInitializer: Starting TestContainers...");
+                log.info("ElasticsearchTestContextInitializer: Starting TestContainers...");
                 ElasticsearchTestConfiguration.startContainersSynchronously();
             } else if (!ElasticsearchTestConfiguration.areContainersReady()) {
-                log.info("TestContextInitializer: Waiting for containers to be ready...");
+                log.info("ElasticsearchTestContextInitializer: Waiting for containers to be ready...");
                 ElasticsearchTestConfiguration.waitForContainersReady();
             }
             
-            log.info("TestContextInitializer: TestContainers are ready, proceeding with Spring context initialization");
+            log.info("ElasticsearchTestContextInitializer: TestContainers are ready, proceeding with Spring context initialization");
 
             ElasticsearchTestConfiguration.ensureContainersReady();
   
@@ -49,7 +49,7 @@ public class ElasticsearchTestContextInitializer implements ApplicationContextIn
                     .applyTo(applicationContext);
             
         } catch (Exception e) {
-            log.error("TestContextInitializer: Failed to ensure TestContainers are ready", e);
+            log.error("ElasticsearchTestContextInitializer: Failed to ensure TestContainers are ready", e);
             throw new RuntimeException("TestContainers failed to start during context initialization", e);
         }
     }

@@ -9,7 +9,6 @@ spring:
   main:
     allow-circular-references: true
     allow-bean-definition-overriding: true
-    web-application-type: none
 
 
 continuum:

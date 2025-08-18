@@ -1,44 +1,39 @@
 import { type UserManagerSettings, WebStorageStateStore, UserManager } from 'oidc-client-ts';
 import { configService } from '@/util/config';
 
-export type OidcProvider = 'okta' | 'keycloak' | 'google' | 'github' | 'microsoft' | 'microsoftSocial' | 'custom' | 'apple';
-
 export interface OidcProviderConfig extends Partial<UserManagerSettings> {
   enabled: boolean;
-  client_id: string;
-  client_secret?: string;
+  clientId: string;
+  clientSecret?: string;
   authority: string;
-  redirect_uri: string;
-  post_logout_redirect_uri?: string;
-  silent_redirect_uri?: string;
+  redirectUri: string;
+  postLogoutRedirectUri?: string;
+  silentRedirectUri?: string;
   loadUserInfo?: boolean;
-  metadata?: {
-    authorization_endpoint?: string;
-    token_endpoint?: string;
-    userinfo_endpoint?: string;
-    end_session_endpoint?: string;
-    jwks_uri?: string;
-  };
+  additionalScopes?: string;
+  // Additional OIDC parameters for better UX
+  enableEmailPreFill?: boolean;
+  enableDomainHint?: boolean;
+  metadata?: any;
   publicClient?: PublicClientConfig;
-  customParams?: Record<string, string>;
 }
 
 export interface PublicClientConfig {
   isPublicClient: boolean;
   responseType: string;
-  responseMode?: string;
+  responseMode: string;
 }
 
 export interface OidcConfiguration {
-  defaultProvider: OidcProvider;
-  providers: Record<OidcProvider, OidcProviderConfig>;
+  defaultProvider: string;
+  providers: Record<string, OidcProviderConfig>;
   defaultSettings: Partial<UserManagerSettings>;
 }
 
 const DEFAULT_SETTINGS: Partial<UserManagerSettings> = {
   response_type: 'code',
   response_mode: 'query',
-  scope: 'openid profile email offline_access',
+  scope: 'openid profile email offline_acces',
   loadUserInfo: true,
   monitorSession: true,
   userStore: new WebStorageStateStore({ store: window.localStorage }),
@@ -47,7 +42,7 @@ const DEFAULT_SETTINGS: Partial<UserManagerSettings> = {
 
 // Create a function to get the OIDC configuration dynamically
 export async function getOidcConfiguration(): Promise<OidcConfiguration> {
-  const oidcConfig = await configService.getOidcConfig();
+  const oidcConfig = await configService.loadConfig();
   const isDebug = await configService.isDebugEnabled();
 
   // Debug: Log configuration for troubleshooting
@@ -55,157 +50,118 @@ export async function getOidcConfiguration(): Promise<OidcConfiguration> {
     console.log('OIDC Configuration:', oidcConfig);
   }
 
+  // Get all enabled OIDC providers
+  const enabledProviders = await configService.getEnabledOidcProviders();
+  
+  // Build dynamic providers configuration
+  const providers: Record<string, OidcProviderConfig> = {};
+  
+  for (const provider of enabledProviders) {
+    providers[provider.provider] = {
+      enabled: provider.enabled,
+      clientId: provider.clientId,
+      clientSecret: '',
+      authority: provider.authority,
+      redirectUri: provider.redirectUri,
+      postLogoutRedirectUri: provider.postLogoutRedirectUri,
+      silentRedirectUri: provider.silentRedirectUri,
+      loadUserInfo: true,
+      additionalScopes: provider.additionalScopes ?? '',
+      publicClient: {
+        isPublicClient: true,
+        responseType: 'code',
+        responseMode: 'query'
+      },
+      // Add custom metadata if available
+      ...(provider.metadata && {
+        metadata: {
+          authorizationEndpoint: provider.metadata.authorization_endpoint,
+          tokenEndpoint: provider.metadata.token_endpoint,
+          userinfoEndpoint: provider.metadata.userinfo_endpoint,
+          endSessionEndpoint: provider.metadata.end_session_endpoint,
+          jwksUri: provider.metadata.jwks_uri,
+        }
+      })
+    };
+  }
+
+  // Determine default provider (use first enabled provider, or 'keycloak' as fallback)
+  const defaultProvider = enabledProviders.length > 0 ? enabledProviders[0].provider : 'keycloak';
+
   return {
-    defaultProvider: 'keycloak',
+    defaultProvider,
     defaultSettings: DEFAULT_SETTINGS,
-    providers: {
-      okta: {
-        enabled: oidcConfig.okta.enabled,
-        client_id: oidcConfig.okta.client_id,
-        client_secret: '',
-        authority: oidcConfig.okta.authority,
-        redirect_uri: oidcConfig.okta.redirect_uri,
-        post_logout_redirect_uri: oidcConfig.okta.post_logout_redirect_uri,
-        silent_redirect_uri: oidcConfig.okta.silent_redirect_uri,
-        loadUserInfo: true,
-        publicClient: {
-          isPublicClient: true,
-          responseType: 'code',
-          responseMode: 'query'
-        },
-        monitorSession: true
-      },
-      keycloak: {
-        enabled: oidcConfig.keycloak.enabled,
-        client_id: oidcConfig.keycloak.client_id,
-        client_secret: '',
-        authority: oidcConfig.keycloak.authority,
-        redirect_uri: oidcConfig.keycloak.redirect_uri,
-        post_logout_redirect_uri: oidcConfig.keycloak.post_logout_redirect_uri,
-        silent_redirect_uri: oidcConfig.keycloak.silent_redirect_uri,
-        loadUserInfo: true,
-        publicClient: {
-          isPublicClient: true,
-          responseType: 'code',
-          responseMode: 'query'
-        },
-      },
-      google: {
-        enabled: oidcConfig.google.enabled,
-        client_id: oidcConfig.google.client_id,
-        client_secret: '',
-        authority: oidcConfig.google.authority,
-        redirect_uri: oidcConfig.google.redirect_uri,
-        post_logout_redirect_uri: oidcConfig.google.post_logout_redirect_uri,
-        silent_redirect_uri: oidcConfig.google.silent_redirect_uri,
-        loadUserInfo: true,
-      },
-      github: {
-        enabled: oidcConfig.github.enabled,
-        client_id: oidcConfig.github.client_id,
-        client_secret: '',
-        authority: oidcConfig.github.authority,
-        redirect_uri: oidcConfig.github.redirect_uri,
-        post_logout_redirect_uri: oidcConfig.github.post_logout_redirect_uri,
-        silent_redirect_uri: oidcConfig.github.silent_redirect_uri,
-        loadUserInfo: true,
-      },
-      microsoft: {
-        enabled: oidcConfig.microsoft.enabled,
-        client_id: oidcConfig.microsoft.client_id,
-        client_secret: '',
-        authority: oidcConfig.microsoft.authority,
-        redirect_uri: oidcConfig.microsoft.redirect_uri,
-        post_logout_redirect_uri: oidcConfig.microsoft.post_logout_redirect_uri,
-        silent_redirect_uri: oidcConfig.microsoft.silent_redirect_uri,
-        loadUserInfo: true,
-        // Add custom scope if specified (for custom audience in v2.0)
-        ...(oidcConfig.microsoft.resource && {
-          scope: `openid profile email ${oidcConfig.microsoft.resource}`
-        }),
-      },
-      microsoftSocial: {
-        enabled: oidcConfig.microsoftSocial.enabled,
-        client_id: oidcConfig.microsoftSocial.client_id,
-        client_secret: '',
-        authority: oidcConfig.microsoftSocial.authority,
-        redirect_uri: oidcConfig.microsoftSocial.redirect_uri,
-        post_logout_redirect_uri: oidcConfig.microsoftSocial.post_logout_redirect_uri,
-        silent_redirect_uri: oidcConfig.microsoftSocial.silent_redirect_uri,
-        loadUserInfo: true,
-        scope: 'openid profile email',
-        response_type: 'code', // Use Authorization Code flow with PKCE
-        response_mode: 'query',
-      },
-             custom: {
-         enabled: oidcConfig.custom.enabled,
-         client_id: oidcConfig.custom.client_id,
-         client_secret: '',
-         authority: oidcConfig.custom.authority,
-         redirect_uri: oidcConfig.custom.redirect_uri,
-         post_logout_redirect_uri: oidcConfig.custom.post_logout_redirect_uri,
-         silent_redirect_uri: oidcConfig.custom.silent_redirect_uri,
-         loadUserInfo: true,
-         metadata: oidcConfig.custom.metadata,
-       },
-       apple: {
-         enabled: oidcConfig.apple.enabled,
-         client_id: oidcConfig.apple.client_id,
-         client_secret: '',
-         authority: oidcConfig.apple.authority,
-         redirect_uri: oidcConfig.apple.redirect_uri,
-         post_logout_redirect_uri: oidcConfig.apple.post_logout_redirect_uri,
-         silent_redirect_uri: oidcConfig.apple.silent_redirect_uri,
-         loadUserInfo: true,
-       }
-    }
+    providers
   };
 }
 
-export async function getProviderConfig(provider: OidcProvider): Promise<OidcProviderConfig> {
+export async function getProviderConfig(providerName: string): Promise<OidcProviderConfig | null> {
   const config = await getOidcConfiguration();
-  return config.providers[provider];
+  return config.providers[providerName] || null;
 }
 
-export async function createUserManagerSettings(provider: OidcProvider): Promise<UserManagerSettings> {
-  const config = await getProviderConfig(provider);
-  const oidcConfig = await getOidcConfiguration();
-  const defaultSettings = oidcConfig.defaultSettings;
+export async function createUserManagerSettings(providerName: string): Promise<UserManagerSettings> {
+  const config = await getOidcConfiguration();
+  const providerConfig = config.providers[providerName];
   
-  const settings = {
-    ...defaultSettings,
-    ...config,
-    ...(config.publicClient?.isPublicClient ? {
-      response_type: config.publicClient.responseType,
-      response_mode: config.publicClient.responseMode,
-      client_secret: undefined
-    } : {}),
-    ...(config.metadata ? {
+  if (!providerConfig) {
+    throw new Error(`Provider configuration not found for: ${providerName}`);
+  }
+
+  if (!providerConfig.enabled) {
+    throw new Error(`Provider ${providerName} is not enabled`);
+  }
+
+  // Merge default settings with provider-specific settings
+  const settings: UserManagerSettings = {
+    ...config.defaultSettings,
+    authority: providerConfig.authority,
+    client_id: providerConfig.clientId,
+    redirect_uri: providerConfig.redirectUri,
+    post_logout_redirect_uri: providerConfig.postLogoutRedirectUri,
+    silent_redirect_uri: providerConfig.silentRedirectUri,
+    loadUserInfo: providerConfig.loadUserInfo ?? true,
+    // Ensure required fields are set
+    response_type: 'code',
+    response_mode: 'query',
+    scope: `openid profile email offline_access ${providerConfig.additionalScopes ?? ''}`,
+    // Add custom metadata if available
+    ...(providerConfig.metadata && {
       metadata: {
-        ...defaultSettings.metadata,
-        ...config.metadata,
+        authorization_endpoint: providerConfig.metadata.authorizationEndpoint,
+        token_endpoint: providerConfig.metadata.tokenEndpoint,
+        userinfo_endpoint: providerConfig.metadata.userinfoEndpoint,
+        end_session_endpoint: providerConfig.metadata.endSessionEndpoint,
+        jwks_uri: providerConfig.metadata.jwksUri,
       }
-    } : {}),
-  } as UserManagerSettings;
+    })
+  };
+
+  // Log settings for debugging
+  console.log('UserManager settings created:', {
+    authority: settings.authority,
+    client_id: settings.client_id,
+    redirect_uri: settings.redirect_uri,
+    enableEmailPreFill: providerConfig.enableEmailPreFill,
+    enableDomainHint: providerConfig.enableDomainHint
+  });
 
   return settings;
 }
 
-export async function createUserManager(provider: OidcProvider) {
-  const settings = await createUserManagerSettings(provider);
-  const cacheKey = `oidc.user.${settings.authority}.${settings.client_id}`;
-  localStorage.removeItem(cacheKey);
-  console.log('Creating UserManager with settings:', {
-    authority: settings.authority,
-    client_id: settings.client_id,
-    redirect_uri: settings.redirect_uri,
-    response_type: settings.response_type,
-    response_mode: settings.response_mode
-  });
+export async function createUserManager(providerName: string): Promise<UserManager> {
+  const settings = await createUserManagerSettings(providerName);
   return new UserManager(settings);
 }
 
-// For backward compatibility, export a default configuration
-export async function getDefaultOidcConfig(): Promise<OidcConfiguration> {
-  return await getOidcConfiguration();
+// Helper function to get all available provider names
+export async function getAvailableProviders(): Promise<string[]> {
+  const enabledProviders = await configService.getEnabledOidcProviders();
+  return enabledProviders.map(provider => provider.provider);
+}
+
+// Helper function to check if a specific provider is enabled
+export async function isProviderEnabled(providerName: string): Promise<boolean> {
+  const provider = await configService.getOidcProviderByName(providerName);
+  return provider?.enabled ?? false;
 } 

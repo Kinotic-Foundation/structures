@@ -1,6 +1,7 @@
 package org.kinotic.structuresserver.tests.config;
 
 import org.junit.jupiter.api.Test;
+import org.kinotic.structuresserver.config.ContainerHealthChecker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

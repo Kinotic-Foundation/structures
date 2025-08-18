@@ -132,6 +132,8 @@ structures:
 ### Example Configurations
 
 #### Okta (Tested and Verified)
+**⚠️ IMPORTANT**: Okta access tokens MUST include an email claim. See [Okta Configuration Guide](./okta.md) for detailed setup instructions.
+
 ```yaml
 structures:
   oidc-auth-verifier:
@@ -153,6 +155,7 @@ okta: {
   post_logout_redirect_uri: 'http://localhost:5173',
   silent_redirect_uri: 'http://localhost:5173/login/silent-renew',
   loadUserInfo: true,
+  scope: 'openid profile email', // email scope is REQUIRED
   publicClient: {
     isPublicClient: true,
     responseType: 'code',
@@ -167,6 +170,8 @@ okta: {
   }
 }
 ```
+
+**For complete Okta setup instructions, see [Okta Configuration Guide](./okta.md)**
 
 #### Keycloak (Tested and Verified)
 ```yaml
@@ -479,11 +484,58 @@ The implementation extracts the following information from JWT claims:
 | JWT Claim | Participant Field | Description |
 |-----------|------------------|-------------|
 | `sub` | `id` | Subject identifier |
-| `email` | `metadata.email` | User email |
+| `email` | `metadata.email` | User email (**REQUIRED**) |
 | `name` | `metadata.name` | Full name |
 | `preferred_username` | `metadata.name` | Username (fallback) |
 | `tenant_id` or `tid` | `tenantId` | Tenant identifier |
 | `roles`, `role`, `groups`, `realm_access.roles` | `roles` | User roles |
+
+### Email Claim Requirements
+
+**⚠️ CRITICAL**: The `email` claim is **REQUIRED** for authentication to succeed. The system follows this fallback order:
+
+1. **Primary**: Extract `email` claim from access token
+2. **Fallback 1**: If no email claim, try `preferred_username` claim (must be valid email format)
+3. **Fallback 2**: If no preferred_username, try `sub` claim (must be valid email format)
+4. **Failure**: If none exist or none are valid emails, authentication fails
+
+**Why This Matters:**
+- Email is used for user identification and tenant routing
+- Without email information, user sessions cannot be created
+- This is a security requirement, not optional
+
+**Supported Claims (in priority order):**
+- **`email`**: Standard OIDC email claim
+- **`preferred_username`**: Standard OIDC preferred username claim (often email format)
+- **`sub`**: Standard OIDC subject claim (if it's an email format)
+- **`upn`**: Microsoft-specific User Principal Name claim
+- **`unique_name`**: Microsoft-specific legacy claim
+
+**Provider-Specific Notes:**
+- **Okta**: Must configure access token to include email claim. See [Okta Configuration Guide](./okta.md)
+- **Microsoft**: Usually includes email in access tokens, supports upn and unique_name
+- **Keycloak**: Configurable, but typically minimal access tokens
+- **Google**: Minimal access tokens, profile data via UserInfo endpoint
+
+### JSON Path Extraction
+
+The OIDC service now supports extracting values from nested JWT claims using dot-separated JSON paths. This allows you to access deeply nested claim values like `realm_access.roles` or `app_metadata.tenant.id`.
+
+**Configuration Example:**
+```yaml
+oidc-security-service:
+  oidc-providers:
+    - provider: "keycloak"
+      roles-claim-path: "realm_access.roles"  # Extract from nested path
+      # ... other configuration
+```
+
+**Supported Path Formats:**
+- Simple: `"email"`, `"name"`
+- Nested: `"realm_access.roles"`, `"groups.department"`
+- Deep: `"user.profile.preferences.theme"`
+
+For detailed information about JSON path extraction, see [JSON_PATH_EXTRACTION_EXAMPLE.md](./JSON_PATH_EXTRACTION_EXAMPLE.md).
 
 ## Caching Strategy
 
@@ -613,7 +665,7 @@ docker compose -f docker-compose/compose.keycloak.yml up -d keycloak-db keycloak
 docker wait keycloak-setup
 
 # Test with test user
-# Username: testuser
+# Username: testuser@example.com
 # Password: password123
 ```
 

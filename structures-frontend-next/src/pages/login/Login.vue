@@ -18,30 +18,18 @@
 
         <!-- Show login form only when not in OIDC callback -->
         <div v-if="shouldShowLoginForm">
-          <!-- Basic Username/Password Form - Only show if enabled -->
-          <div v-if="configLoaded && basicAuthEnabled">
-            <IconField class="!mb-4 !flex !items-center !relative !w-full">
+          <!-- Step 1: Username/Email Input -->
+          <div v-if="!emailEntered && configLoaded" class="w-full">
+            <h2 class="text-xl font-semibold text-gray-800 mb-6 text-center">Enter your email address</h2>
+            
+            <IconField class="!mb-6 !flex !items-center !relative !w-full">
               <InputText
+                ref="emailInput"
                 v-model="login"
-                class="w-full max-w-[540px] h-[56px] !pl-4"
+                class="w-full max-w-[700px] h-[56px] !pl-4"
                 placeholder="Username or Email"
                 @focus="hideAlert"
-              />
-              <InputIcon class="!mt-0 -translate-y-1/2">
-                <img src="@/assets/input-hide.svg" />
-              </InputIcon>
-            </IconField>
-
-            <IconField class="!mb-8 !flex !items-center !relative !w-full">
-              <Password
-                v-model="password"
-                input-class="w-full h-[56px]"
-                class="!w-full max-w-[540px]"
-                placeholder="Password"
-                toggleMask
-                :feedback="false"
-                @focus="hideAlert"
-                @keyup.enter="handleLogin"
+                @keyup.enter="handleEmailSubmit"
               />
               <InputIcon class="!mt-0 -translate-y-1/2">
                 <img src="@/assets/input-hide.svg" />
@@ -49,119 +37,93 @@
             </IconField>
 
             <Button
-              label="Login"
+              label="Continue"
               class="rounded-[10px] max-h-[56px] !py-[18px] !w-full !text-base"
               :loading="loading"
-              @click="handleLogin"
+              @click="handleEmailSubmit"
             />
+          </div>
 
-            <!-- Only show OIDC section if any providers are enabled -->
-            <div v-if="configLoaded && enabledProviders.size > 0" class="flex justify-center items-center w-full mt-10 mb-8">
-              <p class="border border-gray-300 w-full"></p>
-              <span class="text-gray-300 mx-3">OR</span>
-              <p class="border border-gray-300 w-full"></p>
+          <!-- Step 2: Provider Selection or Password Input -->
+          <div v-if="emailEntered && configLoaded" class="w-full">
+            <!-- Show provider selection if domain matches -->
+            <div v-if="matchedProvider && !showPassword" class="w-full">
+              <h2 class="text-xl font-semibold text-gray-800 mb-6 text-center">
+                Continue with {{ providerDisplayName || matchedProvider }}
+              </h2>
+              
+              <div class="flex border border-[#B8BCBD] w-full p-4 mb-6 rounded-[5px] text-black/50 cursor-pointer hover:bg-gray-50 transition-colors"
+                   :class="{ 'opacity-50 cursor-not-allowed': loading }"
+                   @click="handleOidcLogin(matchedProvider)">
+                <img :src="getProviderIcon(matchedProvider)" class="mr-6 w-6 h-6" />
+                <span v-if="!loading">Continue with {{ getProviderDisplayName(matchedProvider) }}</span>
+                <span v-else class="flex items-center">
+                  <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                  Connecting...
+                </span>
+              </div>
+
+              <div class="text-center">
+                <button 
+                  @click="showPassword = true" 
+                  class="text-[#0568FD] hover:underline cursor-pointer">
+                  Or sign in with password
+                </button>
+              </div>
             </div>
-          </div>
 
-          <!-- Show OIDC section without "OR" separator if basic auth is disabled -->
-          <div v-else-if="configLoaded && enabledProviders.size > 0" class="w-full">
-            <!-- OIDC providers will be shown below -->
-          </div>
+            <!-- Show password input if no provider match or user chooses password -->
+            <div v-if="(!matchedProvider || showPassword) && basicAuthEnabled" class="w-full">
+              <h2 class="text-xl font-semibold text-gray-800 mb-6 text-center">
+                {{ matchedProvider ? 'Sign in with password' : 'Enter your password' }}
+              </h2>
+              
+              <div class="mb-4">
+                <div class="text-sm text-gray-600 mb-2">Email: {{ login }}</div>
+                <button 
+                  @click="resetToEmail" 
+                  class="text-[#0568FD] hover:underline cursor-pointer text-sm">
+                  Change email
+                </button>
+              </div>
 
-          <!-- Okta Login Button -->
-          <div v-if="configLoaded && enabledProviders.has('okta')" 
-               class="flex border border-[#B8BCBD] w-full p-4 mb-4 rounded-[5px] text-black/50 cursor-pointer hover:bg-gray-50 transition-colors"
-               :class="{ 'opacity-50 cursor-not-allowed': loading }"
-               @click="handleOktaLogin">
-            <img src="@/assets/okta-icon.svg" class="mr-6" />
-            <span v-if="!loading">Continue with Okta</span>
-            <span v-else class="flex items-center">
-              <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-              Connecting...
-            </span>
-          </div>
+              <IconField class="!mb-6 !flex !items-center !relative !w-full">
+                <Password
+                  ref="passwordInput"
+                  v-model="password"
+                  input-class="w-full h-[56px]"
+                  class="!w-full max-w-[540px]"
+                  placeholder="Password"
+                  toggleMask
+                  :feedback="false"
+                  @focus="hideAlert"
+                  @keyup.enter="handleLogin"
+                />
+                <InputIcon class="!mt-0 -translate-y-1/2">
+                  <img src="@/assets/input-hide.svg" />
+                </InputIcon>
+              </IconField>
 
-          <!-- Google Login Button -->
-          <div v-if="configLoaded && enabledProviders.has('google')" 
-               class="flex border border-[#B8BCBD] w-full p-4 mb-4 rounded-[5px] text-black/50 cursor-pointer hover:bg-gray-50 transition-colors"
-               :class="{ 'opacity-50 cursor-not-allowed': loading }"
-               @click="handleGoogleLogin">
-            <img src="@/assets/google-icon.svg" class="mr-6" />
-            <span v-if="!loading">Continue with Google</span>
-            <span v-else class="flex items-center">
-              <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-              Connecting...
-            </span>
-          </div>
+              <Button
+                label="Sign In"
+                class="rounded-[10px] max-h-[56px] !py-[18px] !w-full !text-base"
+                :loading="loading"
+                @click="handleLogin"
+              />
 
-          <!-- Microsoft Login Button (Enterprise) -->
-          <div v-if="configLoaded && enabledProviders.has('microsoft')" 
-               class="flex border border-[#B8BCBD] w-full p-4 mb-4 rounded-[5px] text-black/50 cursor-pointer hover:bg-gray-50 transition-colors"
-               :class="{ 'opacity-50 cursor-not-allowed': loading }"
-               @click="handleMicrosoftLogin">
-            <img src="@/assets/microsoft_online-icon.svg" class="mr-6" />
-            <span v-if="!loading">Continue with Microsoft (Work)</span>
-            <span v-else class="flex items-center">
-              <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-              Connecting...
-            </span>
-          </div>
+            </div>
 
-          <!-- Microsoft Social Login Button (Personal) -->
-          <div v-if="configLoaded && enabledProviders.has('microsoftSocial')" 
-               class="flex border border-[#B8BCBD] w-full p-4 mb-4 rounded-[5px] text-black/50 cursor-pointer hover:bg-gray-50 transition-colors"
-               :class="{ 'opacity-50 cursor-not-allowed': loading }"
-               @click="handleMicrosoftSocialLogin">
-            <img src="@/assets/microsoft_online-icon.svg" class="mr-6" />
-            <span v-if="!loading">Continue with Microsoft (Personal)</span>
-            <span v-else class="flex items-center">
-              <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-              Connecting...
-            </span>
-          </div>
-
-          <!-- Keycloak Login Button -->
-          <div v-if="configLoaded && enabledProviders.has('keycloak')" 
-               class="flex border border-[#B8BCBD] w-full p-4 mb-4 rounded-[5px] text-black/50 cursor-pointer hover:bg-gray-50 transition-colors"
-               :class="{ 'opacity-50 cursor-not-allowed': loading }"
-               @click="handleKeycloakLogin">
-            <img src="@/assets/keycloak-icon.svg" class="mr-6" />
-            <span v-if="!loading">Continue with Keycloak</span>
-            <span v-else class="flex items-center">
-              <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-              Connecting...
-            </span>
-          </div>
-
-          <!-- GitHub Login Button -->
-          <div v-if="configLoaded && enabledProviders.has('github')" 
-               class="flex border border-[#B8BCBD] w-full p-4 mb-4 rounded-[5px] text-black/50 cursor-pointer hover:bg-gray-50 transition-colors"
-               :class="{ 'opacity-50 cursor-not-allowed': loading }"
-               @click="handleGithubLogin">
-            <img src="@/assets/github-icon.svg" class="mr-6" />
-            <span v-if="!loading">Continue with GitHub</span>
-            <span v-else class="flex items-center">
-              <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-              Connecting...
-            </span>
-          </div>
-
-          <!-- Apple Login Button -->
-          <div v-if="configLoaded && enabledProviders.has('apple')" 
-               class="flex border border-[#B8BCBD] w-full p-4 mb-4 rounded-[5px] text-black/50 cursor-pointer hover:bg-gray-50 transition-colors"
-               :class="{ 'opacity-50 cursor-not-allowed': loading }"
-               @click="handleAppleLogin">
-            <img src="@/assets/apple-logo.svg" class="mr-6" />
-            <span v-if="!loading">Continue with Apple</span>
-            <span v-else class="flex items-center">
-              <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-              Connecting...
-            </span>
-          </div>
-
-          <!-- Only show forgot password if basic auth is enabled -->
-          <div v-if="configLoaded && basicAuthEnabled" class="text-[#212121] cursor-pointer">
-            Forgot Password
+            <!-- Show error if no provider match and basic auth disabled -->
+            <div v-if="!matchedProvider && !basicAuthEnabled" class="w-full text-center">
+              <div class="text-red-600 mb-4">
+                No authentication method found for this email domain.
+              </div>
+              <button 
+                @click="resetToEmail" 
+                class="text-[#0568FD] hover:underline cursor-pointer">
+                Try a different email
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -183,14 +145,14 @@
 </template>
 
 <script lang="ts">
-import { Component, Vue } from "vue-facing-decorator"
+import { Component, Vue } from 'vue-facing-decorator';
 import InputText from 'primevue/inputtext'
 import Password from 'primevue/password'
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
 import { useToast } from 'primevue/usetoast'
-import { createUserManager, type OidcProvider, getProviderConfig } from './OidcConfiguration'
-import { configService } from '@/util/config'
+import { createUserManager } from './OidcConfiguration';
+import { configService } from '@/util/config';
 
 import { type IUserState } from "@/states/IUserState"
 import { CONTINUUM_UI } from "@/IContinuumUI"
@@ -213,6 +175,10 @@ export default class Login extends Vue {
   configLoaded: boolean = false
   basicAuthEnabled: boolean = false
   enabledProviders: Set<string> = new Set()
+  emailEntered: boolean = false
+  showPassword: boolean = false
+  matchedProvider: string | null = null
+  providerDisplayName: string = ''
 
   toast = useToast()
 
@@ -223,6 +189,11 @@ export default class Login extends Vue {
 
   async mounted() {
     await this.loadConfiguration();
+
+        // Focus the email input initially
+    this.$nextTick(() => {
+      this.focusEmailInput();
+    });
     
     // Check if we're returning from an OIDC login with an error
     if (this.$route.query.error) {
@@ -271,12 +242,10 @@ export default class Login extends Vue {
     if (this.$route.query.code && this.$route.query.state) {
       this.oidcCallbackLoading = true; // Show loading overlay
       try {
-        console.log('OIDC callback detected, processing...');
-        console.log('Query parameters:', this.$route.query);
         
         // First, we need to determine which provider was used
         // We'll try to find the provider by checking localStorage for stored state
-        let provider: OidcProvider = 'okta'; // default fallback
+        let provider: string = 'keycloak'; // default fallback
         let referer: string | null = null;
         
         // Check localStorage for stored state to determine provider
@@ -288,23 +257,17 @@ export default class Login extends Vue {
             // Parse the stored state to get our custom data
             const sessionState = JSON.parse(storedState);
             const stateObj = JSON.parse(atob(sessionState.data));
-            console.log(`Found stored state : ${JSON.stringify(stateObj)}`);
-            provider = stateObj.provider || 'okta';
+            provider = stateObj.provider || 'keycloak';
             referer = stateObj.referer || null;
-            console.log('Parsed stored state:', { provider, referer });
           } catch (parseError) {
             console.warn(`Failed to parse stored state for ${storedState}:`, parseError);
           }
         }
         
-        console.log(`Using provider: ${provider}`);
         const userManager = await createUserManager(provider);
         
         // Complete the OIDC login
-        console.log('Starting signinRedirectCallback...');
         const user = await userManager.signinRedirectCallback();
-        console.log('OIDC callback completed successfully');
-        console.log('User state from callback:', user.state);
         
         // The library automatically validates the state parameter
         // If validation fails, it throws an error before reaching this point
@@ -314,7 +277,6 @@ export default class Login extends Vue {
         
         // Redirect to the original destination or default
         const redirectPath = referer || '/applications';
-        console.log(`Navigating to: ${redirectPath}`);
         await CONTINUUM_UI.navigate(redirectPath);
       } catch (error: unknown) {
         console.error('OIDC callback error:', error);
@@ -330,22 +292,36 @@ export default class Login extends Vue {
     }
   }
 
+  private focusEmailInput() {
+    if (this.$refs.emailInput) {
+      (this.$refs.emailInput as any).$el?.focus?.() || 
+      (this.$refs.emailInput as any).focus?.();
+    }
+  }
+
+  private focusPasswordInput() {
+    if (this.$refs.passwordInput) {
+      // For PrimeVue Password component, we need to focus the inner input
+      const passwordElement = this.$refs.passwordInput as any;
+      const innerInput = passwordElement.$el?.querySelector('input[type="password"]') ||
+                        passwordElement.$el?.querySelector('input');
+      if (innerInput) {
+        innerInput.focus();
+      }
+    }
+  }
+
   private async loadConfiguration() {
     try {
+      
       // Load basic auth configuration
       this.basicAuthEnabled = await configService.isBasicAuthEnabled();
       
-      // Load OIDC provider configurations
-      const providers: OidcProvider[] = ['okta', 'keycloak', 'google', 'microsoft', 'microsoftSocial', 'github', 'custom', 'apple'];
-      for (const provider of providers) {
-        try {
-          const config = await getProviderConfig(provider);
-          if (config.enabled) {
-            this.enabledProviders.add(provider);
-          }
-        } catch (error) {
-          console.warn(`Failed to load configuration for provider ${provider}:`, error);
-        }
+      // Load OIDC provider configurations dynamically
+      const enabledProviders = await configService.getEnabledOidcProviders();
+      
+      for (const provider of enabledProviders) {
+        this.enabledProviders.add(provider.provider);
       }
       
       this.configLoaded = true;
@@ -358,9 +334,9 @@ export default class Login extends Vue {
   }
 
   // Check if basic username/password authentication is enabled
-  async isBasicAuthEnabled(): Promise<boolean> {
-    return await configService.isBasicAuthEnabled();
-  }
+  // async isBasicAuthEnabled(): Promise<boolean> {
+  //   return await configService.isBasicAuthEnabled();
+  // }
 
   get loginValid(): boolean {
     return this.loginRules.every(rule => rule(this.login) === true)
@@ -376,23 +352,20 @@ export default class Login extends Vue {
   }
 
   // Check if a specific provider is enabled
-  async isProviderEnabled(provider: OidcProvider): Promise<boolean> {
+  async isProviderEnabled(providerName: string): Promise<boolean> {
     try {
-      const config = await getProviderConfig(provider);
-      return config.enabled;
+      const provider = await configService.getOidcProviderByName(providerName);
+      return provider?.enabled ?? false;
     } catch (error) {
-      console.warn(`Provider ${provider} not found in configuration`);
+      console.warn(`Provider ${providerName} not found in configuration`);
       return false;
     }
   }
 
   // Check if any OIDC providers are enabled
   async hasEnabledOidcProviders(): Promise<boolean> {
-    const providers: OidcProvider[] = ['okta', 'keycloak', 'google', 'microsoft', 'microsoftSocial', 'github', 'custom'];
-    const enabledProviders = await Promise.all(
-      providers.map(provider => this.isProviderEnabled(provider))
-    );
-    return enabledProviders.some(enabled => enabled);
+    const enabledProviders = await configService.getEnabledOidcProviders();
+    return enabledProviders.length > 0;
   }
 
   // Check if we're in an OIDC callback (have code and state parameters)
@@ -413,25 +386,19 @@ export default class Login extends Vue {
 
     this.loading = true;
     try {
-      console.log('Starting authentication...');
       await this.userState.authenticate(this.login, this.password);
-      console.log('Authentication successful, navigating...');
 
       if (this.referer) {
-        console.log('Navigating to referer:', this.referer);
         await CONTINUUM_UI.navigate(this.referer);
       } else {
         // Use the redirected path if available, otherwise go to applications
         const redirectPath = this.$route.redirectedFrom?.fullPath;
         if (redirectPath && redirectPath !== "/") {
-          console.log('Navigating to redirected path:', redirectPath);
           await CONTINUUM_UI.navigate(redirectPath);
         } else {
-          console.log('Navigating to applications');
           await CONTINUUM_UI.navigate('/applications');
         }
       }
-      console.log('Navigation completed');
     } catch (error: unknown) {
       console.error('Authentication error:', error);
       if (error instanceof Error) {
@@ -459,119 +426,189 @@ export default class Login extends Vue {
     });
   }
 
-  private async handleOidcLogin(provider: OidcProvider) {
-    // Prevent multiple clicks
-    if (this.loading) {
-      console.log('OIDC login already in progress, ignoring click');
+  private async handleEmailSubmit() {
+    if (!this.loginValid) {
+      this.displayAlert('Please enter a valid email address');
       return;
     }
-    
+
     this.loading = true;
     try {
-      console.log(`Starting OIDC login for provider: ${provider}`);
+      // Check if OIDC should be used based on the new workflow
+      const shouldUseOidc = await configService.isOidcEnabled();
+      
+      if (shouldUseOidc) {
+        // Try to find a provider that matches the email domain
+        const matchedProvider = await this.findProviderByDomain(this.login);
+        
+        if (matchedProvider) {
+          console.log('Domain matches an OIDC provider, redirecting immediately');
+          // Domain matches an OIDC provider, redirect immediately
+          this.loading = false;
+          await this.handleOidcLogin(matchedProvider);
+          return;
+        } else {
+          // No provider matches the domain, show password input for basic auth fallback
+          console.log('No OIDC provider matches email domain, falling back to basic auth');
+          this.emailEntered = true;
+          this.showPassword = true;
+          this.loading = false;
+          // Focus password input when it becomes visible
+          this.$nextTick(() => {
+            this.focusPasswordInput();
+          });
+          return;
+        }
+      } else {
+        // OIDC is not enabled or no providers configured, use basic auth
+        console.log('OIDC not enabled or no providers configured, using basic auth');
+        this.emailEntered = true;
+        this.showPassword = true;
+        this.loading = false;
+        // Focus password input when it becomes visible
+        this.$nextTick(() => {
+            this.focusPasswordInput();
+          });
+        return;
+      }
+    } catch (error) {
+      console.error('Error determining authentication method:', error);
+      // Fallback to basic auth on error
+      this.emailEntered = true;
+      this.showPassword = true;
+      this.loading = false;
+      // Focus password input when it becomes visible
+      this.$nextTick(() => {
+        this.focusPasswordInput();
+      });
+    }
+  }
+
+  private async findProviderByDomain(domain: string): Promise<string | null> {    
+    // Check if any provider has this domain in their domains array
+    try {
+      const provider = await configService.findProviderByEmailDomain(domain);
+      return provider?.provider || null;
+    } catch (error) {
+      console.warn(`Failed to find OIDC config`, error);
+    }
+    
+    return null;
+  }
+
+  private async getProviderDisplayName(provider: string): Promise<string> {
+    try {
+      const providerConfig = await configService.getOidcProviderByName(provider);
+      return providerConfig?.displayName || provider;
+    } catch (error) {
+      console.warn(`Failed to get display name for provider ${provider}:`, error);
+      return provider;
+    }
+  }
+
+  private getProviderIcon(provider: string): string {
+    const iconMap: Record<string, string> = {
+      okta: '@/assets/okta-icon.svg',
+      keycloak: '@/assets/keycloak-icon.svg',
+      google: '@/assets/google-icon.svg',
+      microsoft: '@/assets/microsoft_online-icon.svg',
+      microsoftSocial: '@/assets/microsoft_online-icon.svg',
+      github: '@/assets/github-icon.svg',
+      apple: '@/assets/apple-logo.svg'
+    };
+    return iconMap[provider] || '@/assets/input-hide.svg';
+  }
+
+  private resetToEmail() {
+    this.emailEntered = false;
+    this.showPassword = false;
+    this.matchedProvider = null;
+    this.providerDisplayName = '';
+    this.password = '';
+        
+    // Focus email input when resetting
+    this.$nextTick(() => {
+      this.focusEmailInput();
+    });
+  }
+
+  private async handleOidcLogin(provider: string) {
+    // Prevent multiple clicks
+    if (this.loading) {
+      return;
+    }
+
+    this.loading = true;
+    try {
       
       // Validate provider configuration
-      const config = await getProviderConfig(provider);
-      if (!config.enabled) {
+      const providerConfig = await configService.getOidcProviderByName(provider);
+      if (!providerConfig?.enabled) {
         throw new Error(`Provider ${provider} is not enabled`);
       }
       
-      if (!config.client_id) {
+      if (!providerConfig.clientId) {
         throw new Error(`Client ID not configured for ${provider}`);
       }
       
-      if (!config.authority) {
+      if (!providerConfig.authority) {
         throw new Error(`Authority URL not configured for ${provider}`);
       }
       
-      const userManager = await createUserManager(provider);
-      
-      console.log('UserManager created, starting signinRedirect...');
-      console.log('Provider configuration:', {
-        authority: config.authority,
-        client_id: config.client_id,
-        redirect_uri: config.redirect_uri
+      console.log('Provider config validated:', {
+        provider: provider,
+        enabled: providerConfig.enabled,
+        clientId: providerConfig.clientId,
+        authority: providerConfig.authority,
+        redirectUri: providerConfig.redirectUri
       });
       
-      // Create state object that includes both referer and provider
+      // Create UserManager for the provider
+      const userManager = await createUserManager(provider);
+      
+      console.log('UserManager settings:', {
+        authority: userManager.settings.authority,
+        client_id: userManager.settings.client_id,
+        redirect_uri: userManager.settings.redirect_uri,
+        response_type: userManager.settings.response_type,
+        scope: userManager.settings.scope
+      });
+      
+      // Create state object with provider and referer information
       const stateObj = {
         referer: this.referer,
         provider: provider
       };
       
-      // Base64 encode the state object to avoid URL encoding issues
-      const stateJson = JSON.stringify(stateObj);
-      const stateBase64 = btoa(stateJson);
-      console.log('State object:', stateObj);
-      console.log('Base64 encoded state:', stateBase64);
+      // Encode state object as base64
+      const state = btoa(JSON.stringify(stateObj));
+      // Start OIDC login with login_hint to pre-fill email
+      const signinOptions: any = { state };
       
-      // Start the OIDC login flow
-      await userManager.signinRedirect({
-        state: stateBase64
-      });
-      console.log('signinRedirect completed successfully');
-      
-      // Debug: Check what's stored in localStorage
-      const storedState = localStorage.getItem(`oidc.state.${userManager.settings.client_id}`);
-      console.log('Stored state in localStorage:', storedState);
-    } catch (error: unknown) {
-      console.error('OIDC login error:', error);
-      this.loading = false;
-      
-      let errorMessage = 'OIDC login failed';
-      
-      if (error instanceof Error) {
-        if (error.message.includes('NetworkError') || error.message.includes('fetch')) {
-          errorMessage = `Network error: Unable to connect to ${provider}. Please check your internet connection and try again.`;
-        } else if (error.message.includes('redirect_uri_mismatch')) {
-          errorMessage = `Configuration error: Redirect URI mismatch for ${provider}. Please contact your administrator.`;
-        } else if (error.message.includes('client_id') || error.message.includes('authority')) {
-          errorMessage = `Configuration error: ${error.message}. Please contact your administrator.`;
-        } else {
-          errorMessage = `OIDC login failed: ${error.message}`;
+      // Add login_hint if we have an email to pre-fill
+      if (this.login) {
+        signinOptions.login_hint = this.login;
+        
+        // Some providers also support domain_hint for better UX
+        const emailDomain = this.login.split('@')[1];
+        if (emailDomain) {
+          signinOptions.domain_hint = emailDomain;
         }
-      } else if (typeof error === 'string') {
-        errorMessage = `OIDC login failed: ${error}`;
       }
       
-      this.displayAlert(errorMessage);
-    }
-  }
-
-  private async handleOktaLogin() {
-    await this.handleOidcLogin('okta');
-  }
-
-  private async handleGoogleLogin() {
-    await this.handleOidcLogin('google');
-  }
-
-  private async handleMicrosoftLogin() {
-    await this.handleOidcLogin('microsoft');
-  }
-
-  private async handleMicrosoftSocialLogin() {
-    await this.handleOidcLogin('microsoftSocial');
-  }
-
-  private async handleKeycloakLogin() {
-    console.log('Starting Keycloak login...');
-    try {
-      await this.handleOidcLogin('keycloak');
+      await userManager.signinRedirect(signinOptions);
+      
     } catch (error) {
-      console.error('Keycloak login error:', error);
-      throw error;
+      console.error('OIDC login failed:', error);
+      console.error('Error details:', {
+        name: error instanceof Error ? error.name : 'Unknown',
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      this.displayAlert(`OIDC login failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      this.loading = false;
     }
   }
-
-  private async handleGithubLogin() {
-    await this.handleOidcLogin('github');
-  }
-
-  private async handleAppleLogin() {
-    await this.handleOidcLogin('apple');
-  }
-
 
 }
 </script>

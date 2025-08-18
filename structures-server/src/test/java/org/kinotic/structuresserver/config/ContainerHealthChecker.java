@@ -1,4 +1,4 @@
-package org.kinotic.structuresserver.tests.config;
+package org.kinotic.structuresserver.config;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

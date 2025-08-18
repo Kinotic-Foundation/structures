@@ -7,9 +7,9 @@ The `structures-frontend-next` application now supports runtime configuration lo
 The application will look for configuration files in the following order, with optional local overrides applied on top:
 
 1. Base: `/config/app-config.json` (preferred)
-   - Local override (optional): `/config/app-config.local.json` or `/config/app-config.json.local`
+   - Local override (optional): `/config/app-config.override.json` or `/config/app-config.json.local`
 2. Base: `/app-config.json` (fallback)
-   - Local override (optional): `/app-config.local.json` or `/app-config.json.local`
+   - Local override (optional): `/app-config.override.json` or `/app-config.json.local`
 3. If no base file exists, a local override (if present) will be merged onto defaults
 
 ## Configuration File Format
@@ -156,7 +156,7 @@ During development, place files in `public/` and they will be served by Vite. Yo
 
 ```bash
 # Example: local override next to base file
-cp public/app-config.json public/app-config.local.json
+cp public/app-config.json public/app-config.override.json
 
 # Or use the .json.local suffix
 cp public/app-config.json public/app-config.json.local
@@ -164,9 +164,9 @@ cp public/app-config.json public/app-config.json.local
 
 Git ignore example (add to your ignore rules):
 ```
-public/app-config.local.json
+public/app-config.override.json
 public/app-config.json.local
-config/app-config.local.json
+config/app-config.override.json
 config/app-config.json.local
 ```
 

@@ -35,12 +35,8 @@ structures:
      host: "localhost"
      port: "9200"
 
-## Configured for the Keycloak docker-compose setup
-## Defaults to Basic Auth using the TemporarySecurityService
-# oidc-security-service:
-#   enabled: true
-#   allowed-issuers:
-#     - "http://localhost:8888/auth/realms/master"  
-#   authorization-audiences:
-#     - "structures-client"
 
+# OIDC security service configuration
+# oidc-security-service:
+#   enabled: false
+#   debug: false

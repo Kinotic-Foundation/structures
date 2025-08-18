@@ -5,11 +5,11 @@ import org.kinotic.continuum.api.security.Participant;
 import org.kinotic.structures.auth.internal.services.OidcSecurityService;
 import org.kinotic.structures.auth.KeycloakTestBase;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.kinotic.structures.auth.api.config.OidcSecurityServiceProperties;
 import org.kinotic.structures.auth.config.KeyloakTestConfiguration;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -26,9 +26,6 @@ public class OidcAuthVerifierTest extends KeycloakTestBase {
     @Autowired
     private OidcSecurityService securityService;
 
-    @Autowired
-    private OidcSecurityServiceProperties properties;
-
 
     @Test
     public void testNoAuthorizationHeader() {
@@ -36,7 +33,8 @@ public class OidcAuthVerifierTest extends KeycloakTestBase {
         
         CompletableFuture<Participant> result = securityService.authenticate(authInfo);
         
-        assertNull(result.join());
+        assertTrue(result.isCompletedExceptionally());
+        assertThrows(CompletionException.class, () -> result.join());
     }
 
     @Test
@@ -45,7 +43,8 @@ public class OidcAuthVerifierTest extends KeycloakTestBase {
         
         CompletableFuture<Participant> result = securityService.authenticate(authInfo);
         
-        assertNull(result.join());
+        assertTrue(result.isCompletedExceptionally());
+        assertThrows(CompletionException.class, () -> result.join());
     }
 
     @Test
@@ -54,7 +53,8 @@ public class OidcAuthVerifierTest extends KeycloakTestBase {
         
         CompletableFuture<Participant> result = securityService.authenticate(authInfo);
         
-        assertNull(result.join());
+        assertTrue(result.isCompletedExceptionally());
+        assertThrows(CompletionException.class, () -> result.join());
     }
 
     @Test
@@ -63,14 +63,53 @@ public class OidcAuthVerifierTest extends KeycloakTestBase {
         
         CompletableFuture<Participant> result = securityService.authenticate(authInfo);
         
-        assertNull(result.join());
+        assertTrue(result.isCompletedExceptionally());
+        assertThrows(CompletionException.class, () -> result.join());
     }
 
     @Test
     public void testValidBearerHeaderWithInvalidToken() {
         Map<String, String> authInfo = Map.of("authorization", "Bearer invalid.jwt.token");
         CompletableFuture<Participant> result = securityService.authenticate(authInfo);
-        assertNull(result.join());
+        
+        assertTrue(result.isCompletedExceptionally());
+        assertThrows(CompletionException.class, () -> result.join());
+    }
+
+    @Test
+    public void testNoAuthorizationHeaderExceptionDetails() {
+        Map<String, String> authInfo = Map.of();
+        
+        CompletableFuture<Participant> result = securityService.authenticate(authInfo);
+        
+        assertTrue(result.isCompletedExceptionally());
+        CompletionException exception = assertThrows(CompletionException.class, () -> result.join());
+        assertTrue(exception.getCause() instanceof RuntimeException);
+        assertEquals("No authorization header found", exception.getCause().getMessage());
+    }
+
+    @Test
+    public void testInvalidAuthorizationHeaderExceptionDetails() {
+        Map<String, String> authInfo = Map.of("authorization", "InvalidFormat");
+        
+        CompletableFuture<Participant> result = securityService.authenticate(authInfo);
+        
+        assertTrue(result.isCompletedExceptionally());
+        CompletionException exception = assertThrows(CompletionException.class, () -> result.join());
+        assertTrue(exception.getCause() instanceof RuntimeException);
+        assertEquals("Invalid authorization header format, expected 'Bearer <token>'", exception.getCause().getMessage());
+    }
+
+    @Test
+    public void testNonBearerAuthorizationHeaderExceptionDetails() {
+        Map<String, String> authInfo = Map.of("authorization", "Basic dXNlcjpwYXNz");
+        
+        CompletableFuture<Participant> result = securityService.authenticate(authInfo);
+        
+        assertTrue(result.isCompletedExceptionally());
+        CompletionException exception = assertThrows(CompletionException.class, () -> result.join());
+        assertTrue(exception.getCause() instanceof RuntimeException);
+        assertEquals("Invalid authorization header format, expected 'Bearer <token>'", exception.getCause().getMessage());
     }
 
     @Test
@@ -78,7 +117,7 @@ public class OidcAuthVerifierTest extends KeycloakTestBase {
         // Use testcontainer Keycloak started by TestConfiguration
         org.junit.jupiter.api.Assumptions.assumeTrue(KeyloakTestConfiguration.KEYCLOAK_CONTAINER != null,
                 "Keycloak container not available");
-        String token = fetchKeycloakAccessToken("testuser", "password123");
+        String token = fetchKeycloakAccessToken("testuser@example.com", "password123");
         assertNotNull(token);
         Map<String, String> authInfo = Map.of("authorization", "Bearer " + token);
         Participant participant = securityService.authenticate(authInfo).join();

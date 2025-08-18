@@ -1,4 +1,18 @@
-# Structures Project - Global Development Guidelines
+# Cursor Rules for Structures Project
+
+## Priority Constraints
+1. **Stop and Ask When Uncertain**: If we don't know exactly how to solve something, we should stop and ask the user for guidance rather than blindly trying different approaches. This prevents wasted time and potential regressions.
+2. **Follow Repository-Specific Guidelines**: Always adhere to the structures project architecture and patterns.
+3. **Test-Driven Development**: Write tests first, then implement functionality.
+4. **Documentation First**: Update documentation before making changes.
+5. **Security-First Approach**: When dealing with authentication, authorization, or access controls, always ask for guidance on the correct approach to avoid creating security vulnerabilities. Never assume cross-provider configurations are safe without explicit confirmation.
+
+## Gradle Build Commands
+**IMPORTANT**: This is a multi-module Gradle project. Always run Gradle commands from the project root directory using the module syntax:
+- ✅ Correct: `./gradlew :structures-server:build` (from project root)
+- ❌ Incorrect: `cd structures-server && ./gradlew build`
+- ✅ Correct: `./gradlew :structures-server:test`
+- ❌ Incorrect: `cd structures-server && ../gradlew test`
 
 ## Project Overview
 This is a multi-module Java/TypeScript/JavaScript project implementing a comprehensive data platform with GraphQL federation, OIDC authentication, and Elasticsearch integration.

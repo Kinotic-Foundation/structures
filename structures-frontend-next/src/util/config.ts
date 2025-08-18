@@ -1,88 +1,34 @@
+import { ConnectionInfo } from '@kinotic/continuum-client'
+
+interface OidcProvider {
+  enabled: boolean;
+  provider: string;
+  displayName: string;
+  clientId: string;
+  authority: string;
+  redirectUri: string;
+  postLogoutRedirectUri: string;
+  silentRedirectUri: string;
+  audience?: string;
+  domains?: string[];
+  roles?: string[];
+  rolesClaimPath?: string;
+  additionalScopes?: string;
+  metadata?: Record<string, string>;
+}
+
 interface AppConfig {
   // OIDC Configuration
-  oidc: {
-    okta: {
-      enabled: boolean;
-      client_id: string;
-      authority: string;
-      redirect_uri: string;
-      post_logout_redirect_uri: string;
-      silent_redirect_uri: string;
-    };
-    keycloak: {
-      enabled: boolean;
-      client_id: string;
-      authority: string;
-      redirect_uri: string;
-      post_logout_redirect_uri: string;
-      silent_redirect_uri: string;
-    };
-    google: {
-      enabled: boolean;
-      client_id: string;
-      authority: string;
-      redirect_uri: string;
-      post_logout_redirect_uri: string;
-      silent_redirect_uri: string;
-    };
-    github: {
-      enabled: boolean;
-      client_id: string;
-      authority: string;
-      redirect_uri: string;
-      post_logout_redirect_uri: string;
-      silent_redirect_uri: string;
-    };
-    microsoft: {
-      enabled: boolean;
-      client_id: string;
-      authority: string;
-      redirect_uri: string;
-      post_logout_redirect_uri: string;
-      silent_redirect_uri: string;
-      resource?: string;
-    };
-    microsoftSocial: {
-      enabled: boolean;
-      client_id: string;
-      authority: string;
-      redirect_uri: string;
-      post_logout_redirect_uri: string;
-      silent_redirect_uri: string;
-    };
-    custom: {
-      enabled: boolean;
-      client_id: string;
-      authority: string;
-      redirect_uri: string;
-      post_logout_redirect_uri: string;
-      silent_redirect_uri: string;
-      metadata: {
-        authorization_endpoint: string;
-        token_endpoint: string;
-        userinfo_endpoint: string;
-        end_session_endpoint: string;
-        jwks_uri: string;
-      };
-    };
-    apple: {
-      enabled: boolean;
-      client_id: string;
-      authority: string;
-      redirect_uri: string;
-      post_logout_redirect_uri: string;
-      silent_redirect_uri: string;
-    };
-  };
-  // Basic Auth
-  basicAuth: {
-    enabled: boolean;
-  };
+  enabled: boolean;
+  tenantIdFieldName: string;
+  oidcProviders: OidcProvider[];
   // Debug
   debug: boolean;
+  frontendConfigurationPath: string;
 }
 
 class ConfigService {
+  
   private config: AppConfig | null = null;
   private configPromise: Promise<AppConfig> | null = null;
 
@@ -101,74 +47,73 @@ class ConfigService {
   }
 
   private async loadConfigFromFile(): Promise<AppConfig> {
-    // Helper to fetch JSON safely
-    const fetchJson = async (path: string): Promise<any | null> => {
-      try {
-        const resp = await fetch(path);
-        if (resp.ok) {
-          return await resp.json();
+    // Load base configuration locally
+    const baseConfig = await this.loadLocalConfig();
+    if (!baseConfig) {
+      console.warn('No base configuration file found, using default configuration');
+      return this.getDefaultConfig();
+    }
+
+    // Load override configuration if available (this would be from the backend)
+    const overrideConfig = await this.loadOverrideConfig();
+    if (overrideConfig) {
+      console.log('Applying configuration override from backend');
+      return this.deepMerge(baseConfig, overrideConfig);
+    }
+
+    console.log('Loaded configuration from local app-config.json');
+    return baseConfig;
+  }
+
+  private async loadLocalConfig(): Promise<AppConfig | null> {
+    try {
+      // Load the local config file from the public folder
+      const resp = await fetch('/app-config.json');
+      if (resp.ok) {
+        return await resp.json();
+      }
+    } catch (error) {
+      console.warn('Failed to load local app-config.json:', error);
+    }
+    return null;
+  }
+
+  private async loadOverrideConfig(): Promise<Partial<AppConfig> | null> {
+    try {
+      // This would fetch from the backend's oidc-security-service configuration
+      // TODO: This is a hack to get the override config from the backend
+      // TODO: We should use the Continuum client to get the config
+      const connectionInfo = this.createConnectionInfo();
+      const resp = await fetch(`${connectionInfo.useSSL ? 'https' : 'http'}://${connectionInfo.host}:${connectionInfo.port}/app-config.override.json`);
+      if (resp.ok) {
+        return await resp.json();
+      }
+    } catch (error) {
+      // Silently ignore if override config is not available
+    }
+    return null;
+  }
+  
+  private createConnectionInfo(): ConnectionInfo {
+    const connectionInfo: ConnectionInfo = {
+        host: '127.0.0.1',
+        port: 9091
+    }
+    if (window.location.hostname !== '127.0.0.1'
+        && window.location.hostname !== 'localhost') {
+        if (window.location.protocol.startsWith('https')) {
+            connectionInfo.useSSL = true
         }
-      } catch (_) {
-        // ignore
-      }
-      return null;
-    };
-
-    // 1) Preferred location with local override
-    const baseConfig1 = await fetchJson('/config/app-config.json');
-    const localOverride1a = await fetchJson('/config/app-config.local.json');
-    const localOverride1b = await fetchJson('/config/app-config.json.local');
-    if (baseConfig1) {
-      let merged = this.validateAndMergeConfig(baseConfig1);
-      if (localOverride1a) {
-        console.log('Applying local override from /config/app-config.local.json');
-        merged = this.deepMerge(merged, localOverride1a);
-      } else if (localOverride1b) {
-        console.log('Applying local override from /config/app-config.json.local');
-        merged = this.deepMerge(merged, localOverride1b);
-      } else {
-        console.log('Loaded configuration from /config/app-config.json');
-      }
-      return merged;
+        if (window.location.port !== '') {
+            connectionInfo.port = 9091
+        } else {
+            connectionInfo.port = null
+        }
+        connectionInfo.host = window.location.hostname
     }
+    return connectionInfo
+}
 
-    // 2) Fallback location with local override
-    const baseConfig2 = await fetchJson('/app-config.json');
-    const localOverride2a = await fetchJson('/app-config.local.json');
-    const localOverride2b = await fetchJson('/app-config.json.local');
-    if (baseConfig2) {
-      let merged = this.validateAndMergeConfig(baseConfig2);
-      if (localOverride2a) {
-        console.log('Applying local override from /app-config.local.json');
-        merged = this.deepMerge(merged, localOverride2a);
-      } else if (localOverride2b) {
-        console.log('Applying local override from /app-config.json.local');
-        merged = this.deepMerge(merged, localOverride2b);
-      } else {
-        console.log('Loaded configuration from /app-config.json');
-      }
-      return merged;
-    }
-
-    // 3) Allow local override without a base file (merge onto defaults)
-    if (localOverride1a || localOverride1b || localOverride2a || localOverride2b) {
-      const defaults = this.getDefaultConfig();
-      const overrideOnly = localOverride1a || localOverride1b || localOverride2a || localOverride2b || {};
-      console.log('Using defaults with local override only');
-      return this.deepMerge(defaults, overrideOnly);
-    }
-
-    // 4) Return default configuration if no config file is found
-    console.warn('No configuration file found, using default configuration');
-    return this.getDefaultConfig();
-  }
-
-  private validateAndMergeConfig(config: Partial<AppConfig>): AppConfig {
-    const defaultConfig = this.getDefaultConfig();
-    
-    // Deep merge the loaded config with defaults
-    return this.deepMerge(defaultConfig, config);
-  }
 
   private deepMerge<T>(target: T, source: Partial<T>): T {
     const result = { ...target };
@@ -189,105 +134,68 @@ class ConfigService {
 
   private getDefaultConfig(): AppConfig {
     return {
-      oidc: {
-        okta: {
-          enabled: false,
-          client_id: '',
-          authority: '',
-          redirect_uri: 'http://localhost:5173/login',
-          post_logout_redirect_uri: 'http://localhost:5173',
-          silent_redirect_uri: 'http://localhost:5173/login/silent-renew',
-        },
-        keycloak: {
-          enabled: true,
-          client_id: '',
-          authority: '',
-          redirect_uri: 'http://localhost:5173/login',
-          post_logout_redirect_uri: 'http://localhost:5173',
-          silent_redirect_uri: 'http://localhost:5173/login/silent-renew',
-        },
-        google: {
-          enabled: false,
-          client_id: '',
-          authority: 'https://accounts.google.com',
-          redirect_uri: '',
-          post_logout_redirect_uri: '',
-          silent_redirect_uri: '',
-        },
-        github: {
-          enabled: false,
-          client_id: '',
-          authority: 'https://github.com',
-          redirect_uri: '',
-          post_logout_redirect_uri: '',
-          silent_redirect_uri: '',
-        },
-        microsoft: {
-          enabled: false,
-          client_id: '',
-          authority: 'https://login.microsoftonline.com/common/v2.0',
-          redirect_uri: '',
-          post_logout_redirect_uri: '',
-          silent_redirect_uri: '',
-        },
-        microsoftSocial: {
-          enabled: false,
-          client_id: '',
-          authority: 'https://login.microsoftonline.com/consumers/v2.0',
-          redirect_uri: '',
-          post_logout_redirect_uri: '',
-          silent_redirect_uri: '',
-        },
-        custom: {
-          enabled: false,
-          client_id: '',
-          authority: '',
-          redirect_uri: '',
-          post_logout_redirect_uri: '',
-          silent_redirect_uri: '',
-          metadata: {
-            authorization_endpoint: '',
-            token_endpoint: '',
-            userinfo_endpoint: '',
-            end_session_endpoint: '',
-            jwks_uri: '',
-          },
-        },
-        apple: {
-          enabled: false,
-          client_id: '',
-          authority: '',
-          redirect_uri: 'http://localhost:5173/login',
-          post_logout_redirect_uri: 'http://localhost:5173',
-          silent_redirect_uri: 'http://localhost:5173/login/silent-renew',
-        },
-      },
-      basicAuth: {
-        enabled: true,
-      },
+      enabled: false,
+      tenantIdFieldName: 'tenantId',
       debug: false,
+      oidcProviders: [],
+      frontendConfigurationPath: '/app-config.override.json'
     };
   }
 
   // Helper methods to get specific config values
-  async getOidcConfig() {
+
+  async getEnabledOidcProviders() {
     const config = await this.loadConfig();
-    return config.oidc;
+    return config?.oidcProviders.filter(provider => provider.enabled) || [];
+  }
+
+  async getOidcProviderByName(providerName: string): Promise<OidcProvider | undefined> {
+    const config = await this.loadConfig();
+    const providers = config?.oidcProviders || [];
+    return providers.find(provider => provider.provider === providerName);
+  }
+
+  async isOidcEnabled(): Promise<boolean> {
+    const config = await this.loadConfig();
+    return config?.enabled || false;
   }
 
   async isBasicAuthEnabled(): Promise<boolean> {
     const config = await this.loadConfig();
-    return config.basicAuth.enabled;
+    return !config?.enabled || (config?.enabled && config?.oidcProviders.length === 0);
   }
 
   async isDebugEnabled(): Promise<boolean> {
     const config = await this.loadConfig();
-    return config.debug;
+    return config?.debug;
+  }
+
+  async getTenantIdFieldName(): Promise<string> {
+    const config = await this.loadConfig();
+    return config?.tenantIdFieldName || 'tenantId';
+  }
+
+
+  // New method to find provider by email domain
+  async findProviderByEmailDomain(email: string): Promise<OidcProvider | null> {
+    const domain = this.extractDomainFromEmail(email);
+    if (!domain) return null;
+
+    const config = await this.loadConfig();
+    return config?.oidcProviders.find(provider => 
+      provider.domains && provider.domains.includes(domain)
+    ) || null;
+  }
+
+  private extractDomainFromEmail(email: string): string | null {
+    const atIndex = email.indexOf('@');
+    if (atIndex === -1) return null;
+    return email.substring(atIndex + 1).toLowerCase();
   }
 }
 
 // Export singleton instance
 export const configService = new ConfigService();
 
-// Export type for use in other files
-export type { AppConfig };
+// Export types for use in other files
+export type { AppConfig, OidcProvider };

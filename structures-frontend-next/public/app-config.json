@@ -1,79 +1,9 @@
 {
-  "oidc": {
-    "apple": {
-      "enabled": false,
-      "client_id": "",
-      "authority": "https://appleid.apple.com",
-      "redirect_uri": "http://localhost:5173/login",
-      "post_logout_redirect_uri": "http://localhost:5173",
-      "silent_redirect_uri": "http://localhost:5173/login/silent-renew"
-    },
-    "okta": {
-      "enabled": false,
-      "client_id": "",
-      "authority": "",
-      "redirect_uri": "http://localhost:5173/login",
-      "post_logout_redirect_uri": "http://localhost:5173",
-      "silent_redirect_uri": "http://localhost:5173/login/silent-renew"
-    },
-    "keycloak": {
-      "enabled": false,
-      "client_id": "",
-      "authority": "",
-      "redirect_uri": "http://localhost:5173/login",
-      "post_logout_redirect_uri": "http://localhost:5173",
-      "silent_redirect_uri": "http://localhost:5173/login/silent-renew"
-    },
-    "google": {
-      "enabled": false,
-      "client_id": "",
-      "authority": "https://accounts.google.com",
-      "redirect_uri": "http://localhost:5173/login",
-      "post_logout_redirect_uri": "http://localhost:5173",
-      "silent_redirect_uri": "http://localhost:5173/login/silent-renew"
-    },
-    "github": {
-      "enabled": false,
-      "client_id": "",
-      "authority": "https://github.com",
-      "redirect_uri": "http://localhost:5173/login",
-      "post_logout_redirect_uri": "http://localhost:5173",
-      "silent_redirect_uri": "http://localhost:5173/login/silent-renew"
-    },
-    "microsoft": {
-      "enabled": false,
-      "client_id": "",
-      "authority": "https://login.microsoftonline.com/common/v2.0",
-      "redirect_uri": "http://localhost:5173/login",
-      "post_logout_redirect_uri": "http://localhost:5173",
-      "silent_redirect_uri": "http://localhost:5173/login/silent-renew"
-    },
-    "microsoftSocial": {
-      "enabled": false,
-      "client_id": "",
-      "authority": "https://login.microsoftonline.com/consumers/v2.0",
-      "redirect_uri": "http://localhost:5173/login",
-      "post_logout_redirect_uri": "http://localhost:5173",
-      "silent_redirect_uri": "http://localhost:5173/login/silent-renew"
-    },
-    "custom": {
-      "enabled": false,
-      "client_id": "",
-      "authority": "",
-      "redirect_uri": "http://localhost:5173/login",
-      "post_logout_redirect_uri": "http://localhost:5173",
-      "silent_redirect_uri": "http://localhost:5173/login/silent-renew",
-      "metadata": {
-        "authorization_endpoint": "",
-        "token_endpoint": "",
-        "userinfo_endpoint": "",
-        "end_session_endpoint": "",
-        "jwks_uri": ""
-      }
-    }
-  },
-  "basicAuth": {
-    "enabled": true
-  },
-  "debug": true
+  "oidc-security-service": {
+    "enabled": false,
+    "tenantIdFieldName": "tenantId",
+    "debug": false,
+    "oidcProviders": [],
+    "frontendConfigurationPath": "/app-config.override.json"
+  }
 }

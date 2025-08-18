@@ -3,6 +3,7 @@ package org.kinotic.structures.internal.endpoints;
 import io.vertx.ext.healthchecks.HealthChecks;
 import org.kinotic.continuum.api.security.SecurityService;
 import org.kinotic.structures.api.config.StructuresProperties;
+import org.kinotic.structures.auth.api.config.OidcSecurityServiceProperties;
 import org.kinotic.structures.internal.endpoints.graphql.DelegatingGqlHandler;
 import org.kinotic.structures.internal.endpoints.graphql.GqlVerticle;
 import org.kinotic.structures.internal.endpoints.openapi.OpenApiVerticle;
@@ -30,17 +31,21 @@ public class StructuresVerticleFactory {
     // Web Server Deps
     private final HealthChecks healthChecks;
 
+    // Frontend Configuration Service
+    private final OidcSecurityServiceProperties oidcSecurityServiceProperties;
 
     public StructuresVerticleFactory(OpenApiVertxRouterFactory openApiVertxRouterFactory,
                                      StructuresProperties properties,
                                      DelegatingGqlHandler delegatingGqlHandler,
                                      HealthChecks healthChecks,
-                                     @Autowired(required = false) SecurityService securityService) {
+                                     @Autowired(required = false) SecurityService securityService,
+                                     @Autowired(required = false) OidcSecurityServiceProperties oidcSecurityServiceProperties) {
         this.openApiVertxRouterFactory = openApiVertxRouterFactory;
         this.properties = properties;
         this.securityService = securityService;
         this.delegatingGqlHandler = delegatingGqlHandler;
         this.healthChecks = healthChecks;
+        this.oidcSecurityServiceProperties = oidcSecurityServiceProperties;
     }
 
     public GqlVerticle createGqlVerticle(){
@@ -56,7 +61,6 @@ public class StructuresVerticleFactory {
     }
 
     public WebServerNextVerticle createWebServerNextVerticle(){
-        return new WebServerNextVerticle(healthChecks, properties);
+        return new WebServerNextVerticle(healthChecks, properties, oidcSecurityServiceProperties);
     }
-
 }
