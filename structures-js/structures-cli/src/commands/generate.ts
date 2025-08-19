@@ -2,8 +2,9 @@ import {CodeGenerationService} from '../internal/CodeGenerationService.js'
 import {Args, Command, Flags} from '@oclif/core'
 import {
     isStructuresProject,
-    loadStructuresProject
+    loadStructuresProjectConfig
 } from '../internal/state/StructuresProject.js'
+import { TypescriptExternalProjectConfig, TypescriptProjectConfig } from '@kinotic/structures-api'
 
 export class Generate extends Command {
     static aliases = ['gen']
@@ -13,7 +14,7 @@ export class Generate extends Command {
     static examples = [
         '$ structures generate',
         '$ structures gen',
-        '$ structures gen my.namespace -v',
+        '$ structures gen my.application -v',
     ]
 
     static flags = {
@@ -21,7 +22,7 @@ export class Generate extends Command {
     }
 
     static args = {
-        namespace: Args.string({description: 'The namespace that you want to generate service classes for', required: false})
+        application: Args.string({description: 'The application that you want to generate service classes for', required: false})
     }
 
     public async run(): Promise<void> {
@@ -31,17 +32,15 @@ export class Generate extends Command {
             this.error('The working directory is not a Structures Project')
         }
 
-        const structuresProject= await loadStructuresProject()
+        const structuresProjectConfig = await loadStructuresProjectConfig()
 
-        let namespaceConfig = structuresProject.findNamespaceConfigOrDefault(args.namespace)
-
-        const codeGenerationService = new CodeGenerationService(namespaceConfig.namespaceName,
-                                                                structuresProject.fileExtensionForImports,
+        const codeGenerationService = new CodeGenerationService(structuresProjectConfig.application,
+                                                                structuresProjectConfig.fileExtensionForImports,
                                                                 this)
 
-        await codeGenerationService.generateAllEntities(namespaceConfig, flags.verbose)
+            await codeGenerationService.generateAllEntities(structuresProjectConfig as TypescriptProjectConfig | TypescriptExternalProjectConfig, flags.verbose)
 
-        this.log(`Code Generation Complete For namespace: ${namespaceConfig.namespaceName}`, flags.verbose)
+        this.log(`Code Generation Complete For applicartion: ${structuresProjectConfig.application}`, flags.verbose)
     }
 
     public logVerbose(message: string | ( () => string ), verbose: boolean): void {

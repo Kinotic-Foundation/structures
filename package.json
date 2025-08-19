@@ -3,5 +3,8 @@
     "docs:dev": "vitepress dev wedocs",
     "docs:build": "vitepress build wedocs",
     "docs:preview": "vitepress preview wedocs"
+  },
+  "dependencies": {
+    "c12": "^3.2.0"
   }
 }
