@@ -4,6 +4,7 @@ import io.vertx.ext.healthchecks.HealthChecks;
 import lombok.RequiredArgsConstructor;
 import org.kinotic.continuum.api.security.SecurityService;
 import org.kinotic.structures.api.config.StructuresProperties;
+import org.kinotic.structures.auth.api.config.OidcSecurityServiceProperties;
 import org.kinotic.structures.internal.endpoints.graphql.DelegatingGqlHandler;
 import org.kinotic.structures.internal.endpoints.graphql.GqlVerticle;
 import org.kinotic.structures.internal.endpoints.openapi.OpenApiVerticle;
@@ -31,6 +32,9 @@ public class StructuresVerticleFactory {
     // Web Server Deps
     private final HealthChecks healthChecks;
 
+    private final OidcSecurityServiceProperties oidcSecurityServiceProperties;
+
+    
     public GqlVerticle createGqlVerticle(){
         return new GqlVerticle(delegatingGqlHandler, properties, securityService);
     }
@@ -44,7 +48,6 @@ public class StructuresVerticleFactory {
     }
 
     public WebServerNextVerticle createWebServerNextVerticle(){
-        return new WebServerNextVerticle(healthChecks, properties);
+        return new WebServerNextVerticle(healthChecks, properties, oidcSecurityServiceProperties);
     }
-
 }

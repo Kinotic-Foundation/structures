@@ -10,6 +10,9 @@ import { CONTINUUM_UI } from '@/IContinuumUI'
 import 'primeicons/primeicons.css'
 import { createApp } from 'vue'
 import App from './App.vue'
+import { Log } from 'oidc-client-ts'
+Log.setLogger(console)
+
 import { Structures } from '@kinotic/structures-api'
 
 // Make Structures globally available for web components
@@ -30,15 +33,14 @@ app.use(PrimeVue, {
         }
     }
 })
-CONTINUUM_UI.initialize({
-    routes: router.options.routes
-});
+
+// Initialize CONTINUUM_UI with the existing router instance
+CONTINUUM_UI.initialize(router);
+
 app.directive('styleclass', StyleClass)
 app.use(ToastService)
 app.use(createStructuresUI(), { router })
 
-
 app.use(router)
-
 
 app.mount('#app')

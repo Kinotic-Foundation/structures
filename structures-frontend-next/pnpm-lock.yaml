@@ -59,6 +59,9 @@ importers:
       keycloak-js:
         specifier: ^26.2.0
         version: 26.2.0
+      oidc-client-ts:
+        specifier: ^3.3.0
+        version: 3.3.0
       primeicons:
         specifier: ^7.0.0
         version: 7.0.0
@@ -1095,6 +1098,10 @@ packages:
     resolution: {integrity: sha512-cEiJEAEoIbWfCZYKWhVwFuvPX1gETRYPw6LlaTKoxD3s2AkXzkCjnp6h0V77ozyqj0jakteJ4YqDJT830+lVGw==}
     engines: {node: '>=14'}
 
+  jwt-decode@4.0.0:
+    resolution: {integrity: sha512-+KJGIyHgkGuIq3IEBNftfhW/LfWhXUIY6OmyVWjliu5KH1y0fw7VQ8YndE2O4qZdMSd9SqbnC8GOcZEy0Om7sA==}
+    engines: {node: '>=18'}
+
   keycloak-js@26.2.0:
     resolution: {integrity: sha512-CrFcXTN+d6J0V/1v3Zpioys6qHNWE6yUzVVIsCUAmFn9H14GZ0vuYod+lt+SSpMgWGPuneDZBSGBAeLBFuqjsw==}
 
@@ -1242,6 +1249,10 @@ packages:
 
   ohash@2.0.11:
     resolution: {integrity: sha512-RdR9FQrFwNBNXAr4GixM8YaRZRJ5PUWbKYbE5eOsrwAjJW0q2REGcf79oYPsLyskQCZG1PLN+S/K1V00joZAoQ==}
+
+  oidc-client-ts@3.3.0:
+    resolution: {integrity: sha512-t13S540ZwFOEZKLYHJwSfITugupW4uYLwuQSSXyKH/wHwZ+7FvgHE7gnNJh1YQIZ1Yd1hKSRjqeXGSUtS0r9JA==}
+    engines: {node: '>=18'}
 
   p-tap@4.0.0:
     resolution: {integrity: sha512-G7GTcera93GkIIt5iM57ITilyMR1nSlGKjwSEifhP7F8I2QtOsHbokoRulAgHW2V5JxLS5Tg/7ToX2YHkPjlFA==}
@@ -2423,6 +2434,8 @@ snapshots:
 
   js-cookie@3.0.5: {}
 
+  jwt-decode@4.0.0: {}
+
   keycloak-js@26.2.0: {}
 
   lightningcss-darwin-arm64@1.30.1:
@@ -2538,6 +2551,10 @@ snapshots:
       tinyexec: 1.0.1
 
   ohash@2.0.11: {}
+
+  oidc-client-ts@3.3.0:
+    dependencies:
+      jwt-decode: 4.0.0
 
   p-tap@4.0.0: {}
 
