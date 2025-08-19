@@ -22,16 +22,22 @@ docker-compose up -d
 
 3. Visit [http://localhost:9090](http://localhost:9090) to access the Structures GUI
 
+For detailed setup instructions, see the [Docker Compose documentation](docker-compose/README.md).
+
 ## Next Steps
 - [Getting Started Guide](https://kinotic-foundation.github.io/structures/website/guide/getting-started.html) - Complete setup instructions and prerequisites
 
 ### Projects
-* structures-core
+* [structures-core](structures-core/README.md)
   * Provides the core library for use in all other projects.
-* structures-frontend
+* [structures-frontend](structures-frontend/README.md)
   * Provides a GUI for interacting with Structures.
-* structures-server
-  * Provides Access to the core library via a REST API and a GUI.
+* [structures-frontend-next](structures-frontend-next/README.md)
+  * Next-generation Vue 3 frontend application.
+* [structures-server](structures-server/README.md)
+  * Provides access to the core library via a REST API and a GUI.
+* [structures-auth](structures-auth/README.md)
+  * Authentication and authorization library with OIDC support.
 
 ### Environment Variables 
 These variables are available for custom configuration, presented are the defaults.
@@ -58,4 +64,17 @@ STRUCTURES_HEALTH_CHECK_PATH: /health/
 STRUCTURES_ENABLE_STATIC_FILE_SERVER: true
 STRUCTURES_INITIALIZE_WITH_SAMPLE_DATA: false
 ```
+
+### Testing Requirements
+When running tests locally or in CI/CD environments, the following environment variable is required:
+
+```bash
+export TESTCONTAINERS_RYUK_DISABLED=true
+```
+
+**Why this is needed:** TestContainers uses a Ryuk container for resource cleanup, which can cause connectivity issues on certain systems (particularly macOS with Docker Desktop). Disabling Ryuk ensures reliable test execution.
+
+**CI/CD Consideration:** Add this environment variable to your CI/CD pipeline configuration to ensure tests run successfully.
+
+**For detailed testing information:** See [TESTING.md](TESTING.md) for comprehensive testing setup, troubleshooting, and CI/CD configuration examples.
 

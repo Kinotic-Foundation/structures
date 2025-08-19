@@ -187,3 +187,40 @@ export class Person {
 ## Next Steps
 - Explore the [Decorators Reference](/reference/decorators) for available decorators and options
 
+## Testing
+
+### Running Tests Locally
+When running tests locally, you may encounter issues with TestContainers (used for Elasticsearch testing). To resolve this, set the following environment variable:
+
+```bash
+export TESTCONTAINERS_RYUK_DISABLED=true
+```
+
+### Why This is Required
+TestContainers uses a Ryuk container for resource cleanup, which can cause connectivity issues on certain systems, particularly:
+- macOS with Docker Desktop
+- Some CI/CD environments
+- Systems with strict firewall rules
+
+Disabling Ryuk ensures reliable test execution by skipping the cleanup container.
+
+### CI/CD Configuration
+If you're running tests in a CI/CD pipeline, add this environment variable to your pipeline configuration:
+
+```yaml
+# GitHub Actions example
+env:
+  TESTCONTAINERS_RYUK_DISABLED: true
+
+# GitLab CI example
+variables:
+  TESTCONTAINERS_RYUK_DISABLED: "true"
+
+# Jenkins example
+environment {
+  TESTCONTAINERS_RYUK_DISABLED = 'true'
+}
+```
+
+This ensures that all tests, including those requiring Elasticsearch containers, run successfully in your automated testing environment.
+

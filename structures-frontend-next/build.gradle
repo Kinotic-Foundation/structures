@@ -72,3 +72,8 @@ task buildFrontend {
 tasks.findByName('build').dependsOn 'buildFrontend'
 
 tasks.findByName('clean').dependsOn 'cleanFrontend'
+
+
+// tasks.named('copyDist') {
+// 	dependsOn ":structures-server:sourcesJar"
+// }
