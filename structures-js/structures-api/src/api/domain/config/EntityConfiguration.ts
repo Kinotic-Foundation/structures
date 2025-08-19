@@ -1,4 +1,4 @@
-import {MultiTenancyType} from '@kinotic/structures-api'
+import {MultiTenancyType} from '@/api/idl/decorators/MultiTenancyType.js'
 import {CalculatedPropertyConfiguration} from './CalculatedPropertyConfiguration.js'
 import {OverrideConfiguration} from './OverrideConfiguration.js'
 import {TransformConfiguration} from './TransformConfiguration.js'

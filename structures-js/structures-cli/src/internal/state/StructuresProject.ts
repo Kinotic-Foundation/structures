@@ -1,7 +1,16 @@
-import {CalculatedPropertyConfiguration} from '../config/CalculatedPropertyConfiguration.js'
-import {EntityConfiguration} from '../config/EntityConfiguration.js'
-import {TransformConfiguration} from '../config/TransformConfiguration.js'
+import {CalculatedPropertyConfiguration, 
+        EntityConfiguration, 
+        TransformConfiguration,
+        TypescriptExternalProjectConfig,
+        TypescriptProjectConfig
+    } from '@kinotic/structures-api'
+import type { StructuresProjectConfig } from '@kinotic/structures-api'
 import {createStateManager} from './IStateManager.js'
+import { loadConfig } from 'c12'
+import path from 'path'
+import fsPromises from 'fs/promises'
+import { Liquid } from 'liquidjs'
+import { fileURLToPath } from 'url'
 
 const STRUCTURES_KEY = 'structures'
 
@@ -100,12 +109,139 @@ export class StructuresProject {
     }
 }
 
+/**
+ * Returns the absolute path to the first supported structures.config.* file in the .config directory, or undefined if none found.
+ */
+async function findStructuresConfigFile(): Promise<string | undefined> {
+    const configDir = path.resolve(process.cwd(), '.config')
+    try {
+        const stat = await fsPromises.stat(configDir)
+        if (stat.isDirectory()) {
+            const files = await fsPromises.readdir(configDir)
+            const supported = files.filter(f => f.startsWith('structures.config.'))
+            if (supported.length > 0) {
+                return path.join(configDir, supported[0])
+            }
+        }
+    } catch (e) {
+        // Directory does not exist or is not accessible
+    }
+    return undefined
+}
+
+/**
+ * Saves a StructuresProjectConfig to the .config directory using the appropriate Liquid template.
+ * @param config The config object to save
+ * @param configDir The directory to save the config file in (usually .config)
+ */
+export async function saveStructuresProjectConfig(config: StructuresProjectConfig, configDir: string): Promise<void> {
+    const engine = new Liquid({
+        root: path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../templates/'),
+        extname: '.liquid'
+    })
+    const outFile = path.join(configDir, 'structures.config.ts')
+    const templateFile = 'StructuresProjectConfig.ts.liquid'
+    const typeName = (config.mdl === 'ts-external') ? 'TypescriptExternalProjectConfig' : 'TypescriptProjectConfig'
+    const renderContext = { config, typeName }
+    try {
+        await fsPromises.mkdir(configDir)
+    } catch (e) {
+        // Directory may already exist
+    }
+    const fileContent = await engine.renderFile(templateFile, renderContext)
+    await fsPromises.writeFile(outFile, fileContent)
+}
+
+// Helper to convert and store legacy config using Liquid templates
+async function convertAndStoreLegacyConfig(configDir: string): Promise<StructuresProjectConfig> {
+    // Use direct imports for config classes
+    const legacy = await loadStructuresProjectLegacy()
+    // Always use the first (and only) namespace
+    const ns = legacy.namespaces.length > 0 ? legacy.namespaces[0] : undefined
+    let newConfig: TypescriptProjectConfig | TypescriptExternalProjectConfig
+    const hasExternal = ns && ns.externalEntities && typeof ns.externalEntities === 'object' && !Array.isArray(ns.externalEntities) && Object.keys(ns.externalEntities).length > 0
+    if (hasExternal) {
+        newConfig = new TypescriptExternalProjectConfig()
+    } else {
+        newConfig = new TypescriptProjectConfig()
+    }
+    // Assign fields
+    (newConfig as any).name = undefined
+    newConfig.application = legacy.defaultNamespaceName
+    newConfig.entitiesPaths = ns ? ns.entitiesPaths : []
+    newConfig.generatedPath = ns ? ns.generatedPath : ''
+    newConfig.validate = ns ? ns.validate : undefined
+    if (hasExternal && newConfig instanceof TypescriptExternalProjectConfig && ns) {
+        newConfig.externalEntities = ns.externalEntities
+        if (Array.isArray(ns.utilFunctionsPaths)) {
+            newConfig.utilFunctionsPaths = ns.utilFunctionsPaths
+        }
+    }
+    await saveStructuresProjectConfig(newConfig, configDir)
+    return newConfig
+}
+
 export async function isStructuresProject(): Promise<boolean> {
+    let result = false
+    if (await findStructuresConfigFile()) {
+        result = true
+    }
+    if (!result) {
+        result = await isStructuresProjectLegacy()
+    }
+    return result
+}
+
+export async function loadStructuresProjectConfig(): Promise<StructuresProjectConfig> {
+    let result: StructuresProjectConfig | undefined
+    const configFile = await findStructuresConfigFile()
+    let configDir = path.resolve(process.cwd(), '.config')
+    if (configFile) {
+        configDir = path.dirname(configFile)
+        const { config } = await loadConfig({
+            configFile: configFile,
+            name: 'structures',
+            cwd: configDir,
+            dotenv: false,
+            packageJson: false
+        })
+        if (!config) {
+            throw new Error(`Failed to load config from ${configFile}`)
+        }
+        result = config as StructuresProjectConfig
+    } else if (await isStructuresProjectLegacy()) {
+        result = await convertAndStoreLegacyConfig(configDir)
+    }
+    if (!result) {
+        throw new Error('No structures project config found and not a legacy project')
+    }
+    // If name is not set, try to load from package.json in cwd
+    if (!result.name || !result.description) {
+        try {
+            const pkgPath = path.resolve(process.cwd(), 'package.json')
+            const pkgRaw = await fsPromises.readFile(pkgPath, 'utf-8')
+            const pkg = JSON.parse(pkgRaw)
+            if (!result.name && pkg.name) {
+                result.name = pkg.name
+            } else {
+                throw new Error('No "name" field found in package.json. Please set the name in your StructuresProjectConfig or package.json.')
+            }
+            if (!result.description && pkg.description) {
+                result.description = pkg.description
+            }
+        } catch (e) {
+            throw new Error('Could not determine project name. Please set the name in your StructuresProjectConfig.\nOriginal error: ' + (e instanceof Error ? e.message : String(e)))
+        }
+    }
+    return result
+}
+
+export async function isStructuresProjectLegacy(): Promise<boolean> {
     const stateManager = createStateManager(process.cwd())
     return await stateManager.containsState(STRUCTURES_KEY)
 }
 
-export async function loadStructuresProject(): Promise<StructuresProject>{
+export async function loadStructuresProjectLegacy(): Promise<StructuresProject>{
     const stateManager = createStateManager(process.cwd())
     if(await stateManager.containsState(STRUCTURES_KEY)){
         const jsonProject = await stateManager.load<StructuresProject>(STRUCTURES_KEY)
@@ -120,7 +256,3 @@ export async function loadStructuresProject(): Promise<StructuresProject>{
     }
 }
 
-export async function saveStructuresProject(project: StructuresProject): Promise<void> {
-    const stateManager = createStateManager(process.cwd())
-    await stateManager.save(STRUCTURES_KEY, project)
-}

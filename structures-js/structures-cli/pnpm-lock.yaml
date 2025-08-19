@@ -18,8 +18,8 @@ importers:
         specifier: ^2.0.2
         version: 2.0.2
       '@kinotic/structures-api':
-        specifier: ^3.4.0
-        version: 3.4.0(@kinotic/continuum-client@2.13.0(reflect-metadata@0.2.2))
+        specifier: ^3.5.0-beta.14
+        version: 3.5.0-beta.14(@kinotic/continuum-client@2.13.0(reflect-metadata@0.2.2))
       '@oclif/core':
         specifier: ^4.2.10
         version: 4.2.10
@@ -711,10 +711,13 @@ packages:
   '@kinotic/continuum-idl@2.0.2':
     resolution: {integrity: sha512-UoXNWArw2M7FWmRCeiF6IsUNnSaGkRZix/Gl2L+HvmMGFnukpoZU0/v9pjRYDUBTa76+lBJa/Ir5dmrmtxdbTQ==}
 
-  '@kinotic/structures-api@3.4.0':
-    resolution: {integrity: sha512-TmkgHLiWbIcbG9XU7pkEIAPyzJqlDVoS63cWR82nip4pVP/lmh2AzzQEoOhx6EkTa4l7mu5qV37yOPDI3yXmqA==}
+  '@kinotic/continuum-idl@2.0.3':
+    resolution: {integrity: sha512-aqW9j5hmhrhP2gGBfbdi+4N/IkbmnNsL8u9Jkrdn3g/pSgkDn+BUq8kC8vn1eBjMy70200MQmPPXVVeswfrM1Q==}
+
+  '@kinotic/structures-api@3.5.0-beta.14':
+    resolution: {integrity: sha512-LxP+ulK9HFcg/VeZzBEdu6wN91T5Z2I6Bb9zvw+JzAewr/N6X+cifNplTar7KLsRQgZ2FGPNkqAC8yxEqUNxGw==}
     peerDependencies:
-      '@kinotic/continuum-client': ^2.13.0
+      '@kinotic/continuum-client': ^2.14.0
 
   '@napi-rs/wasm-runtime@0.2.7':
     resolution: {integrity: sha512-5yximcFK5FNompXfJFoWanu5l8v1hNGqNHh9du1xETp9HWk/B/PzvchX55WYOPaIeNglG8++68AAiauBAtbnzw==}
@@ -3212,6 +3215,9 @@ packages:
   rxjs@7.8.1:
     resolution: {integrity: sha512-AA3TVj+0A2iuIoQkWEK/tqFjBq2j+6PO6Y0zJcvzLAFhEFIO3HL0vls9hWLncZbAAbK0mar7oZ4V079I/qPMxg==}
 
+  rxjs@7.8.2:
+    resolution: {integrity: sha512-dhKf903U/PQZY6boNNtAGdWbG85WAbjT/1xYoZIC7FAY0yWapOBQVsVrDl58W86//e1VpMNBtRV4MaXfdMySFA==}
+
   safe-array-concat@1.1.2:
     resolution: {integrity: sha512-vj6RsCsWBCf19jIeHEfkRMw8DPiBb+DMXklQ/1SGDHOMlHdPUkZXFQ2YdplS23zESTijAcurb1aSgJA3AgMu1Q==}
     engines: {node: '>=0.4'}
@@ -4597,11 +4603,14 @@ snapshots:
 
   '@kinotic/continuum-idl@2.0.2': {}
 
-  '@kinotic/structures-api@3.4.0(@kinotic/continuum-client@2.13.0(reflect-metadata@0.2.2))':
+  '@kinotic/continuum-idl@2.0.3': {}
+
+  '@kinotic/structures-api@3.5.0-beta.14(@kinotic/continuum-client@2.13.0(reflect-metadata@0.2.2))':
     dependencies:
       '@kinotic/continuum-client': 2.13.0(reflect-metadata@0.2.2)
-      '@kinotic/continuum-idl': 2.0.2
+      '@kinotic/continuum-idl': 2.0.3
       reflect-metadata: 0.2.2
+      rxjs: 7.8.2
 
   '@napi-rs/wasm-runtime@0.2.7':
     dependencies:
@@ -7446,6 +7455,10 @@ snapshots:
       queue-microtask: 1.2.3
 
   rxjs@7.8.1:
+    dependencies:
+      tslib: 2.8.1
+
+  rxjs@7.8.2:
     dependencies:
       tslib: 2.8.1
 

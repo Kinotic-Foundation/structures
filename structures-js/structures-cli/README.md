@@ -12,7 +12,7 @@ $ npm install -g @kinotic/structures-cli
 $ structures COMMAND
 running command...
 $ structures (--version)
-@kinotic/structures-cli/3.4.0 darwin-arm64 node-v22.13.1
+@kinotic/structures-cli/3.5.0-beta.1 darwin-arm64 node-v22.13.1
 $ structures --help [COMMAND]
 USAGE
   $ structures COMMAND
@@ -22,8 +22,8 @@ USAGE
 # Commands
 <!-- commands -->
 * [`structures autocomplete [SHELL]`](#structures-autocomplete-shell)
-* [`structures gen [NAMESPACE]`](#structures-gen-namespace)
-* [`structures generate [NAMESPACE]`](#structures-generate-namespace)
+* [`structures gen [APPLICATION]`](#structures-gen-application)
+* [`structures generate [APPLICATION]`](#structures-generate-application)
 * [`structures help [COMMAND]`](#structures-help-command)
 * [`structures init`](#structures-init)
 * [`structures initialize`](#structures-initialize)
@@ -37,8 +37,8 @@ USAGE
 * [`structures plugins uninstall [PLUGIN]`](#structures-plugins-uninstall-plugin)
 * [`structures plugins unlink [PLUGIN]`](#structures-plugins-unlink-plugin)
 * [`structures plugins update`](#structures-plugins-update)
-* [`structures sync [NAMESPACE]`](#structures-sync-namespace)
-* [`structures synchronize [NAMESPACE]`](#structures-synchronize-namespace)
+* [`structures sync [APPLICATION]`](#structures-sync-application)
+* [`structures synchronize [APPLICATION]`](#structures-synchronize-application)
 * [`structures update [CHANNEL]`](#structures-update-channel)
 
 ## `structures autocomplete [SHELL]`
@@ -72,16 +72,16 @@ EXAMPLES
 
 _See code: [@oclif/plugin-autocomplete](https://github.com/oclif/plugin-autocomplete/blob/v3.2.26/src/commands/autocomplete/index.ts)_
 
-## `structures gen [NAMESPACE]`
+## `structures gen [APPLICATION]`
 
 This will generate all Entity Service classes.
 
 ```
 USAGE
-  $ structures gen [NAMESPACE] [-v]
+  $ structures gen [APPLICATION] [-v]
 
 ARGUMENTS
-  NAMESPACE  The namespace that you want to generate service classes for
+  APPLICATION  The application that you want to generate service classes for
 
 FLAGS
   -v, --verbose  Enable verbose logging
@@ -97,19 +97,19 @@ EXAMPLES
 
   $ structures gen
 
-  $ structures gen my.namespace -v
+  $ structures gen my.application -v
 ```
 
-## `structures generate [NAMESPACE]`
+## `structures generate [APPLICATION]`
 
 This will generate all Entity Service classes.
 
 ```
 USAGE
-  $ structures generate [NAMESPACE] [-v]
+  $ structures generate [APPLICATION] [-v]
 
 ARGUMENTS
-  NAMESPACE  The namespace that you want to generate service classes for
+  APPLICATION  The application that you want to generate service classes for
 
 FLAGS
   -v, --verbose  Enable verbose logging
@@ -125,10 +125,10 @@ EXAMPLES
 
   $ structures gen
 
-  $ structures gen my.namespace -v
+  $ structures gen my.application -v
 ```
 
-_See code: [src/commands/generate.ts](https://github.com/Kinotic-Foundation/structures/blob/v3.4.0/src/commands/generate.ts)_
+_See code: [src/commands/generate.ts](https://github.com/Kinotic-Foundation/structures/blob/v3.5.0-beta.1/src/commands/generate.ts)_
 
 ## `structures help [COMMAND]`
 
@@ -156,12 +156,12 @@ This will initialize a new Structures Project for use with the Structures CLI.
 
 ```
 USAGE
-  $ structures init -n <value> -e <value> -g <value>
+  $ structures init [-a <value>] [-e <value>] [-g <value>]
 
 FLAGS
-  -e, --entities=<value>   (required) Path to the directory containing the Entity definitions
-  -g, --generated=<value>  (required) Path to the directory to write generated Services
-  -n, --namespace=<value>  (required) The name of the namespace you want to use
+  -a, --application=<value>  The name of the application you want to use
+  -e, --entities=<value>     Path to the directory containing the Entity definitions
+  -g, --generated=<value>    Path to the directory to write generated Services
 
 DESCRIPTION
   This will initialize a new Structures Project for use with the Structures CLI.
@@ -170,11 +170,11 @@ ALIASES
   $ structures init
 
 EXAMPLES
-  $ structures initialize --namespace my.namespace --entities path/to/entities --generated path/to/services
+  $ structures initialize --application my.app --entities path/to/entities --generated path/to/services
 
-  $ structures init --namespace my.namespace --entities path/to/entities --generated path/to/services
+  $ structures init --application my.app --entities path/to/entities --generated path/to/services
 
-  $ structures init -n my.namespace -e path/to/entities -g path/to/services
+  $ structures init -a my.app -e path/to/entities -g path/to/services
 ```
 
 ## `structures initialize`
@@ -183,12 +183,12 @@ This will initialize a new Structures Project for use with the Structures CLI.
 
 ```
 USAGE
-  $ structures initialize -n <value> -e <value> -g <value>
+  $ structures initialize [-a <value>] [-e <value>] [-g <value>]
 
 FLAGS
-  -e, --entities=<value>   (required) Path to the directory containing the Entity definitions
-  -g, --generated=<value>  (required) Path to the directory to write generated Services
-  -n, --namespace=<value>  (required) The name of the namespace you want to use
+  -a, --application=<value>  The name of the application you want to use
+  -e, --entities=<value>     Path to the directory containing the Entity definitions
+  -g, --generated=<value>    Path to the directory to write generated Services
 
 DESCRIPTION
   This will initialize a new Structures Project for use with the Structures CLI.
@@ -197,14 +197,14 @@ ALIASES
   $ structures init
 
 EXAMPLES
-  $ structures initialize --namespace my.namespace --entities path/to/entities --generated path/to/services
+  $ structures initialize --application my.app --entities path/to/entities --generated path/to/services
 
-  $ structures init --namespace my.namespace --entities path/to/entities --generated path/to/services
+  $ structures init --application my.app --entities path/to/entities --generated path/to/services
 
-  $ structures init -n my.namespace -e path/to/entities -g path/to/services
+  $ structures init -a my.app -e path/to/entities -g path/to/services
 ```
 
-_See code: [src/commands/initialize.ts](https://github.com/Kinotic-Foundation/structures/blob/v3.4.0/src/commands/initialize.ts)_
+_See code: [src/commands/initialize.ts](https://github.com/Kinotic-Foundation/structures/blob/v3.5.0-beta.1/src/commands/initialize.ts)_
 
 ## `structures plugins`
 
@@ -496,16 +496,16 @@ DESCRIPTION
 
 _See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v5.4.36/src/commands/plugins/update.ts)_
 
-## `structures sync [NAMESPACE]`
+## `structures sync [APPLICATION]`
 
 Synchronize the local Entity definitions with the Structures Server
 
 ```
 USAGE
-  $ structures sync [NAMESPACE] [-s <value>] [-p] [-v] [--dryRun]
+  $ structures sync [APPLICATION] [-s <value>] [-p] [-v] [--dryRun]
 
 ARGUMENTS
-  NAMESPACE  The namespace the Entities belong to
+  APPLICATION  The application the Entities belong to
 
 FLAGS
   -p, --publish         Publish each Entity after save/update
@@ -524,21 +524,21 @@ EXAMPLES
 
   $ structures sync
 
-  $ structures synchronize my.namespace --server http://localhost:9090 --publish --verbose
+  $ structures synchronize my.application --server http://localhost:9090 --publish --verbose
 
-  $ structures sync my.namespace -p -v -s http://localhost:9090
+  $ structures sync my.application -p -v -s http://localhost:9090
 ```
 
-## `structures synchronize [NAMESPACE]`
+## `structures synchronize [APPLICATION]`
 
 Synchronize the local Entity definitions with the Structures Server
 
 ```
 USAGE
-  $ structures synchronize [NAMESPACE] [-s <value>] [-p] [-v] [--dryRun]
+  $ structures synchronize [APPLICATION] [-s <value>] [-p] [-v] [--dryRun]
 
 ARGUMENTS
-  NAMESPACE  The namespace the Entities belong to
+  APPLICATION  The application the Entities belong to
 
 FLAGS
   -p, --publish         Publish each Entity after save/update
@@ -557,12 +557,12 @@ EXAMPLES
 
   $ structures sync
 
-  $ structures synchronize my.namespace --server http://localhost:9090 --publish --verbose
+  $ structures synchronize my.application --server http://localhost:9090 --publish --verbose
 
-  $ structures sync my.namespace -p -v -s http://localhost:9090
+  $ structures sync my.application -p -v -s http://localhost:9090
 ```
 
-_See code: [src/commands/synchronize.ts](https://github.com/Kinotic-Foundation/structures/blob/v3.4.0/src/commands/synchronize.ts)_
+_See code: [src/commands/synchronize.ts](https://github.com/Kinotic-Foundation/structures/blob/v3.5.0-beta.1/src/commands/synchronize.ts)_
 
 ## `structures update [CHANNEL]`
 

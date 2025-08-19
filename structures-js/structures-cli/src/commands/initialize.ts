@@ -2,12 +2,9 @@ import {Command, Flags} from '@oclif/core'
 import fs from 'fs'
 import path from 'path'
 import chalk from 'chalk'
-import {
-    isStructuresProject,
-    StructuresProject,
-    NamespaceConfiguration,
-    saveStructuresProject
-} from '../internal/state/StructuresProject.js'
+import { input } from '@inquirer/prompts'
+import { isStructuresProject, saveStructuresProjectConfig } from '../internal/state/StructuresProject.js'
+import { TypescriptProjectConfig } from '@kinotic/structures-api'
 
 export class Initialize extends Command {
     static aliases = ['init']
@@ -15,15 +12,15 @@ export class Initialize extends Command {
     static description = 'This will initialize a new Structures Project for use with the Structures CLI.'
 
     static examples = [
-        '$ structures initialize --namespace my.namespace --entities path/to/entities --generated path/to/services',
-        '$ structures init --namespace my.namespace --entities path/to/entities --generated path/to/services',
-        '$ structures init -n my.namespace -e path/to/entities -g path/to/services',
+        '$ structures initialize --application my.app --entities path/to/entities --generated path/to/services',
+        '$ structures init --application my.app --entities path/to/entities --generated path/to/services',
+        '$ structures init -a my.app -e path/to/entities -g path/to/services',
     ]
 
     static flags = {
-        namespace:  Flags.string({char: 'n', description: 'The name of the namespace you want to use', required: true}),
-        entities:   Flags.string({char: 'e', description: 'Path to the directory containing the Entity definitions', required: true}),
-        generated:  Flags.string({char: 'g', description: 'Path to the directory to write generated Services', required: true}),
+        application:  Flags.string({char: 'a', description: 'The name of the application you want to use', required: false}),
+        entities:   Flags.string({char: 'e', description: 'Path to the directory containing the Entity definitions', required: false}),
+        generated:  Flags.string({char: 'g', description: 'Path to the directory to write generated Services', required: false}),
     }
 
     public async run(): Promise<void> {
@@ -34,27 +31,53 @@ export class Initialize extends Command {
             return
         }
 
-        const entitiesPath = path.resolve(flags.entities)
-        const generatedPath = path.resolve(flags.generated)
-
-        if(!fs.existsSync(entitiesPath)){
-            this.error(`Entities path does not exist: ${entitiesPath}`)
+        // Prompt for missing values
+        let application = flags.application
+        if (!application) {
+            application = await input({
+                message: 'What is the name of your application?',
+                validate: (input: string) => input.trim() !== '' || 'Application name is required'
+            })
         }
-        if(!fs.existsSync(generatedPath)){
-            this.error(`Generated path does not exist: ${generatedPath}`)
+
+        let entitiesPath = flags.entities
+        if (!entitiesPath) {
+            entitiesPath = await input({
+                message: 'Path to the directory containing Entity definitions:',
+                default: 'src/entities',
+                validate: (input: string) => input.trim() !== '' || 'Entities path is required'
+            })
         }
 
-        const namespace = flags.namespace
-        let structuresProject = new StructuresProject()
-        structuresProject.defaultNamespaceName = namespace
-        let namespaceConfig =  new NamespaceConfiguration()
-        namespaceConfig.namespaceName = namespace
-        namespaceConfig.entitiesPaths = [flags.entities]
-        namespaceConfig.generatedPath = flags.generated
-        namespaceConfig.validate = false
-        structuresProject.namespaces.push(namespaceConfig)
+        let generatedPath = flags.generated
+        if (!generatedPath) {
+            generatedPath = await input({
+                message: 'Path to the directory to write generated Services:',
+                default: 'src/generated',
+                validate: (input: string) => input.trim() !== '' || 'Generated path is required'
+            })
+        }
 
-        await saveStructuresProject(structuresProject)
+        const entitiesAbsPath = path.resolve(entitiesPath)
+        const generatedAbsPath = path.resolve(generatedPath)
+
+        if(!fs.existsSync(entitiesAbsPath)){
+            this.error(`Entities path does not exist: ${entitiesAbsPath}`)
+        }
+        if(!fs.existsSync(generatedAbsPath)){
+            this.error(`Generated path does not exist: ${generatedAbsPath}`)
+        }
+
+        // Only use TypescriptProjectConfig for initialization
+        const configDir = path.resolve(process.cwd(), '.config')
+        const configObj = new TypescriptProjectConfig()
+        configObj.name = undefined
+        configObj.application = application
+        configObj.entitiesPaths = [entitiesPath]
+        configObj.generatedPath = generatedPath
+        configObj.validate = false
+        configObj.fileExtensionForImports = '.js'
+        await saveStructuresProjectConfig(configObj, configDir)
 
         this.log(chalk.green('Success:') + ' Initialized Project')
     }
