@@ -93,3 +93,5 @@ structures-server/allure-results/
 structures-server/src/main/resources/webroot/
 
 structures-server/src/main/resources/webroot2/
+
+.vscode/chrome-debug-profile/

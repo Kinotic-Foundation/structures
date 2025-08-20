@@ -5,25 +5,32 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "type": "java",
-            "name": "StructuresTestApplication",
-            "request": "launch",
-            "mainClass": "org.kinotic.structures.StructuresTestApplication",
-            "projectName": "structures-core"
-        },
-        {
             "command": "pnpm dev",
             "name": "Start Structures Frontend",
             "request": "launch",
             "type": "node-terminal",
-            "cwd": "${workspaceFolder}/structures-frontend-next"
+            "cwd": "${workspaceFolder}/structures-frontend-next",
+            "env": {
+                "NODE_ENV": "development"
+            }
         },
         {
             "name": "Launch Chrome Debugger for UI",
             "request": "launch",
             "type": "chrome",
             "url": "http://localhost:5173",
-            "webRoot": "${workspaceFolder}/structures-frontend-next"
+            "webRoot": "${workspaceFolder}/structures-frontend-next",
+            "sourceMapPathOverrides": {
+                "webpack:///src/*": "${webRoot}/*",
+                "webpack:///./src/*": "${webRoot}/*",
+                "webpack:///./*": "${webRoot}/*",
+                "webpack:///*": "${webRoot}/*",
+                "webpack:///./~/*": "${webRoot}/node_modules/*"
+            },
+            "userDataDir": "${workspaceFolder}/.vscode/chrome-debug-profile",
+            "runtimeArgs": [
+                "--disable-features=VizDisplayCompositor"
+            ]
         },
         {
             "type": "java",
@@ -41,19 +48,6 @@
                 "OTEL_METRICS_EXPORTER": "otlp",
                 "OTEL_TRACES_EXPORTER": "otlp",
                 "OTEL_SERVICE_NAME": "structures-server"
-            }
-        },
-        {
-            "type": "java",
-            "name": "Run Java Tests",
-            "request": "launch",
-            "mainClass": "",
-            "projectName": "structures-server",
-            "args": "",
-            "vmArgs": "-XX:MaxDirectMemorySize=1g -Xmx4096m -XX:+AlwaysPreTouch -XX:+UseG1GC -XX:+ScavengeBeforeFullGC -XX:+DisableExplicitGC",
-            "env": {
-                "SPRING_PROFILES_ACTIVE": "test, local",
-                "JAVA_TOOL_OPTIONS": "--add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED --add-opens=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED --add-opens=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED"
             }
         }
     ]
