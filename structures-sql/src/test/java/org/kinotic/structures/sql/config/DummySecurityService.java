@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.kinotic.structures;
+package org.kinotic.structures.sql.config;
 
 import org.kinotic.continuum.api.exceptions.AuthenticationException;
 import org.kinotic.continuum.api.security.DefaultParticipant;
@@ -23,6 +23,7 @@ import org.kinotic.continuum.api.security.Participant;
 import org.kinotic.continuum.api.security.ParticipantConstants;
 import org.kinotic.continuum.api.security.SecurityService;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -37,7 +38,8 @@ import java.util.concurrent.CompletableFuture;
  * Created by Navid Mitchell on 3/11/20
  */
 @Component
-@ConditionalOnProperty(prefix = "structures-core-test", name = "enabled", havingValue = "true")
+@Profile("test")
+@ConditionalOnProperty(prefix = "structures-sql-test", name = "enabled", havingValue = "true")
 public class DummySecurityService implements SecurityService {
 
     @Override

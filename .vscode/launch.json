@@ -5,6 +5,13 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "type": "java",
+            "name": "StructuresTestApplication",
+            "request": "launch",
+            "mainClass": "org.kinotic.structures.StructuresTestApplication",
+            "projectName": "structures-core"
+        },
+        {
             "command": "pnpm dev",
             "name": "Start Structures Frontend",
             "request": "launch",
