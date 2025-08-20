@@ -5,18 +5,18 @@ import {
   Emit,
   toNative,
   Component,
-  Watch
-} from 'vue-facing-decorator'
+  Watch,
+} from "vue-facing-decorator";
 
-import DataTable, { type DataTablePageEvent } from 'primevue/datatable'
-import Column from 'primevue/column'
-import Button from 'primevue/button'
-import Toolbar from 'primevue/toolbar'
-import InputText from 'primevue/inputtext'
-import ConfirmDialog from 'primevue/confirmdialog'
-import Card from 'primevue/card'
-import Paginator, { type PageState } from 'primevue/paginator'
-import SelectButton from 'primevue/selectbutton'
+import DataTable, { type DataTablePageEvent } from "primevue/datatable";
+import Column from "primevue/column";
+import Button from "primevue/button";
+import Toolbar from "primevue/toolbar";
+import InputText from "primevue/inputtext";
+import ConfirmDialog from "primevue/confirmdialog";
+import Card from "primevue/card";
+import Paginator, { type PageState } from "primevue/paginator";
+import SelectButton from "primevue/selectbutton";
 
 import {
   type IDataSource,
@@ -26,10 +26,10 @@ import {
   Pageable,
   Direction,
   DataSourceUtils,
-} from '@kinotic/continuum-client'
+} from "@kinotic/continuum-client";
 
-import type { CrudHeader } from '@/types/CrudHeader'
-import type { DescriptiveIdentifiable } from '@/types/DescriptiveIdentifiable'
+import type { CrudHeader } from "@/types/CrudHeader";
+import type { DescriptiveIdentifiable } from "@/types/DescriptiveIdentifiable";
 
 @Component({
   components: {
@@ -41,195 +41,207 @@ import type { DescriptiveIdentifiable } from '@/types/DescriptiveIdentifiable'
     ConfirmDialog,
     Card,
     Paginator,
-    SelectButton
-  }
+    SelectButton,
+  },
 })
 class CrudTable extends Vue {
-  @Prop({ required: true }) dataSource!: IDataSource<DescriptiveIdentifiable>
-  @Prop({ required: true }) headers!: CrudHeader[]
-  @Prop({ default: false }) multiSort!: boolean
-  @Prop({ default: true }) mustSort!: boolean
-  @Prop({ default: false }) singleExpand!: boolean
-  @Prop({ default: false }) disableModifications!: boolean
-  @Prop({ default: true }) isShowAddNew!: boolean
-  @Prop({ default: true }) isShowDelete!: boolean
-  @Prop({ default: '' }) initialSearch!: string
-  @Prop({ default: '#f5f5f5' }) rowHoverColor!: string
-  @Prop({ default: 'Add new' }) createNewButtonText!: string
-  @Prop({ default: false }) enableViewSwitcher!: boolean
-  @Prop({ default: 'No items yet' }) emptyStateText!: string
-  @Prop({ default: '' }) search!: string
-  @Prop({ default: true }) showPagination!: boolean
-@Prop({ default: true }) enableRowHover!: boolean;
+  @Prop({ required: true }) dataSource!: IDataSource<DescriptiveIdentifiable>;
+  @Prop({ required: true }) headers!: CrudHeader[];
+  @Prop({ default: false }) multiSort!: boolean;
+  @Prop({ default: true }) mustSort!: boolean;
+  @Prop({ default: false }) singleExpand!: boolean;
+  @Prop({ default: false }) disableModifications!: boolean;
+  @Prop({ default: true }) isShowAddNew!: boolean;
+  @Prop({ default: true }) isShowDelete!: boolean;
+  @Prop({ default: "" }) initialSearch!: string;
+  @Prop({ default: "#f5f5f5" }) rowHoverColor!: string;
+  @Prop({ default: "Add new" }) createNewButtonText!: string;
+  @Prop({ default: false }) enableViewSwitcher!: boolean;
+  @Prop({ default: "No items yet" }) emptyStateText!: string;
+  @Prop({ default: "" }) search!: string;
+  @Prop({ default: true }) showPagination!: boolean;
+  @Prop({ default: true }) enableRowHover!: boolean;
 
-getRowClass() {
-  return {
-    'dynamic-hover': this.enableRowHover,
-    'transition-all': true,
-  };
-}
+  getRowClass() {
+    return {
+      "dynamic-hover": this.enableRowHover,
+      "transition-all": true,
+    };
+  }
 
-
-  items: DescriptiveIdentifiable[] = []
-  totalItems = 0
-  loading = false
-  initialSearchCompleted = false
-  searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
-  activeView: 'burger' | 'column' = 'burger'
-  searchText: string | null = ''
+  items: DescriptiveIdentifiable[] = [];
+  totalItems = 0;
+  loading = false;
+  initialSearchCompleted = false;
+  searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  activeView: "burger" | "column" = "burger";
+  searchText: string | null = "";
   options = {
     page: 0,
     rows: 9,
     first: 0,
-    sortField: '',
-    sortOrder: 1 as 1 | -1
-  }
+    sortField: "",
+    sortOrder: 1 as 1 | -1,
+  };
 
   viewOptions = [
-    { icon: 'pi pi-bars', value: 'burger' },
-    { icon: 'pi pi-th-large', value: 'column' }
-  ]
+    { icon: "pi pi-bars", value: "burger" },
+    { icon: "pi pi-th-large", value: "column" },
+  ];
 
   get editable(): boolean {
-    return this.dataSource && DataSourceUtils.instanceOfEditableDataSource(this.dataSource)
+    return (
+      this.dataSource &&
+      DataSourceUtils.instanceOfEditableDataSource(this.dataSource)
+    );
   }
 
   get computedHeaders(): CrudHeader[] {
-    return this.headers
+    return this.headers;
   }
 
   get isBurgerView(): boolean {
-    return this.enableViewSwitcher ? this.activeView === 'burger' : true
+    return this.enableViewSwitcher ? this.activeView === "burger" : true;
   }
 
   get isColumnView(): boolean {
-    return this.enableViewSwitcher && this.activeView === 'column'
+    return this.enableViewSwitcher && this.activeView === "column";
   }
 
   mounted() {
-    console.log(this.showPagination, "VVVVVVVVVVVVVVVVV")
-    console.log(this.items.length, "kasjdlsajdksajdl")
-    const urlSearch = (this.$route.query.search as string) || ''
-    this.loading = true
-    this.initialSearchCompleted = false
+    console.log(this.showPagination, "VVVVVVVVVVVVVVVVV");
+    console.log(this.items.length, "kasjdlsajdksajdl");
+    const urlSearch = (this.$route.query.search as string) || "";
+    this.loading = true;
+    this.initialSearchCompleted = false;
     if (urlSearch) {
-      this.searchText = urlSearch
+      this.searchText = urlSearch;
     }
-    this.options.page = 0
-    this.options.first = 0
-    this.find()
+    this.options.page = 0;
+    this.options.first = 0;
+    this.find();
   }
 
   updateUrlSearchParam(value: string) {
-    const newQuery = { ...this.$route.query }
+    const newQuery = { ...this.$route.query };
     if (value) {
-      newQuery.search = value
+      newQuery.search = value;
     } else {
-      delete newQuery.search
+      delete newQuery.search;
     }
-    this.$router.replace({ query: newQuery })
+    this.$router.replace({ query: newQuery });
   }
 
-  @Watch('search', { immediate: true })
+  @Watch("search", { immediate: true })
   onSearchPropChange(newVal: string) {
-    this.searchText = newVal
-    this.options.page = 0
-    this.options.first = 0
-    this.find()
+    this.searchText = newVal;
+    this.options.page = 0;
+    this.options.first = 0;
+    this.find();
   }
 
-  @Emit('update:search')
+  @Emit("update:search")
   emitSearchUpdate(val: string): string {
-    return val
+    return val;
   }
   @Emit()
-  addItem(): void { }
+  addItem(): void {}
 
   @Emit()
   editItem(item: Identifiable<string>): Identifiable<string> {
-    return { ...item }
+    return { ...item };
   }
 
   @Emit()
-  onRowClick(event: { data: Identifiable<string>; index: number }): Identifiable<string> {
-    return { ...event.data }
+  onRowClick(event: {
+    data: Identifiable<string>;
+    index: number;
+  }): Identifiable<string> {
+    return { ...event.data };
   }
-  @Watch('searchText')
+  @Watch("searchText")
   onSearchTextChanged(newVal: string) {
-    this.emitSearchUpdate(newVal)
+    this.emitSearchUpdate(newVal);
 
-    if (this.searchDebounceTimer) clearTimeout(this.searchDebounceTimer)
+    if (this.searchDebounceTimer) clearTimeout(this.searchDebounceTimer);
     this.searchDebounceTimer = setTimeout(() => {
-      this.options.page = 0
-      this.options.first = 0
-      this.find()
-    }, 400)
+      this.options.page = 0;
+      this.options.first = 0;
+      this.find();
+    }, 400);
   }
   onDataTablePage(event: DataTablePageEvent) {
-    this.options.page = event.page
-    this.options.rows = event.rows
-    this.options.first = event.first
-    this.find()
+    this.options.page = event.page;
+    this.options.rows = event.rows;
+    this.options.first = event.first;
+    this.find();
   }
 
   onPaginatorPage(event: PageState) {
-    this.options.page = event.page
-    this.options.rows = event.rows
-    this.options.first = event.first
-    this.find()
+    this.options.page = event.page;
+    this.options.rows = event.rows;
+    this.options.first = event.first;
+    this.find();
   }
 
   beforeUnmount() {
-    if (this.searchDebounceTimer) clearTimeout(this.searchDebounceTimer)
+    if (this.searchDebounceTimer) clearTimeout(this.searchDebounceTimer);
   }
 
   onSearchChange() {
-    if (this.searchDebounceTimer) clearTimeout(this.searchDebounceTimer)
+    if (this.searchDebounceTimer) clearTimeout(this.searchDebounceTimer);
     this.searchDebounceTimer = setTimeout(() => {
-      this.options.page = 0
-      this.options.first = 0
-      this.find()
-    }, 400)
+      this.options.page = 0;
+      this.options.first = 0;
+      this.find();
+    }, 400);
   }
 
   handleCardClick(item: Identifiable<string>, index: number) {
-    this.onRowClick({ data: item, index })
+    this.onRowClick({ data: item, index });
   }
 
   find() {
     if (!this.loading && this.dataSource) {
-      this.loading = true
+      this.loading = true;
     }
 
-    const orders: Order[] = []
+    const orders: Order[] = [];
     if (this.options.sortField) {
-      orders.push(new Order(this.options.sortField, this.options.sortOrder === -1 ? Direction.DESC : Direction.ASC))
+      orders.push(
+        new Order(
+          this.options.sortField,
+          this.options.sortOrder === -1 ? Direction.DESC : Direction.ASC
+        )
+      );
     }
 
-    const pageable = Pageable.create(this.options.page, this.options.rows, { orders })
+    const pageable = Pageable.create(this.options.page, this.options.rows, {
+      orders,
+    });
     const queryPromise: Promise<Page<Identifiable<string>>> = this.searchText
       ? this.dataSource.search(this.searchText, pageable)
-      : this.dataSource.findAll(pageable)
+      : this.dataSource.findAll(pageable);
 
     queryPromise
       .then((page: Page<Identifiable<string>>) => {
-        this.loading = false
-        this.totalItems = page.totalElements ?? 0
-        this.items = page.content ?? []
-        this.initialSearchCompleted = true
+        this.loading = false;
+        this.totalItems = page.totalElements ?? 0;
+        this.items = page.content ?? [];
+        this.initialSearchCompleted = true;
 
-        this.$emit('items-count', this.items.length)
+        this.$emit("items-count", this.items.length);
       })
 
       .catch((error: unknown) => {
-        console.error('[CRUD Table Alert]:', error)
-        this.loading = false
-        this.initialSearchCompleted = true
-      })
+        console.error("[CRUD Table Alert]:", error);
+        this.loading = false;
+        this.initialSearchCompleted = true;
+      });
   }
 }
 
-export default toNative(CrudTable)
+export default toNative(CrudTable);
 </script>
 
 <template>
@@ -238,81 +250,144 @@ export default toNative(CrudTable)
       <template #start>
         <IconField class="w-full max-w-sm">
           <InputIcon class="pi pi-search" />
-          <InputText v-model="searchText" placeholder="Search" size="small" @input="onSearchChange"
-            @keyup.enter="find" />
+          <InputText
+            v-model="searchText"
+            placeholder="Search"
+            size="small"
+            @input="onSearchChange"
+            @keyup.enter="find"
+          />
         </IconField>
       </template>
 
       <template #end>
         <div class="flex items-center gap-2 h-[33px]">
-          <SelectButton size="small" v-if="enableViewSwitcher" v-model="activeView" :options="viewOptions"
-            optionValue="value" dataKey="value">
+          <SelectButton
+            size="small"
+            v-if="enableViewSwitcher"
+            v-model="activeView"
+            :options="viewOptions"
+            optionValue="value"
+            dataKey="value"
+          >
             <template #option="slotProps">
               <i :class="slotProps.option.icon"></i>
             </template>
           </SelectButton>
-          <Button size="small" v-if="!disableModifications && isShowAddNew" @click="addItem"
-            :label="createNewButtonText" icon="pi pi-plus" />
+          <Button
+            size="small"
+            v-if="!disableModifications && isShowAddNew"
+            @click="addItem"
+            :label="createNewButtonText"
+            icon="pi pi-plus"
+          />
         </div>
       </template>
     </Toolbar>
 
     <div class="mb-6">
       <div v-if="isColumnView">
-        <div v-if="items.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Card v-for="(item, index) in items" :key="item.id || index"
+        <div
+          v-if="items.length > 0"
+          class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+        >
+          <Card
+            v-for="(item, index) in items"
+            :key="item.id || index"
             class="cursor-pointer relative hover:shadow-md transition-shadow h-[170px] flex flex-col justify-between"
-            @click="handleCardClick(item, index)">
+            @click="handleCardClick(item, index)"
+          >
             <template #title>
               <h3 class="">{{ item?.id }}</h3>
             </template>
 
             <template #content>
-              <p class="truncate-multiline max-h-[46px]">{{ item?.description }}</p>
-
+              <p class="truncate-multiline max-h-[46px]">
+                {{ item?.description }}
+              </p>
             </template>
 
             <template #footer>
               <div class="flex p-5 gap-4 absolute bottom-0 left-0">
-                <Button severity="secondary" text class="!p-0"
-                  @click.stop="$router.push({ path: '/graphql', query: { namespace: item.id } })">
-                  <img src="@/assets/graphql.svg" alt="GraphQL" class="w-5 h-5" />
+                <Button
+                  severity="secondary"
+                  text
+                  class="!p-0"
+                  @click.stop="
+                    $router.push({
+                      path: '/graphql',
+                      query: { namespace: item.id },
+                    })
+                  "
+                >
+                  <img
+                    src="@/assets/graphql.svg"
+                    alt="GraphQL"
+                    class="w-5 h-5"
+                  />
                 </Button>
-                <Button severity="secondary" text class="!p-0"
-                  @click.stop="$router.push('/scalar-ui.html?namespace=' + item.id)">
-                  <img src="@/assets/scalar.svg" alt="OpenAPI" class="w-5 h-5" />
+                <Button
+                  severity="secondary"
+                  text
+                  class="!p-0"
+                  @click.stop="
+                    $router.push('/scalar-ui.html?namespace=' + item.id)
+                  "
+                >
+                  <img
+                    src="@/assets/scalar.svg"
+                    alt="OpenAPI"
+                    class="w-5 h-5"
+                  />
                 </Button>
               </div>
             </template>
           </Card>
-
         </div>
-        <div v-else class="flex flex-col items-center justify-center text-gray-500 py-20 h-[calc(100vh-300px)]">
+        <div
+          v-else
+          class="flex flex-col items-center justify-center text-gray-500 py-20 h-[calc(100vh-300px)]"
+        >
           <p class="text-sm">{{ emptyStateText }}</p>
         </div>
 
-        <Paginator :rows="options.rows" :totalRecords="totalItems" @page="onPaginatorPage" class="mt-4"
-          v-if="showPagination" />
+        <Paginator
+          :rows="options.rows"
+          :totalRecords="totalItems"
+          @page="onPaginatorPage"
+          class="mt-4"
+          v-if="showPagination"
+        />
       </div>
 
-      <div v-if="isBurgerView" class="p-4 border text-[color:var(--surface-200)] rounded-xl">
- <DataTable 
-    :value="items" 
-    :rows="options.rows" 
-    :totalRecords="totalItems" 
-    :loading="loading"
-    :paginator="showPagination" 
-    :first="options.first" 
-    :rowsPerPageOptions="[5, 10, 20]" 
-    dataKey="id"
-    @page="onDataTablePage"
-    @row-click="onRowClick" 
-    sortMode="multiple"
-    :rowClass="getRowClass"
-    
-  >
-          <Column v-for="col in computedHeaders" :key="col.field" :field="col.field" :header="col.header"
-            :sortable="col.sortable !== false">
+      <div
+        v-if="isBurgerView"
+        class="p-4 border text-[color:var(--surface-200)] rounded-xl"
+      >
+        <DataTable
+          :value="items"
+          :rows="options.rows"
+          :totalRecords="totalItems"
+          :loading="loading"
+          :paginator="showPagination"
+          :first="options.first"
+          :rowsPerPageOptions="[5, 10, 20]"
+          dataKey="id"
+          @page="onDataTablePage"
+          @row-click="onRowClick"
+          sortMode="multiple"
+          :rowClass="getRowClass"
+        >
+          <Column
+            v-for="col in computedHeaders"
+            :key="col.field"
+            :field="col.field"
+            :header="col.header"
+            :sortable="col.sortable !== false"
+            :headerStyle="
+              col.centered ? { display: 'flex', justifyContent: 'center' } : {}
+            "
+          >
             <template #body="slotProps">
               <slot :name="`item.${col.field}`" :item="slotProps.data">
                 {{ slotProps.data[col.field] }}
@@ -320,7 +395,7 @@ export default toNative(CrudTable)
             </template>
           </Column>
 
-          <Column v-if="editable" header="">
+          <Column v-if="editable || $slots['additional-actions']" header="">
             <template #body="slotProps">
               <div class="flex justify-center">
                 <slot name="additional-actions" :item="slotProps.data" />
@@ -328,12 +403,16 @@ export default toNative(CrudTable)
             </template>
           </Column>
           <template #loading>
-            <div class="flex justify-center bg-white h-full items-center py-20 text-gray-500 w-full">
+            <div
+              class="flex justify-center bg-white h-full items-center py-20 text-gray-500 w-full"
+            >
               <i class="pi pi-spin pi-spinner text-2xl text-primary" />
             </div>
           </template>
           <template #empty>
-            <div class="flex justify-center items-center text-gray-500 py-8 h-[calc(100vh-450px)] w-full">
+            <div
+              class="flex justify-center items-center text-gray-500 py-8 h-[calc(100vh-450px)] w-full"
+            >
               {{ emptyStateText }}
             </div>
           </template>

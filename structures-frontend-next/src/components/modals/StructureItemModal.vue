@@ -5,8 +5,11 @@ import { VueFlow, type Node, type Edge, MarkerType } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
 import { MiniMap } from '@vue-flow/minimap'
-import ERTable from '@/components/modals/ERTable.vue'
 import { ArrowsRightLeftIcon, ArrowsUpDownIcon } from '@heroicons/vue/24/solid'
+import GlobalObjectNode from '@/components/nodes/GlobalObjectNode.vue'
+import ObjectNode from '@/components/nodes/ObjectNode.vue'
+import EnumNode from '@/components/nodes/EnumNode.vue'
+import UnionNode from '@/components/nodes/UnionNode.vue'
 
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
@@ -24,7 +27,14 @@ export default class StructureItemModal extends Vue {
   @Emit('close') closeModal() { return true }
   onHide() { this.visible = false; this.closeModal() }
 
-  get nodeTypes() { return { erTable: ERTable } }
+  get nodeTypes() {
+    return {
+      globalObject: GlobalObjectNode,
+      objectNode: ObjectNode,
+      enumNode: EnumNode,
+      unionNode: UnionNode,
+    }
+  }
 
   mounted() { this.setupGraph() }
 
@@ -42,13 +52,13 @@ export default class StructureItemModal extends Vue {
       return colors[Math.floor(Math.random() * colors.length)]
     }
 
-    const createNode = (id: string, label: string, fields: string[], depth = 0): string => {
+    const createNode = (id: string, label: string, fields: { name: string; type: string }[], depth = 0, nodeType = 'objectNode'): string => {
       const nodeId = `${id}_${nodeCounter++}`
       const estimatedHeight = Math.max(150, 50 + fields.length * 20)
 
       nodes.push({
         id: nodeId,
-        type: 'erTable',
+        type: depth === 0 ? 'globalObject' : nodeType,
         position: { x: 100 + depth * 350, y: yOffset },
         data: { label, fields, color: getRandomColor() },
       })
@@ -63,33 +73,34 @@ export default class StructureItemModal extends Vue {
       const structureKey = label + JSON.stringify(properties.map(p => p.name))
       if (processedStructures.has(structureKey)) return processedStructures.get(structureKey)!
 
-      const fields: string[] = []
-      const nodeId = createNode(label, label, fields, depth)
+      const fields: { name: string; type: string }[] = []
+      const nodeId = createNode(label, label, fields, depth, depth === 0 ? 'globalObject' : 'objectNode')
       processedStructures.set(structureKey, nodeId)
 
       properties.forEach((prop: any, idx: number) => {
         const propName = prop.name || `prop${idx}`
         const type = prop.type?.type
-        let fieldLabel = `${propName}: ${type}`
         let childId = ''
         const fieldIndex = fields.length
 
         if (type === 'object' && Array.isArray(prop.type?.properties)) {
           childId = processProperties(prop.type.properties, prop.type.name || propName, depth + 1)
+          fields.push({ name: propName, type: prop.type?.name || 'object' })
         } else if (type === 'array') {
           const containsType = prop.type.contains?.type
           const containsName = prop.type.contains?.name || propName
 
           if (containsType === 'object' && Array.isArray(prop.type.contains?.properties)) {
-            fieldLabel = `${propName}: ${containsName}[]`
             childId = processProperties(prop.type.contains.properties, containsName, depth + 1)
-
+            fields.push({ name: propName, type: `${containsName}[]` })
           } else if (containsType === 'union' && Array.isArray(prop.type.contains?.types)) {
-            fieldLabel = `${propName}: union[]`
+            fields.push({ name: propName, type: 'union[]' })
             prop.type.contains.types.forEach((unionType: any, uIdx: number) => {
               if (Array.isArray(unionType.properties)) {
                 const unionName = unionType.name || `${propName}_Union_${uIdx}`
-                const unionId = processProperties(unionType.properties, unionName, depth + 1)
+                const unionFields = unionType.properties.map((p: any) => ({ name: p.name, type: p.type?.type }))
+                const unionId = createNode(unionName, unionName, unionFields, depth + 1, 'unionNode')
+                processedStructures.set(unionName, unionId)
                 this.flowEdges.push({
                   id: `e-${nodeId}-${unionId}-union-${uIdx}`,
                   source: nodeId,
@@ -102,16 +113,15 @@ export default class StructureItemModal extends Vue {
                 })
               }
             })
-          }
-          else if (containsType === 'enum' && Array.isArray(prop.type.contains?.values)) {
-            fieldLabel = `${propName}: ${containsName}[]`
-            const enumFields = prop.type.contains.values.map((val: string) => `• ${val}`)
+          } else if (containsType === 'enum' && Array.isArray(prop.type.contains?.values)) {
+            fields.push({ name: propName, type: `${containsName}[]` })
+            const enumFields = prop.type.contains.values.map((val: string) => ({ name: val, type: '' }))
             const enumKey = JSON.stringify(enumFields) + containsName
             let enumNodeId: string
             if (processedStructures.has(enumKey)) {
               enumNodeId = processedStructures.get(enumKey)!
             } else {
-              enumNodeId = createNode(`${propName}_enum_array`, containsName, enumFields, depth + 1)
+              enumNodeId = createNode(`${propName}_enum_array`, containsName, enumFields, depth + 1, 'enumNode')
               processedStructures.set(enumKey, enumNodeId)
             }
             this.flowEdges.push({
@@ -124,17 +134,18 @@ export default class StructureItemModal extends Vue {
               animated: true,
               markerEnd: { type: MarkerType.Arrow },
             })
-
           } else {
-            fieldLabel = `${propName}: ${containsType}[]`
+            fields.push({ name: propName, type: `${containsType}[]` })
           }
 
         } else if (type === 'union' && Array.isArray(prop.type.types)) {
-          fieldLabel = `${propName}: union`
+          fields.push({ name: propName, type: 'union' })
           prop.type.types.forEach((unionType: any, uIdx: number) => {
             if (Array.isArray(unionType.properties)) {
               const unionName = unionType.name || `${propName}_Union_${uIdx}`
-              const unionId = processProperties(unionType.properties, unionName, depth + 1)
+              const unionFields = unionType.properties.map((p: any) => ({ name: p.name, type: p.type?.type }))
+              const unionId = createNode(unionName, unionName, unionFields, depth + 1, 'unionNode')
+              processedStructures.set(unionName, unionId)
               this.flowEdges.push({
                 id: `e-${nodeId}-union-${uIdx}`,
                 source: nodeId,
@@ -147,17 +158,16 @@ export default class StructureItemModal extends Vue {
               })
             }
           })
-
         } else if (type === 'enum' && Array.isArray(prop.type?.values)) {
-          fieldLabel = `${propName}: ${prop.type?.name || 'enum'}`
           const enumLabel = prop.type?.name || `${propName}_Enum`
-          const enumFields = prop.type.values.map((val: string) => `• ${val}`)
+          fields.push({ name: propName, type: enumLabel })
+          const enumFields = prop.type.values.map((val: string) => ({ name: val, type: '' }))
           const enumKey = JSON.stringify(enumFields) + enumLabel
           let enumNodeId: string
           if (processedStructures.has(enumKey)) {
             enumNodeId = processedStructures.get(enumKey)!
           } else {
-            enumNodeId = createNode(`${propName}_enum`, enumLabel, enumFields, depth + 1)
+            enumNodeId = createNode(`${propName}_enum`, enumLabel, enumFields, depth + 1, 'enumNode')
             processedStructures.set(enumKey, enumNodeId)
           }
           this.flowEdges.push({
@@ -170,15 +180,15 @@ export default class StructureItemModal extends Vue {
             animated: true,
             markerEnd: { type: MarkerType.Arrow },
           })
+        } else {
+          fields.push({ name: propName, type: type || 'unknown' })
         }
-
-        fields.push(fieldLabel)
 
         if (childId) {
           this.flowEdges.push({
             id: `e-${nodeId}-${childId}`,
             source: nodeId,
-            sourceHandle: `out-${fields.length - 1}`,
+            sourceHandle: `out-${fieldIndex}`,
             target: childId,
             targetHandle: 'in-0',
             type: 'default',

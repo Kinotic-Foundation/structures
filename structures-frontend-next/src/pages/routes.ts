@@ -115,7 +115,7 @@ const pageRoutes: RouteRecordRaw[] = [
       label: 'Add Application',
     } as RouteMeta,
   },
-    {
+  {
     path: '/new-structure',
     component: () => import('@/pages/NewStructure.vue'),
     meta: {
