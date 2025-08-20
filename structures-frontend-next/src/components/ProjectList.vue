@@ -151,18 +151,6 @@ export default class ProjectList extends Vue {
           {{ DatetimeUtil.formatRelativeDate(item.updated) }}
         </span>
       </template>
-      <template #additional-actions="{ item }">
-        <Button text class="!text-[#334155] !bg-white" title="GraphQL">
-          <RouterLink :to="{ path: '/graphql', query: { namespace: item.id } }">
-            <img src="@/assets/graphql.svg" />
-          </RouterLink>
-        </Button>
-        <Button text class="!text-[#334155] !bg-white" title="OpenAPI">
-          <RouterLink target="_blank" :to="'/scalar-ui.html?namespace=' + item.id">
-            <img src="@/assets/scalar.svg" />
-          </RouterLink>
-        </Button>
-      </template>
     </CrudTable>
 
     <div v-if="selectedProjectId" class="mt-6">
