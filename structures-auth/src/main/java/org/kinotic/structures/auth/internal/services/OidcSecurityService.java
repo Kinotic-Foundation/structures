@@ -122,6 +122,7 @@ public class OidcSecurityService implements SecurityService {
             }
 
             String issuer = claims.getIssuer();
+            log.trace("Token has issuer: {}", issuer);
             OidcProvider oidcProvider = isValidIssuer(issuer, email);
             if (oidcProvider == null) {
                 log.trace("Token has invalid issuer: {}", issuer);
