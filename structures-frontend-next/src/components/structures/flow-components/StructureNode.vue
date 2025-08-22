@@ -227,7 +227,7 @@ export default class StructureNode extends Vue {
         <!-- Editable Property Name -->
         <div class="w-2/3 font-medium text-sm truncate">
           <template v-if="editingNameIndex === index">
-            <!-- <InputText v-model="property.label"
+            <InputText v-model="property.label"
                        autofocus
                        class="!w-full !h-5 !p-0 !m-0 !shadow-none !border-0 focus:!ring-0"
                        :class="{
@@ -235,7 +235,7 @@ export default class StructureNode extends Vue {
                           '!border-red-500 !border': errors.name && editingNameIndex === index
               }"
                        @blur="finishEditingName(index)"
-                       @keyup.enter="finishEditingName(index)" /> -->
+                       @keyup.enter="finishEditingName(index)" />
           </template>
           <template v-else>
             <span class="cursor-pointer" @dblclick="startEditingName(index)">

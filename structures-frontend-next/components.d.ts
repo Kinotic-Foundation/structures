@@ -67,6 +67,7 @@ declare module 'vue' {
     Toast: typeof import('primevue/toast')['default']
     ToggleButton: typeof import('primevue/togglebutton')['default']
     Toolbar: typeof import('primevue/toolbar')['default']
+    UnionGroupNode: typeof import('./src/components/nodes/UnionGroupNode.vue')['default']
     UnionNode: typeof import('./src/components/nodes/UnionNode.vue')['default']
   }
 }
