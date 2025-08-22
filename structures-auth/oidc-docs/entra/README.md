@@ -43,13 +43,24 @@ VITE_MICROSOFT_REDIRECT_URI=http://localhost:5173/login
 
 **Backend Configuration:**
 ```yaml
-structures:
-  oidc-auth-verifier:
-    enabled: true
-    allowed-issuers:
-      - "https://sts.windows.net"
-    authorization-audiences:
-      - "00000003-0000-0000-c000-000000000000"  # Microsoft Graph API
+oidc-security-service:
+  enabled: true
+  debug: true
+  oidc-providers:
+    - provider: "microsoft"
+      display-name: "Microsoft Entra ID"
+      enabled: true
+      roles-claim-path: "roles"
+      domains:
+        - "your-domain.com"
+      audience: "00000003-0000-0000-c000-000000000000"  # Microsoft Graph API
+      client-id: "your-application-client-id"
+      authority: "https://login.microsoftonline.com/your-tenant-id/v2.0"
+      redirect-uri: "http://localhost:9091/login"
+      post-logout-redirect-uri: "http://localhost:9091"
+      silent-redirect-uri: "http://localhost:9091/login/silent-renew"
+      roles:
+        - "user"
 ```
 
 ### 2. Custom Audience Configuration
@@ -65,13 +76,24 @@ VITE_MICROSOFT_RESOURCE=your-application-client-id
 
 **Backend Configuration:**
 ```yaml
-structures:
-  oidc-auth-verifier:
-    enabled: true
-    allowed-issuers:
-      - "https://sts.windows.net"
-    authorization-audiences:
-      - "your-application-client-id"
+oidc-security-service:
+  enabled: true
+  debug: true
+  oidc-providers:
+    - provider: "microsoft"
+      display-name: "Microsoft Entra ID"
+      enabled: true
+      roles-claim-path: "roles"
+      domains:
+        - "your-domain.com"
+      audience: "your-application-client-id"
+      client-id: "your-application-client-id"
+      authority: "https://login.microsoftonline.com/your-tenant-id/v2.0"
+      redirect-uri: "http://localhost:9091/login"
+      post-logout-redirect-uri: "http://localhost:9091"
+      silent-redirect-uri: "http://localhost:9091/login/silent-renew"
+      roles:
+        - "user"
 ```
 
 ## Common Issues

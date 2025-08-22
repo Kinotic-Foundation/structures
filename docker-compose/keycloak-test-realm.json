@@ -71,6 +71,7 @@
   "dockerAuthenticationFlow": "docker auth",
   "firstBrokerLoginFlow": "first broker login",
   "attributes": {
+    "frontendUrl": "http://keycloak:8888/auth",
     "cibaBackchannelTokenDeliveryMode": "poll",
     "cibaExpiresIn": "120",
     "cibaAuthRequestedUserHint": "login_hint",
@@ -265,7 +266,7 @@
           "temporary": false
         }
       ],
-      "realmRoles": ["admin", "user", "offline_access"]
+      "realmRoles": ["admin", "user", "offline_access", "default-roles-test"]
     }
   ]
 }
