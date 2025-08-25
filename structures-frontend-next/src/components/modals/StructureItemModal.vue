@@ -325,41 +325,55 @@ export default class StructureItemModal extends Vue {
       (this.$refs.flow as any)?.fitView?.();
     });
   }
-
   applyAutoLayout(direction: "LR" | "TB" = "LR") {
-    const g = new dagre.graphlib.Graph({ multigraph: true });
+  const g = new dagre.graphlib.Graph({ multigraph: true });
 
-    g.setGraph({
-      rankdir: direction,
-      nodesep: direction === "LR" ? 200 : 600,
-      ranksep: direction === "LR" ? 600 : 200,
-      marginx: 20,
-      marginy: 40,
-    });
-    g.setDefaultEdgeLabel(() => ({}));
-    this.flowNodes.forEach((node) => {
-      const numFields =
-        node.data?.fields?.length || node.data?.variants?.length || 0;
-      const height = Math.max(100, 40 + numFields * 30);
-      const width = 220;
-      g.setNode(node.id, { width, height });
-    });
+  g.setGraph({
+    rankdir: direction,
+    nodesep: direction === "LR" ? 200 : 600,
+    ranksep: direction === "LR" ? 600 : 200,
+    marginx: 20,
+    marginy: 40,
+  });
 
-    this.flowEdges.forEach((edge) => {
-      g.setEdge(edge.source, edge.target);
-    });
+  g.setDefaultEdgeLabel(() => ({}));
+  this.flowNodes.forEach((node) => {
+    const numFields =
+      node.data?.fields?.length || node.data?.variants?.length || 0;
+    const height = Math.max(100, 40 + numFields * 30);
+    const width = 220;
+    g.setNode(node.id, { width, height });
+  });
+  this.flowEdges.forEach((edge) => {
+    g.setEdge(edge.source, edge.target);
+  });
+  dagre.layout(g);
+  const rowMap = new Map<number, number>();
+  let rowIndexCounter = 0;
 
-    dagre.layout(g);
+  this.flowNodes = this.flowNodes.map((node) => {
+    const pos = g.node(node.id);
+    if (!pos) return node;
+    const primaryAxis = direction === "TB" ? pos.y : pos.x;
+    const roundedAxis = Math.round(primaryAxis / 50) * 50;
+    if (!rowMap.has(roundedAxis)) {
+      rowMap.set(roundedAxis, rowIndexCounter++);
+    }
 
-    this.flowNodes = this.flowNodes.map((node) => {
-      const pos = g.node(node.id);
-      return {
-        ...node,
-        position: { x: pos.x, y: pos.y },
-        positionAbsolute: { x: pos.x, y: pos.y },
-      };
-    });
-  }
+    const rowIndex = rowMap.get(roundedAxis);
+
+    return {
+      ...node,
+      position: { x: pos.x, y: pos.y },
+      positionAbsolute: { x: pos.x, y: pos.y },
+      data: {
+        ...node.data,
+        rowIndex
+      },
+    };
+  });
+}
+
 }
 </script>
 

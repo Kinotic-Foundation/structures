@@ -2,10 +2,11 @@
   <div
     class="rounded-lg overflow-hidden bg-white text-xs min-w-[200px] border border-surface-100"
   >
-    <div>
-      <div class="p-3 bg-lime-200 font-semibold text-surface-900 flex items-center gap-2">
-        {{ data.label }}
-      </div>
+    <div
+      class="p-3 font-semibold text-surface-900 flex items-center gap-2"
+      :style="{ backgroundColor: colorSet.header }"
+    >
+      {{ data.label }}
     </div>
     <div
       v-for="(field, index) in data.fields"
@@ -13,7 +14,9 @@
       class="relative px-2 py-1 border-t border-surface-100 flex justify-between items-center"
     >
       <span class="font-normal text-xs text-surface-900">{{ field.name }}</span>
-      <span class="text-gray-500 text-xs font-bold bg-gray-200 ml-2 px-2 py-1 rounded-xl"> {{ field.type }}</span>
+      <span class="text-gray-500 text-xs font-bold bg-gray-200 ml-2 px-2 py-1 rounded-xl">
+        {{ field.type }}
+      </span>
       <Handle
         type="source"
         :position="Position.Right"
@@ -25,7 +28,20 @@
 </template>
 
 <script setup lang="ts">
-import { Handle, Position } from "@vue-flow/core";
+import { computed } from 'vue'
+import { Handle, Position } from "@vue-flow/core"
+import { rowColors } from '@/util/rowColors'
 
-defineProps<{ data: { label: string; fields: { name: string; type: string }[]; color: any } }>();
+const props = defineProps<{
+  data: {
+    label: string
+    fields: { name: string; type: string }[]
+    rowIndex?: number
+  }
+}>()
+
+const colorSet = computed(() => {
+  const index = props.data.rowIndex ?? 0
+  return rowColors[index % rowColors.length]
+})
 </script>
