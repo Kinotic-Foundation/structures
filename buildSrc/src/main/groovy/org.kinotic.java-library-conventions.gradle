@@ -1,10 +1,9 @@
 plugins {
     // Apply the common convention plugin for shared build configuration between library and application projects.
     id 'org.kinotic.java-common-conventions'
-
     id 'java-library'
     id 'maven-publish'
-    id 'signing'
+    id 'org.jreleaser'
 }
 
 dependencies {
@@ -13,12 +12,12 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-autoconfigure'
 }
 
-
 java {
     withJavadocJar()
     withSourcesJar()
 }
 
+// Stages files for use by JReleaser
 publishing {
     publications {
         mavenJava(MavenPublication) {
@@ -38,12 +37,12 @@ publishing {
             pom {
                 name = 'Structures Framework'
                 description = 'Framework for data storage and retrieval, supporting schema evolution!'
-                url = 'https://continuumframework.org'
+                url = 'https://structuresframework.org'
 
                 licenses {
                     license {
-                        name = 'The Apache License, Version 2.0'
-                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                        name = 'Elastic License 2.0'
+                        url = 'https://www.elastic.co/licensing/elastic-license'
                     }
                 }
                 developers {
@@ -60,24 +59,44 @@ publishing {
             }
         }
     }
+    // Here is where JReleaser will look for the staged files
     repositories {
         maven {
-            def releasesRepoUrl = 'https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/'
-            def snapshotsRepoUrl = 'https://s01.oss.sonatype.org/content/repositories/snapshots/'
-            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
-            credentials {
-                username = System.getenv('MAVEN_USERNAME')
-                password = System.getenv('MAVEN_PASSWORD')
-            }
+            url = layout.buildDirectory.dir('staging-deploy')
         }
     }
 }
 
-signing {
-    useGpgCmd()
-    sign publishing.publications.mavenJava
+jreleaser {
+    signing {
+        active = 'ALWAYS'
+        armored = true
+        verify = false
+    }
+    deploy {
+        maven {
+            mavenCentral {
+                'release-deploy' {
+                    active = 'RELEASE'
+                    url = 'https://central.sonatype.com/api/v1/publisher'
+                    applyMavenCentralRules = true
+                    stagingRepository('build/staging-deploy')
+                }
+            }
+            nexus2 {
+                'snapshot-deploy' {
+                    active = 'SNAPSHOT'
+                    snapshotUrl = 'https://central.sonatype.com/repository/maven-snapshots/'
+                    applyMavenCentralRules = true
+                    snapshotSupported = true
+                    closeRepository = true
+                    releaseRepository = true
+                    stagingRepository('build/staging-deploy')
+                }
+            }
+        }
+    }
 }
-
 
 javadoc {
     // suppress warnings
@@ -87,3 +106,4 @@ javadoc {
         options.addBooleanOption('html5', true)
     }
 }
+
