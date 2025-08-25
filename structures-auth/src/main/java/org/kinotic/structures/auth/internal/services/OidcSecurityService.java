@@ -82,7 +82,7 @@ public class OidcSecurityService implements SecurityService {
 
     private CompletableFuture<Participant> verifyJwtToken(String token) {
         return jwksService.getKeyFromToken(token)
-                .thenCompose(key -> validateTokenWithKey(token, key));
+            .thenCompose(key -> validateTokenWithKey(token, key));
     }
 
     private CompletableFuture<Participant> validateTokenWithKey(String token, Jwk<? extends Key> jwk) {
@@ -92,6 +92,7 @@ public class OidcSecurityService implements SecurityService {
             
             // Verify it's a PublicKey for JWT verification
             if (!(key instanceof PublicKey)) {
+                log.trace("Jwk does not contain a PublicKey instance");
                 return CompletableFuture.failedFuture(new RuntimeException("Jwk does not contain a PublicKey instance"));
             }
             
@@ -116,25 +117,28 @@ public class OidcSecurityService implements SecurityService {
                 }
             }
             if(email == null) {
-                if(email == null) {
-                    return CompletableFuture.failedFuture(new RuntimeException("No email found in claims"));
-                }
+                log.trace("Token has no email found in claims");
+                return CompletableFuture.failedFuture(new RuntimeException("No email found in claims"));
             }
 
             String issuer = claims.getIssuer();
+            log.trace("Token has issuer: {}", issuer);
             OidcProvider oidcProvider = isValidIssuer(issuer, email);
             if (oidcProvider == null) {
+                log.trace("Token has invalid issuer: {}", issuer);
                 return CompletableFuture.failedFuture(new RuntimeException("Invalid issuer: " + issuer));
             }
             
             // Validate audience
             Set<String> audiences = claims.getAudience();
             if (!isValidAudience(oidcProvider, audiences)) {
+                log.trace("Token has invalid audience: {}", audiences);
                 return CompletableFuture.failedFuture(new RuntimeException("Invalid audience: " + audiences));
             }
 
             // Validate expiration
             if (claims.getExpiration() != null && claims.getExpiration().before(java.util.Date.from(Instant.now()))) {
+                log.trace("Token has expired");
                 return CompletableFuture.failedFuture(new RuntimeException("Token has expired"));
             }
 

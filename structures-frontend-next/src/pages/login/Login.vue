@@ -1,7 +1,7 @@
 <template>
   <div class="flex w-full justify-center items-center h-screen max-w-[1440px] mx-auto">
     <!-- OIDC Callback Loading Overlay -->
-    <div v-if="oidcCallbackLoading" class="fixed inset-0 bg-white bg-opacity-90 flex items-center justify-center z-50">
+    <div v-if="isInitialized && state?.oidcCallbackLoading" class="fixed inset-0 bg-white bg-opacity-90 flex items-center justify-center z-50">
       <div class="text-center">
         <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
         <h2 class="text-xl font-semibold text-gray-800 mb-2">Validating Login...</h2>
@@ -16,10 +16,74 @@
 
         <img src="@/assets/login-page-logo.svg" class="w-[218px] h-[45px] mb-[53px]" />
 
-        <!-- Show login form only when not in OIDC callback -->
-        <div v-if="shouldShowLoginForm">
+        <!-- Show login form only when not in OIDC callback and initialized -->
+        <div v-if="isInitialized && shouldShowLoginForm">
+          <!-- OIDC Error Retry Option -->
+          <div v-if="state?.showRetryOption" class="w-full mb-6 p-4 border border-red-200 bg-red-50 rounded-lg">
+            <div class="text-center">
+              <div class="flex items-center justify-center mb-3">
+                <svg class="w-5 h-5 text-red-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                </svg>
+                <p class="text-red-700 font-medium">OIDC login encountered an error</p>
+              </div>
+              <p class="text-red-600 mb-4 text-sm">You can try again or use an alternative login method:</p>
+              
+              <!-- Error Details Toggle -->
+              <div class="mb-4">
+                <button 
+                  @click="toggleErrorDetails"
+                  class="text-red-600 hover:text-red-800 text-sm underline flex items-center mx-auto"
+                >
+                  <span>{{ state?.showErrorDetails ? 'Hide' : 'Show' }} error details</span>
+                  <svg 
+                    class="w-4 h-4 ml-1 transition-transform" 
+                    :class="{ 'rotate-180': state?.showErrorDetails }"
+                    fill="currentColor" 
+                    viewBox="0 0 20 20"
+                  >
+                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                  </svg>
+                </button>
+                
+                <!-- Error Details -->
+                <div v-if="state?.showErrorDetails && currentOidcError" class="mt-3 p-3 bg-red-100 border border-red-200 rounded text-left">
+                  <div class="text-xs text-red-700 font-mono">
+                    <div><strong>Error:</strong> {{ currentOidcError.error }}</div>
+                    <div v-if="currentOidcError.description" class="mt-1">
+                      <strong>Description:</strong> {{ currentOidcError.description }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="flex flex-wrap gap-2 justify-center">
+                <Button
+                  label="Try OIDC Again"
+                  class="rounded-[10px] max-h-[40px] !py-2 !px-4 !text-sm bg-blue-600 hover:bg-blue-700"
+                  @click="retryOidcLogin"
+                />
+                <Button
+                  label="Use Password Instead"
+                  class="rounded-[10px] max-h-[40px] !py-2 !px-4 !text-sm bg-gray-600 hover:bg-gray-700"
+                  @click="usePasswordInstead"
+                />
+                <Button
+                  label="Back to Email"
+                  class="rounded-[10px] max-h-[40px] !py-2 !px-4 !text-sm bg-gray-500 hover:bg-gray-600"
+                  @click="goBackToEmail"
+                />
+                <Button
+                  label="Clear Error"
+                  class="rounded-[10px] max-h-[40px] !py-2 !px-4 !text-sm bg-red-600 hover:bg-blue-700"
+                  @click="clearErrorAndReset"
+                />
+              </div>
+            </div>
+          </div>
+
           <!-- Step 1: Username/Email Input -->
-          <div v-if="!emailEntered && configLoaded" class="w-full">
+          <div v-if="!state?.emailEntered" class="w-full">
             <h2 class="text-xl font-semibold text-gray-800 mb-6 text-center">Enter your email address</h2>
             
             <IconField class="!mb-6 !flex !items-center !relative !w-full">
@@ -39,24 +103,24 @@
             <Button
               label="Continue"
               class="rounded-[10px] max-h-[56px] !py-[18px] !w-full !text-base"
-              :loading="loading"
+              :loading="state?.loading || false"
               @click="handleEmailSubmit"
             />
           </div>
 
           <!-- Step 2: Provider Selection or Password Input -->
-          <div v-if="emailEntered && configLoaded" class="w-full">
+          <div v-if="state?.emailEntered" class="w-full">
             <!-- Show provider selection if domain matches -->
-            <div v-if="matchedProvider && !showPassword" class="w-full">
+            <div v-if="state?.matchedProvider && !state?.showPassword" class="w-full">
               <h2 class="text-xl font-semibold text-gray-800 mb-6 text-center">
-                Continue with {{ providerDisplayName || matchedProvider }}
+                Continue with {{ state?.providerDisplayName || state?.matchedProvider }}
               </h2>
               
               <div class="flex border border-[#B8BCBD] w-full p-4 mb-6 rounded-[5px] text-black/50 cursor-pointer hover:bg-gray-50 transition-colors"
-                   :class="{ 'opacity-50 cursor-not-allowed': loading }"
-                   @click="handleOidcLogin(matchedProvider)">
-                <img :src="getProviderIcon(matchedProvider)" class="mr-6 w-6 h-6" />
-                <span v-if="!loading">Continue with {{ getProviderDisplayName(matchedProvider) }}</span>
+                   :class="{ 'opacity-50 cursor-not-allowed': state?.loading }"
+                   @click="handleOidcLogin(state?.matchedProvider)">
+                <img :src="getProviderIcon(state?.matchedProvider)" class="mr-6 w-6 h-6" />
+                <span v-if="!state?.loading">Continue with {{ state?.providerDisplayName || state?.matchedProvider }}</span>
                 <span v-else class="flex items-center">
                   <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
                   Connecting...
@@ -72,18 +136,18 @@
               </div>
             </div>
 
-            <!-- Show password input if no provider match or user chooses password -->
-            <div v-if="(!matchedProvider || showPassword) && basicAuthEnabled" class="w-full">
+            <!-- Show password input ONLY when explicitly falling back to basic auth (no OIDC providers or no match found) -->
+            <div v-if="state?.showPassword" class="w-full">
               <h2 class="text-xl font-semibold text-gray-800 mb-6 text-center">
-                {{ matchedProvider ? 'Sign in with password' : 'Enter your password' }}
+                Enter your password
               </h2>
               
               <div class="mb-4">
-                <div class="text-sm text-gray-600 mb-2">Email: {{ login }}</div>
+                <div class="text-sm text-gray-600 mb-1">Username / Email: {{ login }}</div>
                 <button 
                   @click="resetToEmail" 
                   class="text-[#0568FD] hover:underline cursor-pointer text-sm">
-                  Change email
+                  Change 
                 </button>
               </div>
 
@@ -107,14 +171,14 @@
               <Button
                 label="Sign In"
                 class="rounded-[10px] max-h-[56px] !py-[18px] !w-full !text-base"
-                :loading="loading"
+                :loading="state?.loading || false"
                 @click="handleLogin"
               />
 
             </div>
 
-            <!-- Show error if no provider match and basic auth disabled -->
-            <div v-if="!matchedProvider && !basicAuthEnabled" class="w-full text-center">
+            <!-- Show error if no authentication method available -->
+            <div v-if="!state?.matchedProvider && !state?.showPassword && state?.emailEntered" class="w-full text-center">
               <div class="text-red-600 mb-4">
                 No authentication method found for this email domain.
               </div>
@@ -126,12 +190,18 @@
             </div>
           </div>
         </div>
+
+        <!-- Loading state while initializing -->
+        <div v-if="!isInitialized" class="w-full text-center">
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p class="text-gray-600">Initializing...</p>
+        </div>
       </div>
       <div class="flex gap-2">
           <a href="#" class="text-[#0568FD] border-b-1">
             Terms of use
           </a>
-          <span clas>
+          <span class="text-gray-400">
             |
           </span>
           <span class="text-[#0568FD] border-b-1">
@@ -152,7 +222,7 @@ import Button from 'primevue/button'
 import Toast from 'primevue/toast'
 import { useToast } from 'primevue/usetoast'
 import { createUserManager } from './OidcConfiguration';
-import { configService } from '@/util/config';
+import { AuthenticationService } from '@/util/AuthenticationService';
 
 import { type IUserState } from "@/states/IUserState"
 import { CONTINUUM_UI } from "@/IContinuumUI"
@@ -167,128 +237,95 @@ import { StructuresStates } from "@/states/index"
   }
 })
 export default class Login extends Vue {
-  login: string = ''
-  password: string = ''
-  loading: boolean = false
-  oidcCallbackLoading: boolean = false
-  valid: boolean = true
-  configLoaded: boolean = false
-  basicAuthEnabled: boolean = false
-  enabledProviders: Set<string> = new Set()
-  emailEntered: boolean = false
-  showPassword: boolean = false
-  matchedProvider: string | null = null
-  providerDisplayName: string = ''
+  // Use the authentication service
+  private auth = new AuthenticationService();
+  
+  // Form data
+  get login() { return this.auth.login; }
+  set login(value: string) { this.auth.login = value; }
+  
+  get password() { return this.auth.password; }
+  set password(value: string) { this.auth.password = value; }
+
+  // State from service
+  get state() { return this.auth.state; }
+  get shouldShowLoginForm() { return this.auth.shouldShowLoginForm; }
+  get isLoginValid() { return this.auth.isLoginValid; }
+  get isPasswordValid() { return this.auth.isPasswordValid; }
+  get currentOidcError() { return this.auth.currentOidcError; }
+
+  // Computed properties for template
+  get showPassword() { return this.state.showPassword; }
+  set showPassword(value: boolean) { 
+    this.auth.updateState({ showPassword: value }); 
+  }
+
+  // Always show the form immediately - no initialization wait
+  get isInitialized() { 
+    return true; // Always ready to show email form
+  }
+
+  // These will be loaded when needed
+  private _isConfigLoaded: boolean = false;
+  private _isBasicAuthEnabled: boolean = true; // Default assumption - assume basic auth is available
+
+  get isConfigLoaded() { return this._isConfigLoaded; }
+  get isBasicAuthEnabled() { return this._isBasicAuthEnabled; }
+
+  // Debug method to check current state
+  get debugInfo() {
+    return {
+      emailEntered: this.state?.emailEntered,
+      showPassword: this.state?.showPassword,
+      matchedProvider: this.state?.matchedProvider,
+      isBasicAuthEnabled: this._isBasicAuthEnabled,
+      isConfigLoaded: this._isConfigLoaded
+    };
+  }
 
   toast = useToast()
-
   private userState: IUserState = StructuresStates.getUserState()
 
-  private loginRules = [(v: string) => !!v || 'Login required']
-  private passwordRules = [(v: string) => !!v || 'Password required']
-
   async mounted() {
-    await this.loadConfiguration();
-
-        // Focus the email input initially
+    // Focus the email input immediately - no waiting for initialization
     this.$nextTick(() => {
       this.focusEmailInput();
     });
     
+    // Load basic config in background (non-blocking)
+    this.loadBasicConfig();
+    
     // Check if we're returning from an OIDC login with an error
     if (this.$route.query.error) {
-      this.loading = false;
-      console.error('OIDC login error detected:', this.$route.query);
-      
-      const error = this.$route.query.error as string;
-      const errorDescription = this.$route.query.error_description as string;
-      
-      // Decode URL-encoded error description
-      const decodedErrorDescription = errorDescription ? decodeURIComponent(errorDescription) : '';
-      
-      console.error('OIDC Error:', error);
-      console.error('OIDC Error Description:', decodedErrorDescription);
-      
-      // Display user-friendly error message
-      let userMessage = 'OIDC login failed';
-      
-      if (error === 'invalid_request') {
-        if (decodedErrorDescription.includes('AADSTS50194')) {
-          userMessage = 'Microsoft Azure configuration error: Application is not configured as multi-tenant. Please contact your administrator.';
-        } else if (decodedErrorDescription.includes('redirect_uri_mismatch')) {
-          userMessage = 'OIDC configuration error: Redirect URI mismatch. Please contact your administrator.';
-        } else {
-          userMessage = `OIDC configuration error: ${decodedErrorDescription}`;
-        }
-      } else if (error === 'access_denied') {
-        userMessage = 'Access denied by OIDC provider. Please try again or contact your administrator.';
-      } else if (error === 'unauthorized_client') {
-        userMessage = 'OIDC client not authorized. Please contact your administrator.';
-      } else if (error === 'unsupported_response_type') {
-        userMessage = 'OIDC response type not supported. Please contact your administrator.';
-      } else if (error === 'server_error') {
-        userMessage = 'OIDC server error. Please try again later.';
-      } else if (error === 'temporarily_unavailable') {
-        userMessage = 'OIDC service temporarily unavailable. Please try again later.';
-      } else if (decodedErrorDescription) {
-        userMessage = `OIDC login failed: ${decodedErrorDescription}`;
-      }
-      
-      this.displayAlert(userMessage);
+      this.handleOidcError();
       return;
     }
     
     // Check if we're returning from an OIDC login
     if (this.$route.query.code && this.$route.query.state) {
-      this.oidcCallbackLoading = true; // Show loading overlay
-      try {
-        
-        // First, we need to determine which provider was used
-        // We'll try to find the provider by checking localStorage for stored state
-        let provider: string = 'keycloak'; // default fallback
-        let referer: string | null = null;
-        
-        // Check localStorage for stored state to determine provider
-        const stateKey = `oidc.${this.$route.query.state}`;
-        const storedState = localStorage.getItem(stateKey);
-        
-        if (storedState) {
-          try {
-            // Parse the stored state to get our custom data
-            const sessionState = JSON.parse(storedState);
-            const stateObj = JSON.parse(atob(sessionState.data));
-            provider = stateObj.provider || 'keycloak';
-            referer = stateObj.referer || null;
-          } catch (parseError) {
-            console.warn(`Failed to parse stored state for ${storedState}:`, parseError);
-          }
-        }
-        
-        const userManager = await createUserManager(provider);
-        
-        // Complete the OIDC login
-        const user = await userManager.signinRedirectCallback();
-        
-        // The library automatically validates the state parameter
-        // If validation fails, it throws an error before reaching this point
-        
-        // Store the user info in your state management
-        await this.userState.handleOidcLogin(user);
-        
-        // Redirect to the original destination or default
-        const redirectPath = referer || '/applications';
-        await CONTINUUM_UI.navigate(redirectPath);
-      } catch (error: unknown) {
-        console.error('OIDC callback error:', error);
-        if (error instanceof Error) {
-          this.displayAlert(`OIDC callback failed: ${error.message}`);
-        } else {
-          this.displayAlert('OIDC callback failed');
-        }
-      } finally {
-        this.oidcCallbackLoading = false; // Hide loading overlay
-        this.loading = false;
-      }
+      this.handleOidcCallback();
+    }
+  }
+
+  private async loadBasicConfig() {
+    console.log('Loading basic config...');
+    // Load basic configuration in the background without blocking UI
+    try {
+      this._isBasicAuthEnabled = await this.auth.checkBasicAuthEnabled();
+      this._isConfigLoaded = true;
+      console.log('Basic config loaded successfully:', { 
+        isBasicAuthEnabled: this._isBasicAuthEnabled, 
+        isConfigLoaded: this._isConfigLoaded 
+      });
+    } catch (error) {
+      console.error('Failed to load basic config:', error);
+      // Keep defaults
+      this._isBasicAuthEnabled = true;
+      this._isConfigLoaded = false;
+      console.log('Using default config:', { 
+        isBasicAuthEnabled: this._isBasicAuthEnabled, 
+        isConfigLoaded: this._isConfigLoaded 
+      });
     }
   }
 
@@ -301,7 +338,6 @@ export default class Login extends Vue {
 
   private focusPasswordInput() {
     if (this.$refs.passwordInput) {
-      // For PrimeVue Password component, we need to focus the inner input
       const passwordElement = this.$refs.passwordInput as any;
       const innerInput = passwordElement.$el?.querySelector('input[type="password"]') ||
                         passwordElement.$el?.querySelector('input');
@@ -311,87 +347,87 @@ export default class Login extends Vue {
     }
   }
 
-  private async loadConfiguration() {
-    try {
-      
-      // Load basic auth configuration
-      this.basicAuthEnabled = await configService.isBasicAuthEnabled();
-      
-      // Load OIDC provider configurations dynamically
-      const enabledProviders = await configService.getEnabledOidcProviders();
-      
-      for (const provider of enabledProviders) {
-        this.enabledProviders.add(provider.provider);
-      }
-      
-      this.configLoaded = true;
-    } catch (error) {
-      console.error('Failed to load configuration:', error);
-      // Set defaults if configuration loading fails
-      this.basicAuthEnabled = true;
-      this.configLoaded = true;
-    }
-  }
-
-  // Check if basic username/password authentication is enabled
-  // async isBasicAuthEnabled(): Promise<boolean> {
-  //   return await configService.isBasicAuthEnabled();
-  // }
-
-  get loginValid(): boolean {
-    return this.loginRules.every(rule => rule(this.login) === true)
-  }
-
-  get passwordValid(): boolean {
-    return this.passwordRules.every(rule => rule(this.password) === true)
-  }
-
   get referer(): string | null {
     const r = this.$route.query.referer;
     return typeof r === 'string' ? r : null;
   }
 
-  // Check if a specific provider is enabled
-  async isProviderEnabled(providerName: string): Promise<boolean> {
-    try {
-      const provider = await configService.getOidcProviderByName(providerName);
-      return provider?.enabled ?? false;
-    } catch (error) {
-      console.warn(`Provider ${providerName} not found in configuration`);
-      return false;
+  private async handleOidcError() {
+    this.auth.setLoading(false);
+    this.auth.setOidcCallbackLoading(false);
+    
+    const error = this.$route.query.error as string;
+    const errorDescription = this.$route.query.error_description as string;
+    
+    const { userMessage, isRetryable, error: oidcError } = await this.auth.parseOidcError(error, errorDescription);
+    
+    this.displayAlert(userMessage);
+    
+    if (isRetryable) {
+      this.auth.showRetryOption(oidcError);
+      // Keep current email and provider info for retry
+      this.auth.updateState({ 
+        emailEntered: true, 
+        showPassword: false 
+      });
+    } else {
+      // For non-retryable errors, reset to email input
+      this.auth.resetToEmail();
     }
   }
 
-  // Check if any OIDC providers are enabled
-  async hasEnabledOidcProviders(): Promise<boolean> {
-    const enabledProviders = await configService.getEnabledOidcProviders();
-    return enabledProviders.length > 0;
-  }
-
-  // Check if we're in an OIDC callback (have code and state parameters)
-  get isOidcCallback(): boolean {
-    return !!(this.$route.query.code && this.$route.query.state);
-  }
-
-  // Check if we should show the login form (not during OIDC callback)
-  get shouldShowLoginForm(): boolean {
-    return !this.isOidcCallback;
+  private async handleOidcCallback() {
+    this.auth.setOidcCallbackLoading(true);
+    
+    try {
+      const state = this.$route.query.state as string;
+      const stateInfo = await this.auth.parseOidcState(state);
+      
+      if (!stateInfo) {
+        throw new Error('Invalid OIDC state');
+      }
+      
+      const { referer, provider } = stateInfo;
+      const userManager = await createUserManager(provider);
+      
+      // Complete the OIDC login
+      const user = await userManager.signinRedirectCallback();
+      
+      // Store the user info in your state management
+      await this.userState.handleOidcLogin(user);
+      
+      // Redirect to the original destination or default
+      const redirectPath = referer || '/applications';
+      await CONTINUUM_UI.navigate(redirectPath);
+    } catch (error: unknown) {
+      console.error('OIDC callback error:', error);
+      if (error instanceof Error) {
+        this.displayAlert(`OIDC callback failed: ${error.message}`);
+      } else {
+        this.displayAlert('OIDC callback failed');
+      }
+      
+      // Reset form to email input after OIDC callback error
+      this.auth.resetToEmail();
+    } finally {
+      this.auth.setOidcCallbackLoading(false);
+      this.auth.setLoading(false);
+    }
   }
 
   async handleLogin() {
-    if (!this.loginValid || !this.passwordValid) {
+    if (!this.isLoginValid || !this.isPasswordValid) {
       this.displayAlert('Login and Password are required');
       return;
     }
 
-    this.loading = true;
+    this.auth.setLoading(true);
     try {
       await this.userState.authenticate(this.login, this.password);
 
       if (this.referer) {
         await CONTINUUM_UI.navigate(this.referer);
       } else {
-        // Use the redirected path if available, otherwise go to applications
         const redirectPath = this.$route.redirectedFrom?.fullPath;
         if (redirectPath && redirectPath !== "/") {
           await CONTINUUM_UI.navigate(redirectPath);
@@ -408,8 +444,11 @@ export default class Login extends Vue {
       } else {
         this.displayAlert('Unknown login error')
       }
+      
+      // Reset form to email input after authentication error
+      this.auth.resetToEmail();
     } finally {
-      this.loading = false;
+      this.auth.setLoading(false);
     }
   }
 
@@ -427,188 +466,173 @@ export default class Login extends Vue {
   }
 
   private async handleEmailSubmit() {
-    if (!this.loginValid) {
+    if (!this.isLoginValid) {
       this.displayAlert('Please enter a valid email address');
       return;
     }
 
-    this.loading = true;
+    this.auth.setLoading(true);
     try {
-      // Check if OIDC should be used based on the new workflow
-      const shouldUseOidc = await configService.isOidcEnabled();
+      const authMethod = await this.auth.determineAuthMethod(this.login);
+      console.log('Auth method determined:', authMethod); // Debug log
       
-      if (shouldUseOidc) {
-        // Try to find a provider that matches the email domain
-        const matchedProvider = await this.findProviderByDomain(this.login);
-        
-        if (matchedProvider) {
-          console.log('Domain matches an OIDC provider, redirecting immediately');
-          // Domain matches an OIDC provider, redirect immediately
-          this.loading = false;
-          await this.handleOidcLogin(matchedProvider);
-          return;
-        } else {
-          // No provider matches the domain, show password input for basic auth fallback
-          console.log('No OIDC provider matches email domain, falling back to basic auth');
-          this.emailEntered = true;
-          this.showPassword = true;
-          this.loading = false;
-          // Focus password input when it becomes visible
-          this.$nextTick(() => {
-            this.focusPasswordInput();
-          });
-          return;
-        }
+      if (authMethod.shouldUseOidc && authMethod.matchedProvider) {
+        // Automatically redirect to OIDC login when provider is found
+        console.log('OIDC provider found, automatically redirecting to:', authMethod.matchedProvider);
+        console.log('About to call handleOidcLogin...');
+        // Don't show provider selection UI - just redirect directly
+        await this.handleOidcLogin(authMethod.matchedProvider);
+        console.log('handleOidcLogin completed, returning early');
+        return; // Exit early to prevent any further UI updates
+      } else if (authMethod.fallbackToBasicAuth) {
+        // Only show password if explicitly marked for fallback (no OIDC providers or no match found)
+        console.log('Falling back to basic auth - no OIDC provider found');
+        this.auth.resetToPassword(null, '');
       } else {
-        // OIDC is not enabled or no providers configured, use basic auth
-        console.log('OIDC not enabled or no providers configured, using basic auth');
-        this.emailEntered = true;
-        this.showPassword = true;
-        this.loading = false;
-        // Focus password input when it becomes visible
-        this.$nextTick(() => {
-            this.focusPasswordInput();
-          });
-        return;
+        // OIDC is enabled but something went wrong - reset form and show error
+        console.log('OIDC enabled but no provider found - resetting form');
+        this.auth.resetToEmail();
+        this.displayAlert('Unable to determine authentication method. Please try again or contact support.');
       }
     } catch (error) {
       console.error('Error determining authentication method:', error);
-      // Fallback to basic auth on error
-      this.emailEntered = true;
-      this.showPassword = true;
-      this.loading = false;
+      // OIDC failed - reset form and show error, don't fallback to password
+      console.log('OIDC error occurred - resetting form and showing error');
+      this.auth.resetToEmail();
+      this.displayAlert('Authentication service error. Please try again or contact support.');
+    } finally {
+      this.auth.setLoading(false);
+      
       // Focus password input when it becomes visible
-      this.$nextTick(() => {
-        this.focusPasswordInput();
-      });
-    }
-  }
-
-  private async findProviderByDomain(domain: string): Promise<string | null> {    
-    // Check if any provider has this domain in their domains array
-    try {
-      const provider = await configService.findProviderByEmailDomain(domain);
-      return provider?.provider || null;
-    } catch (error) {
-      console.warn(`Failed to find OIDC config`, error);
-    }
-    
-    return null;
-  }
-
-  private async getProviderDisplayName(provider: string): Promise<string> {
-    try {
-      const providerConfig = await configService.getOidcProviderByName(provider);
-      return providerConfig?.displayName || provider;
-    } catch (error) {
-      console.warn(`Failed to get display name for provider ${provider}:`, error);
-      return provider;
+      if (this.state.showPassword) {
+        this.$nextTick(() => {
+          this.focusPasswordInput();
+        });
+      }
     }
   }
 
   private getProviderIcon(provider: string): string {
-    const iconMap: Record<string, string> = {
-      okta: '@/assets/okta-icon.svg',
-      keycloak: '@/assets/keycloak-icon.svg',
-      google: '@/assets/google-icon.svg',
-      microsoft: '@/assets/microsoft_online-icon.svg',
-      microsoftSocial: '@/assets/microsoft_online-icon.svg',
-      github: '@/assets/github-icon.svg',
-      apple: '@/assets/apple-logo.svg'
-    };
-    return iconMap[provider] || '@/assets/input-hide.svg';
+    return this.auth.getProviderIcon(provider);
   }
 
   private resetToEmail() {
-    this.emailEntered = false;
-    this.showPassword = false;
-    this.matchedProvider = null;
-    this.providerDisplayName = '';
-    this.password = '';
-        
-    // Focus email input when resetting
+    this.auth.resetToEmail();
     this.$nextTick(() => {
       this.focusEmailInput();
     });
   }
 
-  private async handleOidcLogin(provider: string) {
-    // Prevent multiple clicks
-    if (this.loading) {
-      return;
+  private retryOidcLogin() {
+    this.auth.clearRetryOption();
+    this.clearUrlErrorParams();
+    
+    if (this.state.matchedProvider && this.login) {
+      this.handleOidcLogin(this.state.matchedProvider);
+    } else {
+      this.auth.resetToEmail();
     }
+  }
 
-    this.loading = true;
+  private usePasswordInstead() {
+    this.auth.clearRetryOption();
+    // Explicitly show password input when user chooses to use password instead of OIDC
+    this.auth.updateState({
+      emailEntered: true,
+      showPassword: true,
+      matchedProvider: null,
+      providerDisplayName: '',
+      showRetryOption: false,
+      showErrorDetails: false
+    });
+    this.clearUrlErrorParams();
+    
+    this.$nextTick(() => {
+      this.focusPasswordInput();
+    });
+  }
+
+  private goBackToEmail() {
+    this.auth.resetToEmail();
+    this.clearUrlErrorParams();
+    
+    this.$nextTick(() => {
+      this.focusEmailInput();
+    });
+  }
+
+  private clearErrorAndReset() {
+    this.auth.resetAfterError();
+    this.clearUrlErrorParams();
+    
+    this.$nextTick(() => {
+      this.focusEmailInput();
+    });
+  }
+
+  private toggleErrorDetails() {
+    this.auth.toggleErrorDetails();
+  }
+
+  private clearUrlErrorParams() {
+    if (this.$route.query.error || this.$route.query.error_description) {
+      const newQuery = { ...this.$route.query };
+      delete newQuery.error;
+      delete newQuery.error_description;
+      this.$router.replace({ query: newQuery });
+    }
+  }
+
+  private async handleOidcLogin(provider: string) {
+    console.log('handleOidcLogin called with provider:', provider);
+    console.log('Current loading state:', this.state.loading);
+    
+    // Don't check loading state here since we're already in a loading context from handleEmailSubmit
+    // if (this.state.loading) {
+    //   console.log('Loading is true, returning early');
+    //   return;
+    // }
+
+    console.log('Starting OIDC flow (loading already set)...');
+    
     try {
-      
-      // Validate provider configuration
-      const providerConfig = await configService.getOidcProviderByName(provider);
-      if (!providerConfig?.enabled) {
-        throw new Error(`Provider ${provider} is not enabled`);
-      }
-      
-      if (!providerConfig.clientId) {
-        throw new Error(`Client ID not configured for ${provider}`);
-      }
-      
-      if (!providerConfig.authority) {
-        throw new Error(`Authority URL not configured for ${provider}`);
-      }
-      
-      console.log('Provider config validated:', {
-        provider: provider,
-        enabled: providerConfig.enabled,
-        clientId: providerConfig.clientId,
-        authority: providerConfig.authority,
-        redirectUri: providerConfig.redirectUri
-      });
-      
-      // Create UserManager for the provider
+      console.log('Creating user manager for provider:', provider);
       const userManager = await createUserManager(provider);
-      
-      console.log('UserManager settings:', {
-        authority: userManager.settings.authority,
-        client_id: userManager.settings.client_id,
-        redirect_uri: userManager.settings.redirect_uri,
-        response_type: userManager.settings.response_type,
-        scope: userManager.settings.scope
-      });
+      console.log('User manager created successfully');
       
       // Create state object with provider and referer information
-      const stateObj = {
-        referer: this.referer,
-        provider: provider
-      };
+      console.log('Creating OIDC state...');
+      const state = await this.auth.createOidcState(this.referer, provider);
+      console.log('OIDC state created:', state);
       
-      // Encode state object as base64
-      const state = btoa(JSON.stringify(stateObj));
       // Start OIDC login with login_hint to pre-fill email
       const signinOptions: any = { state };
       
       // Add login_hint if we have an email to pre-fill
       if (this.login) {
         signinOptions.login_hint = this.login;
+        console.log('Added login_hint:', this.login);
         
         // Some providers also support domain_hint for better UX
         const emailDomain = this.login.split('@')[1];
         if (emailDomain) {
           signinOptions.domain_hint = emailDomain;
+          console.log('Added domain_hint:', emailDomain);
         }
       }
       
+      console.log('Calling signinRedirect with options:', signinOptions);
       await userManager.signinRedirect(signinOptions);
+      console.log('signinRedirect completed successfully');
       
     } catch (error) {
       console.error('OIDC login failed:', error);
-      console.error('Error details:', {
-        name: error instanceof Error ? error.name : 'Unknown',
-        message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      });
       this.displayAlert(`OIDC login failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      this.loading = false;
+      
+      // Reset form state to allow user to try again
+      this.auth.resetToEmail();
     }
+    // Note: Loading state is managed by the calling handleEmailSubmit method
   }
-
 }
 </script>

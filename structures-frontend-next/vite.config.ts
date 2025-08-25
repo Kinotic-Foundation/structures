@@ -21,5 +21,22 @@ export default defineConfig(
                 "@": path.resolve(__dirname, "./src"),
             }
         },
+        server: {
+            port: 5173,
+            host: true,
+            open: false
+        },
+        build: {
+            sourcemap: true,
+            rollupOptions: {
+                output: {
+                    sourcemapExcludeSources: false
+                }
+            }
+        },
+        define: {
+            __VUE_OPTIONS_API__: true,
+            __VUE_PROD_DEVTOOLS__: false
+        }
     }
 )

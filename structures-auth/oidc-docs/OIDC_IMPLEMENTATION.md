@@ -118,15 +118,24 @@ get hasEnabledOidcProviders(): boolean {
 Add the following configuration to your `application.yml`:
 
 ```yaml
-structures:
-  oidc-auth-verifier:
-    enabled: true
-    allowed-issuers:
-      - "https://your-oidc-provider.com"
-      - "https://keycloak.your-domain.com/auth/realms/your-realm"
-    authorization-audiences:
-      - "your-application-client-id"
-      - "your-api-audience"
+oidc-security-service:
+  enabled: true
+  debug: true
+  oidc-providers:
+    - provider: "your-provider-name"
+      display-name: "Your Provider"
+      enabled: true
+      roles-claim-path: "realm_access.roles"
+      domains:
+        - "your-domain.com"
+      audience: "your-application-client-id"
+      client-id: "your-application-client-id"
+      authority: "https://your-oidc-provider.com"
+      redirect-uri: "http://localhost:9091/login"
+      post-logout-redirect-uri: "http://localhost:9091"
+      silent-redirect-uri: "http://localhost:9091/login/silent-renew"
+      roles:
+        - "user"
 ```
 
 ### Example Configurations
@@ -135,13 +144,24 @@ structures:
 **⚠️ IMPORTANT**: Okta access tokens MUST include an email claim. See [Okta Configuration Guide](./okta.md) for detailed setup instructions.
 
 ```yaml
-structures:
-  oidc-auth-verifier:
-    enabled: true
-    allowed-issuers:
-      - "https://dev-39125344.okta.com/oauth2/default"
-    authorization-audiences:
-      - "0oaowrlsm5Ua1vWD85d7"
+oidc-security-service:
+  enabled: true
+  debug: true
+  oidc-providers:
+    - provider: "okta"
+      display-name: "Okta"
+      enabled: true
+      roles-claim-path: "realm_access.roles"
+      domains:
+        - "your-domain.com"
+      audience: "0oaowrlsm5Ua1vWD85d7"
+      client-id: "0oaowrlsm5Ua1vWD85d7"
+      authority: "https://dev-39125344.okta.com/oauth2/default"
+      redirect-uri: "http://localhost:9091/login"
+      post-logout-redirect-uri: "http://localhost:9091"
+      silent-redirect-uri: "http://localhost:9091/login/silent-renew"
+      roles:
+        - "user"
 ```
 
 **Frontend Configuration (structures-frontend-next):**
@@ -175,13 +195,24 @@ okta: {
 
 #### Keycloak (Tested and Verified)
 ```yaml
-structures:
-  oidc-auth-verifier:
-    enabled: true
-    allowed-issuers:
-      - "http://localhost:8888/auth/realms/master"
-    authorization-audiences:
-      - "structures-client"
+oidc-security-service:
+  enabled: true
+  debug: true
+  oidc-providers:
+    - provider: "keycloak"
+      display-name: "Keycloak"
+      enabled: true
+      roles-claim-path: "realm_access.roles"
+      domains:
+        - "example.com"
+      audience: "structures-client"
+      client-id: "structures-client"
+      authority: "http://localhost:8888/auth/realms/test"
+      redirect-uri: "http://localhost:9091/login"
+      post-logout-redirect-uri: "http://localhost:9091"
+      silent-redirect-uri: "http://localhost:9091/login/silent-renew"
+      roles:
+        - "admin"
 ```
 
 **Frontend Configuration (structures-frontend-next):**
@@ -190,7 +221,7 @@ structures:
 keycloak: {
   client_id: 'structures-client',
   client_secret: '',
-  authority: 'http://localhost:8888/auth/realms/master',
+  authority: 'http://localhost:8888/auth/realms/test',
   redirect_uri: 'http://localhost:5173/login',
   post_logout_redirect_uri: 'http://localhost:5173',
   silent_redirect_uri: 'http://localhost:5173/login/silent-renew',
@@ -215,24 +246,46 @@ docker wait keycloak-setup
 
 #### Auth0
 ```yaml
-structures:
-  oidc-auth-verifier:
-    enabled: true
-    allowed-issuers:
-      - "https://your-tenant.auth0.com/"
-    authorization-audiences:
-      - "https://your-api-identifier"
+oidc-security-service:
+  enabled: true
+  debug: true
+  oidc-providers:
+    - provider: "auth0"
+      display-name: "Auth0"
+      enabled: true
+      roles-claim-path: "https://your-namespace/roles"
+      domains:
+        - "your-domain.com"
+      audience: "https://your-api-identifier"
+      client-id: "your-client-id"
+      authority: "https://your-tenant.auth0.com/"
+      redirect-uri: "http://localhost:9091/login"
+      post-logout-redirect-uri: "http://localhost:9091"
+      silent-redirect-uri: "http://localhost:9091/login/silent-renew"
+      roles:
+        - "user"
 ```
 
 #### Azure AD
 ```yaml
-structures:
-  oidc-auth-verifier:
-    enabled: true
-    allowed-issuers:
-      - "https://login.microsoftonline.com/your-tenant-id/v2.0"
-    authorization-audiences:
-      - "your-application-client-id"
+oidc-security-service:
+  enabled: true
+  debug: true
+  oidc-providers:
+    - provider: "azure"
+      display-name: "Azure AD"
+      enabled: true
+      roles-claim-path: "roles"
+      domains:
+        - "your-domain.com"
+      audience: "your-application-client-id"
+      client-id: "your-application-client-id"
+      authority: "https://login.microsoftonline.com/your-tenant-id/v2.0"
+      redirect-uri: "http://localhost:9091/login"
+      post-logout-redirect-uri: "http://localhost:9091"
+      silent-redirect-uri: "http://localhost:9091/login/silent-renew"
+      roles:
+        - "user"
 ```
 
 ## Social Login Configuration
@@ -301,13 +354,24 @@ google: {
 #### 3. Backend Configuration
 
 ```yaml
-structures:
-  oidc-auth-verifier:
-    enabled: true
-    allowed-issuers:
-      - "https://accounts.google.com"
-    authorization-audiences:
-      - "your-google-client-id"
+oidc-security-service:
+  enabled: true
+  debug: true
+  oidc-providers:
+    - provider: "google"
+      display-name: "Google"
+      enabled: true
+      roles-claim-path: "roles"
+      domains:
+        - "your-domain.com"
+      audience: "your-google-client-id"
+      client-id: "your-google-client-id"
+      authority: "https://accounts.google.com"
+      redirect-uri: "http://localhost:9091/login"
+      post-logout-redirect-uri: "http://localhost:9091"
+      silent-redirect-uri: "http://localhost:9091/login/silent-renew"
+      roles:
+        - "user"
 ```
 
 ### Microsoft Azure AD
@@ -372,13 +436,24 @@ microsoft: {
 #### 3. Backend Configuration
 
 ```yaml
-structures:
-  oidc-auth-verifier:
-    enabled: true
-    allowed-issuers:
-      - "https://login.microsoftonline.com/your-tenant-id/v2.0"
-    authorization-audiences:
-      - "your-microsoft-client-id"
+oidc-security-service:
+  enabled: true
+  debug: true
+  oidc-providers:
+    - provider: "microsoft"
+      display-name: "Microsoft Azure AD"
+      enabled: true
+      roles-claim-path: "roles"
+      domains:
+        - "your-domain.com"
+      audience: "your-microsoft-client-id"
+      client-id: "your-microsoft-client-id"
+      authority: "https://login.microsoftonline.com/your-tenant-id/v2.0"
+      redirect-uri: "http://localhost:9091/login"
+      post-logout-redirect-uri: "http://localhost:9091"
+      silent-redirect-uri: "http://localhost:9091/login/silent-renew"
+      roles:
+        - "user"
 ```
 
 ### GitHub OAuth
@@ -436,13 +511,24 @@ github: {
 #### 3. Backend Configuration
 
 ```yaml
-structures:
-  oidc-auth-verifier:
-    enabled: true
-    allowed-issuers:
-      - "https://github.com"
-    authorization-audiences:
-      - "your-github-client-id"
+oidc-security-service:
+  enabled: true
+  debug: true
+  oidc-providers:
+    - provider: "github"
+      display-name: "GitHub"
+      enabled: true
+      roles-claim-path: "roles"
+      domains:
+        - "your-domain.com"
+      audience: "your-github-client-id"
+      client-id: "your-github-client-id"
+      authority: "https://github.com"
+      redirect-uri: "http://localhost:9091/login"
+      post-logout-redirect-uri: "http://localhost:9091"
+      silent-redirect-uri: "http://localhost:9091/login/silent-renew"
+      roles:
+        - "user"
 ```
 
 ## Frontend State Management
@@ -634,13 +720,24 @@ For integration testing, you can:
 ### Test Configuration
 ```yaml
 # Test configuration
-structures:
-  oidc-auth-verifier:
-    enabled: true
-    allowed-issuers:
-      - "https://test-issuer.com"
-    authorization-audiences:
-      - "test-audience"
+oidc-security-service:
+  enabled: true
+  debug: true
+  oidc-providers:
+    - provider: "test"
+      display-name: "Test Provider"
+      enabled: true
+      roles-claim-path: "roles"
+      domains:
+        - "test-domain.com"
+      audience: "test-audience"
+      client-id: "test-client-id"
+      authority: "https://test-issuer.com"
+      redirect-uri: "http://localhost:9091/login"
+      post-logout-redirect-uri: "http://localhost:9091"
+      silent-redirect-uri: "http://localhost:9091/login/silent-renew"
+      roles:
+        - "user"
 ```
 
 ### Frontend Testing

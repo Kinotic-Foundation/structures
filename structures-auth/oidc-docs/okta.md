@@ -197,25 +197,23 @@ const userManagerSettings = {
 ### Application Properties
 ```yaml
 # application.yml or application-{profile}.yml
-structures:
-  oidc-auth-verifier:
-    enabled: true
-    allowed-issuers:
-      - "https://your-okta-domain.okta.com/oauth2/default"
-    authorization-audiences:
-      - "your-okta-client-id"
-```
-
-### OIDC Provider Configuration
-```yaml
 oidc-security-service:
+  enabled: true
+  debug: true
   oidc-providers:
     - provider: "okta"
+      display-name: "Okta"
       authority: "https://your-okta-domain.okta.com/oauth2/default"
       audience: "your-okta-client-id"
+      client-id: "your-okta-client-id"
       domains: ["your-domain.com"]  # Optional: restrict to specific email domains
       roles-claim-path: "groups"    # Optional: extract roles from groups claim
       enabled: true
+      redirect-uri: "http://localhost:9091/login"
+      post-logout-redirect-uri: "http://localhost:9091"
+      silent-redirect-uri: "http://localhost:9091/login/silent-renew"
+      roles:
+        - "user"
 ```
 
 ## Testing Your Configuration
@@ -375,22 +373,23 @@ oktaWithGroups: {
 
 ### Backend Configuration
 ```yaml
-structures:
-  oidc-auth-verifier:
-    enabled: true
-    allowed-issuers:
-      - "https://your-okta-domain.okta.com/oauth2/default"
-    authorization-audiences:
-      - "0oa1a2b3c4d5e6f7g8h9"
-
 oidc-security-service:
+  enabled: true
+  debug: true
   oidc-providers:
     - provider: "okta"
+      display-name: "Okta"
       authority: "https://your-okta-domain.okta.com/oauth2/default"
       audience: "0oa1a2b3c4d5e6f7g8h9"
+      client-id: "0oa1a2b3c4d5e6f7g8h9"
       domains: ["your-domain.com"]
       roles-claim-path: "groups"
       enabled: true
+      redirect-uri: "http://localhost:9091/login"
+      post-logout-redirect-uri: "http://localhost:9091"
+      silent-redirect-uri: "http://localhost:9091/login/silent-renew"
+      roles:
+        - "user"
 ```
 
 ## Support

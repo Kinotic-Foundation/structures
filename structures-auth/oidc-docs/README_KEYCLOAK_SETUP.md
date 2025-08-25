@@ -5,10 +5,10 @@ This guide provides a complete setup for using Keycloak as an identity provider 
 ## Overview
 
 The setup includes:
-- **Keycloak 24.0.2** with PostgreSQL database
+- **Keycloak 26.3.3** with PostgreSQL database
 - **Pre-configured client** for the Structures frontend
 - **Test user** for immediate testing
-- **Automatic setup script** for easy configuration
+- **Automatic realm import** for easy configuration
 - **Frontend integration** with Vue.js login page
 - **Backend integration** with OIDC authentication
 
@@ -28,7 +28,21 @@ brew install jq  # macOS
 sudo apt-get install jq  # Ubuntu/Debian
 ```
 
-### 2. Start the Complete Stack (recommended)
+### 2. **CRITICAL: Configure Hosts File**
+
+**Before starting Keycloak, you MUST add this entry to your hosts file:**
+
+```bash
+# On macOS/Linux, edit /etc/hosts
+# On Windows, edit C:\Windows\System32\drivers\etc\hosts
+
+# Add this line:
+127.0.0.1 keycloak
+```
+
+**Why this is required:** The Keycloak configuration uses `keycloak` as the hostname in the authority URL (`http://keycloak:8888/auth/realms/test`). This allows the application to resolve the hostname to localhost while maintaining the correct configuration for both container-to-container communication and external access.
+
+### 3. Start the Complete Stack (recommended)
 
 ```bash
 # Make scripts executable
@@ -40,7 +54,7 @@ chmod +x docker-compose/*.sh
 # Or manually:
 cd structures/docker-compose && \
 docker compose -f compose.yml -f compose.ek-m4.override.yml -f compose.gen-schemas.yml up -d && \
-docker compose -f compose.keycloak.yml up -d keycloak-db keycloak keycloak-setup
+docker compose -f compose.keycloak.yml up -d
 ```
 
 This script will:
@@ -48,10 +62,10 @@ This script will:
 - Start Elasticsearch and other services
 - Start Keycloak with PostgreSQL
 - Wait for all services to be ready
-- Automatically configure Keycloak with the Structures client
+- Automatically import the test realm configuration
 - Create a test user
 
-### 3. Start the Frontend
+### 4. Start the Frontend
 
 ```bash
 cd structures-frontend-next
@@ -59,7 +73,7 @@ npm install
 npm run dev
 ```
 
-### 4. Test the Setup
+### 5. Test the Setup
 
 1. Navigate to `http://localhost:5173/login`
 2. Click "Continue with Keycloak"
@@ -77,11 +91,11 @@ If you prefer to set up manually:
 # Create network
 docker network create structures-network
 
-# Start Keycloak (DB, server, and one-shot bootstrapper)
-docker compose -f docker-compose/compose.keycloak.yml up -d keycloak-db keycloak keycloak-setup
+# Start Keycloak (DB and server)
+docker compose -f docker-compose/compose.keycloak.yml up -d keycloak-db keycloak
 
-# Optionally wait for bootstrapper to complete
-docker wait keycloak-setup
+# Wait for Keycloak to be ready
+# The realm will be automatically imported on startup
 ```
 
 ### 2. Start Backend
@@ -107,17 +121,23 @@ The setup creates a client with these settings:
 - **Client Type**: Public Client (for SPA)
 - **Access Type**: Public
 - **Standard Flow**: Enabled
-- **Direct Access Grants**: Disabled
+- **Direct Access Grants**: Enabled
 - **Service Accounts**: Disabled
 
 ### Redirect URIs
 
-- `http://localhost:5173/login` - Main redirect URI
-- `http://localhost:5173/login/silent-renew` - Silent token renewal
+- `http://localhost:9090/*` - Main application
+- `http://localhost:9091/*` - Alternative port
+- `http://localhost:5173/*` - Frontend development
+- `http://localhost:3000/*` - Alternative frontend
 
 ### Web Origins
 
-- `http://localhost:5173` - Frontend origin
+- `http://localhost:9090/*` - Main application
+- `http://localhost:9091/*` - Alternative port
+- `http://localhost:5173/*` - Frontend development
+- `http://localhost:3000/*` - Alternative frontend
+- `+` - Allow all origins (development only)
 
 ### Protocol Mappers
 
@@ -127,12 +147,15 @@ The client includes these protocol mappers:
 2. **Given Name**: Maps first name to `given_name` claim
 3. **Family Name**: Maps last name to `family_name` claim
 4. **Preferred Username**: Maps username to `preferred_username` claim
+5. **Roles**: Maps realm roles to `realm_access.roles` claim
+6. **Client Audience**: Adds `aud` claim with value `structures-client`
+7. **Tenant ID**: Adds `tenantId` claim with value `kinotic`
 
 ## Service URLs
 
 | Service | URL | Description |
 |---------|-----|-------------|
-| Structures Server | http://localhost:9090 | Main application |
+| Structures Server | http://localhost:9091 | Main application |
 | Structures API | http://localhost:8080 | REST API |
 | GraphQL | http://localhost:4000 | GraphQL endpoint |
 | Keycloak | http://localhost:8888/auth | Identity provider |
@@ -152,6 +175,7 @@ The client includes these protocol mappers:
 - **Password**: `password123`
 - **First Name**: Test
 - **Last Name**: User
+- **Roles**: admin, user, offline_access, default-roles-test
 
 ## Frontend Configuration
 
@@ -163,7 +187,7 @@ The frontend is configured via runtime JSON. Update `structures-frontend-next/pu
     "keycloak": {
       "enabled": true,
       "client_id": "structures-client",
-      "authority": "http://localhost:8888/auth/realms/master",
+      "authority": "http://localhost:8888/auth/realms/test",
       "redirect_uri": "http://localhost:5173/login",
       "post_logout_redirect_uri": "http://localhost:5173",
       "silent_redirect_uri": "http://localhost:5173/login/silent-renew"
@@ -177,15 +201,24 @@ The frontend is configured via runtime JSON. Update `structures-frontend-next/pu
 The backend is configured in `structures-server/src/main/resources/application-development.yml`:
 
 ```yaml
-structures:
-  oidc-auth-verifier:
-    enabled: true
-    allowed-issuers:
-      - "https://dev-39125344.okta.com/oauth2/default"
-      - "http://localhost:8888/auth/realms/master"
-    authorization-audiences:
-      - "api://default"
-      - "structures-client"
+oidc-security-service:
+  enabled: true
+  debug: true
+  oidc-providers:
+    - provider: "keycloak"
+      display-name: "Keycloak"
+      enabled: true
+      roles-claim-path: "realm_access.roles"
+      domains:
+        - "example.com"
+      audience: "structures-client"
+      client-id: "structures-client"
+      authority: "http://localhost:8888/auth/realms/test"
+      redirect-uri: "http://localhost:9091/login"
+      post-logout-redirect-uri: "http://localhost:9091"
+      silent-redirect-uri: "http://localhost:9091/login/silent-renew"
+      roles:
+        - "admin"
 ```
 
 ## Testing the Integration
@@ -197,12 +230,12 @@ structures:
 TOKEN=$(curl -s -X POST \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "username=testuser@example.com&password=password123&grant_type=password&client_id=structures-client" \
-  http://localhost:8888/auth/realms/master/protocol/openid-connect/token | \
+  http://localhost:8888/auth/realms/test/protocol/openid-connect/token | \
   jq -r '.access_token')
 
 # Use the token to access the API
 curl -H "Authorization: Bearer $TOKEN" \
-  http://localhost:9090/health/
+  http://localhost:9091/health/
 ```
 
 ### 2. Frontend Testing
@@ -216,11 +249,11 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 ```bash
 # Test backend health
-curl http://localhost:9090/health/
+curl http://localhost:9091/health/
 
 # Test with authentication
 curl -H "Authorization: Bearer $TOKEN" \
-  http://localhost:9090/health/
+  http://localhost:9091/health/
 ```
 
 ## Troubleshooting
@@ -236,30 +269,44 @@ curl -H "Authorization: Bearer $TOKEN" \
    lsof -i :8888
    ```
 
-2. **Bootstrapper Fails**
+2. **Hosts File Not Configured**
    ```bash
-   # Show bootstrap container logs
-   docker logs keycloak-setup | tail -n 200
-
-   # Check if Keycloak is ready
-   curl -sf http://localhost:8888/auth/health/ready
+   # Verify hosts file entry exists
+   cat /etc/hosts | grep keycloak
+   
+   # Should show: 127.0.0.1 keycloak
+   
+   # If missing, add it:
+   echo "127.0.0.1 keycloak" | sudo tee -a /etc/hosts
    ```
 
-3. **Frontend Connection Issues**
-   - Check browser console for CORS errors
-   - Verify Keycloak is running on port 8080
-   - Ensure redirect URIs match exactly
+3. **Realm Import Issues**
+   ```bash
+   # Check if realm was imported
+   curl -s http://localhost:8888/auth/realms/test | jq '.realm'
+   
+   # Should return: "test"
+   
+   # If not working, check Keycloak logs
+   docker compose -f docker-compose/compose.keycloak.yml logs keycloak
+   ```
 
-4. **Backend Authentication Issues**
+4. **Frontend Connection Issues**
+   - Check browser console for CORS errors
+   - Verify Keycloak is running on port 8888
+   - Ensure redirect URIs match exactly
+   - Verify hosts file is configured
+
+5. **Backend Authentication Issues**
    ```bash
    # Check backend logs
    ./gradlew :structures-server:bootRun
    
-       # Verify issuer URL
-    curl http://localhost:8888/auth/realms/master/.well-known/openid-configuration
+   # Verify issuer URL
+   curl http://localhost:8888/auth/realms/test/.well-known/openid-configuration
    ```
 
-5. **Network Issues**
+6. **Network Issues**
    ```bash
    # Check if network exists
    docker network ls | grep structures-network
@@ -289,10 +336,11 @@ If the setup script fails, manually create the client:
 4. Set Client Protocol to `openid-connect`
 5. Set Access Type to `public`
 6. Add redirect URIs:
-   - `http://localhost:5173/login`
-   - `http://localhost:5173/login/silent-renew`
-7. Add web origins: `http://localhost:5173`
-8. Configure protocol mappers for email, name, etc.
+   - `http://localhost:5173/*`
+   - `http://localhost:9090/*`
+   - `http://localhost:9091/*`
+7. Add web origins: `http://localhost:5173/*`, `http://localhost:9090/*`, `http://localhost:9091/*`
+8. Configure protocol mappers for email, name, roles, etc.
 
 ## Production Considerations
 
@@ -349,14 +397,14 @@ For issues or questions:
 3. Verify Keycloak configuration
 4. Test with a known valid JWT token
 5. Check browser console for frontend issues
+6. **Verify hosts file configuration** - this is the most common issue
 
 ## Files Overview
 
 | File | Purpose |
 |------|---------|
-| `docker-compose/compose-keycloak.yml` | Keycloak and PostgreSQL services |
-| `docker-compose/setup-keycloak.sh` | Automated Keycloak configuration |
+| `docker-compose/compose.keycloak.yml` | Keycloak and PostgreSQL services |
+| `docker-compose/keycloak-test-realm.json` | Pre-configured test realm |
 | `docker-compose/start-with-keycloak.sh` | Complete stack startup script |
-| (removed) `docker-compose/KEYCLOAK_README.md` | Consolidated into this guide |
 | `structures-frontend-next/src/pages/login/OidcConfiguration.ts` | Frontend OIDC configuration |
 | `structures-server/src/main/resources/application-development.yml` | Backend OIDC configuration | 

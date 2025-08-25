@@ -35,12 +35,13 @@ The Docker Compose files provide different service configurations for:
 
 #### `compose.keycloak.yml` - Keycloak Identity Provider
 - **Purpose**: OIDC authentication provider for development
-- **Services**: PostgreSQL, Keycloak, Initialization container
+- **Services**: PostgreSQL, Keycloak
 - **Ports**: 
   - Keycloak: 8888
   - PostgreSQL: 5432
 - **Usage**: `docker-compose -f compose.keycloak.yml up -d`
-- **Documentation**: [Keycloak Setup Guide](KEYCLOAK_README.md)
+- **Documentation**: [Keycloak Setup Guide](../structures-auth/oidc-docs/README_KEYCLOAK_SETUP.md)
+- **Important**: Requires hosts file entry: `127.0.0.1 keycloak` ([Quick Setup Guide](KEYCLOAK_HOSTS_SETUP.md))
 
 ### Monitoring & Observability
 
@@ -101,6 +102,16 @@ docker-compose logs -f
 
 For developers on Apple Silicon Macs who want the complete setup with authentication and data seeding:
 
+**⚠️ IMPORTANT: Before starting, add `127.0.0.1 keycloak` to your hosts file**
+
+```bash
+# On macOS/Linux, edit /etc/hosts
+# On Windows, edit C:\Windows\System32\drivers\etc\hosts
+
+# Add this line:
+127.0.0.1 keycloak
+```
+
 ```bash
 # Start all services optimized for M4 Mac with Keycloak and schema generation
 docker-compose -f compose.yml -f compose.ek-m4.override.yml -f compose.gen-schemas.yml -f compose.keycloak.yml up -d
@@ -113,6 +124,8 @@ This command:
 - Starts all core services (Elasticsearch, Kibana, Structures Server)
 
 ### 3. Start with Authentication Only
+
+**⚠️ IMPORTANT: Before starting, add `127.0.0.1 keycloak` to your hosts file**
 
 ```bash
 # Start Keycloak for OIDC testing
@@ -295,7 +308,7 @@ curl http://localhost:9200/_cluster/health
 
 ## Related Documentation
 
-- [Keycloak Setup](KEYCLOAK_README.md) - Detailed Keycloak configuration
+- [Keycloak Setup](../structures-auth/oidc-docs/README_KEYCLOAK_SETUP.md) - Detailed Keycloak configuration
 - [Structures Server](../structures-server/README.md) - Backend server documentation
 - [Getting Started](../../webdocs/guide/getting-started.md) - Complete setup guide
 
