@@ -19,7 +19,7 @@ services:
       - "127.0.0.1:9090:9090" # UI PORT
       - "127.0.0.1:9091:9091" # UI2 PORT
       - "127.0.0.1:4000:4000" # GraphQL Port
-      - "127.0.0.1:8080:8080" # OpenAPI Port
+      - "127.0.0.1:8081:8080" # OpenAPI Port
       - "127.0.0.1:58503:58503" # Continuum Stomp Port
       - "127.0.0.1:58504:58504" # Continuum REST Port
     environment:
@@ -57,6 +57,7 @@ services:
       OTEL_TRACES_EXPORTER: otlp
       OTEL_METRICS_EXPORTER: otlp
       OTEL_LOGS_EXPORTER: otlp
+      SPRING_AI_OPENAI_API-KEY: "DUMMY"
     stdin_open: true # docker run -i
     tty: true        # docker run -t
     deploy:
