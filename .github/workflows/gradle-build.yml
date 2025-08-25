@@ -41,6 +41,8 @@ jobs:
       - name: Build with Gradle
         id: gradle_build
         continue-on-error: true
+        env:
+          TESTCONTAINERS_RYUK_DISABLED: true
         run: ./gradlew build
 
       - name: Publish to Maven Central with JReleaser

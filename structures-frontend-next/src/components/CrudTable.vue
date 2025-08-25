@@ -45,21 +45,21 @@ import type { DescriptiveIdentifiable } from "@/types/DescriptiveIdentifiable";
   },
 })
 class CrudTable extends Vue {
-  @Prop({ required: true }) dataSource!: IDataSource<DescriptiveIdentifiable>;
-  @Prop({ required: true }) headers!: CrudHeader[];
-  @Prop({ default: false }) multiSort!: boolean;
-  @Prop({ default: true }) mustSort!: boolean;
-  @Prop({ default: false }) singleExpand!: boolean;
-  @Prop({ default: false }) disableModifications!: boolean;
-  @Prop({ default: true }) isShowAddNew!: boolean;
-  @Prop({ default: true }) isShowDelete!: boolean;
-  @Prop({ default: "" }) initialSearch!: string;
-  @Prop({ default: "#f5f5f5" }) rowHoverColor!: string;
-  @Prop({ default: "Add new" }) createNewButtonText!: string;
-  @Prop({ default: false }) enableViewSwitcher!: boolean;
-  @Prop({ default: "No items yet" }) emptyStateText!: string;
-  @Prop({ default: "" }) search!: string;
-  @Prop({ default: true }) showPagination!: boolean;
+  @Prop({ required: true }) dataSource!: IDataSource<DescriptiveIdentifiable>
+  @Prop({ required: true }) headers!: CrudHeader[]
+  @Prop({ default: false }) multiSort!: boolean
+  @Prop({ default: true }) mustSort!: boolean
+  @Prop({ default: false }) singleExpand!: boolean
+  @Prop({ default: false }) disableModifications!: boolean
+  @Prop({ default: true }) isShowAddNew!: boolean
+  @Prop({ default: true }) isShowDelete!: boolean
+  @Prop({ default: '' }) initialSearch!: string
+  @Prop({ default: '#f5f5f5' }) rowHoverColor!: string
+  @Prop({ default: 'Add new' }) createNewButtonText!: string
+  @Prop({ default: false }) enableViewSwitcher!: boolean
+  @Prop({ default: 'No items yet' }) emptyStateText!: string
+  @Prop({ default: '' }) search!: string
+  @Prop({ default: true }) showPagination!: boolean
   @Prop({ default: true }) enableRowHover!: boolean;
 
   getRowClass() {
@@ -109,11 +109,9 @@ class CrudTable extends Vue {
   }
 
   mounted() {
-    console.log(this.showPagination, "VVVVVVVVVVVVVVVVV");
-    console.log(this.items.length, "kasjdlsajdksajdl");
-    const urlSearch = (this.$route.query.search as string) || "";
-    this.loading = true;
-    this.initialSearchCompleted = false;
+    const urlSearch = (this.$route.query.search as string) || ''
+    this.loading = true
+    this.initialSearchCompleted = false
     if (urlSearch) {
       this.searchText = urlSearch;
     }
@@ -432,6 +430,7 @@ export default toNative(CrudTable);
 
 .truncate-multiline {
   display: -webkit-box;
+  line-clamp: 2;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;

@@ -33,6 +33,11 @@ const pageRoutes: RouteRecordRaw[] = [
           path: `/application/${route.params.applicationId}`
         },
         {
+          label: 'Data Insights',
+          icon: 'pi pi-chart-line',
+          path: `/application/${route.params.applicationId}/data-insights`
+        },
+        {
           label: 'Authentication',
           icon: 'pi pi-key',
           path: `/application/${route.params.applicationId}/auth`
@@ -49,6 +54,12 @@ const pageRoutes: RouteRecordRaw[] = [
         name: 'application-details',
         path: '',
         component: () => import('@/pages/ApplicationDetails.vue'),
+        props: (route) => ({ applicationId: route.params.applicationId })
+      },
+      {
+        name: 'data-insights',
+        path: 'data-insights',
+        component: () => import('@/pages/DataInsights.vue'),
         props: (route) => ({ applicationId: route.params.applicationId })
       },
       {
@@ -149,7 +160,7 @@ const pageRoutes: RouteRecordRaw[] = [
   },
   {
     path: '/login',
-    component: () => import('@/pages/Login.vue'),
+    component: () => import('@/pages/login/Login.vue'),
     meta: {
       showInMainNav: false,
       authenticationRequired: false

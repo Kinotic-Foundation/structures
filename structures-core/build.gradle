@@ -5,6 +5,7 @@ plugins {
 
 dependencies {
 	implementation project(':structures-sql')
+	implementation project(':structures-auth')
 
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-json'
@@ -13,6 +14,12 @@ dependencies {
 	implementation 'org.reactivestreams:reactive-streams'
 	implementation 'io.projectreactor:reactor-core'
 
+	// Spring AI
+	implementation 'org.springframework.ai:spring-ai-commons'
+	implementation 'org.springframework.ai:spring-ai-model'
+	implementation 'org.springframework.ai:spring-ai-mcp'
+	implementation 'org.springframework.ai:spring-ai-starter-model-openai'
+	
 	implementation "io.vertx:vertx-web"
 	implementation "io.vertx:vertx-web-graphql"
 	implementation "io.vertx:vertx-web-client"

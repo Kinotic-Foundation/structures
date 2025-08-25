@@ -22,7 +22,7 @@ export class Project implements Identifiable<string> {
     /**
      * The description of the project.
      */
-    public description: string
+    public description?: string
 
     /**
      * The source of truth for the project.
@@ -34,7 +34,7 @@ export class Project implements Identifiable<string> {
      */
     public updated: number | null = null
 
-    constructor(id: string | null, applicationId: string, name: string, description: string) {
+    constructor(id: string | null, applicationId: string, name: string, description?: string) {
         this.id = id
         this.applicationId = applicationId
         this.name = name

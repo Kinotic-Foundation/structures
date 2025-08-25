@@ -25,7 +25,7 @@ import org.kinotic.structures.api.domain.idl.decorators.QueryDecorator;
 import org.kinotic.structures.api.services.NamedQueriesService;
 import org.kinotic.structures.api.services.StructureService;
 import org.kinotic.structures.internal.api.services.StructureConversionService;
-import org.kinotic.structures.internal.config.OpenApiSecurityType;
+import org.kinotic.structures.api.config.OpenApiSecurityType;
 import org.kinotic.structures.internal.idl.converters.openapi.OpenApiConversionState;
 import org.kinotic.structures.internal.utils.OpenApiUtils;
 import org.kinotic.structures.internal.utils.QueryUtils;
@@ -76,9 +76,7 @@ public class DefaultOpenApiService implements OpenApiService {
                             .description("Provides access to Structures Items for the " + applicationId + " application");
                     openAPI.setInfo(info);
 
-                    if(structuresProperties.getOpenApiServerUrl() != null){
-                        openAPI.addServersItem(new Server().url(structuresProperties.getOpenApiServerUrl()));
-                    }
+                    openAPI.addServersItem(new Server().url(structuresProperties.getStructuresBaseUrl() + ":"  + structuresProperties.getOpenApiPort()));
 
                     Components components = new Components();
 

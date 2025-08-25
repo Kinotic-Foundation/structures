@@ -2,7 +2,6 @@ spring:
   profiles:
     active: test
   main:
-    allow-circular-references: true
     web-application-type: none
 
 # YAML Reference http://www.yaml.org/refcard.html
@@ -22,3 +21,7 @@ logging:
 
 structures:
   elastic-use-ssl: false
+
+
+structures-core-test:
+  enabled: true

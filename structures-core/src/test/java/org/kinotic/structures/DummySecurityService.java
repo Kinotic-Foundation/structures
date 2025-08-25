@@ -22,6 +22,7 @@ import org.kinotic.continuum.api.security.DefaultParticipant;
 import org.kinotic.continuum.api.security.Participant;
 import org.kinotic.continuum.api.security.ParticipantConstants;
 import org.kinotic.continuum.api.security.SecurityService;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -36,6 +37,7 @@ import java.util.concurrent.CompletableFuture;
  * Created by Navid Mitchell on 3/11/20
  */
 @Component
+@ConditionalOnProperty(prefix = "structures-core-test", name = "enabled", havingValue = "true")
 public class DummySecurityService implements SecurityService {
 
     @Override

@@ -5,5 +5,6 @@ public enum ProjectType {
     TYPESCRIPT,
     GRAPHQL,
     GRAPHICAL,
-    ELASTICSEARCH
+    ELASTICSEARCH,
+    DATA_INSIGHTS
 }

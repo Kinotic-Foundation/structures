@@ -30,7 +30,7 @@ export class TestService implements ITestService {
     }
 
     public testUser(): Promise<any> {
-        return this.serviceProxy.invoke('testUser')
+        return this.serviceProxy.invoke('testuser@example.com')
     }
 
     public testFlux(): Observable<string> {

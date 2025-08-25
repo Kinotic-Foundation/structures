@@ -1,6 +1,6 @@
 {
   "name": "@kinotic/structures-api",
-  "version": "3.5.0-beta.4",
+  "version": "3.5.0-beta.14",
   "author": "Kinotic Foundation <develop@kinotic.org>",
   "license": "MIT",
   "homepage": "https://kinotic-foundation.github.io/structures/",
@@ -27,7 +27,8 @@
   },
   "dependencies": {
     "@kinotic/continuum-idl": "^2.0.3",
-    "reflect-metadata": "^0.2.2"
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
   },
   "devDependencies": {
     "@types/node": "^24.0.3",

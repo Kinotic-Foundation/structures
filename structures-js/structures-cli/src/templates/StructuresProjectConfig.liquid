@@ -1,0 +1,41 @@
+{% comment %}
+  Shared Liquid partial for rendering values, arrays, and objects for config files.
+  Usage: {% include 'StructuresProjectConfig.liquid' %}
+  Provides macros: render_value, render_array, render_object
+{% endcomment %}
+
+{%- comment -%}
+  Macro to render any value (object, array, primitive)
+{%- endcomment -%}
+{% macro render_value value indent %}
+  {%- if value == null -%}null
+  {%- elsif value == true or value == false -%}{{ value }}
+  {%- elsif value is string -%}"{{ value | escape }}"
+  {%- elsif value is number -%}{{ value }}
+  {%- elsif value is array -%}{{ render_array(value, indent) }}
+  {%- elsif value is object -%}{{ render_object(value, indent) }}
+  {%- else -%}undefined
+  {%- endif -%}
+{% endmacro %}
+
+{%- comment -%}
+  Macro to render an array
+{%- endcomment -%}
+{% macro render_array arr indent %}
+[
+{%- for item in arr -%}
+{{ '  ' | repeat: indent | append: '  ' }}{{ render_value(item, indent | plus: 1) }}{% if forloop.last == false %},{% endif %}
+{%- endfor -%}
+{{ '  ' | repeat: indent }}]
+{% endmacro %}
+
+{%- comment -%}
+  Macro to render an object
+{%- endcomment -%}
+{% macro render_object obj indent %}
+{
+{%- for k in obj -%}
+{{ '  ' | repeat: indent | append: '  ' }}{{ k }}: {{ render_value(obj[k], indent | plus: 1) }}{% if forloop.last == false %},{% endif %}
+{%- endfor -%}
+{{ '  ' | repeat: indent }}}
+{% endmacro %}

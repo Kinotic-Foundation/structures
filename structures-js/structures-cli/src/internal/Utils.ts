@@ -8,7 +8,7 @@ import {
     ParticipantConstants
 } from '@kinotic/continuum-client'
 import {C3Type, FunctionDefinition, ObjectC3Type} from '@kinotic/continuum-idl'
-import {EntityDecorator} from '@kinotic/structures-api'
+import {EntityConfiguration, EntityDecorator} from '@kinotic/structures-api'
 import fs from 'fs'
 import fsPromises from 'fs/promises'
 import { confirm } from '@inquirer/prompts'
@@ -21,7 +21,6 @@ import {createConversionContext} from './converter/IConversionContext.js'
 import {TypescriptConversionState} from './converter/typescript/TypescriptConversionState.js'
 import {TypescriptConverterStrategy} from './converter/typescript/TypescriptConverterStrategy.js'
 import {Logger} from './Logger.js'
-import {EntityConfiguration} from './state/StructuresProject.js'
 import {UtilFunctionLocator} from './UtilFunctionLocator.js'
 
 export type GeneratedServiceInfo = {
@@ -169,9 +168,9 @@ export type EntityInfo = {
 }
 
 export type ConversionConfiguration = {
-    namespace: string,
+    application: string,
     entitiesPath: string,
-    utilFunctionLocator: UtilFunctionLocator,
+    utilFunctionLocator: UtilFunctionLocator | null,
     entityConfigurations?: EntityConfiguration[],
     verbose: boolean,
     logger: Logger,
@@ -246,7 +245,7 @@ export function convertAllEntities(config: ConversionConfiguration): EntityInfo[
         if(absSourcePath.startsWith(absEntitiesPath)) {
 
             const conversionContext =
-                      createConversionContext(new TypescriptConverterStrategy(new TypescriptConversionState(config.namespace,
+                      createConversionContext(new TypescriptConverterStrategy(new TypescriptConversionState(config.application,
                                                                                                             config.utilFunctionLocator),
                                                                               config.logger))
 
