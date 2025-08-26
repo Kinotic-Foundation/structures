@@ -15,6 +15,7 @@ import { Log } from 'oidc-client-ts'
 Log.setLogger(console)
 
 import { Structures } from '@kinotic/structures-api'
+import { pt } from './theme/pt.config'
 
 // Make Structures globally available for web components
 declare global {
