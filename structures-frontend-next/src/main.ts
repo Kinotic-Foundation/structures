@@ -35,8 +35,7 @@ app.use(PrimeVue, {
             cssLayer: false,
             prefix: 'p',
         }
-    },
-    pt
+    }
 })
 
 // Initialize CONTINUUM_UI with the existing router instance
