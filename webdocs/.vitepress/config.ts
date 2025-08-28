@@ -33,7 +33,7 @@ function nav() {
     { text: 'Guide', link: '/guide/overview', activeMatch: '/guide/' },
     {
       text: 'Reference',
-      link: '/reference/structures-config',
+      link: '/reference/structures-server-config',
       activeMatch: '/reference/'
     },
     {
@@ -73,7 +73,7 @@ function sidebarReference() {
     {
       text: 'Reference',
       items: [
-        { text: 'Structures Config', link: '/reference/structures-config' },
+        { text: 'Structures Server Config', link: '/reference/structures-server-config' },
         { text: 'Migrations SQL Grammar', link: '/reference/migrations-sql-grammar' }
       ]
     },
