@@ -21,8 +21,8 @@ export const StructuresPreset = definePreset(StructuresTheme, {
         }
     },
     semantic: {
-        primary: {
-            50: '{blue.50}',
+        primary    : {
+            50 : '{blue.50}',
             100: '{blue.100}',
             200: '{blue.200}',
             300: '{blue.300}',
@@ -37,8 +37,8 @@ export const StructuresPreset = definePreset(StructuresTheme, {
         colorScheme: {
             light: {
                 surface: {
-                    0: "#ffffff",
-                    50: "#F5F7FA",
+                    0  : "#ffffff",
+                    50 : "#F5F7FA",
                     100: "#F0F1F5",
                     200: "#E6E7EB",
                     300: "#D2D3D9",
@@ -49,12 +49,25 @@ export const StructuresPreset = definePreset(StructuresTheme, {
                     800: "#28282B",
                     900: "#18181A",
                     950: "#101010"
-                }
+                },
+                lime   : {
+                    50 : "#F7FEE7",
+                    100: "#ECFCCB",
+                    200: "#D9F99D",
+                    300: "#BEF264",
+                    400: "#A3E635",
+                    500: "#84CC16",
+                    600: "#65A30D",
+                    700: "#4D7C0F",
+                    800: "#3F6212",
+                    900: "#365314",
+                    950: "#1A2E05"
+                },
             },
-            dark: {
+            dark : {
                 surface: {
-                    0: "#ffffff",
-                    50: "#F5F7FA",
+                    0  : "#ffffff",
+                    50 : "#F5F7FA",
                     100: "#F0F1F5",
                     200: "#E6E7EB",
                     300: "#D2D3D9",
@@ -65,7 +78,20 @@ export const StructuresPreset = definePreset(StructuresTheme, {
                     800: "#28282B",
                     900: "#18181A",
                     950: "#101010"
-                }
+                },
+                lime   : {
+                    50 : "#F7FEE7",
+                    100: "#ECFCCB",
+                    200: "#D9F99D",
+                    300: "#BEF264",
+                    400: "#A3E635",
+                    500: "#84CC16",
+                    600: "#65A30D",
+                    700: "#4D7C0F",
+                    800: "#3F6212",
+                    900: "#365314",
+                    950: "#1A2E05"
+                },
             }
         }
     }

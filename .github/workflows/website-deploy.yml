@@ -3,7 +3,7 @@ name: Build and Deploy Structures Website
 on:
   push:
     branches:
-      - develop
+      - main
     paths:
       - 'website/**'
 
