@@ -14,19 +14,15 @@ export class Generate extends Command {
     static examples = [
         '$ structures generate',
         '$ structures gen',
-        '$ structures gen my.application -v',
+        '$ structures gen -v',
     ]
 
     static flags = {
         verbose:    Flags.boolean({char: 'v', description: 'Enable verbose logging'}),
     }
 
-    static args = {
-        application: Args.string({description: 'The application that you want to generate service classes for', required: false})
-    }
-
     public async run(): Promise<void> {
-        const {args, flags} = await this.parse(Generate)
+        const {flags} = await this.parse(Generate)
 
         if(!(await isStructuresProject())){
             this.error('The working directory is not a Structures Project')

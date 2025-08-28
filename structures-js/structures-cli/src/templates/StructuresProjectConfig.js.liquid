@@ -1,8 +1,0 @@
-{% comment %}
-  Liquid template for rendering a StructuresProjectConfig as idiomatic JavaScript code.
-  Usage: Render with context { config }
-{% endcomment %}
-
-{% include 'StructuresProjectConfig.liquid' %}
-
-module.exports = {{ render_value(config, 0) }}

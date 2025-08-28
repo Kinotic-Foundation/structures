@@ -130,6 +130,51 @@ async function findStructuresConfigFile(): Promise<string | undefined> {
 }
 
 /**
+ * Helper function to render a value as TypeScript code with proper indentation
+ */
+function renderValue(value: any, indent: number = 0): string {
+    const indentStr = '  '.repeat(indent)
+    const nextIndentStr = '  '.repeat(indent + 1)
+    
+    if (value === null) {
+        return 'null'
+    }
+    if (value === undefined) {
+        return 'undefined'
+    }
+    if (typeof value === 'boolean') {
+        return String(value)
+    }
+    if (typeof value === 'string') {
+        return `"${value.replace(/"/g, '\\"')}"`
+    }
+    if (typeof value === 'number') {
+        return String(value)
+    }
+    if (Array.isArray(value)) {
+        if (value.length === 0) {
+            return '[]'
+        }
+        const items = value.map(item => `${nextIndentStr}${renderValue(item, indent + 1)}`).join(',\n')
+        return `[\n${items}\n${indentStr}]`
+    }
+    if (typeof value === 'object' && value !== null) {
+        const entries = Object.entries(value)
+            .filter(([key, val]) => val !== undefined) // Only filter out undefined values
+        
+        if (entries.length === 0) {
+            return '{}'
+        }
+        
+        const props = entries
+            .map(([key, val]) => `${nextIndentStr}${key}: ${renderValue(val, indent + 1)}`)
+            .join(',\n')
+        return `{\n${props}\n${indentStr}}`
+    }
+    return 'undefined'
+}
+
+/**
  * Saves a StructuresProjectConfig to the .config directory using the appropriate Liquid template.
  * @param config The config object to save
  * @param configDir The directory to save the config file in (usually .config)
@@ -138,6 +183,20 @@ export async function saveStructuresProjectConfig(config: StructuresProjectConfi
     const engine = new Liquid({
         root: path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../templates/'),
         extname: '.liquid'
+    })
+    
+    // Register custom tags for rendering config values
+    engine.registerTag('render_value', {
+        parse: function(tagToken: any) {
+            const args = tagToken.args.trim().split(/\s+/)
+            this.value = args[0]
+            this.indent = args[1] || '0' // Default indent to 0
+        },
+        render: function*(ctx: any): Generator<any, string, any> {
+            const value = yield (engine as any).evalValue(this.value, ctx)
+            const indentLevel = yield (engine as any).evalValue(this.indent, ctx)
+            return renderValue(value, indentLevel || 0)
+        }
     })
     const outFile = path.join(configDir, 'structures.config.ts')
     const templateFile = 'StructuresProjectConfig.ts.liquid'
@@ -165,8 +224,7 @@ async function convertAndStoreLegacyConfig(configDir: string): Promise<Structure
     } else {
         newConfig = new TypescriptProjectConfig()
     }
-    // Assign fields
-    (newConfig as any).name = undefined
+    // Don't set name - it will be loaded from package.json
     newConfig.application = legacy.defaultNamespaceName
     newConfig.entitiesPaths = ns ? ns.entitiesPaths : []
     newConfig.generatedPath = ns ? ns.generatedPath : ''

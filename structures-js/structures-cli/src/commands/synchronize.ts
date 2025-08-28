@@ -28,8 +28,8 @@ export class Synchronize extends Command {
     static examples = [
         '$ structures synchronize',
         '$ structures sync',
-        '$ structures synchronize my.application --server http://localhost:9090 --publish --verbose',
-        '$ structures sync my.application -p -v -s http://localhost:9090'
+        '$ structures synchronize --server http://localhost:9090 --publish --verbose',
+        '$ structures sync -p -v -s http://localhost:9090'
     ]
 
     static flags = {
@@ -39,12 +39,9 @@ export class Synchronize extends Command {
         dryRun:     Flags.boolean({description: 'Dry run enables verbose logging and does not save any changes to the server'})
     }
 
-    static args = {
-        application: Args.string({description: 'The application the Entities belong to', required: false}),
-    }
 
     async run(): Promise<void> {
-        const {args, flags} = await this.parse(Synchronize)
+        const {flags} = await this.parse(Synchronize)
 
         try {
 
