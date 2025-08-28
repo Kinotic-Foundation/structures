@@ -243,7 +243,6 @@ export default class StructuresList extends Vue {
           />
         </div>
       </template>
-
       <template #additional-actions="{ item }">
         <div class="flex items-center justify-center">
           <Button
