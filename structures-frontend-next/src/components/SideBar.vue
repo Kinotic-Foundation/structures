@@ -79,7 +79,7 @@ export default class Sidebar extends Vue {
 
 <template>
   <div class="p-2 fixed rounded-xl top-[64px] left-0 z-40 h-[calc(100vh-64px)]"
-    :class="[collapsed ? 'w-[64px]' : 'w-[256px]']">
+    :class="[collapsed ? 'w-[67px]' : 'w-[256px]']">
     <div :class="['bg-surface-50 rounded-xl flex flex-col justify-between px-2 py-2 h-full', 'transition-[width] duration-300 ease-in-out w-full']">
       <div class="flex flex-col w-full">
         <SidebarItem

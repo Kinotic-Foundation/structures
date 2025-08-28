@@ -84,7 +84,6 @@
 
           <!-- Step 1: Username/Email Input -->
           <div v-if="!state?.emailEntered" class="w-full">
-            <h2 class="text-xl font-semibold text-gray-800 mb-6 text-center">Enter your email address</h2>
             
             <IconField class="!mb-6 !flex !items-center !relative !w-full">
               <InputText
@@ -138,9 +137,6 @@
 
             <!-- Show password input ONLY when explicitly falling back to basic auth (no OIDC providers or no match found) -->
             <div v-if="state?.showPassword" class="w-full">
-              <h2 class="text-xl font-semibold text-gray-800 mb-6 text-center">
-                Enter your password
-              </h2>
               
               <div class="mb-4">
                 <div class="text-sm text-gray-600 mb-1">Username / Email: {{ login }}</div>

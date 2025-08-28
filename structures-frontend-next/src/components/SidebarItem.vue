@@ -22,13 +22,16 @@ const iconClass = computed(() => {
 <template>
   <div
     :class="[
-      'flex items-center py-[9px] cursor-pointer w-full rounded-md hover:bg-surface-200 px-2 pl-1 transition-colors duration-200', 
+      'flex items-center py-[9px] cursor-pointer w-full rounded-md hover:bg-surface-200 px-2 pl-1 transition-colors duration-200',
       props.isActive ? '' : 'bg-transparent'
     ]"
     @click="$emit('click')"
   >
-    <div class="min-w-[20px] flex justify-center">
-      <i :class="['pi', icon, 'text-base', iconClass]" />
+    <div class="min-w-[20px] flex justify-center items-center">
+      <i
+        :class="['pi', icon, props.collapsed ? '' : 'text-base', iconClass]"
+        :style="props.collapsed ? { fontSize: '14px', lineHeight: '14px' } : {}"
+      />
     </div>
     <div class="w-[8px]"></div>
     <div class="overflow-hidden">

@@ -91,7 +91,7 @@ const pageRoutes: RouteRecordRaw[] = [
         {
           label: 'Structures',
           icon: 'pi pi-table',
-          path: `/application/${route.params.applicationId}/project/${route.params.projectId}/structures/overview`
+          path: `/application/${route.params.applicationId}/project/${route.params.projectId}/structures`
         },
         {
           label: 'Lambdas',

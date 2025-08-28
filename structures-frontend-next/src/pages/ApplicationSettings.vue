@@ -5,11 +5,11 @@
 
     <form @submit.prevent="saveSettings" class="space-y-4">
       <div class="field">
-        <label for="appName" class="block text-sm font-medium text-gray-700">Application Name</label>
+        <label for="appDescription" class="block text-sm font-medium text-gray-700">Application Description</label>
         <InputText 
           v-model="appName" 
-          id="appName" 
-          placeholder="Enter name" 
+          id="appDescription" 
+          placeholder="Enter Description" 
           required
           class="p-inputtext w-full" 
         />

@@ -15,7 +15,6 @@ import { Log } from 'oidc-client-ts'
 Log.setLogger(console)
 
 import { Structures } from '@kinotic/structures-api'
-import { pt } from './theme/pt.config'
 
 // Make Structures globally available for web components
 declare global {
@@ -36,8 +35,7 @@ app.use(PrimeVue, {
             cssLayer: false,
             prefix: 'p',
         }
-    },
-    pt
+    }
 })
 
 // Initialize CONTINUUM_UI with the existing router instance
