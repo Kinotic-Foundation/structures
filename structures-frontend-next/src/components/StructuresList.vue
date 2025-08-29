@@ -1,6 +1,7 @@
 <script lang="ts">
 import { Component, Vue, Prop, Ref, Watch } from "vue-facing-decorator";
 import CrudTable from "@/components/CrudTable.vue";
+import StructureDataViewModal from "@/components/modals/StructureDataViewModal.vue";
 import StructureItemModal from "@/components/modals/StructureItemModal.vue";
 import type {
   Identifiable,
@@ -13,7 +14,7 @@ import type { CrudHeader } from "@/types/CrudHeader";
 import DatetimeUtil from "@/util/DatetimeUtil";
 
 @Component({
-  components: { CrudTable, StructureItemModal },
+  components: { CrudTable, StructureDataViewModal, StructureItemModal },
 })
 export default class StructuresList extends Vue {
   @Prop({ required: true }) applicationId!: string;
@@ -33,6 +34,7 @@ export default class StructuresList extends Vue {
   ];
 
   showModal = false;
+  showItemModal = false;
   selectedStructure: Structure | null = null;
   searchText = "";
   isInitialized = false;
@@ -125,6 +127,16 @@ export default class StructuresList extends Vue {
     this.selectedStructure = null;
   }
 
+  openItemModal(item: Structure) {
+    this.selectedStructure = item;
+    this.showItemModal = true;
+  }
+
+  closeItemModal() {
+    this.showItemModal = false;
+    this.selectedStructure = null;
+  }
+
   handleRowClick(item: Structure): void {
     this.openModal(item);
   }
@@ -186,7 +198,11 @@ export default class StructuresList extends Vue {
       {
         label: "View",
         icon: "pi pi-file",
-        command: () => this.handleRowClick(item),
+        command: (e: any) => {
+          e?.originalEvent?.stopPropagation?.();
+          e?.originalEvent?.preventDefault?.();
+          this.openItemModal(item);
+        }
       },
     ];
   }
@@ -227,7 +243,6 @@ export default class StructuresList extends Vue {
           />
         </div>
       </template>
-
       <template #additional-actions="{ item }">
         <div class="flex items-center justify-center">
           <Button
@@ -249,10 +264,18 @@ export default class StructuresList extends Vue {
       </template>
     </CrudTable>
 
-    <StructureItemModal
-      v-if="showModal && selectedStructure"
-      :item="selectedStructure"
+    <StructureDataViewModal
+      v-if="selectedStructure"
+      v-model="showModal"
+      :title="selectedStructure?.name || 'Data View'"
+      :entity-props="{ structureId: selectedStructure?.id }"
       @close="closeModal"
+    />
+
+    <StructureItemModal
+      v-if="showItemModal && selectedStructure"
+      :item="selectedStructure"
+      @close="closeItemModal"
     />
   </div>
 </template>

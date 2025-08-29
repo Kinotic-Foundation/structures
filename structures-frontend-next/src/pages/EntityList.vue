@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="overflow-y-auto">
     <Toolbar>
       <template #start>
         <InputText v-model="searchText" placeholder="Search" @keyup.enter="search" @focus="($event.target as HTMLInputElement)?.select()" />
@@ -17,7 +17,7 @@
           <template #body="slotProps">
             <div :class="[
               header.isCollapsable
-                ? 'whitespace-normal break-words w-[400px] max-w-[400px] text-sm'
+                ? 'whitespace-normal break-words w-[240px] max-w-[240px] text-sm'
                 : 'truncate'
             ]">
               <span v-if="typeof slotProps.data[header.field] === 'object'">
@@ -114,12 +114,13 @@ const id = this.structureId || (Array.isArray(paramId) ? paramId[0] : paramId)
             ) {
               sortable = false
             }
+            const isComplex = ['ref', 'array', 'object'].includes(property.type.type)
             const headerDef: any = {
               header: fieldName,
               field: property.name,
               sortable: sortable,
-              width: property.name === 'id' ? 300 : (sortable ? 150 : 200),
-              isCollapsable: property?.name === 'addresses' || property?.name === 'pet'
+              width: property.name === 'id' ? 220 : (isComplex ? 240 : (sortable ? 120 : 160)),
+              isCollapsable: isComplex || property?.name === 'addresses' || property?.name === 'pet'
             }
             this.headers.push(headerDef)
             this.keys.push(property.name)
