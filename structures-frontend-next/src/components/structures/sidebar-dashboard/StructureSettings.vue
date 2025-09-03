@@ -14,6 +14,48 @@ export default class StructureSettings extends Vue {
     {key: 'NONE', name: 'None'},
     {key: 'SHARED', name: 'Shared'}
   ]
+
+  get entityType() {
+    const entityDecorator = this.structureStore.structure?.entityDefinition?.decorators?.find(
+      (d: any) => d.type === 'Entity'
+    ) as any
+    return entityDecorator?.entityType || 'TABLE'
+  }
+
+  set entityType(value: string) {
+    const entityDecorator = this.structureStore.structure?.entityDefinition?.decorators?.find(
+      (d: any) => d.type === 'Entity'
+    ) as any
+    if (entityDecorator) {
+      entityDecorator.entityType = value
+    }
+  }
+
+  get multiTenancyType() {
+    const entityDecorator = this.structureStore.structure?.entityDefinition?.decorators?.find(
+      (d: any) => d.type === 'Entity'
+    ) as any
+    return entityDecorator?.multiTenancyType || 'NONE'
+  }
+
+  set multiTenancyType(value: string) {
+    const entityDecorator = this.structureStore.structure?.entityDefinition?.decorators?.find(
+      (d: any) => d.type === 'Entity'
+    ) as any
+    if (entityDecorator) {
+      entityDecorator.multiTenancyType = value
+    }
+  }
+
+  get description() {
+    return this.structureStore.structure?.description || ''
+  }
+
+  set description(value: string) {
+    if (this.structureStore.structure) {
+      this.structureStore.structure.description = value
+    }
+  }
 }
 </script>
 
@@ -31,7 +73,7 @@ export default class StructureSettings extends Vue {
         >
           <RadioButton
               size="small"
-              v-model="structureStore.structure.entityType"
+              v-model="entityType"
               :inputId="category.key"
               name="category"
               :value="category.key"
@@ -49,7 +91,7 @@ export default class StructureSettings extends Vue {
         >
           <RadioButton
               size="small"
-              v-model="structureStore.structure.multiTenancyType"
+              v-model="multiTenancyType"
               :inputId="access.key"
               name="access"
               :value="access.key"
@@ -61,7 +103,7 @@ export default class StructureSettings extends Vue {
       <div>
         <p class="text-xs font-medium text-gray-500 mb-1">Description</p>
         <Textarea
-            v-model="structureStore.structure.description"
+            v-model="description"
             autoResize
             size="small"
             rows="5" cols="30"

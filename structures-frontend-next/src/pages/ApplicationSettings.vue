@@ -1,6 +1,6 @@
 <template>
   <div class="application-settings p-4">
-    <h1 class="text-2xl font-bold mb-4">Settings for Application {{ applicationId }}</h1>
+    <h1 class="text-2xl font-bold mb-4">Settings for Application {{ currentApplicationName }}</h1>
     <p class="mb-4 text-gray-700">This is where you can manage settings for your application.</p>
 
     <form @submit.prevent="saveSettings" class="space-y-4">
@@ -25,8 +25,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, defineProps } from 'vue'
+import { ref, defineProps, computed, onMounted, watch } from 'vue'
 import { InputText, Button } from 'primevue'
+import { APPLICATION_STATE } from '@/states/IApplicationState'
 
 defineProps({
   applicationId: {
@@ -36,6 +37,22 @@ defineProps({
 })
 
 const appName = ref('')
+
+const currentApplicationName = computed(() => {
+  return APPLICATION_STATE.currentApplication?.id || 'Unknown Application'
+})
+
+watch(() => APPLICATION_STATE.currentApplication, (newApp) => {
+  if (newApp) {
+    appName.value = newApp.description || ''
+  }
+}, { immediate: true })
+
+onMounted(() => {
+  if (APPLICATION_STATE.currentApplication) {
+    appName.value = APPLICATION_STATE.currentApplication.description || ''
+  }
+})
 
 const saveSettings = () => {
   alert(`Settings saved for ${appName.value}`)

@@ -20,6 +20,8 @@ export default class StructuresList extends Vue {
   @Prop({ required: true }) applicationId!: string;
   @Prop({ required: false, default: undefined }) projectId?: string;
   @Prop({ required: false, default: "" }) initialSearch!: string;
+  @Prop({ required: false, default: false }) showNewStructureButton!: boolean;
+  @Prop({ required: false, default: "New Structure" }) newStructureButtonText!: string;
 
   @Ref("crudTable") crudTable!: InstanceType<typeof CrudTable>;
 
@@ -138,7 +140,9 @@ export default class StructuresList extends Vue {
   }
 
   handleRowClick(item: Structure): void {
-    this.openModal(item);
+    if (item.published) {
+      this.openModal(item);
+    }
   }
 
   onEditItem(item: Identifiable<string>): void {
@@ -221,7 +225,8 @@ export default class StructuresList extends Vue {
       @update:search="updateRouteQuery"
       @edit-item="onEditItem"
       @onRowClick="handleRowClick"
-      createNewButtonText="New Structure"
+      :isShowAddNew="showNewStructureButton"
+      :createNewButtonText="newStructureButtonText"
       class="!text-sm"
       emptyStateText="No structures yet"
     >
