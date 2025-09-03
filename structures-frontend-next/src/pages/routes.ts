@@ -38,10 +38,15 @@ const pageRoutes: RouteRecordRaw[] = [
           path: `/application/${route.params.applicationId}/data-insights`
         },
         {
-          label: 'Authentication',
-          icon: 'pi pi-key',
-          path: `/application/${route.params.applicationId}/auth`
+          label: 'Dashboards',
+          icon: 'pi pi-th-large',
+          path: `/application/${route.params.applicationId}/dashboards`
         },
+        // {
+        //   label: 'Authentication',
+        //   icon: 'pi pi-key',
+        //   path: `/application/${route.params.applicationId}/auth`
+        // },
         {
           label: 'Application settings',
           icon: 'pi pi-cog',
@@ -60,6 +65,12 @@ const pageRoutes: RouteRecordRaw[] = [
         name: 'data-insights',
         path: 'data-insights',
         component: () => import('@/pages/DataInsights.vue'),
+        props: (route) => ({ applicationId: route.params.applicationId })
+      },
+      {
+        name: 'dashboards',
+        path: 'dashboards',
+        component: () => import('@/pages/Dashboards.vue'),
         props: (route) => ({ applicationId: route.params.applicationId })
       },
       {
@@ -92,17 +103,17 @@ const pageRoutes: RouteRecordRaw[] = [
           label: 'Structures',
           icon: 'pi pi-table',
           path: `/application/${route.params.applicationId}/project/${route.params.projectId}/structures`
-        },
-        {
-          label: 'Lambdas',
-          icon: 'pi pi-key',
-          path: `/application/${route.params.applicationId}/project/${route.params.projectId}/structures/sections`
-        },
-        {
-          label: 'Project settings',
-          icon: 'pi pi-cog',
-          path: `/application/${route.params.applicationId}/project/${route.params.projectId}/structures/settings`
         }
+        // {
+        //   label: 'Lambdas',
+        //   icon: 'pi pi-key',
+        //   path: `/application/${route.params.applicationId}/project/${route.params.projectId}/structures/sections`
+        // },
+        // {
+        //   label: 'Project settings',
+        //   icon: 'pi pi-cog',
+        //   path: `/application/${route.params.applicationId}/project/${route.params.projectId}/structures/settings`
+        // }
       ]
     } as RouteMeta,
     children: [
