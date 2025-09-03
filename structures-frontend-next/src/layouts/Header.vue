@@ -32,9 +32,9 @@
           </div>
         </div>
 
-        <template v-if="isProjectStructuresPage && currentApp">
-          <span class="text-surface-400 text-lg">/</span>
-          <div ref="projectDropdownRef" class="relative inline-block">
+                 <template v-if="currentApp">
+           <span class="text-surface-400 text-lg">/</span>
+           <div ref="projectDropdownRef" class="relative inline-block">
             <button @click="toggleProjectDropdown"
               class="flex items-center gap-2 text-surface-400 font-medium text-sm hover:opacity-80 w-full justify-between">
               {{ currentProjectName }}
@@ -61,15 +61,29 @@
       </template>
     </div>
 
-    <RouterLink to="#">
-      <img src="@/assets/avatar.png" class="h-8 w-8 rounded-full" />
-    </RouterLink>
+         <div ref="avatarDropdownRef" class="relative">
+       <button @click="toggleAvatarDropdown" class="flex items-center">
+         <img src="@/assets/avatar.png" class="h-8 w-8 rounded-full cursor-pointer hover:opacity-80" />
+       </button>
+       
+       <div v-if="avatarDropdownOpen" 
+         class="absolute top-full right-0 mt-1 bg-white rounded shadow-lg w-48 z-50">
+         <div class="py-1">
+           <button @click="handleLogout" 
+             class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+             <i class="pi pi-sign-out mr-2"></i>
+             Logout
+           </button>
+         </div>
+       </div>
+     </div>
   </div>
 </template>
 
 <script lang="ts">
 import { Component, Vue, Watch } from 'vue-facing-decorator';
 import { APPLICATION_STATE } from '@/states/IApplicationState';
+import { USER_STATE } from '@/states/IUserState';
 import type { Application, Project } from '@kinotic/structures-api';
 import { Structures } from '@kinotic/structures-api';
 import InputText from 'primevue/inputtext';
@@ -86,6 +100,7 @@ import InputIcon from 'primevue/inputicon';
 export default class Header extends Vue {
   appDropdownOpen = false;
   projectDropdownOpen = false;
+  avatarDropdownOpen = false;
 
   searchTextApp = '';
   searchTextProject = '';
@@ -100,7 +115,9 @@ export default class Header extends Vue {
   mounted() {
     this.updateRouteState();
     this.loadApplicationsIfNeeded();
-    this.tryAutoSelectAppAndProject();
+    if (!APPLICATION_STATE.currentApplication) {
+      this.tryAutoSelectAppAndProject();
+    }
     document.addEventListener('click', this.handleClickOutside);
   }
 
@@ -135,12 +152,22 @@ export default class Header extends Vue {
   @Watch('$route.fullPath', { immediate: true })
   onRouteChange() {
     this.updateRouteState();
-    this.tryAutoSelectAppAndProject();
+    if (!APPLICATION_STATE.currentApplication) {
+      this.tryAutoSelectAppAndProject();
+    }
+  }
+
+  @Watch('APPLICATION_STATE.currentApplication', { immediate: true })
+  onGlobalApplicationChange() {
+    this.currentApp = APPLICATION_STATE.currentApplication;
+    if (this.currentApp) {
+      this.loadProjectsForCurrentApp();
+    }
   }
 
   updateRouteState() {
     const path = this.$route.path;
-    this.isApplicationDetailsPage = /^\/application\/[^/]+$/.test(path);
+    this.isApplicationDetailsPage = /^\/application\/[^/]+/.test(path);
     this.isProjectStructuresPage = /^\/application\/[^/]+\/project\/[^/]+\/structures$/.test(path);
   }
 
@@ -165,6 +192,24 @@ export default class Header extends Vue {
     }
   }
 
+  toggleAvatarDropdown() {
+    this.avatarDropdownOpen = !this.avatarDropdownOpen;
+    if (this.avatarDropdownOpen) {
+      this.appDropdownOpen = false;
+      this.projectDropdownOpen = false;
+    }
+  }
+
+  async handleLogout() {
+    try {
+      await USER_STATE.logout();
+      this.$router.push('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      this.$router.push('/login');
+    }
+  }
+
   async loadProjectsForCurrentApp() {
     if (!this.currentApp) return;
     try {
@@ -176,17 +221,18 @@ export default class Header extends Vue {
     }
   }
 
-  selectApp(app: Application) {
-    const appId = encodeURIComponent(app.id);
-
+  async selectApp(app: Application) {
+    console.log('Header: Selecting application:', app.id)
     this.currentApp = app;
     APPLICATION_STATE.currentApplication = app;
+    console.log('Header: Set global application state:', APPLICATION_STATE.currentApplication?.id)
     this.appDropdownOpen = false;
-    this.projectsForCurrentApp = [];
     this.currentProject = null;
     this.searchTextApp = '';
 
-    this.$router.push(`/application/${appId}`);
+    await this.loadProjectsForCurrentApp();
+
+    this.$emit('application-changed', app);
   }
 
   selectProject(proj: Project) {
@@ -235,17 +281,23 @@ export default class Header extends Vue {
       const projectId = this.$route.params.projectId as string;
       await this.setActiveProjectById(applicationId, projectId);
     } else if (this.isApplicationDetailsPage) {
-      const applicationId = this.$route.params.applicationId as string;
-      await this.setActiveAppById(applicationId);
+      const path = this.$route.path;
+      const match = path.match(/^\/application\/([^/]+)/);
+      if (match) {
+        const applicationId = decodeURIComponent(match[1]);
+        await this.setActiveAppById(applicationId);
+      }
     }
   }
 
   handleClickOutside(event: MouseEvent) {
     const appDropdownEl = this.$refs.appDropdownRef as HTMLElement;
     const projectDropdownEl = this.$refs.projectDropdownRef as HTMLElement;
+    const avatarDropdownEl = this.$refs.avatarDropdownRef as HTMLElement;
 
     const clickedOutsideApp = appDropdownEl && !appDropdownEl.contains(event.target as Node);
     const clickedOutsideProject = projectDropdownEl && !projectDropdownEl.contains(event.target as Node);
+    const clickedOutsideAvatar = avatarDropdownEl && !avatarDropdownEl.contains(event.target as Node);
 
     if (this.appDropdownOpen && clickedOutsideApp) {
       this.appDropdownOpen = false;
@@ -253,6 +305,13 @@ export default class Header extends Vue {
     if (this.projectDropdownOpen && clickedOutsideProject) {
       this.projectDropdownOpen = false;
     }
+    if (this.avatarDropdownOpen && clickedOutsideAvatar) {
+      this.avatarDropdownOpen = false;
+    }
+  }
+
+  notifyApplicationChange(app: Application) {
+    this.$emit('application-changed', app);
   }
 }
 </script>

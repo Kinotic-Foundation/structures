@@ -2,7 +2,13 @@
   <div class="overflow-y-auto">
     <Toolbar>
       <template #start>
-        <InputText v-model="searchText" placeholder="Search" @keyup.enter="search" @focus="($event.target as HTMLInputElement)?.select()" />
+        <InputText 
+          v-model="searchText" 
+          placeholder="Search" 
+          @keyup.enter="search" 
+          @focus="($event.target as HTMLInputElement)?.select()"
+          class="w-md"
+        />
         <Button icon="pi pi-times" class="ml-2" v-if="searchText" @click="clearSearch" />
       </template>
     </Toolbar>

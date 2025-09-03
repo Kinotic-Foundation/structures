@@ -29,8 +29,8 @@ export default class ApplicationDetails extends Vue {
   showGraphQLModal: boolean = false
   isInitialized: boolean = false
 
-  get applicationId(): string | string[] {
-    return this.$route.params.applicationId
+  get applicationId(): string {
+    return APPLICATION_STATE.currentApplication?.id || ''
   }
 
   get projectsCount(): number {
@@ -69,6 +69,10 @@ export default class ApplicationDetails extends Vue {
     if (this.activeTab !== tabFromQuery) {
       this.activeTab = tabFromQuery
     }
+  }
+
+  @Watch('APPLICATION_STATE.currentApplication')
+  onApplicationChange() {
   }
 
   @Watch('activeTab')

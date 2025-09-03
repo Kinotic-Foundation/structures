@@ -14,6 +14,8 @@ import DatetimeUtil from "@/util/DatetimeUtil"
 })
 export default class ProjectStructuresTable extends Vue {
   @Prop({ required: true }) applicationId!: string
+  @Prop({ required: false, default: false }) showNewStructureButton!: boolean
+  @Prop({ required: false, default: "New Structure" }) newStructureButtonText!: string
   @Ref('crudTable') crudTable!: InstanceType<typeof CrudTable>
 
   get projectId(): string {
@@ -124,7 +126,9 @@ export default class ProjectStructuresTable extends Vue {
   }
 
   handleRowClick(item: Structure) {
-    this.openModal(item)
+    if (item.published) {
+      this.openModal(item)
+    }
   }
 
   toggleMenu(event: Event, item: Structure, index: number) {
@@ -209,10 +213,12 @@ export default class ProjectStructuresTable extends Vue {
       @add-item="onAddItem"
       @edit-item="onEditItem"
       @onRowClick="handleRowClick"
-      createNewButtonText="New Structure"
+      :isShowAddNew="showNewStructureButton"
+      :createNewButtonText="newStructureButtonText"
       emptyStateText="No structures yet for this project"
       class="!text-sm"
     >
+      <!-- createNewButtonText="New Structure" -->
       <template #item.name="{ item }">
         <span class="font-semibold">{{ item.name }}</span>
       </template>
