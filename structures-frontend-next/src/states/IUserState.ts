@@ -21,6 +21,12 @@ export class UserState implements IUserState {
     private accessDenied: boolean = false
 
     public async authenticate(login: string, passcode: string): Promise<void> {
+        try {
+            await Continuum.disconnect()
+        } catch (error) {
+            console.log('No existing connection to disconnect')
+        }
+
         const connectionInfo: ConnectionInfo = this.createConnectionInfo()
         connectionInfo.connectHeaders = {
             login,
@@ -50,13 +56,16 @@ export class UserState implements IUserState {
     }
 
     public async handleOidcLogin(user: User): Promise<void> {
+        try {
+            await Continuum.disconnect()
+        } catch (error) {
+            console.log('No existing connection to disconnect')
+        }
+
         const connectionInfo: ConnectionInfo = this.createConnectionInfo()
         
-        // Determine which token to use
         let tokenToUse = user.access_token;
         
-        // For Microsoft social login, check if access_token is a valid JWT
-        // If not, use the ID token instead
         if (user.access_token && !this.isValidJWT(user.access_token)) {
             console.log('Access token is not a valid JWT, using ID token for Microsoft social login');
             tokenToUse = user.id_token || user.access_token;
@@ -72,19 +81,17 @@ export class UserState implements IUserState {
             this.accessDenied = false
             this.oidcUser = user
 
-            // Store the token in a cookie
             Cookies.set('token', tokenToUse, {
                 sameSite: 'strict',
                 secure: true,
-                expires: new Date(user.expires_at! * 1000) // Convert Unix timestamp to Date
+                expires: new Date(user.expires_at! * 1000)
             })
 
-            // Store refresh token if available
             if (user.refresh_token) {
                 Cookies.set('oidc_refresh_token', user.refresh_token, {
                     sameSite: 'strict',
                     secure: true,
-                    expires: 30 // 30 days for refresh token
+                    expires: 30
                 })
             }
         } catch (reason: any) {
@@ -98,17 +105,6 @@ export class UserState implements IUserState {
     }
 
     public async logout(): Promise<void> {
-        // Clear all auth-related cookies
-        Cookies.remove('token')
-        Cookies.remove('oidc_refresh_token')
-
-        // Reset state
-        this.connectedInfo = null
-        this.oidcUser = null
-        this.authenticated = false
-        this.accessDenied = false
-
-        // Disconnect from Continuum if connected
         if (this.connectedInfo) {
             try {
                 await Continuum.disconnect()
@@ -116,6 +112,14 @@ export class UserState implements IUserState {
                 console.error('Error disconnecting from Continuum:', error)
             }
         }
+
+        Cookies.remove('token')
+        Cookies.remove('oidc_refresh_token')
+
+        this.connectedInfo = null
+        this.oidcUser = null
+        this.authenticated = false
+        this.accessDenied = false
     }
 
     public isAccessDenied(): boolean {
@@ -124,9 +128,7 @@ export class UserState implements IUserState {
 
     public isAuthenticated(): boolean {
         return this.authenticated && (
-            // Either we have a basic auth token
             Cookies.get('token') !== undefined ||
-            // Or we have a valid OIDC token
             (this.oidcUser !== null && 
              this.oidcUser.expires_at !== undefined && 
              this.oidcUser.expires_at * 1000 > Date.now())
@@ -153,22 +155,16 @@ export class UserState implements IUserState {
         return connectionInfo
     }
 
-    /**
-     * Check if a token is a valid JWT format
-     */
     private isValidJWT(token: string): boolean {
         try {
-            // Check if token has the JWT format (3 parts separated by dots)
             const parts = token.split('.');
             if (parts.length !== 3) {
                 return false;
             }
             
-            // Try to decode the header and payload
             const header = JSON.parse(atob(parts[0]));
             const payload = JSON.parse(atob(parts[1]));
             
-            // Check for required JWT claims
             return !!(header.alg && payload.iss && payload.aud);
         } catch (error) {
             return false;

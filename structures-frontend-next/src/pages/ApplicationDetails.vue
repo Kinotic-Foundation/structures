@@ -3,6 +3,7 @@ import { Component, Vue, Watch } from 'vue-facing-decorator'
 import ProjectList from '@/components/ProjectList.vue'
 import StructuresList from '@/components/StructuresList.vue'
 import GraphQLModal from '@/components/modals/GraphQLModal.vue'
+import OpenAPIModal from '@/components/modals/OpenAPIModal.vue'
 import StructureItemModal from '@/components/modals/StructureItemModal.vue'
 import Tabs from 'primevue/tabs'
 import TabList from 'primevue/tablist'
@@ -16,6 +17,7 @@ import { APPLICATION_STATE } from '@/states/IApplicationState'
     ProjectList,
     StructuresList,
     GraphQLModal,
+    OpenAPIModal,
     StructureItemModal,
     Tabs,
     TabList,
@@ -27,6 +29,7 @@ import { APPLICATION_STATE } from '@/states/IApplicationState'
 export default class ApplicationDetails extends Vue {
   activeTab: string | number  = 0
   showGraphQLModal: boolean = false
+  showOpenAPIModal: boolean = false
   isInitialized: boolean = false
 
   get applicationId(): string {
@@ -39,6 +42,10 @@ export default class ApplicationDetails extends Vue {
 
   get structuresCount(): number {
     return APPLICATION_STATE.structuresCount ?? 0
+  }
+
+  get currentApplication() {
+    return APPLICATION_STATE.currentApplication
   }
 
   get searchProduct(): string | undefined {
@@ -92,6 +99,14 @@ export default class ApplicationDetails extends Vue {
   closeGraphQL(): void {
     this.showGraphQLModal = false
   }
+
+  openOpenAPI(): void {
+    this.showOpenAPIModal = true
+  }
+
+  closeOpenAPI(): void {
+    this.showOpenAPIModal = false
+  }
 }
 </script>
 
@@ -104,13 +119,18 @@ export default class ApplicationDetails extends Vue {
       </div>
       <div class="flex gap-3 h-full">
         <div
+          v-if="currentApplication?.enableGraphQL"
           @click="openGraphQL"
           class="border border-surface-200 rounded-xl flex items-center gap-2 px-16 cursor-pointer"
         >
           <img src="@/assets/graphql.svg" class="w-6 h-6" />
           <span class="text-sm font-semibold">GraphQL</span>
         </div>
-        <div class="border border-surface-200 rounded-xl flex items-center gap-2 px-16 cursor-pointer">
+        <div 
+          v-if="currentApplication?.enableOpenAPI"
+          @click="openOpenAPI"
+          class="border border-surface-200 rounded-xl flex items-center gap-2 px-16 cursor-pointer"
+        >
           <img src="@/assets/scalar.svg" class="w-6 h-6" />
           <span class="text-sm font-semibold">OpenAPI</span>
         </div>
@@ -143,6 +163,7 @@ export default class ApplicationDetails extends Vue {
     </Tabs>
 
     <GraphQLModal :visible="showGraphQLModal" @close="closeGraphQL" />
+    <OpenAPIModal :visible="showOpenAPIModal" @close="closeOpenAPI" />
   </div>
 </template>
 <style>
