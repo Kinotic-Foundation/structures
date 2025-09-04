@@ -13,10 +13,7 @@
     </style>
 </head>
 <body>
-<!-- Add your own OpenAPI/Swagger spec file URL here: -->
-<!-- You can also set a full configuration object like this -->
 <script id="api-reference"></script>
-<!-- easier for nested objects -->
 <script>
     function getQueryParam(name) {
         const urlParams = new URLSearchParams(window.location.search);
@@ -35,14 +32,50 @@
 
     const namespace = getQueryParam('namespace') || 'default';
     let apiReference = document.getElementById('api-reference')
-    const configuration = {
+    window.addEventListener('message', (event) => {
+        const { token, namespace: messageNamespace } = event.data || {}
+        
+        if (!token || !messageNamespace) {
+            console.error('Missing token or namespace in message')
+            return
+        }
+        
+        const finalNamespace = messageNamespace || namespace
+        const configuration = {
+            isEditable: false,
+            layout: "modern",
+            spec: {
+                url: `${getBaseUrl()}/api-docs/${finalNamespace}/openapi.json`
+            },
+            authentication: {
+                preferredSecurityScheme: 'http',
+                http: {
+                    scheme: 'bearer',
+                    bearerFormat: 'JWT'
+                }
+            },
+            requestInterceptor: (request) => {
+                if (token) {
+                    if (token.includes('.')) {
+                        request.headers['Authorization'] = `Bearer ${token}`
+                    } else {
+                        request.headers['Authorization'] = `Basic ${token}`
+                    }
+                }
+                return request
+            }
+        }
+        apiReference.dataset.configuration = JSON.stringify(configuration)
+    })
+    
+    const fallbackConfiguration = {
         isEditable: false,
         layout: "modern",
         spec: {
             url: `${getBaseUrl()}/api-docs/${namespace}/openapi.json`
         }
     }
-    apiReference.dataset.configuration = JSON.stringify(configuration)
+    apiReference.dataset.configuration = JSON.stringify(fallbackConfiguration)
 
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>

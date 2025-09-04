@@ -97,7 +97,6 @@ class ApplicationState implements IApplicationState {
 
     public async loadAllApplications(): Promise<void> {
         try {
-            // TODO: add virtual scroll to the list of applications
             const service = Structures.getApplicationService()
             const pageable = Pageable.create(0, 1000)
             const result = await service.findAll(pageable)
@@ -108,7 +107,6 @@ class ApplicationState implements IApplicationState {
         }
     }
 
-    // ---------- Utility methods ----------
     private createNavItem(route: RouteRecordRaw, parentPath: string): NavItem {
         const fullPath = this.resolveFullPath(route.path, parentPath)
         const navItem = new NavItem(

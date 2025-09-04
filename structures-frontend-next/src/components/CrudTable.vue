@@ -60,7 +60,8 @@ class CrudTable extends Vue {
   @Prop({ default: 'No items yet' }) emptyStateText!: string
   @Prop({ default: '' }) search!: string
   @Prop({ default: true }) showPagination!: boolean
-  @Prop({ default: true }) enableRowHover!: boolean;
+  @Prop({ default: true }) enableRowHover!: boolean
+  @Prop({ default: 10 }) defaultPageSize!: number
 
   getRowClass() {
     return {
@@ -78,7 +79,7 @@ class CrudTable extends Vue {
   searchText: string | null = "";
   options = {
     page: 0,
-    rows: 9,
+    rows: 10,
     first: 0,
     sortField: "",
     sortOrder: 1 as 1 | -1,
@@ -108,10 +109,22 @@ class CrudTable extends Vue {
     return this.enableViewSwitcher && this.activeView === "column";
   }
 
+  get paginationOptions(): number[] {
+    const options = [5, 10, 20, 50];
+    if (!options.includes(this.defaultPageSize)) {
+      options.push(this.defaultPageSize);
+      options.sort((a, b) => a - b);
+    }
+    return options;
+  }
+
   mounted() {
     const urlSearch = (this.$route.query.search as string) || ''
     this.loading = true
-    this.initialSearchCompleted = false
+    this.initialSearchCompleted = false 
+    
+    this.options.rows = this.defaultPageSize;
+    
     if (urlSearch) {
       this.searchText = urlSearch;
     }
@@ -352,6 +365,7 @@ export default toNative(CrudTable);
         <Paginator
           :rows="options.rows"
           :totalRecords="totalItems"
+          :rowsPerPageOptions="paginationOptions"
           @page="onPaginatorPage"
           class="mt-4"
           v-if="showPagination"
@@ -369,7 +383,7 @@ export default toNative(CrudTable);
           :loading="loading"
           :paginator="showPagination"
           :first="options.first"
-          :rowsPerPageOptions="[5, 10, 20]"
+          :rowsPerPageOptions="paginationOptions"
           dataKey="id"
           @page="onDataTablePage"
           @row-click="onRowClick"
