@@ -8,8 +8,12 @@
       </div>
     </div>
 
-    <div class="hidden md:block w-1/2 h-full bg-[url(@/assets/login-page-image.png)] bg-no-repeat bg-cover bg-bottom-left">
-    </div>
+    <!-- <div class="hidden md:block w-1/2 h-full bg-[url(@/assets/login-page-image.png)] bg-no-repeat bg-cover bg-bottom-left">
+    </div> -->
+         <div class="relative w-1/2 h-full bg-gradient-to-br from-[#0A0A0B] from-0% via-[#0A0A0B] via-70% to-[#293A9E] to-100% hidden md:block">
+       <img src="@/assets/login-page-symbol-new.svg" class="absolute right-0 bottom-0"/>
+       <img src="@/assets/login-page-logo-new.svg" class="absolute left-[75px] bottom-[56px] max-w-[300px] h-[63px] w-auto xl:max-w-[300px] xl:h-[63px] lg:max-w-[250px] lg:h-[52px] md:max-w-[200px] md:h-[42px] sm:max-w-[150px] sm:h-[32px]"/>
+     </div>
     <div class="w-1/2 h-full flex flex-col justify-around items-center bg-center bg-cover">
       <div class="w-[320px] flex flex-col items-center">
 
@@ -77,7 +81,6 @@
             </div>
           </div>
           <div v-if="!state?.emailEntered" class="w-full">
-            
             <IconField class="!mb-6 !flex !items-center !relative !w-full">
               <InputText
                 ref="emailInput"
