@@ -1,6 +1,5 @@
 <template>
   <div class="flex w-full justify-center items-center h-screen max-w-[1440px] mx-auto">
-    <!-- OIDC Callback Loading Overlay -->
     <div v-if="isInitialized && state?.oidcCallbackLoading" class="fixed inset-0 bg-white bg-opacity-90 flex items-center justify-center z-50">
       <div class="text-center">
         <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
@@ -9,16 +8,18 @@
       </div>
     </div>
 
-    <div class="hidden md:block w-1/2 h-full bg-[url(@/assets/login-page-image.png)] bg-no-repeat bg-cover bg-bottom-left">
-    </div>
+    <!-- <div class="hidden md:block w-1/2 h-full bg-[url(@/assets/login-page-image.png)] bg-no-repeat bg-cover bg-bottom-left">
+    </div> -->
+         <div class="relative w-1/2 h-full bg-gradient-to-br from-[#0A0A0B] from-0% via-[#0A0A0B] via-70% to-[#293A9E] to-100% hidden md:block">
+       <img src="@/assets/login-page-symbol-new.svg" class="absolute right-0 bottom-0"/>
+       <img src="@/assets/login-page-logo-new.svg" class="absolute left-[75px] bottom-[56px] max-w-[300px] h-[63px] w-auto xl:max-w-[300px] xl:h-[63px] lg:max-w-[250px] lg:h-[52px] md:max-w-[200px] md:h-[42px] sm:max-w-[150px] sm:h-[32px]"/>
+     </div>
     <div class="w-1/2 h-full flex flex-col justify-around items-center bg-center bg-cover">
       <div class="w-[320px] flex flex-col items-center">
 
         <img src="@/assets/login-page-logo.svg" class="w-[218px] h-[45px] mb-[53px]" />
 
-        <!-- Show login form only when not in OIDC callback and initialized -->
         <div v-if="isInitialized && shouldShowLoginForm">
-          <!-- OIDC Error Retry Option -->
           <div v-if="state?.showRetryOption" class="w-full mb-6 p-4 border border-red-200 bg-red-50 rounded-lg">
             <div class="text-center">
               <div class="flex items-center justify-center mb-3">
@@ -29,7 +30,6 @@
               </div>
               <p class="text-red-600 mb-4 text-sm">You can try again or use an alternative login method:</p>
               
-              <!-- Error Details Toggle -->
               <div class="mb-4">
                 <button 
                   @click="toggleErrorDetails"
@@ -46,7 +46,6 @@
                   </svg>
                 </button>
                 
-                <!-- Error Details -->
                 <div v-if="state?.showErrorDetails && currentOidcError" class="mt-3 p-3 bg-red-100 border border-red-200 rounded text-left">
                   <div class="text-xs text-red-700 font-mono">
                     <div><strong>Error:</strong> {{ currentOidcError.error }}</div>
@@ -81,22 +80,16 @@
               </div>
             </div>
           </div>
-
-          <!-- Step 1: Username/Email Input -->
           <div v-if="!state?.emailEntered" class="w-full">
-            
             <IconField class="!mb-6 !flex !items-center !relative !w-full">
               <InputText
                 ref="emailInput"
                 v-model="login"
-                class="w-full max-w-[700px] h-[56px] !pl-4"
+                class="w-[320px] max-w-[700px] h-[56px] !pl-4"
                 placeholder="Username or Email"
                 @focus="hideAlert"
                 @keyup.enter="handleEmailSubmit"
               />
-              <InputIcon class="!mt-0 -translate-y-1/2">
-                <img src="@/assets/input-hide.svg" />
-              </InputIcon>
             </IconField>
 
             <Button
@@ -106,10 +99,7 @@
               @click="handleEmailSubmit"
             />
           </div>
-
-          <!-- Step 2: Provider Selection or Password Input -->
           <div v-if="state?.emailEntered" class="w-full">
-            <!-- Show provider selection if domain matches -->
             <div v-if="state?.matchedProvider && !state?.showPassword" class="w-full">
               <h2 class="text-xl font-semibold text-gray-800 mb-6 text-center">
                 Continue with {{ state?.providerDisplayName || state?.matchedProvider }}
@@ -134,46 +124,45 @@
                 </button>
               </div>
             </div>
-
-            <!-- Show password input ONLY when explicitly falling back to basic auth (no OIDC providers or no match found) -->
             <div v-if="state?.showPassword" class="w-full">
-              
-              <div class="mb-4">
-                <div class="text-sm text-gray-600 mb-1">Username / Email: {{ login }}</div>
-                <button 
-                  @click="resetToEmail" 
-                  class="text-[#0568FD] hover:underline cursor-pointer text-sm">
-                  Change 
-                </button>
-              </div>
+              <IconField class="!mb-6 !flex !items-center !relative !w-full">
+                <InputText
+                  :value="login"
+                  disabled
+                  class="w-[320px] max-w-[700px] h-[56px] !pl-4 !bg-gray-100 !text-gray-600"
+                  placeholder="Username or Email"
+                />
+              </IconField>
 
               <IconField class="!mb-6 !flex !items-center !relative !w-full">
                 <Password
                   ref="passwordInput"
                   v-model="password"
                   input-class="w-full h-[56px]"
-                  class="!w-full max-w-[540px]"
+                  class="!w-full max-w-[700px]"
                   placeholder="Password"
                   toggleMask
                   :feedback="false"
                   @focus="hideAlert"
                   @keyup.enter="handleLogin"
                 />
-                <InputIcon class="!mt-0 -translate-y-1/2">
-                  <img src="@/assets/input-hide.svg" />
-                </InputIcon>
               </IconField>
-
               <Button
                 label="Sign In"
-                class="rounded-[10px] max-h-[56px] !py-[18px] !w-full !text-base"
+                class="rounded-[10px] max-h-[56px] !py-[18px] !w-full !text-base !mb-5"
                 :loading="state?.loading || false"
                 @click="handleLogin"
+              />
+              <Button
+                label="< Back"
+                text
+                class="!p-3 !w-full !text-base"
+                style="color: #3651ED; background: transparent;"
+                @click="resetToEmail"
               />
 
             </div>
 
-            <!-- Show error if no authentication method available -->
             <div v-if="!state?.matchedProvider && !state?.showPassword && state?.emailEntered" class="w-full text-center">
               <div class="text-red-600 mb-4">
                 No authentication method found for this email domain.
@@ -187,7 +176,6 @@
           </div>
         </div>
 
-        <!-- Loading state while initializing -->
         <div v-if="!isInitialized" class="w-full text-center">
           <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p class="text-gray-600">Initializing...</p>
@@ -233,42 +221,35 @@ import { StructuresStates } from "@/states/index"
   }
 })
 export default class Login extends Vue {
-  // Use the authentication service
   private auth = new AuthenticationService();
   
-  // Form data
   get login() { return this.auth.login; }
   set login(value: string) { this.auth.login = value; }
   
   get password() { return this.auth.password; }
   set password(value: string) { this.auth.password = value; }
 
-  // State from service
   get state() { return this.auth.state; }
   get shouldShowLoginForm() { return this.auth.shouldShowLoginForm; }
   get isLoginValid() { return this.auth.isLoginValid; }
   get isPasswordValid() { return this.auth.isPasswordValid; }
   get currentOidcError() { return this.auth.currentOidcError; }
 
-  // Computed properties for template
   get showPassword() { return this.state.showPassword; }
   set showPassword(value: boolean) { 
     this.auth.updateState({ showPassword: value }); 
   }
 
-  // Always show the form immediately - no initialization wait
   get isInitialized() { 
-    return true; // Always ready to show email form
+    return true;
   }
 
-  // These will be loaded when needed
   private _isConfigLoaded: boolean = false;
-  private _isBasicAuthEnabled: boolean = true; // Default assumption - assume basic auth is available
+  private _isBasicAuthEnabled: boolean = true;
 
   get isConfigLoaded() { return this._isConfigLoaded; }
   get isBasicAuthEnabled() { return this._isBasicAuthEnabled; }
 
-  // Debug method to check current state
   get debugInfo() {
     return {
       emailEntered: this.state?.emailEntered,
@@ -283,21 +264,17 @@ export default class Login extends Vue {
   private userState: IUserState = StructuresStates.getUserState()
 
   async mounted() {
-    // Focus the email input immediately - no waiting for initialization
     this.$nextTick(() => {
       this.focusEmailInput();
     });
     
-    // Load basic config in background (non-blocking)
     this.loadBasicConfig();
     
-    // Check if we're returning from an OIDC login with an error
     if (this.$route.query.error) {
       this.handleOidcError();
       return;
     }
     
-    // Check if we're returning from an OIDC login
     if (this.$route.query.code && this.$route.query.state) {
       this.handleOidcCallback();
     }
@@ -305,7 +282,6 @@ export default class Login extends Vue {
 
   private async loadBasicConfig() {
     console.log('Loading basic config...');
-    // Load basic configuration in the background without blocking UI
     try {
       this._isBasicAuthEnabled = await this.auth.checkBasicAuthEnabled();
       this._isConfigLoaded = true;
@@ -361,13 +337,11 @@ export default class Login extends Vue {
     
     if (isRetryable) {
       this.auth.showRetryOption(oidcError);
-      // Keep current email and provider info for retry
       this.auth.updateState({ 
         emailEntered: true, 
         showPassword: false 
       });
     } else {
-      // For non-retryable errors, reset to email input
       this.auth.resetToEmail();
     }
   }
@@ -386,13 +360,10 @@ export default class Login extends Vue {
       const { referer, provider } = stateInfo;
       const userManager = await createUserManager(provider);
       
-      // Complete the OIDC login
       const user = await userManager.signinRedirectCallback();
       
-      // Store the user info in your state management
       await this.userState.handleOidcLogin(user);
       
-      // Redirect to the original destination or default
       const redirectPath = referer || '/applications';
       await CONTINUUM_UI.navigate(redirectPath);
     } catch (error: unknown) {
@@ -403,7 +374,6 @@ export default class Login extends Vue {
         this.displayAlert('OIDC callback failed');
       }
       
-      // Reset form to email input after OIDC callback error
       this.auth.resetToEmail();
     } finally {
       this.auth.setOidcCallbackLoading(false);
@@ -441,7 +411,6 @@ export default class Login extends Vue {
         this.displayAlert('Unknown login error')
       }
       
-      // Reset form to email input after authentication error
       this.auth.resetToEmail();
     } finally {
       this.auth.setLoading(false);
@@ -469,42 +438,24 @@ export default class Login extends Vue {
 
     this.auth.setLoading(true);
     try {
-      const authMethod = await this.auth.determineAuthMethod(this.login);
-      console.log('Auth method determined:', authMethod); // Debug log
+      console.log('Proceeding to password step for email:', this.login);
+      this.auth.updateState({
+        emailEntered: true,
+        showPassword: true,
+        matchedProvider: null,
+        providerDisplayName: '',
+        showRetryOption: false,
+        showErrorDetails: false
+      });
       
-      if (authMethod.shouldUseOidc && authMethod.matchedProvider) {
-        // Automatically redirect to OIDC login when provider is found
-        console.log('OIDC provider found, automatically redirecting to:', authMethod.matchedProvider);
-        console.log('About to call handleOidcLogin...');
-        // Don't show provider selection UI - just redirect directly
-        await this.handleOidcLogin(authMethod.matchedProvider);
-        console.log('handleOidcLogin completed, returning early');
-        return; // Exit early to prevent any further UI updates
-      } else if (authMethod.fallbackToBasicAuth) {
-        // Only show password if explicitly marked for fallback (no OIDC providers or no match found)
-        console.log('Falling back to basic auth - no OIDC provider found');
-        this.auth.resetToPassword(null, '');
-      } else {
-        // OIDC is enabled but something went wrong - reset form and show error
-        console.log('OIDC enabled but no provider found - resetting form');
-        this.auth.resetToEmail();
-        this.displayAlert('Unable to determine authentication method. Please try again or contact support.');
-      }
+      this.$nextTick(() => {
+        this.focusPasswordInput();
+      });
     } catch (error) {
-      console.error('Error determining authentication method:', error);
-      // OIDC failed - reset form and show error, don't fallback to password
-      console.log('OIDC error occurred - resetting form and showing error');
-      this.auth.resetToEmail();
-      this.displayAlert('Authentication service error. Please try again or contact support.');
+      console.error('Error in email submit:', error);
+      this.displayAlert('Error processing email. Please try again.');
     } finally {
       this.auth.setLoading(false);
-      
-      // Focus password input when it becomes visible
-      if (this.state.showPassword) {
-        this.$nextTick(() => {
-          this.focusPasswordInput();
-        });
-      }
     }
   }
 
@@ -532,7 +483,6 @@ export default class Login extends Vue {
 
   private usePasswordInstead() {
     this.auth.clearRetryOption();
-    // Explicitly show password input when user chooses to use password instead of OIDC
     this.auth.updateState({
       emailEntered: true,
       showPassword: true,
@@ -582,12 +532,7 @@ export default class Login extends Vue {
   private async handleOidcLogin(provider: string) {
     console.log('handleOidcLogin called with provider:', provider);
     console.log('Current loading state:', this.state.loading);
-    
-    // Don't check loading state here since we're already in a loading context from handleEmailSubmit
-    // if (this.state.loading) {
-    //   console.log('Loading is true, returning early');
-    //   return;
-    // }
+  
 
     console.log('Starting OIDC flow (loading already set)...');
     
@@ -596,20 +541,16 @@ export default class Login extends Vue {
       const userManager = await createUserManager(provider);
       console.log('User manager created successfully');
       
-      // Create state object with provider and referer information
       console.log('Creating OIDC state...');
       const state = await this.auth.createOidcState(this.referer, provider);
       console.log('OIDC state created:', state);
       
-      // Start OIDC login with login_hint to pre-fill email
       const signinOptions: any = { state };
       
-      // Add login_hint if we have an email to pre-fill
       if (this.login) {
         signinOptions.login_hint = this.login;
         console.log('Added login_hint:', this.login);
         
-        // Some providers also support domain_hint for better UX
         const emailDomain = this.login.split('@')[1];
         if (emailDomain) {
           signinOptions.domain_hint = emailDomain;
@@ -625,10 +566,8 @@ export default class Login extends Vue {
       console.error('OIDC login failed:', error);
       this.displayAlert(`OIDC login failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       
-      // Reset form state to allow user to try again
       this.auth.resetToEmail();
     }
-    // Note: Loading state is managed by the calling handleEmailSubmit method
   }
 }
 </script>
