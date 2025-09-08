@@ -105,7 +105,6 @@ const enableMCP = ref(false)
 const loading = ref(false)
 const activeTab = ref(0)
 
-
 watch(() => APPLICATION_STATE.currentApplication, (newApp) => {
   if (newApp) {
     appName.value = newApp.id || ''
