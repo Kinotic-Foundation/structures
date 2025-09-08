@@ -1,54 +1,3 @@
-<template>
-  <div class="overflow-y-auto">
-    <Toolbar>
-      <template #start>
-        <InputText 
-          v-model="searchText" 
-          placeholder="Search" 
-          @keyup.enter="search" 
-          @focus="($event.target as HTMLInputElement)?.select()"
-          class="w-md"
-        />
-        <Button icon="pi pi-times" class="ml-2" v-if="searchText" @click="clearSearch" />
-      </template>
-    </Toolbar>
-
-    <DataTable :value="items" :loading="loading" :paginator="true" :rows="options.rows" :totalRecords="totalItems"
-      :first="options.first" :lazy="true" :sortField="options.sortField" :sortOrder="options.sortOrder" @page="onPage"
-      @sort="onSort" :scrollable="true" scrollHeight="flex" :resizableColumns="true" columnResizeMode="expand">
-      <template v-if="headers.length > 0">
-        <Column v-for="header in headers" :key="header.field" :field="header.field" :header="header.header"
-          :sortable="header.sortable" :style="{ width: header.width + 'px' }"
-          :class="[header.isCollapsable ? '!whitespace-normal' : '']">
-          <template #body="slotProps">
-            <div :class="[
-              header.isCollapsable
-                ? 'whitespace-normal break-words w-[240px] max-w-[240px] text-sm'
-                : 'truncate'
-            ]">
-              <span v-if="typeof slotProps.data[header.field] === 'object'">
-                {{ JSON.stringify(slotProps.data[header.field]) }}
-              </span>
-              <span v-else>
-                {{ isDateField(header.field)
-                  ? formatDate(slotProps.data[header.field])
-                  : slotProps.data[header.field]
-                }}
-              </span>
-            </div>
-          </template>
-
-        </Column>
-      </template>
-
-      <template v-if="items.length === 0">
-        <div class="p-4 text-center">
-          <Button label="No Data - Push To Search Again" @click="find" v-if="!loading" />
-        </div>
-      </template>
-    </DataTable>
-  </div>
-</template>
 
 <script lang="ts">
 import { Component, Vue, Prop } from 'vue-facing-decorator'
@@ -86,7 +35,7 @@ export default class EntityList extends Vue {
   headers: any[] = []
   structureProperties: any = {}
   structure!: Structure
-
+  
   entitiesService: IEntitiesService = Structures.getEntitiesService()
   structureService: IStructureService = Structures.getStructureService()
 
@@ -101,7 +50,7 @@ export default class EntityList extends Vue {
 const paramId = this.$route.params.id
 const id = this.structureId || (Array.isArray(paramId) ? paramId[0] : paramId)
 
-    if (!id) {
+if (!id) {
       this.displayAlert("Missing structure ID.")
       return
     }
@@ -166,7 +115,7 @@ const id = this.structureId || (Array.isArray(paramId) ? paramId[0] : paramId)
     this.options.first = 0
     this.find()
   }
-
+  
   search() {
     this.options.first = 0
     this.find()
@@ -183,25 +132,25 @@ const id = this.structureId || (Array.isArray(paramId) ? paramId[0] : paramId)
 
     const page = this.options.first / this.options.rows
     const orders: Order[] = []
-
+    
     if (this.options.sortField) {
       orders.push(new Order(this.options.sortField, this.options.sortOrder === 1 ? Direction.ASC : Direction.DESC))
     }
 
     const pageable = Pageable.create(page, this.options.rows, { orders })
     const paramId = this.$route.params.id
-const id = this.structureId || (Array.isArray(paramId) ? paramId[0] : paramId)
-
+    const id = this.structureId || (Array.isArray(paramId) ? paramId[0] : paramId)
+    
     const queryPromise = (this.searchText?.length)
-      ? this.entitiesService.search(id, this.searchText, pageable)
-      : this.entitiesService.findAll(id, pageable)
+    ? this.entitiesService.search(id, this.searchText, pageable)
+    : this.entitiesService.findAll(id, pageable)
 
     queryPromise
-      .then((page: Page<any>) => {
+    .then((page: Page<any>) => {
         this.items = page.content ?? []
         this.totalItems = page.totalElements ?? 0
         this.loading = false
-
+        
         if (!this.finishedInitialLoad) {
           setTimeout(() => { this.finishedInitialLoad = true }, 500)
         }
@@ -217,8 +166,62 @@ const id = this.structureId || (Array.isArray(paramId) ? paramId[0] : paramId)
 }
 </script>
 
-<style scoped>
+<template>
+  <div class="overflow-y-auto w-full">
+    <Toolbar class="!w-full">
+      <template #start>
+        <InputText
+          v-model="searchText" 
+          placeholder="Search" 
+          @keyup.enter="search" 
+          @focus="($event.target as HTMLInputElement)?.select()"
+          class="w-1/2"
+        />
+        <Button icon="pi pi-times" class="ml-2" v-if="searchText" @click="clearSearch" />
+      </template>
+    </Toolbar>
+
+    <DataTable :value="items" :loading="loading" :paginator="true" :rows="options.rows" :totalRecords="totalItems"
+      :first="options.first" :lazy="true" :sortField="options.sortField" :sortOrder="options.sortOrder" @page="onPage"
+      @sort="onSort" :scrollable="true" scrollHeight="flex" :resizableColumns="true" columnResizeMode="expand">
+      <template v-if="headers.length > 0">
+        <Column v-for="header in headers" :key="header.field" :field="header.field" :header="header.header"
+          :sortable="header.sortable" :style="{ width: header.width + 'px' }"
+          :class="[header.isCollapsable ? '!whitespace-normal' : '']">
+          <template #body="slotProps">
+            <div :class="[
+              header.isCollapsable
+                ? 'whitespace-normal break-words w-[240px] max-w-[240px] text-sm'
+                : 'truncate'
+            ]">
+              <span v-if="typeof slotProps.data[header.field] === 'object'">
+                {{ JSON.stringify(slotProps.data[header.field]) }}
+              </span>
+              <span v-else>
+                {{ isDateField(header.field)
+                  ? formatDate(slotProps.data[header.field])
+                  : slotProps.data[header.field]
+                }}
+              </span>
+            </div>
+          </template>
+
+        </Column>
+      </template>
+
+      <template v-if="items.length === 0">
+        <div class="p-4 text-center">
+          <Button label="No Data - Push To Search Again" @click="find" v-if="!loading" />
+        </div>
+      </template>
+    </DataTable>
+  </div>
+</template>
+<style>
 .p-datatable .p-button {
   margin-top: 1rem;
+}
+.p-toolbar-start {
+  width: 100% !important;
 }
 </style>
