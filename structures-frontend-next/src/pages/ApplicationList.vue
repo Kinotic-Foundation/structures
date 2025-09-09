@@ -4,6 +4,7 @@ import CrudTable from "@/components/CrudTable.vue";
 import ContainerMedium from "@/components/ContainerMedium.vue";
 import ApplicationSidebar from "@/components/ApplicationSidebar.vue";
 import GraphQLModal from "@/components/modals/GraphQLModal.vue";
+import OpenAPIModal from "@/components/modals/OpenAPIModal.vue";
 import {
   Structures,
   type IApplicationService,
@@ -23,6 +24,7 @@ import DatetimeUtil from "@/util/DatetimeUtil";
     ContainerMedium,
     ApplicationSidebar,
     GraphQLModal,
+    OpenAPIModal,
   },
 })
 export default class NamespaceList extends Vue {
@@ -36,6 +38,7 @@ export default class NamespaceList extends Vue {
   dataSource: IApplicationService = Structures.getApplicationService();
   icons = { graph: mdiGraphql, api: mdiApi };
   showGraphQLModal = false;
+  showOpenAPIModal = false;
   showSidebar = false;
   searchText: string = (this?.$route?.query.search as string) || "";
   itemCount: number = 0;
@@ -137,6 +140,14 @@ export default class NamespaceList extends Vue {
   closeGraphQL(): void {
     this.showGraphQLModal = false;
   }
+
+  openOpenAPI(): void {
+    this.showOpenAPIModal = true;
+  }
+
+  closeOpenAPI(): void {
+    this.showOpenAPIModal = false;
+  }
 }
 </script>
 
@@ -190,18 +201,19 @@ export default class NamespaceList extends Vue {
           <img class="!w-[24px] !h-[24px]" src="@/assets/graphql.svg" />
         </Button>
 
-        <Button v-if="item.enableOpenAPI" text title="OpenAPI">
-          <RouterLink
-            target="_blank"
-            :to="'/scalar-ui.html?namespace=' + item.id"
-          >
-            <img class="!w-[24px] !h-[24px]" src="@/assets/scalar.svg" />
-          </RouterLink>
+        <Button
+          v-if="item.enableOpenAPI"
+          text
+          title="OpenAPI"
+          @click="openOpenAPI"
+        >
+          <img class="!w-[24px] !h-[24px]" src="@/assets/scalar.svg" />
         </Button>
       </template>
     </CrudTable>
 
     <GraphQLModal :visible="showGraphQLModal" @close="closeGraphQL" />
+    <OpenAPIModal :visible="showOpenAPIModal" @close="closeOpenAPI" />
 
     <div v-show="showSidebar" ref="sidebarWrapper">
       <ApplicationSidebar

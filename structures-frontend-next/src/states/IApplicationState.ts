@@ -70,22 +70,25 @@ class ApplicationState implements IApplicationState {
         this.updateSelectedNavItem(router.currentRoute.value.path)
     }
 
-    public set currentApplication(app: Application) {
+    public set currentApplication(app: Application | null) {
         this._currentApplication = app
         this.countsLoaded = false
-        Promise.all([
-            Structures.getProjectService().countForApplication(app.id),
-            Structures.getStructureService().countForApplication(app.id)
-        ]).then(([projectsCount, structuresCount]) => {
-            this.projectsCount = projectsCount
-            this.structuresCount = structuresCount
-            this.countsLoaded = true
-        }).catch(error => {
-            console.error('[ApplicationState] Failed to load counts:', error)
-            this.projectsCount = -1
-            this.structuresCount = -1
-            this.countsLoaded = true
-        })
+        
+        if (app) {
+            Promise.all([
+                Structures.getProjectService().countForApplication(app.id),
+                Structures.getStructureService().countForApplication(app.id)
+            ]).then(([projectsCount, structuresCount]) => {
+                this.projectsCount = projectsCount
+                this.structuresCount = structuresCount
+                this.countsLoaded = true
+            }).catch(error => {
+                console.error('[ApplicationState] Failed to load counts:', error)
+                this.projectsCount = -1
+                this.structuresCount = -1
+                this.countsLoaded = true
+            })
+        }
     }
 
     public get currentApplication(): Application | null {
@@ -94,7 +97,6 @@ class ApplicationState implements IApplicationState {
 
     public async loadAllApplications(): Promise<void> {
         try {
-            // TODO: add virtual scroll to the list of applications
             const service = Structures.getApplicationService()
             const pageable = Pageable.create(0, 1000)
             const result = await service.findAll(pageable)
@@ -105,7 +107,6 @@ class ApplicationState implements IApplicationState {
         }
     }
 
-    // ---------- Utility methods ----------
     private createNavItem(route: RouteRecordRaw, parentPath: string): NavItem {
         const fullPath = this.resolveFullPath(route.path, parentPath)
         const navItem = new NavItem(
