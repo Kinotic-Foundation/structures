@@ -232,7 +232,6 @@ export default class StructuresList extends Vue {
     } catch (error: any) {
       delete item["publishing"];
       console.error('Error unpublishing structure:', error);
-      // You could add a toast notification here if needed
     }
   }
 
@@ -332,7 +331,6 @@ export default class StructuresList extends Vue {
       @close="closeItemModal"
     />
 
-    <!-- Publish Modal -->
     <Dialog
       v-model:visible="showPublishModal"
       modal

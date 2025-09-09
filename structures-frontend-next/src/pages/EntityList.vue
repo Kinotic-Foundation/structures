@@ -122,7 +122,8 @@ if (!id) {
   }
 
   displayAlert(text: string) {
-    alert(text)
+    console.log(text)
+    // alert(text)
   }
 
   find() {
