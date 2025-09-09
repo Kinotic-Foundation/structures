@@ -17,6 +17,7 @@ import ConfirmDialog from "primevue/confirmdialog";
 import Card from "primevue/card";
 import Paginator, { type PageState } from "primevue/paginator";
 import SelectButton from "primevue/selectbutton";
+import { useToast } from "primevue/usetoast";
 
 import {
   type IDataSource,
@@ -62,6 +63,8 @@ class CrudTable extends Vue {
   @Prop({ default: true }) showPagination!: boolean
   @Prop({ default: true }) enableRowHover!: boolean
   @Prop({ default: 10 }) defaultPageSize!: number
+
+  private toast = useToast()
 
   getRowClass() {
     return {
@@ -249,6 +252,15 @@ class CrudTable extends Vue {
         this.loading = false;
         this.initialSearchCompleted = true;
       });
+  }
+
+  displayAlert(text: string) {
+    this.toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: text,
+      life: 3000
+    });
   }
 }
 

@@ -65,14 +65,65 @@ export default class ProjectStructuresTable extends Vue {
     this.markProjectAsActive()
   }
 
+  @Watch('applicationId', { immediate: true })
+  onApplicationIdChange(newApplicationId: string, oldApplicationId: string) {
+    console.log('ProjectStructuresTable: applicationId changed from', oldApplicationId, 'to', newApplicationId)
+    this.refreshTable()
+    this.markProjectAsActive()
+  }
+
+  @Watch('APPLICATION_STATE.currentApplication', { immediate: true })
+  async onGlobalApplicationChange(newApp: any, oldApp: any) {
+    console.log('ProjectStructuresTable: Global APPLICATION_STATE.currentApplication changed from', oldApp?.id, 'to', newApp?.id)
+    
+    if (this.isProjectStructuresPage && newApp && newApp.id !== oldApp?.id) {
+      await this.handleApplicationChangeForProjectStructures(newApp)
+    } else {
+      this.refreshTable()
+      this.markProjectAsActive()
+    }
+  }
+
+  get isProjectStructuresPage(): boolean {
+    return /^\/application\/[^/]+\/project\/[^/]+\/structures$/.test(this.$route.path)
+  }
+
+  async handleApplicationChangeForProjectStructures(newApp: any) {
+    try {
+      console.log('ProjectStructuresTable: Handling application change for ProjectStructures page')
+      
+      const pageable = { pageNumber: 0, pageSize: 1 } as any
+      const result = await Structures.getProjectService().findAllForApplication(newApp.id, pageable)
+      const firstProject = result.content?.[0]
+      
+      if (firstProject) {
+        console.log('ProjectStructuresTable: Found first project:', firstProject.name, 'navigating to it')
+        
+        const applicationId = newApp.id
+        const projectId = firstProject.id ?? ''
+        await this.$router.push(`/application/${encodeURIComponent(applicationId)}/project/${encodeURIComponent(projectId)}/structures`)
+      } else {
+        console.log('ProjectStructuresTable: No projects found for application:', newApp.id)
+        this.refreshTable()
+        this.markProjectAsActive()
+      }
+    } catch (error) {
+      console.error('ProjectStructuresTable: Error handling application change:', error)
+      this.refreshTable()
+      this.markProjectAsActive()
+    }
+  }
+
   get dataSource() {
     return {
       findAll: async (pageable: Pageable): Promise<IterablePage<Structure>> => {
+        console.log('ProjectStructuresTable: dataSource.findAll called with projectId:', this.projectId, 'and currentApplication:', APPLICATION_STATE.currentApplication?.id)
         const result = await Structures.getStructureService().findAllForProject(this.projectId, pageable)
         APPLICATION_STATE.structuresCount = result.totalElements ?? 0
         return result
       },
       search: async (_searchText: string, pageable: Pageable): Promise<IterablePage<Structure>> => {
+        console.log('ProjectStructuresTable: dataSource.search called with projectId:', this.projectId, 'and currentApplication:', APPLICATION_STATE.currentApplication?.id)
         const search = `projectId:${this.projectId} && ${this.searchText}`
         return Structures.getStructureService().search(search, pageable)
       }
@@ -122,8 +173,10 @@ export default class ProjectStructuresTable extends Vue {
   }
 
   openPublishModal(item: Structure) {
+    console.log('ProjectStructuresTable: openPublishModal called for item:', item.name);
     this.selectedStructure = item
     this.showPublishModal = true
+    console.log('ProjectStructuresTable: showPublishModal set to:', this.showPublishModal);
   }
 
   closePublishModal() {
@@ -151,8 +204,10 @@ export default class ProjectStructuresTable extends Vue {
 
   handleRowClick(item: Structure) {
     if (item.published) {
+      console.log('ProjectStructuresTable: Opening data modal for published structure');
       this.openModal(item)
     } else {
+      console.log('ProjectStructuresTable: Opening publish modal for unpublished structure');
       this.openPublishModal(item)
     }
   }
@@ -331,7 +386,6 @@ export default class ProjectStructuresTable extends Vue {
       @close="closeModal"
     />
 
-    <!-- Publish Modal -->
     <Dialog
       v-model:visible="showPublishModal"
       modal
@@ -373,7 +427,6 @@ export default class ProjectStructuresTable extends Vue {
       </template>
     </Dialog>
 
-    <!-- Unpublish Modal -->
     <Dialog
       v-model:visible="showUnpublishModal"
       modal

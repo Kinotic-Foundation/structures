@@ -232,6 +232,12 @@ export default class Header extends Vue {
 
     await this.loadProjectsForCurrentApp();
 
+    if (this.isProjectStructuresPage && this.projectsForCurrentApp.length > 0) {
+      const firstProject = this.projectsForCurrentApp[0];
+      console.log('Header: Auto-selecting first project for ProjectStructures page:', firstProject.name);
+      this.selectProject(firstProject);
+    }
+
     this.$emit('application-changed', app);
   }
 

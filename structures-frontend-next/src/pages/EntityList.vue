@@ -122,7 +122,7 @@ if (!id) {
   }
 
   displayAlert(text: string) {
-    alert(text)
+    // alert(text)
   }
 
   find() {
