@@ -1,5 +1,5 @@
 <template>
-  <div class="flex w-full justify-center items-center h-screen max-w-[1440px] mx-auto">
+  <div class="flex w-full justify-center items-center h-screen mx-auto">
     <div v-if="isInitialized && state?.oidcCallbackLoading" class="fixed inset-0 bg-white bg-opacity-90 flex items-center justify-center z-50">
       <div class="text-center">
         <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
@@ -7,16 +7,24 @@
         <p class="text-gray-600">Please wait while we complete your authentication.</p>
       </div>
     </div>
-
-    <!-- <div class="hidden md:block w-1/2 h-full bg-[url(@/assets/login-page-image.png)] bg-no-repeat bg-cover bg-bottom-left">
-    </div> -->
          <div class="relative w-1/2 h-full bg-gradient-to-br from-[#0A0A0B] from-0% via-[#0A0A0B] via-70% to-[#293A9E] to-100% hidden md:block">
-       <img src="@/assets/login-page-symbol-new.svg" class="absolute right-0 bottom-0"/>
+       <img src="@/assets/login-page-symbol-new.svg" class="absolute right-0 bottom-0 h-screen"/>
        <img src="@/assets/login-page-logo-new.svg" class="absolute left-[75px] bottom-[56px] max-w-[300px] h-[63px] w-auto xl:max-w-[300px] xl:h-[63px] lg:max-w-[250px] lg:h-[52px] md:max-w-[200px] md:h-[42px] sm:max-w-[150px] sm:h-[32px]"/>
      </div>
-    <div class="w-1/2 h-full flex flex-col justify-around items-center bg-center bg-cover">
-      <div class="w-[320px] flex flex-col items-center">
+    <div class="w-1/2 h-full flex flex-col justify-center items-center bg-center bg-cover relative">
+      <div v-if="showSuccessMessage" class="w-full h-full flex flex-col justify-center items-center text-center">
+        <div class="mb-6">
+          <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+          </div>
+          <h2 class="text-4xl font-semibold text-surface-900 mb-4">Authentication successful</h2>
+          <p class="text-surface-900 text-base font-normal">You can close this tab and return to your command line</p>
+        </div>
+      </div>
 
+      <div v-if="!showSuccessMessage" class="w-[320px] flex flex-col items-center">
         <img src="@/assets/login-page-logo.svg" class="w-[218px] h-[45px] mb-[53px]" />
 
         <div v-if="isInitialized && shouldShowLoginForm">
@@ -181,7 +189,7 @@
           <p class="text-gray-600">Initializing...</p>
         </div>
       </div>
-      <div class="flex gap-2">
+      <div class="flex gap-2 absolute bottom-8 left-0 right-0 justify-center"> 
           <a href="#" class="text-[#0568FD] border-b-1">
             Terms of use
           </a>
@@ -246,6 +254,10 @@ export default class Login extends Vue {
 
   private _isConfigLoaded: boolean = false;
   private _isBasicAuthEnabled: boolean = true;
+  
+  private showSuccessMessage: boolean = false;
+  private countdown: number = 2;
+  private countdownInterval: NodeJS.Timeout | null = null;
 
   get isConfigLoaded() { return this._isConfigLoaded; }
   get isBasicAuthEnabled() { return this._isBasicAuthEnabled; }
@@ -291,7 +303,6 @@ export default class Login extends Vue {
       });
     } catch (error) {
       console.error('Failed to load basic config:', error);
-      // Keep defaults
       this._isBasicAuthEnabled = true;
       this._isConfigLoaded = false;
       console.log('Using default config:', { 
@@ -364,8 +375,12 @@ export default class Login extends Vue {
       
       await this.userState.handleOidcLogin(user);
       
-      const redirectPath = referer || '/applications';
-      await CONTINUUM_UI.navigate(redirectPath);
+      if (referer) {
+        this.$route.query.referer = referer;
+      }
+      
+      this.showSuccessMessage = true;
+      this.startCountdown();
     } catch (error: unknown) {
       console.error('OIDC callback error:', error);
       if (error instanceof Error) {
@@ -391,16 +406,8 @@ export default class Login extends Vue {
     try {
       await this.userState.authenticate(this.login, this.password);
 
-      if (this.referer) {
-        await CONTINUUM_UI.navigate(this.referer);
-      } else {
-        const redirectPath = this.$route.redirectedFrom?.fullPath;
-        if (redirectPath && redirectPath !== "/") {
-          await CONTINUUM_UI.navigate(redirectPath);
-        } else {
-          await CONTINUUM_UI.navigate('/applications');
-        }
-      }
+      this.showSuccessMessage = true;
+      this.startCountdown();
     } catch (error: unknown) {
       console.error('Authentication error:', error);
       if (error instanceof Error) {
@@ -568,6 +575,56 @@ export default class Login extends Vue {
       
       this.auth.resetToEmail();
     }
+  }
+
+  private startCountdown() {
+    this.countdown = 2;
+    
+    this.countdownInterval = setInterval(() => {
+      this.countdown--;
+      
+      if (this.countdown <= 0) {
+        this.clearCountdown();
+        this.redirectAfterSuccess();
+      }
+    }, 1000);
+  }
+
+  private clearCountdown() {
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+      this.countdownInterval = null;
+    }
+  }
+
+  private async redirectAfterSuccess() {
+    try {
+      const refererFromQuery = this.$route.query.referer as string;
+      if (refererFromQuery) {
+        await CONTINUUM_UI.navigate(refererFromQuery);
+        return;
+      }
+      
+      if (this.referer) {
+        await CONTINUUM_UI.navigate(this.referer);
+        return;
+      }
+      
+      const redirectPath = this.$route.redirectedFrom?.fullPath;
+      if (redirectPath && redirectPath !== "/") {
+        await CONTINUUM_UI.navigate(redirectPath);
+        return;
+      }
+      
+      await CONTINUUM_UI.navigate('/applications');
+    } catch (error) {
+      console.error('Redirect error:', error);
+      await CONTINUUM_UI.navigate('/applications');
+    }
+  }
+
+  beforeUnmount() {
+    this.clearCountdown();
   }
 }
 </script>
