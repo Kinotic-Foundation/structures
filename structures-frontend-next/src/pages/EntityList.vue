@@ -122,6 +122,7 @@ if (!id) {
   }
 
   displayAlert(text: string) {
+    console.log(text)
     // alert(text)
   }
 
