@@ -28,6 +28,7 @@ export class Synchronize extends Command {
         server:     Flags.string({char: 's', description: 'The structures server to connect to'}),
         publish:    Flags.boolean({char: 'p', description: 'Publish each Entity after save/update'}),
         verbose:    Flags.boolean({char: 'v', description: 'Enable verbose logging'}),
+        yes:        Flags.boolean({description: 'Automatically confirm opening the browser'}),
         dryRun:     Flags.boolean({description: 'Dry run enables verbose logging and does not save any changes to the server'})
     }
 
@@ -54,7 +55,7 @@ export class Synchronize extends Command {
                 serverUrl = serverConfig.url
             }
 
-            if (flags.dryRun || await connectAndUpgradeSession(serverUrl, this)) {
+            if (flags.dryRun || await connectAndUpgradeSession(serverUrl, this, flags.yes)) {
                 try {
 
                     if(!flags.dryRun) {

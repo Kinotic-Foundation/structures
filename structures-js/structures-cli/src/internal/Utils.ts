@@ -57,9 +57,10 @@ export function jsonStringifyReplacer(key: any, value: any) {
  * This will be replaced when the server supports a session upgrade command
  * @param server the server to connect to
  * @param logger the logger to use
+ * @param autoConfirm allow the user to skip the browser confirmation
  * @return true if the session was upgraded successfully
  */
-export async function connectAndUpgradeSession(server: string, logger: Logger): Promise<boolean>{
+export async function connectAndUpgradeSession(server: string, logger: Logger, autoConfirm?: boolean): Promise<boolean>{
     try {
         const serverURL: URL = new URL(server)
 
@@ -100,7 +101,7 @@ export async function connectAndUpgradeSession(server: string, logger: Logger): 
             logger.log('Authenticate your account at:')
             logger.log(url)
 
-            const answer = await confirm({
+            const answer = autoConfirm ?? await confirm({
                 message: 'Open in browser?',
                 default: true,
             })
