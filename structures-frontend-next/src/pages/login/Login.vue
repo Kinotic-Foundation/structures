@@ -12,19 +12,7 @@
        <img src="@/assets/login-page-logo-new.svg" class="absolute left-[75px] bottom-[56px] max-w-[300px] h-[63px] w-auto xl:max-w-[300px] xl:h-[63px] lg:max-w-[250px] lg:h-[52px] md:max-w-[200px] md:h-[42px] sm:max-w-[150px] sm:h-[32px]"/>
      </div>
     <div class="w-1/2 h-full flex flex-col justify-center items-center bg-center bg-cover relative">
-      <div v-if="showSuccessMessage" class="w-full h-full flex flex-col justify-center items-center text-center">
-        <div class="mb-6">
-          <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-            </svg>
-          </div>
-          <h2 class="text-4xl font-semibold text-surface-900 mb-4">Authentication successful</h2>
-          <p class="text-surface-900 text-base font-normal">You can close this tab and return to your command line</p>
-        </div>
-      </div>
-
-      <div v-if="!showSuccessMessage" class="w-[320px] flex flex-col items-center">
+      <div class="w-[320px] flex flex-col items-center">
         <img src="@/assets/login-page-logo.svg" class="w-[218px] h-[45px] mb-[53px]" />
 
         <div v-if="isInitialized && shouldShowLoginForm">
@@ -254,10 +242,6 @@ export default class Login extends Vue {
 
   private _isConfigLoaded: boolean = false;
   private _isBasicAuthEnabled: boolean = true;
-  
-  private showSuccessMessage: boolean = false;
-  private countdown: number = 2;
-  private countdownInterval: NodeJS.Timeout | null = null;
 
   get isConfigLoaded() { return this._isConfigLoaded; }
   get isBasicAuthEnabled() { return this._isBasicAuthEnabled; }
@@ -375,12 +359,8 @@ export default class Login extends Vue {
       
       await this.userState.handleOidcLogin(user);
       
-      if (referer) {
-        this.$route.query.referer = referer;
-      }
-      
-      this.showSuccessMessage = true;
-      this.startCountdown();
+      const redirectPath = referer || '/applications';
+      await CONTINUUM_UI.navigate(redirectPath);
     } catch (error: unknown) {
       console.error('OIDC callback error:', error);
       if (error instanceof Error) {
@@ -406,8 +386,16 @@ export default class Login extends Vue {
     try {
       await this.userState.authenticate(this.login, this.password);
 
-      this.showSuccessMessage = true;
-      this.startCountdown();
+      if (this.referer) {
+        await CONTINUUM_UI.navigate(this.referer);
+      } else {
+        const redirectPath = this.$route.redirectedFrom?.fullPath;
+        if (redirectPath && redirectPath !== "/") {
+          await CONTINUUM_UI.navigate(redirectPath);
+        } else {
+          await CONTINUUM_UI.navigate('/applications');
+        }
+      }
     } catch (error: unknown) {
       console.error('Authentication error:', error);
       if (error instanceof Error) {
@@ -577,54 +565,5 @@ export default class Login extends Vue {
     }
   }
 
-  private startCountdown() {
-    this.countdown = 2;
-    
-    this.countdownInterval = setInterval(() => {
-      this.countdown--;
-      
-      if (this.countdown <= 0) {
-        this.clearCountdown();
-        this.redirectAfterSuccess();
-      }
-    }, 1000);
-  }
-
-  private clearCountdown() {
-    if (this.countdownInterval) {
-      clearInterval(this.countdownInterval);
-      this.countdownInterval = null;
-    }
-  }
-
-  private async redirectAfterSuccess() {
-    try {
-      const refererFromQuery = this.$route.query.referer as string;
-      if (refererFromQuery) {
-        await CONTINUUM_UI.navigate(refererFromQuery);
-        return;
-      }
-      
-      if (this.referer) {
-        await CONTINUUM_UI.navigate(this.referer);
-        return;
-      }
-      
-      const redirectPath = this.$route.redirectedFrom?.fullPath;
-      if (redirectPath && redirectPath !== "/") {
-        await CONTINUUM_UI.navigate(redirectPath);
-        return;
-      }
-      
-      await CONTINUUM_UI.navigate('/applications');
-    } catch (error) {
-      console.error('Redirect error:', error);
-      await CONTINUUM_UI.navigate('/applications');
-    }
-  }
-
-  beforeUnmount() {
-    this.clearCountdown();
-  }
 }
 </script>
