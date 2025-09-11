@@ -26,8 +26,14 @@
               </IconField>
             </div>
             <div v-for="app in filteredApplications" :key="app.id" @click="selectApp(app)"
-              class="px-4 py-2 hover:bg-gray-100 cursor-pointer text-surface-950 text-sm rounded">
-              {{ app.id }}
+              :class="[
+                'px-4 py-2 cursor-pointer text-sm rounded flex items-center justify-between',
+                currentApp?.id === app.id 
+                  ? 'bg-blue-100 text-blue-700 font-medium' 
+                  : 'hover:bg-gray-100 text-surface-950'
+              ]">
+              <span>{{ app.id }}</span>
+              <i v-if="currentApp?.id === app.id" class="pi pi-check text-blue-600"></i>
             </div>
           </div>
         </div>
@@ -52,8 +58,14 @@
                 </IconField>
               </div>
               <div v-for="proj in filteredProjects" :key="proj.id ?? ''" @click="selectProject(proj)"
-                class="px-4 py-2 hover:bg-gray-100 cursor-pointer text-surface-950 text-sm rounded">
-                {{ proj.name }}
+                :class="[
+                  'px-4 py-2 cursor-pointer text-sm rounded flex items-center justify-between',
+                  currentProject?.id === proj.id 
+                    ? 'bg-blue-100 text-blue-700 font-medium' 
+                    : 'hover:bg-gray-100 text-surface-950'
+                ]">
+                <span>{{ proj.name }}</span>
+                <i v-if="currentProject?.id === proj.id" class="pi pi-check text-blue-600"></i>
               </div>
             </div>
           </div>
@@ -151,6 +163,7 @@ export default class Header extends Vue {
 
   @Watch('$route.fullPath', { immediate: true })
   onRouteChange() {
+    console.log('Header: Route changed to:', this.$route.fullPath);
     this.updateRouteState();
     if (!APPLICATION_STATE.currentApplication) {
       this.tryAutoSelectAppAndProject();
@@ -167,8 +180,26 @@ export default class Header extends Vue {
 
   updateRouteState() {
     const path = this.$route.path;
-    this.isApplicationDetailsPage = /^\/application\/[^/]+/.test(path);
+    this.isApplicationDetailsPage = /^\/application\/[^/]+$/.test(path);
     this.isProjectStructuresPage = /^\/application\/[^/]+\/project\/[^/]+\/structures$/.test(path);
+    
+    console.log('Header: updateRouteState - path:', path);
+    console.log('Header: isApplicationDetailsPage:', this.isApplicationDetailsPage);
+    console.log('Header: isProjectStructuresPage:', this.isProjectStructuresPage);
+    
+    if (this.isApplicationDetailsPage && !this.isProjectStructuresPage) {
+      console.log('Header: On ApplicationDetails page - clearing project selection');
+      this.currentProject = null;
+    }
+    else if (this.isProjectStructuresPage) {
+      const projectId = this.$route.params.projectId as string;
+      console.log('Header: ProjectStructures page - projectId:', projectId);
+      console.log('Header: Current project:', this.currentProject?.id);
+      if (projectId && this.currentProject?.id !== projectId) {
+        console.log('Header: Detected project ID from URL:', projectId);
+        this.setCurrentProjectById(projectId);
+      }
+    }
   }
 
   loadApplicationsIfNeeded() {
@@ -216,6 +247,14 @@ export default class Header extends Vue {
       const pageable = { pageNumber: 0, pageSize: 100 } as any;
       const result = await Structures.getProjectService().findAllForApplication(this.currentApp.id, pageable);
       this.projectsForCurrentApp = result.content ?? [];
+      
+      if (this.isProjectStructuresPage) {
+        const projectId = this.$route.params.projectId as string;
+        if (projectId && this.currentProject?.id !== projectId) {
+          console.log('Header: Setting current project from URL after loading projects:', projectId);
+          this.setCurrentProjectById(projectId);
+        }
+      }
     } catch (e) {
       console.error('[Header] Failed to load projects:', e);
     }
@@ -232,11 +271,8 @@ export default class Header extends Vue {
 
     await this.loadProjectsForCurrentApp();
 
-    if (this.isProjectStructuresPage && this.projectsForCurrentApp.length > 0) {
-      const firstProject = this.projectsForCurrentApp[0];
-      console.log('Header: Auto-selecting first project for ProjectStructures page:', firstProject.name);
-      this.selectProject(firstProject);
-    }
+    console.log('Header: Redirecting to application details page for:', app.id);
+    await this.$router.push(`/application/${encodeURIComponent(app.id)}`);
 
     this.$emit('application-changed', app);
   }
@@ -260,20 +296,54 @@ export default class Header extends Vue {
     }
   }
 
-  async setActiveProjectById(applicationId: string, projectId: string) {
-    const app = this.allApplications.find(a => a.id === applicationId);
-    if (app) {
-      this.currentApp = app;
-      APPLICATION_STATE.currentApplication = app;
+  async setActiveProjectById(applicationId: string, projectId: string): Promise<void> {
+    try {
+      const app = this.allApplications.find(a => a.id === applicationId);
+      if (app) {
+        this.currentApp = app;
+        APPLICATION_STATE.currentApplication = app;
 
-      const pageable = { pageNumber: 0, pageSize: 100 } as any;
-      const result = await Structures.getProjectService().findAllForApplication(applicationId, pageable);
-      this.projectsForCurrentApp = result.content ?? [];
+        const pageable = { pageNumber: 0, pageSize: 100 } as any;
+        const result = await Structures.getProjectService().findAllForApplication(applicationId, pageable);
+        this.projectsForCurrentApp = result.content ?? [];
 
+        const proj = this.projectsForCurrentApp.find(p => p.id === projectId);
+        if (proj) {
+          this.currentProject = proj;
+          console.log('Header: Set active project to:', proj.name, 'ID:', proj.id);
+          console.log('Header: Current project after setting:', this.currentProject);
+        } else {
+          console.warn('Header: Project not found:', projectId);
+          console.log('Header: Available projects:', this.projectsForCurrentApp.map(p => ({ id: p.id, name: p.name })));
+        }
+      } else {
+        console.warn('Header: Application not found:', applicationId);
+      }
+    } catch (error) {
+      console.error('Header: Error setting active project:', error);
+    }
+  }
+
+  setCurrentProjectById(projectId: string): void {
+    console.log('Header: setCurrentProjectById called with projectId:', projectId);
+    console.log('Header: projectsForCurrentApp length:', this.projectsForCurrentApp.length);
+    
+    if (this.projectsForCurrentApp.length > 0) {
       const proj = this.projectsForCurrentApp.find(p => p.id === projectId);
       if (proj) {
         this.currentProject = proj;
+        console.log('Header: Set current project from URL to:', proj.name, 'ID:', proj.id);
+        console.log('Header: Current project after setting:', this.currentProject);
+      } else {
+        console.warn('Header: Project not found in current projects:', projectId);
+        console.log('Header: Available projects:', this.projectsForCurrentApp.map(p => ({ id: p.id, name: p.name })));
       }
+    } else {
+      console.warn('Header: No projects loaded yet, cannot set current project');
+      this.loadProjectsForCurrentApp().then(() => {
+        console.log('Header: Projects loaded, retrying setCurrentProjectById');
+        this.setCurrentProjectById(projectId);
+      });
     }
   }
 
