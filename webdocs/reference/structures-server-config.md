@@ -1,4 +1,4 @@
-# Structures Config
+# Structures Server Config
 
 Structures is designed to be embedded in any Spring Boot project. You can configure it using any standard Spring configuration mechanism, such as `application.yml`, `application.properties`, or environment variables. The reference implementation is in the `@structures-server` module, but you can use these options in your own Spring Boot applications by adding the `@EnableStructures` annotation to your main class.
 

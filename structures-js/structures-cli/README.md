@@ -12,7 +12,7 @@ $ npm install -g @kinotic/structures-cli
 $ structures COMMAND
 running command...
 $ structures (--version)
-@kinotic/structures-cli/3.5.0-beta.1 darwin-arm64 node-v22.13.1
+@kinotic/structures-cli/3.5.0-beta.5 darwin-arm64 node-v22.13.1
 $ structures --help [COMMAND]
 USAGE
   $ structures COMMAND
@@ -22,8 +22,8 @@ USAGE
 # Commands
 <!-- commands -->
 * [`structures autocomplete [SHELL]`](#structures-autocomplete-shell)
-* [`structures gen [APPLICATION]`](#structures-gen-application)
-* [`structures generate [APPLICATION]`](#structures-generate-application)
+* [`structures gen`](#structures-gen)
+* [`structures generate`](#structures-generate)
 * [`structures help [COMMAND]`](#structures-help-command)
 * [`structures init`](#structures-init)
 * [`structures initialize`](#structures-initialize)
@@ -37,8 +37,8 @@ USAGE
 * [`structures plugins uninstall [PLUGIN]`](#structures-plugins-uninstall-plugin)
 * [`structures plugins unlink [PLUGIN]`](#structures-plugins-unlink-plugin)
 * [`structures plugins update`](#structures-plugins-update)
-* [`structures sync [APPLICATION]`](#structures-sync-application)
-* [`structures synchronize [APPLICATION]`](#structures-synchronize-application)
+* [`structures sync`](#structures-sync)
+* [`structures synchronize`](#structures-synchronize)
 * [`structures update [CHANNEL]`](#structures-update-channel)
 
 ## `structures autocomplete [SHELL]`
@@ -70,18 +70,15 @@ EXAMPLES
   $ structures autocomplete --refresh-cache
 ```
 
-_See code: [@oclif/plugin-autocomplete](https://github.com/oclif/plugin-autocomplete/blob/v3.2.26/src/commands/autocomplete/index.ts)_
+_See code: [@oclif/plugin-autocomplete](https://github.com/oclif/plugin-autocomplete/blob/v3.2.34/src/commands/autocomplete/index.ts)_
 
-## `structures gen [APPLICATION]`
+## `structures gen`
 
 This will generate all Entity Service classes.
 
 ```
 USAGE
-  $ structures gen [APPLICATION] [-v]
-
-ARGUMENTS
-  APPLICATION  The application that you want to generate service classes for
+  $ structures gen [-v]
 
 FLAGS
   -v, --verbose  Enable verbose logging
@@ -97,19 +94,16 @@ EXAMPLES
 
   $ structures gen
 
-  $ structures gen my.application -v
+  $ structures gen -v
 ```
 
-## `structures generate [APPLICATION]`
+## `structures generate`
 
 This will generate all Entity Service classes.
 
 ```
 USAGE
-  $ structures generate [APPLICATION] [-v]
-
-ARGUMENTS
-  APPLICATION  The application that you want to generate service classes for
+  $ structures generate [-v]
 
 FLAGS
   -v, --verbose  Enable verbose logging
@@ -125,10 +119,10 @@ EXAMPLES
 
   $ structures gen
 
-  $ structures gen my.application -v
+  $ structures gen -v
 ```
 
-_See code: [src/commands/generate.ts](https://github.com/Kinotic-Foundation/structures/blob/v3.5.0-beta.1/src/commands/generate.ts)_
+_See code: [src/commands/generate.ts](https://github.com/Kinotic-Foundation/structures/blob/v3.5.0-beta.5/src/commands/generate.ts)_
 
 ## `structures help [COMMAND]`
 
@@ -204,7 +198,7 @@ EXAMPLES
   $ structures init -a my.app -e path/to/entities -g path/to/services
 ```
 
-_See code: [src/commands/initialize.ts](https://github.com/Kinotic-Foundation/structures/blob/v3.5.0-beta.1/src/commands/initialize.ts)_
+_See code: [src/commands/initialize.ts](https://github.com/Kinotic-Foundation/structures/blob/v3.5.0-beta.5/src/commands/initialize.ts)_
 
 ## `structures plugins`
 
@@ -227,7 +221,7 @@ EXAMPLES
   $ structures plugins
 ```
 
-_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v5.4.36/src/commands/plugins/index.ts)_
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v5.4.46/src/commands/plugins/index.ts)_
 
 ## `structures plugins add PLUGIN`
 
@@ -301,7 +295,7 @@ EXAMPLES
   $ structures plugins inspect myplugin
 ```
 
-_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v5.4.36/src/commands/plugins/inspect.ts)_
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v5.4.46/src/commands/plugins/inspect.ts)_
 
 ## `structures plugins install PLUGIN`
 
@@ -350,7 +344,7 @@ EXAMPLES
     $ structures plugins install someuser/someplugin
 ```
 
-_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v5.4.36/src/commands/plugins/install.ts)_
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v5.4.46/src/commands/plugins/install.ts)_
 
 ## `structures plugins link PATH`
 
@@ -381,7 +375,7 @@ EXAMPLES
   $ structures plugins link myplugin
 ```
 
-_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v5.4.36/src/commands/plugins/link.ts)_
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v5.4.46/src/commands/plugins/link.ts)_
 
 ## `structures plugins remove [PLUGIN]`
 
@@ -422,7 +416,7 @@ FLAGS
   --reinstall  Reinstall all plugins after uninstalling.
 ```
 
-_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v5.4.36/src/commands/plugins/reset.ts)_
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v5.4.46/src/commands/plugins/reset.ts)_
 
 ## `structures plugins uninstall [PLUGIN]`
 
@@ -450,7 +444,7 @@ EXAMPLES
   $ structures plugins uninstall myplugin
 ```
 
-_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v5.4.36/src/commands/plugins/uninstall.ts)_
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v5.4.46/src/commands/plugins/uninstall.ts)_
 
 ## `structures plugins unlink [PLUGIN]`
 
@@ -494,18 +488,15 @@ DESCRIPTION
   Update installed plugins.
 ```
 
-_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v5.4.36/src/commands/plugins/update.ts)_
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v5.4.46/src/commands/plugins/update.ts)_
 
-## `structures sync [APPLICATION]`
+## `structures sync`
 
 Synchronize the local Entity definitions with the Structures Server
 
 ```
 USAGE
-  $ structures sync [APPLICATION] [-s <value>] [-p] [-v] [--dryRun]
-
-ARGUMENTS
-  APPLICATION  The application the Entities belong to
+  $ structures sync [-s <value>] [-p] [-v] [--dryRun]
 
 FLAGS
   -p, --publish         Publish each Entity after save/update
@@ -524,21 +515,18 @@ EXAMPLES
 
   $ structures sync
 
-  $ structures synchronize my.application --server http://localhost:9090 --publish --verbose
+  $ structures synchronize --server http://localhost:9090 --publish --verbose
 
-  $ structures sync my.application -p -v -s http://localhost:9090
+  $ structures sync -p -v -s http://localhost:9090
 ```
 
-## `structures synchronize [APPLICATION]`
+## `structures synchronize`
 
 Synchronize the local Entity definitions with the Structures Server
 
 ```
 USAGE
-  $ structures synchronize [APPLICATION] [-s <value>] [-p] [-v] [--dryRun]
-
-ARGUMENTS
-  APPLICATION  The application the Entities belong to
+  $ structures synchronize [-s <value>] [-p] [-v] [--dryRun]
 
 FLAGS
   -p, --publish         Publish each Entity after save/update
@@ -557,12 +545,12 @@ EXAMPLES
 
   $ structures sync
 
-  $ structures synchronize my.application --server http://localhost:9090 --publish --verbose
+  $ structures synchronize --server http://localhost:9090 --publish --verbose
 
-  $ structures sync my.application -p -v -s http://localhost:9090
+  $ structures sync -p -v -s http://localhost:9090
 ```
 
-_See code: [src/commands/synchronize.ts](https://github.com/Kinotic-Foundation/structures/blob/v3.5.0-beta.1/src/commands/synchronize.ts)_
+_See code: [src/commands/synchronize.ts](https://github.com/Kinotic-Foundation/structures/blob/v3.5.0-beta.5/src/commands/synchronize.ts)_
 
 ## `structures update [CHANNEL]`
 
@@ -600,5 +588,5 @@ EXAMPLES
     $ structures update --available
 ```
 
-_See code: [@oclif/plugin-update](https://github.com/oclif/plugin-update/blob/v4.6.36/src/commands/update.ts)_
+_See code: [@oclif/plugin-update](https://github.com/oclif/plugin-update/blob/v4.7.4/src/commands/update.ts)_
 <!-- commandsstop -->
