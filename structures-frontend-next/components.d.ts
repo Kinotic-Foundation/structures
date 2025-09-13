@@ -45,6 +45,7 @@ declare module 'vue' {
     RadioButton: typeof import('primevue/radiobutton')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    ScalarOpenAPI: typeof import('./src/components/ScalarOpenAPI.vue')['default']
     Select: typeof import('primevue/select')['default']
     SelectButton: typeof import('primevue/selectbutton')['default']
     SideBar: typeof import('./src/components/SideBar.vue')['default']

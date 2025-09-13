@@ -111,11 +111,19 @@ export default class ProjectList extends Vue {
     this.$router.push(`${this.$route.path}/edit/${item.id}`)
   }
 
-  toProjectPage(item: Identifiable<string>): void {
+  async toProjectPage(item: Identifiable<string>): Promise<void> {
     if (!item.id) return
-    const appId = this.applicationId
-    const projectId = item.id
-    this.$router.push(`/application/${encodeURIComponent(appId)}/project/${encodeURIComponent(projectId)}/structures`)
+    
+    try {
+      const appId = this.applicationId
+      const projectId = item.id
+      
+      console.log('ProjectList: Navigating to project:', (item as any).name, 'ID:', projectId, 'App ID:', appId)
+      
+      await this.$router.push(`/application/${encodeURIComponent(appId)}/project/${encodeURIComponent(projectId)}/structures`)
+    } catch (error) {
+      console.error('[ProjectList] Failed to navigate to project page:', error)
+    }
   }
 
   clearSelectedProject() {
