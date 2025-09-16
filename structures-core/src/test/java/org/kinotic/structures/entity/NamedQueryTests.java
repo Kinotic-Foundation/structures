@@ -15,7 +15,7 @@ import org.kinotic.continuum.idl.api.schema.LongC3Type;
 import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
 import org.kinotic.continuum.idl.api.schema.StringC3Type;
 import org.kinotic.structures.ElasticsearchTestBase;
-import org.kinotic.structures.api.domain.DefaultEntityContext;
+import org.kinotic.structures.internal.api.domain.DefaultEntityContext;
 import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.NamedQueriesDefinition;
 import org.kinotic.structures.api.domain.Structure;

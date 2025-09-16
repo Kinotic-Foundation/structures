@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.api.services.sql;
+package org.kinotic.structures.api.domain;
 
 /**
  * Marker interface for classes that hold parameters

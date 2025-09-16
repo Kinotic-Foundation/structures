@@ -1,5 +1,6 @@
 package org.kinotic.structures.api.services;
 
+import org.kinotic.continuum.api.annotations.Proxy;
 import org.kinotic.continuum.api.annotations.Publish;
 import org.kinotic.continuum.core.api.crud.IdentifiableCrudService;
 import org.kinotic.structures.api.domain.Application;
@@ -7,6 +8,7 @@ import org.kinotic.structures.api.domain.Application;
 import java.util.concurrent.CompletableFuture;
 
 @Publish
+@Proxy
 public interface ApplicationService extends IdentifiableCrudService<Application, String> {
 
     /**

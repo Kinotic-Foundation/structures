@@ -1,10 +1,8 @@
 package org.kinotic.structures.api.domain;
 
-import org.kinotic.structures.internal.api.services.EntityService;
-
 /**
  * Represents an operation that can be performed on an entity.
- * This list must be kept in sync with the list of operations in the {@link EntityService} interface
+ * This list must be kept in sync with the list of operations in the EntityService interface
  */
 public enum EntityOperation {
 

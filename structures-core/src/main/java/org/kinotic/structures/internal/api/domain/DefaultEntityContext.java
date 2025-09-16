@@ -1,4 +1,4 @@
-package org.kinotic.structures.api.domain;
+package org.kinotic.structures.internal.api.domain;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.kinotic.continuum.api.security.Participant;
+import org.kinotic.structures.api.domain.EntityContext;
 
 import java.util.List;
 

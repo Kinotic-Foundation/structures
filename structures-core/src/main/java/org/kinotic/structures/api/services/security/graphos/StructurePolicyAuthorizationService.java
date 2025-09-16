@@ -20,7 +20,7 @@ import org.kinotic.structures.internal.api.services.impl.security.graphos.Policy
 import org.kinotic.structures.internal.api.services.impl.security.graphos.PolicyEvaluatorWithOperation;
 import org.kinotic.structures.internal.api.services.impl.security.graphos.PolicyEvaluatorWithoutOperation;
 import org.kinotic.structures.internal.api.services.impl.security.graphos.SharedPolicyManager;
-import org.kinotic.structures.internal.idl.converters.common.DecoratedProperty;
+import org.kinotic.structures.api.domain.DecoratedProperty;
 import org.kinotic.structures.internal.utils.StructuresUtil;
 
 public class StructurePolicyAuthorizationService implements AuthorizationService<EntityOperation> {

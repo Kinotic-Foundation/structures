@@ -1,5 +1,6 @@
 package org.kinotic.structures.api.services;
 
+import org.kinotic.continuum.api.annotations.Proxy;
 import org.kinotic.continuum.api.annotations.Publish;
 import org.kinotic.continuum.core.api.crud.IdentifiableCrudService;
 import org.kinotic.continuum.core.api.crud.Page;
@@ -8,7 +9,7 @@ import org.kinotic.continuum.idl.api.schema.FunctionDefinition;
 import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.NamedQueriesDefinition;
 import org.kinotic.structures.api.domain.Structure;
-import org.kinotic.structures.internal.api.services.sql.ParameterHolder;
+import org.kinotic.structures.api.domain.ParameterHolder;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -17,6 +18,7 @@ import java.util.concurrent.CompletableFuture;
  * Created by Navíd Mitchell 🤪 on 4/23/24.
  */
 @Publish
+@Proxy
 public interface NamedQueriesService extends IdentifiableCrudService<NamedQueriesDefinition, String> {
 
     /**

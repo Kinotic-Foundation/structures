@@ -5,7 +5,6 @@ import lombok.Getter;
 import lombok.Locked;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.kinotic.structures.internal.api.services.EntityService;
 import org.kinotic.structures.api.domain.EntityOperation;
 
 import java.util.HashMap;
@@ -14,7 +13,7 @@ import java.util.Map;
 
 /**
  * Configuration for the {@link EntityServiceDecoratorsDecorator}
- * This maps {@link EntityService} method names to decorators that should be applied to the method
+ * This maps EntityService method names to decorators that should be applied to the method
  */
 @Getter
 @Setter
@@ -23,7 +22,7 @@ public class EntityServiceDecoratorsConfig{
 
     /**
      * The following map crud operations to decorators
-     * These will be applied to the corresponding method type in the {@link EntityService}
+     * These will be applied to the corresponding method type in the EntityService
      * i.e. create will be applied to the save method, read will be applied to count, findAll, findById, ect
      */
     private List<EntityServiceDecorator> allCreate = List.of();
@@ -33,7 +32,7 @@ public class EntityServiceDecoratorsConfig{
 
     /**
      * The following map individual methods to decorators
-     * These will be applied to the corresponding method in the {@link EntityService}
+     * These will be applied to the corresponding method in the EntityService
      * i.e. bulkSave will be applied to the bulkSave method
      */
     private List<EntityServiceDecorator> bulkSave = List.of();

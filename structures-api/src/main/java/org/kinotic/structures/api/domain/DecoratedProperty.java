@@ -1,4 +1,4 @@
-package org.kinotic.structures.internal.idl.converters.common;
+package org.kinotic.structures.api.domain;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -17,6 +17,7 @@ import java.util.List;
 @Accessors(chain = true)
 @AllArgsConstructor
 @NoArgsConstructor
+// TODO: move back to structures core
 public class DecoratedProperty {
 
     private String jsonPath;

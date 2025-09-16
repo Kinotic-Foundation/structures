@@ -14,7 +14,6 @@ import org.kinotic.continuum.api.Identifiable;
 import org.kinotic.continuum.idl.api.schema.ObjectC3Type;
 import org.kinotic.structures.api.domain.idl.decorators.EntityType;
 import org.kinotic.structures.api.domain.idl.decorators.MultiTenancyType;
-import org.kinotic.structures.internal.idl.converters.common.DecoratedProperty;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -49,6 +48,7 @@ public class Structure implements Identifiable<String> {
 
     private ObjectC3Type entityDefinition = null;
 
+    // TODO: move these to separate metadata class. Especially decoratedProperties since it has nothing to do with the API.
     private Date created = null; // do not ever set, system managed
 
     private Date updated = null; // do not ever set, system managed

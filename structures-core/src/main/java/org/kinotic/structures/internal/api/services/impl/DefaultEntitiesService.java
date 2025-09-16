@@ -11,7 +11,7 @@ import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.domain.TenantSpecificId;
 import org.kinotic.structures.api.services.EntitiesService;
 import org.kinotic.structures.internal.api.services.EntityService;
-import org.kinotic.structures.internal.api.services.sql.ParameterHolder;
+import org.kinotic.structures.api.domain.ParameterHolder;
 import org.springframework.stereotype.Component;
 
 import java.util.List;

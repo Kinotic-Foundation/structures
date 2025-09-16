@@ -1,6 +1,6 @@
 package org.kinotic.structures;
 
-import org.kinotic.structures.api.domain.DefaultEntityContext;
+import org.kinotic.structures.internal.api.domain.DefaultEntityContext;
 import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.config.ElasticConnectionInfo;
 import org.kinotic.structures.internal.sample.DummyParticipant;

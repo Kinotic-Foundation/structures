@@ -1,7 +1,5 @@
 package org.kinotic.structures.api.domain;
 
-import org.kinotic.structures.internal.api.services.DefaultTenantSpecificId;
-
 /**
  * Created By Navíd Mitchell 🤪on 2/12/25
  */

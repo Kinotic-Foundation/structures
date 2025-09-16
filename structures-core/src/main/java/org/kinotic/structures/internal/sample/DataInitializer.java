@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 
 import org.kinotic.structures.api.config.StructuresProperties;
-import org.kinotic.structures.api.domain.DefaultEntityContext;
+import org.kinotic.structures.internal.api.domain.DefaultEntityContext;
 import org.kinotic.structures.api.domain.Structure;
 import org.kinotic.structures.api.services.EntitiesService;
 import org.slf4j.Logger;

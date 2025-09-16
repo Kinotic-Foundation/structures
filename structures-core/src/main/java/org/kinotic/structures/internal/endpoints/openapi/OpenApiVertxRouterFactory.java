@@ -23,9 +23,9 @@ import org.kinotic.continuum.gateway.api.security.AuthenticationHandler;
 import org.kinotic.structures.api.config.StructuresProperties;
 import org.kinotic.structures.api.domain.*;
 import org.kinotic.structures.api.services.EntitiesService;
-import org.kinotic.structures.internal.api.services.DefaultTenantSpecificId;
+import org.kinotic.structures.api.domain.DefaultTenantSpecificId;
 import org.kinotic.structures.internal.api.services.sql.MapParameterHolder;
-import org.kinotic.structures.internal.api.services.sql.ParameterHolder;
+import org.kinotic.structures.api.domain.ParameterHolder;
 import org.kinotic.structures.internal.utils.VertxWebUtil;
 import org.springframework.stereotype.Component;
 

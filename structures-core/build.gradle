@@ -4,6 +4,7 @@ plugins {
 }
 
 dependencies {
+	implementation project(':structures-api')
 	implementation project(':structures-sql')
 	implementation project(':structures-auth')
 
