@@ -230,4 +230,19 @@ export default class NamespaceList extends Vue {
 .p-row-odd {
   cursor: pointer;
 }
+
+:deep(.p-datatable .p-datatable-tbody > tr) {
+  height: 64px;
+}
+
+:deep(.p-datatable .p-datatable-tbody > tr > td) {
+  vertical-align: middle;
+}
+
+:deep(.p-datatable .p-datatable-tbody > tr > td:last-child) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 64px;
+}
 </style>
