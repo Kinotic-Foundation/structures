@@ -15,6 +15,7 @@ export interface AuthenticationState {
   loading: boolean;
   oidcCallbackLoading: boolean;
   password: string;
+  authenticationSuccess: boolean;
 }
 
 export interface ProviderConfig {
@@ -49,7 +50,6 @@ export class AuthenticationManager {
       this.configLoaded = true;
     } catch (error) {
       console.error('Failed to load configuration:', error);
-      // Set defaults if configuration loading fails
       this.basicAuthEnabled = true;
       this.configLoaded = true;
     }
@@ -222,7 +222,8 @@ export class AuthenticationManager {
       showErrorDetails: false,
       loading: false,
       oidcCallbackLoading: false,
-      password: ''
+      password: '',
+      authenticationSuccess: false
     };
   }
 
@@ -238,7 +239,8 @@ export class AuthenticationManager {
       providerDisplayName: '',
       showRetryOption: false,
       showErrorDetails: false,
-      password: ''
+      password: '',
+      authenticationSuccess: false
     };
   }
 

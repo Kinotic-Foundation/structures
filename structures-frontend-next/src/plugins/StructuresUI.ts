@@ -10,7 +10,7 @@ export function createStructuresUI(): Plugin {
                 const { authenticationRequired } = to.meta
                 if ((authenticationRequired === undefined || authenticationRequired)
                     && !StructuresStates.getUserState().isAuthenticated()){
-                    next({ path: '/login' })
+                    next({ path: '/login', query: { referer: to.fullPath } })
                 } else {
                     next()
                 }
