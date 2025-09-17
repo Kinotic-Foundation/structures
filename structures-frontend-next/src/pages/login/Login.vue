@@ -7,6 +7,7 @@
         <p class="text-gray-600">Please wait while we complete your authentication.</p>
       </div>
     </div>
+
          <div class="relative w-1/2 h-full bg-gradient-to-br from-[#0A0A0B] from-0% via-[#0A0A0B] via-70% to-[#293A9E] to-100% hidden md:block">
        <img src="@/assets/login-page-symbol-new.svg" class="absolute right-0 bottom-0 h-screen"/>
        <img src="@/assets/login-page-logo-new.svg" class="absolute left-[75px] bottom-[56px] max-w-[300px] h-[63px] w-auto xl:max-w-[300px] xl:h-[63px] lg:max-w-[250px] lg:h-[52px] md:max-w-[200px] md:h-[42px] sm:max-w-[150px] sm:h-[32px]"/>
@@ -525,40 +526,21 @@ export default class Login extends Vue {
   }
 
   private async handleOidcLogin(provider: string) {
-    console.log('handleOidcLogin called with provider:', provider);
-    console.log('Current loading state:', this.state.loading);
-  
-
-    console.log('Starting OIDC flow (loading already set)...');
-    
     try {
-      console.log('Creating user manager for provider:', provider);
       const userManager = await createUserManager(provider);
-      console.log('User manager created successfully');
-      
-      console.log('Creating OIDC state...');
       const state = await this.auth.createOidcState(this.referer, provider);
-      console.log('OIDC state created:', state);
-      
       const signinOptions: any = { state };
       
       if (this.login) {
         signinOptions.login_hint = this.login;
-        console.log('Added login_hint:', this.login);
-        
         const emailDomain = this.login.split('@')[1];
         if (emailDomain) {
           signinOptions.domain_hint = emailDomain;
-          console.log('Added domain_hint:', emailDomain);
         }
       }
-      
-      console.log('Calling signinRedirect with options:', signinOptions);
       await userManager.signinRedirect(signinOptions);
-      console.log('signinRedirect completed successfully');
       
     } catch (error) {
-      console.error('OIDC login failed:', error);
       this.displayAlert(`OIDC login failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       
       this.auth.resetToEmail();

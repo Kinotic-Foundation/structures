@@ -68,8 +68,8 @@ jobs:
         continue-on-error: true
         run: |
           cd structures-js/structures-e2e
-          ./gradlew pnpmInstall
-          ./gradlew pnpmTest
+          gradle pnpmInstall
+          gradle pnpmTest
 
       - name: Merge Test Results
         run: |
