@@ -40,7 +40,6 @@ public class MigrationExecutor {
 
     private final ElasticsearchAsyncClient client;
     private final List<StatementExecutor<?, ?>> executors;
-    private String migrationIndex = MIGRATION_INDEX;
 
     public MigrationExecutor(ElasticsearchAsyncClient client, 
                              List<StatementExecutor<?, ?>> executors) {
@@ -59,12 +58,12 @@ public class MigrationExecutor {
      * @return CompletableFuture<Boolean> that completes with true if index was created, false if it already existed
      */
     private CompletableFuture<Boolean> ensureMigrationIndexExists() {
-        return client.indices().exists(ExistsRequest.of(r -> r.index(migrationIndex)))
+        return client.indices().exists(ExistsRequest.of(r -> r.index(MIGRATION_INDEX)))
             .thenCompose(exists -> {
                 if (!exists.value()) {
                     log.info("Creating migration history index...");
                     return client.indices().create(c -> c
-                            .index(migrationIndex)
+                            .index(MIGRATION_INDEX)
                             .mappings(m -> m
                                     .properties("version", p -> p.integer(i -> i))
                                     .properties("projectId", p -> p.keyword(k -> k))
@@ -173,7 +172,7 @@ public class MigrationExecutor {
 
     public CompletableFuture<Boolean> isMigrationAppliedAsync(String version, String projectId) {
         return client.search(s -> s
-                .index(migrationIndex)
+                .index(MIGRATION_INDEX)
                 .query(q -> q
                         .bool(b -> b
                                 .must(m -> m.term(t -> t.field("version").value(version)))
@@ -187,14 +186,40 @@ public class MigrationExecutor {
         });
     }
 
+    /**
+     * Gets the highest migration version that has been applied to a project.
+     * 
+     * @param projectId the project identifier
+     * @return CompletableFuture<Integer> that completes with the highest applied migration version, or null if no migrations have been applied
+     */
+    public CompletableFuture<Integer> getLastAppliedMigrationVersion(String projectId) {
+        return client.search(s -> s
+                .index(MIGRATION_INDEX)
+                .query(q -> q
+                        .term(t -> t.field("projectId").value(projectId))
+                )
+                .sort(sort -> sort
+                        .field(f -> f.field("version").order(co.elastic.clients.elasticsearch._types.SortOrder.Desc))
+                )
+                .size(1),
+                MigrationRecord.class
+        ).thenApply(response -> {
+            if (response.hits().hits().isEmpty()) {
+                return null;
+            }
+            MigrationRecord record = response.hits().hits().get(0).source();
+            return record != null ? record.version() : null;
+        });
+    }
+
     private CompletableFuture<Void> recordMigrationAsync(int version, String projectId, String name, long durationMs) {
         return client.index(i -> i
-                .index(migrationIndex)
+                .index(MIGRATION_INDEX)
                 .document(new MigrationRecord(version, projectId, System.currentTimeMillis(), name, durationMs))
                 .refresh(Refresh.WaitFor)
         ).thenApply(response -> null);
     }
 
     // Enhanced record to track migrations by project with timestamp
-    private record MigrationRecord(int version, String projectId, long appliedAt, String name, long durationMs) {}
+    public record MigrationRecord(int version, String projectId, long appliedAt, String name, long durationMs) {}
 }

@@ -42,7 +42,7 @@ This is a multi-module Java/TypeScript/JavaScript project implementing a compreh
 ## Technology Stack
 
 ### Backend Technologies
-- **Java 17+**: Core application language
+- **Java 21+**: Core application language
 - **Spring Boot 3.x**: Application framework with auto-configuration
 - **Vert.x**: Reactive web server and GraphQL support
 - **Elasticsearch**: Search and analytics engine
