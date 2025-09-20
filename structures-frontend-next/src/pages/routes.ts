@@ -32,16 +32,6 @@ const pageRoutes: RouteRecordRaw[] = [
           icon: 'pi-objects-column',
           path: `/application/${route.params.applicationId}`
         },
-        {
-          label: 'Data Insights',
-          icon: 'pi pi-chart-line',
-          path: `/application/${route.params.applicationId}/data-insights`
-        },
-        {
-          label: 'Dashboards',
-          icon: 'pi pi-th-large',
-          path: `/application/${route.params.applicationId}/dashboards`
-        },
         // {
         //   label: 'Authentication',
         //   icon: 'pi pi-key',
@@ -59,18 +49,6 @@ const pageRoutes: RouteRecordRaw[] = [
         name: 'application-details',
         path: '',
         component: () => import('@/pages/ApplicationDetails.vue'),
-        props: (route) => ({ applicationId: route.params.applicationId })
-      },
-      {
-        name: 'data-insights',
-        path: 'data-insights',
-        component: () => import('@/pages/DataInsights.vue'),
-        props: (route) => ({ applicationId: route.params.applicationId })
-      },
-      {
-        name: 'dashboards',
-        path: 'dashboards',
-        component: () => import('@/pages/Dashboards.vue'),
         props: (route) => ({ applicationId: route.params.applicationId })
       },
       {
@@ -176,6 +154,14 @@ const pageRoutes: RouteRecordRaw[] = [
       showInMainNav: false,
       authenticationRequired: false
     } as RouteMeta,
+  },
+  {
+    path: '/sessionUpgrade/:id',
+    meta: {
+      authenticationRequired: true
+    },
+    component: () => import('@/pages/CliSessionUpgrade.vue'),
+    props: true
   },
   {
     path: '/graphql',

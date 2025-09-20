@@ -9,7 +9,6 @@ export class AuthenticationService {
   private _currentOidcError: OidcError | null = null;
 
   constructor() {
-    // Don't initialize AuthManager immediately - just create basic state
     this._state = {
       emailEntered: false,
       showPassword: false,
@@ -19,21 +18,19 @@ export class AuthenticationService {
       showErrorDetails: false,
       loading: false,
       oidcCallbackLoading: false,
-      password: ''
+      password: '',
+      authenticationSuccess: false
     };
   }
 
-  // Lazy initialize the AuthManager only when needed
   private async getAuthManager(): Promise<AuthenticationManager> {
     if (!this.authManager) {
       this.authManager = new AuthenticationManager();
-      // Wait for it to initialize
       await this.authManager.loadConfiguration();
     }
     return this.authManager;
   }
 
-  // State getters
   get state(): AuthenticationState {
     return this._state;
   }
@@ -58,7 +55,6 @@ export class AuthenticationService {
     return this._currentOidcError;
   }
 
-  // Simple computed properties that don't require AuthManager
   get shouldShowLoginForm(): boolean {
     return !this._state.oidcCallbackLoading;
   }
@@ -71,7 +67,6 @@ export class AuthenticationService {
     return !!this._password;
   }
 
-  // These require AuthManager but are only called after email submission
   async isConfigLoaded(): Promise<boolean> {
     try {
       const authManager = await this.getAuthManager();
@@ -88,7 +83,7 @@ export class AuthenticationService {
       return authManager.isBasicAuthEnabled();
     } catch (error) {
       console.error('Failed to check basic auth:', error);
-      return true; // Default to true
+      return true;
     }
   }
 
@@ -102,7 +97,6 @@ export class AuthenticationService {
     }
   }
 
-  // State management methods
   updateState(newState: Partial<AuthenticationState>): void {
     console.log('updateState called with:', newState);
     console.log('Previous state:', this._state);
@@ -115,14 +109,14 @@ export class AuthenticationService {
       const newState = this.authManager.resetToEmail(this._state);
       this.updateState(newState);
     } else {
-      // Fallback without AuthManager
       this.updateState({
         emailEntered: false,
         showPassword: false,
         matchedProvider: null,
         providerDisplayName: '',
         showRetryOption: false,
-        showErrorDetails: false
+        showErrorDetails: false,
+        authenticationSuccess: false
       });
     }
     this._password = '';
@@ -136,7 +130,6 @@ export class AuthenticationService {
       const newState = this.authManager.resetToPassword(this._state, matchedProvider, providerDisplayName);
       this.updateState(newState);
     } else {
-      // Fallback without AuthManager
       this.updateState({
         emailEntered: true,
         showPassword: true,
@@ -155,7 +148,6 @@ export class AuthenticationService {
       const newState = this.authManager.showProviderSelection(this._state, matchedProvider, providerDisplayName);
       this.updateState(newState);
     } else {
-      // Fallback without AuthManager
       this.updateState({
         emailEntered: true,
         showPassword: false,
@@ -172,7 +164,6 @@ export class AuthenticationService {
       const newState = this.authManager.showRetryOption(this._state);
       this.updateState(newState);
     } else {
-      // Fallback without AuthManager
       this.updateState({
         showRetryOption: true,
         showErrorDetails: false,
@@ -188,7 +179,6 @@ export class AuthenticationService {
       const newState = this.authManager.clearRetryOption(this._state);
       this.updateState(newState);
     } else {
-      // Fallback without AuthManager
       this.updateState({
         showRetryOption: false,
         showErrorDetails: false
@@ -202,7 +192,6 @@ export class AuthenticationService {
       const newState = this.authManager.toggleErrorDetails(this._state);
       this.updateState(newState);
     } else {
-      // Fallback without AuthManager
       this.updateState({
         showErrorDetails: !this._state.showErrorDetails
       });
@@ -214,7 +203,6 @@ export class AuthenticationService {
       const newState = this.authManager.setLoading(this._state, loading);
       this.updateState(newState);
     } else {
-      // Fallback without AuthManager
       this.updateState({ loading });
     }
   }
@@ -224,12 +212,10 @@ export class AuthenticationService {
       const newState = this.authManager.setOidcCallbackLoading(this._state, loading);
       this.updateState(newState);
     } else {
-      // Fallback without AuthManager
       this.updateState({ oidcCallbackLoading: loading });
     }
   }
 
-  // Authentication logic methods - these initialize AuthManager if needed
   async determineAuthMethod(email: string) {
     const authManager = await this.getAuthManager();
     return await authManager.determineAuthMethod(email);
@@ -249,7 +235,6 @@ export class AuthenticationService {
     if (this.authManager) {
       return this.authManager.getProviderIcon(provider);
     } else {
-      // Fallback icon mapping without AuthManager
       const iconMap: Record<string, string> = {
         okta: '@/assets/okta-icon.svg',
         keycloak: '@/assets/keycloak-icon.svg',
@@ -268,12 +253,10 @@ export class AuthenticationService {
     return authManager.parseOidcError(error, errorDescription);
   }
 
-  // OIDC state management
   clearOidcState(): void {
     if (this.authManager) {
       this.authManager.clearOidcState();
     } else {
-      // Fallback without AuthManager
       const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
@@ -295,7 +278,6 @@ export class AuthenticationService {
     return authManager.parseOidcState(state);
   }
 
-  // Create initial state
   createInitialState(): AuthenticationState {
     return {
       emailEntered: false,
@@ -306,11 +288,11 @@ export class AuthenticationService {
       showErrorDetails: false,
       loading: false,
       oidcCallbackLoading: false,
-      password: ''
+      password: '',
+      authenticationSuccess: false
     };
   }
 
-  // Utility methods
   clearForm(): void {
     this._login = '';
     this._password = '';
@@ -323,13 +305,12 @@ export class AuthenticationService {
     this.clearOidcState();
   }
 
-  // Direct config service methods for immediate use
   async checkBasicAuthEnabled(): Promise<boolean> {
     try {
       return await configService.isBasicAuthEnabled();
     } catch (error) {
       console.error('Failed to check basic auth:', error);
-      return true; // Default to enabled
+      return true;
     }
   }
 
@@ -338,7 +319,7 @@ export class AuthenticationService {
       return await configService.isOidcEnabled();
     } catch (error) {
       console.error('Failed to check OIDC:', error);
-      return false; // Default to disabled
+      return false;
     }
   }
 }
