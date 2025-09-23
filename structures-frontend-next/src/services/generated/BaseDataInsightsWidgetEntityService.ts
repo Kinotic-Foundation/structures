@@ -40,6 +40,7 @@ export class BaseDataInsightsWidgetEntityService extends EntityService<DataInsig
     if (entity) {
       ret = (ret ? ret : {})
       ret.id = entity.id
+      ret.applicationId = entity.applicationId
       ret.name = entity.name
       ret.description = entity.description
       ret.src = entity.src

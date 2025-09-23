@@ -1,6 +1,7 @@
 package org.kinotic.structures.internal.api.services.impl;
 
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
+import org.apache.commons.lang3.Validate;
 import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.structures.api.domain.Application;
@@ -29,6 +30,7 @@ public class DefaultApplicationService extends AbstractCrudService<Application> 
 
     @Override
     public CompletableFuture<Application> createApplicationIfNotExist(String id, String description) {
+        Validate.notEmpty(id, "id cannot be empty");
         return findById(id)
                 .thenCompose(application -> {
                     if(application != null){
