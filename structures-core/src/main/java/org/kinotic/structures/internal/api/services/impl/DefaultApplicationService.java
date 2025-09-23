@@ -30,7 +30,7 @@ public class DefaultApplicationService extends AbstractCrudService<Application> 
 
     @Override
     public CompletableFuture<Application> createApplicationIfNotExist(String id, String description) {
-        Validate.notEmpty(id, "id cannot be empty");
+        StructuresUtil.validateApplicationId(id);
         return findById(id)
                 .thenCompose(application -> {
                     if(application != null){
