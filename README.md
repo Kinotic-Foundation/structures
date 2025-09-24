@@ -135,12 +135,12 @@ Structures consists of several key components:
 
 Ready to dive deeper? Our comprehensive documentation covers everything:
 
-**[📖 Full Documentation →](https://kinotic-foundation.github.io/structures/)**
+**[📖 Full Documentation →](https://structuresframework.org/webdocs/)**
 
 ### Quick Links
-- **[Getting Started Guide](https://kinotic-foundation.github.io/structures/guide/getting-started)** - Complete setup and first project
-- **[Decorators Reference](https://kinotic-foundation.github.io/structures/reference/decorators)** - All available decorators
-- **[Multi-tenant Guide](https://kinotic-foundation.github.io/structures/guide/multi-tenant-access)** - Multi-tenancy setup
+- **[Getting Started Guide](https://structuresframework.org/webdocs/guide/getting-started)** - Complete setup and first project
+- **[Decorators Reference](https://structuresframework.org/webdocs/reference/decorators)** - All available decorators
+- **[Multi-tenant Guide](https://structuresframework.org/webdocs/guide/multi-tenant-access)** - Multi-tenancy setup
 - **[Docker Compose Setup](docker-compose/README.md)** - Development environment configuration
 
 ## 🔧 Development Setup
@@ -157,7 +157,7 @@ See the [Docker Compose documentation](docker-compose/README.md) for all availab
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [contribution guidelines](https://kinotic-foundation.github.io/structures/guide/overview#contributing) for details.
+We welcome contributions! Please see our [contribution guidelines](https://structuresframework.org/webdocs/guide/overview#contributing) for details.
 
 ## 📄 License
 
@@ -165,4 +165,4 @@ Structures is released under the [Elastic License 2.0](https://www.elastic.co/li
 
 ---
 
-**Ready to get started?** Check out our [Getting Started Guide](https://kinotic-foundation.github.io/structures/guide/getting-started) or try the quick start above!
+**Ready to get started?** Check out our [Getting Started Guide](https://structuresframework.org/webdocs/guide/getting-started) or try the quick start above!

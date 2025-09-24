@@ -49,13 +49,14 @@ function sidebarGuide() {
       text: 'Introduction',
       items: [
         { text: 'What is Structures?', link: '/guide/overview' },
-        { text: 'Getting Started', link: '/guide/getting-started' },
-        { text: 'Writing Migrations', link: '/guide/writing-migrations' }
+        { text: 'Getting Started', link: '/guide/getting-started' }
       ]
     },
     {
       text: 'Details',
       items: [
+        { text: 'Multi-Tenant Access', link: '/guide/multi-tenant-access' },
+        { text: 'Writing Migrations', link: '/guide/writing-migrations' },
         { text: 'Apollo @policy Support',
           link: '/guide/graphos/overview',
           items: [
