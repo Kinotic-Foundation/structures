@@ -28,7 +28,7 @@ The Docker Compose files provide different service configurations for:
 - **Services**: Elasticsearch, Structures Server (test profile)
 - **Ports**: 
   - Elasticsearch: 9201
-  - Structures Server: 9091
+  - Structures Server: 9090
 - **Usage**: `docker-compose -f compose.test.yml up -d`
 
 ### Authentication Services
@@ -190,7 +190,7 @@ Create `.env` files for environment-specific configuration:
 ```bash
 # .env.local
 ELASTIC_PASSWORD=mysecurepassword
-STRUCTURES_SERVER_PORT=9091
+STRUCTURES_SERVER_PORT=9090
 ```
 
 ## Development Workflow

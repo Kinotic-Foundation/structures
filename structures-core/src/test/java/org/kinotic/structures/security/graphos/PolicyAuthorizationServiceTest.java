@@ -12,7 +12,7 @@ import org.kinotic.structures.api.services.security.graphos.PolicyAuthorizationR
 import org.kinotic.structures.api.services.security.graphos.StructurePolicyAuthorizationService;
 import org.kinotic.structures.api.services.security.graphos.PolicyAuthorizer;
 import org.kinotic.structures.api.domain.EntityOperation;
-import org.kinotic.structures.internal.idl.converters.common.DecoratedProperty;
+import org.kinotic.structures.api.domain.DecoratedProperty;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;

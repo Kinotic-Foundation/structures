@@ -22,6 +22,12 @@
       }
     },
     {
+      "name": "applicationId",
+      "type": {
+        "type": "string"
+      }
+    },
+    {
       "name": "name",
       "type": {
         "type": "string"

@@ -29,7 +29,7 @@ import org.kinotic.structures.internal.api.hooks.ReadPreProcessor;
 import org.kinotic.structures.internal.api.services.ElasticVersion;
 import org.kinotic.structures.internal.api.services.EntityHolder;
 import org.kinotic.structures.internal.api.services.EntityService;
-import org.kinotic.structures.internal.api.services.sql.ParameterHolder;
+import org.kinotic.structures.api.domain.ParameterHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -13,6 +13,7 @@ import {Args, Command, Flags} from '@oclif/core'
 import chalk from 'chalk'
 import {WebSocket} from 'ws'
 import {CodeGenerationService} from '../internal/CodeGenerationService.js'
+import {ProjectMigrationService} from '../internal/ProjectMigrationService.js'
 import {resolveServer} from '../internal/state/Environment.js'
 import {isStructuresProject, loadStructuresProjectConfig} from '../internal/state/StructuresProject.js'
 import {connectAndUpgradeSession} from '../internal/Utils.js'
@@ -98,6 +99,16 @@ export class Synchronize extends Command {
                                                      await this.synchronizeEntity((project as Project).id as string, entityInfo.entity, flags.publish, flags.verbose)
                                                  }
                                              })
+
+                    // Apply migrations after entity synchronization
+                    if (!flags.dryRun) {
+                        const migrationService = new ProjectMigrationService(this)
+                        await migrationService.applyMigrations(
+                            project!.id as string,
+                            './migrations',
+                            flags.verbose
+                        )
+                    }
 
                     this.log(`Synchronization Complete For application: ${structuresProjectConfig.application}`)
 

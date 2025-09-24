@@ -56,9 +56,9 @@ oidc-security-service:
       audience: "00000003-0000-0000-c000-000000000000"  # Microsoft Graph API
       client-id: "your-application-client-id"
       authority: "https://login.microsoftonline.com/your-tenant-id/v2.0"
-      redirect-uri: "http://localhost:9091/login"
-      post-logout-redirect-uri: "http://localhost:9091"
-      silent-redirect-uri: "http://localhost:9091/login/silent-renew"
+      redirect-uri: "http://localhost:9090/login"
+      post-logout-redirect-uri: "http://localhost:9090"
+      silent-redirect-uri: "http://localhost:9090/login/silent-renew"
       roles:
         - "user"
 ```
@@ -89,9 +89,9 @@ oidc-security-service:
       audience: "your-application-client-id"
       client-id: "your-application-client-id"
       authority: "https://login.microsoftonline.com/your-tenant-id/v2.0"
-      redirect-uri: "http://localhost:9091/login"
-      post-logout-redirect-uri: "http://localhost:9091"
-      silent-redirect-uri: "http://localhost:9091/login/silent-renew"
+      redirect-uri: "http://localhost:9090/login"
+      post-logout-redirect-uri: "http://localhost:9090"
+      silent-redirect-uri: "http://localhost:9090/login/silent-renew"
       roles:
         - "user"
 ```

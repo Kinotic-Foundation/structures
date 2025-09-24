@@ -318,6 +318,11 @@ export function getRelativeImportPath(from: string, to: string, fileExtensionFor
     const fromDir = path.dirname(from);
     let relativePath = path.relative(fromDir, to)
 
+    // Normalize path separators to forward slashes for import statements
+    // This is required because import statements always use forward slashes,
+    // even on Windows, but path.relative() returns platform-specific separators
+    relativePath = relativePath.replace(/\\/g, '/')
+
     // Make sure path starts with './' or '../'
     if (!relativePath.startsWith('../') && !relativePath.startsWith('./')) {
         relativePath = `./${relativePath}`

@@ -9,7 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.kinotic.continuum.api.security.Participant;
 import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
-import org.kinotic.structures.api.domain.DefaultEntityContext;
+import org.kinotic.structures.internal.api.domain.DefaultEntityContext;
 import org.kinotic.structures.api.domain.EntityContext;
 import org.kinotic.structures.api.domain.insights.InsightProgress;
 import org.kinotic.structures.api.services.EntitiesService;

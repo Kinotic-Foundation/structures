@@ -46,12 +46,35 @@ public class SystemMigrator implements ApplicationListener<ContextRefreshedEvent
 
             Resource[] resources = resolver.getResources(MIGRATIONS_PATH);
             
-            List<Migration> migrations = new java.util.ArrayList<>();
-            for (Resource resource : resources) {
-                migrations.add(new ResourceMigration(resource, migrationParser));
+            if (resources.length == 0) {
+                log.info("No system migration files found");
+                return;
             }
-            log.info("Found {} migration files to process", migrations.size());
-            migrationExecutor.executeSystemMigrations(migrations).get();
+            
+            log.info("Found {} system migration files", resources.length);
+            
+            // Get the last applied migration version for the system project
+            Integer lastAppliedVersion = migrationExecutor.getLastAppliedMigrationVersion(MigrationExecutor.SYSTEM_PROJECT).get();
+            
+            // Load only migrations that need to be applied
+            List<Migration> migrationsToApply = new java.util.ArrayList<>();
+            for (Resource resource : resources) {
+                Migration migration = new ResourceMigration(resource, migrationParser);
+                if (lastAppliedVersion == null || migration.getVersion() > lastAppliedVersion) {
+                    migrationsToApply.add(migration);
+                }
+            }
+            
+            if (migrationsToApply.isEmpty()) {
+                log.info("All system migrations are already applied (last applied version: {})", lastAppliedVersion);
+                return;
+            }
+            
+            log.info("Applying {} new system migrations (starting from version {})", 
+                    migrationsToApply.size(), 
+                    lastAppliedVersion != null ? lastAppliedVersion + 1 : "1");
+            
+            migrationExecutor.executeSystemMigrations(migrationsToApply).get();
             log.info("System migrations processing complete");
         } catch (Exception e) {
             log.error("Error during system migration", e);

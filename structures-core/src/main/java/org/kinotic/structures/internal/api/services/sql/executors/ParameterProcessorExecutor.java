@@ -5,6 +5,7 @@ import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.continuum.idl.api.schema.FunctionDefinition;
 import org.kinotic.continuum.idl.api.schema.ParameterDefinition;
+import org.kinotic.structures.api.domain.ParameterHolder;
 import org.kinotic.structures.api.domain.QueryOptions;
 import org.kinotic.structures.api.domain.QueryParameter;
 import org.kinotic.structures.api.domain.Structure;

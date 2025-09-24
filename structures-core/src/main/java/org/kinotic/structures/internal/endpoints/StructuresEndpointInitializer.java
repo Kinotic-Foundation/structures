@@ -44,8 +44,7 @@ public class StructuresEndpointInitializer {
 
         vertx.deployVerticle(verticleFactory::createGqlVerticle, options);
 
-        if(properties.isEnableStaticFileServer()){
-            vertx.deployVerticle(verticleFactory::createWebServerVerticle, new DeploymentOptions()); // only 1 web server verticle
+        if(properties.isEnableStaticFileServer()){// only 1 web server verticle
             vertx.deployVerticle(verticleFactory::createWebServerNextVerticle, new DeploymentOptions());
         }
 
@@ -86,10 +85,8 @@ public class StructuresEndpointInitializer {
                  properties.getGraphqlPort(),
                  properties.getGraphqlPath());
         if(properties.isEnableStaticFileServer()) {
-            log.info("Web Server listening on port {}", properties.getWebServerPort());
-            log.info("Web Server available at http://localhost:{}/", properties.getWebServerPort());
-            log.info("Web Server Next listening on port {}", properties.getWebServerPort() + 1);
-            log.info("Web Server Next available at http://localhost:{}/", properties.getWebServerPort() + 1);
+            log.info("Web Server Next listening on port {}", properties.getWebServerPort());
+            log.info("Web Server Next available at http://localhost:{}/", properties.getWebServerPort());
         }
         log.info("Health checks available at http://localhost:{}{}",
                  properties.getWebServerPort(),

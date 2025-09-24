@@ -209,9 +209,9 @@ oidc-security-service:
       domains: ["your-domain.com"]  # Optional: restrict to specific email domains
       roles-claim-path: "groups"    # Optional: extract roles from groups claim
       enabled: true
-      redirect-uri: "http://localhost:9091/login"
-      post-logout-redirect-uri: "http://localhost:9091"
-      silent-redirect-uri: "http://localhost:9091/login/silent-renew"
+      redirect-uri: "http://localhost:9090/login"
+      post-logout-redirect-uri: "http://localhost:9090"
+      silent-redirect-uri: "http://localhost:9090/login/silent-renew"
       roles:
         - "user"
 ```
@@ -385,9 +385,9 @@ oidc-security-service:
       domains: ["your-domain.com"]
       roles-claim-path: "groups"
       enabled: true
-      redirect-uri: "http://localhost:9091/login"
-      post-logout-redirect-uri: "http://localhost:9091"
-      silent-redirect-uri: "http://localhost:9091/login/silent-renew"
+      redirect-uri: "http://localhost:9090/login"
+      post-logout-redirect-uri: "http://localhost:9090"
+      silent-redirect-uri: "http://localhost:9090/login/silent-renew"
       roles:
         - "user"
 ```

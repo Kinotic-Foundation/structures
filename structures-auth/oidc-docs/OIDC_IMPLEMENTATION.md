@@ -131,9 +131,9 @@ oidc-security-service:
       audience: "your-application-client-id"
       client-id: "your-application-client-id"
       authority: "https://your-oidc-provider.com"
-      redirect-uri: "http://localhost:9091/login"
-      post-logout-redirect-uri: "http://localhost:9091"
-      silent-redirect-uri: "http://localhost:9091/login/silent-renew"
+      redirect-uri: "http://localhost:9090/login"
+      post-logout-redirect-uri: "http://localhost:9090"
+      silent-redirect-uri: "http://localhost:9090/login/silent-renew"
       roles:
         - "user"
 ```
@@ -157,9 +157,9 @@ oidc-security-service:
       audience: "0oaowrlsm5Ua1vWD85d7"
       client-id: "0oaowrlsm5Ua1vWD85d7"
       authority: "https://dev-39125344.okta.com/oauth2/default"
-      redirect-uri: "http://localhost:9091/login"
-      post-logout-redirect-uri: "http://localhost:9091"
-      silent-redirect-uri: "http://localhost:9091/login/silent-renew"
+      redirect-uri: "http://localhost:9090/login"
+      post-logout-redirect-uri: "http://localhost:9090"
+      silent-redirect-uri: "http://localhost:9090/login/silent-renew"
       roles:
         - "user"
 ```
@@ -208,9 +208,9 @@ oidc-security-service:
       audience: "structures-client"
       client-id: "structures-client"
       authority: "http://localhost:8888/auth/realms/test"
-      redirect-uri: "http://localhost:9091/login"
-      post-logout-redirect-uri: "http://localhost:9091"
-      silent-redirect-uri: "http://localhost:9091/login/silent-renew"
+      redirect-uri: "http://localhost:9090/login"
+      post-logout-redirect-uri: "http://localhost:9090"
+      silent-redirect-uri: "http://localhost:9090/login/silent-renew"
       roles:
         - "admin"
 ```
@@ -259,9 +259,9 @@ oidc-security-service:
       audience: "https://your-api-identifier"
       client-id: "your-client-id"
       authority: "https://your-tenant.auth0.com/"
-      redirect-uri: "http://localhost:9091/login"
-      post-logout-redirect-uri: "http://localhost:9091"
-      silent-redirect-uri: "http://localhost:9091/login/silent-renew"
+      redirect-uri: "http://localhost:9090/login"
+      post-logout-redirect-uri: "http://localhost:9090"
+      silent-redirect-uri: "http://localhost:9090/login/silent-renew"
       roles:
         - "user"
 ```
@@ -281,9 +281,9 @@ oidc-security-service:
       audience: "your-application-client-id"
       client-id: "your-application-client-id"
       authority: "https://login.microsoftonline.com/your-tenant-id/v2.0"
-      redirect-uri: "http://localhost:9091/login"
-      post-logout-redirect-uri: "http://localhost:9091"
-      silent-redirect-uri: "http://localhost:9091/login/silent-renew"
+      redirect-uri: "http://localhost:9090/login"
+      post-logout-redirect-uri: "http://localhost:9090"
+      silent-redirect-uri: "http://localhost:9090/login/silent-renew"
       roles:
         - "user"
 ```
@@ -367,9 +367,9 @@ oidc-security-service:
       audience: "your-google-client-id"
       client-id: "your-google-client-id"
       authority: "https://accounts.google.com"
-      redirect-uri: "http://localhost:9091/login"
-      post-logout-redirect-uri: "http://localhost:9091"
-      silent-redirect-uri: "http://localhost:9091/login/silent-renew"
+      redirect-uri: "http://localhost:9090/login"
+      post-logout-redirect-uri: "http://localhost:9090"
+      silent-redirect-uri: "http://localhost:9090/login/silent-renew"
       roles:
         - "user"
 ```
@@ -449,9 +449,9 @@ oidc-security-service:
       audience: "your-microsoft-client-id"
       client-id: "your-microsoft-client-id"
       authority: "https://login.microsoftonline.com/your-tenant-id/v2.0"
-      redirect-uri: "http://localhost:9091/login"
-      post-logout-redirect-uri: "http://localhost:9091"
-      silent-redirect-uri: "http://localhost:9091/login/silent-renew"
+      redirect-uri: "http://localhost:9090/login"
+      post-logout-redirect-uri: "http://localhost:9090"
+      silent-redirect-uri: "http://localhost:9090/login/silent-renew"
       roles:
         - "user"
 ```
@@ -524,9 +524,9 @@ oidc-security-service:
       audience: "your-github-client-id"
       client-id: "your-github-client-id"
       authority: "https://github.com"
-      redirect-uri: "http://localhost:9091/login"
-      post-logout-redirect-uri: "http://localhost:9091"
-      silent-redirect-uri: "http://localhost:9091/login/silent-renew"
+      redirect-uri: "http://localhost:9090/login"
+      post-logout-redirect-uri: "http://localhost:9090"
+      silent-redirect-uri: "http://localhost:9090/login/silent-renew"
       roles:
         - "user"
 ```
@@ -733,9 +733,9 @@ oidc-security-service:
       audience: "test-audience"
       client-id: "test-client-id"
       authority: "https://test-issuer.com"
-      redirect-uri: "http://localhost:9091/login"
-      post-logout-redirect-uri: "http://localhost:9091"
-      silent-redirect-uri: "http://localhost:9091/login/silent-renew"
+      redirect-uri: "http://localhost:9090/login"
+      post-logout-redirect-uri: "http://localhost:9090"
+      silent-redirect-uri: "http://localhost:9090/login/silent-renew"
       roles:
         - "user"
 ```
