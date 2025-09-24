@@ -23,14 +23,13 @@ cd structures
    cd docker-compose
    docker-compose -f compose.yml -f compose.ek-m4.override.yml up -d
    ```
-   
+   > **Note for Mac users**: The `compose.ek-m4.override.yml` file contains optimizations specifically for Apple Silicon processors. This override file sets the `_JAVA_OPTIONS=-XX:UseSVE=0` environment variable for Elasticsearch, which prevents performance issues on ARM-based Macs.
+
    **For other platforms:**
    ```bash
    cd docker-compose
    docker-compose up -d
    ```
-
-   > **Note for Mac users**: The `compose.ek-m4.override.yml` file contains optimizations specifically for Apple Silicon processors. This override file sets the `_JAVA_OPTIONS=-XX:UseSVE=0` environment variable for Elasticsearch, which prevents performance issues on ARM-based Macs.
 
 3. Visit [http://localhost:9090](http://localhost:9090) to access the Structures GUI
    - **Username**: admin
