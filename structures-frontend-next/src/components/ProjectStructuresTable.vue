@@ -322,6 +322,7 @@ export default class ProjectStructuresTable extends Vue {
       :isShowAddNew="showNewStructureButton"
       :createNewButtonText="newStructureButtonText"
       emptyStateText="No structures yet for this project"
+      rowHoverColor=""
       class="!text-sm"
     >
       <!-- createNewButtonText="New Structure" -->
