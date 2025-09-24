@@ -31,7 +31,7 @@ public class FrontendConfigurationIntegrationTest extends ElasticTestBase {
     private StructuresProperties structuresProperties;
 
     private String getURL() {
-        return String.format("http://localhost:%d/%s", structuresProperties.getWebServerPort() + 1, oidcSecurityServiceProperties.getFrontendConfigurationPath());
+        return String.format("http://localhost:%d/%s", structuresProperties.getWebServerPort(), oidcSecurityServiceProperties.getFrontendConfigurationPath());
     }
 
     @Test
