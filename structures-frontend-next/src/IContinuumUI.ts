@@ -1,6 +1,5 @@
 import { type Router } from 'vue-router';
 import { reactive } from 'vue';
-import { StructuresStates } from './states';
 
 export interface IContinuumUI {
     initialize(router: Router): void;
