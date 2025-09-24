@@ -85,10 +85,8 @@ public class StructuresEndpointInitializer {
                  properties.getGraphqlPort(),
                  properties.getGraphqlPath());
         if(properties.isEnableStaticFileServer()) {
-            log.info("Web Server listening on port {}", properties.getWebServerPort());
-            log.info("Web Server available at http://localhost:{}/", properties.getWebServerPort());
-            log.info("Web Server Next listening on port {}", properties.getWebServerPort() + 1);
-            log.info("Web Server Next available at http://localhost:{}/", properties.getWebServerPort() + 1);
+            log.info("Web Server Next listening on port {}", properties.getWebServerPort());
+            log.info("Web Server Next available at http://localhost:{}/", properties.getWebServerPort());
         }
         log.info("Health checks available at http://localhost:{}{}",
                  properties.getWebServerPort(),

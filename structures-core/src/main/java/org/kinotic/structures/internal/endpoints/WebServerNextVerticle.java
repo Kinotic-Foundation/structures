@@ -67,7 +67,7 @@ public class WebServerNextVerticle extends AbstractVerticle {
         }
 
         if(properties.isEnableStaticFileServer()) {
-            route.handler(StaticHandler.create("webroot2"));
+            route.handler(StaticHandler.create("webroot"));
         }
         
         // Add SPA fallback - serve index.html for any unmatched routes
@@ -75,7 +75,7 @@ public class WebServerNextVerticle extends AbstractVerticle {
         // Must be placed after all other routes
         if(properties.isEnableStaticFileServer()) {
             router.get("/*").handler(ctx -> {
-                ctx.response().sendFile("webroot2/index.html");
+                ctx.response().sendFile("webroot/index.html");
             });
         }
 
