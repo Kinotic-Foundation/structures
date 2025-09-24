@@ -44,8 +44,7 @@ public class StructuresEndpointInitializer {
 
         vertx.deployVerticle(verticleFactory::createGqlVerticle, options);
 
-        if(properties.isEnableStaticFileServer()){
-            vertx.deployVerticle(verticleFactory::createWebServerVerticle, new DeploymentOptions()); // only 1 web server verticle
+        if(properties.isEnableStaticFileServer()){// only 1 web server verticle
             vertx.deployVerticle(verticleFactory::createWebServerNextVerticle, new DeploymentOptions());
         }
 

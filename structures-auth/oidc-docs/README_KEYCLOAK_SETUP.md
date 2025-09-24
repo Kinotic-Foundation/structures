@@ -127,14 +127,12 @@ The setup creates a client with these settings:
 ### Redirect URIs
 
 - `http://localhost:9090/*` - Main application
-- `http://localhost:9091/*` - Alternative port
 - `http://localhost:5173/*` - Frontend development
 - `http://localhost:3000/*` - Alternative frontend
 
 ### Web Origins
 
 - `http://localhost:9090/*` - Main application
-- `http://localhost:9091/*` - Alternative port
 - `http://localhost:5173/*` - Frontend development
 - `http://localhost:3000/*` - Alternative frontend
 - `+` - Allow all origins (development only)
@@ -153,14 +151,14 @@ The client includes these protocol mappers:
 
 ## Service URLs
 
-| Service | URL | Description |
-|---------|-----|-------------|
-| Structures Server | http://localhost:9091 | Main application |
-| Structures API | http://localhost:8080 | REST API |
-| GraphQL | http://localhost:4000 | GraphQL endpoint |
-| Keycloak | http://localhost:8888/auth | Identity provider |
+| Service | URL                              | Description |
+|---------|----------------------------------|-------------|
+| Structures Server | http://localhost:9090            | Main application |
+| Structures API | http://localhost:8080            | REST API |
+| GraphQL | http://localhost:4000            | GraphQL endpoint |
+| Keycloak | http://localhost:8888/auth       | Identity provider |
 | Keycloak Admin | http://localhost:8888/auth/admin | Admin console |
-| Frontend | http://localhost:5173 | Vue.js application |
+| Frontend | http://localhost:5173            | Vue.js application |
 
 ## Admin Credentials
 
@@ -214,9 +212,9 @@ oidc-security-service:
       audience: "structures-client"
       client-id: "structures-client"
       authority: "http://localhost:8888/auth/realms/test"
-      redirect-uri: "http://localhost:9091/login"
-      post-logout-redirect-uri: "http://localhost:9091"
-      silent-redirect-uri: "http://localhost:9091/login/silent-renew"
+      redirect-uri: "http://localhost:9090/login"
+      post-logout-redirect-uri: "http://localhost:9090"
+      silent-redirect-uri: "http://localhost:9090/login/silent-renew"
       roles:
         - "admin"
 ```
@@ -235,7 +233,7 @@ TOKEN=$(curl -s -X POST \
 
 # Use the token to access the API
 curl -H "Authorization: Bearer $TOKEN" \
-  http://localhost:9091/health/
+  http://localhost:9090/health/
 ```
 
 ### 2. Frontend Testing
@@ -249,11 +247,11 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 ```bash
 # Test backend health
-curl http://localhost:9091/health/
+curl http://localhost:9090/health/
 
 # Test with authentication
 curl -H "Authorization: Bearer $TOKEN" \
-  http://localhost:9091/health/
+  http://localhost:9090/health/
 ```
 
 ## Troubleshooting
@@ -338,8 +336,7 @@ If the setup script fails, manually create the client:
 6. Add redirect URIs:
    - `http://localhost:5173/*`
    - `http://localhost:9090/*`
-   - `http://localhost:9091/*`
-7. Add web origins: `http://localhost:5173/*`, `http://localhost:9090/*`, `http://localhost:9091/*`
+7. Add web origins: `http://localhost:5173/*`, `http://localhost:9090/*`
 8. Configure protocol mappers for email, name, roles, etc.
 
 ## Production Considerations

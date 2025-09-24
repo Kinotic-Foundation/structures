@@ -81,7 +81,7 @@ public class WebServerNextVerticle extends AbstractVerticle {
 
         // Begin listening for requests
         server.requestHandler(router)
-              .listen(properties.getWebServerPort() + 1, ar -> {
+              .listen(properties.getWebServerPort(), ar -> {
                   if (ar.succeeded()) {
                       startPromise.complete();
                   } else {

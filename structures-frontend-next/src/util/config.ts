@@ -97,7 +97,7 @@ class ConfigService {
   private createConnectionInfo(): ConnectionInfo {
     const connectionInfo: ConnectionInfo = {
         host: '127.0.0.1',
-        port: 9091
+        port: 9090
     }
     if (window.location.hostname !== '127.0.0.1'
         && window.location.hostname !== 'localhost') {
@@ -105,7 +105,7 @@ class ConfigService {
             connectionInfo.useSSL = true
         }
         if (window.location.port !== '') {
-            connectionInfo.port = 9091
+            connectionInfo.port = 9090
         } else {
             connectionInfo.port = null
         }

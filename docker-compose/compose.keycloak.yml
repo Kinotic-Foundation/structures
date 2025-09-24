@@ -17,9 +17,9 @@ services:
       - OIDC_SECURITY_SERVICE_OIDC_PROVIDERS_0_AUDIENCE=structures-client
       - OIDC_SECURITY_SERVICE_OIDC_PROVIDERS_0_CLIENT_ID=structures-client
       - OIDC_SECURITY_SERVICE_OIDC_PROVIDERS_0_AUTHORITY=http://keycloak:8888/auth/realms/test
-      - OIDC_SECURITY_SERVICE_OIDC_PROVIDERS_0_REDIRECT_URI=http://localhost:9091/login
-      - OIDC_SECURITY_SERVICE_OIDC_PROVIDERS_0_POST_LOGOUT_REDIRECT_URI=http://localhost:9091
-      - OIDC_SECURITY_SERVICE_OIDC_PROVIDERS_0_SILENT_REDIRECT_URI=http://localhost:9091/login/silent-renew
+      - OIDC_SECURITY_SERVICE_OIDC_PROVIDERS_0_REDIRECT_URI=http://localhost:9090/login
+      - OIDC_SECURITY_SERVICE_OIDC_PROVIDERS_0_POST_LOGOUT_REDIRECT_URI=http://localhost:9090
+      - OIDC_SECURITY_SERVICE_OIDC_PROVIDERS_0_SILENT_REDIRECT_URI=http://localhost:9090/login/silent-renew
 
   keycloak-db:
     container_name: keycloak-db
