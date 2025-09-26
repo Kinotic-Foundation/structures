@@ -70,7 +70,7 @@ public class DefaultProjectService extends AbstractCrudService<Project> implemen
     public CompletableFuture<Void> deleteById(String id) {
         return structureService.countForProject(id).thenAccept(count -> {
             if(count > 0){
-                throw new IllegalStateException("Cannot a delete project with structures in it.");
+                throw new IllegalStateException("Cannot delete project with structures in it.");
             }
         }).thenCompose(v -> super.deleteById(id));
     }

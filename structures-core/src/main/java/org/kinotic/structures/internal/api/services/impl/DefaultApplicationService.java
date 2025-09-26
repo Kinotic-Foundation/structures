@@ -1,31 +1,31 @@
 package org.kinotic.structures.internal.api.services.impl;
 
-import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
-import org.apache.commons.lang3.Validate;
+import java.util.Date;
+import java.util.concurrent.CompletableFuture;
+
 import org.kinotic.continuum.core.api.crud.Page;
 import org.kinotic.continuum.core.api.crud.Pageable;
 import org.kinotic.structures.api.domain.Application;
 import org.kinotic.structures.api.services.ApplicationService;
-import org.kinotic.structures.api.services.StructureService;
+import org.kinotic.structures.api.services.ProjectService;
 import org.kinotic.structures.internal.utils.StructuresUtil;
 import org.springframework.stereotype.Component;
 
-import java.util.Date;
-import java.util.concurrent.CompletableFuture;
+import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 
 @Component
 public class DefaultApplicationService extends AbstractCrudService<Application> implements ApplicationService {
 
-    private final StructureService structureService;
+    private final ProjectService projectService;
 
     public DefaultApplicationService(ElasticsearchAsyncClient esAsyncClient,
-                                     StructureService structureService,
+                                     ProjectService projectService,
                                      CrudServiceTemplate crudServiceTemplate) {
         super("struct_application",
               Application.class,
               esAsyncClient,
               crudServiceTemplate);
-        this.structureService = structureService;
+        this.projectService = projectService;
     }
 
     @Override
@@ -43,9 +43,9 @@ public class DefaultApplicationService extends AbstractCrudService<Application> 
 
     @Override
     public CompletableFuture<Void> deleteById(String id) {
-        return structureService.countForApplication(id).thenAccept(count -> {
+        return projectService.countForApplication(id).thenAccept(count -> {
             if(count > 0){
-                throw new IllegalStateException("Cannot delete an application with structures in it.");
+                throw new IllegalStateException("Cannot delete an application with projects in it.");
             }
         }).thenCompose(v -> super.deleteById(id));
     }
