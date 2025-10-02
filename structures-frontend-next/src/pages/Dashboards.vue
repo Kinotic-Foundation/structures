@@ -1,7 +1,16 @@
 <script lang="ts" setup>
-import { computed, watch, onMounted, nextTick } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { APPLICATION_STATE } from '@/states/IApplicationState'
-import { INSIGHTS_STATE } from '@/states/IInsightsState'
+import { DashboardEntityService } from '@/services/DashboardEntityService'
+import { Dashboard } from '@/domain/Dashboard'
+import CrudTable from '@/components/CrudTable.vue'
+import Button from 'primevue/button'
+import { useToast } from 'primevue/usetoast'
+import { type IDataSource, type IterablePage, Pageable } from '@kinotic/continuum-client'
+
+const router = useRouter()
+const toast = useToast()
 
 const props = defineProps<{ applicationId?: string }>()
 
@@ -11,103 +20,191 @@ const currentApplicationId = computed(() => {
 
 const title = computed(() => `Dashboards${currentApplicationId.value ? ` – ${currentApplicationId.value}` : ''}`)
 
-const insights = computed(() => {
-  return INSIGHTS_STATE.getInsightsByApplication(currentApplicationId.value)
-})
+const dashboardService = new DashboardEntityService()
+const crudTableRef = ref<any>(null)
 
-watch(() => currentApplicationId.value, (newAppId) => {
-  console.log('Dashboard: Application changed to', newAppId)
-}, { immediate: true })
-
-
-function renderInsightContent(insight: any) {
-  const containerId = `insight-content-${insight.id}`
-  const container = document.getElementById(containerId)
+const dashboardDataSource: IDataSource<Dashboard> = {
+  async findAll(pageable: Pageable): Promise<IterablePage<Dashboard>> {
+    
+    if (!currentApplicationId.value) {
+      const emptyResult = await dashboardService.findAll(pageable)
+      return {
+        ...emptyResult,
+        content: [],
+        totalElements: 0
+      }
+    }
+    
+    try {
+      const allPageable = Pageable.create(0, 10000)
+      const result = await dashboardService.findAll(allPageable)
+      const filteredDashboards = (result.content || []).filter(dashboard => {
+        const matches = dashboard.applicationId === currentApplicationId.value
+        return matches
+      })
+      return {
+        ...result,
+        content: filteredDashboards,
+        totalElements: filteredDashboards.length
+      }
+    } catch (error) {
+      const emptyResult = await dashboardService.findAll(pageable)
+      return {
+        ...emptyResult,
+        content: [],
+        totalElements: 0
+      }
+    }
+  },
   
-  if (!container || !insight.htmlContent) {
+  async search(searchText: string, pageable: Pageable): Promise<IterablePage<Dashboard>> {
+    
+    if (!currentApplicationId.value) {
+      const emptyResult = await dashboardService.findAll(pageable)
+      return {
+        ...emptyResult,
+        content: [],
+        totalElements: 0
+      }
+    }
+    
+    try {
+      const allPageable = Pageable.create(0, 10000)
+      const result = await dashboardService.findAll(allPageable)
+      
+      const filteredDashboards = (result.content || []).filter(dashboard => {
+        const matchesApp = dashboard.applicationId === currentApplicationId.value
+        const matchesSearch = dashboard.name?.toLowerCase().includes(searchText.toLowerCase()) ||
+                             dashboard.description?.toLowerCase().includes(searchText.toLowerCase())
+        return matchesApp && matchesSearch
+      })
+      
+      
+      return {
+        ...result,
+        content: filteredDashboards,
+        totalElements: filteredDashboards.length
+      }
+    } catch (error) {
+      console.error('🔍 Error in search:', error)
+      const emptyResult = await dashboardService.findAll(pageable)
+      return {
+        ...emptyResult,
+        content: [],
+        totalElements: 0
+      }
+    }
+  }
+}
+
+
+const tableHeaders = [
+  { field: 'name', header: 'Name', sortable: true },
+  { field: 'description', header: 'Description', sortable: true },
+  { field: 'created', header: 'Created', sortable: true },
+  { field: 'updated', header: 'Updated', sortable: true },
+  { field: 'actions', header: 'Actions', sortable: false }
+]
+
+const deleteDashboard = async (dashboard: Dashboard) => {
+  if (!confirm(`Are you sure you want to delete the dashboard "${dashboard.name}"?`)) {
     return
   }
 
-  container.innerHTML = ''
-
   try {
-    const script = document.createElement('script')
-    script.textContent = insight.htmlContent
-    document.head.appendChild(script)
+    await dashboardService.deleteById(dashboard.id!)
+    toast.add({ severity: 'success', summary: 'Success', detail: 'Dashboard deleted successfully' })
     
-    setTimeout(() => {
-      const elementNameMatch = insight.htmlContent.match(/customElements\.define\(['"`]([^'"`]+)['"`]/)
-      const elementName = elementNameMatch ? elementNameMatch[1] : 'ai-insight-component'
-      
-      if (customElements.get(elementName)) {
-        const element = document.createElement(elementName)
-        container.appendChild(element)
-      } else {
-        container.innerHTML = insight.htmlContent
-      }
-    }, 1000)
+    if (crudTableRef.value) {
+      crudTableRef.value.refresh()
+    }
   } catch (error) {
-    console.error('Error rendering insight content:', error)
-    container.innerHTML = '<div class="text-red-500 text-sm">Error rendering content</div>'
+    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete dashboard' })
   }
 }
 
-async function renderAllInsights() {
-  await nextTick()
-  insights.value.forEach(insight => {
-    renderInsightContent(insight)
-  })
+const openDashboard = (dashboard: Dashboard) => {
+  if (!dashboard.id) {
+    toast.add({ severity: 'error', summary: 'Error', detail: 'Dashboard ID is missing' })
+    return
+  }
+  
+  if (!currentApplicationId.value) {
+    toast.add({ severity: 'error', summary: 'Error', detail: 'Application ID is missing' })
+    return
+  }
+  
+  const route = `/application/${currentApplicationId.value}/dashboards/${dashboard.id}`
+  router.push(route)
 }
 
-watch(insights, () => {
-  renderAllInsights()
-}, { deep: true })
+const createNewDashboard = () => {
+  router.push(`/application/${currentApplicationId.value}/dashboards/new`)
+}
 
-onMounted(() => {
-  renderAllInsights()
+const editDashboard = (dashboard: Dashboard) => {
+  router.push(`/application/${currentApplicationId.value}/dashboards/${dashboard.id}/edit`)
+}
+
+watch(() => router.currentRoute.value.query.refresh, (newVal) => {
+  if (crudTableRef.value) {
+    console.log(newVal)
+    crudTableRef.value.refresh()
+  } else {
+    console.log('CrudTable ref not available yet')
+  }
 })
+
 </script>
 
 <template>
   <div class="p-6 h-full">
     <div class="flex justify-between items-center mb-6">
       <h1 class="text-2xl font-semibold text-surface-950">{{ title }}</h1>
-      <div class="flex items-center gap-2 text-sm text-surface-600">
-        <i class="pi pi-info-circle"></i>
-        <span>{{ insights.length }} AI-generated insight{{ insights.length !== 1 ? 's' : '' }}</span>
-      </div>
+      <Button
+        @click="createNewDashboard"
+        icon="pi pi-plus"
+        label="Create Dashboard"
+        class="p-button-primary"
+      />
     </div>
     
     <div class="h-[calc(100vh-140px)]">
-      <!-- Insights Grid -->
-      <div v-if="insights.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 h-full overflow-auto">
-        <div
-          v-for="insight in insights"
-          :key="insight.id"
-          class="bg-white rounded-xl border border-[#E6E7EB] p-6 hover:shadow-lg transition-shadow duration-200"
-        >
-          <!-- AI Generated Content Only -->
-          <div 
-            :id="`insight-content-${insight.id}`" 
-            class="insight-content w-full"
-          >
-            <!-- The actual AI-generated visualization will be rendered here -->
+      <CrudTable
+        ref="crudTableRef"
+        :dataSource="dashboardDataSource"
+        :headers="tableHeaders"
+        :defaultPageSize="50"
+        @edit="editDashboard"
+        @delete="deleteDashboard"
+        @onRowClick="openDashboard"
+        row-clickable
+      >
+        <template #item.created="{ item }">
+          {{ item.created ? new Date(item.created).toLocaleDateString() : '-' }}
+        </template>
+        <template #item.updated="{ item }">
+          {{ item.updated ? new Date(item.updated).toLocaleDateString() : '-' }}
+        </template>
+        <template #item.actions="{ item }">
+          <div class="flex items-center gap-2">
+            <Button
+              @click.stop="editDashboard(item)"
+              icon="pi pi-pencil"
+              class="p-button-text p-button-sm"
+              v-tooltip.top="'Edit Dashboard'"
+            />
+            <Button
+              @click.stop="deleteDashboard(item)"
+              icon="pi pi-trash"
+              class="p-button-text p-button-sm p-button-danger"
+              v-tooltip.top="'Delete Dashboard'"
+            />
           </div>
-        </div>
-      </div>
-
-      <!-- Empty State -->
-      <div v-else class="h-full flex items-center justify-center">
-        <div class="text-center text-surface-500">
-          <i class="pi pi-chart-line text-6xl mb-4"></i>
-          <h3 class="text-lg font-medium mb-2">No AI Insights Yet</h3>
-          <p class="text-sm mb-4">Generate your first data insight using the Data Insights page</p>
-          <div class="text-xs text-surface-400">
-            Go to <strong>Data Insights</strong> and ask questions about your data to create visualizations
-          </div>
-        </div>
-      </div>
+        </template>
+      </CrudTable>
     </div>
+
   </div>
 </template>
 

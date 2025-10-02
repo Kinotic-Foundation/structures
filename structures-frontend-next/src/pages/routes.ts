@@ -38,6 +38,16 @@ const pageRoutes: RouteRecordRaw[] = [
         //   path: `/application/${route.params.applicationId}/auth`
         // },
         {
+          label: 'Dashboards',
+          icon: 'pi pi-chart-line',
+          path: `/application/${route.params.applicationId}/dashboards`
+        },
+        {
+          label: 'Data Insights',
+          icon: 'pi pi-lightbulb',
+          path: `/application/${route.params.applicationId}/data-insights`
+        },
+        {
           label: 'Application settings',
           icon: 'pi pi-cog',
           path: `/application/${route.params.applicationId}/settings`
@@ -49,6 +59,27 @@ const pageRoutes: RouteRecordRaw[] = [
         name: 'application-details',
         path: '',
         component: () => import('@/pages/ApplicationDetails.vue'),
+        props: (route) => ({ applicationId: route.params.applicationId })
+      },
+      {
+        name: 'application-dashboards',
+        path: 'dashboards',
+        component: () => import('@/pages/Dashboards.vue'),
+        props: (route) => ({ applicationId: route.params.applicationId })
+      },
+      {
+        name: 'dashboard-details',
+        path: 'dashboards/:dashboardId',
+        component: () => import('@/pages/DashboardDetails.vue'),
+        props: (route) => ({ 
+          applicationId: route.params.applicationId,
+          dashboardId: route.params.dashboardId 
+        })
+      },
+      {
+        name: 'application-data-insights',
+        path: 'data-insights',
+        component: () => import('@/pages/DataInsights.vue'),
         props: (route) => ({ applicationId: route.params.applicationId })
       },
       {
