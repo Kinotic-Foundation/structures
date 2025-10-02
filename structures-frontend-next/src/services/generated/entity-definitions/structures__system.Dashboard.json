@@ -1,6 +1,6 @@
 {
   "type": "object",
-  "name": "DataInsightsWidget",
+  "name": "Dashboard",
   "namespace": "structures__system",
   "decorators": [
     {
@@ -22,12 +22,6 @@
       }
     },
     {
-      "name": "applicationId",
-      "type": {
-        "type": "string"
-      }
-    },
-    {
       "name": "name",
       "type": {
         "type": "string"
@@ -40,30 +34,18 @@
       }
     },
     {
-      "name": "src",
+      "name": "applicationId",
+      "type": {
+        "type": "string"
+      }
+    },
+    {
+      "name": "layout",
       "decorators": [
         {
           "type": "NotIndexedDecorator"
         }
       ],
-      "type": {
-        "type": "string"
-      }
-    },
-    {
-      "name": "widgetType",
-      "type": {
-        "type": "string"
-      }
-    },
-    {
-      "name": "config",
-      "type": {
-        "type": "string"
-      }
-    },
-    {
-      "name": "dashboardId",
       "type": {
         "type": "string"
       }

@@ -11,6 +11,7 @@ declare module 'vue' {
     ApplicationSidebar: typeof import('./src/components/ApplicationSidebar.vue')['default']
     Breadcrumb: typeof import('./src/components/Breadcrumb.vue')['default']
     Button: typeof import('primevue/button')['default']
+    Calendar: typeof import('primevue/calendar')['default']
     Card: typeof import('primevue/card')['default']
     CascadeSelect: typeof import('primevue/cascadeselect')['default']
     Column: typeof import('primevue/column')['default']
@@ -66,5 +67,8 @@ declare module 'vue' {
     ToggleButton: typeof import('primevue/togglebutton')['default']
     Toolbar: typeof import('primevue/toolbar')['default']
     UnionNode: typeof import('./src/components/nodes/UnionNode.vue')['default']
+  }
+  export interface GlobalDirectives {
+    Tooltip: typeof import('primevue/tooltip')['default']
   }
 }

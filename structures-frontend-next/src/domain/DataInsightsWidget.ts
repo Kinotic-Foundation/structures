@@ -9,6 +9,9 @@ export class DataInsightsWidget {
     public description!: string
     @NotIndexed
     public src!: string
+    public widgetType!: string // chart, table, metric, etc.
+    public config!: string // JSON configuration for the widget
+    public dashboardId?: string // Optional reference to dashboard
     public created!: Date
     public updated!: Date
 }
