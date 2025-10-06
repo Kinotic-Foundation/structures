@@ -10,6 +10,8 @@ import { Structures, ProgressType } from '@kinotic/structures-api'
 import type { InsightRequest, DataInsightsComponent, InsightProgress } from '@kinotic/structures-api'
 import { APPLICATION_STATE } from '@/states/IApplicationState'
 import { INSIGHTS_STATE, type InsightData } from '@/states/IInsightsState'
+import { DataInsightsWidgetEntityService } from '@/services/DataInsightsWidgetEntityService'
+import { DataInsightsWidget } from '@/domain/DataInsightsWidget'
 
 interface ChatMessage {
   id: string
@@ -85,6 +87,7 @@ export default class DataInsights extends Vue {
     endDate: null
   }
   showDateRangePicker: boolean = false
+  widgetService: DataInsightsWidgetEntityService = new DataInsightsWidgetEntityService()
 
   get currentApplicationName(): string {
     const appId = APPLICATION_STATE.currentApplication?.id
@@ -299,7 +302,7 @@ Components that support date filtering will automatically respond to the global 
           }
           
           if (progress.type === ProgressType.COMPONENTS_READY && progress.components && progress.components.length > 0) {
-            progress.components.forEach((component: DataInsightsComponent) => {
+            progress.components.forEach(async (component: DataInsightsComponent) => {
               this.visualizations.push({
                 id: component.id,
                 htmlContent: component.rawHtml,
@@ -324,6 +327,9 @@ Components that support date filtering will automatically respond to the global 
                 }
               }
               INSIGHTS_STATE.addInsight(insightData)
+
+              // Save widget as entity for dashboard sidebar
+              await this.saveWidgetAsEntity(component, userQuery)
 
               this.executeVisualization(component.rawHtml)
             })
@@ -461,6 +467,95 @@ Components that support date filtering will automatically respond to the global 
     }
   }
 
+  async saveWidgetAsEntity(component: DataInsightsComponent, userQuery: string): Promise<void> {
+    try {
+      // First, execute the JavaScript code to create the custom element
+      const script = document.createElement('script')
+      script.textContent = component.rawHtml
+      document.head.appendChild(script)
+      
+      // Extract the custom element name
+      const elementNameMatch = component.rawHtml.match(/customElements\.define\(['"`]([^'"`]+)['"`]/)
+      const elementName = elementNameMatch ? elementNameMatch[1] : 'data-insights-dashboard'
+      
+      // Wait for the custom element to be defined
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      // Create a temporary instance to get the rendered HTML and extract title/subtitle
+      let renderedHTML = ''
+      let aiTitle = ''
+      let aiSubtitle = ''
+      
+      try {
+        if (customElements.get(elementName)) {
+          const tempElement = document.createElement(elementName)
+          // Add to a temporary container
+          const tempContainer = document.createElement('div')
+          tempContainer.style.position = 'absolute'
+          tempContainer.style.left = '-9999px'
+          tempContainer.style.top = '-9999px'
+          document.body.appendChild(tempContainer)
+          tempContainer.appendChild(tempElement)
+          
+          // Wait for the element to render
+          await new Promise(resolve => setTimeout(resolve, 500))
+          
+          // Extract title and subtitle from the rendered element
+          const h3Element = tempElement.shadowRoot?.querySelector('h3')
+          const pElement = tempElement.shadowRoot?.querySelector('p')
+          
+          if (h3Element) {
+            aiTitle = h3Element.textContent?.trim() || ''
+          }
+          if (pElement) {
+            aiSubtitle = pElement.textContent?.trim() || ''
+          }
+          
+          // Get the rendered HTML (just the custom element tag)
+          renderedHTML = tempElement.outerHTML
+          console.log('AI Generated Title:', aiTitle)
+          console.log('AI Generated Subtitle:', aiSubtitle)
+          
+          // Clean up
+          document.body.removeChild(tempContainer)
+        } else {
+          console.warn('Custom element not defined, using element tag')
+          renderedHTML = `<${elementName}></${elementName}>`
+        }
+      } catch (error) {
+        console.warn('Error creating custom element, using element tag:', error)
+        renderedHTML = `<${elementName}></${elementName}>`
+      }
+      
+      // Clean up the script
+      document.head.removeChild(script)
+      
+      const widget = new DataInsightsWidget()
+      widget.applicationId = this.currentApplicationId
+      widget.name = aiTitle || this.generateInsightTitle(userQuery)
+      widget.description = aiSubtitle || `AI-generated widget for: "${userQuery}"`
+      widget.src = renderedHTML // Use the rendered HTML instead of raw JavaScript
+      widget.widgetType = this.detectVisualizationType(component.rawHtml)
+      widget.config = JSON.stringify({
+        query: userQuery,
+        supportsDateRangeFiltering: component.supportsDateRangeFiltering || false,
+        originalComponentId: component.id,
+        originalRawHtml: component.rawHtml, // Keep the original JavaScript for reference
+        aiTitle: aiTitle, // Store the AI-generated title
+        aiSubtitle: aiSubtitle, // Store the AI-generated subtitle
+        width: 4, // Default grid width
+        height: 3  // Default grid height
+      })
+      widget.created = new Date()
+      widget.updated = new Date()
+
+      await this.widgetService.save(widget)
+      console.log('Widget saved successfully:', widget.name)
+    } catch (error) {
+      console.error('Error saving widget:', error)
+    }
+  }
+
 }
 </script>
 
@@ -479,7 +574,7 @@ Components that support date filtering will automatically respond to the global 
           </div>
           
           <!-- Global Date Range Picker -->
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2">image.png
             <Button
               @click="toggleDateRangePicker"
               :class="showDateRangePicker ? 'p-button-primary' : 'p-button-outlined'"
@@ -523,7 +618,6 @@ Components that support date filtering will automatically respond to the global 
         </div>
       </div>
 
-      <!-- Dashboard Content -->
       <div class="flex-1 p-4 overflow-auto rounded-b-lg">
         <div v-if="visualizations.length === 0" class="flex items-center justify-center h-full">
           <div class="text-center text-surface-500">
@@ -534,20 +628,16 @@ Components that support date filtering will automatically respond to the global 
         </div>
 
         <div v-else id="dashboard-container" class="space-y-6">
-          <!-- Visualizations will be dynamically inserted here -->
         </div>
       </div>
     </div>
 
-    <!-- Chat Panel (Right) -->
     <div class="w-1/3 border-l border-surface-200 flex flex-col">
-      <!-- Header -->
       <div class="p-4 border-b border-surface-200 bg-surface-50 flex-shrink-0 rounded-t-lg">
         <h1 class="text-xl font-semibold text-surface-900">Data Insights Chat</h1>
         <p class="text-sm text-surface-600 mt-1">Ask questions about your data</p>
       </div>
 
-      <!-- Messages -->
       <div class="flex-1 p-4 overflow-y-auto min-h-0 rounded-b-lg">
         <div class="space-y-4">
           <div
@@ -564,7 +654,6 @@ Components that support date filtering will automatically respond to the global 
                 <div class="text-sm">
                   <div class="whitespace-pre-wrap">{{ message.content }}</div>
                   
-                  <!-- Task list for loading messages -->
                   <div v-if="message.loading && message.tasks && message.tasks.length > 0" class="mt-3">
                     <div class="text-xs font-medium text-surface-700 mb-2">Progress:</div>
                     <ul class="space-y-1">
@@ -575,8 +664,6 @@ Components that support date filtering will automatically respond to the global 
                       </li>
                     </ul>
                   </div>
-                  
-                  <!-- Expandable task history for completed messages -->
                   <div v-if="!message.loading && message.tasks && message.tasks.length > 0" class="mt-3">
                     <button 
                       @click="message.isExpanded = !message.isExpanded"
@@ -605,7 +692,6 @@ Components that support date filtering will automatically respond to the global 
         </div>
       </div>
 
-      <!-- Input -->
       <div class="p-4 border-t border-surface-200 bg-surface-50 flex-shrink-0 rounded-b-lg">
         <div class="flex gap-2">
           <InputText

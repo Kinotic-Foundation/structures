@@ -1,5 +1,7 @@
 import { type IEntitiesService } from '@kinotic/structures-api'
+import { Pageable } from '@kinotic/continuum-client'
 import { BaseDataInsightsWidgetEntityService } from './generated/BaseDataInsightsWidgetEntityService.js'
+import { DataInsightsWidget } from '@/domain/DataInsightsWidget'
 
 /**
  * Service for interacting with DataInsightsWidget entities
@@ -9,6 +11,21 @@ export class DataInsightsWidgetEntityService extends BaseDataInsightsWidgetEntit
 
   constructor(entitiesService?: IEntitiesService) {
     super(false, entitiesService)
+  }
+
+  async findByApplicationId(applicationId: string): Promise<DataInsightsWidget[]> {
+    const pageable = Pageable.create(0, 1000)
+    const result = await this.findAll(pageable)
+    
+    if (!result.content) {
+      return []
+    }
+    
+    const filtered = result.content.filter((widget: DataInsightsWidget) => {
+      return widget.applicationId === applicationId
+    })
+    
+    return filtered
   }
 
 }
