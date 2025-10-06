@@ -31,6 +31,7 @@ const widgetSearchText = ref('')
 const addedWidgetIds = new Set<string>()
 const executedScripts = new Set<string>()
 const definedElements = new Set<string>()
+const hasWidgets = ref(false)
 
 const showAllWidgetContent = () => {
   const allWidgets = document.querySelectorAll('[data-widget-id]')
@@ -58,6 +59,10 @@ const filteredWidgets = computed(() => {
   return savedWidgets.value.filter(w =>
     w.name.toLowerCase().includes(widgetSearchText.value.toLowerCase())
   )
+})
+
+const hasWidgetsInGrid = computed(() => {
+  return hasWidgets.value
 })
 
 const isNewDashboard = computed(() => {
@@ -237,6 +242,7 @@ const loadDashboard = async () => {
       dashboard.value.description = 'New dashboard'
       dashboard.value.layout = ''
       dashboardTitle.value = ''
+      hasWidgets.value = false
       loading.value = false
       return
     }
@@ -249,6 +255,7 @@ const loadDashboard = async () => {
         const layoutData = JSON.parse(dashboard.value.layout)
         
         if (layoutData.widgets && layoutData.widgets.length > 0) {
+          hasWidgets.value = true
           setTimeout(() => {
             
             layoutData.widgets.forEach((widgetData: any) => {
@@ -457,6 +464,11 @@ const addWidgetToGrid = (widget: DataInsightsWidget, x?: number, y?: number, w?:
     removeBtn.addEventListener('click', async () => {
       gridStack.value?.removeWidget(el)
       addedWidgetIds.delete(widgetInstanceId)
+      
+      setTimeout(() => {
+        const remainingWidgets = document.querySelectorAll('.grid-stack-item')
+        hasWidgets.value = remainingWidgets.length > 0
+      }, 100)
     })
   }
   const getWidgetSize = (widget: DataInsightsWidget) => {
@@ -490,6 +502,7 @@ const addWidgetToGrid = (widget: DataInsightsWidget, x?: number, y?: number, w?:
   
   gridStack.value.makeWidget(el, options)
   addedWidgetIds.add(widgetInstanceId)
+  hasWidgets.value = true
   
   const resizeObserver = new ResizeObserver((entries) => {
     entries.forEach((entry) => {
@@ -657,6 +670,7 @@ const updateDashboard = async () => {
     dashboard.value.layout = JSON.stringify({ widgets: widgetInstances })
     dashboard.value.updated = new Date()
     
+    await dashboardService.save(dashboard.value)
     
     toast.add({ severity: 'success', summary: 'Updated', detail: 'Dashboard updated successfully' })
   } catch (error) {
@@ -759,12 +773,18 @@ onMounted(async () => {
         </div>
       </div>
 
-      <div class="flex-1 p-4 flex flex-col">
-        <div v-if="loading" class="flex items-center justify-center flex-1">
-          <i class="pi pi-spin pi-spinner text-3xl"></i>
-        </div>
-        <div v-else class="grid-stack flex-1 overflow-y-auto"></div>
-      </div>
+       <div class="flex-1 p-4 flex flex-col">
+         <div v-if="loading" class="flex items-center justify-center flex-1">
+           <i class="pi pi-spin pi-spinner text-3xl"></i>
+         </div>
+         <div v-else class="grid-stack flex-1 overflow-y-auto relative">
+           <div v-if="!hasWidgetsInGrid" class="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+             <div class="text-center text-gray-500 bg-white bg-opacity-90 p-6 rounded-lg">
+               <p class="text-sm text-gray-500">Drag and drop widgets from the sidebar to start building your dashboard</p>
+             </div>
+           </div>
+         </div>
+       </div>
     </div>
 
     <div class="w-80 border-l border-surface-200 flex flex-col h-full overflow-y-auto">
