@@ -86,7 +86,6 @@ const dashboardDataSource: IDataSource<Dashboard> = {
         totalElements: filteredDashboards.length
       }
     } catch (error) {
-      console.error('🔍 Error in search:', error)
       const emptyResult = await dashboardService.findAll(pageable)
       return {
         ...emptyResult,
@@ -146,9 +145,8 @@ const editDashboard = (dashboard: Dashboard) => {
   router.push(`/application/${currentApplicationId.value}/dashboards/${dashboard.id}/edit`)
 }
 
-watch(() => router.currentRoute.value.query.refresh, (newVal) => {
+watch(() => router.currentRoute.value.query.refresh, () => {
   if (crudTableRef.value) {
-    console.log(newVal)
     crudTableRef.value.refresh()
   } else {
     console.log('CrudTable ref not available yet')

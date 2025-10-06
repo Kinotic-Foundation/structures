@@ -481,8 +481,11 @@ Components that support date filtering will automatically respond to the global 
       // Wait for the custom element to be defined
       await new Promise(resolve => setTimeout(resolve, 1000))
       
-      // Create a temporary instance to get the rendered HTML
+      // Create a temporary instance to get the rendered HTML and extract title/subtitle
       let renderedHTML = ''
+      let aiTitle = ''
+      let aiSubtitle = ''
+      
       try {
         if (customElements.get(elementName)) {
           const tempElement = document.createElement(elementName)
@@ -497,12 +500,24 @@ Components that support date filtering will automatically respond to the global 
           // Wait for the element to render
           await new Promise(resolve => setTimeout(resolve, 500))
           
-      // Get the rendered HTML (just the custom element tag)
-      renderedHTML = tempElement.outerHTML
-      console.log('Rendered HTML for widget:', renderedHTML.substring(0, 200) + '...')
-      
-      // Clean up
-      document.body.removeChild(tempContainer)
+          // Extract title and subtitle from the rendered element
+          const h3Element = tempElement.shadowRoot?.querySelector('h3')
+          const pElement = tempElement.shadowRoot?.querySelector('p')
+          
+          if (h3Element) {
+            aiTitle = h3Element.textContent?.trim() || ''
+          }
+          if (pElement) {
+            aiSubtitle = pElement.textContent?.trim() || ''
+          }
+          
+          // Get the rendered HTML (just the custom element tag)
+          renderedHTML = tempElement.outerHTML
+          console.log('AI Generated Title:', aiTitle)
+          console.log('AI Generated Subtitle:', aiSubtitle)
+          
+          // Clean up
+          document.body.removeChild(tempContainer)
         } else {
           console.warn('Custom element not defined, using element tag')
           renderedHTML = `<${elementName}></${elementName}>`
@@ -517,8 +532,8 @@ Components that support date filtering will automatically respond to the global 
       
       const widget = new DataInsightsWidget()
       widget.applicationId = this.currentApplicationId
-      widget.name = this.generateInsightTitle(userQuery)
-      widget.description = `AI-generated widget for: "${userQuery}"`
+      widget.name = aiTitle || this.generateInsightTitle(userQuery)
+      widget.description = aiSubtitle || `AI-generated widget for: "${userQuery}"`
       widget.src = renderedHTML // Use the rendered HTML instead of raw JavaScript
       widget.widgetType = this.detectVisualizationType(component.rawHtml)
       widget.config = JSON.stringify({
@@ -526,6 +541,8 @@ Components that support date filtering will automatically respond to the global 
         supportsDateRangeFiltering: component.supportsDateRangeFiltering || false,
         originalComponentId: component.id,
         originalRawHtml: component.rawHtml, // Keep the original JavaScript for reference
+        aiTitle: aiTitle, // Store the AI-generated title
+        aiSubtitle: aiSubtitle, // Store the AI-generated subtitle
         width: 4, // Default grid width
         height: 3  // Default grid height
       })
