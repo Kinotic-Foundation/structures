@@ -12,14 +12,14 @@ importers:
         specifier: ^7.4.0
         version: 7.4.0(@types/node@22.13.14)
       '@kinotic/continuum-client':
-        specifier: ^2.13.0
-        version: 2.13.0(reflect-metadata@0.2.2)
+        specifier: 2.14.1
+        version: 2.14.1(reflect-metadata@0.2.2)
       '@kinotic/continuum-idl':
         specifier: ^2.0.2
         version: 2.0.2
       '@kinotic/structures-api':
         specifier: ^3.4.0
-        version: 3.4.0(@kinotic/continuum-client@2.13.0(reflect-metadata@0.2.2))
+        version: 3.4.0(@kinotic/continuum-client@2.14.1(reflect-metadata@0.2.2))
       '@oclif/core':
         specifier: ^4.2.10
         version: 4.2.10
@@ -41,6 +41,9 @@ importers:
       '@oclif/plugin-warn-if-update-available':
         specifier: ^3.1.38
         version: 3.1.38
+      '@stomp/rx-stomp':
+        specifier: 2.1.0
+        version: 2.1.0(@stomp/stompjs@7.2.0)(rxjs@7.8.2)(uuid@11.1.0)
       chalk:
         specifier: ^5.4.1
         version: 5.4.1
@@ -703,8 +706,8 @@ packages:
     resolution: {integrity: sha512-O8jcjabXaleOG9DQ0+ARXWZBTfnP4WNAqzuiJK7ll44AmxGKv/J2M4TPjxjY3znBCfvBXFzucm1twdyFybFqEA==}
     engines: {node: '>=12'}
 
-  '@kinotic/continuum-client@2.13.0':
-    resolution: {integrity: sha512-rBHulZfJyYnOrrKUpT2K+7KctT9pQ1kMXb4oL6wedIhrsKxdekh24XojvpTE6bEAkl2PpmE++ZF1kxVFiCCsiw==}
+  '@kinotic/continuum-client@2.14.1':
+    resolution: {integrity: sha512-v0ewpA8akl1uiHd/JAVgEIQCGBwdmo22TqPQx6hH8eXfmm5okjFrX226FnrVn5QG4qEUF4IqjxsplhRCCvCrGg==}
     peerDependencies:
       reflect-metadata: ^0.2.2
 
@@ -785,8 +788,8 @@ packages:
     resolution: {integrity: sha512-3giAOQvZiH5F9bMlMiv8+GSPMeqg0dbaeo58/0SlA9sxSqZhnUtxzX9/2FzyhS9sWQf5S0GJE0AKBrFqjpeYcg==}
     engines: {node: '>=8.0.0'}
 
-  '@opentelemetry/semantic-conventions@1.28.0':
-    resolution: {integrity: sha512-lp4qAiMTD4sNWW4DbKLBkfiMZ4jbAboJIGOQr5DvciMRI494OapieI9qiODpOt0XBr1LjIDy1xAGAnVs5supTA==}
+  '@opentelemetry/semantic-conventions@1.37.0':
+    resolution: {integrity: sha512-JD6DerIKdJGmRp4jQyX5FlrQjA4tjOw1cvfsPAZXfOOEErMUHjPcPSICS+6WnM0nB0efSFARh0KAZss+bvExOA==}
     engines: {node: '>=14'}
 
   '@pkgjs/parseargs@0.11.0':
@@ -1028,15 +1031,15 @@ packages:
     resolution: {integrity: sha512-JtaY3FxmD+te+KSI2FJuEcfNC9T/DGGVf551babM7fAaXhjJUt7oSYurH1Devxd2+BOSUACCgt3buinx4UnmEA==}
     engines: {node: '>=18.0.0'}
 
-  '@stomp/rx-stomp@2.0.0':
-    resolution: {integrity: sha512-3UxTxAA3NWGnwFfIvN8AigJ7BxGXG0u5IK8K12mQ9cCMuaT/MM7xlyZnuV8sDbHiqqLlbwA1wk1fDfUyOTIeug==}
+  '@stomp/rx-stomp@2.1.0':
+    resolution: {integrity: sha512-bDdVDHZaJ232gSXqdHLG1ANiZaqbVcPvKVKPTWLMHwkq8oBs9F4KFRmW8n1j66i3vE5sfojsQJz3u3enEUgWwA==}
     peerDependencies:
-      '@stomp/stompjs': ^7.0.0
+      '@stomp/stompjs': ^7.2.0
       rxjs: ^7.2.0
-      uuid: ^9.0.0
+      uuid: '>=9.0.0 <12.0.0'
 
-  '@stomp/stompjs@7.0.0':
-    resolution: {integrity: sha512-fGdq4wPDnSV/KyOsjq4P+zLc8MFWC3lMmP5FBgLWKPJTYcuCbAIrnRGjB7q2jHZdYCOD5vxLuFoKIYLy5/u8Pw==}
+  '@stomp/stompjs@7.2.0':
+    resolution: {integrity: sha512-+Waf/wdSxgRmXHWg7HXUt51YNK/Cp2pMhW+OELwX5fzbO6pd+O2bLrWqGmyFNC/RyeUQIMGESP7oE3L1dXXm0Q==}
 
   '@stylistic/eslint-plugin@2.13.0':
     resolution: {integrity: sha512-RnO1SaiCFHn666wNz2QfZEFxvmiNRqhzaMXHXxXXKt+MEP7aajlPxUSMIQpKAaJfverpovEYqjBOXDq6dDcaOQ==}
@@ -3212,6 +3215,9 @@ packages:
   rxjs@7.8.1:
     resolution: {integrity: sha512-AA3TVj+0A2iuIoQkWEK/tqFjBq2j+6PO6Y0zJcvzLAFhEFIO3HL0vls9hWLncZbAAbK0mar7oZ4V079I/qPMxg==}
 
+  rxjs@7.8.2:
+    resolution: {integrity: sha512-dhKf903U/PQZY6boNNtAGdWbG85WAbjT/1xYoZIC7FAY0yWapOBQVsVrDl58W86//e1VpMNBtRV4MaXfdMySFA==}
+
   safe-array-concat@1.1.2:
     resolution: {integrity: sha512-vj6RsCsWBCf19jIeHEfkRMw8DPiBb+DMXklQ/1SGDHOMlHdPUkZXFQ2YdplS23zESTijAcurb1aSgJA3AgMu1Q==}
     engines: {node: '>=0.4'}
@@ -4579,27 +4585,27 @@ snapshots:
       wrap-ansi: 8.1.0
       wrap-ansi-cjs: wrap-ansi@7.0.0
 
-  '@kinotic/continuum-client@2.13.0(reflect-metadata@0.2.2)':
+  '@kinotic/continuum-client@2.14.1(reflect-metadata@0.2.2)':
     dependencies:
       '@opentelemetry/api': 1.9.0
-      '@opentelemetry/semantic-conventions': 1.28.0
-      '@stomp/rx-stomp': 2.0.0(@stomp/stompjs@7.0.0)(rxjs@7.8.1)(uuid@9.0.1)
-      '@stomp/stompjs': 7.0.0
+      '@opentelemetry/semantic-conventions': 1.37.0
+      '@stomp/rx-stomp': 2.1.0(@stomp/stompjs@7.2.0)(rxjs@7.8.2)(uuid@11.1.0)
+      '@stomp/stompjs': 7.2.0
       debug: 4.4.0(supports-color@8.1.1)
       elliptic: 6.6.1
       p-tap: 4.0.0
       reflect-metadata: 0.2.2
-      rxjs: 7.8.1
+      rxjs: 7.8.2
       typescript-optional: 3.0.0-alpha.3
-      uuid: 9.0.1
+      uuid: 11.1.0
     transitivePeerDependencies:
       - supports-color
 
   '@kinotic/continuum-idl@2.0.2': {}
 
-  '@kinotic/structures-api@3.4.0(@kinotic/continuum-client@2.13.0(reflect-metadata@0.2.2))':
+  '@kinotic/structures-api@3.4.0(@kinotic/continuum-client@2.14.1(reflect-metadata@0.2.2))':
     dependencies:
-      '@kinotic/continuum-client': 2.13.0(reflect-metadata@0.2.2)
+      '@kinotic/continuum-client': 2.14.1(reflect-metadata@0.2.2)
       '@kinotic/continuum-idl': 2.0.2
       reflect-metadata: 0.2.2
 
@@ -4773,7 +4779,7 @@ snapshots:
 
   '@opentelemetry/api@1.9.0': {}
 
-  '@opentelemetry/semantic-conventions@1.28.0': {}
+  '@opentelemetry/semantic-conventions@1.37.0': {}
 
   '@pkgjs/parseargs@0.11.0':
     optional: true
@@ -5127,13 +5133,13 @@ snapshots:
       '@smithy/types': 4.2.0
       tslib: 2.8.1
 
-  '@stomp/rx-stomp@2.0.0(@stomp/stompjs@7.0.0)(rxjs@7.8.1)(uuid@9.0.1)':
+  '@stomp/rx-stomp@2.1.0(@stomp/stompjs@7.2.0)(rxjs@7.8.2)(uuid@11.1.0)':
     dependencies:
-      '@stomp/stompjs': 7.0.0
-      rxjs: 7.8.1
-      uuid: 9.0.1
+      '@stomp/stompjs': 7.2.0
+      rxjs: 7.8.2
+      uuid: 11.1.0
 
-  '@stomp/stompjs@7.0.0': {}
+  '@stomp/stompjs@7.2.0': {}
 
   '@stylistic/eslint-plugin@2.13.0(eslint@9.23.0)(typescript@5.8.2)':
     dependencies:
@@ -7446,6 +7452,10 @@ snapshots:
       queue-microtask: 1.2.3
 
   rxjs@7.8.1:
+    dependencies:
+      tslib: 2.8.1
+
+  rxjs@7.8.2:
     dependencies:
       tslib: 2.8.1
 
