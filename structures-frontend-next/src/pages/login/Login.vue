@@ -337,7 +337,6 @@ export default class Login extends Vue {
       this._isBasicAuthEnabled = await this.auth.checkBasicAuthEnabled()
       this._isConfigLoaded = true
     } catch (error) {
-      console.error('Failed to load config', error)
       this._isBasicAuthEnabled = true
       this._isConfigLoaded = false
     }
@@ -369,7 +368,7 @@ export default class Login extends Vue {
       severity: 'error',
       summary: 'Error',
       detail: text,
-      life: 30000,
+      life: 3000,
     })
   }
 
@@ -408,7 +407,6 @@ export default class Login extends Vue {
   }
 
   async handleLogin() {
-    console.log('handleLogin called - showPassword:', this.state?.showPassword)
 
     if (!this.state?.showPassword) return
 
@@ -434,7 +432,6 @@ export default class Login extends Vue {
         this.referer || this.$route.redirectedFrom?.fullPath || '/applications'
       await CONTINUUM_UI.navigate(redirect)
     } catch (error: any) {
-      console.error('Authentication error:', error)
       this.displayAlert(
         error?.message || typeof error === 'string'
           ? error
