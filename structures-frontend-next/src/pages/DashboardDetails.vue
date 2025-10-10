@@ -9,8 +9,10 @@ import { DataInsightsWidgetEntityService } from '@/services/DataInsightsWidgetEn
 import { DataInsightsWidget } from '@/domain/DataInsightsWidget'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
+import Calendar from 'primevue/calendar'
 import { useToast } from 'primevue/usetoast'
 import SavedWidgetItem from '@/components/SavedWidgetItem.vue'
+import { DateRangeObservable } from '../observables/DateRangeObservable'
 
 const router = useRouter()
 const toast = useToast()
@@ -34,12 +36,16 @@ const addedWidgetIds = new Set<string>()
 const hasWidgets = ref(false)
 const loadingSidebarWidgets = ref(true)
 
-// Determine if we're in edit mode
+const dateRange = ref<{ startDate: Date | null, endDate: Date | null }>({
+  startDate: null,
+  endDate: null
+})
+const showDateRangePicker = ref(false)
+
 const isEditMode = computed(() => {
   if (props.mode) {
     return props.mode === 'edit'
   }
-  // Fallback: new dashboards are always in edit mode
   return props.dashboardId === 'new'
 })
 
@@ -77,7 +83,6 @@ const loadWidgets = async () => {
     savedWidgets.value = await widgetService.findByApplicationId(props.applicationId)
     loadingSidebarWidgets.value = false
   } catch (error) {
-    console.error('Error loading widgets:', error)
     loadingSidebarWidgets.value = false
   }
 }
@@ -538,7 +543,6 @@ const addWidgetToGrid = (widget: DataInsightsWidget, x?: number, y?: number, w?:
                       aiSubtitle: extractedSubtitle 
                     })
                 } catch (error) {
-                  console.error('Grid: Error updating widget config:', error)
                 }
               }
               
@@ -555,7 +559,7 @@ const addWidgetToGrid = (widget: DataInsightsWidget, x?: number, y?: number, w?:
 
 const createDashboard = async () => {
   if (!dashboardTitle.value || dashboardTitle.value.trim() === '') {
-    toast.add({ severity: 'warn', summary: 'Warning', detail: 'Please enter a dashboard title' })
+    toast.add({ severity: 'warn', summary: 'Warning', detail: 'Please enter a dashboard title', life: 3000 })
     return
   }
   
@@ -573,7 +577,7 @@ const createDashboard = async () => {
     
     const savedDashboard = await dashboardService.save(newDashboard)
     
-    toast.add({ severity: 'success', summary: 'Created', detail: `Dashboard "${savedDashboard.name}" created successfully` })
+    toast.add({ severity: 'success', summary: 'Created', detail: `Dashboard "${savedDashboard.name}" created successfully`, life: 3000 })
     
     // Redirect to view mode of the created dashboard
     setTimeout(() => {
@@ -583,7 +587,8 @@ const createDashboard = async () => {
     toast.add({ 
       severity: 'error', 
       summary: 'Error', 
-      detail: error?.message || 'Failed to create dashboard' 
+      detail: error?.message || 'Failed to create dashboard',
+      life: 3000
     })
   }
 }
@@ -614,14 +619,14 @@ const updateDashboard = async () => {
     
     await dashboardService.save(dashboard.value)
     
-    toast.add({ severity: 'success', summary: 'Updated', detail: 'Dashboard updated successfully' })
+    toast.add({ severity: 'success', summary: 'Updated', detail: 'Dashboard updated successfully', life: 3000 })
     
     // Redirect to view mode after update
     setTimeout(() => {
       router.push(`/application/${props.applicationId}/dashboards/${props.dashboardId}`)
     }, 500)
   } catch (error) {
-    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to update dashboard' })
+    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to update dashboard', life: 3000 })
   }
 }
 
@@ -637,6 +642,16 @@ const goBack = () => {
   router.push(`/application/${props.applicationId}/dashboards`)
 }
 
+const updateDateRange = () => {
+  if (typeof window !== 'undefined' && window.globalDateRangeObservable) {
+    window.globalDateRangeObservable.updateDateRange(dateRange.value)
+  }
+}
+
+const toggleDateRangePicker = () => {
+  showDateRangePicker.value = !showDateRangePicker.value
+}
+
 const enterEditMode = () => {
   router.push(`/application/${props.applicationId}/dashboards/${props.dashboardId}/edit`)
 }
@@ -649,12 +664,10 @@ const updateGridMode = () => {
   if (!gridStack.value) return
   
   if (!isEditMode.value) {
-    // View mode: disable all interactions
     gridStack.value.setStatic(true)
     gridStack.value.enableMove(false)
     gridStack.value.enableResize(false)
   } else {
-    // Edit mode: enable all interactions
     gridStack.value.setStatic(false)
     gridStack.value.enableMove(true)
     gridStack.value.enableResize(true)
@@ -686,12 +699,10 @@ const updateWidgetConfig = (widget: DataInsightsWidget, updates: { aiTitle?: str
 }
 
 
-// Watch for mode changes and update grid accordingly
 watch(isEditMode, () => {
   if (gridStack.value) {
     updateGridMode()
     
-    // Only setup drag-drop in edit mode
     if (isEditMode.value) {
       setTimeout(() => setupDragDrop(), 100)
     }
@@ -699,12 +710,15 @@ watch(isEditMode, () => {
 })
 
 onMounted(async () => {
+  if (!window.globalDateRangeObservable) {
+    window.globalDateRangeObservable = new DateRangeObservable()
+  }
+  
   await Promise.all([loadDashboard(), loadWidgets()])
   
   setTimeout(() => {
     initGrid()
     
-    // Only setup drag-drop in edit mode
     if (isEditMode.value) {
       setTimeout(() => setupDragDrop(), 100)
     }
@@ -726,7 +740,50 @@ onMounted(async () => {
           <!-- Edit Mode: Editable title input -->
           <InputText v-if="isEditMode" v-model="dashboardTitle" placeholder="Dashboard Title" class="text-xl font-semibold" />
         </div>
-        <div class="flex gap-2">
+        <div class="flex gap-2 items-center">
+          <!-- View Mode: Date Range Picker -->
+          <div v-if="!isEditMode" class="flex items-center gap-2">
+            <Button
+              @click="toggleDateRangePicker"
+              :class="showDateRangePicker ? 'p-button-primary' : 'p-button-outlined'"
+              icon="pi pi-calendar"
+              size="small"
+              :label="showDateRangePicker ? 'Hide Date Range' : 'Set Date Range'"
+            />
+            
+            <div v-if="showDateRangePicker" class="flex items-center gap-2 bg-white p-2 rounded border">
+              <div class="flex items-center gap-2">
+                <label class="text-sm font-medium text-surface-700">From:</label>
+                <Calendar
+                  v-model="dateRange.startDate"
+                  @date-select="updateDateRange"
+                  placeholder="Start Date"
+                  size="small"
+                  showIcon
+                />
+              </div>
+              
+              <div class="flex items-center gap-2">
+                <label class="text-sm font-medium text-surface-700">To:</label>
+                <Calendar
+                  v-model="dateRange.endDate"
+                  @date-select="updateDateRange"
+                  placeholder="End Date"
+                  size="small"
+                  showIcon
+                />
+              </div>
+              
+              <Button
+                @click="dateRange = { startDate: null, endDate: null }; updateDateRange()"
+                icon="pi pi-times"
+                size="small"
+                class="p-button-text"
+                title="Clear date range"
+              />
+            </div>
+          </div>
+          
           <!-- View Mode: Edit button -->
           <Button v-if="!isEditMode" @click="enterEditMode" label="Edit" icon="pi pi-pencil" class="p-button-primary" />
           <!-- Edit Mode: Cancel and Save buttons -->

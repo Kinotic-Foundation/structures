@@ -126,37 +126,27 @@ const closeDeleteModal = () => {
 
 const deleteDashboard = async () => {
   if (!selectedDashboard.value?.id) {
-    toast.add({ severity: 'error', summary: 'Error', detail: 'Dashboard ID is missing' })
+    toast.add({ severity: 'error', summary: 'Error', detail: 'Dashboard ID is missing', life: 3000 })
     return
   }
 
   isDeleting.value = true
 
   try {
-    console.log('Deleting dashboard:', selectedDashboard.value)
-    console.log('Dashboard ID:', selectedDashboard.value.id)
-    console.log('Dashboard service:', dashboardService)
     
     const result = await dashboardService.deleteById(selectedDashboard.value.id)
-    console.log('Delete result:', result)
     
-    toast.add({ severity: 'success', summary: 'Success', detail: 'Dashboard deleted successfully' })
+    toast.add({ severity: 'success', summary: 'Success', detail: 'Dashboard deleted successfully', life: 3000 })
     
     tableKey.value++
     
     closeDeleteModal()
   } catch (error: any) {
-    console.error('Error deleting dashboard:', error)
-    console.error('Error details:', {
-      message: error.message,
-      status: error.status,
-      statusText: error.statusText,
-      response: error.response
-    })
     toast.add({ 
       severity: 'error', 
       summary: 'Error', 
-      detail: error.message || error.statusText || 'Failed to delete dashboard' 
+      detail: error.message || error.statusText || 'Failed to delete dashboard',
+      life: 3000
     })
   } finally {
     isDeleting.value = false
@@ -183,12 +173,12 @@ const getActionMenu = (item: Dashboard) => {
 
 const openDashboard = (dashboard: Dashboard) => {
   if (!dashboard.id) {
-    toast.add({ severity: 'error', summary: 'Error', detail: 'Dashboard ID is missing' })
+    toast.add({ severity: 'error', summary: 'Error', detail: 'Dashboard ID is missing', life: 3000 })
     return
   }
   
   if (!currentApplicationId.value) {
-    toast.add({ severity: 'error', summary: 'Error', detail: 'Application ID is missing' })
+    toast.add({ severity: 'error', summary: 'Error', detail: 'Application ID is missing', life: 3000 })
     return
   }
   
@@ -202,7 +192,6 @@ const createNewDashboard = () => {
 
 
 watch(() => router.currentRoute.value.query.refresh, () => {
-  console.log('Refresh query parameter changed, CrudTable will re-fetch data')
 })
 
 </script>
