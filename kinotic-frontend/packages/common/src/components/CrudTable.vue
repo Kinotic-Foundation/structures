@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount } from "vue";
 import { useRoute } from "vue-router";
+import "../styles/datatable-loading.css";
 
 import DataTable from "primevue/datatable";
 import Column from "primevue/column";
@@ -16,7 +17,6 @@ import type { DataTableSortMeta } from "primevue/datatable";
 import Paginator, { type PageState } from "primevue/paginator";
 import SelectButton from "primevue/selectbutton";
 import Skeleton from "primevue/skeleton";
-import { useToast } from "primevue/usetoast";
 import { useConfirm } from "primevue/useconfirm";
 
 import {
@@ -100,7 +100,6 @@ const emit = defineEmits<{
   (e: "items-count", count: number): void;
 }>();
 
-const toast = useToast()
 const route = useRoute()
 
 function getRowClass() {
@@ -378,18 +377,7 @@ function find() {
     });
 }
 
-function displayAlert(text: string) {
-  toast.add({
-    severity: 'error',
-    summary: 'Error',
-    detail: text,
-    life: 3000
-  });
-}
-
-// displayAlert is exposed because ProjectEntityDefinitionsTable and EntityDefinitionsList
-// surface publish errors through their crudTable ref.
-defineExpose({ find, displayAlert });
+defineExpose({ find });
 </script>
 
 <template>
@@ -540,7 +528,7 @@ defineExpose({ find, displayAlert });
           <DataTable
             :class="[
               'crud-table__datatable',
-              { 'crud-table__datatable--loading': loading },
+              { 'datatable-loading': loading },
               displayRows.length > 0 ? 'min-h-0 flex-1' : ''
             ]"
             :pt="dataTablePt"
@@ -563,6 +551,8 @@ defineExpose({ find, displayAlert });
               :sortable="col.sortable !== false"
               :style="{ width: col.width }"
               :headerStyle="col.centered ? { textAlign: 'center' } : {}"
+              :headerClass="col.optional ? 'hidden md:table-cell' : undefined"
+              :bodyClass="col.optional ? 'hidden md:table-cell' : undefined"
             >
               <template #body="slotProps">
                 <div :class="['flex min-h-[48px] items-center', col.centered ? 'w-full justify-center' : '']">
@@ -633,33 +623,6 @@ defineExpose({ find, displayAlert });
 </template>
 
 <style>
-/* While loading, an indeterminate line overlays the header row's bottom divider. */
-.crud-table__datatable--loading .p-datatable-thead {
-  position: relative;
-}
-
-.crud-table__datatable--loading .p-datatable-thead::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 3px;
-  background: linear-gradient(90deg, transparent, var(--p-primary-500), transparent);
-  background-size: 40% 100%;
-  background-repeat: no-repeat;
-  animation: crud-table-loading-slide 1.2s ease-in-out infinite;
-}
-
-@keyframes crud-table-loading-slide {
-  0% {
-    background-position: -100% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-
 .p-datatable-paginator-bottom {
   border: none !important;
   box-shadow: none !important;
