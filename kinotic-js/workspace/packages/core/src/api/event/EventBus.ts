@@ -212,9 +212,13 @@ export class EventBus implements IEventBus {
 
                                                           if (value.headers.get(EventConstants.CONTROL_HEADER) === EventConstants.CONTROL_VALUE_COMPLETE) {
                                                               serverSignaledCompletion = true
-                                                              // A terminal reply carries the value it completes with, so it is emitted before
-                                                              // completing. A bare terminal reply still resolves a single-value invocation
-                                                              // (a void result), while for a stream it is the ordinary completion event.
+                                                              // control: complete marks the last event of a request, and two kinds arrive here:
+                                                              //  - a single-value reply (invoke): the result rides on this same event, so it is
+                                                              //    emitted before completing. A void result has no body but is emitted anyway,
+                                                              //    so the caller's promise resolves with null instead of failing on an empty stream.
+                                                              //  - a stream's completion event (invokeStream): it carries nothing and only
+                                                              //    ends the stream, so nothing is emitted.
+                                                              // sendControlEvents is true only for streams, which is what tells the two apart.
                                                               if (value.data.isPresent() || !sendControlEvents) {
                                                                   subscriber.next(value)
                                                               }
