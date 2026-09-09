@@ -136,8 +136,10 @@ public class EndpointConnectionHandler {
 
     public void removeSession() {
         if (sessionKeepAliveMode == SessionKeepAliveMode.NONE && session != null) {
-            // nothing flushes a destroyed session on the WebSocket path, so the store entry is removed
-            // here; a reconnect within the timeout would otherwise resume the session and its replyToId
+            // destroy() only removes the session from the store inside the Vert.x SessionHandler call
+            // chain, which flushes at response end. A WebSocket's response ended at the upgrade, so the
+            // store entry is removed here; a reconnect within the timeout would otherwise resume the
+            // session and its replyToId.
             services.sessionStore.delete(session.id())
                                  .onFailure(throwable -> log.warn("Session {} could not be removed from the store", session.id(), throwable));
             session.destroy();
