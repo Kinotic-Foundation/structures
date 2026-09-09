@@ -72,7 +72,7 @@ public class ParkedReplySessions {
         if (stillServing) {
             long timer = vertx.setTimer(apiGatewayProperties.getReplyBufferWindow(), _ -> end(state, "the window expired"));
             parked.put(state, new Parked(timer, session, connectedInfo));
-            state.park(() -> end(state, "the buffered replies exceeded the budget"));
+            state.park(() -> end(state, "the buffered replies exceeded the budget"), () -> handedOff(state));
         } else {
             state.dispose();
         }
@@ -91,6 +91,15 @@ public class ParkedReplySessions {
             entry.session().put(ConnectedInfo.SESSION_KEY, entry.connectedInfo());
             sessionStore.put(entry.session())
                         .onFailure(throwable -> log.warn("Session {} could not store its rotated reply destination", entry.session().id(), throwable));
+        }
+    }
+
+    // The client came back through another node, which holds the state from now on; nothing rotates
+    private void handedOff(ReplySessionState state) {
+        Parked entry = parked.remove(state);
+        if (entry != null) {
+            vertx.cancelTimer(entry.timer());
+            log.debug("The parked reply state of session {} was handed to another node", entry.session().id());
         }
     }
 

@@ -10,9 +10,15 @@ import org.kinotic.core.api.exceptions.RpcServiceUnavailableException;
 import org.kinotic.core.internal.utils.EventUtil;
 import org.kinotic.gateway.internal.endpoints.Services;
 
+import tools.jackson.core.type.TypeReference;
+
 import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -23,7 +29,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>
  * The state outlives a sticky session's connection: parked, it keeps its reply subscriptions registered and
  * buffers what they receive, up to a byte budget, so the same client reconnecting takes every reply and
- * every pinned request over through {@link #adopt} and {@link #rebind}.
+ * every pinned request over through {@link #adopt} and {@link #rebind}. A client that reconnects to another
+ * node has that node announce itself on the reply destination; the state then hands over across the
+ * cluster: its subscription steps aside, what it held is replayed to the destination, and the requests it
+ * was watching follow in the flush-complete message for the new node to watch.
  *
  * Created by Navíd Mitchell 🤪 on 9/9/26.
  */
@@ -33,7 +42,10 @@ public class ReplySessionState {
     private final Services services;
     private final ConcurrentHashMap<String, ReplySubscription> replySubscriptions = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, PendingRequest> pendingRequests = new ConcurrentHashMap<>();
+    // names this state in the release it publishes, so the echo of its own announcement is ignored
+    private final String stateId = UUID.randomUUID().toString();
     private volatile Runnable onOverflow;   // set while parked
+    private volatile Runnable onHandedOff;  // set while parked
     private long bufferedBytes;              // touched only under the parking lock
 
     public ReplySessionState(Services services) {
@@ -52,6 +64,14 @@ public class ReplySessionState {
                      .exceptionHandler(throwable -> subscription.handler.handleError(throwable));
         subscription.consumer = eventConsumer;
         replySubscriptions.put(cri.raw(), subscription);
+        // Whoever holds this destination's state on another node hands it over. Published only once this
+        // consumer is registered, so the replay routes here and nowhere else.
+        eventConsumer.completion().onSuccess(_ -> {
+            Metadata release = Metadata.create();
+            release.put(EventConstants.CONTROL_HEADER, EventConstants.CONTROL_VALUE_REPLY_SESSION_RELEASE);
+            release.put(EventConstants.RELEASE_ORIGIN_HEADER, stateId);
+            services.eventBusService.publish(Event.create(cri, release, null));
+        });
     }
 
     /**
@@ -136,8 +156,9 @@ public class ReplySessionState {
      * configured byte budget, and the pinned requests stay pinned.
      * @param onOverflow run once if the buffered replies exceed the budget
      */
-    public void park(Runnable onOverflow) {
+    public void park(Runnable onOverflow, Runnable onHandedOff) {
         this.onOverflow = onOverflow;
+        this.onHandedOff = onHandedOff;
         replySubscriptions.values().forEach(ReplySubscription::park);
     }
 
@@ -160,6 +181,7 @@ public class ReplySessionState {
         });
         other.replySubscriptions.clear();
         other.onOverflow = null;
+        other.onHandedOff = null;
     }
 
     /**
@@ -171,6 +193,56 @@ public class ReplySessionState {
         replySubscriptions.values().forEach(subscription -> subscription.consumer.unregister());
         replySubscriptions.clear();
         onOverflow = null;
+        onHandedOff = null;
+    }
+
+    // Another node's connection took the destination over: this subscription steps aside, replays what it
+    // held to the destination, which now routes only there, and sends the pending requests after it. The
+    // requests are settled here because the watcher is node-local; the other node pins them again.
+    private void handOff(ReplySubscription subscription) {
+        replySubscriptions.remove(subscription.cri);
+        subscription.consumer.unregister().onComplete(_ -> {
+            CRI destination = CRI.create(subscription.cri);
+            services.eventBusService.send(control(destination, EventConstants.CONTROL_VALUE_FLUSH_BEGIN, null));
+            for (Event<byte[]> event : subscription.drain()) {
+                event.metadata().put(EventConstants.REPLAYED_HEADER, "true");
+                services.eventBusService.send(event);
+            }
+            List<PendingRequestRecord> records = new ArrayList<>();
+            pendingRequests.forEach((correlationId, pending) -> {
+                Map<String, String> replyMetadata = new HashMap<>();
+                pending.replyMetadata().forEach(entry -> replyMetadata.put(entry.getKey(), entry.getValue()));
+                records.add(new PendingRequestRecord(correlationId, pending.nodeId(), replyMetadata));
+            });
+            pendingRequests.keySet().forEach(this::settle);
+            services.eventBusService.send(control(destination, EventConstants.CONTROL_VALUE_FLUSH_COMPLETE,
+                                                  services.jsonMapper.writeValueAsBytes(records)));
+            Runnable handedOff = onHandedOff;
+            if (replySubscriptions.isEmpty() && handedOff != null) {
+                handedOff.run();
+            }
+        });
+    }
+
+    // The flush-complete of a handing-over node: its pending requests are pinned here from now on
+    private void adoptRecords(byte[] body) {
+        if (body != null && body.length > 0) {
+            List<PendingRequestRecord> records = services.jsonMapper.readValue(body, new TypeReference<List<PendingRequestRecord>>() {});
+            for (PendingRequestRecord record : records) {
+                pendingRequests.put(record.getCorrelationId(),
+                                    new PendingRequest(Metadata.create(record.getReplyMetadata()), record.getNodeId()));
+                if (record.getNodeId() != null) {
+                    services.requestLivenessWatcher.watch(record.getCorrelationId(), record.getNodeId(),
+                                                          () -> fail(record.getCorrelationId(), null, record.getNodeId()));
+                }
+            }
+        }
+    }
+
+    private static Event<byte[]> control(CRI destination, String value, byte[] body) {
+        Metadata metadata = Metadata.create();
+        metadata.put(EventConstants.CONTROL_HEADER, value);
+        return Event.create(destination, metadata, body);
     }
 
     private void settleIfTerminal(Event<byte[]> reply) {
@@ -219,6 +291,9 @@ public class ReplySessionState {
         volatile ReplySessionState owner;
         EventConsumer consumer;
         private final ArrayDeque<Event<byte[]>> buffered = new ArrayDeque<>();
+        // between a flush-begin and its flush-complete, everything arriving waits behind the replay
+        private final List<Event<byte[]>> held = new ArrayList<>();
+        private boolean holding;
         private boolean parked;
 
         ReplySubscription(String cri, String subscriptionId, StompSubscriptionHandler handler) {
@@ -228,6 +303,40 @@ public class ReplySessionState {
         }
 
         synchronized void deliver(Event<byte[]> event) {
+            ReplySessionState state = owner;
+            String control = event.metadata().get(EventConstants.CONTROL_HEADER);
+            if (EventConstants.CONTROL_VALUE_REPLY_SESSION_RELEASE.equals(control)) {
+                if (!state.stateId.equals(event.metadata().get(EventConstants.RELEASE_ORIGIN_HEADER))) {
+                    state.handOff(this);
+                }
+            } else if (EventConstants.CONTROL_VALUE_FLUSH_BEGIN.equals(control)) {
+                holding = true;
+            } else if (EventConstants.CONTROL_VALUE_FLUSH_COMPLETE.equals(control)) {
+                state.adoptRecords(event.data());
+                holding = false;
+                // everything replayed precedes everything that arrived live during the handoff
+                List<Event<byte[]>> replayed = new ArrayList<>();
+                List<Event<byte[]>> live = new ArrayList<>();
+                for (Event<byte[]> heldEvent : held) {
+                    if (heldEvent.metadata().contains(EventConstants.REPLAYED_HEADER)) {
+                        heldEvent.metadata().remove(EventConstants.REPLAYED_HEADER);
+                        replayed.add(heldEvent);
+                    } else {
+                        live.add(heldEvent);
+                    }
+                }
+                held.clear();
+                replayed.forEach(this::pass);
+                live.forEach(this::pass);
+            } else if (holding) {
+                held.add(event);
+            } else {
+                pass(event);
+            }
+        }
+
+        // Delivery proper: settle what the reply answers, then hand it on or hold it while parked
+        private void pass(Event<byte[]> event) {
             ReplySessionState state = owner;
             state.settleIfTerminal(event);
             if (parked) {
@@ -241,6 +350,13 @@ public class ReplySessionState {
             } else {
                 handler.handleEvent(event);
             }
+        }
+
+        synchronized List<Event<byte[]>> drain() {
+            List<Event<byte[]>> ret = new ArrayList<>(buffered);
+            buffered.forEach(event -> owner.release(sizeOf(event)));
+            buffered.clear();
+            return ret;
         }
 
         synchronized void park() {

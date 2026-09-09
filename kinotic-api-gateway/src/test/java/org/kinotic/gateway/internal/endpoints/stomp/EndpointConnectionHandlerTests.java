@@ -111,6 +111,8 @@ public class EndpointConnectionHandlerTests {
             return replyConsumer;
         });
         when(replyConsumer.exceptionHandler(any())).thenReturn(replyConsumer);
+        when(replyConsumer.completion()).thenReturn(Future.succeededFuture());
+        when(replyConsumer.unregister()).thenReturn(Future.succeededFuture());
         when(eventBusService.listen(any())).thenReturn(replyConsumer);
 
         JsonMapper jsonMapper = JsonMapper.builder().build();
@@ -297,6 +299,69 @@ public class EndpointConnectionHandlerTests {
         verify(replyConsumer).unregister();
         EndpointConnectionHandler second = connect(session, Map.of());
         Assertions.assertNotEquals(firstReplyToId, replyToId(), "the reply destination was not rotated on overflow");
+    }
+
+    @Test
+    public void testParkedStateHandsOverToTheNodeThatTookTheDestination() throws Exception {
+        Session session = services.sessionStore.createSession(SESSION_TIMEOUT_MS * 10);
+        services.sessionStore.put(session).toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
+        EndpointConnectionHandler first = connect(session, Map.of());
+        String replyTo = subscribeReplies(first);
+        first.send(request(replyTo, "corr-h")).toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
+        first.shutdown();
+        // a stream value lands while parked; the request stays pending
+        replyDelivery.get().handle(Event.create(CRI.create(replyTo), Metadata.create(Map.of(EventConstants.CORRELATION_ID_HEADER, "corr-h")), new byte[]{1}));
+
+        // another node's connection announces it took the destination over
+        Metadata release = Metadata.create(Map.of(EventConstants.CONTROL_HEADER, EventConstants.CONTROL_VALUE_REPLY_SESSION_RELEASE,
+                                                  EventConstants.RELEASE_ORIGIN_HEADER, "some-other-state"));
+        replyDelivery.get().handle(Event.create(CRI.create(replyTo), release, null));
+
+        verify(replyConsumer).unregister();
+        ArgumentCaptor<Event<byte[]>> sent = ArgumentCaptor.forClass(Event.class);
+        verify(eventBusService, org.mockito.Mockito.times(3)).send(sent.capture());
+        List<Event<byte[]>> handoff = sent.getAllValues();
+        Assertions.assertEquals(EventConstants.CONTROL_VALUE_FLUSH_BEGIN, handoff.get(0).metadata().get(EventConstants.CONTROL_HEADER));
+        Assertions.assertEquals("corr-h", handoff.get(1).metadata().get(EventConstants.CORRELATION_ID_HEADER));
+        Assertions.assertTrue(handoff.get(1).metadata().contains(EventConstants.REPLAYED_HEADER));
+        Assertions.assertEquals(EventConstants.CONTROL_VALUE_FLUSH_COMPLETE, handoff.get(2).metadata().get(EventConstants.CONTROL_HEADER));
+        String records = new String(handoff.get(2).data(), StandardCharsets.UTF_8);
+        Assertions.assertTrue(records.contains("corr-h") && records.contains("node-2"), records);
+        // the request is watched by the other node from now on
+        verify(requestLivenessWatcher).settle("corr-h");
+    }
+
+    @Test
+    public void testTakingOverADestinationHoldsLiveRepliesBehindTheReplay() throws Exception {
+        EndpointConnectionHandler handler = connect(Map.of());
+        String replyTo = EventConstants.REPLY_DESTINATION_SCHEME + "://" + replyToId() + ":replies@kinotic.js.EventBus/replyHandler";
+        List<Event<byte[]>> delivered = new ArrayList<>();
+        handler.subscribe(CRI.create(replyTo), "sub-1", new StompSubscriptionHandler() {
+            @Override
+            public void handleEvent(Event<byte[]> event) { delivered.add(event); }
+
+            @Override
+            public void handleError(Throwable throwable) {}
+        });
+        // a fresh subscription announces itself, so a parked state elsewhere hands over
+        ArgumentCaptor<Event<byte[]>> published = ArgumentCaptor.forClass(Event.class);
+        verify(eventBusService).publish(published.capture());
+        Assertions.assertEquals(EventConstants.CONTROL_VALUE_REPLY_SESSION_RELEASE, published.getValue().metadata().get(EventConstants.CONTROL_HEADER));
+
+        Handler<Event<byte[]>> consumer = replyDelivery.get();
+        consumer.handle(Event.create(CRI.create(replyTo), Metadata.create(Map.of(EventConstants.CONTROL_HEADER, EventConstants.CONTROL_VALUE_FLUSH_BEGIN)), null));
+        consumer.handle(Event.create(CRI.create(replyTo), Metadata.create(Map.of(EventConstants.CORRELATION_ID_HEADER, "corr-live")), new byte[0]));
+        consumer.handle(Event.create(CRI.create(replyTo), Metadata.create(Map.of(EventConstants.CORRELATION_ID_HEADER, "corr-x",
+                                                                                 EventConstants.REPLAYED_HEADER, "true")), new byte[0]));
+        Assertions.assertTrue(delivered.isEmpty(), "nothing is delivered until the flush completes");
+
+        byte[] records = services.jsonMapper.writeValueAsBytes(List.of(new PendingRequestRecord("corr-x", "node-2", Map.of(EventConstants.REPLY_TO_HEADER, replyTo))));
+        consumer.handle(Event.create(CRI.create(replyTo), Metadata.create(Map.of(EventConstants.CONTROL_HEADER, EventConstants.CONTROL_VALUE_FLUSH_COMPLETE)), records));
+
+        Assertions.assertEquals(List.of("corr-x", "corr-live"),
+                                delivered.stream().map(event -> event.metadata().get(EventConstants.CORRELATION_ID_HEADER)).toList());
+        Assertions.assertFalse(delivered.get(0).metadata().contains(EventConstants.REPLAYED_HEADER));
+        verify(requestLivenessWatcher).watch(eq("corr-x"), eq("node-2"), any());
     }
 
     @Test

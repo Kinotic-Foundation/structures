@@ -438,9 +438,29 @@ to the new node), transfers its pending records, and ends with `flush-complete`;
 holds client forwarding until then, preserving per-correlation stream order. A parked session that never
 answers is bounded by the same registration monitoring, no timeouts here either.
 
-Files: control values in `EventConstants`, release/flush in `ParkedReplySessions`, the hold in
-`ReplySessionState`, a pending-record codec, a two-gateway test (kill gateway A mid-stream,
-reconnect to B, stream resumes complete and ordered).
+As built. Every fresh reply subscription publishes the release once its consumer is registered,
+carrying a `__release-origin` naming the publishing state so the echo is ignored; nothing else
+on the cluster has to know whether a parked state exists. The state receiving a release from
+another origin hands over from its subscription's delivery path, parked or still live:
+
+```
+A: unregister consumer → send flush-begin → replay buffered events, each marked __replayed
+   → send flush-complete with the pending requests as PendingRequestRecord JSON → settle them locally
+B: flush-begin → hold everything that arrives → flush-complete → pin the records → deliver the
+   replayed events first, then what arrived live, __replayed stripped
+```
+
+B holds only between A's flush-begin and flush-complete, so an A that never answers, because it
+died, costs B nothing: live replies are delivered as they arrive. The window between A's
+unregister and its flush-begin reaching B is the one place a live reply for a correlation with
+buffered predecessors could overtake them; it is a few milliseconds on the same event bus.
+
+Files: `EventConstants` (three control values, two headers), `PendingRequestRecord`,
+`ReplySessionState` (announce, hand off, hold), `ParkedReplySessions` (handed-off exit, no
+rotation), `EndpointConnectionHandlerTests` (a parked state hands over in order with its records
+and settles them locally; a taking-over subscription announces itself and holds live replies behind
+the replay, re-pinning the records). The two-gateway test the plan named needs two gateways and a
+client; the protocol is pinned from both ends on one.
 
 ## Phase 9 — orchestrator fast path (~5 files, optional)
 

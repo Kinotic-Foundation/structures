@@ -99,6 +99,35 @@ public class EventConstants {
 
     public static final String CONTROL_VALUE_RESUME = "resume";
 
+    /**
+     * Published to a reply destination by the gateway node a client reconnected to, so the node holding that
+     * destination's parked reply state hands it over.
+     */
+    public static final String CONTROL_VALUE_REPLY_SESSION_RELEASE = "reply-session-release";
+
+    /**
+     * Sent to a reply destination by the node handing a reply state over, before it replays what it held.
+     */
+    public static final String CONTROL_VALUE_FLUSH_BEGIN = "flush-begin";
+
+    /**
+     * Sent to a reply destination by the node handing a reply state over, after the replay; the body carries
+     * the requests still pending, for the receiving node to keep watching.
+     */
+    public static final String CONTROL_VALUE_FLUSH_COMPLETE = "flush-complete";
+
+    /**
+     * Marks a reply replayed by a handing-over node, so the receiving node delivers it ahead of anything that
+     * arrived live during the handoff.
+     */
+    public static final String REPLAYED_HEADER = "__replayed";
+
+    /**
+     * Identifies the reply state that published a {@link #CONTROL_VALUE_REPLY_SESSION_RELEASE}, so it ignores
+     * its own announcement.
+     */
+    public static final String RELEASE_ORIGIN_HEADER = "__release-origin";
+
 
     public static final String SERVICE_DESTINATION_SCHEME = "srv";
 
