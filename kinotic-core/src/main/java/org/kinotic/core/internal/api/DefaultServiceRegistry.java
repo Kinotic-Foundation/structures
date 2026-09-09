@@ -15,6 +15,7 @@ import org.kinotic.core.api.event.TraceLogFilter;
 import org.kinotic.core.api.security.SecurityContext;
 import org.kinotic.core.api.service.ServiceDescriptor;
 import org.kinotic.core.api.service.FunctionInstanceProvider;
+import org.kinotic.core.api.service.RequestLivenessWatcher;
 import org.kinotic.core.api.service.ServiceIdentifier;
 import org.kinotic.core.internal.api.service.ExceptionConverterComposite;
 import org.kinotic.core.internal.api.service.invoker.ArgumentResolverComposite;
@@ -71,6 +72,8 @@ public class DefaultServiceRegistry implements ServiceRegistry {
     private ObjectProvider<ServiceDirectory> serviceDirectoryProvider;
     @Autowired
     private TraceLogFilter traceLogFilter;
+    @Autowired
+    private RequestLivenessWatcher requestLivenessWatcher;
 
     @Override
     public Future<Void> register(ServiceIdentifier serviceIdentifier, Class<?> serviceInterface, Object instance) {
@@ -133,6 +136,7 @@ public class DefaultServiceRegistry implements ServiceRegistry {
                                                   eventBusService,
                                                   securityContext,
                                                   serviceDirectoryProvider,
+                                                  requestLivenessWatcher,
                                                   vertx,
                                                   Thread.currentThread().getContextClassLoader(),
                                                   openTelemetry,
@@ -152,6 +156,7 @@ public class DefaultServiceRegistry implements ServiceRegistry {
                                                   eventBusService,
                                                   securityContext,
                                                   serviceDirectoryProvider,
+                                                  requestLivenessWatcher,
                                                   vertx,
                                                   Thread.currentThread().getContextClassLoader(),
                                                   openTelemetry,

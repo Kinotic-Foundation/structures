@@ -1,7 +1,7 @@
 # Node failure handling for service proxies — phase plan
 
 Plan of record for making a proxy call fail when the node serving it dies, instead of hanging
-forever. Phase 1 landed in PR #476; Phase 2 is PR #540. Everything below was re-validated against `develop` at `3adf17d`
+forever. Phase 1 landed in PR #476; Phase 2 is PR #540; Phase 3 is PR #544, based on #540. Everything below was re-validated against `develop` at `3adf17d`
 (2026-09-08); the adjustments that pass produced are folded in, and the phase numbering below
 supersedes the earlier chat numbering (mapping at the end).
 
@@ -132,16 +132,22 @@ Why not `RegistrationInfo.seq()`: it exists, but a `MessageConsumer` never learn
 identifying below node granularity from the consumer side needs Vert.x internals. Node id plus
 the gateway-side synthesis in Phase 5 covers every case without them.
 
-## Phase 3 — the watcher, in kinotic-core (~7 files)
+## Phase 3 — the watcher, in kinotic-core (~11 files)
 
-One internal component every in-cluster caller uses:
+One component every in-cluster caller uses, in `api/service` because the MCP invoker lives in
+`kinotic-domain`:
 
 ```java
-interface RequestLivenessWatcher {
-    Lease watch(CRI destination, Runnable onLost);   // close() the lease when the request settles
-    int pendingCount();                              // the per-node metric from NavidNotes, for free
+public interface RequestLivenessWatcher {
+    void watch(String correlationId, String nodeId, Runnable onLost);   // pin at the ack
+    void settle(String correlationId);                                   // release when the reply settles it
+    int pendingCount();                                                  // the rpc.pending.requests gauge
 }
 ```
+
+Keyed by correlation id rather than handing out lease objects, so the two callers keep no lease
+bookkeeping of their own: each pins in the ack handler and settles wherever it already removes
+the request from its own map.
 
 A lease starts at the ack. Until then Vert.x owns the outcome (`NO_HANDLERS` or `TIMEOUT` on the
 `request`, see Phase 2), and `KinoticUtil.mapSendFailure` maps `TIMEOUT` to
@@ -158,20 +164,23 @@ Coverage of the round-robin cases:
 | unscoped, N Java instances (one per JVM) — a service on N nodes, or `@ScopeOptional` methods | the JVM that took it | that JVM leaves the cluster |
 | unscoped, N TS instances behind gateways | the **gateway** holding that instance's subscription | that gateway dies (this phase); the instance dies while its gateway lives (Phase 5) |
 
-Wired into `DefaultRpcServiceProxyHandle` (lease per correlationId, symmetric with the existing
-send-failure path — `onLost` calls `handler.processError(new RpcServiceUnavailableException(...))`)
-and `McpToolInvoker`. `onLost` only *dispatches* the failure to the request's own context, never
+Wired into `DefaultRpcServiceProxyHandle` (pinned inside `responseMap.computeIfPresent` so a reply
+that lands before the ack is processed leaves nothing pinned; `onLost` removes the handler and calls
+`processError(new RpcServiceUnavailableException(...))`, and only the party that removes the handler
+signals it) and `McpToolInvoker`. `onLost` only *dispatches* the failure to the request's own context, never
 runs continuations on the cluster manager's delivery context: under a death burst that loop must
 drain in queue submissions, not user code. One membership subscription per JVM, held for the
 watcher's lifetime, and leases keyed by the node id they are pinned to, so a membership change costs
 one lookup per pinned node. Non-clustered guards are gone from `develop` (#496), so there is no
 fallback path.
 
-Files: `RequestLivenessWatcher` + `Lease`, `RpcServiceUnavailableException`,
-`DefaultRpcServiceProxyHandle`, `McpToolInvoker`, Spring wiring, `RpcTests` (a second cluster
-node hosting the service leaves mid-call → `RpcServiceUnavailableException`, while a call pinned
-to the surviving node completes; the local node unregistering the service mid-call → the reply
-still arrives; unrelated churn → no false failure).
+Files: `RequestLivenessWatcher`, `DefaultRequestLivenessWatcher`, `RpcServiceUnavailableException`,
+`KinoticUtil`, `DefaultRpcServiceProxyHandle`, `DefaultServiceRegistry`, `McpToolInvoker`,
+`ServiceInvocationSupervisor`, `ServiceRegistrationBeanPostProcessor`, `RpcLivenessTests` +
+`DrainTestService` (a second Ignite node in the test JVM hosts an address, acks, and leaves mid-call
+→ `RpcServiceUnavailableException`; the local service unregistering mid-call → the reply still
+arrives and `unregister` waits for it; a stream cut by `stop()` → `RpcServiceUnavailableException`;
+unrelated membership churn → no false failure).
 
 The proxy constructor grows by one parameter, the way `develop` grew it for `TraceLogFilter`;
 it is not restructured.
@@ -189,13 +198,14 @@ for(... : activeStreamingResults.entrySet()){
 
 Today `stop()` cancels streams with no terminal reply and returns before running invocations have
 replied; with membership as the post-ack signal a cut stream's caller would otherwise wait for the
-JVM to exit. The supervisor only tracks streams, so it gains an in-flight count for single-value
-invocations. The drain is bounded by a shutdown setting, the same kind of bound as Spring's
-lifecycle timeout, never a per-call one. To verify while building it: the drain only helps while
-Vert.x and Ignite are still up, and `ServiceRegistrationBeanPostProcessor.postProcessBeforeDestruction`
-runs on the service bean's destruction, where a published bean that injects nothing from kinotic
-has no dependency edge forcing that order. If the drain does not fit the phase's file budget it is
-Phase 3b, after the watcher.
+JVM to exit. The supervisor only tracked streams, so it gains an in-flight count for single-value invocations:
+the synchronous handler run plus every pending single-value reactive result. The drain is bounded
+by `DRAIN_TIMEOUT_MS` (30 s), a constant until an environment needs a different value, never a
+per-call bound. The drain only helps while Vert.x and Ignite are still up, and
+`ServiceRegistrationBeanPostProcessor.postProcessBeforeDestruction` runs on the service bean's
+destruction, where a published bean that injects nothing from kinotic had no dependency edge forcing
+that order; the post processor now records each published bean as dependent on the registry, so
+Spring destroys it, and drains it, before the registry and the Vert.x behind it.
 
 ## Phase 4 — gateway, caller side: session state, leases, session touch (~10 files)
 
