@@ -136,6 +136,10 @@ public class EndpointConnectionHandler {
 
     public void removeSession() {
         if (sessionKeepAliveMode == SessionKeepAliveMode.NONE && session != null) {
+            // nothing flushes a destroyed session on the WebSocket path, so the store entry is removed
+            // here; a reconnect within the timeout would otherwise resume the session and its replyToId
+            services.sessionStore.delete(session.id())
+                                 .onFailure(throwable -> log.warn("Session {} could not be removed from the store", session.id(), throwable));
             session.destroy();
         }
     }
@@ -214,6 +218,8 @@ public class EndpointConnectionHandler {
         subscriptions.clear();
         replySessionState.dispose();
         serviceSessionState.dispose();
+        // a NONE session ends with its connection however the connection ended
+        removeSession();
         session = null;
         connectedInfo = null;
         stompAuthorizer = null;

@@ -327,6 +327,18 @@ vm-manager's overlapping heartbeat `setInterval`.
 Not in scope: failing in-flight calls on a sticky reconnect. That is what parking exists to
 avoid.
 
+As built: `RpcError` (`api/event`, exported) carries `exceptionName` and `exceptionClass` parsed
+from the `ServiceExceptionWrapper` body of an error reply, falling back to the error header;
+`EventBus.requestStream` rejects with it. The `NONE` edge was a gateway defect, not a client one:
+`removeSession()` only marked the session destroyed, and nothing flushes a destroyed session on
+the WebSocket path, so the store entry and its `replyToId` survived until the timeout; it now
+deletes the entry from the store, and `shutdown()` does the same, so a NONE session ends with its
+connection however the connection ended. The vm-manager heartbeat is a self-rescheduling
+`setTimeout`, so a beat that outlives its interval never overlaps the next. Files: `RpcError.ts`,
+`EventBus.ts`, `index.ts`, `RpcError.test.ts`, vm-manager `index.ts`, `EndpointConnectionHandler`,
+`EndpointConnectionHandlerTests` (a NONE session is gone from the store once the connection
+closes). `@kinotic-ai/core` moves to 5.0.0-beta.11 for the new export.
+
 ## Phase 7 — parked reply sessions, same node (~13 files, split 7a gateway / 7b client)
 
 On `closed()` with a sticky session, `shutdown()` *parks* the `ReplySessionState` in a node-local

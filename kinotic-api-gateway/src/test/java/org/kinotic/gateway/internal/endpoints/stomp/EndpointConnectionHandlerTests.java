@@ -229,6 +229,23 @@ public class EndpointConnectionHandlerTests {
         Assertions.assertFalse(sent.getValue().metadata().contains(EventConstants.ERROR_HEADER));
     }
 
+    @Test
+    public void testNoneKeepAliveSessionEndsWithTheConnection() throws Exception {
+        Session session = services.sessionStore.createSession(SESSION_TIMEOUT_MS * 10);
+        services.sessionStore.put(session).toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
+
+        EndpointConnectionHandler handler = connect(session, Map.of(EventConstants.SESSION_KEEP_ALIVE_HEADER, "NONE"));
+        Assertions.assertNotNull(storedSession(session.id()));
+
+        // a network close, not a DISCONNECT frame: the session must not outlive the connection either way
+        handler.shutdown();
+        long deadline = System.currentTimeMillis() + 5000;
+        while (storedSession(session.id()) != null && System.currentTimeMillis() < deadline) {
+            Thread.sleep(50);
+        }
+        Assertions.assertNull(storedSession(session.id()), "a NONE session survived its connection");
+    }
+
     // Subscribes the connection to a service address it publishes and delivers one invocation to it
     private void deliverInvocation(EndpointConnectionHandler handler, String replyTo, String correlationId) {
         handler.subscribe(CRI.create("srv://app.acme-org.orders-app~OrderService#1.0.0"), "svc-1", new StompSubscriptionHandler() {
