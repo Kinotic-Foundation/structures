@@ -1,7 +1,8 @@
 package org.kinotic.core.internal.api.service;
 
+import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.metrics.ObservableLongGauge;
 import io.vertx.core.Context;
-import io.micrometer.core.instrument.Metrics;
 import io.vertx.core.Vertx;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -31,16 +32,23 @@ public class DefaultRequestLivenessWatcher implements RequestLivenessWatcher {
 
     private final EventBusService eventBusService;
     private final Vertx vertx;
+    private final OpenTelemetry openTelemetry;
     private final ConcurrentHashMap<String, Lease> leases = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Set<String>> correlationIdsByNode = new ConcurrentHashMap<>();
     // null until the first membership snapshot arrives: a request pinned before that is judged by the snapshot
     private volatile Set<String> members;
     private Disposable membership;
+    private ObservableLongGauge pendingGauge;
 
     @PostConstruct
     void start() {
         // A count that climbs on a healthy node is the only visible sign of a callee that is up but wedged
-        Metrics.globalRegistry.gauge("kinotic.rpc.pending.requests", leases, ConcurrentHashMap::size);
+        pendingGauge = openTelemetry.getMeter("kinotic.rpc.liveness")
+                                    .gaugeBuilder("rpc.pending.requests")
+                                    .setDescription("Requests pinned to a node and not yet settled")
+                                    .setUnit("requests")
+                                    .ofLongs()
+                                    .buildWithCallback(measurement -> measurement.record(leases.size()));
         membership = eventBusService.monitorClusterNodes()
                                     .subscribe(this::membershipChanged,
                                                throwable -> log.error("Cluster membership monitoring failed, pending requests can no longer be failed on node departure", throwable));
@@ -48,6 +56,7 @@ public class DefaultRequestLivenessWatcher implements RequestLivenessWatcher {
 
     @PreDestroy
     void stop() {
+        pendingGauge.close();
         membership.dispose();
     }
 

@@ -141,7 +141,7 @@ One component every in-cluster caller uses, in `api/service` because the MCP inv
 public interface RequestLivenessWatcher {
     void watch(String correlationId, String nodeId, Runnable onLost);   // pin at the ack
     void settle(String correlationId);                                   // release when the reply settles it
-    int pendingCount();                                                  // the kinotic.rpc.pending.requests gauge
+    int pendingCount();                                                  // the rpc.pending.requests gauge
 }
 ```
 
