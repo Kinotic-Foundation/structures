@@ -100,6 +100,9 @@
     <loc>/platform/system-migrations</loc>
   </url>
   <url>
+    <loc>/platform/service-call-liveness</loc>
+  </url>
+  <url>
     <loc>/platform/reference/cri-format</loc>
   </url>
   <url>
