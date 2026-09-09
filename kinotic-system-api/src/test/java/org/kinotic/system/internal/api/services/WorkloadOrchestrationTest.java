@@ -1,6 +1,16 @@
 package org.kinotic.system.internal.api.services;
 
 import io.vertx.core.Future;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.mock;
+import static org.mockito.ArgumentMatchers.any;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import java.util.Date;
+import reactor.core.publisher.Flux;
+import org.kinotic.core.api.exceptions.RpcServiceUnavailableException;
+import org.kinotic.core.api.exceptions.RpcMissingServiceException;
+import org.kinotic.core.api.event.ListenerStatus;
+import org.kinotic.core.api.event.EventBusService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.kinotic.system.api.config.KinoticSystemApiProperties;
@@ -33,6 +43,8 @@ public class WorkloadOrchestrationTest {
     private StubWorkloadService workloads;
     private StubVmNodeService nodes;
     private StubVmManagerProxy vmManager;
+    private EventBusService eventBus;
+    private KinoticSystemApiProperties properties;
     private DefaultVmNodeOrchestrationService nodeOrchestration;
     private DefaultWorkloadOrchestrationService orchestration;
 
@@ -42,10 +54,57 @@ public class WorkloadOrchestrationTest {
         nodes = new StubVmNodeService();
         nodes.availableNode = new VmNode(NODE_ID, "node-1", "host-1");
         vmManager = new StubVmManagerProxy();
-        nodeOrchestration = new DefaultVmNodeOrchestrationService(new KinoticSystemApiProperties(),
-                                                                  nodes, workloads);
+        // the node's vm-manager registration, as the cluster reports it: absent unless a test says otherwise
+        eventBus = mock(EventBusService.class);
+        when(eventBus.monitorListenerStatus(any())).thenReturn(Flux.just(ListenerStatus.INACTIVE));
+        properties = new KinoticSystemApiProperties();
+        nodeOrchestration = new DefaultVmNodeOrchestrationService(properties, nodes, workloads, eventBus);
         orchestration = new DefaultWorkloadOrchestrationService(nodeOrchestration, vmManager,
                                                                 nodes, workloads);
+    }
+
+    @Test
+    public void unreachableVmManagerMarksItsNodeUnreachableAtOnce() throws Exception {
+        nodes.saveSync(nodes.availableNode);
+        vmManager.failStartWith = new RpcMissingServiceException("no vm-manager registered for node-1");
+
+        assertThrows(Exception.class, () -> await(orchestration.deployWorkload(newWorkload())));
+
+        assertEquals(VmNodeStatusType.UNREACHABLE, nodes.saved.get(NODE_ID).getStatus().getType());
+    }
+
+    @Test
+    public void reachableVmManagerKeepsItsNodeOnlineWhenACallFails() throws Exception {
+        nodes.saveSync(nodes.availableNode);
+        when(eventBus.monitorListenerStatus(any())).thenReturn(Flux.just(ListenerStatus.ACTIVE));
+        vmManager.failStartWith = new RpcServiceUnavailableException("the gateway serving it left mid-call");
+
+        assertThrows(Exception.class, () -> await(orchestration.deployWorkload(newWorkload())));
+
+        assertEquals(VmNodeStatusType.ONLINE, nodes.saved.get(NODE_ID).getStatus().getType());
+    }
+
+    @Test
+    public void silentNodeGoesOfflineWhateverItReportedLast() throws Exception {
+        properties.getSystemApi().getVmNode().setHealthCheckIntervalSeconds(1);
+        properties.getSystemApi().getVmNode().setHeartbeatTimeoutSeconds(1);
+        Workload deployed = await(orchestration.deployWorkload(newWorkload()));
+        VmNode node = nodes.saved.get(NODE_ID);
+        node.setStatus(new VmNodeStatus(VmNodeStatusType.DRAINING, "telemetry shipping lost"));
+        node.setLastSeen(new Date(System.currentTimeMillis() - 10_000));
+        nodes.saveSync(node);
+
+        nodeOrchestration.init();
+        try {
+            long deadline = System.currentTimeMillis() + 10_000;
+            while (nodes.saved.get(NODE_ID).getStatus().getType() != VmNodeStatusType.OFFLINE && System.currentTimeMillis() < deadline) {
+                Thread.sleep(100);
+            }
+            assertEquals(VmNodeStatusType.OFFLINE, nodes.saved.get(NODE_ID).getStatus().getType());
+            assertEquals(WorkloadStatus.FAILED, workloads.saved.get(deployed.getId()).getStatus());
+        } finally {
+            nodeOrchestration.destroy();
+        }
     }
 
     @Test
