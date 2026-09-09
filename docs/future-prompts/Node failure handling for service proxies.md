@@ -234,9 +234,34 @@ The clustered entry's TTL is frozen at upgrade, so an `ACTIVITY`/`CONNECTION` se
 under a live connection (the sizing doc's open item 7). Fix: an explicit store put where the touch
 happens, pinned by a test that a session outlives its timeout under an active connection.
 
-Files: `ReplySessionState`, `EndpointConnectionHandler`, `StompSubscriptionEventSubscriber`,
-`Services`, the session-touch fix, tests (TS client observes the typed failure when its callee
-dies mid-call; session survives its timeout under an open socket).
+As built:
+
+```java
+// ReplySessionState — one per connection, owned by EndpointConnectionHandler
+void subscribe(CRI cri, String subscriptionIdentifier, StompSubscriptionHandler handler);  // reply destinations, settling each terminal reply on the way through
+boolean unsubscribe(String subscriptionIdentifier);
+void track(Event<byte[]> request);              // at send: records the reply metadata under the correlation id; a cancel settles instead
+void pin(String correlationId, String nodeId, CRI destination);   // at the ack, inside computeIfPresent so a reply that beat the ack leaves nothing pinned
+void settle(String correlationId);              // terminal reply, failed send, or cancel
+void dispose();                                 // shutdown(): settle everything, unregister the reply subscriptions
+```
+
+Terminal replies settle inside the reply consumer's handler rather than in
+`StompSubscriptionEventSubscriber`, so that class is untouched and the state stays self-contained
+for Phase 7 to park. A lost node answers through `exceptionConverter.convert` → `eventBusService.send`
+on the recorded reply metadata, the same path a failed send takes.
+
+The session touch writes through `SessionStore.put` at most once per quarter of the session
+timeout, from both the ACTIVITY touch and the CONNECTION timer. A put that fails on the store's
+version check, because a request on the same cookie flushed a newer copy, adopts the stored copy
+and retries once.
+
+Files: `ReplySessionState`, `EndpointConnectionHandler`, `Services` (+ `RequestLivenessWatcher`,
+`SessionStore`), the gateway's test dependencies (`spring-boot-starter-test`, `vertx-ignite`),
+`EndpointConnectionHandlerTests` on a clustered Vert.x of its own (a lost node answers the reply
+destination with `RpcServiceUnavailableException`; a terminal reply settles the request; shutdown
+settles everything; a session under an open connection outlives its timeout, and expires after the
+connection closes).
 
 ## Phase 5 — gateway, callee side: heartbeats and instance-level synthesis (~7 files)
 
