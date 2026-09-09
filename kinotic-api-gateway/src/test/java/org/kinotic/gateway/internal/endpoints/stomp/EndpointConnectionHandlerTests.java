@@ -30,7 +30,7 @@ import org.kinotic.core.api.event.Metadata;
 import org.kinotic.core.api.security.SecurityService;
 import org.kinotic.core.api.service.RequestLivenessWatcher;
 import org.kinotic.core.internal.api.service.json.JacksonExceptionConverter;
-import org.kinotic.domain.api.model.security.participant.DefaultApplicationParticipant;
+import org.kinotic.domain.api.model.security.participant.DefaultOrganizationParticipant;
 import org.kinotic.gateway.api.config.ApiGatewayProperties;
 import org.kinotic.gateway.internal.endpoints.Services;
 import org.mockito.ArgumentCaptor;
@@ -55,7 +55,8 @@ import static org.mockito.Mockito.when;
 /**
  * Pins what a STOMP connection's caller side owes its client: a request whose serving node leaves the
  * cluster is answered on the client's reply destination with the typed error, a reply that settles a
- * request releases it, and a session under an open connection outlives its timeout.
+ * request releases it, a session under an open connection outlives its timeout, and a connection that closes
+ * answers every invocation still outstanding on the services it published.
  *
  * Created by Navíd Mitchell 🤪 on 9/9/26.
  */
@@ -194,6 +195,54 @@ public class EndpointConnectionHandlerTests {
         Assertions.assertNull(storedSession(session.id()), "the session outlived its timeout after the connection closed");
     }
 
+    @Test
+    public void testClosedConnectionFailsTheInvocationsItStillOwes() throws Exception {
+        EndpointConnectionHandler handler = connect(Map.of());
+        String requester = EventConstants.REPLY_DESTINATION_SCHEME + "://other:replies@kinotic.js.EventBus/replyHandler";
+        deliverInvocation(handler, requester, "inv-1");
+
+        handler.shutdown();
+
+        ArgumentCaptor<Event<byte[]>> sent = ArgumentCaptor.forClass(Event.class);
+        verify(eventBusService).send(sent.capture());
+        Event<byte[]> errorReply = sent.getValue();
+        Assertions.assertEquals(requester, errorReply.cri().raw());
+        Assertions.assertEquals("inv-1", errorReply.metadata().get(EventConstants.CORRELATION_ID_HEADER));
+        Assertions.assertTrue(new String(errorReply.data(), StandardCharsets.UTF_8).contains("RpcServiceUnavailableException"));
+    }
+
+    @Test
+    public void testTerminalReplyFromTheConnectionSettlesTheInvocation() throws Exception {
+        EndpointConnectionHandler handler = connect(Map.of());
+        String requester = EventConstants.REPLY_DESTINATION_SCHEME + "://other:replies@kinotic.js.EventBus/replyHandler";
+        deliverInvocation(handler, requester, "inv-2");
+
+        // the service instance answers through the connection; the reply passes back on the reply scheme
+        Metadata replyMetadata = Metadata.create(Map.of(EventConstants.CORRELATION_ID_HEADER, "inv-2",
+                                                        EventConstants.CONTROL_HEADER, EventConstants.CONTROL_VALUE_COMPLETE));
+        handler.send(Event.create(CRI.create(requester), replyMetadata, new byte[0])).toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
+        handler.shutdown();
+
+        // the forwarded reply is the only send; no error follows it
+        ArgumentCaptor<Event<byte[]>> sent = ArgumentCaptor.forClass(Event.class);
+        verify(eventBusService).send(sent.capture());
+        Assertions.assertFalse(sent.getValue().metadata().contains(EventConstants.ERROR_HEADER));
+    }
+
+    // Subscribes the connection to a service address it publishes and delivers one invocation to it
+    private void deliverInvocation(EndpointConnectionHandler handler, String replyTo, String correlationId) {
+        handler.subscribe(CRI.create("srv://app.acme-org.orders-app~OrderService#1.0.0"), "svc-1", new StompSubscriptionHandler() {
+            @Override
+            public void handleEvent(Event<byte[]> event) {}
+
+            @Override
+            public void handleError(Throwable throwable) {}
+        });
+        Metadata metadata = Metadata.create(Map.of(EventConstants.REPLY_TO_HEADER, replyTo,
+                                                   EventConstants.CORRELATION_ID_HEADER, correlationId));
+        replyDelivery.get().handle(Event.create(CRI.create(SERVICE_DESTINATION), metadata, new byte[0]));
+    }
+
     private EndpointConnectionHandler connect(Map<String, String> connectHeaders) throws Exception {
         return connect(services.sessionStore.createSession(SESSION_TIMEOUT_MS), connectHeaders);
     }
@@ -241,13 +290,13 @@ public class EndpointConnectionHandlerTests {
         return services.sessionStore.get(id).toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
     }
 
-    private static DefaultApplicationParticipant participant() {
-        return DefaultApplicationParticipant.builder()
-                                            .id("app-user")
-                                            .organizationId("acme-org")
-                                            .applicationId("orders-app")
-                                            .metadata(Map.of())
-                                            .roles(List.of())
-                                            .build();
+    // An organization participant may both call and publish services in its own application zones
+    private static DefaultOrganizationParticipant participant() {
+        return DefaultOrganizationParticipant.builder()
+                                             .id("org-user")
+                                             .organizationId("acme-org")
+                                             .metadata(Map.of())
+                                             .roles(List.of())
+                                             .build();
     }
 }

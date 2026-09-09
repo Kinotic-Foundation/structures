@@ -7,6 +7,7 @@ import org.kinotic.core.api.event.EventConstants;
 import org.kinotic.core.api.event.EventConsumer;
 import org.kinotic.core.api.event.Metadata;
 import org.kinotic.core.api.exceptions.RpcServiceUnavailableException;
+import org.kinotic.core.internal.utils.EventUtil;
 import org.kinotic.gateway.internal.endpoints.Services;
 
 import java.util.HashMap;
@@ -67,7 +68,7 @@ public class ReplySessionState {
         if (correlationId != null) {
             String control = request.metadata().get(EventConstants.CONTROL_HEADER);
             if (control == null) {
-                pendingRequests.put(correlationId, replyMetadataOf(request.metadata()));
+                pendingRequests.put(correlationId, EventUtil.replyMetadataOf(request.metadata()));
             } else if (EventConstants.CONTROL_VALUE_CANCEL.equals(control)) {
                 // the caller gave up on the stream, so no reply is owed to it any more
                 settle(correlationId);
@@ -107,22 +108,9 @@ public class ReplySessionState {
         replySubscriptions.clear();
     }
 
-    // Only what an error reply needs: the reply destination and the headers every reply persists
-    private static Metadata replyMetadataOf(Metadata requestMetadata) {
-        Metadata ret = Metadata.create();
-        for (Map.Entry<String, String> entry : requestMetadata) {
-            if (EventConstants.REPLY_TO_HEADER.equals(entry.getKey()) || entry.getKey().startsWith("__")) {
-                ret.put(entry.getKey(), entry.getValue());
-            }
-        }
-        return ret;
-    }
-
     private void settleIfTerminal(Event<byte[]> reply) {
-        Metadata metadata = reply.metadata();
-        if (metadata.contains(EventConstants.ERROR_HEADER)
-                || EventConstants.CONTROL_VALUE_COMPLETE.equals(metadata.get(EventConstants.CONTROL_HEADER))) {
-            settle(metadata.get(EventConstants.CORRELATION_ID_HEADER));
+        if (EventUtil.isTerminalReply(reply.metadata())) {
+            settle(reply.metadata().get(EventConstants.CORRELATION_ID_HEADER));
         }
     }
 

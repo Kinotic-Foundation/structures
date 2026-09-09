@@ -42,6 +42,7 @@ public class EndpointConnectionHandler {
     private final Services services;
     private final Map<String, EventConsumer> subscriptions = new HashMap<>();
     private final ReplySessionState replySessionState;
+    private final ServiceSessionState serviceSessionState;
     private Session session;
     private long lastSessionFlush = 0;
     private ConnectedInfo connectedInfo;
@@ -53,6 +54,7 @@ public class EndpointConnectionHandler {
         this.services = services;
         this.securityService = services.securityService;
         this.replySessionState = new ReplySessionState(services);
+        this.serviceSessionState = new ServiceSessionState(services);
     }
 
     public Future<MultiMap> handshake(RoutingContext routingContext) {
@@ -194,6 +196,7 @@ public class EndpointConnectionHandler {
 
             // A reply is a one-way delivery to the requester's reply destination. It is never
             // invoked and never itself replies, so no ack and no reply-to validation apply.
+            serviceSessionState.settleIfTerminal(incomingEvent);
             services.eventBusService.send(incomingEvent);
             return Future.succeededFuture();
 
@@ -210,6 +213,7 @@ public class EndpointConnectionHandler {
         subscriptions.forEach((s, eventConsumer) -> eventConsumer.unregister());
         subscriptions.clear();
         replySessionState.dispose();
+        serviceSessionState.dispose();
         session = null;
         connectedInfo = null;
         stompAuthorizer = null;
@@ -251,6 +255,7 @@ public class EndpointConnectionHandler {
                                          event);
                             }
                         }
+                        serviceSessionState.deliver(event);
                         subscriptionHandler.handleEvent(event);
                     })
                     .exceptionHandler(subscriptionHandler::handleError);
