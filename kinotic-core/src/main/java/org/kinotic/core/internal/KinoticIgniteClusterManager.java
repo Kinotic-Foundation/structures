@@ -34,6 +34,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * Monitoring an address therefore costs a local map entry, no matter how many addresses are monitored or
  * how often monitors come and go. All monitor signals are delivered on a vertx context, never on the
  * cluster threads that observe registration changes.
+ * <p>
+ * Vert.x high availability ({@code VertxOptions.setHAEnabled}) is not supported: {@link IgniteClusterManager}
+ * holds a single {@link NodeListener}, which the membership flux owns, and HA installs its own in that slot.
  *
  * Created by Navid on 7/13/26
  */
