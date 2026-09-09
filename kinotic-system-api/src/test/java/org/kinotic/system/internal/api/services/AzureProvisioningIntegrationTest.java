@@ -183,29 +183,31 @@ class AzureProvisioningIntegrationTest {
     @Test
     @Order(4)
     @Timeout(value = STEP_TIMEOUT_MINUTES, unit = TimeUnit.MINUTES)
-    void publishesIntoTheSitesAccount() throws Exception {
+    void issuesCredentialsScopedToOneSite() throws Exception {
         assumeTrue(uiProperties().getSitesStorageEndpoint() != null, "the local profile names no sites account: apply the dev root first");
-        String hostname = uiProperties().resolveHostname(SITE_LABEL);
+        String hostname = uiProperties().resolveHostname(SITE_LABEL + "-scope");
         String other = uiProperties().resolveHostname(SITE_LABEL + "-other");
         String container = uiProperties().getSitesStorageEndpoint().replaceAll("/$", "") + "/" + UiStoragePaths.SITES_CONTAINER;
 
         String uploadUrl = await(siteStorage.issueUploadUrl(hostname, Duration.ofMinutes(STEP_TIMEOUT_MINUTES)));
         assertTrue(uploadUrl.startsWith(container + "/" + hostname + "?"), "the upload URL names the site's directory: " + uploadUrl);
         String sas = uploadUrl.substring(uploadUrl.indexOf('?') + 1);
-
         upload(uploadUrl, "index.html", INDEX_HTML, "text/html", COMMIT_SHA);
-        upload(uploadUrl, "assets/old.js", "// stale", "text/javascript", "1".repeat(40));
         // the SAS is scoped to the directory: a sibling site's directory refuses it
         BlobStorageException refused = assertThrows(BlobStorageException.class,
                                                     () -> upload(container + "/" + other + "?" + sas, "index.html", INDEX_HTML, "text/html", COMMIT_SHA));
         assertEquals(403, refused.getStatusCode(), "an upload outside the site's directory is refused");
+        // the publish workload lists its directory to delete other commits' files, and nothing beyond it
+        assertEquals(200, get(container + "?restype=container&comp=list&prefix=" + hostname + "/&" + sas).statusCode(), "the site's directory lists");
+        assertEquals(403, get(container + "?restype=container&comp=list&prefix=" + other + "/&" + sas).statusCode(), "a sibling directory does not");
 
-        await(siteStorage.deleteFilesOfOtherCommits(hostname, COMMIT_SHA));
-        assertFalse(siteBlob(hostname + "/assets/old.js").exists(), "the other commit's file is deleted");
-        assertTrue(siteBlob(hostname + "/index.html").exists(), "the current commit's file stays");
-
-        await(siteStorage.deleteSite(hostname));
-        assertFalse(siteBlob(hostname + "/index.html").exists(), "removing the site deletes its files");
+        // the removal workload deletes the directory through the Data Lake endpoint in one request
+        String removalUrl = await(siteStorage.issueRemovalUrl(hostname, Duration.ofMinutes(STEP_TIMEOUT_MINUTES)));
+        String dfs = removalUrl.replace(".blob.", ".dfs.");
+        HttpResponse<String> deleted = http.send(HttpRequest.newBuilder(URI.create(dfs.replace("?", "?recursive=true&"))).DELETE().build(),
+                                                 HttpResponse.BodyHandlers.ofString());
+        assertEquals(200, deleted.statusCode(), "the removal URL deletes the site's directory: " + deleted.body());
+        assertFalse(siteBlob(hostname + "/index.html").exists(), "the site's files are gone");
     }
 
     /** Uploads one file the way the publish workload does: through the site's upload URL, stamped with its commit. */

@@ -15,7 +15,9 @@ import org.kinotic.grind.api.services.JobService;
 import org.kinotic.management.api.model.MicroserviceDeployment;
 import org.kinotic.management.api.model.UiDeployment;
 import org.kinotic.management.api.repositories.MicroserviceDeploymentRepository;
+import org.kinotic.management.api.repositories.ProjectDeploymentRepository;
 import org.kinotic.management.api.repositories.UiDeploymentRepository;
+import org.kinotic.management.api.model.workload.WorkloadStatus;
 import org.kinotic.system.api.services.DeploymentOperationsService;
 import org.kinotic.system.api.services.OrganizationStorageProvisioner;
 import org.kinotic.system.api.config.KinoticSystemApiProperties;
@@ -26,12 +28,16 @@ import org.kinotic.system.api.services.WorkloadOrchestrationService;
 import org.kinotic.system.api.services.WorkloadService;
 import org.springframework.stereotype.Component;
 
+import java.time.Duration;
 import java.util.Date;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class DefaultDeploymentOperationsService implements DeploymentOperationsService {
+
+    /** Longer than deleting a site takes, and short enough that a leaked URL is soon worthless. */
+    private static final Duration REMOVAL_URL_TTL = Duration.ofMinutes(15);
 
     private final MicroserviceDeploymentRepository microserviceDeploymentRepository;
     private final UiDeploymentRepository uiDeploymentRepository;
@@ -40,6 +46,8 @@ public class DefaultDeploymentOperationsService implements DeploymentOperationsS
     private final ParticipantIdentityService participantIdentityService;
     private final UiDeploymentProvisioner uiDeploymentProvisioner;
     private final SiteStorageService siteStorageService;
+    private final SiteWorkloadFactory siteWorkloadFactory;
+    private final ProjectDeploymentRepository projectDeploymentRepository;
     private final KinoticSystemApiProperties properties;
     private final OrganizationStorageProvisioner organizationStorageProvisioner;
     private final OrganizationService organizationService;
@@ -132,9 +140,36 @@ public class DefaultDeploymentOperationsService implements DeploymentOperationsS
                         .compose(v -> uiDeploymentRepository.deleteByIdSync(deployment.getId())));
     }
 
-    // The files may already be gone; a later publish of the same label adopts what is left
+    /**
+     * Deletes the site's directory through a removal workload on the node its project deploys
+     * to, with a URL scoped to that directory. A project never deployed has no node, and its
+     * site no files; a removal that fails leaves the files for a later publish of the same
+     * label to adopt, and the workload for inspection.
+     */
     private Future<Void> deleteFiles(UiDeployment deployment) {
-        return siteStorageService.deleteSite(uiDeployment().resolveHostname(deployment.getId()))
+        return projectDeploymentRepository.findById(deployment.getProjectId(), deployment.getOrganizationId())
+                .compose(project -> {
+                    Future<Void> ret;
+                    if (project == null || project.getNodeId() == null) {
+                        ret = Future.succeededFuture();
+                    } else {
+                        ret = siteStorageService.issueRemovalUrl(uiDeployment().resolveHostname(deployment.getId()), REMOVAL_URL_TTL)
+                                .map(url -> siteWorkloadFactory.removal(deployment, project.getNodeId(), url))
+                                .compose(workloadOrchestrationService::deployWorkload)
+                                .compose(finished -> {
+                                    Future<Void> removed;
+                                    if (finished.getStatus() == WorkloadStatus.STOPPED && Integer.valueOf(0).equals(finished.getExitCode())) {
+                                        removed = workloadOrchestrationService.destroyWorkload(finished.getId());
+                                    } else {
+                                        removed = Future.failedFuture(new IllegalStateException("Removal workload " + finished.getId()
+                                                + " ended " + finished.getStatus() + " with exit code " + finished.getExitCode()
+                                                + "; the workload is kept for log inspection"));
+                                    }
+                                    return removed;
+                                });
+                    }
+                    return ret;
+                })
                 .recover(error -> {
                     log.warn("Files of site {} could not be deleted: {}", deployment.getId(), error.getMessage());
                     return Future.succeededFuture();

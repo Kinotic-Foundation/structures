@@ -51,7 +51,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
-import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -91,6 +90,7 @@ public class ProjectDeployJobDefinitionFactory {
     private final OrganizationService organizationService;
     private final SiteStorageService siteStorageService;
     private final UiDeploymentProvisioner uiDeploymentProvisioner;
+    private final SiteWorkloadFactory siteWorkloadFactory;
     private final ProjectDeployIdentityService projectDeployIdentityService;
     private final KinoticSystemApiProperties properties;
     private final KinoticDomainProperties domainProperties;
@@ -453,7 +453,7 @@ public class ProjectDeployJobDefinitionFactory {
                         // a site's directory is its hostname, so a first publish mints the label first
                         published = sequentially(artifacts.uis(), ui -> deploymentFor(project, ui, unmatched.remove(ui.name())))
                                 .compose(rows -> (serving ? uploadUis(project, target, rows, commitSha) : Future.<Void>succeededFuture())
-                                        .compose(v -> sequentially(rows, row -> finalizeUi(row, commitSha, serving))));
+                                        .compose(v -> sequentially(rows, row -> finalizeUi(row, commitSha))));
                     }
                     return published.compose(rows -> orphanUis(new ArrayList<>(unmatched.values()))
                             .map(orphans -> {
@@ -486,7 +486,7 @@ public class ProjectDeployJobDefinitionFactory {
                 .map(all -> {
                     JsonObject urls = new JsonObject();
                     all.<Map.Entry<String, String>>list().forEach(entry -> urls.put(entry.getKey(), entry.getValue()));
-                    return publishWorkload(project, target, urls, commitSha);
+                    return siteWorkloadFactory.publish(project, target, urls, commitSha);
                 })
                 .compose(workloadOrchestrationService::deployWorkload)
                 .compose(finished -> requireSucceeded(finished, "UI publish"))
@@ -494,10 +494,10 @@ public class ProjectDeployJobDefinitionFactory {
     }
 
     /**
-     * Records a published UI once its files are up: the commit it now serves, the site's
-     * status, and the cleanup of commits nobody can still be looking at.
+     * Records a published UI once its files are up: the commit it now serves and the site's
+     * status.
      */
-    private Future<UiDeployment> finalizeUi(UiDeployment row, String commitSha, boolean serving) {
+    private Future<UiDeployment> finalizeUi(UiDeployment row, String commitSha) {
         row.setCommitSha(commitSha);
         Future<UiDeployment> deployment;
         if (row.getStatus().type() == DeploymentStatusType.ORPHANED) {
@@ -508,10 +508,7 @@ public class ProjectDeployJobDefinitionFactory {
         } else {
             deployment = uiDeploymentProvisioner.provision(row);
         }
-        // the index switched to the current commit, so nothing reaches another commit's files
-        return deployment.compose(saved -> (serving ? siteStorageService.deleteFilesOfOtherCommits(hostname(saved), commitSha)
-                                                    : Future.<Void>succeededFuture())
-                .compose(v -> uiDeploymentRepository.save(saved.setUpdated(new Date()))));
+        return deployment.compose(saved -> uiDeploymentRepository.save(saved.setUpdated(new Date())));
     }
 
     private String hostname(UiDeployment row) {
@@ -567,37 +564,6 @@ public class ProjectDeployJobDefinitionFactory {
             }
         }
         return Future.all(saves).map(CompositeFuture::list);
-    }
-
-    /**
-     * The publish workload carries the built UIs to the sites account and nothing else: no
-     * Kinotic credentials, no machine identity, a read-only checkout, and an egress policy
-     * naming the account's host alone. Kept after its run, like the sync workload, so its logs
-     * stay inspectable until the next run retires it.
-     */
-    private Workload publishWorkload(Project project,
-                                     DeployTarget target,
-                                     JsonObject uploadUrls,
-                                     String commitSha) {
-        DeploymentProperties deployment = deployment();
-        Workload workload = new Workload("project-ui-publish-" + project.getId(), deployment.getWorkloadRunnerImage());
-        workload.setId(target.uiPublishWorkloadId());
-        workload.setDescription("UI publish for project " + project.getId());
-        workload.setNodeId(target.nodeId());
-        workload.setOrganizationId(project.getOrganizationId());
-        workload.setApplicationId(project.getApplicationId());
-        workload.setDetached(false);
-        workload.setMemoryMb(deployment.getRuntimeMemoryMb());
-        workload.setEntrypoint(List.of("bun", "src/publish-ui.ts"));
-        workload.getEnvironment().put("KINOTIC_UI_COMMIT", commitSha);
-        // each URL is a credential for the run's length, so they travel as a secret
-        workload.getSecrets().put("KINOTIC_UI_UPLOAD_URLS", uploadUrls.encode());
-        workload.getVolumeMounts().add(new VolumeMount().setHostPath(target.hostDir())
-                                                        .setGuestPath("/workspace")
-                                                        .setReadOnly(true));
-        // every URL names the one sites account
-        workload.getNetwork().setAllowedHosts(List.of(URI.create(uploadUrls.getString(uploadUrls.fieldNames().iterator().next())).getHost()));
-        return workload;
     }
 
     private Workload syncWorkload(Project project,

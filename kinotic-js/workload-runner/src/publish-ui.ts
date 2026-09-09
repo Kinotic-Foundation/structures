@@ -2,6 +2,7 @@ import { readdirSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { findArtifacts } from './artifacts.ts'
 import { log, logError } from './log.ts'
+import { blobUrl, deleteFilesOfOtherCommits, parseSiteUrl, type SiteTarget } from './site-storage.ts'
 
 /**
  * One-shot entrypoint of the UI publish workload: uploads every built UI of the checkout to
@@ -10,6 +11,7 @@ import { log, logError } from './log.ts'
  * commit it belongs to: the hashed files under {@code assets/} first, marked immutable, then
  * the rest uncached, then {@code version.json}, then {@code index.html} last, so a site never
  * serves an index whose assets are not there yet and the index switch is the atomic publish.
+ * Once the index has switched, the files other commits left in the directory are deleted.
  *
  * Environment:
  * - KINOTIC_UI_UPLOAD_URLS  a JSON object of UI name to upload URL: the site's directory in
@@ -38,28 +40,10 @@ function require_(name: string): string {
     return value
 }
 
-/** A site's upload URL split into the directory it addresses and the SAS query it carries. */
-interface UploadTarget {
-    base: string
-    query: string
-}
-
-function parseUploadUrl(name: string, url: string): UploadTarget {
-    const query = url.indexOf('?')
-    if (query === -1) {
-        throw new Error(`the upload URL of UI ${name} carries no SAS query`)
-    }
-    return { base: url.slice(0, query), query: url.slice(query + 1) }
-}
-
 /** The upload URL of every UI, by name. */
-function parseUploadUrls(json: string): Map<string, UploadTarget> {
+function parseUploadUrls(json: string): Map<string, SiteTarget> {
     const urls = JSON.parse(json) as Record<string, string>
-    return new Map(Object.entries(urls).map(([name, url]) => [name, parseUploadUrl(name, url)]))
-}
-
-function blobUrl(target: UploadTarget, ...segments: string[]): string {
-    return `${target.base}/${segments.map(encodeURIComponent).join('/')}?${target.query}`
+    return new Map(Object.entries(urls).map(([name, url]) => [name, parseSiteUrl(`the upload URL of UI ${name}`, url)]))
 }
 
 /** Every file under dir, as paths relative to it with forward slashes. */
@@ -115,7 +99,7 @@ async function uploadAll(tasks: Array<() => Promise<void>>): Promise<void> {
     await Promise.all(workers)
 }
 
-async function publishUi(target: UploadTarget, workspaceDir: string, name: string, dir: string, commitSha: string): Promise<void> {
+async function publishUi(target: SiteTarget, workspaceDir: string, name: string, dir: string, commitSha: string): Promise<void> {
     const dist = join(workspaceDir, dir, 'dist')
     const files = walk(dist)
     if (!files.includes(INDEX_FILE)) {
@@ -134,6 +118,9 @@ async function publishUi(target: UploadTarget, workspaceDir: string, name: strin
                  NO_CACHE_CONTROL, 'application/json', commitSha)
     const index = Bun.file(join(dist, INDEX_FILE))
     await upload(blobUrl(target, INDEX_FILE), index, NO_CACHE_CONTROL, index.type || 'text/html', commitSha)
+    // the index switched to this commit, so nothing reaches another commit's files
+    const stale = await deleteFilesOfOtherCommits(target, commitSha)
+    log(`[workload-runner] published UI ${name}; deleted ${stale} file(s) of other commits`)
 }
 
 async function main(): Promise<void> {

@@ -35,11 +35,11 @@ function sharedKeyHeaders(method: string, url: string, contentLength: number = 0
     return headers
 }
 
-/** A container SAS allowing create and write for an hour, signed the way the platform signs upload URLs. */
+/** A container SAS allowing create, write, delete and list for an hour, the permissions the platform's upload URL carries. */
 function containerSas(): string {
     const start = new Date(Date.now() - 5 * 60_000).toISOString().replace(/\.\d{3}Z$/, 'Z')
     const expiry = new Date(Date.now() + 60 * 60_000).toISOString().replace(/\.\d{3}Z$/, 'Z')
-    const permissions = 'cw'
+    const permissions = 'cwdl'
     const stringToSign = [permissions, start, expiry, `/blob/${ACCOUNT}/${CONTAINER}`, '', '', 'https,http', SAS_VERSION,
                           'c', '', '', '', '', '', '', ''].join('\n')
     const signature = createHmac('sha256', Buffer.from(ACCOUNT_KEY, 'base64')).update(stringToSign, 'utf-8').digest('base64')
@@ -94,6 +94,12 @@ describe.skipIf(!azurite)('publish-ui entrypoint (against Azurite)', () => {
         // one upload URL per UI, each naming the site's directory
         const uploadUrls = JSON.stringify({ admin: `${ENDPOINT}/${CONTAINER}/admin.apps.kinotic.test?${containerSas()}` })
 
+        // a file an earlier publish left behind, stamped with its commit
+        const staleUrl = `${ENDPOINT}/${CONTAINER}/admin.apps.kinotic.test/assets/old.js`
+        const stale = await fetch(staleUrl, { method: 'PUT', body: '// stale',
+            headers: sharedKeyHeaders('PUT', staleUrl, 8, { 'x-ms-blob-type': 'BlockBlob', 'x-ms-meta-commit': 'b'.repeat(40) }) })
+        expect(stale.status).toBe(201)
+
         const result = spawnSync('bun', [PUBLISH], {
             env: { ...process.env, KINOTIC_UI_UPLOAD_URLS: uploadUrls, KINOTIC_UI_COMMIT: sha, KINOTIC_WORKSPACE_DIR: workspaceDir },
             encoding: 'utf-8',
@@ -122,6 +128,8 @@ describe.skipIf(!azurite)('publish-ui entrypoint (against Azurite)', () => {
         expect(index.headers.get('cache-control')).toBe('no-cache')
         expect(index.headers.get('content-type')).toContain('text/html')
         expect(index.headers.get('x-ms-meta-commit')).toBe(sha)
+
+        expect((await readBlob('admin.apps.kinotic.test/assets/old.js')).status).toBe(404)
     }, 60_000)
 
     it('fails when a UI was not built', async () => {
