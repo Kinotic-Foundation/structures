@@ -1,7 +1,7 @@
 # Node failure handling for service proxies — phase plan
 
 Plan of record for making a proxy call fail when the node serving it dies, instead of hanging
-forever. Phase 1 is in PR #476. Everything below was re-validated against `develop` at `3adf17d`
+forever. Phase 1 landed in PR #476; Phase 2 is PR #540. Everything below was re-validated against `develop` at `3adf17d`
 (2026-09-08); the adjustments that pass produced are folded in, and the phase numbering below
 supersedes the earlier chat numbering (mapping at the end).
 
@@ -101,19 +101,31 @@ if (message.replyAddress() != null) {
 // EventBusService — the ack's payload reaches the sender
 Future<String> sendWithAck(Event<byte[]> event);     // completes with the acking node id (was Future<Void>)
 
-// KinoticIgniteClusterManager — registration updates already carry RegistrationInfo.nodeId();
-// alongside statusFlux, emit the set of nodes holding a registration for the address
-Flux<Set<String>> registeredNodesFlux(String address);
-// exposed as EventBusService.monitorRegisteredNodes(CRI)
+// KinoticIgniteClusterManager — a NodeListener on the discovery events vertx-ignite already
+// subscribes to (EVT_NODE_JOINED, EVT_NODE_LEFT, EVT_NODE_FAILED) emits the cluster membership
+Flux<Set<String>> clusterNodesFlux();
+// exposed as EventBusService.monitorClusterNodes()
 ```
 
-Same cost profile as `statusFlux`: a map entry per monitored address, on registration events the
-cluster already delivers to every node.
+Membership, not the address's registration set, is what a pinned lease checks against. A JVM
+unregisters an address while it is still up — `ServiceRegistrationBeanPostProcessor` runs
+`ServiceInvocationSupervisor.stop()` on bean destruction, and an invocation already running there
+still replies — so the registration set fires a false failure on every rolling restart, at the
+exact moment Phase 3's drain wants callers to keep waiting. `nodeLeft` fires only when the node is
+gone: at once after a graceful leave, after a crash once Ignite's `failureDetectionTimeout` (10 s)
+expires. Cost is one N-sized snapshot per membership change per node, however many addresses have
+calls in flight; the registration set would have cost a k-sized set per monitored address, since
+every platform address is registered on all k nodes.
+
+Nothing watches the address before the ack. `sendWithAck` is a Vert.x `request`, which fails with
+`NO_HANDLERS` at once when nothing is registered and with `TIMEOUT` after `DeliveryOptions`'
+default 30 s when the ack never arrives — a bound on one network hop, since `DefaultEventConsumer`
+acks before dispatching, never on the invocation.
 
 Files: `DefaultEventConsumer`, `DefaultEventBusService`, `EventBusService`,
 `KinoticIgniteClusterManager`, the four `sendWithAck` call sites adapting to the new return type
 (`DefaultRpcServiceProxyHandle`, `McpToolInvoker`, `DefaultEventService`,
-`EndpointConnectionHandler`), `EventBusServiceTests` (node set tracks registration lifecycle;
+`EndpointConnectionHandler`), `EventBusServiceTests` (the membership names the local node;
 the ack names the local node).
 
 Why not `RegistrationInfo.seq()`: it exists, but a `MessageConsumer` never learns its own seq, so
@@ -131,38 +143,59 @@ interface RequestLivenessWatcher {
 }
 ```
 
-A lease passes through two states:
-
-- **Before the ack**: the address's `statusFlux` going INACTIVE fails the lease. This is the
-  single-registration case (every scoped call, every single-instance service) and it fires without
-  waiting for anything.
-- **After the ack** names a node: the lease is pinned to `(address, nodeId)` and fails when that
-  node leaves the address's `registeredNodesFlux` set. The address may stay ACTIVE on other
-  instances; this lease still fails, because the instance that took the request is gone.
+A lease starts at the ack. Until then Vert.x owns the outcome (`NO_HANDLERS` or `TIMEOUT` on the
+`request`, see Phase 2), and `KinoticUtil.mapSendFailure` maps `TIMEOUT` to
+`RpcServiceUnavailableException`, because an ack lost in flight cannot rule out that the handler
+ran. From the ack on, the lease is pinned to the node id it named and fails when that id leaves
+`monitorClusterNodes()`. The address may stay ACTIVE on other instances, and the node may already
+have unregistered the address to drain; the lease holds until the node is gone.
 
 Coverage of the round-robin cases:
 
 | Call | Ack names | Fails when |
 |---|---|---|
-| scoped `srv://<scope>@…` | the one node | either rule; immediate |
-| unscoped, N Java instances (one per JVM) — a service on N nodes, or `@ScopeOptional` methods | the JVM that took it | that JVM leaves the set |
+| scoped `srv://<scope>@…` | the one node | that node leaves the cluster |
+| unscoped, N Java instances (one per JVM) — a service on N nodes, or `@ScopeOptional` methods | the JVM that took it | that JVM leaves the cluster |
 | unscoped, N TS instances behind gateways | the **gateway** holding that instance's subscription | that gateway dies (this phase); the instance dies while its gateway lives (Phase 5) |
 
 Wired into `DefaultRpcServiceProxyHandle` (lease per correlationId, symmetric with the existing
 send-failure path — `onLost` calls `handler.processError(new RpcServiceUnavailableException(...))`)
 and `McpToolInvoker`. `onLost` only *dispatches* the failure to the request's own context, never
 runs continuations on the cluster manager's delivery context: under a death burst that loop must
-drain in queue submissions, not user code. Refcount monitors per address with a short linger so
-high-QPS bursts to one address do not churn subscribe/re-seed. Non-clustered guards are gone from
-`develop` (#496), so there is no fallback path.
+drain in queue submissions, not user code. One membership subscription per JVM, held for the
+watcher's lifetime, and leases keyed by the node id they are pinned to, so a membership change costs
+one lookup per pinned node. Non-clustered guards are gone from `develop` (#496), so there is no
+fallback path.
 
 Files: `RequestLivenessWatcher` + `Lease`, `RpcServiceUnavailableException`,
-`DefaultRpcServiceProxyHandle`, `McpToolInvoker`, Spring wiring, `RpcTests` (unregister a
-supervisor mid-call → `RpcServiceUnavailableException`; second instance still registered → the
-lease pinned to the dead node fails, the other's does not; unrelated churn → no false failure).
+`DefaultRpcServiceProxyHandle`, `McpToolInvoker`, Spring wiring, `RpcTests` (a second cluster
+node hosting the service leaves mid-call → `RpcServiceUnavailableException`, while a call pinned
+to the surviving node completes; the local node unregistering the service mid-call → the reply
+still arrives; unrelated churn → no false failure).
 
 The proxy constructor grows by one parameter, the way `develop` grew it for `TraceLogFilter`;
 it is not restructured.
+
+The callee side of the same phase: `ServiceInvocationSupervisor.stop()` drains instead of cutting.
+
+```java
+// ServiceInvocationSupervisor.stop() — Phase 3
+Future<Void> ret = methodInvocationEventConsumer.unregister()          // 1. stop accepting
+    .compose(v -> inFlight.drained());                                 // 2. single-value invocations reply first
+for(... : activeStreamingResults.entrySet()){
+    streamSubscribers.getValue().fail(new RpcServiceUnavailableException(...));   // 3. streams end with a terminal error
+}
+```
+
+Today `stop()` cancels streams with no terminal reply and returns before running invocations have
+replied; with membership as the post-ack signal a cut stream's caller would otherwise wait for the
+JVM to exit. The supervisor only tracks streams, so it gains an in-flight count for single-value
+invocations. The drain is bounded by a shutdown setting, the same kind of bound as Spring's
+lifecycle timeout, never a per-call one. To verify while building it: the drain only helps while
+Vert.x and Ignite are still up, and `ServiceRegistrationBeanPostProcessor.postProcessBeforeDestruction`
+runs on the service bean's destruction, where a published bean that injects nothing from kinotic
+has no dependency edge forcing that order. If the drain does not fit the phase's file budget it is
+Phase 3b, after the watcher.
 
 ## Phase 4 — gateway, caller side: session state, leases, session touch (~10 files)
 
@@ -241,7 +274,7 @@ vm-manager's overlapping heartbeat `setInterval`.
 Not in scope: failing in-flight calls on a sticky reconnect. That is what parking exists to
 avoid.
 
-## Phase 7 — parked reply sessions, same node (~9 files)
+## Phase 7 — parked reply sessions, same node (~13 files, split 7a gateway / 7b client)
 
 On `closed()` with a sticky session, `shutdown()` *parks* the `ReplySessionState` in a node-local
 `ParkedReplySessions` instead of disposing: the reply consumer keeps consuming into a bounded
@@ -261,19 +294,39 @@ Adjustments from the re-validation:
   heap-resident bodies up to `maxEventPayloadSize`, and the direct-memory-exhaustion scenario in
   NavidNotes parks many sessions on one node at once.
 
-Two exits. Window expiry: dispose, drop the buffer, close leases (streams then cancel through the
-existing INACTIVE path). Overflow: dispose and **rotate the `replyToId`** in the session's
-`ConnectedInfo`, so the next CONNECT mints a new reply CRI and the client's existing
+Two exits, one outcome. Window expiry: dispose, drop the buffer, close leases (streams then cancel
+through the existing INACTIVE path). Overflow: dispose. Both **rotate the `replyToId`** in the
+session's `ConnectedInfo`, so the next CONNECT mints a new reply CRI and the client's existing
 `replyToCriChangedHandler` → `resetRequestReplies` path fails its in-flight calls — continuity
-loss signals through a mechanism that already ships, and login is untouched.
+loss signals through a mechanism that already ships, and login is untouched. Expiry has to rotate
+too: a single-value reply produced during the gap is gone with the buffer, and a client that
+reconnects within the session but after the window would otherwise find its `replyToId` intact
+and wait forever for that reply.
+
+**The client half (7b).** A client whose socket stays down longer than the window has nothing left
+to wait for, so it fails its in-flight calls itself instead of holding them for a reconnect that
+may never come. One timer per connection, armed on `connectionState$` CLOSED and cleared on the
+next CONNECTED, never a per-call timeout; on expiry it runs `resetRequestReplies`. The window comes
+from the server: `ConnectedInfo` gains `replyBufferWindow` beside `replyToId`, mirrored in
+`ConnectedInfo.ts`, so it is configured once, on the gateway. Every ordering is consistent given
+the rotation above: a reconnect inside the window flushes; the client timer first, then a reconnect
+inside the server's window, flushes to correlations already failed, which `cancelIfUnexpected`
+already handles; the server first, then a reconnect, fails through the reply CRI change; no
+reconnect at all fails on the client timer. The client's first reconnect attempt comes
+`INITIAL_RECONNECT_DELAY` (2 s) after the drop, so the window's useful range starts there; five to
+ten seconds absorbs a spotty network, and past that the network is down and failing fast is
+cheaper than holding the calls.
 
 A client that reconnects through a fresh handshake without its session (the vm-manager's
 `reconnectOnFatalError` loop re-authenticates with credentials) gets a new `replyToId`; its old
 parked session is orphaned until the window expires. The window bounds a leak, not only a wait.
 
-Files: `ParkedReplySessions`, park/reattach in `EndpointConnectionHandler` + `ReplySessionState`,
-`replyToId` rotation, properties, tests (blip mid-stream on one gateway → stream continues;
-overflow → calls fail with the reset error).
+Files, 7a: `ParkedReplySessions`, park/reattach in `EndpointConnectionHandler` +
+`ReplySessionState`, `replyToId` rotation on both exits, `ApiGatewayProperties.replyBufferWindow`,
+`ConnectedInfo` (Java) carrying it, tests (blip mid-stream on one gateway → stream continues; a
+single-value reply during the blip → delivered on reattach; expiry and overflow → calls fail with
+the reset error). 7b: `ConnectedInfo.ts`, `StompConnectionManager.ts`, `EventBus.ts`, a TS test
+(blip shorter than the window → the call completes; longer → it fails).
 
 ## Phase 8 — cross-node handoff (~9 files)
 
