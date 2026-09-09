@@ -10,7 +10,7 @@ The reason to prefer this over a timeout is that a timeout encodes a guess about
 
 <callout type="info">
 
-**Implementation status.** The terminal reply marker every part of this design reads is in place, and so are the acknowledgement that names the node and the cluster membership signal a pinned lease checks it against. The watcher, the gateway leases, reply session parking and the cross-node handoff land in successive releases; sections describing them say so. The wire contract and error types below are the ones callers will see.
+**Implementation status.** The terminal reply marker every part of this design reads is in place, and so are the acknowledgement that names the node, the cluster membership signal a pinned lease checks it against, and the request liveness watcher Java callers and the MCP invoker take their leases through, together with the graceful stop on the callee side. The gateway leases, reply session parking and the cross-node handoff land in successive releases; sections describing them say so. The wire contract and error types below are the ones callers will see.
 
 </callout>
 
@@ -24,7 +24,7 @@ A service is reachable exactly while its address has an entry in the cluster's r
 
 </rpc-liveness-diagram>
 
-Reading the diagram: every pending request is a **lease** on the callee's registration, taken at whichever hop has cluster visibility. A Java caller and the MCP invoker are in the cluster and take leases directly through the request liveness watcher. A TS client — the UI, or a TS service calling another service — is outside the cluster and cannot see registrations, so the **gateway** takes the leases on its behalf and answers the client with an error reply when one fails. The watcher costs one monitor per *address* with traffic in flight, not one per request, and it rides on registration events the cluster already delivers to every node; nothing new is replicated.
+Reading the diagram: every pending request is a **lease** pinned to the node whose acknowledgement took it, held at whichever hop has cluster visibility. A Java caller and the MCP invoker are in the cluster and take leases directly through the request liveness watcher. A TS client — the UI, or a TS service calling another service — is outside the cluster and cannot see registrations, so the **gateway** takes the leases on its behalf and answers the client with an error reply when one fails. The watcher holds one cluster membership subscription per node, however many requests are in flight, and it rides on the discovery events the cluster already delivers to every node; nothing new is replicated. The count of requests it holds is the `rpc.pending.requests` gauge.
 
 The signal that ends a request is the same one every reply already carries: a terminal reply is marked `control: complete` on the event itself, so any hop can release its lease on that one event without knowing whether the method returned a value, nothing, or a stream.
 
@@ -86,7 +86,7 @@ What the caller receives, in every runtime:
     </td>
     
     <td>
-      the callee's registration vanished while the call was in flight
+      the node that took the call left the cluster while it was in flight, its acknowledgement never arrived, or the service stopped while producing a stream
     </td>
     
     <td>
@@ -97,6 +97,8 @@ What the caller receives, in every runtime:
 </table>
 
 Callers of non-idempotent operations should treat the second as ambiguous and check before retrying.
+
+A service that stops, on a rolling update or any other graceful shutdown, stops accepting calls first, then answers every call it already has before its node leaves the cluster, so those calls complete normally and no lease fails. Streams it was producing cannot be finished; each one ends with `RpcServiceUnavailableException` at its subscriber the moment the service stops. The wait for the in-flight calls is bounded, so a call that never finishes cannot hold the shutdown.
 
 ## Reconnects and node rollovers
 
