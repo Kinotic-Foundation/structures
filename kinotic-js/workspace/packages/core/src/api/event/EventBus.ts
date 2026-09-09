@@ -9,6 +9,7 @@ import {filter, map, multicast, tap} from 'rxjs/operators'
 import {Optional} from 'typescript-optional'
 import {v4 as uuidv4} from 'uuid'
 import {EventConstants, type IEvent, type IEventBus} from './IEventBus'
+import {RpcError} from './RpcError'
 
 /**
  * Default IEvent implementation
@@ -229,9 +230,8 @@ export class EventBus implements IEventBus {
 
                                                       } else if (value.hasHeader(EventConstants.ERROR_HEADER)) {
 
-                                                          // TODO: add custom error type that contains error detail as well if provided by server, this would be the event body
                                                           serverSignaledCompletion = true
-                                                          subscriber.error(new Error(value.getHeader(EventConstants.ERROR_HEADER)))
+                                                          subscriber.error(RpcError.fromEvent(value))
 
                                                       } else {
 

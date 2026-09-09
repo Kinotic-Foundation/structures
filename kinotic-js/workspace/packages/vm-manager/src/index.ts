@@ -149,7 +149,9 @@ function reconnectOnFatalError() {
 function startHeartbeat(nodeOrchestrator: VmNodeOrchestrationServiceProxy,
                         vmManager: DefaultVmManager,
                         provider: IVmProvider) {
-    heartbeatTimer = setInterval(async () => {
+    // The next beat is scheduled once this one has finished, so a heartbeat that outlives its
+    // interval while the server is slow or unreachable never overlaps the one after it
+    const beat = async () => {
         try {
             // A node that stopped enforcing something keeps its workloads but takes no more
             await nodeOrchestrator.heartbeat(nodeId!, [...await provider.checkNodeHealth(),
@@ -162,8 +164,13 @@ function startHeartbeat(nodeOrchestrator: VmNodeOrchestrationServiceProxy,
             }
         } catch (error) {
             console.error('Heartbeat failed:', error)
+        } finally {
+            if (!shuttingDown) {
+                heartbeatTimer = setTimeout(beat, config.heartbeatIntervalMs)
+            }
         }
-    }, config.heartbeatIntervalMs)
+    }
+    heartbeatTimer = setTimeout(beat, config.heartbeatIntervalMs)
 }
 
 async function start() {
@@ -226,7 +233,7 @@ async function shutdown() {
     console.log('Shutting down VM Manager...')
     shuttingDown = true
     if (heartbeatTimer) {
-        clearInterval(heartbeatTimer)
+        clearTimeout(heartbeatTimer)
     }
     await alloyManager?.stop()
     await Kinotic.disconnect()
