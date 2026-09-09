@@ -13,6 +13,7 @@ dependencies {
 
     implementation 'com.azure:azure-identity'
     implementation 'com.azure:azure-storage-blob'
+    implementation 'com.azure:azure-storage-file-datalake'
     implementation 'com.azure.resourcemanager:azure-resourcemanager-cdn'
     implementation 'com.azure.resourcemanager:azure-resourcemanager-dns'
     implementation 'com.azure.resourcemanager:azure-resourcemanager-network'

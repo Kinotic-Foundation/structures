@@ -22,6 +22,7 @@ import com.azure.core.util.BinaryData;
 import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobClientBuilder;
 import com.azure.storage.blob.models.BlobHttpHeaders;
+import com.azure.storage.blob.models.BlobStorageException;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -64,6 +65,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
@@ -103,6 +105,7 @@ class AzureProvisioningIntegrationTest {
     private AzureOrganizationStorageProvisioner storageProvisioner;
     private AzureOrganizationStorageService storageService;
     private FrontDoorUiDeploymentProvisioner siteProvisioner;
+    private AzureSiteStorageService siteStorage;
     private final HttpClient http = HttpClient.newHttpClient();
     private Organization organization;
 
@@ -123,6 +126,7 @@ class AzureProvisioningIntegrationTest {
         storageProvisioner = new AzureOrganizationStorageProvisioner(organizations, vertx, properties);
         storageService = new AzureOrganizationStorageService(vertx, properties);
         siteProvisioner = new FrontDoorUiDeploymentProvisioner(vertx, properties, new StubUiDeploymentRepository());
+        siteStorage = new AzureSiteStorageService(vertx, properties);
     }
 
     @AfterAll
@@ -272,6 +276,53 @@ class AzureProvisioningIntegrationTest {
                                       .buildClient();
     }
 
+    @Test
+    @Order(4)
+    @Timeout(value = STEP_TIMEOUT_MINUTES, unit = TimeUnit.MINUTES)
+    void publishesIntoTheSitesAccount() throws Exception {
+        assumeTrue(uiProperties().getSitesStorageEndpoint() != null, "the local profile names no sites account: apply the dev root first");
+        String hostname = uiProperties().resolveHostname(SITE_LABEL);
+        String other = uiProperties().resolveHostname(SITE_LABEL + "-other");
+        String container = uiProperties().getSitesStorageEndpoint().replaceAll("/$", "") + "/" + UiStoragePaths.SITES_CONTAINER;
+
+        String uploadUrl = await(siteStorage.issueUploadUrl(hostname, Duration.ofMinutes(STEP_TIMEOUT_MINUTES)));
+        assertTrue(uploadUrl.startsWith(container + "/" + hostname + "?"), "the upload URL names the site's directory: " + uploadUrl);
+        String sas = uploadUrl.substring(uploadUrl.indexOf('?') + 1);
+
+        upload(uploadUrl, "index.html", INDEX_HTML, "text/html", COMMIT_SHA);
+        upload(uploadUrl, "assets/old.js", "// stale", "text/javascript", "1".repeat(40));
+        // the SAS is scoped to the directory: a sibling site's directory refuses it
+        BlobStorageException refused = assertThrows(BlobStorageException.class,
+                                                    () -> upload(container + "/" + other + "?" + sas, "index.html", INDEX_HTML, "text/html", COMMIT_SHA));
+        assertEquals(403, refused.getStatusCode(), "an upload outside the site's directory is refused");
+
+        await(siteStorage.deleteFilesOfOtherCommits(hostname, COMMIT_SHA));
+        assertFalse(siteBlob(hostname + "/assets/old.js").exists(), "the other commit's file is deleted");
+        assertTrue(siteBlob(hostname + "/index.html").exists(), "the current commit's file stays");
+
+        await(siteStorage.deleteSite(hostname));
+        assertFalse(siteBlob(hostname + "/index.html").exists(), "removing the site deletes its files");
+    }
+
+    /** Uploads one file the way the publish workload does: through the site's upload URL, stamped with its commit. */
+    private static void upload(String uploadUrl, String path, String content, String contentType, String commitSha) {
+        int query = uploadUrl.indexOf('?');
+        BlobClient blob = new BlobClientBuilder().endpoint(uploadUrl.substring(0, query) + "/" + path + uploadUrl.substring(query))
+                                                 .buildClient();
+        blob.upload(BinaryData.fromString(content), true);
+        blob.setHttpHeaders(new BlobHttpHeaders().setContentType(contentType).setCacheControl("no-cache"));
+        blob.setMetadata(Map.of("commit", commitSha));
+    }
+
+    /** A blob of the sites container, read as the test's own identity. */
+    private BlobClient siteBlob(String name) {
+        return new BlobClientBuilder().endpoint(uiProperties().getSitesStorageEndpoint())
+                                      .containerName(UiStoragePaths.SITES_CONTAINER)
+                                      .blobName(name)
+                                      .credential(credential)
+                                      .buildClient();
+    }
+
     private <T> T await(Future<T> future) {
         T ret = null;
         try {
@@ -349,7 +400,8 @@ class AzureProvisioningIntegrationTest {
            .setSitesDomain((String) sites.get("sitesDomain"))
            .setDnsZoneId((String) sites.get("dnsZoneId"))
            .setFrontDoorProfileId((String) sites.get("frontDoorProfileId"))
-           .setFrontDoorEndpointHostName((String) sites.get("frontDoorEndpointHostName"));
+           .setFrontDoorEndpointHostName((String) sites.get("frontDoorEndpointHostName"))
+           .setSitesStorageEndpoint((String) sites.get("sitesStorageEndpoint"));
         return ret;
     }
 
