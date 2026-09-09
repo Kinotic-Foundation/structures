@@ -7,7 +7,9 @@ uses. One apply creates:
 | Resource | Name | Purpose |
 |---|---|---|
 | Resource group | `rg-kinotic-<environment>` | Holds the Front Door profile and, created by the server at runtime, one storage account per organization |
-| Front Door Standard profile + endpoint | `afd-kinotic-<environment>-sites` | Serves every published UI at `<label>.apps-<environment>.kinotic.ai`; its system identity holds Storage Blob Data Reader on the group, and the server adds origin groups, the rule set, domains and routes at runtime |
+| Front Door Standard profile + endpoint | `afd-kinotic-<environment>-sites` | Serves every published UI at `<label>.apps-<environment>.kinotic.ai` through one wildcard domain, one wildcard DNS record and one route; nothing on Front Door changes when a UI is published (`modules/sites`) |
+| Sites storage account | `stkinotic<environment>sites` | Holds every site's files under `sites/<hostname>/`, read by the profile's identity and written by the server |
+| Key vault | `kv-kinotic-<environment>-sites` | Holds the Let's Encrypt wildcard certificate for `*.apps-<environment>.kinotic.ai`, issued by the apply through a DNS challenge and renewed by an apply within 30 days of expiry |
 | Service principal | `kinotic-<environment>-server` | The identity the server runs as, with Contributor and Storage Blob Data Contributor on the group, DNS Zone Contributor on `kinotic.ai`, and Contributor on the email service |
 | `.env.local` at the repository root | | The principal's `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` and `AZURE_TENANT_ID`, written by the apply |
 
@@ -41,9 +43,14 @@ profile in all of Azure, so two developers sharing one would collide:
 environment = "local"   # e.g. your first name
 ```
 
+```hcl
+# local.auto.tfvars (gitignored)
+lets_encrypt_email = "you@example.com"   # the Let's Encrypt account the wildcard certificate is issued under
+```
+
 ```bash
 terraform init
-terraform apply -target=azurerm_cdn_frontdoor_profile.sites   # the profile first: the role below needs its identity's principal id
+terraform apply -target=module.sites.azurerm_cdn_frontdoor_profile.sites   # the profile first: the roles need its identity's principal id
 terraform apply
 terraform output -raw application_local_yml > ../../../../kinotic-server/src/main/resources/application-local.yml
 ```

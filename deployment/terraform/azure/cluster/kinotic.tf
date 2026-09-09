@@ -51,8 +51,9 @@ resource "helm_release" "kinotic_server" {
     # UI sites — the Front Door profile and DNS zone kinotic-server serves published UIs from
     { name = "extraEnv.KINOTIC_SYSTEMAPI_UIDEPLOYMENT_SITESDOMAIN", value = local.sites_domain },
     { name = "extraEnv.KINOTIC_SYSTEMAPI_UIDEPLOYMENT_DNSZONEID", value = local.global.dns_zone_id },
-    { name = "extraEnv.KINOTIC_SYSTEMAPI_UIDEPLOYMENT_FRONTDOORPROFILEID", value = azurerm_cdn_frontdoor_profile.sites.id },
-    { name = "extraEnv.KINOTIC_SYSTEMAPI_UIDEPLOYMENT_FRONTDOORENDPOINTHOSTNAME", value = azurerm_cdn_frontdoor_endpoint.sites.host_name },
+    { name = "extraEnv.KINOTIC_SYSTEMAPI_UIDEPLOYMENT_FRONTDOORPROFILEID", value = module.sites.profile_id },
+    { name = "extraEnv.KINOTIC_SYSTEMAPI_UIDEPLOYMENT_FRONTDOORENDPOINTHOSTNAME", value = module.sites.endpoint_host_name },
+    { name = "extraEnv.KINOTIC_SYSTEMAPI_UIDEPLOYMENT_SITESSTORAGEENDPOINT", value = module.sites.storage_blob_endpoint },
     # Email (Azure Communication Services) — shared service from global terraform
     { name = "extraEnv.KINOTIC_EMAIL_BACKEND", value = "azure" },
     { name = "extraEnv.KINOTIC_EMAIL_AZURE_ENDPOINT", value = local.global.email_service_endpoint },
