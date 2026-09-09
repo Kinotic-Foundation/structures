@@ -267,6 +267,22 @@ public class EndpointConnectionHandlerTests {
     }
 
     @Test
+    public void testClientThatDisconnectedIsNotWaitedFor() throws Exception {
+        Session session = services.sessionStore.createSession(SESSION_TIMEOUT_MS * 10);
+        services.sessionStore.put(session).toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
+        EndpointConnectionHandler handler = connect(session, Map.of());
+        String replyTo = subscribeReplies(handler);
+        handler.send(request(replyTo, "corr-d")).toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
+
+        // a DISCONNECT frame, then the socket closes: the sticky session's state is disposed, not parked
+        handler.clientDisconnected();
+        handler.shutdown();
+
+        verify(requestLivenessWatcher).settle("corr-d");
+        verify(replyConsumer).unregister();
+    }
+
+    @Test
     public void testUnclaimedParkedStateRotatesTheReplyDestination() throws Exception {
         services.apiGatewayProperties.setReplyBufferWindow(200);
         Session session = services.sessionStore.createSession(SESSION_TIMEOUT_MS * 10);
