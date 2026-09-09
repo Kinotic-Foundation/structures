@@ -159,8 +159,7 @@ public class DefaultStompServerHandler extends AbstractStompServerHandler {
 
     @Override
     public void disconnected() {
-        // we remove the session since the client disconnected on purpose
-        endpointConnectionHandler.removeSession();
+        endpointConnectionHandler.clientDisconnected();
     }
 
     @Override
