@@ -95,6 +95,15 @@ index switch is the atomic publish.
 A microservice process that dies is respawned with a backoff doubling from 1s to 30s; a
 sentinel change restarts it immediately.
 
+The process runs with `src/instrumentation.ts` preloaded (`bun --preload`), which starts the
+OpenTelemetry Node SDK when `OTEL_EXPORTER_OTLP_ENDPOINT` is set — the node sets it, with the
+rest of the standard `OTEL_*` variables, for a workload that elected telemetry — so the spans
+the Kinotic runtime records through `@opentelemetry/api` are exported to the node. The SDK
+registers against the global API, which the project's own copy of `@opentelemetry/api` resolves
+as long as it is the same major and no newer than the one installed here. Pending spans are
+flushed when the process receives `SIGTERM`; a project that installs its own `SIGTERM` handler
+owns the exit after that flush. Without the endpoint variable the process runs uninstrumented.
+
 ## Logs
 
 Both entrypoints write everything — their own messages and the output of the processes they
