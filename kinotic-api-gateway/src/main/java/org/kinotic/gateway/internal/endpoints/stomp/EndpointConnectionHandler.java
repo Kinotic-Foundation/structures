@@ -45,6 +45,8 @@ public class EndpointConnectionHandler {
     private final ServiceSessionState serviceSessionState;
     private Session session;
     private long lastSessionFlush = 0;
+    // set by a DISCONNECT frame: the client chose to leave, so nothing is held for its return
+    private boolean clientDisconnected = false;
     private ConnectedInfo connectedInfo;
     private StompAuthorizer stompAuthorizer;
     private SessionKeepAliveMode sessionKeepAliveMode = SessionKeepAliveMode.ACTIVITY;
@@ -135,7 +137,16 @@ public class EndpointConnectionHandler {
         return ret;
     }
 
-    public void removeSession() {
+    /**
+     * The client sent a DISCONNECT frame. A NONE session ends here; the reply state ends when the socket
+     * closes, since the client is not coming back for it.
+     */
+    public void clientDisconnected() {
+        clientDisconnected = true;
+        removeNoneSession();
+    }
+
+    private void removeNoneSession() {
         if (sessionKeepAliveMode == SessionKeepAliveMode.NONE && session != null) {
             // The Vert.x SessionHandler deletes a destroyed session from the store when the response
             // ends. A WebSocket's response ended at the upgrade, so the store entry is removed here,
@@ -218,15 +229,16 @@ public class EndpointConnectionHandler {
         }
         subscriptions.forEach((s, eventConsumer) -> eventConsumer.unregister());
         subscriptions.clear();
-        // a sticky session's reply state waits for the client to come back; a NONE session ends with its
-        // connection however the connection ended
-        if (sessionKeepAliveMode != SessionKeepAliveMode.NONE && session != null && connectedInfo != null) {
+        // A sticky session's reply state waits for the client to come back after a close it did not ask
+        // for. A client that sent DISCONNECT has left, and a NONE session ends with its connection however
+        // the connection ended.
+        if (!clientDisconnected && sessionKeepAliveMode != SessionKeepAliveMode.NONE && session != null && connectedInfo != null) {
             services.parkedReplySessions.park(replySessionState, session, connectedInfo);
         } else {
             replySessionState.dispose();
         }
         serviceSessionState.dispose();
-        removeSession();
+        removeNoneSession();
         session = null;
         connectedInfo = null;
         stompAuthorizer = null;

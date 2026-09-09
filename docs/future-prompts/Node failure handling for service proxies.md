@@ -409,7 +409,9 @@ public void park(ReplySessionState state, Session session, ConnectedInfo connect
 ```
 
 Both exits rotate the `replyToId` in the session's `ConnectedInfo` and write the session to the
-store. `ConnectedInfo.replyBufferWindow` reaches the client in the CONNECTED frame.
+store. `ConnectedInfo.replyBufferWindow` reaches the client in the CONNECTED frame. Parking is for
+a close the client did not ask for: a DISCONNECT frame marks the connection as left on purpose, and
+its `shutdown()` disposes the state instead.
 
 Files, 7a: `ParkedReplySessions`, `ReplySessionState`, `EndpointConnectionHandler`, `Services`,
 `ApiGatewayProperties` (`replyBufferWindow`, `replyBufferMaxBytes`), `ConnectedInfo`,
