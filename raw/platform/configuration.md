@@ -1142,6 +1142,26 @@ Azure Front Door, configured under `kinotic.systemApi.uiDeployment.*`:
       Host name of the profile's endpoint, the target of every site's CNAME. Required
     </td>
   </tr>
+  
+  <tr>
+    <td>
+      <code>
+        sitesStorageEndpoint
+      </code>
+    </td>
+    
+    <td>
+      —
+    </td>
+    
+    <td>
+      Blob endpoint of the sites storage account terraform creates, where every published UI is written under <code>
+        sites/<hostname>/
+      </code>
+      
+      . Required
+    </td>
+  </tr>
 </tbody>
 </table>
 
