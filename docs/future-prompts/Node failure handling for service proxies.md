@@ -481,6 +481,25 @@ if (node.getStatus().getType() == VmNodeStatusType.ONLINE      // DRAINING never
 This matters more now: the vm-manager reports telemetry-shipping problems as DRAINING, so a node
 that loses Loki/Tempo and then dies keeps its workloads RUNNING forever.
 
+As built. `VmNodeOrchestrationService.verifyNode(nodeId)` is the invalidation trigger:
+`DefaultWorkloadOrchestrationService` calls it when a `VmManagerProxy` call fails with
+`RpcMissingServiceException` or `RpcServiceUnavailableException`. Verification reads the
+vm-manager's registration for the node (`monitorListenerStatus` on the scoped address, first
+emission); absent, the node becomes `UNREACHABLE`, a new `VmNodeStatusType`, so placement stops
+at once. Its workloads are left to the heartbeat reaper: a vm-manager reconnecting after a blip
+is registration-less for a few seconds, and failing workloads on that would be a false positive.
+The reaper now marks any non-OFFLINE node with a stale `lastSeen` OFFLINE and fails its
+workloads, which covers DRAINING and UNREACHABLE alike. The next heartbeat brings an UNREACHABLE
+node back to ONLINE through the existing status comparison. `KinoticUtil.serviceIdentifierOf`
+carries the proxy-to-identifier derivation `DefaultServiceRegistry` had inline, so the orchestrator
+builds the scoped address the same way the proxy does.
+
+Files: `KinoticUtil`, `DefaultServiceRegistry`, `VmNodeStatusType` (Java and TS),
+`VmNodeOrchestrationService`, `DefaultVmNodeOrchestrationService`,
+`DefaultWorkloadOrchestrationService`, `WorkloadOrchestrationTest` (+ `StubVmNodeService.findAll`):
+an unreachable vm-manager with no registration marks its node UNREACHABLE; one still registered
+leaves it ONLINE; a silent DRAINING node goes OFFLINE with its workload FAILED.
+
 ## Numbering
 
 | Earlier chat numbering | This document |
