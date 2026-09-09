@@ -56,6 +56,7 @@ public class KinoticIgniteClusterManager extends IgniteClusterManager {
     // Retains the latest membership snapshot for every clusterNodesFlux subscriber; never terminates
     private final Sinks.Many<Set<String>> clusterNodesSink = Sinks.many().replay().latest();
     private boolean clusterNodesEmitted; // touched only on the delivery context
+    private boolean nodeListenerInstalled;
     private volatile Vertx vertx;
     private volatile Context deliveryContext;
 
@@ -68,8 +69,6 @@ public class KinoticIgniteClusterManager extends IgniteClusterManager {
     public void init(Vertx vertx) {
         super.init(vertx);
         this.vertx = vertx;
-        // IgniteClusterManager holds a single NodeListener and vertx core only installs one under HA,
-        // which KinoticVertxConfig does not enable, so this replaces nothing
         nodeListener(new NodeListener() {
             @Override
             public void nodeAdded(String nodeId) {
@@ -81,6 +80,17 @@ public class KinoticIgniteClusterManager extends IgniteClusterManager {
                 emitClusterNodes(false);
             }
         });
+    }
+
+    @Override
+    public void nodeListener(NodeListener nodeListener) {
+        // IgniteClusterManager keeps one listener, so a second installer would silently take the slot
+        // from the membership flux. Vert.x HA is the only other installer, whichever of the two runs first.
+        if(nodeListenerInstalled){
+            throw new UnsupportedOperationException("KinoticIgniteClusterManager does not support Vert.x HA: its single NodeListener slot is owned by the cluster membership flux");
+        }
+        super.nodeListener(nodeListener);
+        nodeListenerInstalled = true;
     }
 
     // One shared context all monitors deliver on, so subscriber chains never run on the cluster

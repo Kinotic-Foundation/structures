@@ -1,5 +1,6 @@
 package org.kinotic.core.internal.api;
 
+import io.vertx.core.spi.cluster.NodeListener;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.kinotic.core.api.Kinotic;
@@ -10,6 +11,7 @@ import org.kinotic.core.api.event.EventConstants;
 import org.kinotic.core.api.event.EventConsumer;
 import org.kinotic.core.api.event.ListenerStatus;
 import org.kinotic.core.api.event.Metadata;
+import org.kinotic.core.internal.KinoticIgniteClusterManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
@@ -32,6 +34,8 @@ public class EventBusServiceTests {
     private EventBusService eventBusService;
     @Autowired
     private Kinotic kinotic;
+    @Autowired
+    private KinoticIgniteClusterManager clusterManager;
 
     /**
      * Pins the monitorListenerStatus contract: the initial status reflects existing listeners, removing
@@ -100,4 +104,21 @@ public class EventBusServiceTests {
             consumer.unregister();
         }
     }
+
+    /**
+     * Pins that the cluster manager's single NodeListener slot belongs to the membership flux: installing
+     * another listener, which is what Vert.x HA does, fails instead of silently ending membership updates.
+     */
+    @Test
+    public void testSecondNodeListenerIsRejected() {
+        Assertions.assertThrows(UnsupportedOperationException.class,
+                                () -> clusterManager.nodeListener(new NodeListener() {
+                                    @Override
+                                    public void nodeAdded(String nodeId) {}
+
+                                    @Override
+                                    public void nodeLeft(String nodeId) {}
+                                }));
+    }
+
 }
