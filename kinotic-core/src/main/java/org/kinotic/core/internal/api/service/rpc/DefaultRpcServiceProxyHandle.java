@@ -18,7 +18,9 @@ import org.kinotic.core.api.RpcServiceProxy;
 import org.kinotic.core.api.RpcServiceProxyHandle;
 import org.kinotic.core.api.directory.ServiceDirectory;
 import org.kinotic.core.api.event.*;
+import org.kinotic.core.api.exceptions.RpcServiceUnavailableException;
 import org.kinotic.core.api.security.SecurityContext;
+import org.kinotic.core.api.service.RequestLivenessWatcher;
 import org.kinotic.core.api.service.ServiceIdentifier;
 import org.kinotic.core.api.utils.KinoticUtil;
 import org.kinotic.core.internal.utils.MetaUtil;
@@ -59,6 +61,7 @@ public class DefaultRpcServiceProxyHandle<T> implements RpcServiceProxyHandle<T>
     private final EventBusService eventBusService;
     private final SecurityContext securityContext;
     private final ObjectProvider<ServiceDirectory> serviceDirectoryProvider;
+    private final RequestLivenessWatcher requestLivenessWatcher;
     private final TextMapPropagator propagator;
     private final Tracer tracer;
     private final TraceLogFilter traceLogFilter;
@@ -82,6 +85,7 @@ public class DefaultRpcServiceProxyHandle<T> implements RpcServiceProxyHandle<T>
                                         EventBusService eventBusService,
                                         SecurityContext securityContext,
                                         ObjectProvider<ServiceDirectory> serviceDirectoryProvider,
+                                        RequestLivenessWatcher requestLivenessWatcher,
                                         Vertx vertx,
                                         ClassLoader classLoader,
                                         OpenTelemetry openTelemetry,
@@ -95,6 +99,7 @@ public class DefaultRpcServiceProxyHandle<T> implements RpcServiceProxyHandle<T>
         Validate.notNull(eventBusService, "eventBusService must not be null");
         Validate.notNull(securityContext, "securityContext must not be null");
         Validate.notNull(serviceDirectoryProvider, "serviceDirectoryProvider must not be null");
+        Validate.notNull(requestLivenessWatcher, "requestLivenessWatcher must not be null");
         Validate.notNull(vertx, "vertx must not be null");
         Validate.notNull(classLoader, "classLoader must not be null");
         Validate.notNull(openTelemetry, "openTelemetry must not be null");
@@ -109,6 +114,7 @@ public class DefaultRpcServiceProxyHandle<T> implements RpcServiceProxyHandle<T>
         this.eventBusService = eventBusService;
         this.securityContext = securityContext;
         this.serviceDirectoryProvider = serviceDirectoryProvider;
+        this.requestLivenessWatcher = requestLivenessWatcher;
         this.tracer = openTelemetry.getTracer(INSTRUMENTATION_NAME);
         this.propagator = openTelemetry.getPropagators().getTextMapPropagator();
         this.traceLogFilter = traceLogFilter;
@@ -147,7 +153,7 @@ public class DefaultRpcServiceProxyHandle<T> implements RpcServiceProxyHandle<T>
                                 // provide message to handler for processing
                                 RpcReturnValueHandler handler = responseMap.get(correlationId);
                                 if(handler.processResponse(event)){
-                                    responseMap.remove(correlationId);
+                                    settle(correlationId);
                                 }
                             } catch (Exception e) {
                                 log.error("URGENT: Unhandled exception in RpcReturnValueHandler.processResponse, Proxy Will be Released!!", e);
@@ -204,7 +210,10 @@ public class DefaultRpcServiceProxyHandle<T> implements RpcServiceProxyHandle<T>
         if(released.compareAndSet(false,true)){
             replyEventConsumer.unregister();
 
-            responseMap.forEach((s, returnValueHandler) -> returnValueHandler.cancel(serviceClass.getSimpleName() + " released. No further responses will be processed"));
+            responseMap.forEach((correlationId, returnValueHandler) -> {
+                requestLivenessWatcher.settle(correlationId);
+                returnValueHandler.cancel(serviceClass.getSimpleName() + " released. No further responses will be processed");
+            });
             responseMap.clear();
             recentlyReaped.clear();
         }
@@ -231,6 +240,15 @@ public class DefaultRpcServiceProxyHandle<T> implements RpcServiceProxyHandle<T>
             metadata.put(EventConstants.CORRELATION_ID_HEADER, correlationId);
             eventBusService.send(Event.create(CRI.create(originCri), metadata, null));
         }
+    }
+
+    /**
+     * Ends the tracking of a request whose response handler is done: it is no longer pinned to the node
+     * that acknowledged it and no longer receives replies.
+     */
+    private void settle(String correlationId){
+        requestLivenessWatcher.settle(correlationId);
+        responseMap.remove(correlationId);
     }
 
     @Override
@@ -318,6 +336,13 @@ public class DefaultRpcServiceProxyHandle<T> implements RpcServiceProxyHandle<T>
                                                log.error("URGENT: Unhandled exception in RpcReturnValueHandler.processError, Proxy Will be Released!!", e);
                                                release();
                                            }
+                                       } else {
+                                           // computeIfPresent serializes with settle() on this key, so a reply that
+                                           // lands before the acknowledgement is processed leaves nothing pinned
+                                           responseMap.computeIfPresent(correlationId, (_, pending) -> {
+                                               requestLivenessWatcher.watch(correlationId, ar.result(), () -> failLost(correlationId, requestCri, ar.result()));
+                                               return pending;
+                                           });
                                        }
                                    });
                 }
@@ -334,7 +359,7 @@ public class DefaultRpcServiceProxyHandle<T> implements RpcServiceProxyHandle<T>
                         eventBusService.sendWithAck(Event.create(requestCri,
                                                                  metadata,
                                                                  null))
-                                       .onComplete(ar -> responseMap.remove(correlationId));
+                                       .onComplete(ar -> settle(correlationId));
                     } else {
                         throw new IllegalStateException("Cancel is not supported if RpcReturnValueHandler.isMultiValue returns false");
                     }
@@ -345,6 +370,20 @@ public class DefaultRpcServiceProxyHandle<T> implements RpcServiceProxyHandle<T>
            throw new IllegalStateException("RpcServiceProxyHandle has already been released. No service method can be called after release.");
         }
         return ret;
+    }
+
+    // Runs on the request's context when the node that took it leaves the cluster. Only the party that
+    // removes the handler signals it, so a reply that settled the request first leaves nothing to fail.
+    private void failLost(String correlationId, CRI requestCri, String nodeId){
+        RpcReturnValueHandler lost = responseMap.remove(correlationId);
+        if(lost != null){
+            try {
+                lost.processError(new RpcServiceUnavailableException("Node " + nodeId + " left the cluster while serving the request to " + requestCri.raw()));
+            } catch (IllegalStateException e) {
+                // the reply completed the handler between the removal above and this signal
+                log.debug("Request {} to {} settled before its node loss was signalled", correlationId, requestCri.raw());
+            }
+        }
     }
 
     @Override

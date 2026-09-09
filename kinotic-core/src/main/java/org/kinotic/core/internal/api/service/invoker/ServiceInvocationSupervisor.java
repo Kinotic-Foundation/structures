@@ -9,6 +9,7 @@ import io.opentelemetry.context.Scope;
 import io.opentelemetry.context.propagation.TextMapPropagator;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import org.apache.commons.lang3.Validate;
 import org.jspecify.annotations.NonNull;
@@ -16,6 +17,7 @@ import org.kinotic.core.api.annotations.ScopeOptional;
 import org.kinotic.core.api.event.*;
 import org.kinotic.core.api.exceptions.RpcInvocationException;
 import org.kinotic.core.api.exceptions.RpcMissingMethodException;
+import org.kinotic.core.api.exceptions.RpcServiceUnavailableException;
 import org.kinotic.core.api.security.Participant;
 import org.kinotic.core.api.security.SecurityContext;
 import org.kinotic.core.api.service.ServiceDescriptor;
@@ -44,6 +46,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Class handles invoking services that are published to the Continuum.
@@ -57,8 +60,15 @@ public class ServiceInvocationSupervisor {
 
     private static final String INSTRUMENTATION_NAME = "org.kinotic.core.service-invoker";
 
+    // Upper bound on how long stop() waits for the invocations in flight to reply before returning
+    private static final long DRAIN_TIMEOUT_MS = 30_000;
+
     private final AtomicBoolean active = new AtomicBoolean(false);
     private final ConcurrentHashMap<String, StreamSubscriber> activeStreamingResults = new ConcurrentHashMap<>();
+    // Invocations accepted and not yet replied to: the synchronous handler runs plus the single-value
+    // reactive results still pending. Streams are tracked in activeStreamingResults instead.
+    private final AtomicInteger inFlight = new AtomicInteger();
+    private volatile Promise<Void> drained;
     private final ArgumentResolver argumentResolver;
     private final EventBusService eventBusService;
     private final ExceptionConverter exceptionConverter;
@@ -169,23 +179,57 @@ public class ServiceInvocationSupervisor {
     }
 
     /**
-     * Stops this {@link ServiceInvocationSupervisor}
+     * Stops this {@link ServiceInvocationSupervisor}: no further invocations are accepted, every stream in
+     * progress ends with an {@link RpcServiceUnavailableException} for its caller, and the invocations
+     * already running reply before the returned future completes, up to a bounded wait.
      * @return a Future that will succeed on Stop and fail on an error
      */
     public Future<Void> stop(){
         if (active.compareAndSet(true, false)) {
-            for(Map.Entry<String, StreamSubscriber> streamSubscribers : activeStreamingResults.entrySet()){
-                streamSubscribers.getValue().cancel();
+            Future<Void> unregistered = methodInvocationEventConsumer.unregister();
+            if(unscopedInvocationEventConsumer != null){
+                unregistered = Future.all(unregistered, unscopedInvocationEventConsumer.unregister()).mapEmpty();
             }
 
-            Future<Void> ret = methodInvocationEventConsumer.unregister();
-            if(unscopedInvocationEventConsumer != null){
-                ret = Future.all(ret, unscopedInvocationEventConsumer.unregister()).mapEmpty();
+            // A stream's caller is still listening, so it gets a terminal error rather than a silent cancel
+            String serviceName = serviceDescriptor.serviceIdentifier().qualifiedName();
+            for(StreamSubscriber streamSubscriber : activeStreamingResults.values()){
+                streamSubscriber.fail(new RpcServiceUnavailableException("Service " + serviceName + " stopped while producing the stream"));
             }
-            return ret;
+
+            Promise<Void> drainedPromise = Promise.promise();
+            drained = drainedPromise;
+            if(inFlight.get() == 0){
+                drainedPromise.tryComplete();
+            }
+            long timer = vertx.setTimer(DRAIN_TIMEOUT_MS, _ -> {
+                if(drainedPromise.tryComplete()){
+                    log.warn("Service {} stopped with {} invocations still in flight after {} ms", serviceName, inFlight.get(), DRAIN_TIMEOUT_MS);
+                }
+            });
+            return Future.all(unregistered, drainedPromise.future())
+                         .<Void>mapEmpty()
+                         .andThen(_ -> vertx.cancelTimer(timer));
         }else{
             return Future.failedFuture(new IllegalStateException("Service already stopped"));
         }
+    }
+
+    /**
+     * Counts an invocation as in flight until the returned callback runs; running it more than once has no
+     * further effect.
+     */
+    private Runnable enterInFlight(){
+        inFlight.incrementAndGet();
+        AtomicBoolean left = new AtomicBoolean(false);
+        return () -> {
+            if(left.compareAndSet(false, true) && inFlight.decrementAndGet() == 0){
+                Promise<Void> drainedPromise = drained;
+                if(drainedPromise != null){
+                    drainedPromise.tryComplete();
+                }
+            }
+        };
     }
 
     private Map<String, HandlerMethod> buildMethodMap(ServiceDescriptor serviceDescriptor,
@@ -294,7 +338,12 @@ public class ServiceInvocationSupervisor {
                     processControlPlaneRequest(incomingEvent);
                 }else{
                     if(validateReplyTo(incomingEvent)){
-                        processInvocationRequest(incomingEvent);
+                        Runnable leaveInFlight = enterInFlight();
+                        try {
+                            processInvocationRequest(incomingEvent);
+                        } finally {
+                            leaveInFlight.run();
+                        }
                     }else{
                         log.error("ReplyTo header is missing or invalid incoming message will be ignored\n{}", EventUtil.toString(
                                 incomingEvent,
@@ -404,7 +453,7 @@ public class ServiceInvocationSupervisor {
             if(!reactiveAdapter.isMultiValue()){
 
                 Publisher<?> publisher = reactiveAdapter.toPublisher(result);
-                publisher.subscribe(new SingleValueSubscriber(incomingMetadata, handlerMethod, incomingEvent, span));
+                publisher.subscribe(new SingleValueSubscriber(incomingMetadata, handlerMethod, incomingEvent, span, enterInFlight()));
 
             }else{
 
@@ -493,13 +542,15 @@ public class ServiceInvocationSupervisor {
         private final HandlerMethod handlerMethod;
         private final Event<byte[]> incomingEvent;
         private final Span span;
+        private final Runnable leaveInFlight;
         private boolean valueReceived = false;
 
-        public SingleValueSubscriber(Metadata incomingMetadata, HandlerMethod handlerMethod, Event<byte[]> incomingEvent, Span span) {
+        public SingleValueSubscriber(Metadata incomingMetadata, HandlerMethod handlerMethod, Event<byte[]> incomingEvent, Span span, Runnable leaveInFlight) {
             this.incomingMetadata = incomingMetadata;
             this.handlerMethod = handlerMethod;
             this.incomingEvent = incomingEvent;
             this.span = span;
+            this.leaveInFlight = leaveInFlight;
         }
 
         @Override
@@ -522,6 +573,7 @@ public class ServiceInvocationSupervisor {
             }
             handleException(incomingMetadata, t);
             failSpan(span, t);
+            leaveInFlight.run();
         }
 
         @Override
@@ -530,6 +582,7 @@ public class ServiceInvocationSupervisor {
                 convertAndSend(incomingMetadata, handlerMethod, null);
             }
             span.end();
+            leaveInFlight.run();
         }
     }
 
@@ -597,6 +650,18 @@ public class ServiceInvocationSupervisor {
             this.replyListenerStatus = replyListenerStatus;
             this.originCri = originCri;
             this.span = span;
+        }
+
+        /**
+         * Ends the stream with a terminal error for its caller, then cancels the source.
+         */
+        public void fail(Throwable throwable){
+            if(!isDisposed()){
+                handleException(incomingMetadata, throwable);
+                span.recordException(throwable);
+                span.setStatus(StatusCode.ERROR);
+                cancel();
+            }
         }
 
         public void processControlEvent(Event<byte[]> incomingEvent){

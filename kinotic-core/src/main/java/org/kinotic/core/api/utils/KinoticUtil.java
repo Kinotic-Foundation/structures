@@ -7,6 +7,7 @@ import net.openhft.hashing.LongTupleHashFunction;
 import org.kinotic.core.api.directory.ServiceDirectory;
 import org.kinotic.core.api.event.CRI;
 import org.kinotic.core.api.exceptions.RpcMissingServiceException;
+import org.kinotic.core.api.exceptions.RpcServiceUnavailableException;
 
 import java.math.BigInteger;
 import java.net.URLEncoder;
@@ -39,15 +40,20 @@ public class KinoticUtil {
      */
     public static Throwable mapSendFailure(Throwable throwable, CRI destination, ServiceDirectory serviceDirectory) {
         Throwable ret = throwable;
-        if (throwable instanceof ReplyException replyException
-                && replyException.failureType() == ReplyFailure.NO_HANDLERS) {
-            if (serviceDirectory != null) {
-                // fire-and-forget: reportUnreachable debounces and only writes verified state
-                serviceDirectory.reportUnreachable(destination.raw())
-                                .onFailure(reportFailure -> log.debug("Failed to report unreachable service {}",
-                                                                      destination.raw(), reportFailure));
+        if (throwable instanceof ReplyException replyException) {
+            if (replyException.failureType() == ReplyFailure.NO_HANDLERS) {
+                if (serviceDirectory != null) {
+                    // fire-and-forget: reportUnreachable debounces and only writes verified state
+                    serviceDirectory.reportUnreachable(destination.raw())
+                                    .onFailure(reportFailure -> log.debug("Failed to report unreachable service {}",
+                                                                          destination.raw(), reportFailure));
+                }
+                ret = new RpcMissingServiceException(throwable);
+            } else if (replyException.failureType() == ReplyFailure.TIMEOUT) {
+                // the consumer acknowledges before it dispatches, so a lost acknowledgement cannot rule out
+                // that the handler ran
+                ret = new RpcServiceUnavailableException("No acknowledgement for the request to " + destination.raw(), throwable);
             }
-            ret = new RpcMissingServiceException(throwable);
         }
         return ret;
     }
