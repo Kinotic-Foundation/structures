@@ -2,7 +2,7 @@ import {buildBrokerUrl, buildServerUrl, type ConnectOptions, type IWebSocket, ty
 import type {CredentialsResolver} from '@/api/security/CredentialsResolver'
 import {EventConstants} from '@/api/event/IEventBus'
 import {ConnectedInfo} from '@/api/security/ConnectedInfo'
-import {type IFrame, RxStomp, RxStompConfig, StompHeaders} from '@stomp/rx-stomp'
+import {type IFrame, RxStomp, RxStompConfig, StompHeaders, RxStompState} from '@stomp/rx-stomp'
 import {ReconnectionTimeMode} from '@stomp/stompjs'
 import debug from 'debug'
 import {Observable, Subject, Subscription} from 'rxjs'
@@ -31,6 +31,12 @@ export class StompConnectionManager {
      * replyToId across connections.
      */
     public replyToCriChangedHandler: ((replyToCri: string) => void) | null = null
+
+    /**
+     * Invoked once when a dropped connection has stayed down for longer than the server holds its replies,
+     * so the calls in flight cannot complete any more. A reconnect inside the window never invokes it.
+     */
+    public outageHandler: (() => void) | null = null
     /**
      * The process-lifetime RxStomp client. Never replaced: watch() subscriptions made on it
      * queue until connected and re-subscribe on every (re)connection, which is what keeps
@@ -52,6 +58,11 @@ export class StompConnectionManager {
     private rxStompHasConnected: boolean = false
     private serverHeadersSubscription: Subscription | null = null
     private stompErrorsSubscription: Subscription | null = null
+    private connectionStateSubscription: Subscription | null = null
+    // armed when the connection drops, cleared when it comes back; fires outageHandler once the drop outlasts
+    // the window the server holds replies for
+    private outageTimer: ReturnType<typeof setTimeout> | null = null
+    private replyBufferWindowMs: number = 0
     private readonly uuidv4 = uuidv4()
 
     private _replyToCri: string | null = null
@@ -294,6 +305,9 @@ export class StompConnectionManager {
                     return
                 }
 
+                this.replyBufferWindowMs = connectedInfo.replyBufferWindow ?? 0
+                this.clearOutageTimer()
+
                 const newReplyToCri: string = EventConstants.REPLY_DESTINATION_PREFIX
                     + connectedInfo.replyToId + ':' + this.uuidv4
                     + '@kinotic.js.EventBus/replyHandler'
@@ -307,9 +321,32 @@ export class StompConnectionManager {
                 }
             })
 
+            // One timer per connection, not per call: a drop arms it, the next CONNECTED clears it
+            this.connectionStateSubscription = this.rxStomp.connectionState$.subscribe((state: RxStompState) => {
+                if (state === RxStompState.OPEN) {
+                    this.clearOutageTimer()
+                } else if (state === RxStompState.CLOSED
+                           && this.isActive
+                           && this.initialConnectionSuccessful
+                           && this.outageTimer === null
+                           && this.replyBufferWindowMs > 0) {
+                    this.outageTimer = setTimeout(() => {
+                        this.outageTimer = null
+                        this.outageHandler?.()
+                    }, this.replyBufferWindowMs)
+                }
+            })
+
             this.isActive = true
             this.rxStomp.activate()
         })
+    }
+
+    private clearOutageTimer(): void {
+        if (this.outageTimer !== null) {
+            clearTimeout(this.outageTimer)
+            this.outageTimer = null
+        }
     }
 
     public async deactivate(force?: boolean): Promise<void> {
@@ -335,6 +372,9 @@ export class StompConnectionManager {
             this.serverHeadersSubscription = null
             this.stompErrorsSubscription?.unsubscribe()
             this.stompErrorsSubscription = null
+            this.connectionStateSubscription?.unsubscribe()
+            this.connectionStateSubscription = null
+            this.clearOutageTimer()
             this._replyToCri = null
         }
         return

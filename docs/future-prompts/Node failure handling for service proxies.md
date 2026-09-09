@@ -386,12 +386,38 @@ A client that reconnects through a fresh handshake without its session (the vm-m
 `reconnectOnFatalError` loop re-authenticates with credentials) gets a new `replyToId`; its old
 parked session is orphaned until the window expires. The window bounds a leak, not only a wait.
 
-Files, 7a: `ParkedReplySessions`, park/reattach in `EndpointConnectionHandler` +
-`ReplySessionState`, `replyToId` rotation on both exits, `ApiGatewayProperties.replyBufferWindow`,
-`ConnectedInfo` (Java) carrying it, tests (blip mid-stream on one gateway → stream continues; a
-single-value reply during the blip → delivered on reattach; expiry and overflow → calls fail with
-the reset error). 7b: `ConnectedInfo.ts`, `StompConnectionManager.ts`, `EventBus.ts`, a TS test
-(blip shorter than the window → the call completes; longer → it fails).
+As built, 7a. Parked states are indexed by the reply destinations they listen on, not by
+`replyToId`: the destination carries the client process's own uuid, so it is stable across that
+process's reconnects, while two browser tabs on one session keep their own states apart. The
+index also answers the race where the client reconnects before the old socket's close is
+processed (heartbeat detection lags the client): `claim` hands the new connection whatever state
+serves the destination, parked or still held, and `adopt` moves its pinned requests, re-pinned,
+and its subscriptions with their buffers; the old connection's later `park` finds itself no
+longer serving and disposes an empty state.
+
+```java
+// ReplySessionState — the Phase 4 object, extended
+public void park(Runnable onOverflow);        // buffer instead of deliver, leases stay armed
+public boolean rebind(CRI cri, String subscriptionId, StompSubscriptionHandler handler);  // flush buffered, then live
+public void adopt(ReplySessionState other);   // pinned requests re-pinned here, subscriptions moved
+public Set<String> replyDestinations();
+
+// ParkedReplySessions — node-local, a @Component
+public void serve(CRI replyDestination, ReplySessionState state);
+public ReplySessionState claim(CRI replyDestination, ReplySessionState claimant);
+public void park(ReplySessionState state, Session session, ConnectedInfo connectedInfo);
+```
+
+Both exits rotate the `replyToId` in the session's `ConnectedInfo` and write the session to the
+store. `ConnectedInfo.replyBufferWindow` reaches the client in the CONNECTED frame.
+
+Files, 7a: `ParkedReplySessions`, `ReplySessionState`, `EndpointConnectionHandler`, `Services`,
+`ApiGatewayProperties` (`replyBufferWindow`, `replyBufferMaxBytes`), `ConnectedInfo`,
+`EndpointConnectionHandlerTests` (a reply that lands while parked reaches the reconnected client
+through the rebound subscription; an unclaimed state rotates the destination after the window; an
+overflowing one rotates it at once). 7b: `ConnectedInfo.ts`, `StompConnectionManager.ts`
+(`outageHandler`, one timer per connection on `connectionState$`), `EventBus.ts`. The TS blip test
+needs a running gateway and is not in this repo's unit harness.
 
 ## Phase 8 — cross-node handoff (~9 files)
 

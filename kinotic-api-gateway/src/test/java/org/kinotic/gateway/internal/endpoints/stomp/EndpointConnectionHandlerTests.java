@@ -71,6 +71,7 @@ public class EndpointConnectionHandlerTests {
     private EventBusService eventBusService;
     private RequestLivenessWatcher requestLivenessWatcher;
     private EventConsumer replyConsumer;
+    private Map<String, String> lastConnected;
     private final AtomicReference<Handler<Event<byte[]>>> replyDelivery = new AtomicReference<>();
 
     // The clustered session store needs a clustered Vert.x; one Ignite node on ports of its own, so a
@@ -126,6 +127,7 @@ public class EndpointConnectionHandlerTests {
         services.requestLivenessWatcher = requestLivenessWatcher;
         services.serviceDirectoryProvider = mock(ObjectProvider.class);
         services.sessionStore = ClusteredSessionStore.create(vertx);
+        services.parkedReplySessions = new ParkedReplySessions(services.apiGatewayProperties, vertx, services.sessionStore);
     }
 
     @Test
@@ -170,7 +172,8 @@ public class EndpointConnectionHandlerTests {
 
     @Test
     public void testShutdownSettlesEveryOutstandingRequest() throws Exception {
-        EndpointConnectionHandler handler = connect(Map.of());
+        // a NONE session's reply state ends with the connection; a sticky session's is parked instead
+        EndpointConnectionHandler handler = connect(Map.of(EventConstants.SESSION_KEEP_ALIVE_HEADER, "NONE"));
         String replyTo = subscribeReplies(handler);
         handler.send(request(replyTo, "corr-3")).toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
 
@@ -230,6 +233,73 @@ public class EndpointConnectionHandlerTests {
     }
 
     @Test
+    public void testParkedRepliesReachTheReconnectedClient() throws Exception {
+        Session session = services.sessionStore.createSession(SESSION_TIMEOUT_MS * 10);
+        services.sessionStore.put(session).toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
+        EndpointConnectionHandler first = connect(session, Map.of());
+        String replyTo = subscribeReplies(first);
+        first.send(request(replyTo, "corr-p")).toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
+
+        // the connection drops; the reply subscription stays registered and the reply lands while parked
+        first.shutdown();
+        verify(replyConsumer, never()).unregister();
+        Metadata replyMetadata = Metadata.create(Map.of(EventConstants.CORRELATION_ID_HEADER, "corr-p",
+                                                        EventConstants.CONTROL_HEADER, EventConstants.CONTROL_VALUE_COMPLETE));
+        replyDelivery.get().handle(Event.create(CRI.create(replyTo), replyMetadata, new byte[0]));
+        verify(requestLivenessWatcher).settle("corr-p");
+
+        // the same client reconnects on its session and re-subscribes the same reply destination
+        EndpointConnectionHandler second = connect(session, Map.of());
+        List<Event<byte[]>> delivered = new ArrayList<>();
+        second.subscribe(CRI.create(replyTo), "sub-2", new StompSubscriptionHandler() {
+            @Override
+            public void handleEvent(Event<byte[]> event) { delivered.add(event); }
+
+            @Override
+            public void handleError(Throwable throwable) {}
+        });
+        Assertions.assertEquals(1, delivered.size());
+        Assertions.assertEquals("corr-p", delivered.get(0).metadata().get(EventConstants.CORRELATION_ID_HEADER));
+        // the parked subscription was rebound, not registered again
+        verify(eventBusService).listen(any());
+    }
+
+    @Test
+    public void testUnclaimedParkedStateRotatesTheReplyDestination() throws Exception {
+        services.apiGatewayProperties.setReplyBufferWindow(200);
+        Session session = services.sessionStore.createSession(SESSION_TIMEOUT_MS * 10);
+        services.sessionStore.put(session).toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
+        EndpointConnectionHandler first = connect(session, Map.of());
+        String firstReplyToId = replyToId();
+        subscribeReplies(first);
+
+        first.shutdown();
+        Thread.sleep(600);
+
+        verify(replyConsumer).unregister();
+        EndpointConnectionHandler second = connect(session, Map.of());
+        Assertions.assertNotEquals(firstReplyToId, replyToId(), "the reply destination was not rotated after the window");
+    }
+
+    @Test
+    public void testOverflowingParkedStateRotatesTheReplyDestination() throws Exception {
+        services.apiGatewayProperties.setReplyBufferMaxBytes(8);
+        Session session = services.sessionStore.createSession(SESSION_TIMEOUT_MS * 10);
+        services.sessionStore.put(session).toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
+        EndpointConnectionHandler first = connect(session, Map.of());
+        String firstReplyToId = replyToId();
+        String replyTo = subscribeReplies(first);
+
+        first.shutdown();
+        Metadata replyMetadata = Metadata.create(Map.of(EventConstants.CORRELATION_ID_HEADER, "corr-big"));
+        replyDelivery.get().handle(Event.create(CRI.create(replyTo), replyMetadata, new byte[16]));
+
+        verify(replyConsumer).unregister();
+        EndpointConnectionHandler second = connect(session, Map.of());
+        Assertions.assertNotEquals(firstReplyToId, replyToId(), "the reply destination was not rotated on overflow");
+    }
+
+    @Test
     public void testNoneKeepAliveSessionEndsWithTheConnection() throws Exception {
         Session session = services.sessionStore.createSession(SESSION_TIMEOUT_MS * 10);
         services.sessionStore.put(session).toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
@@ -273,13 +343,13 @@ public class EndpointConnectionHandlerTests {
 
         EndpointConnectionHandler handler = new EndpointConnectionHandler(services);
         handler.handshake(routingContext).toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
-        handler.connect(connectHeaders).toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
+        lastConnected = handler.connect(connectHeaders).toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
         return handler;
     }
 
     // Subscribes the connection's reply destination and returns its CRI; requests carry it as reply-to
     private String subscribeReplies(EndpointConnectionHandler handler) throws Exception {
-        String replyTo = EventConstants.REPLY_DESTINATION_SCHEME + "://" + replyToId(handler) + ":replies@kinotic.js.EventBus/replyHandler";
+        String replyTo = EventConstants.REPLY_DESTINATION_SCHEME + "://" + replyToId() + ":replies@kinotic.js.EventBus/replyHandler";
         handler.subscribe(CRI.create(replyTo), "sub-1", new StompSubscriptionHandler() {
             @Override
             public void handleEvent(Event<byte[]> event) {}
@@ -290,10 +360,9 @@ public class EndpointConnectionHandlerTests {
         return replyTo;
     }
 
-    private String replyToId(EndpointConnectionHandler handler) throws Exception {
-        // connect() answers the CONNECT frame with the connected info, whose replyToId scopes every reply destination
-        Map<String, String> connected = handler.connect(Map.of()).toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
-        return services.jsonMapper.readTree(connected.get(EventConstants.CONNECTED_INFO_HEADER)).get("replyToId").asString();
+    // The CONNECT frame is answered with the connected info, whose replyToId scopes every reply destination
+    private String replyToId() {
+        return services.jsonMapper.readTree(lastConnected.get(EventConstants.CONNECTED_INFO_HEADER)).get("replyToId").asString();
     }
 
     private Event<byte[]> request(String replyTo, String correlationId) {

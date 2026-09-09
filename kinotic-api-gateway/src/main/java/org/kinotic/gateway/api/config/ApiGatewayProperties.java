@@ -14,6 +14,8 @@ import lombok.Setter;
 public class ApiGatewayProperties {
     public static long DEFAULT_SESSION_TIMEOUT = 1000 * 60 * 30;
     public static long DEFAULT_STOMP_HEARTBEAT = 30_000;
+    public static long DEFAULT_REPLY_BUFFER_WINDOW = 10_000;
+    public static int DEFAULT_REPLY_BUFFER_MAX_BYTES = 4 * 1024 * 1024;
     public static int DEFAULT_STOMP_PORT = 58503;
 
     /**
@@ -27,6 +29,21 @@ public class ApiGatewayProperties {
      * client's disconnect deterministic, with every registration and outstanding invocation it held.
      */
     private long stompHeartbeat = DEFAULT_STOMP_HEARTBEAT;
+
+    /**
+     * How long, in milliseconds, a sticky session's reply state is held after its connection closes: the
+     * replies its calls produce in the meantime are buffered and delivered when the same client
+     * reconnects to this node. A session not reclaimed within the window is disposed and its reply
+     * destination rotated, so the client fails the calls it was waiting on. The client is told the window
+     * on connect and fails those calls itself once a disconnect outlasts it.
+     */
+    private long replyBufferWindow = DEFAULT_REPLY_BUFFER_WINDOW;
+
+    /**
+     * The most reply bytes held for one disconnected session. A session whose buffered replies exceed
+     * this is disposed and its reply destination rotated, the same exit as the window expiring.
+     */
+    private int replyBufferMaxBytes = DEFAULT_REPLY_BUFFER_MAX_BYTES;
 
     /**
      * The {@code SameSite} attribute of the session cookie. {@code LAX} sends it on requests

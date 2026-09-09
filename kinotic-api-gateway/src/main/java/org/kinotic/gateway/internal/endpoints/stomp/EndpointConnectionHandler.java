@@ -114,6 +114,7 @@ public class EndpointConnectionHandler {
                 if (connectedInfo.getReplyToId() == null) {
                     connectedInfo.setReplyToId(UUID.randomUUID().toString());
                 }
+                connectedInfo.setReplyBufferWindow(services.apiGatewayProperties.getReplyBufferWindow());
                 if (session != null) {
                     session.put(ConnectedInfo.SESSION_KEY, connectedInfo);
                 }
@@ -217,9 +218,14 @@ public class EndpointConnectionHandler {
         }
         subscriptions.forEach((s, eventConsumer) -> eventConsumer.unregister());
         subscriptions.clear();
-        replySessionState.dispose();
+        // a sticky session's reply state waits for the client to come back; a NONE session ends with its
+        // connection however the connection ended
+        if (sessionKeepAliveMode != SessionKeepAliveMode.NONE && session != null && connectedInfo != null) {
+            services.parkedReplySessions.park(replySessionState, session, connectedInfo);
+        } else {
+            replySessionState.dispose();
+        }
         serviceSessionState.dispose();
-        // a NONE session ends with its connection however the connection ended
         removeSession();
         session = null;
         connectedInfo = null;
@@ -290,7 +296,16 @@ public class EndpointConnectionHandler {
 
         } else if (cri.scheme().equals(EventConstants.REPLY_DESTINATION_SCHEME)) {
 
-            replySessionState.subscribe(cri, subscriptionIdentifier, subscriptionHandler);
+            // the destination is stable across the client's reconnects, so a state parked by, or still held
+            // by, its previous connection is taken over here, buffered replies first
+            ReplySessionState previous = services.parkedReplySessions.claim(cri, replySessionState);
+            if (previous != null) {
+                replySessionState.adopt(previous);
+            }
+            if (!replySessionState.rebind(cri, subscriptionIdentifier, subscriptionHandler)) {
+                replySessionState.subscribe(cri, subscriptionIdentifier, subscriptionHandler);
+            }
+            services.parkedReplySessions.serve(cri, replySessionState);
 
             log.debug("New Reply Subscription cri: {} id: {} for login: {}",
                       cri.raw(),

@@ -94,6 +94,10 @@ export class EventBus implements IEventBus {
             this.replyToCri = replyToCri
             this.resetRequestReplies('Reply destination changed')
         }
+        // The server holds replies for a bounded window after a drop; past it nothing in flight can complete
+        this.stompConnectionManager.outageHandler = () => {
+            this.resetRequestReplies('Connection lost for longer than the server holds replies')
+        }
     }
 
     public get fatalErrors(): Observable<Error> {

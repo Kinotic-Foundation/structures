@@ -2,7 +2,6 @@ package org.kinotic.core.api.security;
 
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.shareddata.ClusterSerializable;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -17,7 +16,6 @@ import java.nio.charset.StandardCharsets;
  * clustered session store, which marshals session values between nodes.
  * Created by Navíd Mitchell 🤪on 7/11/23.
  */
-@AllArgsConstructor
 @NoArgsConstructor
 @Getter
 @Setter
@@ -49,6 +47,17 @@ public class ConnectedInfo implements ClusterSerializable {
      * This id is the only valid "reply-to" scope that can be used by the client.
      */
     private String replyToId;
+    /**
+     * How long, in milliseconds, the gateway holds the client's reply state after its connection closes,
+     * so a reconnect within that window resumes every call in flight. A client whose connection stays
+     * down longer has nothing left to wait for.
+     */
+    private long replyBufferWindow;
+
+    public ConnectedInfo(Participant participant, String replyToId) {
+        this.participant = participant;
+        this.replyToId = replyToId;
+    }
 
     @Override
     public void writeToBuffer(Buffer buffer) {
@@ -65,6 +74,7 @@ public class ConnectedInfo implements ClusterSerializable {
         ConnectedInfo decoded = mapper().readValue(new String(json, StandardCharsets.UTF_8), ConnectedInfo.class);
         this.participant = decoded.participant;
         this.replyToId = decoded.replyToId;
+        this.replyBufferWindow = decoded.replyBufferWindow;
         return pos;
     }
 

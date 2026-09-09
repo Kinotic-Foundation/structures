@@ -10,8 +10,9 @@ import org.kinotic.core.api.exceptions.RpcServiceUnavailableException;
 import org.kinotic.core.internal.utils.EventUtil;
 import org.kinotic.gateway.internal.endpoints.Services;
 
-import java.util.HashMap;
+import java.util.ArrayDeque;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -19,6 +20,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * requests it forwarded whose replies are still outstanding. An outstanding request is pinned to the node
  * that acknowledged it, and one whose node leaves the cluster is answered on the connection's reply
  * destination with an {@link RpcServiceUnavailableException}, the way a request that fails to send is.
+ * <p>
+ * The state outlives a sticky session's connection: parked, it keeps its reply subscriptions registered and
+ * buffers what they receive, up to a byte budget, so the same client reconnecting takes every reply and
+ * every pinned request over through {@link #adopt} and {@link #rebind}.
  *
  * Created by Navíd Mitchell 🤪 on 9/9/26.
  */
@@ -26,9 +31,10 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ReplySessionState {
 
     private final Services services;
-    private final Map<String, EventConsumer> replySubscriptions = new HashMap<>();
-    // the reply metadata of every forwarded request, keyed by correlation id, until its terminal reply
-    private final ConcurrentHashMap<String, Metadata> pendingRequests = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, ReplySubscription> replySubscriptions = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, PendingRequest> pendingRequests = new ConcurrentHashMap<>();
+    private volatile Runnable onOverflow;   // set while parked
+    private long bufferedBytes;              // touched only under the parking lock
 
     public ReplySessionState(Services services) {
         this.services = services;
@@ -39,24 +45,50 @@ public class ReplySessionState {
      * request it answers before it is handed to the subscription handler.
      */
     public void subscribe(CRI cri, String subscriptionIdentifier, StompSubscriptionHandler subscriptionHandler) {
+        ReplySubscription subscription = new ReplySubscription(cri.raw(), subscriptionIdentifier, subscriptionHandler);
+        subscription.owner = this;
         EventConsumer eventConsumer = services.eventBusService.listen(cri);
-        eventConsumer.handler(event -> {
-                         settleIfTerminal(event);
-                         subscriptionHandler.handleEvent(event);
-                     })
-                     .exceptionHandler(subscriptionHandler::handleError);
-        replySubscriptions.put(subscriptionIdentifier, eventConsumer);
+        eventConsumer.handler(subscription::deliver)
+                     .exceptionHandler(throwable -> subscription.handler.handleError(throwable));
+        subscription.consumer = eventConsumer;
+        replySubscriptions.put(cri.raw(), subscription);
+    }
+
+    /**
+     * Binds a reply destination this state already listens on to a new connection's subscription handler,
+     * delivering what was buffered while parked before anything live.
+     * @return true when the destination was one of this state's, false when a subscription is still needed
+     */
+    public boolean rebind(CRI cri, String subscriptionIdentifier, StompSubscriptionHandler subscriptionHandler) {
+        ReplySubscription subscription = replySubscriptions.get(cri.raw());
+        if (subscription != null) {
+            subscription.rebind(subscriptionIdentifier, subscriptionHandler);
+        }
+        return subscription != null;
     }
 
     /**
      * @return true when the identifier named one of this connection's reply subscriptions, which is now gone
      */
     public boolean unsubscribe(String subscriptionIdentifier) {
-        EventConsumer consumer = replySubscriptions.remove(subscriptionIdentifier);
-        if (consumer != null) {
-            consumer.unregister();
+        ReplySubscription found = null;
+        for (ReplySubscription subscription : replySubscriptions.values()) {
+            if (subscriptionIdentifier.equals(subscription.subscriptionId)) {
+                found = subscription;
+            }
         }
-        return consumer != null;
+        if (found != null) {
+            replySubscriptions.remove(found.cri);
+            found.consumer.unregister();
+        }
+        return found != null;
+    }
+
+    /**
+     * @return the reply destinations this state listens on
+     */
+    public Set<String> replyDestinations() {
+        return Set.copyOf(replySubscriptions.keySet());
     }
 
     /**
@@ -68,7 +100,7 @@ public class ReplySessionState {
         if (correlationId != null) {
             String control = request.metadata().get(EventConstants.CONTROL_HEADER);
             if (control == null) {
-                pendingRequests.put(correlationId, EventUtil.replyMetadataOf(request.metadata()));
+                pendingRequests.put(correlationId, new PendingRequest(EventUtil.replyMetadataOf(request.metadata()), null));
             } else if (EventConstants.CONTROL_VALUE_CANCEL.equals(control)) {
                 // the caller gave up on the stream, so no reply is owed to it any more
                 settle(correlationId);
@@ -83,9 +115,9 @@ public class ReplySessionState {
     public void pin(String correlationId, String nodeId, CRI destination) {
         if (correlationId != null) {
             // computeIfPresent serializes with settle() on this key
-            pendingRequests.computeIfPresent(correlationId, (_, replyMetadata) -> {
+            pendingRequests.computeIfPresent(correlationId, (_, pending) -> {
                 services.requestLivenessWatcher.watch(correlationId, nodeId, () -> fail(correlationId, destination, nodeId));
-                return replyMetadata;
+                return new PendingRequest(pending.replyMetadata(), nodeId);
             });
         }
     }
@@ -100,12 +132,45 @@ public class ReplySessionState {
     }
 
     /**
-     * Ends the reply side of the connection: nothing stays pinned and no reply destination stays subscribed.
+     * Keeps the state alive without a connection: replies are buffered instead of delivered, up to the
+     * configured byte budget, and the pinned requests stay pinned.
+     * @param onOverflow run once if the buffered replies exceed the budget
+     */
+    public void park(Runnable onOverflow) {
+        this.onOverflow = onOverflow;
+        replySubscriptions.values().forEach(ReplySubscription::park);
+    }
+
+    /**
+     * Takes over everything another state holds: its pinned requests, re-pinned to this state, and its reply
+     * subscriptions with whatever they buffered. The other state is left empty.
+     */
+    public void adopt(ReplySessionState other) {
+        other.pendingRequests.forEach((correlationId, pending) -> {
+            pendingRequests.put(correlationId, pending);
+            if (pending.nodeId() != null) {
+                // watch() replaces the lease, so the other state's callback is dropped with it
+                services.requestLivenessWatcher.watch(correlationId, pending.nodeId(), () -> fail(correlationId, null, pending.nodeId()));
+            }
+        });
+        other.pendingRequests.clear();
+        other.replySubscriptions.forEach((cri, subscription) -> {
+            subscription.owner = this;
+            replySubscriptions.put(cri, subscription);
+        });
+        other.replySubscriptions.clear();
+        other.onOverflow = null;
+    }
+
+    /**
+     * Ends the reply side of the connection: nothing stays pinned, nothing stays buffered, and no reply
+     * destination stays subscribed.
      */
     public void dispose() {
         pendingRequests.keySet().forEach(this::settle);
-        replySubscriptions.values().forEach(EventConsumer::unregister);
+        replySubscriptions.values().forEach(subscription -> subscription.consumer.unregister());
         replySubscriptions.clear();
+        onOverflow = null;
     }
 
     private void settleIfTerminal(Event<byte[]> reply) {
@@ -117,15 +182,84 @@ public class ReplySessionState {
     // Runs on the connection's context when the node that took the request leaves the cluster. Only the
     // party that removes the record answers, so a reply that settled the request first leaves nothing to fail.
     private void fail(String correlationId, CRI destination, String nodeId) {
-        Metadata replyMetadata = pendingRequests.remove(correlationId);
-        if (replyMetadata != null) {
+        PendingRequest pending = pendingRequests.remove(correlationId);
+        if (pending != null) {
+            String target = destination != null ? destination.raw() : "the service";
             RpcServiceUnavailableException cause = new RpcServiceUnavailableException(
-                    "Node " + nodeId + " left the cluster while serving the request to " + destination.raw());
+                    "Node " + nodeId + " left the cluster while serving the request to " + target);
             try {
-                services.eventBusService.send(services.exceptionConverter.convert(replyMetadata, cause));
+                services.eventBusService.send(services.exceptionConverter.convert(pending.replyMetadata(), cause));
             } catch (Exception e) {
-                log.error("Could not answer request {} to {} after node {} left", correlationId, destination.raw(), nodeId, e);
+                log.error("Could not answer request {} to {} after node {} left", correlationId, target, nodeId, e);
             }
+        }
+    }
+
+    // The buffered bytes are accounted across every subscription of the state, under one lock
+    private synchronized boolean buffer(int bytes) {
+        bufferedBytes += bytes;
+        return bufferedBytes <= services.apiGatewayProperties.getReplyBufferMaxBytes();
+    }
+
+    private synchronized void release(int bytes) {
+        bufferedBytes -= bytes;
+    }
+
+    private record PendingRequest(Metadata replyMetadata, String nodeId) {}
+
+    /**
+     * One reply destination the state listens on. Delivery and the buffered replies are guarded by the
+     * subscription's own monitor: the consumer delivers on the context it was registered from, while a
+     * reconnect rebinds and flushes from the new connection's.
+     */
+    private static class ReplySubscription {
+        final String cri;
+        volatile String subscriptionId;
+        volatile StompSubscriptionHandler handler;
+        volatile ReplySessionState owner;
+        EventConsumer consumer;
+        private final ArrayDeque<Event<byte[]>> buffered = new ArrayDeque<>();
+        private boolean parked;
+
+        ReplySubscription(String cri, String subscriptionId, StompSubscriptionHandler handler) {
+            this.cri = cri;
+            this.subscriptionId = subscriptionId;
+            this.handler = handler;
+        }
+
+        synchronized void deliver(Event<byte[]> event) {
+            ReplySessionState state = owner;
+            state.settleIfTerminal(event);
+            if (parked) {
+                buffered.add(event);
+                if (!state.buffer(sizeOf(event))) {
+                    Runnable overflow = state.onOverflow;
+                    if (overflow != null) {
+                        overflow.run();
+                    }
+                }
+            } else {
+                handler.handleEvent(event);
+            }
+        }
+
+        synchronized void park() {
+            parked = true;
+        }
+
+        synchronized void rebind(String newSubscriptionId, StompSubscriptionHandler newHandler) {
+            subscriptionId = newSubscriptionId;
+            handler = newHandler;
+            parked = false;
+            Event<byte[]> event;
+            while ((event = buffered.poll()) != null) {
+                owner.release(sizeOf(event));
+                newHandler.handleEvent(event);
+            }
+        }
+
+        private static int sizeOf(Event<byte[]> event) {
+            return event.data() == null ? 0 : event.data().length;
         }
     }
 }

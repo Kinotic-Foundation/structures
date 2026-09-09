@@ -11,6 +11,7 @@ import org.kinotic.core.api.security.SecurityService;
 import org.kinotic.core.api.service.RequestLivenessWatcher;
 import org.kinotic.core.internal.api.service.ExceptionConverter;
 import org.kinotic.gateway.api.config.ApiGatewayProperties;
+import org.kinotic.gateway.internal.endpoints.stomp.ParkedReplySessions;
 import org.kinotic.core.api.directory.ServiceDirectory;
 import org.kinotic.gateway.internal.endpoints.stomp.DefaultStompServerHandler;
 import org.kinotic.gateway.internal.endpoints.stomp.StompAuthorizerFactory;
@@ -44,6 +45,8 @@ public class Services {
     public ObjectProvider<ServiceDirectory> serviceDirectoryProvider;
     @Autowired
     public SessionStore sessionStore;
+    @Autowired
+    public ParkedReplySessions parkedReplySessions;
     @Autowired
     public StompAuthorizerFactory stompAuthorizerFactory;
     @Autowired
