@@ -845,195 +845,11 @@ directory — the project's checkout lives at `<workloadDataDir>/projects/<proje
 the node that first deployed it, mounted read-write into the sync VM and read-only into
 the runtime VMs.
 
-## Organization storage
-
-A deployment of a commit that contains a UI needs storage to publish it to. The platform
-keeps one storage account per organization, provisioned when the organization is created and
-configured under `kinotic.systemApi.organizationStorage.*`:
-
-<table>
-<thead>
-  <tr>
-    <th>
-      Property
-    </th>
-    
-    <th>
-      Default
-    </th>
-    
-    <th>
-      Meaning
-    </th>
-  </tr>
-</thead>
-
-<tbody>
-  <tr>
-    <td>
-      <code>
-        disableProvisioner
-      </code>
-    </td>
-    
-    <td>
-      <code>
-        false
-      </code>
-    </td>
-    
-    <td>
-      When true, no Azure account is provisioned; every organization is pointed at the Azurite named by <code>
-        azuriteConnectionString
-      </code>
-      
-      , which stands in for its account in development and tests
-    </td>
-  </tr>
-  
-  <tr>
-    <td>
-      <code>
-        disablePrivateEndpoint
-      </code>
-    </td>
-    
-    <td>
-      <code>
-        false
-      </code>
-    </td>
-    
-    <td>
-      When true no private endpoint is created and the platform reaches each account over its public endpoint, as a server outside the platform VNet, such as a developer machine, must
-    </td>
-  </tr>
-  
-  <tr>
-    <td>
-      <code>
-        subscriptionIds
-      </code>
-    </td>
-    
-    <td>
-      <code>
-        []
-      </code>
-    </td>
-    
-    <td>
-      The Azure subscriptions accounts are spread over; an organization's account is created in one of them and stays there. Required
-    </td>
-  </tr>
-  
-  <tr>
-    <td>
-      <code>
-        resourceGroup
-      </code>
-    </td>
-    
-    <td>
-      —
-    </td>
-    
-    <td>
-      The resource group, present in every listed subscription, holding the accounts and their private endpoints. Required
-    </td>
-  </tr>
-  
-  <tr>
-    <td>
-      <code>
-        location
-      </code>
-    </td>
-    
-    <td>
-      —
-    </td>
-    
-    <td>
-      The Azure region the accounts are created in. Required
-    </td>
-  </tr>
-  
-  <tr>
-    <td>
-      <code>
-        privateEndpointSubnetId
-      </code>
-    </td>
-    
-    <td>
-      —
-    </td>
-    
-    <td>
-      Id of the subnet in the platform VNet each account's private endpoint is placed in. Required unless <code>
-        disablePrivateEndpoint
-      </code>
-      
-       is true
-    </td>
-  </tr>
-  
-  <tr>
-    <td>
-      <code>
-        privateDnsZoneId
-      </code>
-    </td>
-    
-    <td>
-      —
-    </td>
-    
-    <td>
-      Id of the <code>
-        privatelink.blob.core.windows.net
-      </code>
-      
-       private DNS zone each account is registered in. Required unless <code>
-        disablePrivateEndpoint
-      </code>
-      
-       is true
-    </td>
-  </tr>
-  
-  <tr>
-    <td>
-      <code>
-        azuriteConnectionString
-      </code>
-    </td>
-    
-    <td>
-      —
-    </td>
-    
-    <td>
-      Connection string of the Azurite the mock provisioner points every organization at, and that organization storage is reached through, while the provisioner is disabled. Required then, and unread otherwise
-    </td>
-  </tr>
-</tbody>
-</table>
-
-The required settings are validated at boot, like the GitHub App settings, so an environment
-that disables the provisioner still sets them, to placeholders; nothing reads them while it
-is disabled. In the Azure deployment, terraform creates the resource group, subnet and
-private DNS zone and passes their ids to the server (see the
-[deployment guide](/platform/deployment-guide)). The development profile disables the
-provisioner, points at a local Azurite and disables private endpoints; a developer who wants
-the real path adds the `local` profile with their own subscription, as the
-[contributing guide](/platform/contributing#publishing-uis-against-azure) describes.
-
 ## UI sites
 
-Each published UI is served from its own site, a hostname under a platform domain fronted by
-Azure Front Door, configured under `kinotic.systemApi.uiDeployment.*`:
+A deployment of a commit that contains a UI publishes it into the platform's sites storage
+account, one per environment, and it is served at its own hostname under a platform domain
+fronted by Azure Front Door. Both are configured under `kinotic.systemApi.uiDeployment.*`:
 
 <table>
 <thead>
@@ -1067,7 +883,7 @@ Azure Front Door, configured under `kinotic.systemApi.uiDeployment.*`:
     </td>
     
     <td>
-      When true no site is created; every published UI is marked ready at once, so publishing works in development and tests without Front Door
+      When true nothing is uploaded or served; every published UI is marked ready at once, so publishing works in development and tests without Azure
     </td>
   </tr>
   
@@ -1094,58 +910,6 @@ Azure Front Door, configured under `kinotic.systemApi.uiDeployment.*`:
   <tr>
     <td>
       <code>
-        dnsZoneId
-      </code>
-    </td>
-    
-    <td>
-      —
-    </td>
-    
-    <td>
-      Id of the Azure DNS zone holding <code>
-        sitesDomain
-      </code>
-      
-      , where each site's CNAME and validation TXT are written. Required
-    </td>
-  </tr>
-  
-  <tr>
-    <td>
-      <code>
-        frontDoorProfileId
-      </code>
-    </td>
-    
-    <td>
-      —
-    </td>
-    
-    <td>
-      Id of the Front Door Standard profile every site is served through. Required
-    </td>
-  </tr>
-  
-  <tr>
-    <td>
-      <code>
-        frontDoorEndpointHostName
-      </code>
-    </td>
-    
-    <td>
-      —
-    </td>
-    
-    <td>
-      Host name of the profile's endpoint, the target of every site's CNAME. Required
-    </td>
-  </tr>
-  
-  <tr>
-    <td>
-      <code>
         sitesStorageEndpoint
       </code>
     </td>
@@ -1165,14 +929,18 @@ Azure Front Door, configured under `kinotic.systemApi.uiDeployment.*`:
 </tbody>
 </table>
 
-Like organization storage, the required settings are validated at boot, and an environment
-that disables the provisioner sets them to placeholders. In the Azure deployment terraform creates the profile and endpoint and passes them to the
-server; the development profile disables the provisioner, and the `local` profile of the
+The required settings are validated at boot, like the GitHub App settings, so an environment
+that disables the provisioner still sets them, to placeholders; nothing reads them while it
+is disabled. In the Azure deployment terraform creates the account, the Front Door profile
+and the wildcard domain and passes the account and domain to the server (see the
+[deployment guide](/platform/deployment-guide)); the development profile disables the
+provisioner, and the `local` profile of the
 [contributing guide](/platform/contributing#publishing-uis-against-azure) enables it against a
-developer's own profile. Front Door reads an organization's
-storage as the profile's managed identity, which terraform grants Storage Blob Data Reader
-on the group every organization's account is created in; the account's public network is
-open to it, with anonymous access off.
+developer's own subscription. The server never reads or writes the account itself: it holds
+Storage Blob Data Contributor on it only to sign the URLs, scoped to one site's directory,
+that the publish and removal workloads act through. Front Door reads the account as the
+profile's managed identity, which holds Storage Blob Data Reader on it; the account's public
+network is open to both, with anonymous access off.
 
 ## Workload storage and log limits
 

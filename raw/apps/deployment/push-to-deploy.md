@@ -45,12 +45,11 @@ failed it. A microservice the commit no longer contains keeps its VM running but
 deployment is marked orphaned, and a commit that brings it back adopts the VM; the
 deployment is only ever destroyed on request. A microservice that cannot be left running
 is recorded failed with the reason, the others still deploy, and the step fails naming it.
-5. **Publish UIs** — uploads every UI the build VM built to your organization's storage
-through a short-lived publish VM that holds nothing but an upload URL valid for the run,
-then records each UI's site. The storage was created with your organization, so the step
-only reads it; a UI's first publish mints its site's hostname and creates the site, which
-is the one slow step a deployment ever takes on the platform's cloud, and later publishes
-keep the site and switch it to the new commit. A UI the commit no longer
+5. **Publish UIs** — uploads every UI the build VM built to its site's directory in the
+platform's storage through a short-lived publish VM that holds nothing but one upload URL
+per site, valid for the run, then records each UI's site. A UI's first publish mints its
+site's hostname; nothing else is created for a site, so it serves as soon as its files
+are up, and later publishes switch it to the new commit. A UI the commit no longer
 contains keeps serving but its deployment is marked orphaned, and a commit that brings it
 back adopts the site. The step expands on the job run page into the publish VM's log.
 
@@ -191,7 +190,7 @@ year, and the site's index is replaced last.
     </td>
     
     <td>
-      The site is being created: its hostname is registered, its certificate issued, and it does not yet serve the recorded commit
+      The site does not yet serve the recorded commit
     </td>
   </tr>
   
