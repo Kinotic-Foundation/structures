@@ -1,11 +1,7 @@
 package org.kinotic.system.internal.api.services;
 
 import com.azure.core.credential.TokenCredential;
-import com.azure.core.management.AzureEnvironment;
-import com.azure.core.management.profile.AzureProfile;
 import com.azure.identity.DefaultAzureCredentialBuilder;
-import com.azure.resourcemanager.storage.StorageManager;
-import com.azure.resourcemanager.storage.models.BlobContainer;
 import com.azure.core.util.BinaryData;
 import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobClientBuilder;
@@ -24,13 +20,9 @@ import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.Timeout;
 import org.kinotic.domain.api.model.DeploymentStatus;
 import org.kinotic.domain.api.model.DeploymentStatusType;
-import org.kinotic.domain.api.model.Organization;
-import org.kinotic.domain.api.model.OrganizationStorage;
 import org.kinotic.management.api.model.UiDeployment;
 import org.kinotic.system.api.config.KinoticSystemApiProperties;
-import org.kinotic.system.api.config.OrganizationStorageProperties;
 import org.kinotic.system.api.config.UiDeploymentProperties;
-import org.kinotic.system.api.services.OrganizationStorageProvisioner;
 import org.kinotic.system.api.services.UiStoragePaths;
 import org.yaml.snakeyaml.Yaml;
 
@@ -44,15 +36,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Date;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -60,14 +49,13 @@ import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
- * Provisions one organization's storage and publishes one site against a real Azure
- * subscription, the way the provisioning job and a deployment do, and reads back what Azure
- * serves. Runs only on a developer machine set up as the contributing guide describes: the
- * {@code local} profile in {@code kinotic-server/src/main/resources/application-local.yml}
- * names the subscription, resource group, sites account and domain, and the service principal's
- * {@code AZURE_*} variables are in the environment, which the module's test task takes from
- * {@code .env.local}. Skipped everywhere else. Everything it creates is idempotent and left in
- * place, so a second run reads through what the first created.
+ * Publishes one site into a real sites account, the way a deployment does, and reads back what
+ * Azure serves. Runs only on a developer machine set up as the contributing guide describes:
+ * the {@code local} profile in {@code kinotic-server/src/main/resources/application-local.yml}
+ * names the sites account and domain, and the service principal's {@code AZURE_*} variables are
+ * in the environment, which the module's test task takes from {@code .env.local}. Skipped
+ * everywhere else. Everything it creates is idempotent and left in place, so a second run reads
+ * through what the first created.
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -81,7 +69,7 @@ class AzureProvisioningIntegrationTest {
     private static final String SITE_LABEL = "azure-it";
     private static final String COMMIT_SHA = "0000000000000000000000000000000000000000";
     private static final String INDEX_HTML = "<!doctype html><title>azure-it</title>";
-    /** A storage account or a Front Door write takes minutes; a step past this is stuck. */
+    /** Longer than any upload or delete takes; a step past this is stuck. */
     private static final long STEP_TIMEOUT_MINUTES = 15;
     /** A site serves once its configuration reaches Front Door's edges, which Microsoft bounds at 15 minutes per change and longer when changes queue. */
     private static final long SITE_TIMEOUT_MINUTES = 45;
@@ -90,27 +78,20 @@ class AzureProvisioningIntegrationTest {
     private Vertx vertx;
     private KinoticSystemApiProperties properties;
     private TokenCredential credential;
-    private AzureOrganizationStorageProvisioner storageProvisioner;
     private FrontDoorUiDeploymentProvisioner siteProvisioner;
     private AzureSiteStorageService siteStorage;
     private final HttpClient http = HttpClient.newHttpClient();
-    private Organization organization;
 
     @BeforeAll
     void requireAzure() throws IOException {
         assumeTrue(Files.exists(LOCAL_PROFILE), "no " + LOCAL_PROFILE + ": not a developer machine set up for Azure");
         assumeTrue(System.getenv("AZURE_CLIENT_ID") != null, "AZURE_CLIENT_ID is not set: .env.local is not in the environment");
         properties = load(LOCAL_PROFILE);
-        assumeFalse(storageProperties().isDisableProvisioner(), "the local profile disables the storage provisioner");
         assumeFalse(uiProperties().isDisableProvisioner(), "the local profile disables the site provisioner");
+        assumeTrue(uiProperties().getSitesStorageEndpoint() != null, "the local profile names no sites account: apply the dev root first");
 
         vertx = Vertx.vertx();
         credential = new DefaultAzureCredentialBuilder().build();
-        StubOrganizationService organizations = new StubOrganizationService();
-        organizations.saved.put(ORGANIZATION_ID, new Organization().setId(ORGANIZATION_ID)
-                                                                   .setName("Azure integration test")
-                                                                   .setCreated(new Date()));
-        storageProvisioner = new AzureOrganizationStorageProvisioner(organizations, vertx, properties);
         siteProvisioner = new FrontDoorUiDeploymentProvisioner(vertx, properties, new StubUiDeploymentRepository());
         siteStorage = new AzureSiteStorageService(vertx, properties);
     }
@@ -124,26 +105,8 @@ class AzureProvisioningIntegrationTest {
 
     @Test
     @Order(1)
-    @Timeout(value = STEP_TIMEOUT_MINUTES, unit = TimeUnit.MINUTES)
-    void provisionsTheStorageAccount() {
-        organization = await(storageProvisioner.ensureStorage(ORGANIZATION_ID));
-
-        OrganizationStorage storage = organization.getStorage();
-        assertEquals(DeploymentStatusType.READY, storage.getStatus().type(), storage.getStatus().message());
-        assertTrue(storage.getAzureBlobEndpoint().startsWith("https://"), storage.getAzureBlobEndpoint());
-
-        StorageManager storageManager = StorageManager.authenticate(credential, profileOf(storage.getAzureSubscriptionId()));
-        BlobContainer container = storageManager.blobContainers().get(storageProperties().getResourceGroup(),
-                                                                      storage.getAzureAccountName(),
-                                                                      OrganizationStorageProvisioner.UI_CONTAINER);
-        assertNotNull(container, "the " + OrganizationStorageProvisioner.UI_CONTAINER + " container exists");
-    }
-
-    @Test
-    @Order(3)
     @Timeout(value = SITE_TIMEOUT_MINUTES, unit = TimeUnit.MINUTES)
     void servesASite() throws Exception {
-        assumeTrue(uiProperties().getSitesStorageEndpoint() != null, "the local profile names no sites account: apply the dev root first");
         String hostname = uiProperties().resolveHostname(SITE_LABEL);
         // the files go up through the site's upload URL before the site is checked, as the publish task orders it
         String uploadUrl = await(siteStorage.issueUploadUrl(hostname, Duration.ofMinutes(STEP_TIMEOUT_MINUTES)));
@@ -181,10 +144,9 @@ class AzureProvisioningIntegrationTest {
     }
 
     @Test
-    @Order(4)
+    @Order(2)
     @Timeout(value = STEP_TIMEOUT_MINUTES, unit = TimeUnit.MINUTES)
     void issuesCredentialsScopedToOneSite() throws Exception {
-        assumeTrue(uiProperties().getSitesStorageEndpoint() != null, "the local profile names no sites account: apply the dev root first");
         String hostname = uiProperties().resolveHostname(SITE_LABEL + "-scope");
         String other = uiProperties().resolveHostname(SITE_LABEL + "-other");
         String container = uiProperties().getSitesStorageEndpoint().replaceAll("/$", "") + "/" + UiStoragePaths.SITES_CONTAINER;
@@ -241,19 +203,11 @@ class AzureProvisioningIntegrationTest {
         return ret;
     }
 
-    private OrganizationStorageProperties storageProperties() {
-        return properties.getSystemApi().getOrganizationStorage();
-    }
-
     private UiDeploymentProperties uiProperties() {
         return properties.getSystemApi().getUiDeployment();
     }
 
-    private static AzureProfile profileOf(String subscriptionId) {
-        return new AzureProfile(null, subscriptionId, AzureEnvironment.AZURE);
-    }
-
-    /** Binds the two property blocks the provisioners read from the local profile's YAML. */
+    /** Binds the property block the site provisioner and storage service read from the local profile's YAML. */
     @SuppressWarnings("unchecked")
     private static KinoticSystemApiProperties load(Path localProfile) throws IOException {
         Map<String, Object> yaml;
@@ -261,23 +215,12 @@ class AzureProvisioningIntegrationTest {
             yaml = new Yaml().load(reader);
         }
         Map<String, Object> systemApi = (Map<String, Object>) ((Map<String, Object>) yaml.get("kinotic")).get("systemApi");
-        Map<String, Object> storage = (Map<String, Object>) systemApi.get("organizationStorage");
         Map<String, Object> sites = (Map<String, Object>) systemApi.get("uiDeployment");
 
         KinoticSystemApiProperties ret = new KinoticSystemApiProperties();
-        ret.getSystemApi().getOrganizationStorage()
-           .setDisableProvisioner(Boolean.TRUE.equals(storage.get("disableProvisioner")))
-           // the development profile turns private endpoints off for every developer machine; the local profile inherits that
-           .setDisablePrivateEndpoint(!Boolean.FALSE.equals(storage.get("disablePrivateEndpoint")))
-           .setSubscriptionIds((List<String>) storage.get("subscriptionIds"))
-           .setResourceGroup((String) storage.get("resourceGroup"))
-           .setLocation((String) storage.get("location"));
         ret.getSystemApi().getUiDeployment()
            .setDisableProvisioner(Boolean.TRUE.equals(sites.get("disableProvisioner")))
            .setSitesDomain((String) sites.get("sitesDomain"))
-           .setDnsZoneId((String) sites.get("dnsZoneId"))
-           .setFrontDoorProfileId((String) sites.get("frontDoorProfileId"))
-           .setFrontDoorEndpointHostName((String) sites.get("frontDoorEndpointHostName"))
            .setSitesStorageEndpoint((String) sites.get("sitesStorageEndpoint"));
         return ret;
     }

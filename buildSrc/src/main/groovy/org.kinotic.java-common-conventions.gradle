@@ -98,10 +98,6 @@ dependencyManagement {
         dependency "com.azure:azure-security-keyvault-secrets:${azureKeyvaultSecretsVersion}"
         dependency "com.azure:azure-storage-blob:${azureStorageBlobVersion}"
         dependency "com.azure:azure-storage-file-datalake:${azureStorageFileDatalakeVersion}"
-        dependency "com.azure.resourcemanager:azure-resourcemanager-cdn:${azureResourcemanagerCdnVersion}"
-        dependency "com.azure.resourcemanager:azure-resourcemanager-dns:${azureResourcemanagerDnsVersion}"
-        dependency "com.azure.resourcemanager:azure-resourcemanager-network:${azureResourcemanagerNetworkVersion}"
-        dependency "com.azure.resourcemanager:azure-resourcemanager-storage:${azureResourcemanagerStorageVersion}"
 
         dependency "com.github.ben-manes.caffeine:caffeine:${caffeineVersion}"
         dependency "com.github.jknack:handlebars:${handlebarsVersion}"

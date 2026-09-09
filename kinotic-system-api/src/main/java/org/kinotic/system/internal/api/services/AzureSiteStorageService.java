@@ -63,10 +63,11 @@ public class AzureSiteStorageService implements SiteStorageService {
         DataLakeDirectoryAsyncClient site = directories().getFileSystemAsyncClient(UiStoragePaths.SITES_CONTAINER)
                                                          .getDirectoryAsyncClient(directory);
         DataLakeServiceSasSignatureValues values = new DataLakeServiceSasSignatureValues(expiry, permission);
-        return AzureUtil.toFuture(directories().getUserDelegationKey(now.minus(KEY_START_SKEW), expiry)
-                                              .map(key -> site.generateUserDelegationSas(values, key)), vertx)
-                        // the workloads act through the blob endpoint, which honors the directory SAS
-                        .map(token -> blobEndpoint() + "/" + UiStoragePaths.SITES_CONTAINER + "/" + directory + "?" + token);
+        return Future.fromCompletionStage(directories().getUserDelegationKey(now.minus(KEY_START_SKEW), expiry)
+                                                       .map(key -> site.generateUserDelegationSas(values, key))
+                                                       .toFuture(), vertx.getOrCreateContext())
+                     // the workloads act through the blob endpoint, which honors the directory SAS
+                     .map(token -> blobEndpoint() + "/" + UiStoragePaths.SITES_CONTAINER + "/" + directory + "?" + token);
     }
 
     private String blobEndpoint() {

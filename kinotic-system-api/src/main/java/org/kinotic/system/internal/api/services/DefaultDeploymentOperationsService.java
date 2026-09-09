@@ -4,14 +4,7 @@ import io.vertx.core.Future;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.Validate;
-import org.kinotic.domain.api.model.Organization;
-import org.kinotic.domain.api.services.OrganizationService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
-import org.kinotic.grind.api.model.JobDefinition;
-import org.kinotic.grind.api.model.JobOwner;
-import org.kinotic.grind.api.model.JobRunHandle;
-import org.kinotic.grind.api.model.Tasks;
-import org.kinotic.grind.api.services.JobService;
 import org.kinotic.management.api.model.MicroserviceDeployment;
 import org.kinotic.management.api.model.UiDeployment;
 import org.kinotic.management.api.repositories.MicroserviceDeploymentRepository;
@@ -19,7 +12,6 @@ import org.kinotic.management.api.repositories.ProjectDeploymentRepository;
 import org.kinotic.management.api.repositories.UiDeploymentRepository;
 import org.kinotic.management.api.model.workload.WorkloadStatus;
 import org.kinotic.system.api.services.DeploymentOperationsService;
-import org.kinotic.system.api.services.OrganizationStorageProvisioner;
 import org.kinotic.system.api.config.KinoticSystemApiProperties;
 import org.kinotic.system.api.config.UiDeploymentProperties;
 import org.kinotic.system.api.services.SiteStorageService;
@@ -49,9 +41,6 @@ public class DefaultDeploymentOperationsService implements DeploymentOperationsS
     private final SiteWorkloadFactory siteWorkloadFactory;
     private final ProjectDeploymentRepository projectDeploymentRepository;
     private final KinoticSystemApiProperties properties;
-    private final OrganizationStorageProvisioner organizationStorageProvisioner;
-    private final OrganizationService organizationService;
-    private final JobService jobService;
 
     @Override
     public Future<Void> restartMicroservice(String deploymentId) {
@@ -173,40 +162,6 @@ public class DefaultDeploymentOperationsService implements DeploymentOperationsS
                 .recover(error -> {
                     log.warn("Files of site {} could not be deleted: {}", deployment.getId(), error.getMessage());
                     return Future.succeededFuture();
-                });
-    }
-
-    /**
-     * Runs the provisioning job: a task that provisions the organization's storage. It takes
-     * minutes on Azure, so the job runs in the background and the task records its outcome on
-     * the organization; the run itself is recorded as the organization's provisioning run,
-     * where the console shows it. The task is idempotent, so a run started again does what an
-     * earlier one left undone.
-     */
-    @Override
-    public Future<Organization> provisionOrganization(String organizationId) {
-        Validate.notBlank(organizationId, "organizationId is required");
-        return organizationService.findById(organizationId)
-                .compose(organization -> {
-                    if (organization == null) {
-                        throw new IllegalArgumentException("Organization not found: " + organizationId);
-                    }
-                    JobDefinition definition = JobDefinition.create("Provision organization " + organizationId)
-                            .name("provision-organization-" + organizationId)
-                            .version("1.0.0")
-                            .task(Tasks.fromCallable("Provision storage",
-                                                     () -> organizationStorageProvisioner.ensureStorage(organizationId)
-                                                                                         .<Void>mapEmpty()
-                                                                                         .toCompletionStage().toCompletableFuture()));
-                    JobRunHandle handle = jobService.run(definition, JobOwner.ofOrganization(organizationId, null));
-                    organization.setProvisioningJobRunId(handle.getJobRunId()).setUpdated(new Date());
-                    // the run starts once its completion is subscribed, so the run id is on the
-                    // record before the first task saves the organization
-                    return organizationService.save(organization)
-                            .onSuccess(saved -> handle.completion()
-                                    .onSuccess(v -> log.info("Organization {} is provisioned", organizationId))
-                                    .onFailure(error -> log.warn("Provisioning organization {} failed, see job run {}: {}",
-                                                                 organizationId, handle.getJobRunId(), error.getMessage())));
                 });
     }
 
