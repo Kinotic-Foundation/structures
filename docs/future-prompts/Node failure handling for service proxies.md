@@ -209,14 +209,12 @@ Spring destroys it, and drains it, before the registry and the Vert.x behind it.
 
 ## Phase 4 — gateway, caller side: session state, leases, session touch (~10 files)
 
-**The boundary-critical phase.** Introduce the object Phase 7 later parks: a
-per-connection `ReplySessionState` owning what is spread through `EndpointConnectionHandler`
+**The boundary-critical phase.** Introduce a per-connection `ReplySessionState` owning what is spread through `EndpointConnectionHandler`
 today — the `reply://` consumer and, new, the pending-request records
 `(correlationId, metadata, destination)` with a Phase 3 lease each. On lease loss, synthesize the
 error reply through the *existing* recover path (`exceptionConverter.convert` → `send`); release
 leases on terminal-marked replies observed in `StompSubscriptionEventSubscriber`. Lifecycle is
-still socket-bound here (`shutdown()` disposes it) — disposal is one call on a self-contained
-object, which is exactly the seam Phase 7 repoints.
+socket-bound (`shutdown()` disposes it), and disposal is one call on a self-contained object.
 
 Also here, because parking cannot be built on it otherwise: the session touch on the
 WebSocket path never reaches the store.
@@ -247,8 +245,7 @@ void dispose();                                 // shutdown(): settle everything
 ```
 
 Terminal replies settle inside the reply consumer's handler rather than in
-`StompSubscriptionEventSubscriber`, so that class is untouched and the state stays self-contained
-for Phase 7 to park. A lost node answers through `exceptionConverter.convert` → `eventBusService.send`
+`StompSubscriptionEventSubscriber`, so that class is untouched and the state stays self-contained. A lost node answers through `exceptionConverter.convert` → `eventBusService.send`
 on the recorded reply metadata, the same path a failed send takes.
 
 The session touch writes through `SessionStore.put` at most once per quarter of the session
@@ -413,6 +410,32 @@ Files: `KinoticUtil`, `DefaultServiceRegistry`, `VmNodeStatusType` (Java and TS)
 `DefaultWorkloadOrchestrationService`, `WorkloadOrchestrationTest` (+ `StubVmNodeService.findAll`):
 an unreachable vm-manager with no registration marks its node UNREACHABLE; one still registered
 leaves it ONLINE; a silent DRAINING node goes OFFLINE with its workload FAILED.
+
+## Wrap-up (after Phase 9)
+
+Built after the direction change, against the whole series:
+
+- The TS client's incoming heartbeat matches the gateway's `stompHeartbeat` (30 s, from 120 s). The
+  client had asked the gateway for a beat every 120 s, so a gateway VM that vanished without closing
+  the socket took stompjs two of those to notice, and every call on the connection hung for that
+  long; the gateway itself has bounded the reverse direction at two 30 s intervals since Phase 5.
+- The system console handles `UNREACHABLE`: the node list ranks nodes by fitness in the client
+  rather than by the keyword order of `status.type`, which would have put `UNREACHABLE` above
+  `ONLINE`; the dashboard counts it, the node pages explain it, and the attention list reports it.
+- `DefaultStompServerHandler.closed()` describes what a close does with the session.
+
+Still open, and outside this repository's harness:
+
+- Publish `@kinotic-ai/core` 5.0.0-beta.11 and `@kinotic-ai/system-api` 5.0.0-beta.12. The console's
+  catalog ranges admit both; `kinotic-cli` pins core at 5.0.0-beta.10 exactly and needs a bump to
+  fail its calls on a lost connection. Until core is published, a browser or CLI on 5.0.0-beta.10
+  still waits on a dropped connection.
+- A TS service's stream keeps producing when its requester's reply consumer is gone: the gateway
+  drops the replies (no handler for the address), and nothing tells the TS supervisor to cancel.
+  The Java supervisor cancels on the reply listener's INACTIVE; the gateway could forward that as
+  a cancel to the socket that owns the invocation. A leak rather than a hang, so not built here.
+- An end-to-end run against a cluster: a Java caller and a UI caller each mid-call while the serving
+  node is killed, and a UI mid-call while its gateway node is killed.
 
 ## Numbering
 

@@ -145,7 +145,9 @@ export class StompConnectionManager {
                 connectHeaders: {
                     [EventConstants.SESSION_KEEP_ALIVE_HEADER]: options.sessionKeepAlive ?? SessionKeepAliveMode.ACTIVITY
                 },
-                heartbeatIncoming: 120000,
+                // Both match the gateway's stompHeartbeat, so a gateway that vanishes without closing the
+                // socket is detected here within two intervals, the same bound the gateway applies to a client
+                heartbeatIncoming: 30000,
                 heartbeatOutgoing: 30000,
                 reconnectDelay: this.INITIAL_RECONNECT_DELAY,
                 maxReconnectDelay: this.MAX_RECONNECT_DELAY,
