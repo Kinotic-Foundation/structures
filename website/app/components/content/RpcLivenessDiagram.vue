@@ -124,7 +124,7 @@ defineProps<{ view?: 'overview' | 'failure' | 'reconnect' }>()
         <marker id="rf-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><polygon class="mk-red" points="0,0 10,5 0,10"/></marker>
       </defs>
 
-      <text class="t-tag" x="24" y="26">A · CALLEE NODE DIES MID-CALL — @SCOPEOPTIONAL METHOD, TWO INSTANCES</text>
+      <text class="t-tag" x="24" y="26">A · CALLEE NODE DIES MID-CALL — A SERVICE WITH TWO INSTANCES</text>
 
       <!-- lifeline heads -->
       <rect class="node" x="80" y="42" width="220" height="40" rx="8"/>
@@ -215,8 +215,8 @@ defineProps<{ view?: 'overview' | 'failure' | 'reconnect' }>()
       <text class="t-tiny" x="80" y="756">Same synthesis path the gateway already uses for a send that finds no handler; a socket close is the fastest signal in the system, ahead of Ignite's window.</text>
     </svg>
 
-    <!-- ═══════════════════════════ RECONNECT: mailbox and cross-node handoff ═══════════════════════════ -->
-    <svg v-else class="rpc-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1140 720" role="img" aria-label="Sequence: a TS client mid-stream loses its socket; the gateway parks the connection's reply state in a mailbox, keeping the reply registration so the server stream keeps running and replies buffer. On reconnect to the same node the mailbox reattaches and flushes. On a node rollover the client lands on gateway B, which publishes a mailbox-release; gateway A flushes its buffer to the reply address and B forwards from then on. The mailbox window and buffer are bounded; overflow rotates the replyToId so the client fails its in-flight calls through its existing reset path.">
+    <!-- ═══════════════════════════ RECONNECT: parked reply session and cross-node handoff ═══════════════════════════ -->
+    <svg v-else class="rpc-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1140 720" role="img" aria-label="Sequence: a TS client mid-stream loses its socket; the gateway parks the connection's reply session, keeping the reply registration so the server stream keeps running and replies buffer. On reconnect to the same node the parked session reattaches and flushes. On a node rollover the client lands on gateway B, which publishes a reply-session-release; gateway A flushes its buffer to the reply address and B forwards from then on. The parking window and buffer are bounded; overflow rotates the replyToId so the client fails its in-flight calls through its existing reset path.">
       <defs>
         <marker id="rr-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><polygon class="mk-ink" points="0,0 10,5 0,10"/></marker>
         <marker id="rr-ind" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><polygon class="mk-ind" points="0,0 10,5 0,10"/></marker>
@@ -228,8 +228,8 @@ defineProps<{ view?: 'overview' | 'failure' | 'reconnect' }>()
 
       <rect class="node" x="60" y="42" width="180" height="40" rx="8"/>
       <text class="t-name" x="150" y="67" text-anchor="middle">TS client</text>
-      <rect class="gw" x="330" y="42" width="200" height="40" rx="8"/>
-      <text class="t-name" x="430" y="67" text-anchor="middle">Gateway A · mailbox</text>
+      <rect class="gw" x="315" y="42" width="230" height="40" rx="8"/>
+      <text class="t-name" x="430" y="67" text-anchor="middle">Gateway A · parked session</text>
       <rect class="gw" x="620" y="42" width="200" height="40" rx="8"/>
       <text class="t-name" x="720" y="67" text-anchor="middle">Gateway B</text>
       <rect class="node" x="910" y="42" width="180" height="40" rx="8"/>
@@ -282,12 +282,12 @@ defineProps<{ view?: 'overview' | 'failure' | 'reconnect' }>()
 
       <circle class="step" cx="30" cy="540" r="11"/><text class="t-step" x="30" y="544" text-anchor="middle">4</text>
       <line class="flow-ind" x1="720" y1="540" x2="430" y2="540" marker-end="url(#rr-ind)"/>
-      <text class="t-lbl-ind" x="575" y="532" text-anchor="middle">publish(control: mailbox-release) — reaches every consumer on the address</text>
+      <text class="t-lbl-ind" x="575" y="532" text-anchor="middle">publish(control: reply-session-release) — reaches every consumer on the address</text>
 
       <circle class="step" cx="30" cy="586" r="11"/><text class="t-step" x="30" y="590" text-anchor="middle">5</text>
       <line class="flow-amb" x1="430" y1="586" x2="720" y2="586" marker-end="url(#rr-amb)"/>
       <text class="t-lbl-amb" x="575" y="578" text-anchor="middle">A unregisters, re-sends its buffer to the reply address, then flush-complete</text>
-      <text class="t-tiny" x="60" y="606">A's mailbox is done; B is now the only consumer for the address.</text>
+      <text class="t-tiny" x="60" y="606">A's parked session is done; B is now the only consumer for the address.</text>
 
       <circle class="step" cx="30" cy="640" r="11"/><text class="t-step" x="30" y="644" text-anchor="middle">6</text>
       <line class="flow" x1="1000" y1="640" x2="720" y2="640" marker-end="url(#rr-ink)"/>

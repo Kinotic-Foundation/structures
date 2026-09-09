@@ -72,8 +72,11 @@ NO_HANDLERS mapping (proxy, gateway, MCP) and the proxy path now reports unreach
 
 ## Phase 2 — the ack names the node (~7 files)
 
-Address-level watching alone has a blind spot that `@ScopeOptional` turned from hypothetical into
-a designed case. A scoped service now registers on two addresses:
+Address-level watching alone has a blind spot: any address with more than one registration
+round-robins, and it stays ACTIVE while *any* instance survives. That is every unscoped service
+published on more than one node — Java on N JVMs, or N TS instances of one service — and also the
+shared unscoped address a scoped service joins for its `@ScopeOptional` methods, which behaves
+exactly like any other multi-instance address:
 
 ```java
 // ServiceInvocationSupervisor.java:139-144
@@ -83,9 +86,8 @@ if(serviceDescriptor.serviceIdentifier().scope() != null && !scopeOptionalMethod
 }
 ```
 
-An unscoped call to a `@ScopeOptional` method round-robins across N instances, and the address
-stays ACTIVE while *any* instance survives — so the caller has to know **which** registration took
-its request. The ack is where that is learned, and it costs nothing on the wire beyond the reply
+However an address comes to hold N registrations, a call to it lands on one of them, so the
+caller has to know **which** registration took its request. The ack is where that is learned, and it costs nothing on the wire beyond the reply
 body the ack already sends:
 
 ```java
@@ -143,9 +145,8 @@ Coverage of the round-robin cases:
 | Call | Ack names | Fails when |
 |---|---|---|
 | scoped `srv://<scope>@…` | the one node | either rule; immediate |
-| unscoped `@ScopeOptional` to Java instances (one per JVM) | the JVM that took it | that JVM leaves the set |
-| unscoped `@ScopeOptional` to TS instances on gateways | the **gateway** holding that instance's subscription | that gateway dies (this phase); the instance dies while its gateway lives (Phase 5) |
-| unscoped Java service published on N JVMs | the JVM that took it | that JVM leaves the set |
+| unscoped, N Java instances (one per JVM) — a service on N nodes, or `@ScopeOptional` methods | the JVM that took it | that JVM leaves the set |
+| unscoped, N TS instances behind gateways | the **gateway** holding that instance's subscription | that gateway dies (this phase); the instance dies while its gateway lives (Phase 5) |
 
 Wired into `DefaultRpcServiceProxyHandle` (lease per correlationId, symmetric with the existing
 send-failure path — `onLost` calls `handler.processError(new RpcServiceUnavailableException(...))`)
@@ -165,7 +166,7 @@ it is not restructured.
 
 ## Phase 4 — gateway, caller side: session state, leases, session touch (~10 files)
 
-**The boundary-critical phase.** Introduce the object the mailbox later detaches: a
+**The boundary-critical phase.** Introduce the object Phase 7 later parks: a
 per-connection `ReplySessionState` owning what is spread through `EndpointConnectionHandler`
 today — the `reply://` consumer and, new, the pending-request records
 `(correlationId, metadata, destination)` with a Phase 3 lease each. On lease loss, synthesize the
@@ -174,7 +175,7 @@ leases on terminal-marked replies observed in `StompSubscriptionEventSubscriber`
 still socket-bound here (`shutdown()` disposes it) — disposal is one call on a self-contained
 object, which is exactly the seam Phase 7 repoints.
 
-Also here, because the mailbox cannot be built on it otherwise: the session touch on the
+Also here, because parking cannot be built on it otherwise: the session touch on the
 WebSocket path never reaches the store.
 
 ```java
@@ -225,7 +226,7 @@ failure-detection window.
 
 Files: `ApiGatewayProperties`, `ApiGatewayVertcleFactory`, delivered-invocation tracking on the
 service-subscription side of `EndpointConnectionHandler`/`ReplySessionState`'s sibling, tests
-(heartbeat closes a dead socket; a caller of a `@ScopeOptional` method fails when the TS instance
+(heartbeat closes a dead socket; a caller of a multi-instance service fails when the TS instance
 that took it disconnects while another instance stays up).
 
 ## Phase 6 — TS client edges (~4 files)
@@ -237,13 +238,13 @@ crosses to TS as more than a message string (the `EventBus.ts` TODO); the `NONE`
 where a network drop keeps the session and resurrects the old `replyToId` until expiry; and the
 vm-manager's overlapping heartbeat `setInterval`.
 
-Not in scope: failing in-flight calls on a sticky reconnect. That is what the mailbox exists to
+Not in scope: failing in-flight calls on a sticky reconnect. That is what parking exists to
 avoid.
 
-## Phase 7 — reply mailbox, same node (~9 files)
+## Phase 7 — parked reply sessions, same node (~9 files)
 
 On `closed()` with a sticky session, `shutdown()` *parks* the `ReplySessionState` in a node-local
-`ReplyMailboxManager` instead of disposing: the reply consumer keeps consuming into a bounded
+`ParkedReplySessions` instead of disposing: the reply consumer keeps consuming into a bounded
 buffer, leases stay armed (a callee dying during the gap synthesizes a buffered error), and —
 because the registration stays — `ServiceInvocationSupervisor`'s reply-listener monitor stays
 ACTIVE, so long-running server streams survive the reconnect instead of being cancelled. Reattach
@@ -251,14 +252,14 @@ and flush on same-node reconnect.
 
 Adjustments from the re-validation:
 
-- **The window is a gateway property**, beside `sessionTimeout`; the mailbox never derives its
+- **The window is a gateway property**, beside `sessionTimeout`; parking never derives its
   lifetime from the clustered session's expiry (the Phase 4 fix makes that expiry correct, but the
   window is gateway policy either way).
-- **Replies only.** The client no longer queues requests during a gap, so the mailbox holds
+- **Replies only.** The client no longer queues requests during a gap, so a parked session holds
   inbound replies and nothing else.
-- **A byte budget per mailbox**, and a new heap term for the sizing doc: parked replies are
+- **A byte budget per parked session**, and a new heap term for the sizing doc: parked replies are
   heap-resident bodies up to `maxEventPayloadSize`, and the direct-memory-exhaustion scenario in
-  NavidNotes parks many mailboxes on one node at once.
+  NavidNotes parks many sessions on one node at once.
 
 Two exits. Window expiry: dispose, drop the buffer, close leases (streams then cancel through the
 existing INACTIVE path). Overflow: dispose and **rotate the `replyToId`** in the session's
@@ -268,9 +269,9 @@ loss signals through a mechanism that already ships, and login is untouched.
 
 A client that reconnects through a fresh handshake without its session (the vm-manager's
 `reconnectOnFatalError` loop re-authenticates with credentials) gets a new `replyToId`; its old
-mailbox is orphaned until the window expires. The window bounds a leak, not only a wait.
+parked session is orphaned until the window expires. The window bounds a leak, not only a wait.
 
-Files: `ReplyMailboxManager`, park/reattach in `EndpointConnectionHandler` + `ReplySessionState`,
+Files: `ParkedReplySessions`, park/reattach in `EndpointConnectionHandler` + `ReplySessionState`,
 `replyToId` rotation, properties, tests (blip mid-stream on one gateway → stream continues;
 overflow → calls fail with the reset error).
 
@@ -285,15 +286,15 @@ replies are on the old one. Protocol over the event bus itself:
 void publish(Event<byte[]> event);
 ```
 
-The new node registers its reply consumer, then `publish`es a `control: mailbox-release` to the
-reply address — with `publish` it reaches both the old mailbox and the new consumer regardless of
+The new node registers its reply consumer, then `publish`es a `control: reply-session-release` to the
+reply address — with `publish` it reaches both the parked session's consumer and the new consumer regardless of
 registration order, which removes the split-brain reasoning the earlier `send`-based sketch
-needed. The old mailbox stops consuming, re-sends its buffer to the same address (now routing only
+needed. The parked session stops consuming, re-sends its buffer to the same address (now routing only
 to the new node), transfers its pending records, and ends with `flush-complete`; the new node
-holds client forwarding until then, preserving per-correlation stream order. A mailbox that never
+holds client forwarding until then, preserving per-correlation stream order. A parked session that never
 answers is bounded by the same registration monitoring, no timeouts here either.
 
-Files: control values in `EventConstants`, release/flush in `ReplyMailboxManager`, the hold in
+Files: control values in `EventConstants`, release/flush in `ParkedReplySessions`, the hold in
 `ReplySessionState`, a pending-record codec, a two-gateway test (kill gateway A mid-stream,
 reconnect to B, stream resumes complete and ordered).
 
@@ -324,7 +325,7 @@ that loses Loki/Tempo and then dies keeps its workloads RUNNING forever.
 | 2 watcher (address-level) | 2 ack names the node, 3 watcher (node-level) |
 | 3 gateway leases + heartbeats | 4 caller side + session touch, 5 callee side + heartbeats |
 | 4 TS edges | 6 |
-| 5 mailbox | 7 |
+| 5 mailbox | 7 parked reply sessions |
 | 6 handoff | 8 |
 | 7 orchestrator | 9 |
 
