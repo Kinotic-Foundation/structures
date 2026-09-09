@@ -36,6 +36,7 @@ kinotic:
       dnsZoneId: "-"
       frontDoorProfileId: "-"
       frontDoorEndpointHostName: "-"
+      sitesStorageEndpoint: "-"
     deployment:
       # A workload runs inside a micro VM, so "localhost" there is the guest, not this machine.
       # Local development runs the BOXLITE provider, whose guests reach the host on the
