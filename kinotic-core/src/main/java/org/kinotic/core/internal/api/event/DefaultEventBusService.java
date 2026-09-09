@@ -70,10 +70,8 @@ public class DefaultEventBusService implements EventBusService {
     }
 
     @Override
-    public Flux<Set<String>> monitorRegisteredNodes(CRI cri) {
-        // Every registration change on the address emits its resulting node set, dedupe to changes
-        return clusterManager.registeredNodesFlux(cri.baseResource())
-                             .distinctUntilChanged();
+    public Flux<Set<String>> monitorClusterNodes() {
+        return clusterManager.clusterNodesFlux();
     }
 
     @Override

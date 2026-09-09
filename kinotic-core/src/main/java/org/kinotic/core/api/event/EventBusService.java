@@ -65,14 +65,12 @@ public interface EventBusService {
     Flux<ListenerStatus> monitorListenerStatus(CRI cri);
 
     /**
-     * Monitors which nodes hold a listener for the {@link CRI#baseResource()} of the given {@link CRI}.
-     * Node ids are the ones {@link #sendWithAck(Event)} completes with, so a sender can tell whether the
-     * node that took its event is still listening.
-     * @param cri to check for registered listeners
-     * @return a {@link Flux} that emits the current set of node ids on subscribe and every change after that;
-     *         an empty set means nothing is listening
+     * Monitors the membership of the cluster. Node ids are the ones {@link #sendWithAck(Event)} completes
+     * with, so a sender can tell whether the node that took its event is still part of the cluster.
+     * @return a {@link Flux} that emits the current set of node ids on subscribe and the resulting set
+     *         every time a node joins or leaves
      */
-    Flux<Set<String>> monitorRegisteredNodes(CRI cri);
+    Flux<Set<String>> monitorClusterNodes();
 
     /**
      * Monitors listener registration events across all service ({@code srv://}) addresses. A

@@ -7,7 +7,7 @@ defineProps<{ view?: 'overview' | 'failure' | 'reconnect' }>()
   <div class="rpc-diagram-wrap">
 
     <!-- ═══════════════════════════ OVERVIEW: registration is liveness ═══════════════════════════ -->
-    <svg v-if="!view || view === 'overview'" class="rpc-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1140 664" role="img" aria-label="Every hop that holds a pending request watches the callee's event bus registration: Java proxies and the MCP invoker through the request liveness watcher, TS clients through the gateway on their behalf. A dead node's registrations leave the replicated subscription cache, and every lease pinned to that node fails with RpcServiceUnavailableException.">
+    <svg v-if="!view || view === 'overview'" class="rpc-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1140 664" role="img" aria-label="Every hop that holds a pending request holds a lease pinned to the node the acknowledgement named: Java proxies and the MCP invoker through the request liveness watcher, TS clients through the gateway on their behalf. When that node leaves the cluster, every lease pinned to it fails with RpcServiceUnavailableException.">
       <defs>
         <marker id="rk-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><polygon class="mk-ink" points="0,0 10,5 0,10"/></marker>
         <marker id="rk-ind" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><polygon class="mk-ind" points="0,0 10,5 0,10"/></marker>
@@ -65,17 +65,17 @@ defineProps<{ view?: 'overview' | 'failure' | 'reconnect' }>()
       <text class="t-name" x="530" y="468" text-anchor="middle">KinoticIgniteClusterManager</text>
       <line class="sep" x1="396" y1="476" x2="664" y2="476"/>
       <text class="t-mono" x="530" y="493" text-anchor="middle">statusFlux(address) · ACTIVE / INACTIVE</text>
-      <text class="t-mono" x="530" y="508" text-anchor="middle">registeredNodesFlux(address) · { nodeId }</text>
-      <text class="t-tiny" x="530" y="525" text-anchor="middle">fed by registration updates the bus already delivers</text>
+      <text class="t-mono" x="530" y="508" text-anchor="middle">clusterNodesFlux() · membership { nodeId }</text>
+      <text class="t-tiny" x="530" y="525" text-anchor="middle">fed by registration updates and discovery events</text>
 
       <rect class="watch" x="380" y="206" width="300" height="150" rx="8"/>
       <text class="t-name" x="530" y="228" text-anchor="middle">RequestLivenessWatcher</text>
       <line class="sep" x1="396" y1="236" x2="664" y2="236"/>
-      <text class="t-mono" x="530" y="254" text-anchor="middle">lease = (address, correlationId)</text>
-      <text class="t-mono" x="530" y="269" text-anchor="middle">before ack: address INACTIVE → onLost</text>
+      <text class="t-mono" x="530" y="254" text-anchor="middle">lease = (correlationId, nodeId from the ack)</text>
+      <text class="t-mono" x="530" y="269" text-anchor="middle">before ack: Vert.x fails the request itself</text>
       <text class="t-mono" x="530" y="284" text-anchor="middle">after ack: pinned to nodeId</text>
-      <text class="t-mono" x="530" y="299" text-anchor="middle">nodeId leaves the set → onLost</text>
-      <text class="t-mono" x="530" y="320" text-anchor="middle">one monitor per address, refcounted</text>
+      <text class="t-mono" x="530" y="299" text-anchor="middle">nodeId leaves the cluster → onLost</text>
+      <text class="t-mono" x="530" y="320" text-anchor="middle">one membership subscription per JVM</text>
       <text class="t-mono" x="530" y="335" text-anchor="middle">pendingCount() → node metric</text>
 
       <!-- callers use the watcher -->
@@ -85,7 +85,7 @@ defineProps<{ view?: 'overview' | 'failure' | 'reconnect' }>()
 
       <!-- signals cluster manager → watcher -->
       <line class="flow-red" x1="530" y1="446" x2="530" y2="356" marker-end="url(#rk-red)"/>
-      <text class="t-tiny" x="540" y="432">status · node set</text>
+      <text class="t-tiny" x="540" y="432">status · membership</text>
       <line class="flow-red" x1="640" y1="446" x2="760" y2="356" marker-end="url(#rk-red)"/>
       <text class="t-tiny" x="700" y="432">to gateway leases</text>
 
@@ -117,7 +117,7 @@ defineProps<{ view?: 'overview' | 'failure' | 'reconnect' }>()
     </svg>
 
     <!-- ═══════════════════════════ FAILURE: a call in flight when its node dies ═══════════════════════════ -->
-    <svg v-else-if="view === 'failure'" class="rpc-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1140 780" role="img" aria-label="Sequence: the caller sends a request and takes a lease; the ack names node N2 and the lease pins to it; N2 dies; Ignite removes N2's registrations; the watcher sees N2 leave the address's node set and fails the lease with RpcServiceUnavailableException even though another instance keeps the address active. Below, a TS instance dying behind a live gateway: the gateway synthesizes the error for every invocation outstanding on that socket.">
+    <svg v-else-if="view === 'failure'" class="rpc-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1140 780" role="img" aria-label="Sequence: the caller sends a request and takes a lease; the ack names node N2 and the lease pins to it; N2 dies; Ignite detects the failure and N2 leaves the cluster membership; the watcher fails the lease with RpcServiceUnavailableException even though another instance keeps the address active. Below, a TS instance dying behind a live gateway: the gateway synthesizes the error for every invocation outstanding on that socket.">
       <defs>
         <marker id="rf-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><polygon class="mk-ink" points="0,0 10,5 0,10"/></marker>
         <marker id="rf-ind" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><polygon class="mk-ind" points="0,0 10,5 0,10"/></marker>
@@ -167,17 +167,17 @@ defineProps<{ view?: 'overview' | 'failure' | 'reconnect' }>()
       <!-- 5 registrations removed -->
       <circle class="step" cx="40" cy="346" r="11"/><text class="t-step" x="40" y="350" text-anchor="middle">4</text>
       <rect class="note-red" x="420" y="330" width="240" height="46" rx="6"/>
-      <text class="t-mono-red" x="540" y="349" text-anchor="middle">N2's registrations removed</text>
+      <text class="t-mono-red" x="540" y="349" text-anchor="middle">N2 leaves the membership</text>
       <text class="t-mono-red" x="540" y="364" text-anchor="middle">address → { N1 }   still ACTIVE</text>
       <line class="flow-red" x1="420" y1="353" x2="190" y2="353" marker-end="url(#rf-red)"/>
-      <text class="t-tiny" x="300" y="345" text-anchor="middle">registeredNodesFlux emits { N1 }</text>
+      <text class="t-tiny" x="300" y="345" text-anchor="middle">clusterNodesFlux emits { N1, … }</text>
 
       <!-- 6 lease fails -->
       <circle class="step" cx="40" cy="400" r="11"/><text class="t-step" x="40" y="404" text-anchor="middle">5</text>
       <rect class="note-red" x="80" y="384" width="410" height="32" rx="6"/>
-      <text class="t-mono-red" x="285" y="404" text-anchor="middle">N2 ∉ { N1 } → onLost → RpcServiceUnavailableException</text>
+      <text class="t-mono-red" x="285" y="404" text-anchor="middle">N2 ∉ membership → onLost → RpcServiceUnavailableException</text>
       <text class="t-tiny" x="80" y="438">The address never went INACTIVE — N1 still serves it. The lease fails anyway, because it was pinned to the node that took the request.</text>
-      <text class="t-tiny" x="80" y="452">Before the ack arrives, the lease instead fails on the address going INACTIVE — the single-registration case, every scoped call.</text>
+      <text class="t-tiny" x="80" y="452">Had N2 only unregistered the address to drain before shutting down, the lease would hold: it fails on the node leaving the cluster, not the address.</text>
 
       <!-- ─────────── B ─────────── -->
       <line class="sep" x1="24" y1="478" x2="1116" y2="478"/>
@@ -216,7 +216,7 @@ defineProps<{ view?: 'overview' | 'failure' | 'reconnect' }>()
     </svg>
 
     <!-- ═══════════════════════════ RECONNECT: parked reply session and cross-node handoff ═══════════════════════════ -->
-    <svg v-else class="rpc-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1140 720" role="img" aria-label="Sequence: a TS client mid-stream loses its socket; the gateway parks the connection's reply session, keeping the reply registration so the server stream keeps running and replies buffer. On reconnect to the same node the parked session reattaches and flushes. On a node rollover the client lands on gateway B, which publishes a reply-session-release; gateway A flushes its buffer to the reply address and B forwards from then on. The parking window and buffer are bounded; overflow rotates the replyToId so the client fails its in-flight calls through its existing reset path.">
+    <svg v-else class="rpc-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1140 720" role="img" aria-label="Sequence: a TS client mid-stream loses its socket; the gateway parks the connection's reply session, keeping the reply registration so the server stream keeps running and replies buffer. On reconnect to the same node the parked session reattaches and flushes. On a node rollover the client lands on gateway B, which publishes a reply-session-release; gateway A flushes its buffer to the reply address and B forwards from then on. The parking window and buffer are bounded; expiry and overflow both rotate the replyToId so the client fails its in-flight calls through its existing reset path, and a client whose socket stays down past the window fails them itself.">
       <defs>
         <marker id="rr-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><polygon class="mk-ink" points="0,0 10,5 0,10"/></marker>
         <marker id="rr-ind" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><polygon class="mk-ind" points="0,0 10,5 0,10"/></marker>
@@ -297,8 +297,8 @@ defineProps<{ view?: 'overview' | 'failure' | 'reconnect' }>()
 
       <!-- exits -->
       <rect class="note-red" x="60" y="664" width="1030" height="40" rx="6"/>
-      <text class="t-mono-red" x="575" y="681" text-anchor="middle">Exits: window expiry → dispose, streams cancel through the reply-listener INACTIVE path already in place.</text>
-      <text class="t-mono-red" x="575" y="696" text-anchor="middle">Buffer overflow → dispose and rotate replyToId; the next CONNECT hands the client a new reply CRI and its existing reset path fails the in-flight calls.</text>
+      <text class="t-mono-red" x="575" y="681" text-anchor="middle">Exits: window expiry → dispose and rotate replyToId; streams cancel through the reply-listener INACTIVE path already in place.</text>
+      <text class="t-mono-red" x="575" y="696" text-anchor="middle">Overflow → the same. The next CONNECT hands the client a new reply CRI and its reset path fails the in-flight calls; down past the window, the client fails them itself.</text>
     </svg>
   </div>
 </template>

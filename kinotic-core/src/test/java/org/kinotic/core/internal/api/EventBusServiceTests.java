@@ -72,45 +72,18 @@ public class EventBusServiceTests {
     }
 
     /**
-     * Pins the monitorRegisteredNodes contract, the node-level counterpart of the status monitor: the set
-     * names the nodes holding a listener, so a sender can tell whether the node that acknowledged its event
-     * is still among them. On one node the set is either this node or empty.
+     * Pins the monitorClusterNodes contract: the set names every cluster member by the id an acknowledgement
+     * carries, so a sender can tell whether the node that acknowledged its event is still among them.
      */
     @Test
-    public void testMonitorRegisteredNodesTracksListenerLifecycle() throws Exception {
-        CRI cri = CRI.create(EventConstants.SERVICE_DESTINATION_SCHEME, "org.kinotic.tests.RegisteredNodesProbe");
-        Set<String> thisNode = Set.of(kinotic.serverInfo().getNodeId());
-
-        EventConsumer consumer = eventBusService.listen(cri);
-        consumer.handler(event -> {});
-        consumer.completion().toCompletionStage().toCompletableFuture().get(10, TimeUnit.SECONDS);
-
-        AtomicReference<EventConsumer> relistened = new AtomicReference<>();
-        try {
-            StepVerifier.create(eventBusService.monitorRegisteredNodes(cri))
-                        .expectNext(thisNode)
-                        .then(consumer::unregister)
-                        .expectNext(Set.of())
-                        .then(() -> {
-                            EventConsumer ec = eventBusService.listen(cri);
-                            ec.handler(event -> {});
-                            relistened.set(ec);
-                        })
-                        .expectNext(thisNode)
-                        .thenCancel()
-                        .verify(Duration.ofSeconds(15));
-        } finally {
-            EventConsumer ec = relistened.get();
-            if(ec != null){
-                ec.unregister();
-            }
-        }
+    public void testMonitorClusterNodesNamesThisNode() {
+        // the test cluster is a single node, so the membership is exactly this node
+        StepVerifier.create(eventBusService.monitorClusterNodes())
+                    .expectNext(Set.of(kinotic.serverInfo().getNodeId()))
+                    .thenCancel()
+                    .verify(Duration.ofSeconds(15));
     }
 
-    /**
-     * The acknowledgement names the node whose consumer took the event, in the same id space
-     * monitorRegisteredNodes reports, which is what lets a sender pin a request to one registration.
-     */
     @Test
     public void testSendWithAckNamesTheReceivingNode() throws Exception {
         CRI cri = CRI.create(EventConstants.SERVICE_DESTINATION_SCHEME, "org.kinotic.tests.AckProbe");
