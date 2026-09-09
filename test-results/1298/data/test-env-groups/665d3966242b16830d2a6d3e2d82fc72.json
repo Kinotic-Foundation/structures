@@ -1,0 +1,1 @@
+{"id":"665d3966242b16830d2a6d3e2d82fc72","fullName":"org.kinotic.test.tests.sql.CompositeTypeTest.whenCreateTableWithUnionColumn_thenMergedFlatObject","name":"whenCreateTableWithUnionColumn_thenMergedFlatObject()","status":"broken","testResultsByEnv":{"default":"3ae77b951eb6289fa3e63259b307f76b"}}
