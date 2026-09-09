@@ -292,10 +292,28 @@ the same synthesis path as Phase 4. This closes the last row of the Phase 3 tabl
 fastest signal there is for the scoped VM-node case — a socket close, ahead of Ignite's
 failure-detection window.
 
-Files: `ApiGatewayProperties`, `ApiGatewayVertcleFactory`, delivered-invocation tracking on the
-service-subscription side of `EndpointConnectionHandler`/`ReplySessionState`'s sibling, tests
-(heartbeat closes a dead socket; a caller of a multi-instance service fails when the TS instance
-that took it disconnects while another instance stays up).
+As built. The premise on heartbeats was stale: vertx-stomp-lite already negotiates them, with a
+server default of 30 s both ways, and closes a connection silent for two intervals through
+`handler.closed()`. What the phase adds is the interval as `ApiGatewayProperties.stompHeartbeat`
+(30 s), set explicitly on `StompServerOptions`, so the detection window is a deployment setting
+rather than a library default nobody reads.
+
+```java
+// ServiceSessionState — the callee side of one connection, sibling of ReplySessionState
+void deliver(Event<byte[]> event);           // in the srv:// subscription handler; a cancel forgets its invocation
+void settleIfTerminal(Event<byte[]> reply);  // in send() on the reply scheme, the way back through the connection
+void dispose();                              // shutdown(): RpcServiceUnavailableException to every reply-to still outstanding
+```
+
+`EventUtil.replyMetadataOf` and `EventUtil.isTerminalReply` carry the two rules both session
+states share.
+
+Files: `ApiGatewayProperties`, `ApiGatewayVertcleFactory`, `ServiceSessionState`,
+`EndpointConnectionHandler`, `EventUtil`, `ReplySessionState` (uses the shared helpers),
+`EndpointConnectionHandlerTests` (a closed connection answers the invocations it still owes; a
+terminal reply back through the connection settles one), `StompHeartbeatTests` (a real
+stomp-lite server on a free port: a client that offers a heartbeat and goes silent is disconnected
+after two intervals).
 
 ## Phase 6 — TS client edges (~4 files)
 
