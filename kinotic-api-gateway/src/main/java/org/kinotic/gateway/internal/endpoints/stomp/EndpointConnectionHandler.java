@@ -41,7 +41,9 @@ public class EndpointConnectionHandler {
     private final SecurityService securityService;
     private final Services services;
     private final Map<String, EventConsumer> subscriptions = new HashMap<>();
+    private final ReplySessionState replySessionState;
     private Session session;
+    private long lastSessionFlush = 0;
     private ConnectedInfo connectedInfo;
     private StompAuthorizer stompAuthorizer;
     private SessionKeepAliveMode sessionKeepAliveMode = SessionKeepAliveMode.ACTIVITY;
@@ -50,6 +52,7 @@ public class EndpointConnectionHandler {
     public EndpointConnectionHandler(Services services) {
         this.services = services;
         this.securityService = services.securityService;
+        this.replySessionState = new ReplySessionState(services);
     }
 
     public Future<MultiMap> handshake(RoutingContext routingContext) {
@@ -151,9 +154,15 @@ public class EndpointConnectionHandler {
                 // make sure reply-to if present is scoped to sender
                 validateReplyToForServiceRequest(incomingEvent);
 
+                String correlationId = incomingEvent.metadata().get(EventConstants.CORRELATION_ID_HEADER);
+                replySessionState.track(incomingEvent);
+
                 return services.eventBusService
                         .sendWithAck(incomingEvent)
+                        .onSuccess(nodeId -> replySessionState.pin(correlationId, nodeId, incomingEvent.cri()))
                         .recover(throwable -> {
+                            // no reply will come for a request that never left
+                            replySessionState.settle(correlationId);
                             throwable = KinoticUtil.mapSendFailure(throwable,
                                                                    incomingEvent.cri(),
                                                                    services.serviceDirectoryProvider.getIfAvailable());
@@ -200,6 +209,7 @@ public class EndpointConnectionHandler {
         }
         subscriptions.forEach((s, eventConsumer) -> eventConsumer.unregister());
         subscriptions.clear();
+        replySessionState.dispose();
         session = null;
         connectedInfo = null;
         stompAuthorizer = null;
@@ -268,11 +278,7 @@ public class EndpointConnectionHandler {
 
         } else if (cri.scheme().equals(EventConstants.REPLY_DESTINATION_SCHEME)) {
 
-            EventConsumer eventConsumer = services.eventBusService.listen(cri);
-            eventConsumer.handler(subscriptionHandler::handleEvent)
-                         .exceptionHandler(subscriptionHandler::handleError);
-
-            subscriptions.put(subscriptionIdentifier, eventConsumer);
+            replySessionState.subscribe(cri, subscriptionIdentifier, subscriptionHandler);
 
             log.debug("New Reply Subscription cri: {} id: {} for login: {}",
                       cri.raw(),
@@ -289,11 +295,13 @@ public class EndpointConnectionHandler {
 
         signalActivity();
 
-        EventConsumer consumer = subscriptions.remove(subscriptionIdentifier);
-        if (consumer != null) {
-            consumer.unregister();
-        } else {
-            log.debug("No subscription exists for subscriptionIdentifier: {}", subscriptionIdentifier);
+        if (!replySessionState.unsubscribe(subscriptionIdentifier)) {
+            EventConsumer consumer = subscriptions.remove(subscriptionIdentifier);
+            if (consumer != null) {
+                consumer.unregister();
+            } else {
+                log.debug("No subscription exists for subscriptionIdentifier: {}", subscriptionIdentifier);
+            }
         }
     }
 
@@ -322,8 +330,36 @@ public class EndpointConnectionHandler {
                 log.error("Session is null while sessionKeepAliveMode is ACTIVITY");
                 throw new IllegalStateException("Internal server error");
             }
-            session.setAccessed();
+            touchSession();
         }
+    }
+
+    // SessionHandler flushes a session to the store when a response ends, which on a WebSocket happened
+    // once, at the upgrade. Every touch after that has to reach the store itself or the clustered entry
+    // expires under the open connection. The write is rate limited to a fraction of the timeout, which
+    // bounds how far the stored expiry lags a busy connection.
+    private void touchSession() {
+        session.setAccessed();
+        long now = System.currentTimeMillis();
+        if (now - lastSessionFlush >= services.apiGatewayProperties.getSessionTimeout() / 4) {
+            lastSessionFlush = now;
+            flushSession(session);
+        }
+    }
+
+    private void flushSession(Session flushed) {
+        services.sessionStore.put(flushed).onFailure(throwable -> {
+            // a request on the same cookie may have stored a newer version in the meantime; the stored
+            // copy carries the same data, so it is adopted and the touch retried on it once
+            services.sessionStore.get(flushed.id()).onSuccess(stored -> {
+                if (stored != null && session == flushed) {
+                    session = stored;
+                    stored.setAccessed();
+                    services.sessionStore.put(stored)
+                                         .onFailure(retryFailure -> log.warn("Session {} could not be refreshed in the store", stored.id(), retryFailure));
+                }
+            });
+        });
     }
 
     private void startSessionTouchTimer() {
@@ -337,7 +373,7 @@ public class EndpointConnectionHandler {
                 log.error("Session is null while session-touch timer is active");
                 throw new IllegalStateException("Internal server error");
             }
-            session.setAccessed();
+            touchSession();
         });
     }
 
