@@ -1,0 +1,1 @@
+{"id":"321ce8180c5d6ae0d903073482d5eb91","fullName":"org.kinotic.test.tests.sql.CompositeTypeTest.whenObjectInsideNested_thenDeepMappingCorrect","name":"whenObjectInsideNested_thenDeepMappingCorrect()","status":"passed","testResultsByEnv":{"default":"fdb4c04cc6d5c707210dd17a1ea6e629"}}
