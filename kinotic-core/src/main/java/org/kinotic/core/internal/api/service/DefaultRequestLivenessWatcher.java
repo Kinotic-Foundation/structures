@@ -45,7 +45,7 @@ public class DefaultRequestLivenessWatcher implements RequestLivenessWatcher {
         // A count that climbs on a healthy node is the only visible sign of a callee that is up but wedged
         pendingGauge = openTelemetry.getMeter("kinotic.rpc.liveness")
                                     .gaugeBuilder("rpc.pending.requests")
-                                    .setDescription("Requests pinned to a node and not yet settled")
+                                    .setDescription("The number of requests in flight")
                                     .setUnit("requests")
                                     .ofLongs()
                                     .buildWithCallback(measurement -> measurement.record(leases.size()));
