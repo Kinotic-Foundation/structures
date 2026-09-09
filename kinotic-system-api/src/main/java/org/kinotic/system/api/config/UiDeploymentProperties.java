@@ -52,6 +52,13 @@ public class UiDeploymentProperties {
     private String frontDoorEndpointHostName;
 
     /**
+     * Blob endpoint of the sites storage account every published UI is written to, under
+     * {@code sites/<hostname>/}, from which Front Door serves it.
+     */
+    @NotBlank
+    private String sitesStorageEndpoint;
+
+    /**
      * The hostname a site with the given label is served at.
      */
     public String resolveHostname(String label) {
