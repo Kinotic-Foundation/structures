@@ -38,14 +38,6 @@ moved {
   to   = module.sites.azurerm_cdn_frontdoor_endpoint.sites
 }
 
-# Sites published before the sites account still live in organization storage accounts,
-# which the profile reads through this assignment until they are gone
-resource "azurerm_role_assignment" "sites_blob_reader" {
-  scope                = azurerm_resource_group.org_storage.id
-  role_definition_name = "Storage Blob Data Reader"
-  principal_id         = module.sites.profile_principal_id
-}
-
 output "sites_domain" {
   description = "The domain every published UI is a label under"
   value       = local.sites_domain

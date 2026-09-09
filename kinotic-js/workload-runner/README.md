@@ -72,17 +72,26 @@ The git token travels as a per-invocation `http.extraheader`, never written to
 must not hold a credential.
 
 `publish-ui.ts` — one-shot, exits 0 on success. Runs after the sync on the same checkout,
-mounted read-only, with no Kinotic credentials: it uploads every built UI to the
-organization's storage through a URL that carries a short-lived container SAS, the one
-destination its egress policy permits. Per UI the commit's assets go under
-`<name>/<sha>/` marked immutable, then `version.json`, then `index.html` last, so the
-index switch is the atomic publish.
+mounted read-only, with no Kinotic credentials: it uploads every built UI into its site's
+directory of the platform's sites account through a URL that carries a short-lived SAS for
+that directory alone, the one destination its egress policy permits. Per UI the files under
+`assets/` go up marked immutable, the rest uncached, then `version.json`, then `index.html`
+last, so the index switch is the atomic publish; then the files other commits left in the
+directory are deleted. The server never touches a site's files itself: it issues the URL and
+runs this workload.
 
 | Variable | Meaning | Default |
 |---|---|---|
-| `KINOTIC_UI_UPLOAD_URL` | blob endpoint, container and application prefix, with the container SAS as its query | required |
+| `KINOTIC_UI_UPLOAD_URLS` | a JSON object of UI name to upload URL: the site's directory in the sites account, with a SAS for that directory as its query | required |
 | `KINOTIC_UI_COMMIT` | the commit the UIs were built from | required |
 | `KINOTIC_WORKSPACE_DIR` | the checkout | `/workspace` |
+
+`remove-ui.ts` — one-shot, exits 0 on success. Deletes one site's directory and everything
+under it, through the removal URL issued for the site.
+
+| Variable | Meaning | Default |
+|---|---|---|
+| `KINOTIC_UI_REMOVAL_URL` | the site's directory in the sites account, with a SAS for that directory as its query | required |
 
 `supervise.ts` — long-lived:
 

@@ -136,14 +136,6 @@ moved {
   to   = module.sites.azurerm_cdn_frontdoor_endpoint.sites
 }
 
-# Sites published before the sites account still live in organization storage accounts in
-# this group, which the profile reads through this assignment until they are gone
-resource "azurerm_role_assignment" "sites_blob_reader" {
-  scope                = azurerm_resource_group.main.id
-  role_definition_name = "Storage Blob Data Reader"
-  principal_id         = module.sites.profile_principal_id
-}
-
 # ── Service principal for kinotic-server ──────────────────────────────────────
 # The server on this machine authenticates as this principal: DefaultAzureCredential takes
 # AZURE_CLIENT_ID, AZURE_CLIENT_SECRET and AZURE_TENANT_ID before anything else, and the
@@ -210,39 +202,15 @@ resource "terraform_data" "env_local" {
 }
 
 # ── Roles for kinotic-server ──────────────────────────────────────────────────
-# What the cluster grants the kinotic-server workload identity in keyvault.tf and email.tf,
-# minus the private endpoint roles it has no VNet to use: Contributor creates the storage
-# accounts, reads their keys and manages the Front Door origin groups, rule sets, domains
-# and routes; Storage Blob Data Contributor is for the blob data plane the storage service
-# reaches with the token, not the key; DNS Zone Contributor writes each site's CNAME and
-# validation TXT; Contributor on the email service sends mail.
+# What the cluster grants the kinotic-server workload identity: the sites module gives it
+# Storage Blob Data Contributor on the sites account, where it signs each site's upload and
+# removal URLs; Contributor on the email service sends mail.
 
-resource "azurerm_role_assignment" "server_contributor" {
-  scope                = azurerm_resource_group.main.id
+resource "azurerm_role_assignment" "server_email" {
+  scope                = local.global.email_communication_service_id
   role_definition_name = "Contributor"
   principal_id         = azuread_service_principal.server.object_id
   # a principal created moments ago may not have replicated to the RBAC lookup yet
-  skip_service_principal_aad_check = true
-}
-
-resource "azurerm_role_assignment" "server_blob_data" {
-  scope                            = azurerm_resource_group.main.id
-  role_definition_name             = "Storage Blob Data Contributor"
-  principal_id                     = azuread_service_principal.server.object_id
-  skip_service_principal_aad_check = true
-}
-
-resource "azurerm_role_assignment" "server_dns" {
-  scope                            = local.global.dns_zone_id
-  role_definition_name             = "DNS Zone Contributor"
-  principal_id                     = azuread_service_principal.server.object_id
-  skip_service_principal_aad_check = true
-}
-
-resource "azurerm_role_assignment" "server_email" {
-  scope                            = local.global.email_communication_service_id
-  role_definition_name             = "Contributor"
-  principal_id                     = azuread_service_principal.server.object_id
   skip_service_principal_aad_check = true
 }
 
@@ -288,17 +256,9 @@ output "application_local_yml" {
   value       = <<-EOT
     kinotic:
       systemApi:
-        organizationStorage:
-          disableProvisioner: false
-          subscriptionIds: ["${data.azurerm_client_config.current.subscription_id}"]
-          resourceGroup: ${azurerm_resource_group.main.name}
-          location: ${var.location}
         uiDeployment:
           disableProvisioner: false
           sitesDomain: ${local.sites_domain}
-          dnsZoneId: ${local.global.dns_zone_id}
-          frontDoorProfileId: ${module.sites.profile_id}
-          frontDoorEndpointHostName: ${module.sites.endpoint_host_name}
           sitesStorageEndpoint: ${module.sites.storage_blob_endpoint}
   EOT
 }
