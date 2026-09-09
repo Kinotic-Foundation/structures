@@ -5,18 +5,18 @@ import { log, logError } from './log.ts'
 
 /**
  * One-shot entrypoint of the UI publish workload: uploads every built UI of the checkout to
- * the organization's storage, under the application's prefix the upload URL names. Per UI,
- * {@code dist} goes under {@code <name>/} as it is, every blob stamped with the commit it
- * belongs to: the hashed files under {@code assets/} first, marked immutable, then the rest
- * uncached, then {@code version.json}, then {@code index.html} last, so a site never serves an
- * index whose assets are not there yet and the index switch is the atomic publish.
+ * its site's directory in the platform's sites storage account, through the upload URL
+ * issued for that site. Per UI, {@code dist} goes up as it is, every blob stamped with the
+ * commit it belongs to: the hashed files under {@code assets/} first, marked immutable, then
+ * the rest uncached, then {@code version.json}, then {@code index.html} last, so a site never
+ * serves an index whose assets are not there yet and the index switch is the atomic publish.
  *
  * Environment:
- * - KINOTIC_UI_UPLOAD_URL  the application's upload URL: blob endpoint, container and
- *                          application prefix, with a container SAS as its query (required)
- * - KINOTIC_UI_COMMIT      the commit the UIs were built from (required)
- * - KINOTIC_WORKSPACE_DIR  the checkout, mounted read-only (default /workspace)
- * - KINOTIC_LOG_*          see log.ts
+ * - KINOTIC_UI_UPLOAD_URLS  a JSON object of UI name to upload URL: the site's directory in
+ *                           the sites account, with a SAS for that directory as its query (required)
+ * - KINOTIC_UI_COMMIT       the commit the UIs were built from (required)
+ * - KINOTIC_WORKSPACE_DIR   the checkout, mounted read-only (default /workspace)
+ * - KINOTIC_LOG_*           see log.ts
  */
 
 /** Files under assets/ carry a content hash in their name and never change, so caches may keep them for a year. */
@@ -38,18 +38,24 @@ function require_(name: string): string {
     return value
 }
 
-/** The upload URL split into the blob path it addresses and the SAS query it carries. */
+/** A site's upload URL split into the directory it addresses and the SAS query it carries. */
 interface UploadTarget {
     base: string
     query: string
 }
 
-function parseUploadUrl(url: string): UploadTarget {
+function parseUploadUrl(name: string, url: string): UploadTarget {
     const query = url.indexOf('?')
     if (query === -1) {
-        throw new Error('KINOTIC_UI_UPLOAD_URL carries no SAS query')
+        throw new Error(`the upload URL of UI ${name} carries no SAS query`)
     }
     return { base: url.slice(0, query), query: url.slice(query + 1) }
+}
+
+/** The upload URL of every UI, by name. */
+function parseUploadUrls(json: string): Map<string, UploadTarget> {
+    const urls = JSON.parse(json) as Record<string, string>
+    return new Map(Object.entries(urls).map(([name, url]) => [name, parseUploadUrl(name, url)]))
 }
 
 function blobUrl(target: UploadTarget, ...segments: string[]): string {
@@ -120,24 +126,28 @@ async function publishUi(target: UploadTarget, workspaceDir: string, name: strin
     log(`[workload-runner] publishing UI ${name}: ${assets.length} asset(s) and ${others.length} other file(s) of ${commitSha}`)
     const uploadFile = (file: string, cacheControl: string) => () => {
         const blob = Bun.file(join(dist, file))
-        return upload(blobUrl(target, name, ...file.split('/')), blob, cacheControl, blob.type || 'application/octet-stream', commitSha)
+        return upload(blobUrl(target, ...file.split('/')), blob, cacheControl, blob.type || 'application/octet-stream', commitSha)
     }
     await uploadAll(assets.map(file => uploadFile(file, IMMUTABLE_CACHE_CONTROL)))
     await uploadAll(others.map(file => uploadFile(file, NO_CACHE_CONTROL)))
-    await upload(blobUrl(target, name, VERSION_FILE), new Blob([JSON.stringify({ commitSha })]),
+    await upload(blobUrl(target, VERSION_FILE), new Blob([JSON.stringify({ commitSha })]),
                  NO_CACHE_CONTROL, 'application/json', commitSha)
     const index = Bun.file(join(dist, INDEX_FILE))
-    await upload(blobUrl(target, name, INDEX_FILE), index, NO_CACHE_CONTROL, index.type || 'text/html', commitSha)
+    await upload(blobUrl(target, INDEX_FILE), index, NO_CACHE_CONTROL, index.type || 'text/html', commitSha)
 }
 
 async function main(): Promise<void> {
-    const target = parseUploadUrl(require_('KINOTIC_UI_UPLOAD_URL'))
+    const targets = parseUploadUrls(require_('KINOTIC_UI_UPLOAD_URLS'))
     const commitSha = require_('KINOTIC_UI_COMMIT')
     const workspaceDir = process.env.KINOTIC_WORKSPACE_DIR ?? '/workspace'
 
     const uis = findArtifacts(workspaceDir).uis
     log(`[workload-runner] publishing ${uis.length} UI(s) of ${commitSha}`)
     for (const ui of uis) {
+        const target = targets.get(ui.name)
+        if (!target) {
+            throw new Error(`UI ${ui.name} has no upload URL; the deploy issued URLs for ${[...targets.keys()].join(', ') || 'no UI'}`)
+        }
         await publishUi(target, workspaceDir, ui.name, ui.dir, commitSha)
     }
     log(`[workload-runner] published ${commitSha}`)

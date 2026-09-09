@@ -18,9 +18,10 @@ import org.kinotic.management.api.repositories.MicroserviceDeploymentRepository;
 import org.kinotic.management.api.repositories.UiDeploymentRepository;
 import org.kinotic.system.api.services.DeploymentOperationsService;
 import org.kinotic.system.api.services.OrganizationStorageProvisioner;
-import org.kinotic.system.api.services.OrganizationStorageService;
+import org.kinotic.system.api.config.KinoticSystemApiProperties;
+import org.kinotic.system.api.config.UiDeploymentProperties;
+import org.kinotic.system.api.services.SiteStorageService;
 import org.kinotic.system.api.services.UiDeploymentProvisioner;
-import org.kinotic.system.api.services.UiStoragePaths;
 import org.kinotic.system.api.services.WorkloadOrchestrationService;
 import org.kinotic.system.api.services.WorkloadService;
 import org.springframework.stereotype.Component;
@@ -38,7 +39,8 @@ public class DefaultDeploymentOperationsService implements DeploymentOperationsS
     private final WorkloadOrchestrationService workloadOrchestrationService;
     private final ParticipantIdentityService participantIdentityService;
     private final UiDeploymentProvisioner uiDeploymentProvisioner;
-    private final OrganizationStorageService organizationStorageService;
+    private final SiteStorageService siteStorageService;
+    private final KinoticSystemApiProperties properties;
     private final OrganizationStorageProvisioner organizationStorageProvisioner;
     private final OrganizationService organizationService;
     private final JobService jobService;
@@ -118,34 +120,21 @@ public class DefaultDeploymentOperationsService implements DeploymentOperationsS
     @Override
     public Future<UiDeployment> provisionUiSite(String deploymentId) {
         return loadUi(deploymentId)
-                .compose(deployment -> organization(deployment)
-                        .compose(organization -> uiDeploymentProvisioner.provision(deployment, organization)))
+                .compose(uiDeploymentProvisioner::provision)
                 .compose(row -> uiDeploymentRepository.save(row.setUpdated(new Date())));
     }
 
     @Override
     public Future<Void> removeUiSite(String deploymentId) {
         return loadUi(deploymentId)
-                .compose(deployment -> takeDown(deployment)
-                        .compose(v -> deleteFiles(deployment))
+                .compose(deployment -> deleteFiles(deployment)
                         // sync so the console's immediate re-query no longer lists it
                         .compose(v -> uiDeploymentRepository.deleteByIdSync(deployment.getId())));
     }
 
-    // The site may already be gone, or never have been created; what is left is adopted by a
-    // later publish of the same label
-    private Future<Void> takeDown(UiDeployment deployment) {
-        return uiDeploymentProvisioner.remove(deployment)
-                .recover(error -> {
-                    log.warn("Site {} could not be taken down: {}", deployment.getId(), error.getMessage());
-                    return Future.succeededFuture();
-                });
-    }
-
+    // The files may already be gone; a later publish of the same label adopts what is left
     private Future<Void> deleteFiles(UiDeployment deployment) {
-        return organization(deployment)
-                .compose(organization -> organizationStorageService.deletePrefix(
-                        organization, UiStoragePaths.uiPrefix(deployment.getApplicationId(), deployment.getName())))
+        return siteStorageService.deleteSite(uiDeployment().resolveHostname(deployment.getId()))
                 .recover(error -> {
                     log.warn("Files of site {} could not be deleted: {}", deployment.getId(), error.getMessage());
                     return Future.succeededFuture();
@@ -153,11 +142,10 @@ public class DefaultDeploymentOperationsService implements DeploymentOperationsS
     }
 
     /**
-     * Runs the provisioning job: a task that provisions the organization's storage, then one
-     * that prepares what the serving layer needs to read that storage. Both take minutes on
-     * Azure, so the job runs in the background and every task records its outcome on the
-     * organization; the run itself is recorded as the organization's provisioning run, where
-     * the console shows it. Both tasks are idempotent, so a run started again does what an
+     * Runs the provisioning job: a task that provisions the organization's storage. It takes
+     * minutes on Azure, so the job runs in the background and the task records its outcome on
+     * the organization; the run itself is recorded as the organization's provisioning run,
+     * where the console shows it. The task is idempotent, so a run started again does what an
      * earlier one left undone.
      */
     @Override
@@ -174,12 +162,7 @@ public class DefaultDeploymentOperationsService implements DeploymentOperationsS
                             .task(Tasks.fromCallable("Provision storage",
                                                      () -> organizationStorageProvisioner.ensureStorage(organizationId)
                                                                                          .<Void>mapEmpty()
-                                                                                         .toCompletionStage().toCompletableFuture()))
-                            // read again: the storage task saved the organization it works from
-                            .task(Tasks.fromCallable("Prepare Front Door",
-                                                     () -> organizationService.findById(organizationId)
-                                                                              .compose(uiDeploymentProvisioner::prepareOrganization)
-                                                                              .toCompletionStage().toCompletableFuture()));
+                                                                                         .toCompletionStage().toCompletableFuture()));
                     JobRunHandle handle = jobService.run(definition, JobOwner.ofOrganization(organizationId, null));
                     organization.setProvisioningJobRunId(handle.getJobRunId()).setUpdated(new Date());
                     // the run starts once its completion is subscribed, so the run id is on the
@@ -189,17 +172,6 @@ public class DefaultDeploymentOperationsService implements DeploymentOperationsS
                                     .onSuccess(v -> log.info("Organization {} is provisioned", organizationId))
                                     .onFailure(error -> log.warn("Provisioning organization {} failed, see job run {}: {}",
                                                                  organizationId, handle.getJobRunId(), error.getMessage())));
-                });
-    }
-
-    private Future<Organization> organization(UiDeployment deployment) {
-        return organizationService.findById(deployment.getOrganizationId())
-                .map(organization -> {
-                    if (organization == null) {
-                        throw new IllegalStateException("Organization " + deployment.getOrganizationId() + " of site "
-                                + deployment.getId() + " no longer exists");
-                    }
-                    return organization;
                 });
     }
 
@@ -223,6 +195,10 @@ public class DefaultDeploymentOperationsService implements DeploymentOperationsS
                     }
                     return deployment;
                 });
+    }
+
+    private UiDeploymentProperties uiDeployment() {
+        return properties.getSystemApi().getUiDeployment();
     }
 
 }

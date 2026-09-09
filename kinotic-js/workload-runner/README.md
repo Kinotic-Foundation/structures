@@ -80,7 +80,7 @@ index switch is the atomic publish.
 
 | Variable | Meaning | Default |
 |---|---|---|
-| `KINOTIC_UI_UPLOAD_URL` | blob endpoint, container and application prefix, with the container SAS as its query | required |
+| `KINOTIC_UI_UPLOAD_URLS` | a JSON object of UI name to upload URL: the site's directory in the sites account, with a SAS for that directory as its query | required |
 | `KINOTIC_UI_COMMIT` | the commit the UIs were built from | required |
 | `KINOTIC_WORKSPACE_DIR` | the checkout | `/workspace` |
 
