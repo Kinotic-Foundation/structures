@@ -1,7 +1,7 @@
 # Node failure handling for service proxies — phase plan
 
 Plan of record for making a proxy call fail when the node serving it dies, instead of hanging
-forever. Phase 1 is in PR #476. Everything below was re-validated against `develop` at `3adf17d`
+forever. Phase 1 landed in PR #476; Phase 2 followed it. Everything below was re-validated against `develop` at `3adf17d`
 (2026-09-08); the adjustments that pass produced are folded in, and the phase numbering below
 supersedes the earlier chat numbering (mapping at the end).
 

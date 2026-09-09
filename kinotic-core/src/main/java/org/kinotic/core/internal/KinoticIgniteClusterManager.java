@@ -20,15 +20,18 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
 
 import javax.cache.Cache;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
- * An {@link IgniteClusterManager} that additionally provides a {@link Flux} of {@link ListenerStatus} for
- * any event bus address, fed by the registration updates it already receives for message routing.
+ * An {@link IgniteClusterManager} that additionally provides, for any event bus address, a {@link Flux} of
+ * the ids of the nodes holding a registration and a {@link Flux} of {@link ListenerStatus} derived from it,
+ * both fed by the registration updates it already receives for message routing.
  * Monitoring an address therefore costs a local map entry, no matter how many addresses are monitored or
  * how often monitors come and go. All monitor signals are delivered on a vertx context, never on the
  * cluster threads that observe registration changes.
@@ -99,7 +102,7 @@ public class KinoticIgniteClusterManager extends IgniteClusterManager {
                 }
                 AddressMonitor monitor = monitors.get(event.address());
                 if(monitor != null){
-                    monitor.emit(statusOf(event.registrations()));
+                    monitor.emit(nodeIdsOf(event.registrations()));
                 }
                 if(event.address().startsWith(SERVICE_ADDRESS_PREFIX) && serviceListenerSink.currentSubscriberCount() > 0){
                     emitServiceListenerEvent(new ServiceListenerChange(event.address(), statusOf(event.registrations())));
@@ -120,13 +123,25 @@ public class KinoticIgniteClusterManager extends IgniteClusterManager {
     }
 
     /**
-     * A {@link Flux} of {@link ListenerStatus} for the given address, shared between all subscribers
-     * for the same address. Emits the current status on subscribe and the resulting status of every
-     * registration change after that, so consecutive duplicates are possible.
+     * A {@link Flux} of {@link ListenerStatus} for the given address, derived from {@link #registeredNodesFlux}.
+     * Emits the current status on subscribe and the resulting status of every registration change after
+     * that, so consecutive duplicates are possible.
      * @param address the event bus address to monitor
      * @return the status flux
      */
     public Flux<ListenerStatus> statusFlux(String address) {
+        return registeredNodesFlux(address).map(KinoticIgniteClusterManager::statusOf);
+    }
+
+    /**
+     * A {@link Flux} of the ids of the nodes holding a registration for the given address, shared between
+     * all subscribers for the same address. Emits the current set on subscribe and the resulting set of
+     * every registration change after that, so consecutive duplicates are possible. Each emission is an
+     * immutable snapshot; an empty set means nothing is listening.
+     * @param address the event bus address to monitor
+     * @return the registered node ids flux
+     */
+    public Flux<Set<String>> registeredNodesFlux(String address) {
         return Flux.defer(() -> {
             Context context = deliveryContext();
             AddressMonitor monitor = monitors.compute(address, (a, existing) -> {
@@ -191,11 +206,11 @@ public class KinoticIgniteClusterManager extends IgniteClusterManager {
                 return;
             }
             if(ar.succeeded()){
-                ListenerStatus status = statusOf(ar.result());
+                Set<String> nodeIds = nodeIdsOf(ar.result());
                 if(seed){
-                    monitor.seed(status);
+                    monitor.seed(nodeIds);
                 }else{
-                    monitor.emit(status);
+                    monitor.emit(nodeIds);
                 }
             }else{
                 log.error("Failed to query registrations for monitored address {}", address, ar.cause());
@@ -204,18 +219,25 @@ public class KinoticIgniteClusterManager extends IgniteClusterManager {
         });
     }
 
-    private static ListenerStatus statusOf(List<RegistrationInfo> registrations) {
-        return registrations == null || registrations.isEmpty() ? ListenerStatus.INACTIVE : ListenerStatus.ACTIVE;
+    // Registrations and node id sets both mean ACTIVE exactly when non-empty
+    private static ListenerStatus statusOf(Collection<?> registrationsOrNodeIds) {
+        return registrationsOrNodeIds == null || registrationsOrNodeIds.isEmpty() ? ListenerStatus.INACTIVE : ListenerStatus.ACTIVE;
+    }
+
+    private static Set<String> nodeIdsOf(List<RegistrationInfo> registrations) {
+        return registrations == null
+                ? Set.of()
+                : registrations.stream().map(RegistrationInfo::nodeId).collect(Collectors.toUnmodifiableSet());
     }
 
     /**
      * Per-address sink plus the subscriber count used to remove idle entries. Emissions are serialized
      * on the delivery context; the emitted flag keeps a seed scheduled behind an update event from
-     * overwriting the newer status with a stale one.
+     * overwriting the newer node set with a stale one.
      */
     private static class AddressMonitor {
 
-        final Sinks.Many<ListenerStatus> sink = Sinks.many().replay().latest();
+        final Sinks.Many<Set<String>> sink = Sinks.many().replay().latest();
         int subscribers; // mutated only inside monitors.compute* blocks for this address
         private final Context deliveryContext;
         private boolean emitted; // touched only on the delivery context
@@ -224,18 +246,18 @@ public class KinoticIgniteClusterManager extends IgniteClusterManager {
             this.deliveryContext = deliveryContext;
         }
 
-        void emit(ListenerStatus status) {
+        void emit(Set<String> nodeIds) {
             deliveryContext.runOnContext(v -> {
                 emitted = true;
-                tryEmit(status);
+                tryEmit(nodeIds);
             });
         }
 
-        void seed(ListenerStatus status) {
+        void seed(Set<String> nodeIds) {
             deliveryContext.runOnContext(v -> {
                 if(!emitted){
                     emitted = true;
-                    tryEmit(status);
+                    tryEmit(nodeIds);
                 }
             });
         }
@@ -244,10 +266,10 @@ public class KinoticIgniteClusterManager extends IgniteClusterManager {
             deliveryContext.runOnContext(v -> sink.tryEmitError(throwable));
         }
 
-        private void tryEmit(ListenerStatus status) {
-            Sinks.EmitResult result = sink.tryEmitNext(status);
+        private void tryEmit(Set<String> nodeIds) {
+            Sinks.EmitResult result = sink.tryEmitNext(nodeIds);
             if(result.isFailure()){
-                log.warn("Failed to emit ListenerStatus {}: {}", status, result);
+                log.warn("Failed to emit registered nodes {}: {}", nodeIds, result);
             }
         }
     }

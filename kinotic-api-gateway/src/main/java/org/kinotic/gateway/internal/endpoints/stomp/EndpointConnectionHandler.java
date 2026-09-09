@@ -170,7 +170,8 @@ public class EndpointConnectionHandler {
                                 }
                                 return Future.failedFuture(ex);
                             }
-                        });
+                        })
+                        .mapEmpty();
 
             } catch (Exception e) {
                 return Future.failedFuture(e);

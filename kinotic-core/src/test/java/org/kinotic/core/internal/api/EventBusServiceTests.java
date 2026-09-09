@@ -1,17 +1,22 @@
 package org.kinotic.core.internal.api;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.kinotic.core.api.Kinotic;
 import org.kinotic.core.api.event.CRI;
+import org.kinotic.core.api.event.Event;
 import org.kinotic.core.api.event.EventBusService;
 import org.kinotic.core.api.event.EventConstants;
 import org.kinotic.core.api.event.EventConsumer;
 import org.kinotic.core.api.event.ListenerStatus;
+import org.kinotic.core.api.event.Metadata;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import reactor.test.StepVerifier;
 
 import java.time.Duration;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -25,6 +30,8 @@ public class EventBusServiceTests {
 
     @Autowired
     private EventBusService eventBusService;
+    @Autowired
+    private Kinotic kinotic;
 
     /**
      * Pins the monitorListenerStatus contract: the initial status reflects existing listeners, removing
@@ -61,6 +68,63 @@ public class EventBusServiceTests {
             if(ec != null){
                 ec.unregister();
             }
+        }
+    }
+
+    /**
+     * Pins the monitorRegisteredNodes contract, the node-level counterpart of the status monitor: the set
+     * names the nodes holding a listener, so a sender can tell whether the node that acknowledged its event
+     * is still among them. On one node the set is either this node or empty.
+     */
+    @Test
+    public void testMonitorRegisteredNodesTracksListenerLifecycle() throws Exception {
+        CRI cri = CRI.create(EventConstants.SERVICE_DESTINATION_SCHEME, "org.kinotic.tests.RegisteredNodesProbe");
+        Set<String> thisNode = Set.of(kinotic.serverInfo().getNodeId());
+
+        EventConsumer consumer = eventBusService.listen(cri);
+        consumer.handler(event -> {});
+        consumer.completion().toCompletionStage().toCompletableFuture().get(10, TimeUnit.SECONDS);
+
+        AtomicReference<EventConsumer> relistened = new AtomicReference<>();
+        try {
+            StepVerifier.create(eventBusService.monitorRegisteredNodes(cri))
+                        .expectNext(thisNode)
+                        .then(consumer::unregister)
+                        .expectNext(Set.of())
+                        .then(() -> {
+                            EventConsumer ec = eventBusService.listen(cri);
+                            ec.handler(event -> {});
+                            relistened.set(ec);
+                        })
+                        .expectNext(thisNode)
+                        .thenCancel()
+                        .verify(Duration.ofSeconds(15));
+        } finally {
+            EventConsumer ec = relistened.get();
+            if(ec != null){
+                ec.unregister();
+            }
+        }
+    }
+
+    /**
+     * The acknowledgement names the node whose consumer took the event, in the same id space
+     * monitorRegisteredNodes reports, which is what lets a sender pin a request to one registration.
+     */
+    @Test
+    public void testSendWithAckNamesTheReceivingNode() throws Exception {
+        CRI cri = CRI.create(EventConstants.SERVICE_DESTINATION_SCHEME, "org.kinotic.tests.AckProbe");
+
+        EventConsumer consumer = eventBusService.listen(cri);
+        consumer.handler(event -> {});
+        consumer.completion().toCompletionStage().toCompletableFuture().get(10, TimeUnit.SECONDS);
+        try {
+            String ackingNode = eventBusService.sendWithAck(Event.create(cri, Metadata.create(), new byte[0]))
+                                               .toCompletionStage().toCompletableFuture().get(10, TimeUnit.SECONDS);
+
+            Assertions.assertEquals(kinotic.serverInfo().getNodeId(), ackingNode);
+        } finally {
+            consumer.unregister();
         }
     }
 }
