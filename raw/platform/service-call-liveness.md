@@ -10,7 +10,7 @@ The reason to prefer this over a timeout is that a timeout encodes a guess about
 
 <callout type="info">
 
-**Implementation status.** The terminal reply marker every part of this design reads is in place, and so are the acknowledgement that names the node, the cluster membership signal a pinned lease checks it against, and the request liveness watcher Java callers and the MCP invoker take their leases through, together with the graceful stop on the callee side. The gateway leases, reply session parking and the cross-node handoff land in successive releases; sections describing them say so. The wire contract and error types below are the ones callers will see.
+**Implementation status.** The terminal reply marker every part of this design reads is in place, and so are the acknowledgement that names the node, the cluster membership signal a pinned lease checks it against, and the request liveness watcher Java callers and the MCP invoker take their leases through, together with the graceful stop on the callee side, and the gateway holds a lease for every request it forwards for a TS client and answers the client with the typed error when the serving node leaves. Reply session parking and the cross-node handoff land in successive releases; sections describing them say so. The wire contract and error types below are the ones callers will see.
 
 </callout>
 
