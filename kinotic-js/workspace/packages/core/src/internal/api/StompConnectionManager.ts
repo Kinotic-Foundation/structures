@@ -2,7 +2,7 @@ import {buildBrokerUrl, buildServerUrl, type ConnectOptions, type IWebSocket, ty
 import type {CredentialsResolver} from '@/api/security/CredentialsResolver'
 import {EventConstants} from '@/api/event/IEventBus'
 import {ConnectedInfo} from '@/api/security/ConnectedInfo'
-import {type IFrame, RxStomp, RxStompConfig, StompHeaders} from '@stomp/rx-stomp'
+import {type IFrame, RxStomp, RxStompConfig, StompHeaders, RxStompState} from '@stomp/rx-stomp'
 import {ReconnectionTimeMode} from '@stomp/stompjs'
 import debug from 'debug'
 import {Observable, Subject, Subscription} from 'rxjs'
@@ -31,6 +31,12 @@ export class StompConnectionManager {
      * replyToId across connections.
      */
     public replyToCriChangedHandler: ((replyToCri: string) => void) | null = null
+
+    /**
+     * Invoked when an established connection drops, before any reconnect. The server releases everything it
+     * held for the connection at the same moment, so nothing in flight can complete any more.
+     */
+    public connectionLostHandler: (() => void) | null = null
     /**
      * The process-lifetime RxStomp client. Never replaced: watch() subscriptions made on it
      * queue until connected and re-subscribe on every (re)connection, which is what keeps
@@ -52,6 +58,7 @@ export class StompConnectionManager {
     private rxStompHasConnected: boolean = false
     private serverHeadersSubscription: Subscription | null = null
     private stompErrorsSubscription: Subscription | null = null
+    private connectionStateSubscription: Subscription | null = null
     private readonly uuidv4 = uuidv4()
 
     private _replyToCri: string | null = null
@@ -307,6 +314,13 @@ export class StompConnectionManager {
                 }
             })
 
+            // A drop after the initial connect: the socket and everything the server held behind it are gone
+            this.connectionStateSubscription = this.rxStomp.connectionState$.subscribe((state: RxStompState) => {
+                if (state === RxStompState.CLOSED && this.isActive && this.initialConnectionSuccessful) {
+                    this.connectionLostHandler?.()
+                }
+            })
+
             this.isActive = true
             this.rxStomp.activate()
         })
@@ -335,6 +349,8 @@ export class StompConnectionManager {
             this.serverHeadersSubscription = null
             this.stompErrorsSubscription?.unsubscribe()
             this.stompErrorsSubscription = null
+            this.connectionStateSubscription?.unsubscribe()
+            this.connectionStateSubscription = null
             this._replyToCri = null
         }
         return
