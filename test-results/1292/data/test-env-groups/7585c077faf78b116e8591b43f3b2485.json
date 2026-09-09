@@ -1,1 +1,0 @@
-{"id":"7585c077faf78b116e8591b43f3b2485","fullName":"org.kinotic.test.tests.sql.MigrationExecutorIntegrationTest.whenDuplicateVersionNumber_thenExceptionThrown","name":"whenDuplicateVersionNumber_thenExceptionThrown()","status":"passed","testResultsByEnv":{"default":"5b4d6dfda4c6d04f8ea0a9e25ff69a09"}}
