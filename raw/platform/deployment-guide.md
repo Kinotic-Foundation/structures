@@ -30,6 +30,13 @@ A Docker Compose configuration in `deployment/docker-compose/` provides a comple
 
 For testing Kubernetes deployments locally, `deployment/kind/` provides a KinD setup with Terraform configurations that deploy the full stack into a local Kubernetes cluster.
 
+### Development Server
+
+A single-host development environment on Proxmox — the compose stack on one VM, a Cloud
+Hypervisor node on another, three Elasticsearch nodes on their own disks — that keeps Front
+Door, the sites account, and email in Azure and is designed to migrate its organizations to
+Kinotic Cloud. See [Development Server](/platform/development-server).
+
 ### Cloud Providers (Terraform)
 
 Terraform configurations in `deployment/terraform/` support deployment to:
