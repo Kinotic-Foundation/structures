@@ -201,7 +201,7 @@ public class EndpointConnectionHandler {
 
             // A reply is a one-way delivery to the requester's reply destination. It is never
             // invoked and never itself replies, so no ack and no reply-to validation apply.
-            serviceSessionState.settleIfTerminal(incomingEvent);
+            serviceSessionState.observeReply(incomingEvent);
             services.eventBusService.send(incomingEvent);
             return Future.succeededFuture();
 
@@ -262,7 +262,7 @@ public class EndpointConnectionHandler {
                                          event);
                             }
                         }
-                        serviceSessionState.deliver(event);
+                        serviceSessionState.deliver(event, subscriptionHandler);
                         subscriptionHandler.handleEvent(event);
                     })
                     .exceptionHandler(subscriptionHandler::handleError);

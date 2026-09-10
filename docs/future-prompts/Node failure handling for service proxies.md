@@ -297,8 +297,8 @@ rather than a library default nobody reads.
 
 ```java
 // ServiceSessionState — the callee side of one connection, sibling of ReplySessionState
-void deliver(Event<byte[]> event);           // in the srv:// subscription handler; a cancel forgets its invocation
-void settleIfTerminal(Event<byte[]> reply);  // in send() on the reply scheme, the way back through the connection
+void deliver(Event<byte[]> event, StompSubscriptionHandler handler);  // in the srv:// subscription handler; a cancel forgets its invocation
+void observeReply(Event<byte[]> reply);      // in send() on the reply scheme: a terminal reply settles, a stream value starts the requester watch
 void dispose();                              // shutdown(): RpcServiceUnavailableException to every reply-to still outstanding
 ```
 
@@ -430,10 +430,16 @@ Still open, and outside this repository's harness:
   catalog ranges admit both; `kinotic-cli` pins core at 5.0.0-beta.10 exactly and needs a bump to
   fail its calls on a lost connection. Until core is published, a browser or CLI on 5.0.0-beta.10
   still waits on a dropped connection.
-- A TS service's stream keeps producing when its requester's reply consumer is gone: the gateway
-  drops the replies (no handler for the address), and nothing tells the TS supervisor to cancel.
-  The Java supervisor cancels on the reply listener's INACTIVE; the gateway could forward that as
-  a cancel to the socket that owns the invocation. A leak rather than a hang, so not built here.
+- A TS service could not stream at all: `BasicReturnValueConverter` serialised whatever a method
+  returned, an `Observable` included, and `processControlPlaneRequest` dropped every control, while
+  the streaming page documented the feature. Built as the follow-up to the wrap-up: the TS supervisor
+  streams an `Observable` result (one reply per value carrying the origin CRI, a bodiless completion
+  control at the end, an error reply on failure), honours a cancel control, ends every stream with an
+  error reply on `stop()`, and cancels them all when `IEventBus.connectionLost` fires, since the
+  gateway has already failed those requesters. The gateway's `ServiceSessionState` watches the
+  requester's reply destination once an invocation answers with a stream value and delivers a cancel
+  control over the socket on INACTIVE, which is the Java supervisor's reply-listener cancel carried
+  one hop further.
 - An end-to-end run against a cluster: a Java caller and a UI caller each mid-call while the serving
   node is killed, and a UI mid-call while its gateway node is killed.
 

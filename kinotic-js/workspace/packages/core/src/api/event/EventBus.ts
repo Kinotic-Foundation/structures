@@ -83,6 +83,7 @@ export class EventBus implements IEventBus {
     private requestRepliesSubscription: Subscription | null = null
     private readonly activeCorrelationIds: Set<string> = new Set<string>()
     private readonly recentlyReaped: Set<string> = new Set<string>()
+    private readonly connectionLostSubject: Subject<void> = new Subject<void>()
     // How long a sent cancel suppresses repeat cancels for the same stream before retrying.
     private static readonly REAP_DEBOUNCE_MS = 5000
 
@@ -98,11 +99,16 @@ export class EventBus implements IEventBus {
         // across a drop is failed here rather than waited on
         this.stompConnectionManager.connectionLostHandler = () => {
             this.resetRequestReplies('Connection lost')
+            this.connectionLostSubject.next()
         }
     }
 
     public get fatalErrors(): Observable<Error> {
         return this.stompConnectionManager.fatalErrors
+    }
+
+    public get connectionLost(): Observable<void> {
+        return this.connectionLostSubject.asObservable()
     }
 
     public isConnectionActive(): boolean{

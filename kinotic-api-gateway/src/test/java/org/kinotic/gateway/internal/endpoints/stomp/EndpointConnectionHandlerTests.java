@@ -26,6 +26,7 @@ import org.kinotic.core.api.event.Event;
 import org.kinotic.core.api.event.EventBusService;
 import org.kinotic.core.api.event.EventConstants;
 import org.kinotic.core.api.event.EventConsumer;
+import org.kinotic.core.api.event.ListenerStatus;
 import org.kinotic.core.api.event.Metadata;
 import org.kinotic.core.api.security.SecurityService;
 import org.kinotic.core.api.service.RequestLivenessWatcher;
@@ -35,6 +36,7 @@ import org.kinotic.gateway.api.config.ApiGatewayProperties;
 import org.kinotic.gateway.internal.endpoints.Services;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.ObjectProvider;
+import reactor.core.publisher.Sinks;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.nio.charset.StandardCharsets;
@@ -56,7 +58,8 @@ import static org.mockito.Mockito.when;
  * Pins what a STOMP connection's caller side owes its client: a request whose serving node leaves the
  * cluster is answered on the client's reply destination with the typed error, a reply that settles a
  * request releases it, a session under an open connection outlives its timeout, and a connection that closes
- * answers every invocation still outstanding on the services it published.
+ * answers every invocation still outstanding on the services it published, and a stream whose requester is
+ * gone is cancelled on the connection producing it.
  *
  * Created by Navíd Mitchell 🤪 on 9/9/26.
  */
@@ -230,6 +233,38 @@ public class EndpointConnectionHandlerTests {
     }
 
     @Test
+    public void testRequesterGoneCancelsTheStreamOnTheConnection() throws Exception {
+        Sinks.Many<ListenerStatus> requesterStatus = Sinks.many().replay().latest();
+        requesterStatus.tryEmitNext(ListenerStatus.ACTIVE);
+        when(eventBusService.monitorListenerStatus(any())).thenReturn(requesterStatus.asFlux());
+        EndpointConnectionHandler handler = connect(Map.of());
+        String requester = EventConstants.REPLY_DESTINATION_SCHEME + "://other:replies@kinotic.js.EventBus/replyHandler";
+        List<Event<byte[]>> delivered = deliverInvocation(handler, requester, "inv-3");
+
+        // a value without the completion marker is what makes the invocation a stream
+        Metadata valueMetadata = Metadata.create(Map.of(EventConstants.CORRELATION_ID_HEADER, "inv-3"));
+        handler.send(Event.create(CRI.create(requester), valueMetadata, new byte[0])).toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
+        ArgumentCaptor<CRI> watched = ArgumentCaptor.forClass(CRI.class);
+        verify(eventBusService).monitorListenerStatus(watched.capture());
+        Assertions.assertEquals(requester, watched.getValue().raw());
+
+        requesterStatus.tryEmitNext(ListenerStatus.INACTIVE);
+        long deadline = System.currentTimeMillis() + 5000;
+        while (delivered.size() < 2 && System.currentTimeMillis() < deadline) {
+            Thread.sleep(50);
+        }
+        Assertions.assertEquals(2, delivered.size(), "no cancel reached the connection");
+        Event<byte[]> cancel = delivered.get(1);
+        Assertions.assertEquals(SERVICE_DESTINATION, cancel.cri().raw());
+        Assertions.assertEquals(EventConstants.CONTROL_VALUE_CANCEL, cancel.metadata().get(EventConstants.CONTROL_HEADER));
+        Assertions.assertEquals("inv-3", cancel.metadata().get(EventConstants.CORRELATION_ID_HEADER));
+
+        // the cancelled invocation is no longer owed: the forwarded value is the only send, the close adds none
+        handler.shutdown();
+        verify(eventBusService).send(any());
+    }
+
+    @Test
     public void testNoneKeepAliveSessionEndsWithTheConnection() throws Exception {
         Session session = services.sessionStore.createSession(SESSION_TIMEOUT_MS * 10);
         services.sessionStore.put(session).toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
@@ -246,11 +281,15 @@ public class EndpointConnectionHandlerTests {
         Assertions.assertNull(storedSession(session.id()), "a NONE session survived its connection");
     }
 
-    // Subscribes the connection to a service address it publishes and delivers one invocation to it
-    private void deliverInvocation(EndpointConnectionHandler handler, String replyTo, String correlationId) {
+    // Subscribes the connection to a service address it publishes and delivers one invocation to it; returns
+    // everything the subscription delivers to the connection, the invocation first
+    private List<Event<byte[]>> deliverInvocation(EndpointConnectionHandler handler, String replyTo, String correlationId) {
+        List<Event<byte[]>> delivered = new ArrayList<>();
         handler.subscribe(CRI.create("srv://app.acme-org.orders-app~OrderService#1.0.0"), "svc-1", new StompSubscriptionHandler() {
             @Override
-            public void handleEvent(Event<byte[]> event) {}
+            public void handleEvent(Event<byte[]> event) {
+                delivered.add(event);
+            }
 
             @Override
             public void handleError(Throwable throwable) {}
@@ -258,6 +297,7 @@ public class EndpointConnectionHandlerTests {
         Metadata metadata = Metadata.create(Map.of(EventConstants.REPLY_TO_HEADER, replyTo,
                                                    EventConstants.CORRELATION_ID_HEADER, correlationId));
         replyDelivery.get().handle(Event.create(CRI.create(SERVICE_DESTINATION), metadata, new byte[0]));
+        return delivered;
     }
 
     private EndpointConnectionHandler connect(Map<String, String> connectHeaders) throws Exception {
