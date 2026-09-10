@@ -1,8 +1,0 @@
-# Development server overrides for the one-shot migration: the secured cluster's credentials,
-# and the production profile, so no fixture migration (test users, console samples) is applied.
-services:
-  kinotic-migration:
-    environment:
-      SPRING_PROFILES_ACTIVE: production
-      KINOTIC_MIGRATION_ELASTIC_USERNAME: elastic
-      KINOTIC_MIGRATION_ELASTIC_PASSWORD: ${ELASTIC_PASSWORD:?ELASTIC_PASSWORD is required}

@@ -54,26 +54,26 @@ output "tenant_id" {
   value       = module.environment.tenant_id
 }
 
-# The proxmox root writes this to /etc/kinotic/dev-server.env on the platform VM, minus the
-# server host it adds itself. Nothing here is secret.
+# The proxmox root merges this into kinotic-server's environment, with the addresses only it
+# knows. Nothing here is secret.
 output "dev_server_env" {
-  description = "The non-secret half of the server's environment, as env-file lines"
-  value       = <<-EOT
-    DEV_SERVER_HOSTNAME=${local.hostname}
-    KINOTIC_SYSTEMAPI_UIDEPLOYMENT_SITESDOMAIN=${module.environment.sites_domain}
-    KINOTIC_SYSTEMAPI_UIDEPLOYMENT_SITESSTORAGEENDPOINT=${module.environment.sites_storage_blob_endpoint}
-    KINOTIC_DOMAIN_SECRETSTORAGE_AZURE_VAULTURL=${azurerm_key_vault.server.vault_uri}
-    KINOTIC_DOMAIN_EMAIL_ENDPOINT=${local.global.email_service_endpoint}
-    KINOTIC_DOMAIN_EMAIL_SENDERADDRESS=DoNotReply@${local.global.email_sender_domain}
-    AZURE_CLIENT_ID=${module.environment.server_client_id}
-    AZURE_TENANT_ID=${module.environment.tenant_id}
-  EOT
+  description = "The non-secret half of the server's environment"
+  value = {
+    DEV_SERVER_HOSTNAME                                 = local.hostname
+    KINOTIC_SYSTEMAPI_UIDEPLOYMENT_SITESDOMAIN          = module.environment.sites_domain
+    KINOTIC_SYSTEMAPI_UIDEPLOYMENT_SITESSTORAGEENDPOINT = module.environment.sites_storage_blob_endpoint
+    KINOTIC_DOMAIN_SECRETSTORAGE_AZURE_VAULTURL         = azurerm_key_vault.server.vault_uri
+    KINOTIC_DOMAIN_EMAIL_ENDPOINT                       = local.global.email_service_endpoint
+    KINOTIC_DOMAIN_EMAIL_SENDERADDRESS                  = "DoNotReply@${local.global.email_sender_domain}"
+    AZURE_CLIENT_ID                                     = module.environment.server_client_id
+    AZURE_TENANT_ID                                     = module.environment.tenant_id
+  }
 }
 
-# The operator copies this into /etc/kinotic/secrets.env on the platform VM and fills in the
-# rest by hand; it never goes through the proxmox root or its state.
+# The operator places this on the host as kinotic-server.env (sync-secrets.sh in the proxmox
+# root); it never goes through that root or its state.
 output "secrets_env" {
-  description = "The Azure half of the server's secrets, as env-file lines"
+  description = "The Azure half of the server's secrets, as an env-file line"
   value       = "AZURE_CLIENT_SECRET=${module.environment.server_client_secret}\n"
   sensitive   = true
 }

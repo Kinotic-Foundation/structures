@@ -1,9 +1,15 @@
-# The development server: one all-in-one kinotic-server on a docker-compose stack of its own
-# (deployment/docker-compose/compose.dev-server.yml), with Front Door, the sites storage
-# account, email, and a Key Vault in Azure (deployment/terraform/azure/dev-server).
-# Activated as `production,compose,dev-server`. Holds what is fixed for this shape of
-# deployment; everything that differs per server — hostnames, endpoints, credentials —
-# arrives through the environment (see dev-server.env.example beside the compose files).
+# The development server: kinotic-server as a container on one Proxmox host beside three
+# Elasticsearch nodes and the observability stack (deployment/terraform/proxmox), with Front
+# Door, the sites storage account, email, and a Key Vault in Azure
+# (deployment/terraform/azure/dev-server). Activated as `production,dev-server`. Holds what is
+# fixed for this shape of deployment; everything that differs per server — hostnames,
+# endpoints, addresses — arrives through the environment the terraform root composes, and
+# the credentials through the file imported below.
+spring:
+  config:
+    # The secret-storage master key and the GitHub App's key and webhook secret, placed on
+    # the host by sync-secrets.sh and mounted read-only
+    import: optional:file:/etc/kinotic/secrets.yml
 kinotic:
   persistence:
     # Three master-eligible data nodes, one physical disk each: one replica survives a disk,
@@ -13,8 +19,8 @@ kinotic:
     numberOfReplicas: 1
   apiGateway:
     ssl:
-      # certbot's certificate for the server's hostname, mounted by the compose override;
-      # Vert.x terminates TLS on both ports and there is no reverse proxy
+      # certbot's certificate for the server's hostname, mounted from the host; Vert.x
+      # terminates TLS on both ports and there is no reverse proxy
       enabled: true
       certPath: /etc/kinotic/certs/fullchain.pem
       keyPath: /etc/kinotic/certs/privkey.pem
@@ -32,8 +38,7 @@ kinotic:
     secretStorage:
       # The in-memory default loses every stored secret on restart; the Key Vault the
       # dev-server terraform root creates keeps them, and keeps them in Azure for migration.
-      # The master key SecretNameDeriver derives storage names with arrives as
-      # KINOTIC_DOMAIN_SECRETSTORAGE_MASTERKEY from the secrets env file.
+      # The master key SecretNameDeriver derives storage names with comes from secrets.yml.
       backend: AZURE
   systemApi:
     uiDeployment:

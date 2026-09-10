@@ -1,12 +1,12 @@
 # ── Proxmox ───────────────────────────────────────────────────────────────────
 
-variable "proxmox_endpoint" {
-  description = "The Proxmox API, e.g. https://192.168.1.10:8006/"
+variable "proxmox_host" {
+  description = "The Proxmox host's address, for the API and for SSH as root (uploads, and the container applier)"
   type        = string
 }
 
 variable "proxmox_api_token" {
-  description = "An API token of a user allowed to manage VMs and storage, as user@realm!name=uuid; set it in local.auto.tfvars or PROXMOX_VE_API_TOKEN"
+  description = "A root@pam API token, as root@pam!name=uuid: bind mounts into containers are root's alone. Set it in local.auto.tfvars or PROXMOX_VE_API_TOKEN"
   type        = string
   sensitive   = true
 }
@@ -17,51 +17,87 @@ variable "proxmox_insecure" {
   default     = true
 }
 
-variable "proxmox_ssh_username" {
-  description = "The user snippets are uploaded as, over SSH with the agent's key"
-  type        = string
-  default     = "root"
-}
-
 variable "proxmox_node" {
-  description = "The node both VMs run on"
+  description = "The node everything runs on"
   type        = string
   default     = "pve"
 }
 
 variable "vm_datastore_id" {
-  description = "Datastore the VMs' OS disks and cloud-init drives are created on"
+  description = "Datastore for container root filesystems, the node VM's OS disk, and its cloud-init drive"
   type        = string
   default     = "local-zfs"
 }
 
 variable "iso_datastore_id" {
-  description = "Datastore the Ubuntu cloud images are downloaded to (content type iso)"
+  description = "Datastore the node VM's Ubuntu cloud image is downloaded to (content type iso)"
   type        = string
   default     = "local"
 }
 
-variable "snippets_datastore_id" {
-  description = "Datastore the cloud-init files are uploaded to; it must allow the snippets content type"
+variable "files_datastore_id" {
+  description = "Datastore the OCI images (vztmpl) and the uploaded manifests, config files, and applier (snippets) go to; host/prepare-host.sh enables both content types"
   type        = string
   default     = "local"
+}
+
+variable "snippets_dir" {
+  description = "Where that datastore keeps snippets on the host"
+  type        = string
+  default     = "/var/lib/vz/snippets"
 }
 
 # ── Network ───────────────────────────────────────────────────────────────────
 
 variable "bridge" {
-  description = "The bridge both VMs attach to"
+  description = "The LAN bridge: the server, Loki, Tempo, Mimir, Grafana, and the node VM attach to it"
   type        = string
   default     = "vmbr0"
 }
 
-variable "platform_ip" {
-  description = "The platform VM's LAN address in CIDR notation, e.g. 192.168.1.20/24; the router forwards 443 and 58503 here"
+variable "private_network" {
+  description = "The name of the SDN zone and VNet the Elasticsearch nodes, the migration, and the server's second interface attach to: a bridge with no physical port that the host gateways and source-NATs"
+  type        = string
+  default     = "kinotic"
+  validation {
+    condition     = can(regex("^[a-z][a-z0-9]{0,7}$", var.private_network))
+    error_message = "A VNet name is at most 8 lowercase alphanumerics starting with a letter."
+  }
+}
+
+variable "private_cidr" {
+  description = "The private network; the host takes .1, the ES nodes .11 to .13, the server .20, the migration .21"
+  type        = string
+  default     = "10.10.0.0/24"
+}
+
+variable "server_ip" {
+  description = "kinotic-server's LAN address in CIDR notation; the router forwards 443 and 58503 here, and workloads on the node VM dial it"
+  type        = string
+}
+
+variable "loki_ip" {
+  description = "Loki's LAN address in CIDR notation"
+  type        = string
+}
+
+variable "tempo_ip" {
+  description = "Tempo's LAN address in CIDR notation"
+  type        = string
+}
+
+variable "mimir_ip" {
+  description = "Mimir's LAN address in CIDR notation"
+  type        = string
+}
+
+variable "grafana_ip" {
+  description = "Grafana's LAN address in CIDR notation"
   type        = string
 }
 
 variable "node_ip" {
-  description = "The node VM's LAN address in CIDR notation, e.g. 192.168.1.21/24"
+  description = "The node VM's LAN address in CIDR notation"
   type        = string
 }
 
@@ -71,50 +107,102 @@ variable "gateway" {
 }
 
 variable "dns_servers" {
-  description = "Resolvers for both VMs, and the resolver every workload is given"
+  description = "Resolvers for every container and the node VM, and the resolver every workload is given"
   type        = list(string)
 }
 
-# ── Disks ─────────────────────────────────────────────────────────────────────
-# Whole physical disks passed through to the VMs, by stable id (ls -l /dev/disk/by-id on the
-# host). Each Elasticsearch node's disk is its own failure domain; the node's disk holds the
-# workload runtime and checkouts.
+# ── Disks and directories ─────────────────────────────────────────────────────
 
-variable "es_disks" {
-  description = "The three Elasticsearch disks, in order es-1, es-2, es-3"
-  type = list(object({
-    device  = string
-    size_gb = number
-  }))
+variable "es_data_dirs" {
+  description = "Host directories the three Elasticsearch nodes keep their data in, one physical disk each: the ZFS datasets host/prepare-host.sh creates"
+  type        = list(string)
+  default     = ["/es1/data", "/es2/data", "/es3/data"]
   validation {
-    condition     = length(var.es_disks) == 3
-    error_message = "Three Elasticsearch disks, one per node: quorum survives one disk only with three master-eligible nodes."
+    condition     = length(var.es_data_dirs) == 3
+    error_message = "Three Elasticsearch data directories, one per node: quorum survives one disk only with three master-eligible nodes."
   }
 }
 
 variable "node_disk" {
-  description = "The node VM's disk: Docker's data root and the workload checkouts, on XFS with project quotas"
+  description = "The node VM's whole disk by stable id: Docker's data root and the workload checkouts, on XFS with project quotas"
   type = object({
     device  = string
     size_gb = number
   })
 }
 
+variable "data_dir" {
+  description = "Host directory the other containers' state and config live under"
+  type        = string
+  default     = "/var/lib/kinotic"
+}
+
+variable "secrets_dir" {
+  description = "Host directory the operator places secrets in (sync-secrets.sh); the applier merges them, terraform never reads them"
+  type        = string
+  default     = "/etc/kinotic/secrets"
+}
+
+# ── Images ────────────────────────────────────────────────────────────────────
+
+variable "kinotic_version" {
+  description = "Tag of the kinotic-server and kinotic-migration images"
+  type        = string
+  default     = "5.0.0-SNAPSHOT"
+}
+
+variable "elasticsearch_version" {
+  type    = string
+  default = "9.5.1"
+}
+
+variable "loki_version" {
+  type    = string
+  default = "3.4.2"
+}
+
+variable "tempo_version" {
+  type    = string
+  default = "2.6.1"
+}
+
+variable "mimir_version" {
+  type    = string
+  default = "2.14.3"
+}
+
+variable "grafana_version" {
+  type    = string
+  default = "12.3.1"
+}
+
+variable "node_image_url" {
+  description = "Ubuntu cloud image for the node VM; 22.04 is what the node kit is verified on"
+  type        = string
+  default     = "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img"
+}
+
 # ── Sizing ────────────────────────────────────────────────────────────────────
 
-variable "platform_cores" {
+variable "server_cores" {
   type    = number
-  default = 12
+  default = 4
 }
 
-variable "platform_memory_mb" {
+variable "server_memory_mb" {
   type    = number
-  default = 32768
+  default = 4096
 }
 
-variable "platform_os_disk_gb" {
+variable "es_cores" {
   type    = number
-  default = 64
+  default = 2
+}
+
+variable "es_memory_mb" {
+  description = "Per node; half of it is heap"
+  type        = number
+  default     = 4096
 }
 
 variable "node_cores" {
@@ -135,20 +223,8 @@ variable "node_os_disk_gb" {
 # ── Guests ────────────────────────────────────────────────────────────────────
 
 variable "ssh_public_key" {
-  description = "Authorized for the kinotic user on both VMs"
+  description = "Authorized for the kinotic user on the node VM"
   type        = string
-}
-
-variable "platform_image_url" {
-  description = "Ubuntu cloud image for the platform VM"
-  type        = string
-  default     = "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img"
-}
-
-variable "node_image_url" {
-  description = "Ubuntu cloud image for the node VM; 22.04 is what the node kit is verified on"
-  type        = string
-  default     = "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img"
 }
 
 variable "vm_manager_version" {

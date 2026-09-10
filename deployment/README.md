@@ -4,14 +4,14 @@
 
 | Environment | Directory | Purpose |
 |---|---|---|
-| **Docker Compose** | `docker-compose/` | Local development (Elasticsearch, the observability stack, Keycloak), and the `compose.dev-server.yml` overlay the development server runs |
+| **Docker Compose** | `docker-compose/` | Local development (Elasticsearch, the observability stack, Keycloak); the development server runs the same images and config files as containers |
 | **KinD** | `kind/` | Local Kubernetes via Kubernetes in Docker, for rehearsing the Helm charts |
-| **Development server** | `terraform/proxmox/` + `terraform/azure/dev-server/` | One Proxmox host: the compose stack on a platform VM, a Cloud Hypervisor node VM, Front Door and email kept in Azure ([design](https://kinotic.ai/platform/development-server)) |
+| **Development server** | `terraform/proxmox/` + `terraform/azure/dev-server/` | One Proxmox host: a container per service, a Cloud Hypervisor node VM, Front Door and email kept in Azure ([design](https://kinotic.ai/platform/development-server)) |
 | **Developer's Azure side** | `terraform/azure/dev/` | Front Door, sites account, and email for a kinotic-server on a developer machine |
 | **Azure** | `terraform/azure/` | Production AKS cluster |
 
 KinD and Azure are deployed with Terraform and share the same Helm charts. The development
-server is deployed with Terraform and shares the compose files with local development.
+server is deployed with Terraform and shares the images and config files with local development.
 
 ## Workload nodes
 
@@ -128,8 +128,9 @@ Azure documentation:
 
 ```bash
 cd deployment/terraform/azure/dev-server && terraform init && terraform apply   # the Azure side
-cd ../../proxmox && terraform init && terraform apply                          # the VMs
-./generate-secrets.sh ./dev-server-secrets && ./sync-platform.sh secrets ./dev-server-secrets
+cd ../../proxmox
+./generate-secrets.sh ./dev-server-secrets && ./sync-secrets.sh ./dev-server-secrets <host>   # secrets on the host first
+terraform init && terraform apply                                              # the containers and the node VM
 ```
 
 See [terraform/proxmox/README.md](terraform/proxmox/README.md) for the whole runbook.

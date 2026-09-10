@@ -1,60 +1,108 @@
 # The development server on Proxmox
 
-Two VMs on one Proxmox host, created by terraform from a freshly installed Proxmox and
-configured on first boot by cloud-init from files in this repository: the **platform VM**
-runs the compose stack (kinotic-server, three Elasticsearch nodes on their own disks, Loki,
-Tempo, Mimir, Grafana; `deployment/docker-compose/compose.dev-server.yml`), the **node VM**
-runs the vm-manager with the Cloud Hypervisor provider (`deployment/vm-node`). The design and
-the reasons are on the [Development Server](https://kinotic.ai/platform/development-server)
+One Proxmox host runs the whole platform: a container per service — kinotic-server, the
+one-shot migration, three Elasticsearch nodes on a physical disk each, Loki, Tempo, Mimir,
+Grafana — created from the same images the compose stack pulls, and one VM for the
+vm-manager with the Cloud Hypervisor provider (`deployment/vm-node`). The design and the
+reasons are on the [Development Server](https://kinotic.ai/platform/development-server)
 page; this is the runbook.
 
-Terraform owns what the Proxmox API exposes. Proxmox itself is installed by hand, and
-nothing secret goes through terraform: credentials are generated and placed by the two
-scripts here.
+Terraform owns what the Proxmox API exposes: the private network the Elasticsearch nodes
+live on, the images, the containers with their mounts, the VM, and the files it uploads to
+the host. One thing the API does not take yet for a container created from an OCI image is
+the environment its entrypoint sees ([bpg/terraform-provider-proxmox#2789](https://github.com/bpg/terraform-provider-proxmox/issues/2789)),
+so terraform uploads a manifest per container and `host/kinotic-apply-container.py`
+applies it on the host: the environment, the config files each store reads, and the
+ownership of the directories each container mounts. The applier merges in the secrets the
+operator placed on the host, so nothing secret goes through terraform or its state.
+
+Each container's state lives in a host directory and survives the container: the
+Elasticsearch data on ZFS datasets `/es1/data`, `/es2/data`, `/es3/data`, one pool per
+disk; everything else under `/var/lib/kinotic/data/<service>`; the config files under
+`/var/lib/kinotic/config/<service>`; secrets under `/etc/kinotic/secrets`.
 
 ## Before the first apply
 
-On the Proxmox host, once:
+On the host, once. Proxmox VE 9.1 or later, installed by hand on the first disk; the
+enterprise repository the installer enables answers 401 without a subscription, so disable
+it and enable `pve-no-subscription` under Node → Repositories.
 
 ```bash
-# An API token for terraform. Privileges: VM and datastore management on the node
-pveum user add terraform@pve
-pveum role add Terraform -privs "Datastore.Allocate Datastore.AllocateSpace Datastore.AllocateTemplate Datastore.Audit Sys.Audit Sys.Modify VM.Allocate VM.Audit VM.Clone VM.Config.CDROM VM.Config.CPU VM.Config.Cloudinit VM.Config.Disk VM.Config.HWType VM.Config.Memory VM.Config.Network VM.Config.Options VM.Migrate VM.Monitor VM.PowerMgmt SDN.Use"
-pveum aclmod / -user terraform@pve -role Terraform
-pveum user token add terraform@pve terraform --privsep 0     # prints the token once
+# Terraform's API token: bind mounts into containers are root's alone
+pveum user token add root@pam terraform --privsep 0     # prints the token once
 
-# Snippets on the local datastore, for the cloud-init files
-pvesm set local --content iso,vztmpl,backup,snippets
-
-# The disks the VMs get whole, by stable id
+# The Elasticsearch disks and the node VM's disk, whole, by stable id
 ls -l /dev/disk/by-id/ | grep -v part
 ```
 
-Snippets are uploaded over SSH, so the key of whoever runs terraform must be in root's
-`authorized_keys` on the host and loaded in their agent. The enterprise repository the
-installer enables answers 401 without a subscription; disable it and enable
-`pve-no-subscription` under Node → Repositories.
+Then `host/prepare-host.sh` with the three Elasticsearch disks: the ZFS pools, the
+directories, the sysctl Elasticsearch needs, the datastore content types, and the timer that
+restarts a container whose entrypoint exited (Proxmox does not):
+
+```bash
+scp host/prepare-host.sh root@<host>:
+ssh root@<host> ./prepare-host.sh /dev/disk/by-id/nvme-A /dev/disk/by-id/nvme-B /dev/disk/by-id/nvme-C
+```
+
+Uploads and the applier run over SSH as root, so the key of whoever runs terraform must be
+in root's `authorized_keys` on the host and loaded in their agent.
 
 The Azure side comes first: `deployment/terraform/azure/dev-server` (its README), applied
 from the same checkout, because this root reads its outputs from that state file.
+
+## Secrets and the certificate
+
+Placed on the host before the first apply, so the server starts with everything it needs:
+
+```bash
+./generate-secrets.sh ./dev-server-secrets
+(cd ../azure/dev-server && terraform output -raw secrets_env)   # → dev-server-secrets/kinotic-server.env
+# The shared GitHub App's private key and webhook secret → dev-server-secrets/kinotic-server/secrets.yml
+./sync-secrets.sh ./dev-server-secrets <host>
+```
+
+The generated directory is the only copy of the JWT signing key and the master key. Keep it
+somewhere safe and out of the repository; both are carried to the cloud at migration.
+
+The certificate is issued on the host by certbot with the DNS-01 plugin, as the server's
+principal (the `dev-server` root granted it DNS Zone Contributor), and installed into the
+directory the server's container mounts — `cnb`, uid 1000 in the container, is uid 101000
+on the host:
+
+```bash
+ssh root@<host>
+python3 -m venv /opt/certbot && /opt/certbot/bin/pip install certbot certbot-dns-azure
+install -m 0600 /dev/stdin /etc/kinotic/certbot-azure.ini <<EOT
+dns_azure_sp_client_id = <AZURE_CLIENT_ID>
+dns_azure_sp_client_secret = <AZURE_CLIENT_SECRET>
+dns_azure_tenant_id = <AZURE_TENANT_ID>
+dns_azure_environment = AzurePublicCloud
+dns_azure_zone1 = kinotic.ai:/subscriptions/<subscription>/resourceGroups/<global rg>
+EOT
+/opt/certbot/bin/certbot certonly --authenticator dns-azure --dns-azure-config /etc/kinotic/certbot-azure.ini \
+  --deploy-hook 'install -m 0640 -o 101000 -g 101000 "$RENEWED_LINEAGE"/fullchain.pem "$RENEWED_LINEAGE"/privkey.pem /etc/kinotic/secrets/kinotic-server/certs/ && pct reboot 121 2>/dev/null || true' \
+  -d dev.kinotic.ai
+echo '0 3 * * * root /opt/certbot/bin/certbot renew -q' > /etc/cron.d/certbot
+```
+
+The deploy hook runs on every renewal too, which is all the certificate rotation there is.
 
 ## Applying
 
 ```hcl
 # local.auto.tfvars (gitignored)
-proxmox_endpoint  = "https://192.168.1.10:8006/"
-proxmox_api_token = "terraform@pve!terraform=00000000-0000-0000-0000-000000000000"
-platform_ip       = "192.168.1.20/24"
-node_ip           = "192.168.1.21/24"
+proxmox_host      = "192.168.1.10"
+proxmox_api_token = "root@pam!terraform=00000000-0000-0000-0000-000000000000"
+server_ip         = "192.168.1.20/24"
+loki_ip           = "192.168.1.21/24"
+tempo_ip          = "192.168.1.22/24"
+mimir_ip          = "192.168.1.23/24"
+grafana_ip        = "192.168.1.24/24"
+node_ip           = "192.168.1.25/24"
 gateway           = "192.168.1.1"
 dns_servers       = ["192.168.1.1"]
 ssh_public_key    = "ssh-ed25519 AAAA... you@laptop"
-es_disks = [
-  { device = "/dev/disk/by-id/nvme-Samsung_SSD_990_PRO_1TB_S6Z1NL0W123457B", size_gb = 931 },
-  { device = "/dev/disk/by-id/nvme-Samsung_SSD_990_PRO_1TB_S6Z1NL0W123458C", size_gb = 931 },
-  { device = "/dev/disk/by-id/nvme-Samsung_SSD_990_PRO_1TB_S6Z1NL0W123459D", size_gb = 931 },
-]
-node_disk = { device = "/dev/disk/by-id/nvme-Samsung_SSD_990_PRO_1TB_S6Z1NL0W123456A", size_gb = 931 }
+node_disk         = { device = "/dev/disk/by-id/nvme-D", size_gb = 931 }
 ```
 
 ```bash
@@ -63,55 +111,24 @@ terraform init
 terraform apply
 ```
 
-Both VMs boot and run their cloud-init: the platform VM formats and mounts the three
-Elasticsearch disks, installs Docker, writes the stack and `/etc/kinotic/dev-server.env`, and
-enables `kinotic-dev-server.service`, which waits for the secrets below; the node VM splits
-its disk into the Docker data root and the workload checkouts, runs `setup-node.sh`, turns on
-egress default-deny, and installs the vm-manager as `kinotic-vm-manager.service`, which waits
-for the machine credentials. Watch either with `ssh kinotic@<ip> sudo cloud-init status --wait`.
+The apply creates the private network, pulls the images, creates every container stopped
+and the node VM, uploads the manifests, and runs the applier over them in startup order: the
+three Elasticsearch nodes, then Loki, Tempo, Mimir and Grafana, then the migration, which
+waits for the cluster to be healthy, runs to completion, and is verified against the
+`migration_history` index, then the server. The node VM boots and runs its cloud-init: it
+splits its disk into the Docker data root and the workload checkouts, runs `setup-node.sh`,
+turns on egress default-deny, and installs the vm-manager as `kinotic-vm-manager.service`,
+which waits for the machine credentials. Watch it with
+`ssh kinotic@<node ip> sudo cloud-init status --wait`.
+
+The portal is on `https://dev.kinotic.ai` once the router forwards 443 to `server_ip:9090`
+and 58503 to `server_ip:58503`.
 
 ## After the first apply
 
-1. **Secrets.** Generate them, fill in the two values that come from elsewhere, place them:
+1. **The GitHub App's webhook** → `https://dev.kinotic.ai:58503/api/github/webhook`.
 
-   ```bash
-   ./generate-secrets.sh ./dev-server-secrets
-   (cd ../azure/dev-server && terraform output -raw secrets_env)   # AZURE_CLIENT_SECRET
-   # KINOTIC_MANAGEMENTAPI_GITHUB_APPPRIVATEKEY and _WEBHOOKSECRET: the shared GitHub App's settings page
-   ./sync-platform.sh secrets ./dev-server-secrets
-   ```
-
-   The generated directory is the only copy of the JWT signing key and the master key. Keep
-   it somewhere safe and out of the repository; both are carried to the cloud at migration.
-
-2. **The certificate.** On the platform VM, certbot with the DNS-01 plugin, as the server's
-   principal (the `dev-server` root granted it DNS Zone Contributor):
-
-   ```bash
-   ssh kinotic@<platform ip>
-   sudo pip install certbot-dns-azure
-   sudo tee /etc/kinotic/certbot-azure.ini <<EOT   # then chmod 0600
-   dns_azure_sp_client_id = <AZURE_CLIENT_ID>
-   dns_azure_sp_client_secret = <AZURE_CLIENT_SECRET>
-   dns_azure_tenant_id = <AZURE_TENANT_ID>
-   dns_azure_environment = AzurePublicCloud
-   dns_azure_zone1 = kinotic.ai:/subscriptions/<subscription>/resourceGroups/<global rg>
-   EOT
-   sudo certbot certonly --authenticator dns-azure --dns-azure-config /etc/kinotic/certbot-azure.ini \
-     --deploy-hook 'install -m 0644 -o kinotic "$RENEWED_LINEAGE"/fullchain.pem /etc/kinotic/certs/ && install -m 0640 -o kinotic "$RENEWED_LINEAGE"/privkey.pem /etc/kinotic/certs/ && systemctl try-restart kinotic-dev-server' \
-     -d dev.kinotic.ai
-   ```
-
-   The deploy hook runs on every renewal too, which is all the certificate rotation there is.
-
-3. **Start the stack**: `sudo systemctl start kinotic-dev-server`. The migration runs once
-   against the cluster, then the server comes up; `./sync-platform.sh logs kinotic-server`
-   follows it. The portal is on `https://dev.kinotic.ai` once the router forwards 443 to the
-   platform VM's 9090 and 58503 to 58503.
-
-4. **The GitHub App's webhook** → `https://dev.kinotic.ai:58503/api/github/webhook`.
-
-5. **The node.** In the system console create a SYSTEM-scope machine for the node, then:
+2. **The node.** In the system console create a SYSTEM-scope machine for the node, then:
 
    ```bash
    ssh kinotic@<node ip> 'sudo tee /etc/kinotic/vm-manager.secrets.env >/dev/null && sudo chmod 0600 /etc/kinotic/vm-manager.secrets.env && sudo systemctl start kinotic-vm-manager' <<EOT
@@ -122,17 +139,47 @@ for the machine credentials. Watch either with `ssh kinotic@<ip> sudo cloud-init
 
    The node appears `ONLINE` in the console with no health message.
 
-6. **Snapshots.** Register the Azure repository and a daily policy on the cluster (the
-   account key is `terraform output -raw snapshots_storage_account_key` in the Azure root,
-   and goes into each node's keystore as `azure.client.default.key`).
+3. **Snapshots.** The storage account key (`terraform output -raw snapshots_storage_account_key`
+   in the Azure root) goes into each node's keystore, then the repository and a daily policy
+   are registered once, from the host, which reaches the private network directly:
+
+   ```bash
+   for id in 101 102 103; do
+     pct exec $id -- bash -c 'bin/elasticsearch-keystore add -x azure.client.default.account <<<"stkinoticdevsnapshots" && bin/elasticsearch-keystore add -x azure.client.default.key <<<"<key>" && chown 1000:0 config/elasticsearch.keystore'
+   done
+   curl -X POST http://10.10.0.11:9200/_nodes/reload_secure_settings
+   curl -X PUT http://10.10.0.11:9200/_snapshot/azure -H 'Content-Type: application/json' -d '{"type":"azure","settings":{"container":"elasticsearch-snapshots"}}'
+   curl -X PUT http://10.10.0.11:9200/_slm/policy/daily -H 'Content-Type: application/json' -d '{"schedule":"0 30 2 * * ?","name":"<daily-{now/d}>","repository":"azure","config":{"indices":"*"},"retention":{"expire_after":"30d"}}'
+   ```
+
+   The keystore lives in each node's root filesystem, so this is repeated after a node's
+   container is replaced.
 
 ## Day 2
 
-- `./sync-platform.sh stack` pushes `deployment/docker-compose` to the VM and restarts the
-  stack: after a compose or config change, or to pull newer images.
-- `terraform apply` again after changing a VM's size. Changing a cloud-init template does
-  not re-run it on an existing VM; cloud-init runs once.
-- The node kit is idempotent: `ssh kinotic@<node ip> sudo /opt/kinotic/vm-node/verify-node.sh`
-  after a reboot, `setup-node.sh` again to pick up a new Kata release.
-- `terraform destroy` removes both VMs and their OS disks. The passthrough disks are not
-  touched: a new apply mounts the same Elasticsearch data and the same checkouts.
+- **Logs.** Each container's stdout and stderr go to `/var/log/kinotic/<name>.log` on the
+  host (16 MB, one rotation); the server's logs are in Loki too, through Grafana.
+- **A config or environment change** — `tempo.yml` in `deployment/docker-compose`, a value
+  in `main.tf` — is a `terraform apply`: the applier restarts only the containers whose
+  manifest or files changed.
+- **A newer image** (a republished SNAPSHOT included) is a replacement of the image and the
+  containers built from it; every container's state is in host directories, so it comes back
+  with its data:
+
+  ```bash
+  terraform apply -replace=proxmox_oci_image.kinotic_server -replace='proxmox_virtual_environment_container.fleet["kinotic-server"]'
+  ```
+
+  A container replaced this way keeps its vmid, so run the applier yourself afterwards:
+  `ssh root@<host> python3 /var/lib/vz/snippets/kinotic-apply-container.py /var/lib/vz/snippets/kinotic-*.manifest.json`.
+  To re-run the migration on the same image, `rm /var/lib/kinotic/state/120.ran` first.
+- **New secrets** are another `./sync-secrets.sh`, which re-applies the server and Grafana.
+- **Stopping a container** for more than a minute: remove its marker first,
+  `rm /var/lib/kinotic/state/keepalive/<vmid>`, or `kinotic-keepalive.timer` starts it
+  again; the next apply or applier run puts the marker back.
+- **The node kit** is idempotent: `ssh kinotic@<node ip> sudo /opt/kinotic/vm-node/verify-node.sh`
+  after a reboot, `setup-node.sh` again to pick up a new Kata release. Changing the
+  cloud-init template does not re-run it on an existing VM.
+- **`terraform destroy`** removes the containers, the VM, the images, and the private
+  network. The host directories are not touched: a new apply mounts the same Elasticsearch
+  data, the same store data, and the same secrets. The passthrough disk keeps the checkouts.

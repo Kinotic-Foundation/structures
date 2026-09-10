@@ -38,11 +38,11 @@ terraform apply
 ```
 
 The proxmox root reads this root's state file directly (`../azure/dev-server/terraform.tfstate`),
-so both are applied from the same checkout. Two outputs feed the platform VM:
+so both are applied from the same checkout. Two outputs feed kinotic-server:
 
 ```bash
-terraform output -raw dev_server_env    # → /etc/kinotic/dev-server.env, written by the proxmox root
-terraform output -raw secrets_env       # → the AZURE_CLIENT_SECRET line of /etc/kinotic/secrets.env, placed by hand
+terraform output dev_server_env         # merged into the server's environment by the proxmox root
+terraform output -raw secrets_env       # → kinotic-server.env in the secrets directory, placed by sync-secrets.sh
 ```
 
 `terraform destroy` removes the resource group with everything in it, the DNS record, the

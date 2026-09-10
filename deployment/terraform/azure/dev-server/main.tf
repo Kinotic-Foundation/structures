@@ -144,7 +144,7 @@ resource "azurerm_storage_container" "snapshots" {
 }
 
 # ── The server's hostname ─────────────────────────────────────────────────────
-# One A record for the address the router forwards to the platform VM, and DNS Zone
+# One A record for the address the router forwards to kinotic-server, and DNS Zone
 # Contributor so certbot on the VM answers the DNS-01 challenge as the server's principal.
 
 resource "azurerm_dns_a_record" "server" {
