@@ -1,0 +1,99 @@
+#cloud-config
+# The platform VM, laid down once on first boot: Docker, the three Elasticsearch disks, the
+# compose stack from deployment/docker-compose, and the systemd unit that runs it. The stack
+# starts only once the operator has placed /etc/kinotic/secrets.env, the certificate, and the
+# JWT signing keys (deployment/terraform/proxmox/README.md).
+hostname: kinotic-dev-platform
+manage_etc_hosts: true
+
+users:
+  - name: kinotic
+    groups: [sudo, docker]
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    ssh_authorized_keys:
+      - ${ssh_public_key}
+
+package_update: true
+package_upgrade: true
+packages:
+  - ca-certificates
+  - curl
+  - qemu-guest-agent
+  - xfsprogs
+  - certbot
+  - python3-pip
+  - rsync
+
+# scsi1..scsi3 are the passthrough Elasticsearch disks, one XFS filesystem each. fs_setup
+# skips a disk that already carries a filesystem, so a rebuilt VM keeps its data, and the
+# mounts go by label so device names never matter again.
+fs_setup:
+  - label: es-1
+    filesystem: xfs
+    device: /dev/sdb
+    overwrite: false
+  - label: es-2
+    filesystem: xfs
+    device: /dev/sdc
+    overwrite: false
+  - label: es-3
+    filesystem: xfs
+    device: /dev/sdd
+    overwrite: false
+
+mounts:
+  - [LABEL=es-1, /mnt/es-1, xfs, "defaults,nofail", "0", "2"]
+  - [LABEL=es-2, /mnt/es-2, xfs, "defaults,nofail", "0", "2"]
+  - [LABEL=es-3, /mnt/es-3, xfs, "defaults,nofail", "0", "2"]
+
+write_files:
+  - path: /etc/sysctl.d/99-elasticsearch.conf
+    content: |
+      vm.max_map_count = 262144
+  - path: /etc/kinotic/dev-server.env
+    permissions: "0644"
+    content: |
+      ${indent(6, dev_server_env)}
+  - path: /etc/systemd/system/kinotic-dev-server.service
+    permissions: "0644"
+    content: |
+      [Unit]
+      Description=Kinotic development server stack
+      Documentation=https://kinotic.ai/platform/development-server
+      Requires=docker.service
+      After=docker.service network-online.target
+      Wants=network-online.target
+      # Placed by the operator once the Azure side and the certificate exist
+      ConditionPathExists=/etc/kinotic/secrets.env
+      ConditionPathExists=/etc/kinotic/certs/fullchain.pem
+      ConditionPathExists=/etc/kinotic/platform-secrets/jwt-signing-keys
+
+      [Service]
+      Type=oneshot
+      RemainAfterExit=yes
+      WorkingDirectory=/opt/kinotic/compose
+      ExecStart=/usr/bin/docker compose --env-file /etc/kinotic/dev-server.env --env-file /etc/kinotic/secrets.env -f compose.dev-server.yml up -d --remove-orphans
+      ExecStop=/usr/bin/docker compose --env-file /etc/kinotic/dev-server.env --env-file /etc/kinotic/secrets.env -f compose.dev-server.yml down
+      TimeoutStartSec=900
+
+      [Install]
+      WantedBy=multi-user.target
+%{ for name, content in compose_files ~}
+  - path: /opt/kinotic/compose/${name}
+    encoding: b64
+    permissions: "0644"
+    content: ${content}
+%{ endfor ~}
+
+runcmd:
+  - systemctl enable --now qemu-guest-agent
+  - sysctl --system
+  # Elasticsearch runs as uid 1000 inside its containers
+  - chown 1000:0 /mnt/es-1 /mnt/es-2 /mnt/es-3
+  - curl -fsSL https://get.docker.com -o /tmp/get-docker.sh && sh /tmp/get-docker.sh
+  - systemctl enable --now docker
+  - mkdir -p /etc/kinotic/certs /etc/kinotic/platform-secrets && chown -R kinotic:kinotic /opt/kinotic /etc/kinotic
+  - chmod 0750 /etc/kinotic/platform-secrets
+  - systemctl daemon-reload
+  - systemctl enable kinotic-dev-server

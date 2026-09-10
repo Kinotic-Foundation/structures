@@ -1,0 +1,10 @@
+# Development server overrides for the observability stack. The base file publishes Loki,
+# Tempo and Mimir on the VM's interfaces already, which is what the node VM's Alloy needs;
+# Grafana is reachable on the LAN too, so it asks for a login instead of granting Admin to
+# anyone who finds it.
+services:
+  grafana:
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD is required}
