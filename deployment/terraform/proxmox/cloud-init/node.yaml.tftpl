@@ -24,7 +24,7 @@ packages:
   - qemu-guest-agent
   - xfsprogs
 
-# scsi1 is the passthrough disk: half for Docker's data root (guest rootfs, per-workload disk
+# scsi1 is the data disk: half for Docker's data root (guest rootfs, per-workload disk
 # caps), half for the checkouts (per-mount size limits). setup-node.sh keeps a data root that
 # is already mounted with prjquota, and the fstab lines the mounts module writes carry it.
 disk_setup:

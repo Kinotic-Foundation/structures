@@ -31,7 +31,7 @@ it and enable `pve-no-subscription` under Node → Repositories.
 # Terraform's API token: bind mounts into containers are root's alone
 pveum user token add root@pam terraform --privsep 0     # prints the token once
 
-# The Elasticsearch disks and the node VM's disk, whole, by stable id
+# The three Elasticsearch drives, whole, by stable id
 ls -l /dev/disk/by-id/ | grep -v part
 ```
 
@@ -102,7 +102,6 @@ node_ip           = "192.168.1.25/24"
 gateway           = "192.168.1.1"
 dns_servers       = ["192.168.1.1"]
 ssh_public_key    = "ssh-ed25519 AAAA... you@laptop"
-node_disk         = { device = "/dev/disk/by-id/nvme-D", size_gb = 931 }
 ```
 
 ```bash
@@ -182,4 +181,5 @@ and 58503 to `server_ip:58503`.
   cloud-init template does not re-run it on an existing VM.
 - **`terraform destroy`** removes the containers, the VM, the images, and the private
   network. The host directories are not touched: a new apply mounts the same Elasticsearch
-  data, the same store data, and the same secrets. The passthrough disk keeps the checkouts.
+  data, the same store data, and the same secrets. The node VM's data disk goes with the VM;
+  checkouts are redeployed from GitHub.

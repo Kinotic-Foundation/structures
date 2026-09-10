@@ -646,11 +646,11 @@ resource "proxmox_virtual_environment_vm" "node" {
 
   # scsi1: Docker's data root and the workload checkouts, partitioned by cloud-init
   disk {
-    datastore_id      = ""
-    path_in_datastore = var.node_disk.device
-    file_format       = "raw"
-    interface         = "scsi1"
-    size              = var.node_disk.size_gb
+    datastore_id = var.vm_datastore_id
+    interface    = "scsi1"
+    size         = var.node_data_disk_gb
+    discard      = "on"
+    iothread     = true
   }
 
   network_device {

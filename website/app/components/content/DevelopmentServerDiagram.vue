@@ -1,7 +1,7 @@
 <template>
   <DiagramFrame>
   <div class="dev-server-diagram-wrap">
-    <svg class="dev-server-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1172 860" role="img" aria-label="Development server topology: peers and GitHub reach kinotic-server over two forwarded ports; Azure keeps Front Door, the sites storage account, email, DNS, a Key Vault and a snapshot container; one Proxmox host runs a container per service — kinotic-server, Loki, Tempo, Mimir, Grafana on the LAN, three Elasticsearch nodes and the one-shot migration on a private NAT-only network — and a node VM running the vm-manager with Cloud Hypervisor micro VMs; each Elasticsearch node has a ZFS pool on its own physical disk, and the node runtime owns a whole disk.">
+    <svg class="dev-server-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1172 860" role="img" aria-label="Development server topology: peers and GitHub reach kinotic-server over two forwarded ports; Azure keeps Front Door, the sites storage account, email, DNS, a Key Vault and a snapshot container; one Proxmox host runs a container per service — kinotic-server, Loki, Tempo, Mimir, Grafana on the LAN, three Elasticsearch nodes and the one-shot migration on a private NAT-only network — and a node VM running the vm-manager with Cloud Hypervisor micro VMs; each Elasticsearch node has a ZFS pool on its own physical drive, and Proxmox has a drive of its own.">
 
       <defs>
         <marker id="ds-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -172,33 +172,28 @@
       <text class="t-tiny" x="1128" y="300" text-anchor="end">signed upload URL</text>
 
       <!-- ═════════ disks ═════════ -->
-      <text class="t-tag" x="588" y="738">DISKS · ONE ZFS POOL PER ES NODE</text>
+      <text class="t-tag" x="588" y="738">DRIVES · ONE ZFS POOL PER ES NODE · PROXMOX ON ITS OWN</text>
 
       <rect class="disk" x="35" y="756" width="150" height="44" rx="8"></rect>
-      <text class="t-chip" x="110" y="774" text-anchor="middle">disk 2 · pool es1</text>
+      <text class="t-chip" x="110" y="774" text-anchor="middle">drive 2 · pool es1</text>
       <text class="t-tiny" x="110" y="790" text-anchor="middle">/es1/data → es-1</text>
       <line class="data" x1="110" y1="756" x2="110" y2="652"></line>
 
       <rect class="disk" x="215" y="756" width="150" height="44" rx="8"></rect>
-      <text class="t-chip" x="290" y="774" text-anchor="middle">disk 3 · pool es2</text>
+      <text class="t-chip" x="290" y="774" text-anchor="middle">drive 3 · pool es2</text>
       <text class="t-tiny" x="290" y="790" text-anchor="middle">/es2/data → es-2</text>
       <line class="data" x1="290" y1="756" x2="290" y2="652"></line>
 
       <rect class="disk" x="395" y="756" width="150" height="44" rx="8"></rect>
-      <text class="t-chip" x="470" y="774" text-anchor="middle">disk 4 · pool es3</text>
+      <text class="t-chip" x="470" y="774" text-anchor="middle">drive 4 · pool es3</text>
       <text class="t-tiny" x="470" y="790" text-anchor="middle">/es3/data → es-3</text>
       <line class="data" x1="470" y1="756" x2="470" y2="652"></line>
 
-      <rect class="disk" x="565" y="756" width="170" height="44" rx="8"></rect>
-      <text class="t-chip" x="650" y="774" text-anchor="middle">disk 0</text>
-      <text class="t-tiny" x="650" y="790" text-anchor="middle">Proxmox · rootfs · store data</text>
+      <rect class="disk" x="575" y="756" width="280" height="44" rx="8"></rect>
+      <text class="t-chip" x="715" y="774" text-anchor="middle">drive 1</text>
+      <text class="t-tiny" x="715" y="790" text-anchor="middle">Proxmox · rootfs · node VM disks · store data</text>
 
-      <rect class="disk" x="811" y="756" width="150" height="44" rx="8"></rect>
-      <text class="t-chip" x="886" y="774" text-anchor="middle">disk 1</text>
-      <text class="t-tiny" x="886" y="790" text-anchor="middle">XFS prjquota · node</text>
-      <line class="data" x1="886" y1="756" x2="886" y2="622"></line>
-
-      <text class="t-tag" x="36" y="826">HOST · PROXMOX VE · RYZEN 9 · 96 GB · 5 SSDS</text>
+      <text class="t-tag" x="36" y="826">HOST · PROXMOX VE · RYZEN 9 · 96 GB · 4 × 512 GB NVME</text>
     </svg>
   </div>
   </DiagramFrame>

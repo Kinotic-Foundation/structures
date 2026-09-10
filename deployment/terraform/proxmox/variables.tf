@@ -123,12 +123,10 @@ variable "es_data_dirs" {
   }
 }
 
-variable "node_disk" {
-  description = "The node VM's whole disk by stable id: Docker's data root and the workload checkouts, on XFS with project quotas"
-  type = object({
-    device  = string
-    size_gb = number
-  })
+variable "node_data_disk_gb" {
+  description = "The node VM's second disk, on vm_datastore_id: Docker's data root and the workload checkouts, which cloud-init splits in two, both XFS with project quotas"
+  type        = number
+  default     = 100
 }
 
 variable "data_dir" {
