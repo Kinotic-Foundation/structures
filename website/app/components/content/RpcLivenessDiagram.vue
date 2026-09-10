@@ -4,6 +4,7 @@ defineProps<{ view?: 'overview' | 'failure' | 'reconnect' }>()
 </script>
 
 <template>
+  <DiagramFrame>
   <div class="rpc-diagram-wrap">
 
     <!-- ═══════════════════════════ OVERVIEW: registration is liveness ═══════════════════════════ -->
@@ -301,6 +302,7 @@ defineProps<{ view?: 'overview' | 'failure' | 'reconnect' }>()
       <text class="t-mono-red" x="575" y="696" text-anchor="middle">Overflow → the same. The next CONNECT hands the client a new reply CRI and its reset path fails the in-flight calls; down past the window, the client fails them itself.</text>
     </svg>
   </div>
+  </DiagramFrame>
 </template>
 
 <style>
@@ -334,7 +336,7 @@ svg.rpc-diagram {
   --pink-tint: rgba(216, 121, 172, 0.12);
 }
 
-.rpc-diagram-wrap { overflow-x: auto; margin: 1.5rem 0; }
+.rpc-diagram-wrap { overflow-x: auto; }
 svg.rpc-diagram { min-width: 760px; width: 100%; height: auto; display: block; }
 
 /* ── SVG vocabulary ─────────────────────────────── */
