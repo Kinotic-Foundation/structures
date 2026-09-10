@@ -1,4 +1,5 @@
 <template>
+  <DiagramFrame>
   <div class="dev-server-diagram-wrap">
     <svg class="dev-server-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1172 860" role="img" aria-label="Development server topology: peers and GitHub reach kinotic-server over two forwarded ports; Azure keeps Front Door, the sites storage account, email, DNS, a Key Vault and a snapshot container; one Proxmox host runs a platform VM with kinotic-server, three Elasticsearch nodes and the observability stack, and a node VM running the vm-manager with Cloud Hypervisor micro VMs; each Elasticsearch node and the node runtime own a whole physical disk.">
 
@@ -181,6 +182,7 @@
       <text class="t-tag" x="36" y="826">HOST · PROXMOX VE · RYZEN 9 · 96 GB · 5 SSDS</text>
     </svg>
   </div>
+  </DiagramFrame>
 </template>
 
 <style>
