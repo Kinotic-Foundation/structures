@@ -224,7 +224,7 @@ Each vm-manager node runs every workload on one VM provider, chosen by the node 
 </tbody>
 </table>
 
-`CLOUD_HYPERVISOR` needs the node's Docker daemon to register a `kata-clh` runtime and to keep its data root on an XFS filesystem mounted with `prjquota`. Without the quota support the daemon refuses any workload declaring a `diskSizeMb`, since that is what caps a container's rootfs.
+`CLOUD_HYPERVISOR` needs the node's Docker daemon to register a `kata-clh` runtime and to keep its data root on an XFS filesystem mounted with `prjquota`. Without the quota support the daemon refuses any workload declaring a `diskSizeMb`, since that is what caps a container's rootfs. `deployment/vm-node` in the repository provisions a node that way and installs the vm-manager as a service.
 
 `BOXLITE` keeps box records and every guest's rootfs disk under one directory. That directory is the filesystem workload disks grow into and the one the node reports its `totalDiskMb` from, so a node taking workloads of any size wants it on a data volume rather than the root filesystem under the service account's home.
 

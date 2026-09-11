@@ -5,8 +5,9 @@
 ## Overview
 
 This page is the design record and setup plan for the development server: a development
-environment on one physical host — a Ryzen 9 with 96 GB of RAM and several SSDs — where a few
-peers build Kinotic applications against the real platform: organization sign-up,
+environment on one physical host — a Ryzen 9 with 96 GB of RAM and four SSDs — plus two Intel
+NUCs that run the peers' workloads, where a few peers build Kinotic applications against the
+real platform: organization sign-up,
 push-to-deploy into micro VMs, published UIs served through Front Door, email, logs and traces
 in the portal. Everything that can run on the host runs on the host. Azure keeps only what a
 single host cannot provide (Front Door, the sites storage account, Communication Services
@@ -31,25 +32,38 @@ and the steps that build it, in the order they have to happen.
 
 ## Decisions
 
-### Proxmox VE hosts two VMs
+### Proxmox VE: a container per service; the nodes are their own machines
 
-The platform and the vm-manager node cannot share one operating system. The node's provisioning
-(`kinotic-js/vmm-r&d/docker-kata-ch-test/setup-node.sh`) owns `/etc/docker/daemon.json`,
+The platform and a vm-manager node cannot share one operating system. The node's provisioning
+(`deployment/vm-node/setup-node.sh`) owns `/etc/docker/daemon.json`,
 `br_netfilter`, and the `DOCKER-USER` chain, and its firewall floor (`kinotic-node-firewall`)
 drops every guest packet addressed to the node itself — so a gateway on the node's own address
 is unreachable from every workload, and the kit's README says outright not to colocate the
-api-gateway with workloads. On one host that means a hypervisor.
+api-gateway with workloads. So the nodes are separate machines: two Intel NUCs (32 GB, 250 GB
+each) running the kit on their own KVM, and the host runs no workloads at all. Two nodes also
+exercise placement, heartbeat expiry, and draining, which one node never does. If capacity
+outgrows the NUCs, a node VM on the host is the fallback: nested KVM is the configuration every
+measurement in the Cloud Hypervisor evaluation was taken in (Azure `Standard_D4s_v3`).
 
-Proxmox over plain Ubuntu with libvirt because it adds snapshots (re-running `setup-node.sh`
-deletes `/opt/kata`), whole-disk passthrough by stable id, ZFS, and the `bpg/proxmox` Terraform
-provider, so the host can be a third terraform root beside `kind/` and `azure/`. Incus is the
-credible alternative for an all-code, no-UI host; XCP-ng is out because Xen's nested
-virtualization is off the path the vm-manager was tested on; Harvester wants three nodes. The
-node VM runs nested KVM, which is the configuration every measurement in the Cloud Hypervisor
-evaluation was taken in (Azure `Standard_D4s_v3`).
+Proxmox over plain Ubuntu with libvirt because it adds ZFS, snapshots, containers created from
+OCI images, and the `bpg/proxmox` Terraform provider, so the host can be a third terraform
+root beside `kind/` and `azure/`. Incus is the credible alternative for an all-code, no-UI
+host; XCP-ng is out because Xen's nested virtualization is off the path the vm-manager was
+tested on; Harvester wants three nodes.
 
-The node is a VM, never an LXC container: it needs its own kernel modules, sysctls, and
-iptables.
+Every other service is a Proxmox container of its own, created from the image the compose
+stack pulls — Proxmox VE 9.1 creates LXC containers from OCI images — rather than a VM
+running docker-compose. Each service is then a first-class guest: its own address, its own
+CPU and memory limits, its own mounts and startup order, visible and restartable in the
+Proxmox UI, sharing the host's kernel with no VM in between. There is no compose, no
+Kubernetes, and no second layer of orchestration inside a guest. What the Proxmox API does
+not take yet for such a container — the environment its entrypoint sees,
+[bpg/terraform-provider-proxmox#2789](https://github.com/bpg/terraform-provider-proxmox/issues/2789)
+— a script terraform uploads applies on the host from a manifest per container, and the same
+script is where the operator's secrets are merged in, so no secret passes through terraform.
+Proxmox also does not restart a container whose entrypoint exits, so a host timer does.
+
+A node is never a container on the host: it needs its own kernel modules, sysctls, and iptables.
 
 ### No Kubernetes
 
@@ -57,17 +71,19 @@ Nothing the server needs comes from Kubernetes. Ignite discovers peers by shared
 static addresses as readily as by the Kubernetes API (`KinoticIgniteConfig`), platform secrets
 are two JSON files at a path, TLS is two PEM files at a path, and the docker-compose stack in
 `deployment/docker-compose/` is the complete platform — with Tempo and Mimir, which the Helm
-charts do not deploy yet. The Helm charts stay the production artifact; KinD on a laptop is
-where they are rehearsed. If the host ever needs to rehearse them too, a k3s VM slots in beside
-the two below without touching them.
+charts do not deploy yet. The development server runs that stack's images and config files,
+one container each. The Helm charts stay the production artifact; KinD on a laptop is where
+they are rehearsed. If the host ever needs to rehearse them too, a k3s VM slots in without
+touching anything else.
 
 ### Three Elasticsearch nodes, one physical disk each, one shard and one replica
 
 On one host, a node is a failure domain only if its disk is. Redundancy is therefore the
 conjunction of replicas across nodes **and** one physical disk per node: two nodes whose data
-directories share a disk, or two virtual disks carved from one Proxmox pool, replicate a shard
-onto the same failure domain and lose it together. Each ES node's data directory is a whole-disk
-passthrough (`qm set <vm> -scsiN /dev/disk/by-id/<disk>`), never a volume from a shared pool.
+directories share a disk, or two volumes carved from one pool, replicate a shard onto the same
+failure domain and lose it together. Each node's data directory is a dataset on a ZFS pool
+that spans exactly one disk (`/es1/data`, `/es2/data`, `/es3/data`), bind-mounted into that
+node's container, never a volume from a shared pool.
 
 Three nodes rather than two because of quorum, not storage: with two master-eligible nodes the
 cluster stops accepting writes the moment one disk dies, even though the surviving replica holds
@@ -78,13 +94,21 @@ One shard and one replica per index. The production defaults are three and two
 against the 1000-shard-per-node ceiling, so the production numbers on three small nodes would
 cap the peers' definitions early for no gain.
 
+### Elasticsearch on a private network, with security off
+
+The three nodes attach only to a private network: a Proxmox SDN simple zone, a bridge with no
+physical port, whose subnet the host gateways and source-NATs. The migration and the server's
+second interface are on it; nothing on the LAN or the internet has a route to it. With that
+isolation the cluster runs the way the local compose stack does, `xpack.security.enabled: false`: no transport TLS to issue and rotate, no passwords to place. The NAT is for one
+direction only — the nodes reach the snapshot container in Azure.
+
 ### The node runs the Cloud Hypervisor provider
 
 `BOXLITE` is the provider that runs anywhere a developer works; `CLOUD_HYPERVISOR` is the one a
 node is provisioned for, with a health contract the node re-checks on every heartbeat, egress
 denied by default, host-side stdout capture, and no mount limit (see
 [VM provider](/platform/configuration#vm-provider)). The development server is a production
-shape, so the node is provisioned with the kit under `docker-kata-ch-test/` exactly as an Azure
+shape, so the node is provisioned with the kit under `deployment/vm-node` exactly as any other
 node is.
 
 ### Azure keeps Front Door, the sites account, email, DNS, and a server Key Vault
@@ -131,22 +155,15 @@ Azure Blob as an open item for the cloud; the development server builds it first
 
 ## Host
 
-Proxmox VE on the first SSD. Every other disk is passed through whole to exactly one VM, so a
-disk failure is contained to the node that owns it and `smartd` on the host watches each drive.
+Four 512 GB NVMe drives, one per M.2 slot: Proxmox on its own, and one per Elasticsearch
+node. Each ES drive is a ZFS pool of its own, so a disk failure is contained to the node that
+owns it, and `smartd` on the host watches each drive.
 
 <table>
 <thead>
   <tr>
     <th>
-      Disk
-    </th>
-    
-    <th>
-      Passed to
-    </th>
-    
-    <th>
-      Filesystem
+      Drive
     </th>
     
     <th>
@@ -158,53 +175,13 @@ disk failure is contained to the node that owns it and `smartd` on the host watc
 <tbody>
   <tr>
     <td>
-      0
-    </td>
-    
-    <td>
-      Proxmox
-    </td>
-    
-    <td>
-      ZFS or ext4
-    </td>
-    
-    <td>
-      Proxmox, both VMs' OS images, Loki/Tempo/Mimir data
-    </td>
-  </tr>
-  
-  <tr>
-    <td>
       1
     </td>
     
     <td>
-      Node VM
-    </td>
-    
-    <td>
-      XFS <code>
-        prjquota
+      Proxmox, every container's root filesystem, the Loki/Tempo/Mimir/Grafana data under <code>
+        /var/lib/kinotic/data
       </code>
-      
-      , two partitions
-    </td>
-    
-    <td>
-      <code>
-        /var/lib/docker
-      </code>
-      
-       (guest rootfs, per-workload disk caps) and <code>
-        /var/lib/kinotic/workloads
-      </code>
-      
-       (checkouts, <code>
-        sizeLimitMb
-      </code>
-      
-       quotas)
     </td>
   </tr>
   
@@ -214,19 +191,17 @@ disk failure is contained to the node that owns it and `smartd` on the host watc
     </td>
     
     <td>
-      Platform VM
-    </td>
-    
-    <td>
-      XFS or ext4
-    </td>
-    
-    <td>
-      <code>
-        es-1
+      ZFS pool <code>
+        es1
       </code>
       
-       data
+      , dataset <code>
+        /es1/data
+      </code>
+      
+      , mounted into <code>
+        es-1
+      </code>
     </td>
   </tr>
   
@@ -236,19 +211,17 @@ disk failure is contained to the node that owns it and `smartd` on the host watc
     </td>
     
     <td>
-      Platform VM
-    </td>
-    
-    <td>
-      XFS or ext4
-    </td>
-    
-    <td>
-      <code>
-        es-2
+      ZFS pool <code>
+        es2
       </code>
       
-       data
+      , dataset <code>
+        /es2/data
+      </code>
+      
+      , mounted into <code>
+        es-2
+      </code>
     </td>
   </tr>
   
@@ -258,32 +231,37 @@ disk failure is contained to the node that owns it and `smartd` on the host watc
     </td>
     
     <td>
-      Platform VM
-    </td>
-    
-    <td>
-      XFS or ext4
-    </td>
-    
-    <td>
-      <code>
-        es-3
+      ZFS pool <code>
+        es3
       </code>
       
-       data
+      , dataset <code>
+        /es3/data
+      </code>
+      
+      , mounted into <code>
+        es-3
+      </code>
     </td>
   </tr>
 </tbody>
 </table>
 
-With four disks, disk 1 becomes a partition of disk 0: a workload checkout is redeployable from
-GitHub and not worth a slot. The three ES disks are not negotiable.
+Four is the smallest count that gives every ES node its own disk and Proxmox its own. Three
+works, with `es-3` on a partition of the Proxmox drive, since that is still a different device
+from the other two nodes; the cost is rebuilding `es-3` from its replicas whenever the boot
+drive is replaced. 512 GB is enough everywhere: an ES node holds about 430 GB at the
+allocation watermark, and the Proxmox drive's largest tenant is the stores' retention.
 
 <table>
 <thead>
   <tr>
     <th>
-      VM
+      Guest
+    </th>
+    
+    <th>
+      Kind
     </th>
     
     <th>
@@ -295,7 +273,7 @@ GitHub and not worth a slot. The three ES disks are not negotiable.
     </th>
     
     <th>
-      Notes
+      Network
     </th>
   </tr>
 </thead>
@@ -303,45 +281,117 @@ GitHub and not worth a slot. The three ES disks are not negotiable.
 <tbody>
   <tr>
     <td>
-      Platform
+      <code>
+        es-1
+      </code>
+      
+      , <code>
+        es-2
+      </code>
+      
+      , <code>
+        es-3
+      </code>
     </td>
     
     <td>
-      12
+      container
     </td>
     
     <td>
-      32 GB
+      2 each
     </td>
     
     <td>
-      server 4 GB, three ES nodes at 4 GB each (2 GB heap), otel stack ~4 GB, headroom for the migration job
+      4 GB each (2 GB heap)
+    </td>
+    
+    <td>
+      private
     </td>
   </tr>
   
   <tr>
     <td>
-      Node
+      <code>
+        kinotic-server
+      </code>
     </td>
     
     <td>
-      8
+      container
     </td>
     
     <td>
-      40 GB
+      4
     </td>
     
+    <td>
+      4 GB
+    </td>
+    
+    <td>
+      LAN + private
+    </td>
+  </tr>
+  
+  <tr>
     <td>
       <code>
-        cpu: host
+        kinotic-migration
+      </code>
+    </td>
+    
+    <td>
+      container, runs once
+    </td>
+    
+    <td>
+      2
+    </td>
+    
+    <td>
+      2 GB
+    </td>
+    
+    <td>
+      private
+    </td>
+  </tr>
+  
+  <tr>
+    <td>
+      <code>
+        loki
       </code>
       
-       for nested KVM; ~165 MiB per idle Kata guest plus touched pages; sync VMs 2 GB, runtime VMs 1 GB (<code>
-        DeploymentProperties
+      , <code>
+        tempo
       </code>
       
-      )
+      , <code>
+        mimir
+      </code>
+      
+      , <code>
+        grafana
+      </code>
+    </td>
+    
+    <td>
+      containers
+    </td>
+    
+    <td>
+      2, 2, 2, 1
+    </td>
+    
+    <td>
+      1, 1, 2, 0.5 GB
+    </td>
+    
+    <td>
+      LAN
     </td>
   </tr>
   
@@ -355,48 +405,62 @@ GitHub and not worth a slot. The three ES disks are not negotiable.
     </td>
     
     <td>
-      24 GB
+      —
     </td>
     
     <td>
-      ZFS ARC and spare
+      the rest, ~70 GB
+    </td>
+    
+    <td>
+      ZFS ARC, and headroom to grow the ES heaps
     </td>
   </tr>
 </tbody>
 </table>
 
-Both VMs sit on `vmbr0` with static LAN addresses. Only the platform VM is reachable from the
-internet, on two forwarded ports.
+The LAN guests have static addresses on `vmbr0`; the private network is `10.10.0.0/24` with
+the host at `.1`. Only `kinotic-server` is reachable from the internet, on two forwarded
+ports.
 
-The host is a terraform root, `deployment/proxmox/terraform`, using `bpg/proxmox`: two VMs
-cloned from a cloud-init Ubuntu template, the passthrough disks, and the cloud-init files that
-lay down the compose stack on one and run the node kit on the other.
+Proxmox itself is installed by hand, and `host/prepare-host.sh` runs once on it: the three ZFS
+pools, the directories, `vm.max_map_count`, and the keepalive timer. From there the host is a
+terraform root, `deployment/terraform/proxmox`, using `bpg/proxmox`: the private network, the
+seven images, the containers with their mounts, and the manifests and config files it uploads
+to the host. Everything it uploads comes from this
+repository; nothing secret passes through it; its README is the runbook.
 
-## Platform VM
-
-Ubuntu 24.04 LTS with Docker Engine. The stack is the existing compose files plus a
-`dev-server` overlay, run under a systemd unit:
+## Containers
 
 ```text
+deployment/terraform/proxmox/
+  main.tf                            # the network, images, containers, and the applier run
+  host/prepare-host.sh               # once on the host: ZFS pools, directories, sysctl, keepalive timer
+  host/kinotic-apply-container.py    # on the host after every apply: environment, config files, ownership
+  generate-secrets.sh                # the JWT key set, the master key, Grafana's password
+  sync-secrets.sh                    # copies them to the host and re-applies the containers that read them
 deployment/docker-compose/
-  compose.dev-server.yml                # includes: elasticsearch-dev-server, compose-otel, migration, server, with overrides
-  compose.elasticsearch-dev-server.yml  # es-1, es-2, es-3 — one service per passthrough disk
+  tempo.yml, mimir.yml, grafana-*.yaml, dashboards/   # the stores' config files, addresses substituted
 kinotic-server/src/main/resources/
-  application-dev-server.yml            # the dev-server profile: everything below that is not a secret
-/etc/kinotic/                           # on the VM, outside the repo
-  env                                   # AZURE_*, ES password, GitHub App key and webhook secret, machine secrets
-  platform-secrets/                     # jwt-signing-keys, secret-storage-master-keys
-  certs/                                # fullchain.pem, privkey.pem from certbot
+  application-dev-server.yml         # the dev-server profile: what is fixed for this shape
+/etc/kinotic/secrets/                # on the host, placed by hand
+  kinotic-server.env                 # AZURE_CLIENT_SECRET, merged into the server's environment
+  kinotic-server/                    # mounted at /etc/kinotic in the server: secrets.yml, platform-secrets/, certs/
+  grafana.env                        # the admin password
+/var/lib/kinotic/{config,data}/<service>, /es{1,2,3}/data   # each container's files and state
 ```
 
-The server runs with `SPRING_PROFILES_ACTIVE=production,compose,dev-server`. `production` is
-what takes it off the development conveniences: no auto-seeded platform secrets
+The server runs with `SPRING_PROFILES_ACTIVE=production,dev-server`. `production` is what
+takes it off the development conveniences: no auto-seeded platform secrets
 (`DevPlatformSecretsGenerator` is development-only), the halting Ignite failure handler, the
-production shard defaults — which `dev-server` then overrides.
+production shard defaults — which `dev-server` then overrides. Its environment is composed by
+terraform from the compose service's, the Azure root's outputs, and the addresses only the
+proxmox root knows; its secrets arrive through `secrets.yml`, which the profile imports, and
+the env file the applier merges.
 
 ### Elasticsearch
 
-Three services in `compose.elasticsearch-dev-server.yml`, identical except for name and mount:
+Three containers from the same image, identical except for name, address and mount:
 
 <table>
 <thead>
@@ -446,7 +510,7 @@ Three services in `compose.elasticsearch-dev-server.yml`, identical except for n
     </td>
     
     <td>
-      the three service names
+      the three private addresses, the three names
     </td>
     
     <td>
@@ -463,20 +527,12 @@ Three services in `compose.elasticsearch-dev-server.yml`, identical except for n
     
     <td>
       <code>
-        true
+        false
       </code>
     </td>
     
     <td>
-      The compose default of <code>
-        false
-      </code>
-      
-       is marked local-only; three nodes with security on require transport TLS, generated once with <code>
-        elasticsearch-certutil
-      </code>
-      
-       and mounted
+      The private network is the isolation; see the decision above
     </td>
   </tr>
   
@@ -489,7 +545,7 @@ Three services in `compose.elasticsearch-dev-server.yml`, identical except for n
     
     <td>
       <code>
-        -Xms2g -Xmx2g
+        -Xms2048m -Xmx2048m
       </code>
     </td>
     
@@ -505,26 +561,30 @@ Three services in `compose.elasticsearch-dev-server.yml`, identical except for n
     
     <td>
       <code>
-        /mnt/es-N:/usr/share/elasticsearch/data
+        /esN/data
+      </code>
+      
+       → <code>
+        /usr/share/elasticsearch/data
       </code>
     </td>
     
     <td>
-      One passthrough disk per node
+      One ZFS pool per node, one disk per pool
     </td>
   </tr>
   
   <tr>
     <td>
-      published ports
+      LAN
     </td>
     
     <td>
-      none on the LAN
+      none
     </td>
     
     <td>
-      The server, migration, and Grafana reach ES on the compose network; 9200 is never on the LAN
+      The server, the migration, and the host reach the cluster on the private network; 9200 is never on the LAN
     </td>
   </tr>
   
@@ -540,17 +600,17 @@ Three services in `compose.elasticsearch-dev-server.yml`, identical except for n
         262144
       </code>
       
-       on the VM
+       on the host
     </td>
     
     <td>
-      ES refuses to start without it
+      Containers share the host kernel; ES refuses to start without it
     </td>
   </tr>
 </tbody>
 </table>
 
-Server side, in `application-dev-server.yml` and the env file:
+Server side, in `application-dev-server.yml` and the environment:
 
 <table>
 <thead>
@@ -575,40 +635,20 @@ Server side, in `application-dev-server.yml` and the env file:
     
     <td>
       <code>
-        es-1
+        10.10.0.11
       </code>
       
       , <code>
-        es-2
+        .12
       </code>
       
       , <code>
-        es-3
+        .13
       </code>
       
        on 9200, <code>
         http
       </code>
-    </td>
-  </tr>
-  
-  <tr>
-    <td>
-      <code>
-        kinotic.domain.elasticUsername
-      </code>
-      
-       / <code>
-        elasticPassword
-      </code>
-    </td>
-    
-    <td>
-      the <code>
-        elastic
-      </code>
-      
-       user; password from the env file
     </td>
   </tr>
   
@@ -639,30 +679,21 @@ Server side, in `application-dev-server.yml` and the env file:
       <code>
         KINOTIC_MIGRATION_ELASTIC_HOST
       </code>
-      
-       / <code>
-        _USERNAME
-      </code>
-      
-       / <code>
-        _PASSWORD
-      </code>
     </td>
     
     <td>
       <code>
-        es-1
+        10.10.0.11
       </code>
       
-       and the same user, for the one-shot migration container
+      , for the one-shot migration container
     </td>
   </tr>
 </tbody>
 </table>
 
 The snapshot repository is registered once ES is up: an `azure` repository named for the
-environment, its account key or SAS token in the ES keystore (built once and mounted, since
-compose cannot run `elasticsearch-keystore` at start), and an SLM policy taking a daily
+environment, its account key in each node's keystore, and an SLM policy taking a daily
 snapshot of every index with 30 days' retention.
 
 ### Server
@@ -758,15 +789,11 @@ snapshot of every index with 30 days' retention.
       <code>
         kinotic.platformSecrets.jwtSigningKeysPath
       </code>
-      
-       / <code>
-        secretStorageMasterKeysPath
-      </code>
     </td>
     
     <td>
-      files under <code>
-        /etc/kinotic/platform-secrets
+      <code>
+        /etc/kinotic/platform-secrets/jwt-signing-keys
       </code>
     </td>
     
@@ -784,6 +811,28 @@ snapshot of every index with 30 days' retention.
       </code>
       
        list
+    </td>
+  </tr>
+  
+  <tr>
+    <td>
+      <code>
+        kinotic.domain.secretStorage.masterKey
+      </code>
+    </td>
+    
+    <td>
+      from <code>
+        secrets.yml
+      </code>
+    </td>
+    
+    <td>
+      <code>
+        SecretNameDeriver
+      </code>
+      
+       derives every stored secret's name from it, so it is generated once and carried to the cloud
     </td>
   </tr>
   
@@ -897,7 +946,7 @@ snapshot of every index with 30 days' retention.
     </td>
     
     <td>
-      the platform VM's LAN IPv4, <code>
+      the server's LAN IPv4, <code>
         58503
       </code>
       
@@ -907,7 +956,7 @@ snapshot of every index with 30 days' retention.
     </td>
     
     <td>
-      Workloads reach the gateway across VMs; a <code>
+      Workloads on the nodes reach the gateway across the LAN; a <code>
         CLOUD_HYPERVISOR
       </code>
       
@@ -979,7 +1028,9 @@ snapshot of every index with 30 days' retention.
     </td>
     
     <td>
-      from the env file
+      from <code>
+        secrets.yml
+      </code>
     </td>
     
     <td>
@@ -996,16 +1047,18 @@ snapshot of every index with 30 days' retention.
       </code>
       
        / <code>
-        AZURE_CLIENT_SECRET
+        AZURE_TENANT_ID
       </code>
       
-       / <code>
-        AZURE_TENANT_ID
+      , <code>
+        AZURE_CLIENT_SECRET
       </code>
     </td>
     
     <td>
-      from the env file
+      the Azure root's outputs; <code>
+        kinotic-server.env
+      </code>
     </td>
     
     <td>
@@ -1016,40 +1069,84 @@ snapshot of every index with 30 days' retention.
        root's service principal
     </td>
   </tr>
+  
+  <tr>
+    <td>
+      <code>
+        OTEL_EXPORTER_OTLP_{TRACES,METRICS,LOGS}_ENDPOINT
+      </code>
+      
+      , <code>
+        OTEL_EXPORTER_OTLP_HEADERS
+      </code>
+    </td>
+    
+    <td>
+      Tempo's <code>
+        :4318
+      </code>
+      
+      , Mimir's <code>
+        :9009/otlp
+      </code>
+      
+      , Loki's <code>
+        :3100/otlp
+      </code>
+      
+      ; <code>
+        X-Scope-OrgID=kinotic-system
+      </code>
+    </td>
+    
+    <td>
+      No collector: the agent exports each signal to its store under the platform tenant, which is what the compose collector stamps on
+    </td>
+  </tr>
 </tbody>
 </table>
 
-The Loki, Tempo, and Mimir URLs the server queries are the ones `compose.kinotic-server.yml`
-already sets. `compose.dev-server.yml` additionally publishes Loki's 3100, Tempo's OTLP 4318,
-and Mimir's 9009 on the LAN interface, for the node's Alloy.
+### Loki, Tempo, Mimir, Grafana
+
+Four containers on the LAN, running the config files from `deployment/docker-compose` with
+the compose service names replaced by the containers' addresses — one definition of each
+store for local development and the development server. Loki's 3100, Tempo's 4318, and
+Mimir's 9009 are what the node's Alloy ships to; Grafana on 3000 asks for a login, since the
+LAN reaches it. Their data lives under `/var/lib/kinotic/data`, so a container replaced for a
+newer image keeps it.
 
 ### TLS
 
-certbot with the `dns-azure` plugin, authenticating as the same service principal, which the
-`dev-server` root grants DNS Zone Contributor on `kinotic.ai`. One certificate for
-`dev.kinotic.ai` serves both ports. The deploy hook copies the PEMs into `/etc/kinotic/certs`
-and runs `docker compose restart kinotic-server`, which is the whole of what Reloader does in
-the cluster.
+certbot on the host with the `dns-azure` plugin, authenticating as the same service principal,
+which the `dev-server` root grants DNS Zone Contributor on `kinotic.ai`. One certificate for
+`dev.kinotic.ai` serves both ports. The deploy hook installs the PEMs into the secrets
+directory the server's container mounts and reboots the container, which is the whole of what
+Reloader does in the cluster.
 
-## Node VM
+## Nodes
 
-Ubuntu 22.04 (what the kit is verified on), `cpu: host`, disk 1 passed through. Two XFS
-partitions mounted with `prjquota` before the kit runs: `/var/lib/docker`, which `setup-node.sh`
-then leaves alone instead of creating its 40 GB loop image, and `/var/lib/kinotic/workloads`.
+Two Intel NUCs, 32 GB and 250 GB each, Ubuntu 22.04 (what the kit is verified on) installed
+with two XFS partitions mounted with `prjquota`: `/var/lib/docker`, which `setup-node.sh` keeps
+instead of creating its 40 GB loop image, and `/var/lib/kinotic/workloads`. Then the kit from
+`deployment/vm-node`:
 
 ```bash
-sudo ./setup-node.sh          # docker, kata 4.1.0 on cloud-hypervisor, daemon.json, firewall floor
+sudo ./setup-node.sh            # docker, kata 4.1.0 on cloud-hypervisor, daemon.json, firewall floor
 sudo touch /etc/kinotic/egress-default-deny && sudo systemctl restart kinotic-node-firewall
-sudo ./verify-node.sh         # every invariant, again after every reboot
-sudo bun run src/requirements-test.ts
+sudo ./install-vm-manager.sh    # bun, @kinotic-ai/vm-manager, kinotic-vm-manager.service
+sudo ./verify-node.sh           # every invariant, again after every reboot
 ```
 
 The Azure IMDS and WireServer drops install and verify unchanged; they protect nothing here and
-are left in so every node is provisioned by one path.
+are left in so every node is provisioned by one path. A NUC's 32 GB is roughly a dozen runtime
+VMs at 1 GB beside a couple of 2 GB sync VMs (`DeploymentProperties`); a first deployment lands
+on the first `ONLINE` node with room for it.
 
-The vm-manager is installed from npm as `@kinotic-ai/vm-manager` and runs as root under a
-systemd unit with Bun (root for iptables, the Docker socket, and project quotas), with this
-environment:
+The vm-manager runs as root under `kinotic-vm-manager.service` with Bun (root for iptables, the
+Docker socket, and project quotas). Its environment is `/etc/kinotic/vm-manager.env`: the
+proxmox root's `vm_manager_env` output, which carries the server's and the stores' addresses,
+plus the node's own id. The machine credentials go in `/etc/kinotic/vm-manager.secrets.env`,
+which the service waits for:
 
 <table>
 <thead>
@@ -1090,6 +1187,10 @@ environment:
       <code>
         dev-node-1
       </code>
+      
+      , <code>
+        dev-node-2
+      </code>
     </td>
   </tr>
   
@@ -1109,7 +1210,7 @@ environment:
     </td>
     
     <td>
-      the platform VM's LAN IPv4, <code>
+      the server's LAN IPv4, <code>
         58503
       </code>
       
@@ -1178,15 +1279,15 @@ environment:
     
     <td>
       <code>
-        http://<platform VM>:3100
+        http://<loki>:3100
       </code>
       
       , <code>
-        http://<platform VM>:4318
+        http://<tempo>:4318
       </code>
       
       , <code>
-        http://<platform VM>:9009/otlp
+        http://<mimir>:9009/otlp
       </code>
     </td>
   </tr>
@@ -1195,7 +1296,9 @@ environment:
 
 ## Azure: the `dev-server` terraform root
 
-`deployment/terraform/azure/dev-server`, modeled on `dev/` with local state and
+`deployment/terraform/azure/dev-server` shares `modules/dev-environment` with the `dev/` root
+a developer uses for their own machine — the resource group, the sites module, the sites key
+vault, and the service principal — and adds what a server peers depend on needs. Local state,
 `environment = "dev"`, creating:
 
 <table>
@@ -1310,17 +1413,18 @@ environment:
 </tbody>
 </table>
 
-Its outputs are the values the `dev-server` profile tables above name, and the principal's
-three `AZURE_*` values go into `/etc/kinotic/env` on the platform VM rather than `.env.local`.
+Its `dev_server_env` output is the non-secret half of the server's environment, which the
+proxmox root merges into the server container's; its `secrets_env` output is the principal's
+secret, which the operator places on the host in `kinotic-server.env` by hand.
 
 ## Network and access
 
-The router forwards two ports to the platform VM: 443 to 9090 (the SPA) and 58503 to 58503
-(REST, STOMP, MCP, the GitHub webhook). This is the KinD layout with a public address; there is
-no reverse proxy. A Cloudflare Tunnel routing `/api`, `/v1`, `/.well-known`, and `/mcp` to 58503
-and everything else to 9090 would collapse the two ports into one origin, the way the
-development tunnel does, and hide the host's address; it is the alternative if exposing the
-address is unwelcome.
+The router forwards two ports to the server container: 443 to 9090 (the SPA) and 58503 to
+58503 (REST, STOMP, MCP, the GitHub webhook). This is the KinD layout with a public address;
+there is no reverse proxy. A Cloudflare Tunnel routing `/api`, `/v1`, `/.well-known`, and
+`/mcp` to 58503 and everything else to 9090 would collapse the two ports into one origin, the
+way the development tunnel does, and hide the host's address; it is the alternative if exposing
+the address is unwelcome.
 
 Peers use `https://dev.kinotic.ai`: organization sign-up with email verification through ACS,
 social login through the platform OIDC providers registered with `https://dev.kinotic.ai:58503`
@@ -1357,43 +1461,55 @@ Nothing on the LAN besides the two forwarded ports is reachable from outside.
     </td>
     
     <td>
-      Restore the latest snapshot into a scratch three-node compose on the platform VM, once, before the first peer signs up, and again before cutover
+      Restore the latest snapshot into a scratch three-node cluster on the host, once, before the first peer signs up, and again before cutover
     </td>
   </tr>
   
   <tr>
     <td>
-      Platform VM
+      Container root filesystems
     </td>
     
     <td>
-      Proxmox <code>
-        vzdump
-      </code>
-      
-       weekly to disk 0
+      none
     </td>
     
     <td>
-      Restore the VM; ES data lives on the passthrough disks and rejoins
+      Recreated from the images; every container's state is in a host directory
     </td>
   </tr>
   
   <tr>
     <td>
-      Node VM
-    </td>
-    
-    <td>
-      Proxmox snapshot before each <code>
-        setup-node.sh
+      Secrets (<code>
+        /etc/kinotic/secrets
       </code>
       
-       re-run
+      )
     </td>
     
     <td>
-      Roll back
+      The generated directory, kept off the host
+    </td>
+    
+    <td>
+      <code>
+        sync-secrets.sh
+      </code>
+    </td>
+  </tr>
+  
+  <tr>
+    <td>
+      Nodes
+    </td>
+    
+    <td>
+      none
+    </td>
+    
+    <td>
+      Ubuntu and the kit again; the checkouts are redeployable
     </td>
   </tr>
   
@@ -1614,30 +1730,49 @@ configuration keep resolving; they sign in again on `portal.kinotic.ai`, since s
 8. Disable the development node's machine identity; keep the development server running
 read-only for a week, then tear it down.
 
+## Developers' own environments
+
+The same pieces serve a developer's machine, without the Proxmox host: the compose stack
+from `deployment/docker-compose` with the `BOXLITE` vm-manager beside it, and the `dev/` root
+for Front Door, the sites account, and email, as the contributing guide describes. Every
+development environment shares one GitHub App. An App has one webhook URL, and it points at
+the development server, so a developer's own server sees no push events: deployments there
+start from the re-run path, and a developer who needs the webhook registers an App of their
+own. Sign-in through Azure and Google is outside this page until that support is defined.
+
 ## Build order
 
-1. **Azure root.** `deployment/terraform/azure/dev-server`; apply; record the outputs.
-2. **Host.** Proxmox on disk 0; `deployment/proxmox/terraform` with the two VMs, the passthrough
-disks, and cloud-init.
-3. **Platform VM.** `compose.elasticsearch-dev-server.yml`, `compose.dev-server.yml`,
-`application-dev-server.yml`; the env file, platform secrets, and certbot; bring up ES,
-register the snapshot repository and SLM policy, run the migration, start the server; confirm
-sign-up mail arrives and the portal loads on `https://dev.kinotic.ai`.
-4. **Node VM.** Partition and mount disk 1; run the kit; enable default-deny; create the machine
-in the system console; start the vm-manager; confirm the node is `ONLINE` with no health
-message.
-5. **End to end.** Deploy the template project from a peer's organization: the sync VM fetches
+1. **Azure root.** `deployment/terraform/azure/dev-server`; apply.
+2. **Host.** Proxmox installed by hand on disk 0; `host/prepare-host.sh` with the three
+Elasticsearch disks.
+3. **Secrets and the certificate.** `generate-secrets.sh`, the Azure secret and the GitHub
+App's key filled in, `sync-secrets.sh`; certbot on the host.
+4. **The fleet.** `deployment/terraform/proxmox`; apply. The applier brings up the cluster,
+the stores, runs the migration to completion and verifies it, and starts the server.
+Register the snapshot repository and SLM policy; confirm sign-up mail arrives and the
+portal loads on `https://dev.kinotic.ai`.
+5. **Nodes.** Ubuntu 22.04 and the kit on each NUC, `vm-manager.env` from the terraform
+output plus the node's id, the SYSTEM machine's credentials from the system console in
+`vm-manager.secrets.env`; confirm each node is `ONLINE` with no health message.
+6. **End to end.** Deploy the template project from a peer's organization: the sync VM fetches
 through the allowlist, the runtime VM registers its microservice, the UI appears at
 `<label>.apps-dev.kinotic.ai`, and the run's log and the microservice's traces show in the
 portal.
-6. **Restore drill.** Restore the previous night's snapshot into a scratch cluster and open the
+7. **Restore drill.** Restore the previous night's snapshot into a scratch cluster and open the
 portal against it. Repeat before cutover.
 
 ## Open items
 
-- `setup-node.sh` persists its own loop image in `/etc/fstab` even when `/var/lib/docker` is
-already a mounted disk, then verifies the fstab. With a passthrough disk mounted first, the
-kit needs to accept a pre-mounted data root before step 4 runs.
+- A first system user. The migration runs with the `production` profile, so no fixture user
+exists, and system users otherwise arrive through Entra SSO, which the development server
+does not run. The system console, and with it the SYSTEM machine the vm-manager connects as
+in step 5, needs a bootstrap for a first system user.
+- Containers from OCI images are a technology preview in Proxmox VE 9.1. The environment is
+applied on the host until the API takes it (#2789), and a container whose entrypoint exits
+is restarted by a host timer; both fold into the terraform root as Proxmox catches up.
+- Loki, Tempo, and Mimir are on the LAN without authentication, because the nodes' Alloy ships
+to them from the LAN. A VLAN holding the host and the nodes is the change to make if the LAN
+is not trusted.
 - The compose stack runs Elasticsearch 9.5.1 and the ECK values pin 9.0.2. The cloud cluster
 must be at or above the development server's version on restore day.
 - Tempo and Mimir are in compose and not in Helm. When the charts gain them nothing changes on
