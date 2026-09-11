@@ -29,12 +29,13 @@ enterprise repository the installer enables answers 401 without a subscription, 
 it and enable `pve-no-subscription` under Node → Repositories.
 
 ```bash
-# Terraform's API token: bind mounts into containers are root's alone
-pveum user token add root@pam terraform --privsep 0     # prints the token once
-
 # The three Elasticsearch drives, whole, by stable id
 ls -l /dev/disk/by-id/ | grep -v part
 ```
+
+Terraform authenticates as `root@pam` with its password: bind mounts into containers are
+allowed for that user alone, and an API token, even one without privilege separation,
+authenticates as `root@pam!name` and fails the check.
 
 Then `host/prepare-host.sh` with the three Elasticsearch disks: the ZFS pools, the
 directories, the sysctl Elasticsearch needs, the datastore content types, and the timer that
@@ -96,7 +97,7 @@ The deploy hook runs on every renewal too, which is all the certificate rotation
 ```hcl
 # local.auto.tfvars (gitignored)
 proxmox_host      = "192.168.1.10"
-proxmox_api_token = "root@pam!terraform=00000000-0000-0000-0000-000000000000"
+proxmox_password  = "..."                # or PROXMOX_VE_PASSWORD in the environment
 server_ip         = "192.168.1.20/24"
 loki_ip           = "192.168.1.21/24"
 tempo_ip          = "192.168.1.22/24"
