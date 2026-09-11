@@ -378,6 +378,7 @@ locals {
     vmid        = c.vm_id
     name        = name
     image       = c.image
+    entrypoint  = c.entrypoint
     env         = c.env
     secrets_env = c.secrets_env
     files = [for key, upload in local.config_uploads : {

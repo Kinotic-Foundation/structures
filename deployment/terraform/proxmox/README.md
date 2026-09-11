@@ -52,6 +52,11 @@ in root's `authorized_keys` on the host and loaded in their agent.
 The Azure side comes first: `deployment/terraform/azure/dev-server` (its README), applied
 from the same checkout, because this root reads its outputs from that state file.
 
+The `kinotic-server` and `kinotic-migration` images at `kinotic_version` must carry the
+`dev-server` profile (`application-dev-server.yml`), which imports the secrets file: without
+it the server starts with no master key. The nightly `gradle-build.yml` run promotes the
+`-SNAPSHOT` tags from `develop`; `gh workflow run gradle-build.yml --ref develop` does it now.
+
 ## Secrets and the certificate
 
 Placed on the host before the first apply, so the server starts with everything it needs:

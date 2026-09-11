@@ -5,6 +5,8 @@ SSH after every apply. It converges on the host's actual state, so running it by
 
 For each manifest:
 
+  entrypoint   the command with its arguments, set with pct: the API keeps only the
+               command when it creates the container
   env          the entrypoint's environment, as raw `lxc.environment:` lines in
                /etc/pve/lxc/<vmid>.conf: the API validates each key as a word, which
                Elasticsearch's dotted settings are not. A secrets env file the operator
@@ -108,6 +110,17 @@ def write_config(manifest, env):
         f.write("\n".join(kept + raw_lines(manifest, env)) + "\n")
 
 
+def entrypoint_in_sync(manifest):
+    with open(conf_path(manifest["vmid"])) as f:
+        current = [l.partition(":")[2].strip() for l in f if l.startswith("entrypoint:")]
+    return not manifest.get("entrypoint") or current == [manifest["entrypoint"]]
+
+
+def set_entrypoint(manifest):
+    if manifest.get("entrypoint"):
+        pct("set", str(manifest["vmid"]), "--entrypoint", manifest["entrypoint"])
+
+
 def resolv_conf(manifest):
     return "".join(f"nameserver {server}\n" for server in manifest.get("dns", []))
 
@@ -196,6 +209,7 @@ def apply(manifest):
     env.update(read_env_file(manifest.get("secrets_env")))
 
     in_sync = (config_in_sync(manifest, env)
+               and entrypoint_in_sync(manifest)
                and resolv_conf_in_sync(manifest)
                and all(file_in_sync(spec) for spec in files)
                and all(dir_in_sync(spec) for spec in dirs))
@@ -217,6 +231,7 @@ def apply(manifest):
     if status(vmid) == "running":
         pct("stop", str(vmid))
     write_config(manifest, env)
+    set_entrypoint(manifest)
     write_resolv_conf(manifest)
     place(files, dirs)
     if console_log:
