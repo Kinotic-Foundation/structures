@@ -189,6 +189,8 @@ resource "azurerm_cdn_frontdoor_secret" "sites" {
 
 # ── Wildcard domain and DNS ───────────────────────────────────────────────────
 
+# Ownership is proven by the certificate: Front Door approves a domain whose customer
+# certificate's SAN matches it, so no _dnsauth TXT record is issued or needed
 resource "azurerm_cdn_frontdoor_custom_domain" "sites" {
   name                     = "sites-wildcard"
   cdn_frontdoor_profile_id = azurerm_cdn_frontdoor_profile.sites.id
@@ -199,17 +201,6 @@ resource "azurerm_cdn_frontdoor_custom_domain" "sites" {
     certificate_type        = "CustomerCertificate"
     cdn_frontdoor_secret_id = azurerm_cdn_frontdoor_secret.sites.id
     minimum_tls_version     = "TLS12"
-  }
-}
-
-resource "azurerm_dns_txt_record" "sites_validation" {
-  name                = "_dnsauth.${var.sites_label}"
-  zone_name           = var.dns_zone_name
-  resource_group_name = var.dns_zone_resource_group_name
-  ttl                 = 300
-
-  record {
-    value = azurerm_cdn_frontdoor_custom_domain.sites.validation_token
   }
 }
 
