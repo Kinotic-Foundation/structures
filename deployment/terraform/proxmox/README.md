@@ -72,8 +72,9 @@ on the host:
 
 ```bash
 ssh root@<host>
-# pyOpenSSL 26 drops X509Req, which the josepy 1.x certbot pins still imports
-python3 -m venv /opt/certbot && /opt/certbot/bin/pip install certbot certbot-dns-azure "pyOpenSSL>=25,<26"
+# pyOpenSSL 26 drops X509Req, which the josepy 1.x certbot pins still imports; azure-mgmt-dns 9
+# changes the client constructor certbot-dns-azure calls
+python3 -m venv /opt/certbot && /opt/certbot/bin/pip install certbot certbot-dns-azure "pyOpenSSL>=25,<26" "azure-mgmt-dns<9"
 install -m 0600 /dev/stdin /etc/kinotic/certbot-azure.ini <<EOT
 dns_azure_sp_client_id = <AZURE_CLIENT_ID>
 dns_azure_sp_client_secret = <AZURE_CLIENT_SECRET>
@@ -81,7 +82,8 @@ dns_azure_tenant_id = <AZURE_TENANT_ID>
 dns_azure_environment = AzurePublicCloud
 dns_azure_zone1 = kinotic.ai:/subscriptions/<subscription>/resourceGroups/<global rg>
 EOT
-/opt/certbot/bin/certbot certonly --authenticator dns-azure --dns-azure-config /etc/kinotic/certbot-azure.ini \
+/opt/certbot/bin/certbot certonly --non-interactive --agree-tos --email <you> \
+  --authenticator dns-azure --dns-azure-config /etc/kinotic/certbot-azure.ini \
   --deploy-hook 'install -m 0640 -o 101000 -g 101000 "$RENEWED_LINEAGE"/fullchain.pem "$RENEWED_LINEAGE"/privkey.pem /etc/kinotic/secrets/kinotic-server/certs/ && pct reboot 121 2>/dev/null || true' \
   -d dev.kinotic.ai
 echo '0 3 * * * root /opt/certbot/bin/certbot renew -q' > /etc/cron.d/certbot
