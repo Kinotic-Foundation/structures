@@ -72,7 +72,8 @@ on the host:
 
 ```bash
 ssh root@<host>
-python3 -m venv /opt/certbot && /opt/certbot/bin/pip install certbot certbot-dns-azure
+# pyOpenSSL 26 drops X509Req, which the josepy 1.x certbot pins still imports
+python3 -m venv /opt/certbot && /opt/certbot/bin/pip install certbot certbot-dns-azure "pyOpenSSL>=25,<26"
 install -m 0600 /dev/stdin /etc/kinotic/certbot-azure.ini <<EOT
 dns_azure_sp_client_id = <AZURE_CLIENT_ID>
 dns_azure_sp_client_secret = <AZURE_CLIENT_SECRET>
