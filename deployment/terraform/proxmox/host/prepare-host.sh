@@ -33,6 +33,8 @@ for disk in "$@"; do
         echo "$pool: present"
     elif zpool import "$pool" >/dev/null 2>&1; then
         echo "$pool: imported"
+    elif blkid -p "$disk" >/dev/null 2>&1; then
+        fail "$disk carries a partition table or filesystem; if it is expendable, wipe it first: wipefs -a $disk"
     else
         zpool create -o ashift=12 -O compression=lz4 -O atime=off -O xattr=sa -m none "$pool" "$disk"
         zfs create -o mountpoint="/$pool/data" "$pool/data"

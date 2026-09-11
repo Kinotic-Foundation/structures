@@ -24,15 +24,9 @@ variable "proxmox_node" {
 }
 
 variable "vm_datastore_id" {
-  description = "Datastore for container root filesystems, the node VM's OS disk, and its cloud-init drive"
+  description = "Datastore for the container root filesystems"
   type        = string
   default     = "local-zfs"
-}
-
-variable "iso_datastore_id" {
-  description = "Datastore the node VM's Ubuntu cloud image is downloaded to (content type iso)"
-  type        = string
-  default     = "local"
 }
 
 variable "files_datastore_id" {
@@ -50,7 +44,7 @@ variable "snippets_dir" {
 # ── Network ───────────────────────────────────────────────────────────────────
 
 variable "bridge" {
-  description = "The LAN bridge: the server, Loki, Tempo, Mimir, Grafana, and the node VM attach to it"
+  description = "The LAN bridge: the server, Loki, Tempo, Mimir and Grafana attach to it"
   type        = string
   default     = "vmbr0"
 }
@@ -96,18 +90,13 @@ variable "grafana_ip" {
   type        = string
 }
 
-variable "node_ip" {
-  description = "The node VM's LAN address in CIDR notation"
-  type        = string
-}
-
 variable "gateway" {
   description = "The LAN's default gateway"
   type        = string
 }
 
 variable "dns_servers" {
-  description = "Resolvers for every container and the node VM, and the resolver every workload is given"
+  description = "Resolvers for every container, and the resolver the nodes give every workload"
   type        = list(string)
 }
 
@@ -121,12 +110,6 @@ variable "es_data_dirs" {
     condition     = length(var.es_data_dirs) == 3
     error_message = "Three Elasticsearch data directories, one per node: quorum survives one disk only with three master-eligible nodes."
   }
-}
-
-variable "node_data_disk_gb" {
-  description = "The node VM's second disk, on vm_datastore_id: Docker's data root and the workload checkouts, which cloud-init splits in two, both XFS with project quotas"
-  type        = number
-  default     = 100
 }
 
 variable "data_dir" {
@@ -174,12 +157,6 @@ variable "grafana_version" {
   default = "12.3.1"
 }
 
-variable "node_image_url" {
-  description = "Ubuntu cloud image for the node VM; 22.04 is what the node kit is verified on"
-  type        = string
-  default     = "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img"
-}
-
 # ── Sizing ────────────────────────────────────────────────────────────────────
 
 variable "server_cores" {
@@ -201,40 +178,6 @@ variable "es_memory_mb" {
   description = "Per node; half of it is heap"
   type        = number
   default     = 4096
-}
-
-variable "node_cores" {
-  type    = number
-  default = 8
-}
-
-variable "node_memory_mb" {
-  type    = number
-  default = 40960
-}
-
-variable "node_os_disk_gb" {
-  type    = number
-  default = 32
-}
-
-# ── Guests ────────────────────────────────────────────────────────────────────
-
-variable "ssh_public_key" {
-  description = "Authorized for the kinotic user on the node VM"
-  type        = string
-}
-
-variable "vm_manager_version" {
-  description = "The @kinotic-ai/vm-manager release the node installs"
-  type        = string
-  default     = "latest"
-}
-
-variable "node_id" {
-  description = "The node's id in the orchestrator"
-  type        = string
-  default     = "dev-node-1"
 }
 
 variable "azure_state_path" {

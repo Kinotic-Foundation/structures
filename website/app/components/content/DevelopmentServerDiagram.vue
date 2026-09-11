@@ -1,7 +1,7 @@
 <template>
   <DiagramFrame>
   <div class="dev-server-diagram-wrap">
-    <svg class="dev-server-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1172 860" role="img" aria-label="Development server topology: peers and GitHub reach kinotic-server over two forwarded ports; Azure keeps Front Door, the sites storage account, email, DNS, a Key Vault and a snapshot container; one Proxmox host runs a container per service — kinotic-server, Loki, Tempo, Mimir, Grafana on the LAN, three Elasticsearch nodes and the one-shot migration on a private NAT-only network — and a node VM running the vm-manager with Cloud Hypervisor micro VMs; each Elasticsearch node has a ZFS pool on its own physical drive, and Proxmox has a drive of its own.">
+    <svg class="dev-server-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1172 860" role="img" aria-label="Development server topology: peers and GitHub reach kinotic-server over two forwarded ports; Azure keeps Front Door, the sites storage account, email, DNS, a Key Vault and a snapshot container; one Proxmox host runs a container per service — kinotic-server, Loki, Tempo, Mimir, Grafana on the LAN, three Elasticsearch nodes and the one-shot migration on a private NAT-only network — with a ZFS pool on its own drive for each Elasticsearch node and a drive of Proxmox's own; two Intel NUCs beside it run the vm-manager with Cloud Hypervisor micro VMs.">
 
       <defs>
         <marker id="ds-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -65,7 +65,8 @@
       <text class="t-sub"  x="1058" y="183" text-anchor="middle">A record · DNS-01 certs</text>
 
       <!-- ═════════ the host ═════════ -->
-      <rect class="wall" x="24" y="262" width="1124" height="580" rx="12"></rect>
+      <rect class="wall" x="24" y="262" width="696" height="580" rx="12"></rect>
+      <rect class="wall" x="740" y="262" width="408" height="580" rx="12"></rect>
 
       <!-- the containers -->
       <rect class="encl-app" x="40" y="306" width="580" height="396" rx="10"></rect>
@@ -127,35 +128,35 @@
       <line class="link" x1="329" y1="540" x2="290" y2="593"></line>
       <line class="link" x1="329" y1="540" x2="470" y2="593"></line>
 
-      <!-- node VM -->
-      <rect class="wbox" x="640" y="306" width="492" height="396" rx="10"></rect>
-      <text class="t-plane-w" x="656" y="330">NODE VM · UBUNTU 22.04 · NESTED KVM</text>
+      <!-- the nodes: their own machines -->
+      <rect class="wbox" x="756" y="306" width="376" height="396" rx="10"></rect>
+      <text class="t-plane-w" x="772" y="330">NODES · UBUNTU 22.04 · KVM</text>
 
-      <rect class="chip" x="660" y="344" width="180" height="62" rx="8"></rect>
-      <text class="t-chip" x="750" y="364" text-anchor="middle">vm-manager</text>
-      <text class="t-tiny" x="750" y="380" text-anchor="middle">CLOUD_HYPERVISOR provider</text>
-      <text class="t-tiny" x="750" y="394" text-anchor="middle">Alloy · machine credentials</text>
+      <rect class="chip" x="776" y="344" width="180" height="62" rx="8"></rect>
+      <text class="t-chip" x="866" y="364" text-anchor="middle">vm-manager</text>
+      <text class="t-tiny" x="866" y="380" text-anchor="middle">CLOUD_HYPERVISOR provider</text>
+      <text class="t-tiny" x="866" y="394" text-anchor="middle">Alloy · machine credentials</text>
 
-      <rect class="gw gw-node" x="660" y="426" width="452" height="112" rx="8"></rect>
-      <text class="t-name" x="886" y="449" text-anchor="middle">Cloud Hypervisor micro VMs</text>
-      <line class="sep" x1="678" y1="458" x2="1094" y2="458"></line>
-      <text class="t-mono" x="886" y="475" text-anchor="middle">sync VM · runtime VM per microservice · UI publish VM</text>
-      <text class="t-mono" x="886" y="490" text-anchor="middle">reach the gateway at kinotic-server's LAN IPv4</text>
-      <text class="t-mono" x="886" y="505" text-anchor="middle">egress denied by default · allowlisted CIDRs only</text>
-      <text class="t-mono" x="886" y="520" text-anchor="middle">stdout and stderr captured, shipped by Alloy</text>
+      <rect class="gw gw-node" x="776" y="426" width="336" height="112" rx="8"></rect>
+      <text class="t-name" x="944" y="449" text-anchor="middle">Cloud Hypervisor micro VMs</text>
+      <line class="sep" x1="794" y1="458" x2="1094" y2="458"></line>
+      <text class="t-mono" x="944" y="475" text-anchor="middle">sync VM · runtime VM per microservice · publish VM</text>
+      <text class="t-mono" x="944" y="490" text-anchor="middle">reach the gateway at kinotic-server's LAN IPv4</text>
+      <text class="t-mono" x="944" y="505" text-anchor="middle">egress denied by default · allowlisted CIDRs only</text>
+      <text class="t-mono" x="944" y="520" text-anchor="middle">stdout and stderr captured, shipped by Alloy</text>
 
-      <rect class="chip" x="660" y="558" width="452" height="62" rx="8"></rect>
-      <text class="t-chip" x="886" y="578" text-anchor="middle">Docker + kata-clh runtime</text>
-      <text class="t-tiny" x="886" y="594" text-anchor="middle">XFS prjquota data root · icc: false · live-restore</text>
-      <text class="t-tiny" x="886" y="608" text-anchor="middle">DOCKER-USER floor · egress default-deny</text>
+      <rect class="chip" x="776" y="558" width="336" height="62" rx="8"></rect>
+      <text class="t-chip" x="944" y="578" text-anchor="middle">Docker + kata-clh runtime</text>
+      <text class="t-tiny" x="944" y="594" text-anchor="middle">XFS prjquota data root · icc: false · live-restore</text>
+      <text class="t-tiny" x="944" y="608" text-anchor="middle">DOCKER-USER floor · egress default-deny</text>
 
-      <line class="link" x1="750" y1="406" x2="750" y2="426" marker-end="url(#ds-ink)"></line>
-      <line class="link" x1="886" y1="538" x2="886" y2="558" marker-end="url(#ds-ink)"></line>
+      <line class="link" x1="866" y1="406" x2="866" y2="426" marker-end="url(#ds-ink)"></line>
+      <line class="link" x1="944" y1="538" x2="944" y2="558" marker-end="url(#ds-ink)"></line>
 
-      <!-- node → server -->
-      <line class="flow-vio" x1="660" y1="372" x2="350" y2="372" marker-end="url(#ds-vio)"></line>
-      <text class="t-tiny" x="505" y="386" text-anchor="middle">STOMP · machine credentials · heartbeat</text>
-      <line class="flow-amb" x1="660" y1="470" x2="350" y2="430" marker-end="url(#ds-amb)"></line>
+      <!-- nodes → server, across the LAN -->
+      <line class="flow-vio" x1="776" y1="372" x2="350" y2="372" marker-end="url(#ds-vio)"></line>
+      <text class="t-tiny" x="560" y="386" text-anchor="middle">STOMP · machine credentials · heartbeat</text>
+      <line class="flow-amb" x1="776" y1="470" x2="350" y2="430" marker-end="url(#ds-amb)"></line>
       <text class="t-tiny" x="490" y="418" text-anchor="middle">gateway = server IPv4 · :58503 · TLS</text>
 
       <!-- server → Azure: one service principal -->
@@ -172,7 +173,6 @@
       <text class="t-tiny" x="1128" y="300" text-anchor="end">signed upload URL</text>
 
       <!-- ═════════ disks ═════════ -->
-      <text class="t-tag" x="588" y="738">DRIVES · ONE ZFS POOL PER ES NODE · PROXMOX ON ITS OWN</text>
 
       <rect class="disk" x="35" y="756" width="150" height="44" rx="8"></rect>
       <text class="t-chip" x="110" y="774" text-anchor="middle">drive 2 · pool es1</text>
@@ -189,11 +189,12 @@
       <text class="t-tiny" x="470" y="790" text-anchor="middle">/es3/data → es-3</text>
       <line class="data" x1="470" y1="756" x2="470" y2="652"></line>
 
-      <rect class="disk" x="575" y="756" width="280" height="44" rx="8"></rect>
-      <text class="t-chip" x="715" y="774" text-anchor="middle">drive 1</text>
-      <text class="t-tiny" x="715" y="790" text-anchor="middle">Proxmox · rootfs · node VM disks · store data</text>
+      <rect class="disk" x="556" y="756" width="150" height="44" rx="8"></rect>
+      <text class="t-chip" x="631" y="774" text-anchor="middle">drive 1</text>
+      <text class="t-tiny" x="631" y="790" text-anchor="middle">Proxmox · rootfs · stores</text>
 
       <text class="t-tag" x="36" y="826">HOST · PROXMOX VE · RYZEN 9 · 96 GB · 4 × 512 GB NVME</text>
+      <text class="t-tag" x="752" y="826">2 × INTEL NUC · 32 GB · 250 GB SSD</text>
     </svg>
   </div>
   </DiagramFrame>

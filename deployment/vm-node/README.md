@@ -3,8 +3,9 @@
 Provisioning for a node that runs Kinotic workloads with the `CLOUD_HYPERVISOR` provider:
 each workload is a [Kata Containers](https://katacontainers.io/) micro VM on
 [Cloud Hypervisor](https://www.cloudhypervisor.org/), driven through the Docker Engine API by
-the vm-manager. The same kit builds the development server's node VM
-(`deployment/terraform/proxmox`) and any other node, cloud or bare metal.
+the vm-manager. The same kit provisions the development server's nodes (bare-metal machines
+beside the Proxmox host, configured from `deployment/terraform/proxmox`'s `vm_manager_env`
+output) and any other node, cloud or bare metal.
 
 ```bash
 sudo ./setup-node.sh            # provision; idempotent, safe to re-run
@@ -29,8 +30,8 @@ Two ways to get there:
   the script, with an fstab entry that carries `prjquota`; the script keeps the mount and only
   verifies it. Give the workload data directory (`KINOTIC_WORKLOAD_DATA_DIR`, by convention
   `/var/lib/kinotic/workloads`) the same treatment, on its own partition or the same
-  filesystem, since the vm-manager refuses writable mounts it cannot cap. This is what the
-  development server's cloud-init does.
+  filesystem, since the vm-manager refuses writable mounts it cannot cap. This is how the
+  development server's nodes are installed.
 - **Nothing to spare.** The script creates a 40 GB XFS loop image (`DOCKER_FS_SIZE` to change
   it) and mounts that. Fine for a cloud VM with one disk.
 

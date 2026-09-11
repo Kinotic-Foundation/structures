@@ -6,7 +6,7 @@
 |---|---|---|
 | **Docker Compose** | `docker-compose/` | Local development (Elasticsearch, the observability stack, Keycloak); the development server runs the same images and config files as containers |
 | **KinD** | `kind/` | Local Kubernetes via Kubernetes in Docker, for rehearsing the Helm charts |
-| **Development server** | `terraform/proxmox/` + `terraform/azure/dev-server/` | One Proxmox host: a container per service, a Cloud Hypervisor node VM, Front Door and email kept in Azure ([design](https://kinotic.ai/platform/development-server)) |
+| **Development server** | `terraform/proxmox/` + `terraform/azure/dev-server/` | One Proxmox host with a container per service, workload nodes on their own machines, Front Door and email kept in Azure ([design](https://kinotic.ai/platform/development-server)) |
 | **Developer's Azure side** | `terraform/azure/dev/` | Front Door, sites account, and email for a kinotic-server on a developer machine |
 | **Azure** | `terraform/azure/` | Production AKS cluster |
 
@@ -17,8 +17,8 @@ server is deployed with Terraform and shares the images and config files with lo
 
 `vm-node/` provisions a node that runs workloads as Cloud Hypervisor micro VMs — Docker with
 the Kata runtime, XFS project quotas, the firewall floor — and installs the vm-manager as a
-service. The development server's node VM runs it from cloud-init; any other node runs it by
-hand. Its README says what each step establishes.
+service. The development server's nodes and any other node run it by hand; its README says
+what each step establishes.
 
 ## Shared Helm Charts
 
@@ -130,7 +130,7 @@ Azure documentation:
 cd deployment/terraform/azure/dev-server && terraform init && terraform apply   # the Azure side
 cd ../../proxmox
 ./generate-secrets.sh ./dev-server-secrets && ./sync-secrets.sh ./dev-server-secrets <host>   # secrets on the host first
-terraform init && terraform apply                                              # the containers and the node VM
+terraform init && terraform apply                                              # the containers
 ```
 
 See [terraform/proxmox/README.md](terraform/proxmox/README.md) for the whole runbook.

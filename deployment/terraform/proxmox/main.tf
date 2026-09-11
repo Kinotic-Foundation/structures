@@ -1,14 +1,13 @@
 # ── The development server on Proxmox ────────────────────────────────────────
-# One container per service and one VM, on one host. Every service the compose stack runs
-# locally — kinotic-server, the one-shot migration, three Elasticsearch nodes, Loki, Tempo,
-# Mimir, Grafana — is an unprivileged LXC container created from the image compose pulls,
-# with its state in a host directory: the Elasticsearch nodes on a physical disk each. The
-# node VM runs the vm-manager with the Cloud Hypervisor provider under nested KVM; it needs
-# its own kernel, and cannot share an operating system with the gateway anyway, since its
-# firewall floor drops every guest packet addressed to the node itself.
+# One container per service, on one host. Every service the compose stack runs locally —
+# kinotic-server, the one-shot migration, three Elasticsearch nodes, Loki, Tempo, Mimir,
+# Grafana — is an unprivileged LXC container created from the image compose pulls, with its
+# state in a host directory: the Elasticsearch nodes on a physical disk each. The workload
+# nodes are separate machines provisioned with deployment/vm-node; they dial the server and
+# the stores on the LAN, and the vm_manager_env output is their configuration.
 #
 # Terraform owns what the Proxmox API exposes: the private network, the images, the
-# containers with their mounts, the VM, and the files it uploads to the host. What the API
+# containers with their mounts, and the files it uploads to the host. What the API
 # does not take for a container created from an OCI image yet — the environment its
 # entrypoint sees (bpg/terraform-provider-proxmox#2789) — host/kinotic-apply-container.py
 # applies on the host from a manifest per container, merging in the secrets the operator
@@ -29,7 +28,6 @@ locals {
   tempo_ip   = split("/", var.tempo_ip)[0]
   mimir_ip   = split("/", var.mimir_ip)[0]
   grafana_ip = split("/", var.grafana_ip)[0]
-  node_ip    = split("/", var.node_ip)[0]
 
   # The private network: the host is its gateway, the ES nodes take .11 to .13
   private_prefix       = split("/", var.private_cidr)[1]
@@ -39,7 +37,6 @@ locals {
   migration_private_ip = cidrhost(var.private_cidr, 21)
 
   compose_dir = "${path.module}/../../docker-compose"
-  vm_node_dir = "${path.module}/../../vm-node"
   config_root = "${var.data_dir}/config"
   data_root   = "${var.data_dir}/data"
 
@@ -340,27 +337,6 @@ locals {
     verify      = c.verify
     timeout     = c.timeout
   } }
-
-  vm_manager_env = <<-EOT
-    KINOTIC_VM_PROVIDER=CLOUD_HYPERVISOR
-    KINOTIC_NODE_ID=${var.node_id}
-    KINOTIC_SERVER_HOST=${local.server_ip}
-    KINOTIC_SERVER_PORT=58503
-    KINOTIC_SERVER_USE_SSL=true
-    KINOTIC_WORKLOAD_DATA_DIR=/var/lib/kinotic/workloads
-    KINOTIC_WORKLOAD_DNS=${var.dns_servers[0]}
-    KINOTIC_LOKI_URL=${local.service_urls["http://loki:3100"]}
-    KINOTIC_TEMPO_URL=http://${local.tempo_ip}:4318
-    KINOTIC_MIMIR_URL=${local.service_urls["http://mimir:9009"]}/otlp
-  EOT
-
-  vm_node_files = [
-    "setup-node.sh",
-    "verify-node.sh",
-    "kinotic-node-firewall",
-    "install-vm-manager.sh",
-    "kinotic-vm-manager.service",
-  ]
 }
 
 # ── The private network ───────────────────────────────────────────────────────
@@ -440,15 +416,6 @@ resource "proxmox_oci_image" "grafana" {
   reference    = "docker.io/grafana/grafana:${var.grafana_version}"
 }
 
-resource "proxmox_download_file" "node_image" {
-  content_type = "iso"
-  datastore_id = var.iso_datastore_id
-  node_name    = var.proxmox_node
-  url          = var.node_image_url
-  file_name    = "kinotic-node-cloudimg-amd64.img"
-  overwrite    = false
-}
-
 # ── Files on the host ─────────────────────────────────────────────────────────
 
 resource "proxmox_virtual_environment_file" "applier" {
@@ -485,22 +452,6 @@ resource "proxmox_virtual_environment_file" "manifest" {
   source_raw {
     file_name = "kinotic-${each.key}.manifest.json"
     data      = jsonencode(each.value)
-  }
-}
-
-resource "proxmox_virtual_environment_file" "node_cloud_init" {
-  content_type = "snippets"
-  datastore_id = var.files_datastore_id
-  node_name    = var.proxmox_node
-
-  source_raw {
-    file_name = "kinotic-node.cloud-config.yaml"
-    data = templatefile("${path.module}/cloud-init/node.yaml.tftpl", {
-      ssh_public_key     = var.ssh_public_key
-      vm_manager_env     = local.vm_manager_env
-      vm_manager_version = var.vm_manager_version
-      vm_node_files      = { for f in local.vm_node_files : f => base64encode(file("${local.vm_node_dir}/${f}")) }
-    })
   }
 }
 
@@ -606,82 +557,4 @@ resource "terraform_data" "apply" {
     proxmox_virtual_environment_file.config,
     proxmox_virtual_environment_file.manifest,
   ]
-}
-
-# ── The node VM ───────────────────────────────────────────────────────────────
-
-resource "proxmox_virtual_environment_vm" "node" {
-  node_name   = var.proxmox_node
-  vm_id       = 200
-  name        = "kinotic-dev-node"
-  description = "vm-manager with the Cloud Hypervisor provider (deployment/vm-node)"
-  tags        = ["kinotic", "dev-server"]
-  on_boot     = true
-
-  agent {
-    enabled = true
-  }
-
-  # type = host exposes the CPU's virtualization extensions, which the Kata micro VMs need
-  cpu {
-    cores = var.node_cores
-    type  = "host"
-  }
-
-  memory {
-    dedicated = var.node_memory_mb
-  }
-
-  scsi_hardware = "virtio-scsi-single"
-  boot_order    = ["scsi0"]
-
-  disk {
-    datastore_id = var.vm_datastore_id
-    file_id      = proxmox_download_file.node_image.id
-    interface    = "scsi0"
-    size         = var.node_os_disk_gb
-    discard      = "on"
-    iothread     = true
-  }
-
-  # scsi1: Docker's data root and the workload checkouts, partitioned by cloud-init
-  disk {
-    datastore_id = var.vm_datastore_id
-    interface    = "scsi1"
-    size         = var.node_data_disk_gb
-    discard      = "on"
-    iothread     = true
-  }
-
-  network_device {
-    bridge = var.bridge
-    model  = "virtio"
-  }
-
-  operating_system {
-    type = "l26"
-  }
-
-  serial_device {}
-
-  # The server comes up before the node connects to it
-  startup {
-    order = 40
-  }
-
-  initialization {
-    datastore_id      = var.vm_datastore_id
-    user_data_file_id = proxmox_virtual_environment_file.node_cloud_init.id
-
-    ip_config {
-      ipv4 {
-        address = var.node_ip
-        gateway = var.gateway
-      }
-    }
-
-    dns {
-      servers = var.dns_servers
-    }
-  }
 }

@@ -2,14 +2,15 @@
 
 One Proxmox host runs the whole platform: a container per service — kinotic-server, the
 one-shot migration, three Elasticsearch nodes on a physical disk each, Loki, Tempo, Mimir,
-Grafana — created from the same images the compose stack pulls, and one VM for the
-vm-manager with the Cloud Hypervisor provider (`deployment/vm-node`). The design and the
-reasons are on the [Development Server](https://kinotic.ai/platform/development-server)
-page; this is the runbook.
+Grafana — created from the same images the compose stack pulls. The workload nodes are
+separate machines provisioned with `deployment/vm-node`, configured from this root's
+`vm_manager_env` output. The design and the reasons are on the
+[Development Server](https://kinotic.ai/platform/development-server) page; this is the
+runbook.
 
 Terraform owns what the Proxmox API exposes: the private network the Elasticsearch nodes
-live on, the images, the containers with their mounts, the VM, and the files it uploads to
-the host. One thing the API does not take yet for a container created from an OCI image is
+live on, the images, the containers with their mounts, and the files it uploads to the
+host. One thing the API does not take yet for a container created from an OCI image is
 the environment its entrypoint sees ([bpg/terraform-provider-proxmox#2789](https://github.com/bpg/terraform-provider-proxmox/issues/2789)),
 so terraform uploads a manifest per container and `host/kinotic-apply-container.py`
 applies it on the host: the environment, the config files each store reads, and the
@@ -98,10 +99,8 @@ loki_ip           = "192.168.1.21/24"
 tempo_ip          = "192.168.1.22/24"
 mimir_ip          = "192.168.1.23/24"
 grafana_ip        = "192.168.1.24/24"
-node_ip           = "192.168.1.25/24"
 gateway           = "192.168.1.1"
 dns_servers       = ["192.168.1.1"]
-ssh_public_key    = "ssh-ed25519 AAAA... you@laptop"
 ```
 
 ```bash
@@ -110,15 +109,11 @@ terraform init
 terraform apply
 ```
 
-The apply creates the private network, pulls the images, creates every container stopped
-and the node VM, uploads the manifests, and runs the applier over them in startup order: the
-three Elasticsearch nodes, then Loki, Tempo, Mimir and Grafana, then the migration, which
-waits for the cluster to be healthy, runs to completion, and is verified against the
-`migration_history` index, then the server. The node VM boots and runs its cloud-init: it
-splits its disk into the Docker data root and the workload checkouts, runs `setup-node.sh`,
-turns on egress default-deny, and installs the vm-manager as `kinotic-vm-manager.service`,
-which waits for the machine credentials. Watch it with
-`ssh kinotic@<node ip> sudo cloud-init status --wait`.
+The apply creates the private network, pulls the images, creates every container stopped,
+uploads the manifests, and runs the applier over them in startup order: the three
+Elasticsearch nodes, then Loki, Tempo, Mimir and Grafana, then the migration, which waits for
+the cluster to be healthy, runs to completion, and is verified against the
+`migration_history` index, then the server.
 
 The portal is on `https://dev.kinotic.ai` once the router forwards 443 to `server_ip:9090`
 and 58503 to `server_ip:58503`.
@@ -127,16 +122,22 @@ and 58503 to `server_ip:58503`.
 
 1. **The GitHub App's webhook** → `https://dev.kinotic.ai:58503/api/github/webhook`.
 
-2. **The node.** In the system console create a SYSTEM-scope machine for the node, then:
+2. **The nodes.** Each is Ubuntu 22.04 on its own machine with the kit from
+   `deployment/vm-node` (its README: the two XFS `prjquota` partitions, then `setup-node.sh`,
+   egress default-deny, `install-vm-manager.sh`, `verify-node.sh`). Its configuration is this
+   root's output plus the node's own id; the machine credentials come from a SYSTEM-scope
+   machine created in the system console:
 
    ```bash
+   { terraform output -raw vm_manager_env; echo KINOTIC_NODE_ID=dev-node-1; } | ssh kinotic@<node ip> 'sudo tee /etc/kinotic/vm-manager.env >/dev/null'
    ssh kinotic@<node ip> 'sudo tee /etc/kinotic/vm-manager.secrets.env >/dev/null && sudo chmod 0600 /etc/kinotic/vm-manager.secrets.env && sudo systemctl start kinotic-vm-manager' <<EOT
    KINOTIC_CLIENT_ID=<machine id>
    KINOTIC_CLIENT_SECRET=<machine secret>
    EOT
    ```
 
-   The node appears `ONLINE` in the console with no health message.
+   The node appears `ONLINE` in the console with no health message. A first deployment lands
+   on the first `ONLINE` node with room for it.
 
 3. **Snapshots.** The storage account key (`terraform output -raw snapshots_storage_account_key`
    in the Azure root) goes into each node's keystore, then the repository and a daily policy
@@ -177,9 +178,7 @@ and 58503 to `server_ip:58503`.
   `rm /var/lib/kinotic/state/keepalive/<vmid>`, or `kinotic-keepalive.timer` starts it
   again; the next apply or applier run puts the marker back.
 - **The node kit** is idempotent: `ssh kinotic@<node ip> sudo /opt/kinotic/vm-node/verify-node.sh`
-  after a reboot, `setup-node.sh` again to pick up a new Kata release. Changing the
-  cloud-init template does not re-run it on an existing VM.
-- **`terraform destroy`** removes the containers, the VM, the images, and the private
-  network. The host directories are not touched: a new apply mounts the same Elasticsearch
-  data, the same store data, and the same secrets. The node VM's data disk goes with the VM;
-  checkouts are redeployed from GitHub.
+  after a reboot, `setup-node.sh` again to pick up a new Kata release.
+- **`terraform destroy`** removes the containers, the images, and the private network. The
+  host directories are not touched: a new apply mounts the same Elasticsearch data, the same
+  store data, and the same secrets. The nodes are not this root's and keep running.
