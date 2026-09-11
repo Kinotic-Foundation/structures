@@ -15,11 +15,11 @@ SNIPPETS="${SNIPPETS_DIR:-/var/lib/vz/snippets}"
 # Ownership and modes are set on the host: -a would carry the operator's uid across, and
 # macOS's openrsync takes no octal --chmod
 rsync -rlt "$SRC/" "root@$HOST:$DEST/"
-# cnb, uid 1000 in the server's container, is uid 101000 on the host
+# cnb, uid 1002 and gid 1001 in the server's container, is 101002:101001 on the host
 ssh "root@$HOST" "
   chmod -R u=rwX,go= '$DEST'
   chown -R 0:0 '$DEST'
-  chown -R 101000:101000 '$DEST/kinotic-server'
+  chown -R 101002:101001 '$DEST/kinotic-server'
   for manifest in '$SNIPPETS/kinotic-kinotic-server.manifest.json' '$SNIPPETS/kinotic-grafana.manifest.json'; do
     [ -e \"\$manifest\" ] && python3 '$SNIPPETS/kinotic-apply-container.py' \"\$manifest\"
   done

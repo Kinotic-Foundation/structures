@@ -49,6 +49,17 @@ chmod 0700 "$SECRETS_DIR"
 echo 'vm.max_map_count = 262144' > /etc/sysctl.d/90-kinotic-elasticsearch.conf
 sysctl -q -p /etc/sysctl.d/90-kinotic-elasticsearch.conf
 
+# Each container's console log, which LXC keeps open: 16 MB, one rotation
+cat > /etc/logrotate.d/kinotic <<'CONF'
+/var/log/kinotic/*.log {
+    size 16M
+    rotate 1
+    copytruncate
+    missingok
+    notifempty
+}
+CONF
+
 # OCI images are vztmpl content, the manifests and config files snippets
 current=$(awk -v ds="$FILES_DATASTORE" '$1 ~ /:$/ { in_ds = ($2 == ds) } in_ds && $1 == "content" { print $2 }' /etc/pve/storage.cfg)
 wanted=$(printf '%s\n' "${current//,/$'\n'}" snippets vztmpl | grep -v '^$' | sort -u | paste -sd,)

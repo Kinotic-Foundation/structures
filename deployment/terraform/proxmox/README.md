@@ -10,10 +10,10 @@ runbook.
 
 Terraform owns what the Proxmox API exposes: the private network the Elasticsearch nodes
 live on, the images, the containers with their mounts, and the files it uploads to the
-host. One thing the API does not take yet for a container created from an OCI image is
-the environment its entrypoint sees ([bpg/terraform-provider-proxmox#2789](https://github.com/bpg/terraform-provider-proxmox/issues/2789)),
-so terraform uploads a manifest per container and `host/kinotic-apply-container.py`
-applies it on the host: the environment, the config files each store reads, and the
+host. The API validates a container's environment as word-keyed, which Elasticsearch's
+dotted settings are not, and writes no resolv.conf into an OCI image, so terraform uploads
+a manifest per container and `host/kinotic-apply-container.py` applies it on the host: the
+environment, the resolvers, the console log, the config files each store reads, and the
 ownership of the directories each container mounts. The applier merges in the secrets the
 operator placed on the host, so nothing secret goes through terraform or its state.
 
@@ -68,8 +68,8 @@ somewhere safe and out of the repository; both are carried to the cloud at migra
 
 The certificate is issued on the host by certbot with the DNS-01 plugin, as the server's
 principal (the `dev-server` root granted it DNS Zone Contributor), and installed into the
-directory the server's container mounts — `cnb`, uid 1000 in the container, is uid 101000
-on the host:
+directory the server's container mounts — `cnb`, uid 1002 and gid 1001 in the container, is
+101002:101001 on the host:
 
 ```bash
 ssh root@<host>
@@ -85,7 +85,7 @@ dns_azure_zone1 = kinotic.ai:/subscriptions/<subscription>/resourceGroups/<globa
 EOT
 /opt/certbot/bin/certbot certonly --non-interactive --agree-tos --email <you> \
   --authenticator dns-azure --dns-azure-config /etc/kinotic/certbot-azure.ini \
-  --deploy-hook 'install -m 0640 -o 101000 -g 101000 "$RENEWED_LINEAGE"/fullchain.pem "$RENEWED_LINEAGE"/privkey.pem /etc/kinotic/secrets/kinotic-server/certs/ && pct reboot 121 2>/dev/null || true' \
+  --deploy-hook 'install -m 0640 -o 101002 -g 101001 "$RENEWED_LINEAGE"/fullchain.pem "$RENEWED_LINEAGE"/privkey.pem /etc/kinotic/secrets/kinotic-server/certs/ && pct reboot 121 2>/dev/null || true' \
   -d dev.kinotic.ai
 echo '0 3 * * * root /opt/certbot/bin/certbot renew -q' > /etc/cron.d/certbot
 ```
