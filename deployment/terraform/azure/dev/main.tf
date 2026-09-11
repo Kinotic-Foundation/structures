@@ -1,12 +1,9 @@
 # ── Developer UI publishing ───────────────────────────────────────────────────
 # What a kinotic-server running on a developer machine needs to publish UIs to a real
-# subscription: the resource group its organizations' storage accounts are created in, the
-# Front Door Standard profile and endpoint every site is served through, under
-# apps-<environment>.<zone> in the global DNS zone, and a service principal for the server
-# holding the roles it needs on them and on the email service. The server creates the rest
-# at runtime, as it does in the cluster. There is no VNet: the server reaches the accounts
-# over their public endpoints and creates no private endpoints, which is what the `local`
-# profile it runs with turns off. Independent of cluster/: apply and destroy freely.
+# subscription: the dev-environment module (a resource group, the Front Door profile and
+# endpoint under apps-<environment>.<zone>, the sites storage account and key vault, and a
+# service principal with the roles the server needs), plus the three lines in .env.local that
+# make the server on this machine run as that principal.
 #
 # State is kept locally, next to this file, because the root is per developer: each
 # developer picks an `environment` of their own and owns what it creates.
@@ -66,13 +63,9 @@ data "terraform_remote_state" "global" {
   }
 }
 
-data "azurerm_client_config" "current" {}
-
 locals {
-  name_prefix  = "${var.project}-${var.environment}"
-  global       = data.terraform_remote_state.global.outputs
-  sites_domain = module.sites.sites_domain
-  env_local    = "${path.module}/../../../../.env.local"
+  global    = data.terraform_remote_state.global.outputs
+  env_local = "${path.module}/../../../../.env.local"
 
   common_tags = {
     environment = var.environment
@@ -81,51 +74,27 @@ locals {
   }
 }
 
-# ── Resource Group ────────────────────────────────────────────────────────────
-# Holds the Front Door profile and, created at runtime, one storage account per organization
+# ── The environment ───────────────────────────────────────────────────────────
 
-resource "azurerm_resource_group" "main" {
-  name     = "rg-${local.name_prefix}"
-  location = var.location
-  tags     = local.common_tags
+module "environment" {
+  source = "../modules/dev-environment"
+
+  project            = var.project
+  environment        = var.environment
+  location           = var.location
+  tags               = local.common_tags
+  lets_encrypt_email = var.lets_encrypt_email
+
+  dns_zone_name                  = local.global.dns_zone_name
+  dns_zone_id                    = local.global.dns_zone_id
+  dns_zone_resource_group_name   = local.global.resource_group_name
+  dns_zone_subscription_id       = local.global.subscription_id
+  email_communication_service_id = local.global.email_communication_service_id
 }
 
-# ── UI sites on Front Door ────────────────────────────────────────────────────
-# The sites module owns everything a site needs, so nothing changes on Front Door or in
-# DNS when a UI is published; this root adds the key vault the wildcard certificate is
-# issued into, which the cluster root has already.
-
-resource "azurerm_key_vault" "sites" {
-  name                       = "kv-${local.name_prefix}-sites"
-  location                   = var.location
-  resource_group_name        = azurerm_resource_group.main.name
-  tenant_id                  = data.azurerm_client_config.current.tenant_id
-  sku_name                   = "standard"
-  soft_delete_retention_days = 7
-  rbac_authorization_enabled = true
-  tags                       = local.common_tags
-}
-
-module "sites" {
-  source = "../modules/sites"
-
-  name_prefix                     = local.name_prefix
-  location                        = var.location
-  resource_group_name             = azurerm_resource_group.main.name
-  tags                            = local.common_tags
-  dns_zone_name                   = local.global.dns_zone_name
-  dns_zone_id                     = local.global.dns_zone_id
-  dns_zone_resource_group_name    = local.global.resource_group_name
-  dns_zone_subscription_id        = local.global.subscription_id
-  sites_label                     = "apps-${var.environment}"
-  key_vault_id                    = azurerm_key_vault.sites.id
-  certificate_officer_object_id   = data.azurerm_client_config.current.object_id
-  lets_encrypt_email              = var.lets_encrypt_email
-  server_principal_id             = azuread_service_principal.server.object_id
-  server_principal_skip_aad_check = true
-}
-
-# The profile and endpoint predate the module and keep their identity
+# The resources predate the module and keep their identity: a developer's next apply moves
+# them in state instead of recreating them. The first two chain through the earlier move of
+# the profile and endpoint into the sites module.
 moved {
   from = azurerm_cdn_frontdoor_profile.sites
   to   = module.sites.azurerm_cdn_frontdoor_profile.sites
@@ -136,25 +105,42 @@ moved {
   to   = module.sites.azurerm_cdn_frontdoor_endpoint.sites
 }
 
-# ── Service principal for kinotic-server ──────────────────────────────────────
-# The server on this machine authenticates as this principal: DefaultAzureCredential takes
-# AZURE_CLIENT_ID, AZURE_CLIENT_SECRET and AZURE_TENANT_ID before anything else, and the
-# root writes those three to .env.local at the repository root. One per developer, holding
-# roles on nothing but what this root creates and the email service.
-
-resource "azuread_application" "server" {
-  display_name = "${local.name_prefix}-server"
+moved {
+  from = module.sites
+  to   = module.environment.module.sites
 }
 
-resource "azuread_service_principal" "server" {
-  client_id = azuread_application.server.client_id
+moved {
+  from = azurerm_resource_group.main
+  to   = module.environment.azurerm_resource_group.main
 }
 
-resource "azuread_application_password" "server" {
-  application_id = azuread_application.server.id
-  display_name   = "${local.name_prefix}-server"
+moved {
+  from = azurerm_key_vault.sites
+  to   = module.environment.azurerm_key_vault.sites
 }
 
+moved {
+  from = azuread_application.server
+  to   = module.environment.azuread_application.server
+}
+
+moved {
+  from = azuread_service_principal.server
+  to   = module.environment.azuread_service_principal.server
+}
+
+moved {
+  from = azuread_application_password.server
+  to   = module.environment.azuread_application_password.server
+}
+
+moved {
+  from = azurerm_role_assignment.server_email
+  to   = module.environment.azurerm_role_assignment.server_email
+}
+
+# ── .env.local ────────────────────────────────────────────────────────────────
 # Keeps the block below current and everything else in the file as it was: a block a
 # previous run wrote (its comment through AZURE_TENANT_ID) and any stray AZURE_* lines are
 # dropped, trailing blank lines trimmed, and the block appended after one blank line. The
@@ -176,7 +162,7 @@ locals {
     ' "$f" > "$f.tmp"
     if [ -s "$f.tmp" ]; then printf '\n' >> "$f.tmp"; fi
     cat >> "$f.tmp" <<EOF
-    # kinotic-server Azure identity: the ${local.name_prefix}-server service principal, created by
+    # kinotic-server Azure identity: the ${var.project}-${var.environment}-server service principal, created by
     # deployment/terraform/azure/dev with the roles the server needs to publish UIs and send email.
     # DefaultAzureCredential reads these before anything else. Written by terraform apply there;
     # to write them again: terraform apply -replace=terraform_data.env_local
@@ -189,29 +175,16 @@ locals {
 }
 
 resource "terraform_data" "env_local" {
-  triggers_replace = [azuread_application_password.server.key_id, local.env_local_script]
+  triggers_replace = [module.environment.server_client_secret_key_id, local.env_local_script]
 
   provisioner "local-exec" {
     command = local.env_local_script
     environment = {
-      AZURE_CLIENT_ID     = azuread_application.server.client_id
-      AZURE_CLIENT_SECRET = azuread_application_password.server.value
-      AZURE_TENANT_ID     = data.azurerm_client_config.current.tenant_id
+      AZURE_CLIENT_ID     = module.environment.server_client_id
+      AZURE_CLIENT_SECRET = module.environment.server_client_secret
+      AZURE_TENANT_ID     = module.environment.tenant_id
     }
   }
-}
-
-# ── Roles for kinotic-server ──────────────────────────────────────────────────
-# What the cluster grants the kinotic-server workload identity: the sites module gives it
-# Storage Blob Data Contributor on the sites account, where it signs each site's upload and
-# removal URLs; Contributor on the email service sends mail.
-
-resource "azurerm_role_assignment" "server_email" {
-  scope                = local.global.email_communication_service_id
-  role_definition_name = "Contributor"
-  principal_id         = azuread_service_principal.server.object_id
-  # a principal created moments ago may not have replicated to the RBAC lookup yet
-  skip_service_principal_aad_check = true
 }
 
 # ── Variables ─────────────────────────────────────────────────────────────────
@@ -239,16 +212,16 @@ variable "lets_encrypt_email" {
   type        = string
 }
 
-# ── Outputs ───────────────────────────────────────────────────────────────────
+# ── Outputs ─────────────────────────────────────────────────────────────────
 
 output "sites_domain" {
   description = "The domain every published UI is a label under"
-  value       = local.sites_domain
+  value       = module.environment.sites_domain
 }
 
 output "server_client_id" {
   description = "The service principal kinotic-server runs as; its credentials are in .env.local at the repository root"
-  value       = azuread_application.server.client_id
+  value       = module.environment.server_client_id
 }
 
 output "application_local_yml" {
@@ -258,7 +231,7 @@ output "application_local_yml" {
       systemApi:
         uiDeployment:
           disableProvisioner: false
-          sitesDomain: ${local.sites_domain}
-          sitesStorageEndpoint: ${module.sites.storage_blob_endpoint}
+          sitesDomain: ${module.environment.sites_domain}
+          sitesStorageEndpoint: ${module.environment.sites_storage_blob_endpoint}
   EOT
 }

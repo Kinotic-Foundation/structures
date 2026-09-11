@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Provisions a node to run Kinotic workloads as Kata microVMs on Cloud Hypervisor, driven
 # through the Docker Engine API. Idempotent: safe to re-run on a node already set up.
+# README.md beside this script says what each step establishes and why.
 #
 # Docker rather than containerd's CRI for two reasons neither is obvious from the outside:
 # CRI has no per-container rootfs size (containerd applies base_image_size per snapshotter,
@@ -92,12 +93,20 @@ echo "  hypervisor      : $(/opt/kata/bin/cloud-hypervisor --version 2>&1 | head
 step "XFS with project quotas for Docker's data root"
 # --storage-opt size needs overlay2 on XFS mounted with pquota; ext4 silently refuses it.
 # The same quota mechanism bounds workload volume mounts (VolumeMount.sizeLimitMb).
-if ! mountpoint -q "$DOCKER_DATA"; then
+#
+# A node built with a whole disk for the data root mounts it before this runs (the
+# development server's cloud-init does), and that mount is kept. Anything else gets a loop
+# image, which is what a cloud VM with one disk has room for.
+if mountpoint -q "$DOCKER_DATA"; then
+    DATA_ROOT_SOURCE="$(findmnt -no SOURCE "$DOCKER_DATA")"
+    echo "  $DOCKER_DATA is already mounted from $DATA_ROOT_SOURCE"
+else
     systemctl stop docker docker.socket 2>/dev/null || true
     [ -f "$DOCKER_FS_IMAGE" ] || truncate -s "$DOCKER_FS_SIZE" "$DOCKER_FS_IMAGE"
     blkid "$DOCKER_FS_IMAGE" >/dev/null 2>&1 || mkfs.xfs -q "$DOCKER_FS_IMAGE"
     mkdir -p "$DOCKER_DATA"
     mount -o loop,prjquota "$DOCKER_FS_IMAGE" "$DOCKER_DATA"
+    DATA_ROOT_SOURCE="$DOCKER_FS_IMAGE"
 fi
 findmnt -no FSTYPE,OPTIONS "$DOCKER_DATA" | sed 's/^/  /'
 findmnt -no OPTIONS "$DOCKER_DATA" | grep -q prjquota || fail "$DOCKER_DATA is not mounted with prjquota"
@@ -105,9 +114,18 @@ findmnt -no OPTIONS "$DOCKER_DATA" | grep -q prjquota || fail "$DOCKER_DATA is n
 # Persist it. Without an fstab entry the mount is lost on reboot, /var/lib/docker falls back to
 # the ext4 root, and --storage-opt size stops working — the per-workload disk cap disappears
 # with nothing to indicate it. RequiresMountsFor orders the mount before dockerd, which fstab
-# alone does not guarantee.
-grep -q "$DOCKER_FS_IMAGE" /etc/fstab || \
-  printf '%s %s xfs loop,prjquota,x-systemd.before=docker.service 0 0\n' "$DOCKER_FS_IMAGE" "$DOCKER_DATA" >> /etc/fstab
+# alone does not guarantee. An entry that already mounts the data root (written by whoever
+# mounted the disk) is kept, as long as it carries prjquota.
+if awk -v m="$DOCKER_DATA" '$2 == m { found = 1 } END { exit !found }' /etc/fstab; then
+    awk -v m="$DOCKER_DATA" '$2 == m' /etc/fstab | grep -q prjquota \
+        || fail "the fstab entry for $DOCKER_DATA lacks prjquota — the disk cap would vanish on reboot"
+elif [ "$DATA_ROOT_SOURCE" = "$DOCKER_FS_IMAGE" ]; then
+    printf '%s %s xfs loop,prjquota,x-systemd.before=docker.service 0 0\n' "$DOCKER_FS_IMAGE" "$DOCKER_DATA" >> /etc/fstab
+else
+    DATA_ROOT_UUID="$(blkid -s UUID -o value "$DATA_ROOT_SOURCE")"
+    [ -n "$DATA_ROOT_UUID" ] || fail "$DATA_ROOT_SOURCE has no filesystem UUID to persist the mount by"
+    printf 'UUID=%s %s xfs prjquota,x-systemd.before=docker.service 0 0\n' "$DATA_ROOT_UUID" "$DOCKER_DATA" >> /etc/fstab
+fi
 mkdir -p /etc/systemd/system/docker.service.d
 printf '[Unit]\nRequiresMountsFor=%s\n' "$DOCKER_DATA" > /etc/systemd/system/docker.service.d/10-kinotic-data-root.conf
 findmnt --verify --fstab >/dev/null 2>&1 || fail "the fstab entry does not parse — a bad entry makes the node unbootable"

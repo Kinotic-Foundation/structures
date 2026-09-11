@@ -1,0 +1,41 @@
+output "proxmox_host" {
+  description = "The host, for sync-secrets.sh and ssh"
+  value       = var.proxmox_host
+}
+
+output "hostname" {
+  description = "The hostname peers use; the router forwards its 443 and 58503 to server_ip"
+  value       = local.azure.hostname
+}
+
+output "server_ip" {
+  description = "kinotic-server's LAN address: 443 → 9090 and 58503 → 58503 at the router"
+  value       = local.server_ip
+}
+
+output "grafana_url" {
+  description = "Grafana, on the LAN, admin with the password in grafana.env"
+  value       = "http://${local.grafana_ip}:3000"
+}
+
+# Each node adds its own KINOTIC_NODE_ID line; the machine credentials go in
+# vm-manager.secrets.env beside it (deployment/vm-node/README.md)
+output "vm_manager_env" {
+  description = "The nodes' /etc/kinotic/vm-manager.env: the server and the stores as the nodes reach them"
+  value       = <<-EOT
+    KINOTIC_VM_PROVIDER=CLOUD_HYPERVISOR
+    KINOTIC_SERVER_HOST=${local.server_ip}
+    KINOTIC_SERVER_PORT=58503
+    KINOTIC_SERVER_USE_SSL=true
+    KINOTIC_WORKLOAD_DATA_DIR=/var/lib/kinotic/workloads
+    KINOTIC_WORKLOAD_DNS=${var.dns_servers[0]}
+    KINOTIC_LOKI_URL=${local.service_urls["http://loki:3100"]}
+    KINOTIC_TEMPO_URL=http://${local.tempo_ip}:4318
+    KINOTIC_MIMIR_URL=${local.service_urls["http://mimir:9009"]}/otlp
+  EOT
+}
+
+output "containers" {
+  description = "Each container's vmid, for pct"
+  value       = { for name, c in local.containers : name => c.vm_id }
+}

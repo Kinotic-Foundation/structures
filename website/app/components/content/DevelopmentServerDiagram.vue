@@ -1,7 +1,7 @@
 <template>
   <DiagramFrame>
   <div class="dev-server-diagram-wrap">
-    <svg class="dev-server-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1172 860" role="img" aria-label="Development server topology: peers and GitHub reach kinotic-server over two forwarded ports; Azure keeps Front Door, the sites storage account, email, DNS, a Key Vault and a snapshot container; one Proxmox host runs a platform VM with kinotic-server, three Elasticsearch nodes and the observability stack, and a node VM running the vm-manager with Cloud Hypervisor micro VMs; each Elasticsearch node and the node runtime own a whole physical disk.">
+    <svg class="dev-server-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1172 860" role="img" aria-label="Development server topology: peers and GitHub reach kinotic-server over two forwarded ports; Azure keeps Front Door, the sites storage account, email, DNS, a Key Vault and a snapshot container; one Proxmox host runs a container per service — kinotic-server, Loki, Tempo, Mimir, Grafana on the LAN, three Elasticsearch nodes and the one-shot migration on a private NAT-only network — with a ZFS pool on its own drive for each Elasticsearch node and a drive of Proxmox's own; two Intel NUCs beside it run the vm-manager with Cloud Hypervisor micro VMs.">
 
       <defs>
         <marker id="ds-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -65,87 +65,107 @@
       <text class="t-sub"  x="1058" y="183" text-anchor="middle">A record · DNS-01 certs</text>
 
       <!-- ═════════ the host ═════════ -->
-      <rect class="wall" x="24" y="262" width="1124" height="580" rx="12"></rect>
+      <rect class="wall" x="24" y="262" width="696" height="580" rx="12"></rect>
+      <rect class="wall" x="740" y="262" width="408" height="580" rx="12"></rect>
 
-      <!-- platform VM -->
-      <rect class="encl-app" x="40" y="306" width="580" height="390" rx="10"></rect>
-      <text class="t-plane-a" x="590" y="330" text-anchor="end">PLATFORM VM · DOCKER COMPOSE</text>
+      <!-- the containers -->
+      <rect class="encl-app" x="40" y="306" width="580" height="396" rx="10"></rect>
+      <text class="t-plane-a" x="590" y="330" text-anchor="end">CONTAINERS · ONE PER SERVICE · OCI IMAGES</text>
 
       <rect class="gw gw-app" x="60" y="344" width="290" height="112" rx="8"></rect>
       <text class="t-name" x="205" y="367" text-anchor="middle">kinotic-server</text>
       <text class="t-sub"  x="205" y="383" text-anchor="middle">UI :9090 · REST · STOMP · MCP :58503</text>
       <line class="sep" x1="78" y1="392" x2="332" y2="392"></line>
       <text class="t-mono" x="205" y="409" text-anchor="middle">Vert.x terminates TLS on both ports</text>
-      <text class="t-mono" x="205" y="424" text-anchor="middle">profiles: production · compose · dev-server</text>
+      <text class="t-mono" x="205" y="424" text-anchor="middle">profiles: production · dev-server</text>
       <text class="t-mono" x="205" y="439" text-anchor="middle">secrets → Key Vault · mail → ACS</text>
 
-      <rect class="chip" x="370" y="402" width="220" height="46" rx="8"></rect>
-      <text class="t-chip" x="480" y="421" text-anchor="middle">Loki · Tempo · Mimir · Grafana</text>
-      <text class="t-sub"  x="480" y="437" text-anchor="middle">otel-collector in front</text>
-      <line class="link" x1="350" y1="425" x2="370" y2="425" marker-end="url(#ds-ink)"></line>
+      <!-- the stores, on the LAN -->
+      <rect class="chip" x="60" y="470" width="124" height="40" rx="8"></rect>
+      <text class="t-chip" x="122" y="487" text-anchor="middle">Loki</text>
+      <text class="t-tiny" x="122" y="501" text-anchor="middle">:3100 · logs</text>
 
-      <!-- three ES nodes, one whole disk each -->
-      <path class="cyl" d="M 54 586 a 56 9 0 0 0 112 0 v 38 a 56 9 0 0 1 -112 0 z"></path>
-      <ellipse class="cyl" cx="110" cy="586" rx="56" ry="9"></ellipse>
-      <text class="t-chip" x="110" y="606" text-anchor="middle">es-1</text>
-      <text class="t-tiny" x="110" y="620" text-anchor="middle">master + data</text>
+      <rect class="chip" x="198" y="470" width="124" height="40" rx="8"></rect>
+      <text class="t-chip" x="260" y="487" text-anchor="middle">Tempo</text>
+      <text class="t-tiny" x="260" y="501" text-anchor="middle">:4318 OTLP · :3200</text>
 
-      <path class="cyl" d="M 234 586 a 56 9 0 0 0 112 0 v 38 a 56 9 0 0 1 -112 0 z"></path>
-      <ellipse class="cyl" cx="290" cy="586" rx="56" ry="9"></ellipse>
-      <text class="t-chip" x="290" y="606" text-anchor="middle">es-2</text>
-      <text class="t-tiny" x="290" y="620" text-anchor="middle">master + data</text>
+      <rect class="chip" x="336" y="470" width="124" height="40" rx="8"></rect>
+      <text class="t-chip" x="398" y="487" text-anchor="middle">Mimir</text>
+      <text class="t-tiny" x="398" y="501" text-anchor="middle">:9009 · OTLP · PromQL</text>
 
-      <path class="cyl" d="M 414 586 a 56 9 0 0 0 112 0 v 38 a 56 9 0 0 1 -112 0 z"></path>
-      <ellipse class="cyl" cx="470" cy="586" rx="56" ry="9"></ellipse>
-      <text class="t-chip" x="470" y="606" text-anchor="middle">es-3</text>
-      <text class="t-tiny" x="470" y="620" text-anchor="middle">master + data</text>
+      <rect class="chip" x="474" y="470" width="124" height="40" rx="8"></rect>
+      <text class="t-chip" x="536" y="487" text-anchor="middle">Grafana</text>
+      <text class="t-tiny" x="536" y="501" text-anchor="middle">:3000 · login</text>
 
-      <text class="t-tiny" x="200" y="660" text-anchor="middle">1 shard · 1 replica per index</text>
+      <text class="t-tiny" x="330" y="525" text-anchor="middle">LAN · the node's Alloy and the server's agent push OTLP here · X-Scope-OrgID per tenant</text>
 
-      <line class="link" x1="205" y1="456" x2="110" y2="577"></line>
-      <line class="link" x1="205" y1="456" x2="290" y2="577"></line>
-      <line class="link" x1="205" y1="456" x2="470" y2="577"></line>
+      <!-- the private network: three ES nodes on a whole disk each, and the migration -->
+      <rect class="encl-priv" x="48" y="536" width="564" height="150" rx="8"></rect>
+      <text class="t-plane-v" x="56" y="552">PRIVATE NETWORK · NAT OUT</text>
 
-      <!-- node VM -->
-      <rect class="wbox" x="640" y="306" width="492" height="390" rx="10"></rect>
-      <text class="t-plane-w" x="656" y="330">NODE VM · UBUNTU 22.04 · NESTED KVM</text>
+      <rect class="chip" x="452" y="544" width="148" height="30" rx="8"></rect>
+      <text class="t-tiny" x="526" y="563" text-anchor="middle">migration · runs once</text>
 
-      <rect class="chip" x="660" y="344" width="180" height="62" rx="8"></rect>
-      <text class="t-chip" x="750" y="364" text-anchor="middle">vm-manager</text>
-      <text class="t-tiny" x="750" y="380" text-anchor="middle">CLOUD_HYPERVISOR provider</text>
-      <text class="t-tiny" x="750" y="394" text-anchor="middle">Alloy · machine credentials</text>
+      <path class="cyl" d="M 54 602 a 56 9 0 0 0 112 0 v 38 a 56 9 0 0 1 -112 0 z"></path>
+      <ellipse class="cyl" cx="110" cy="602" rx="56" ry="9"></ellipse>
+      <text class="t-chip" x="110" y="622" text-anchor="middle">es-1</text>
+      <text class="t-tiny" x="110" y="636" text-anchor="middle">master + data</text>
 
-      <rect class="gw gw-node" x="660" y="426" width="452" height="112" rx="8"></rect>
-      <text class="t-name" x="886" y="449" text-anchor="middle">Cloud Hypervisor micro VMs</text>
-      <line class="sep" x1="678" y1="458" x2="1094" y2="458"></line>
-      <text class="t-mono" x="886" y="475" text-anchor="middle">sync VM · runtime VM per microservice · UI publish VM</text>
-      <text class="t-mono" x="886" y="490" text-anchor="middle">reach the gateway at the platform VM's IPv4</text>
-      <text class="t-mono" x="886" y="505" text-anchor="middle">egress denied by default · allowlisted CIDRs only</text>
-      <text class="t-mono" x="886" y="520" text-anchor="middle">stdout and stderr captured, shipped by Alloy</text>
+      <path class="cyl" d="M 234 602 a 56 9 0 0 0 112 0 v 38 a 56 9 0 0 1 -112 0 z"></path>
+      <ellipse class="cyl" cx="290" cy="602" rx="56" ry="9"></ellipse>
+      <text class="t-chip" x="290" y="622" text-anchor="middle">es-2</text>
+      <text class="t-tiny" x="290" y="636" text-anchor="middle">master + data</text>
 
-      <rect class="chip" x="660" y="558" width="452" height="62" rx="8"></rect>
-      <text class="t-chip" x="886" y="578" text-anchor="middle">Docker + kata-clh runtime</text>
-      <text class="t-tiny" x="886" y="594" text-anchor="middle">XFS prjquota data root · icc: false · live-restore</text>
-      <text class="t-tiny" x="886" y="608" text-anchor="middle">DOCKER-USER floor · egress default-deny</text>
+      <path class="cyl" d="M 414 602 a 56 9 0 0 0 112 0 v 38 a 56 9 0 0 1 -112 0 z"></path>
+      <ellipse class="cyl" cx="470" cy="602" rx="56" ry="9"></ellipse>
+      <text class="t-chip" x="470" y="622" text-anchor="middle">es-3</text>
+      <text class="t-tiny" x="470" y="636" text-anchor="middle">master + data</text>
 
-      <line class="link" x1="750" y1="406" x2="750" y2="426" marker-end="url(#ds-ink)"></line>
-      <line class="link" x1="886" y1="538" x2="886" y2="558" marker-end="url(#ds-ink)"></line>
+      <text class="t-tiny" x="200" y="678" text-anchor="middle">1 shard · 1 replica per index · no TLS</text>
 
-      <!-- node → platform -->
-      <line class="flow-vio" x1="660" y1="372" x2="350" y2="372" marker-end="url(#ds-vio)"></line>
-      <text class="t-tiny" x="505" y="386" text-anchor="middle">STOMP · machine credentials · heartbeat</text>
-      <line class="flow-vio" x1="660" y1="396" x2="590" y2="425" marker-end="url(#ds-vio)"></line>
-      <text class="t-tiny" x="608" y="458" text-anchor="end">Alloy → Loki · Tempo · Mimir</text>
-      <line class="flow-amb" x1="660" y1="480" x2="350" y2="456" marker-end="url(#ds-amb)"></line>
-      <text class="t-tiny" x="490" y="492" text-anchor="middle">gateway = platform VM IPv4 · :58503 · TLS</text>
+      <line class="link" x1="329" y1="456" x2="329" y2="540"></line>
+      <line class="link" x1="329" y1="540" x2="110" y2="593"></line>
+      <line class="link" x1="329" y1="540" x2="290" y2="593"></line>
+      <line class="link" x1="329" y1="540" x2="470" y2="593"></line>
 
-      <!-- platform → Azure: one service principal -->
+      <!-- the nodes: their own machines -->
+      <rect class="wbox" x="756" y="306" width="376" height="396" rx="10"></rect>
+      <text class="t-plane-w" x="772" y="330">NODES · UBUNTU 22.04 · KVM</text>
+
+      <rect class="chip" x="776" y="344" width="180" height="62" rx="8"></rect>
+      <text class="t-chip" x="866" y="364" text-anchor="middle">vm-manager</text>
+      <text class="t-tiny" x="866" y="380" text-anchor="middle">CLOUD_HYPERVISOR provider</text>
+      <text class="t-tiny" x="866" y="394" text-anchor="middle">Alloy · machine credentials</text>
+
+      <rect class="gw gw-node" x="776" y="426" width="336" height="112" rx="8"></rect>
+      <text class="t-name" x="944" y="449" text-anchor="middle">Cloud Hypervisor micro VMs</text>
+      <line class="sep" x1="794" y1="458" x2="1094" y2="458"></line>
+      <text class="t-mono" x="944" y="475" text-anchor="middle">sync VM · runtime VM per microservice · publish VM</text>
+      <text class="t-mono" x="944" y="490" text-anchor="middle">reach the gateway at kinotic-server's LAN IPv4</text>
+      <text class="t-mono" x="944" y="505" text-anchor="middle">egress denied by default · allowlisted CIDRs only</text>
+      <text class="t-mono" x="944" y="520" text-anchor="middle">stdout and stderr captured, shipped by Alloy</text>
+
+      <rect class="chip" x="776" y="558" width="336" height="62" rx="8"></rect>
+      <text class="t-chip" x="944" y="578" text-anchor="middle">Docker + kata-clh runtime</text>
+      <text class="t-tiny" x="944" y="594" text-anchor="middle">XFS prjquota data root · icc: false · live-restore</text>
+      <text class="t-tiny" x="944" y="608" text-anchor="middle">DOCKER-USER floor · egress default-deny</text>
+
+      <line class="link" x1="866" y1="406" x2="866" y2="426" marker-end="url(#ds-ink)"></line>
+      <line class="link" x1="944" y1="538" x2="944" y2="558" marker-end="url(#ds-ink)"></line>
+
+      <!-- nodes → server, across the LAN -->
+      <line class="flow-vio" x1="776" y1="372" x2="350" y2="372" marker-end="url(#ds-vio)"></line>
+      <text class="t-tiny" x="560" y="386" text-anchor="middle">STOMP · machine credentials · heartbeat</text>
+      <line class="flow-amb" x1="776" y1="470" x2="350" y2="430" marker-end="url(#ds-amb)"></line>
+      <text class="t-tiny" x="490" y="418" text-anchor="middle">gateway = server IPv4 · :58503 · TLS</text>
+
+      <!-- server → Azure: one service principal -->
       <polyline class="flow-ind" points="350,350 600,350 600,171 660,171" marker-end="url(#ds-ind)"></polyline>
       <text class="t-tiny" x="594" y="276" text-anchor="end">service principal</text>
       <text class="t-tiny" x="594" y="288" text-anchor="end">Key Vault · ACS · site URLs</text>
 
-      <!-- ES → snapshot container -->
-      <polyline class="data" points="526,586 630,586 630,254 898,254 898,194" marker-end="url(#ds-ink)"></polyline>
+      <!-- ES → snapshot container, out through the host's NAT -->
+      <polyline class="data" points="526,602 630,602 630,254 898,254 898,194" marker-end="url(#ds-ink)"></polyline>
       <text class="t-tiny" x="764" y="247" text-anchor="middle">SLM daily snapshot</text>
 
       <!-- publish workload → sites account -->
@@ -153,33 +173,28 @@
       <text class="t-tiny" x="1128" y="300" text-anchor="end">signed upload URL</text>
 
       <!-- ═════════ disks ═════════ -->
-      <text class="t-tag" x="40" y="738">DISKS · WHOLE-DISK PASSTHROUGH · ONE PER ES NODE</text>
 
       <rect class="disk" x="35" y="756" width="150" height="44" rx="8"></rect>
-      <text class="t-chip" x="110" y="774" text-anchor="middle">disk 2</text>
-      <text class="t-tiny" x="110" y="790" text-anchor="middle">es-1 data</text>
-      <line class="data" x1="110" y1="756" x2="110" y2="636"></line>
+      <text class="t-chip" x="110" y="774" text-anchor="middle">drive 2 · pool es1</text>
+      <text class="t-tiny" x="110" y="790" text-anchor="middle">/es1/data → es-1</text>
+      <line class="data" x1="110" y1="756" x2="110" y2="652"></line>
 
       <rect class="disk" x="215" y="756" width="150" height="44" rx="8"></rect>
-      <text class="t-chip" x="290" y="774" text-anchor="middle">disk 3</text>
-      <text class="t-tiny" x="290" y="790" text-anchor="middle">es-2 data</text>
-      <line class="data" x1="290" y1="756" x2="290" y2="636"></line>
+      <text class="t-chip" x="290" y="774" text-anchor="middle">drive 3 · pool es2</text>
+      <text class="t-tiny" x="290" y="790" text-anchor="middle">/es2/data → es-2</text>
+      <line class="data" x1="290" y1="756" x2="290" y2="652"></line>
 
       <rect class="disk" x="395" y="756" width="150" height="44" rx="8"></rect>
-      <text class="t-chip" x="470" y="774" text-anchor="middle">disk 4</text>
-      <text class="t-tiny" x="470" y="790" text-anchor="middle">es-3 data</text>
-      <line class="data" x1="470" y1="756" x2="470" y2="636"></line>
+      <text class="t-chip" x="470" y="774" text-anchor="middle">drive 4 · pool es3</text>
+      <text class="t-tiny" x="470" y="790" text-anchor="middle">/es3/data → es-3</text>
+      <line class="data" x1="470" y1="756" x2="470" y2="652"></line>
 
-      <rect class="disk" x="575" y="756" width="150" height="44" rx="8"></rect>
-      <text class="t-chip" x="650" y="774" text-anchor="middle">disk 0</text>
-      <text class="t-tiny" x="650" y="790" text-anchor="middle">Proxmox · VM OS images</text>
+      <rect class="disk" x="556" y="756" width="150" height="44" rx="8"></rect>
+      <text class="t-chip" x="631" y="774" text-anchor="middle">drive 1</text>
+      <text class="t-tiny" x="631" y="790" text-anchor="middle">Proxmox · rootfs · stores</text>
 
-      <rect class="disk" x="811" y="756" width="150" height="44" rx="8"></rect>
-      <text class="t-chip" x="886" y="774" text-anchor="middle">disk 1</text>
-      <text class="t-tiny" x="886" y="790" text-anchor="middle">XFS prjquota · node</text>
-      <line class="data" x1="886" y1="756" x2="886" y2="622"></line>
-
-      <text class="t-tag" x="36" y="826">HOST · PROXMOX VE · RYZEN 9 · 96 GB · 5 SSDS</text>
+      <text class="t-tag" x="36" y="826">HOST · PROXMOX VE · RYZEN 9 · 96 GB · 4 × 512 GB NVME</text>
+      <text class="t-tag" x="752" y="826">2 × INTEL NUC · 32 GB · 250 GB SSD</text>
     </svg>
   </div>
   </DiagramFrame>
@@ -233,6 +248,7 @@ svg.dev-server-diagram { min-width: 700px; width: 100%; height: auto; display: b
   svg.dev-server-diagram .encl-app  { fill: var(--green-tint);  stroke: var(--green);  stroke-width: 1.25; stroke-dasharray: 6 5; }
   svg.dev-server-diagram .encl-plat { fill: var(--indigo-tint); stroke: var(--indigo); stroke-width: 1.25; stroke-dasharray: 6 5; }
   svg.dev-server-diagram .wbox      { fill: var(--amber-tint);  stroke: var(--amber);  stroke-width: 1.25; stroke-dasharray: 6 5; }
+  svg.dev-server-diagram .encl-priv { fill: var(--surface);     stroke: var(--violet); stroke-width: 1.25; stroke-dasharray: 3 4; }
   svg.dev-server-diagram .cyl       { fill: var(--surface); stroke: var(--pink); stroke-width: 1.5; }
   svg.dev-server-diagram .sep       { stroke: var(--line); stroke-width: 1; }
 
@@ -258,4 +274,5 @@ svg.dev-server-diagram { min-width: 700px; width: 100%; height: auto; display: b
   svg.dev-server-diagram .t-plane-p { font-family: ui-monospace, Menlo, monospace; font-size: 11px; letter-spacing: 0.14em; font-weight: 600; fill: var(--indigo); }
   svg.dev-server-diagram .t-plane-a { font-family: ui-monospace, Menlo, monospace; font-size: 11px; letter-spacing: 0.14em; font-weight: 600; fill: var(--green); }
   svg.dev-server-diagram .t-plane-w { font-family: ui-monospace, Menlo, monospace; font-size: 11px; letter-spacing: 0.12em; font-weight: 600; fill: var(--amber); }
+  svg.dev-server-diagram .t-plane-v { font-family: ui-monospace, Menlo, monospace; font-size: 10px; letter-spacing: 0.12em; font-weight: 600; fill: var(--violet); }
 </style>

@@ -72,7 +72,7 @@ function createProvider(reportStatus: (workload: Workload) => void): IVmProvider
         const egress = new EgressPolicyManager(config.workloadDns ?? null)
         if (!egress.enforces()) {
             console.warn('This node does not deny workload egress by default — a workload can reach '
-                         + 'anything its address can route to. See docker-kata-ch/README.md')
+                         + 'anything its address can route to. See deployment/vm-node/README.md')
         }
         ret = new CloudHypervisorProvider(join(config.vmStateDir, 'cloud-hypervisor'),
                                           new Docker(),
