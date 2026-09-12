@@ -210,6 +210,7 @@ export class EventBus implements IEventBus {
                 }
 
                 let serverSignaledCompletion = false
+                let replyDestinationReset = false
                 const correlationId = uuidv4()
                 this.activeCorrelationIds.add(correlationId)
                 // registered before the request is sent so a send that throws still untracks it
@@ -252,6 +253,9 @@ export class EventBus implements IEventBus {
                                                       }
                                                   },
                                                   error(err: any): void {
+                                                      // a reset: the connection the stream ran on is gone, and
+                                                      // the gateway released the stream with it
+                                                      replyDestinationReset = true
                                                       subscriber.error(err)
                                                   },
                                                   complete(): void {
@@ -268,7 +272,7 @@ export class EventBus implements IEventBus {
 
                 // registered after the send so a request that never went out is never cancelled
                 subscriber.add(() => {
-                    if (sendControlEvents && !serverSignaledCompletion) {
+                    if (sendControlEvents && !serverSignaledCompletion && !replyDestinationReset) {
                         try {
                             this.sendCancel(event.cri, correlationId)
                         } catch (e) {
@@ -292,8 +296,11 @@ export class EventBus implements IEventBus {
         return this._observe(cri)
     }
 
+    // Runs on a fatal error, on disconnect(), and ahead of a connect(); the emission ahead of a connect finds
+    // nothing streaming
     private cleanup(): void{
         this.resetRequestReplies('Connection disconnected')
+        this.connectionLostSubject.next()
 
         this.serverInfo = null
     }

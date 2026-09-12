@@ -110,7 +110,7 @@ export class ServiceInvocationSupervisor {
             this.log.info(`ServiceInvocationSupervisor also listening for ScopeOptional methods at ${unscopedBase}`)
         }
 
-        // The gateway answers every requester of a connection that dropped, so a stream produced for one
+        // The gateway answers every requester of a connection that ended, so a stream produced for one
         // has no consumer left and is cancelled without a reply
         this.connectionLostSubscription = this._eventBus.connectionLost.subscribe(() => {
             for (const stream of this.activeStreams.values()) {
