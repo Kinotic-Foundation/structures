@@ -36,6 +36,7 @@ import org.kinotic.gateway.api.config.ApiGatewayProperties;
 import org.kinotic.gateway.internal.endpoints.Services;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.ObjectProvider;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -51,6 +52,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -262,6 +264,44 @@ public class EndpointConnectionHandlerTests {
         // the cancelled invocation is no longer owed: the forwarded value is the only send, the close adds none
         handler.shutdown();
         verify(eventBusService).send(any());
+    }
+
+    @Test
+    public void testEveryReplyOfAPendingInvocationIsAllowed() throws Exception {
+        when(eventBusService.monitorListenerStatus(any())).thenReturn(Flux.just(ListenerStatus.ACTIVE));
+        EndpointConnectionHandler handler = connect(Map.of());
+        String requester = EventConstants.REPLY_DESTINATION_SCHEME + "://other:replies@kinotic.js.EventBus/replyHandler";
+        deliverInvocation(handler, requester, "inv-4");
+
+        // two stream values, then the completion
+        for (int i = 0; i < 2; i++) {
+            Metadata valueMetadata = Metadata.create(Map.of(EventConstants.CORRELATION_ID_HEADER, "inv-4"));
+            handler.send(Event.create(CRI.create(requester), valueMetadata, new byte[0])).toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
+        }
+        Metadata completion = Metadata.create(Map.of(EventConstants.CORRELATION_ID_HEADER, "inv-4",
+                                                     EventConstants.CONTROL_HEADER, EventConstants.CONTROL_VALUE_COMPLETE));
+        handler.send(Event.create(CRI.create(requester), completion, new byte[0])).toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
+        verify(eventBusService, times(3)).send(any());
+
+        // the invocation is over: a further reply to the requester is refused
+        Metadata late = Metadata.create(Map.of(EventConstants.CORRELATION_ID_HEADER, "inv-4"));
+        Assertions.assertTrue(handler.send(Event.create(CRI.create(requester), late, new byte[0])).failed());
+    }
+
+    @Test
+    public void testSessionDeletedFromTheStoreIsNotRecreatedByTheTouch() throws Exception {
+        Session session = services.sessionStore.createSession(SESSION_TIMEOUT_MS * 10);
+        services.sessionStore.put(session).toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
+        EndpointConnectionHandler handler = connect(session, Map.of());
+        // connect() touched the session; let that write land before the delete
+        Thread.sleep(300);
+
+        // a logout deletes the session; the connection's next touch must not put it back
+        services.sessionStore.delete(session.id()).toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
+        Thread.sleep(SESSION_TIMEOUT_MS / 4 + 50);
+        handler.unsubscribe("none");
+        Thread.sleep(500);
+        Assertions.assertNull(storedSession(session.id()), "the touch re-created a deleted session");
     }
 
     @Test
