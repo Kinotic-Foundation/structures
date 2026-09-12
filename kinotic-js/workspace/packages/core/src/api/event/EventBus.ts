@@ -77,7 +77,6 @@ export class EventBus implements IEventBus {
     private readonly log: Logger = createDebugLogger('kinotic:EventBus')
     private stompConnectionManager: StompConnectionManager = new StompConnectionManager()
     private connectionLifecycle: Promise<unknown> = Promise.resolve()
-    private replyToCri: string  | null = null
     private requestRepliesObservable: ConnectableObservable<IEvent> | null = null
     private requestRepliesSubject: Subject<IEvent> | null = null
     private requestRepliesSubscription: Subscription | null = null
@@ -91,10 +90,6 @@ export class EventBus implements IEventBus {
         // We send an error any in-flight requests and clean up our connection state on fatal errors
         // The StompConnectionManager will automatically deactivate on fatal errors
         this.stompConnectionManager.fatalErrors.subscribe(() => this.cleanup())
-        this.stompConnectionManager.replyToCriChangedHandler = (replyToCri: string) => {
-            this.replyToCri = replyToCri
-            this.resetRequestReplies('Reply destination changed')
-        }
         // The server drops every reply consumer and lease of a closed connection, so a call in flight
         // across a drop is failed here rather than waited on
         this.stompConnectionManager.connectionLostHandler = () => {
@@ -129,13 +124,6 @@ export class EventBus implements IEventBus {
                 const connectedInfo = await this.stompConnectionManager.activate(options)
                 // copy so the reported server never aliases the caller's options object
                 this.serverInfo = {...options.server} as ServerInfo
-
-                // the initial connection reports its reply destination here rather than through
-                // replyToCriChangedHandler; a request that raced this connect built its replies on the old one
-                if (this.replyToCri !== this.stompConnectionManager.replyToCri) {
-                    this.resetRequestReplies('Reply destination changed')
-                }
-                this.replyToCri = this.stompConnectionManager.replyToCri
 
                 return connectedInfo
             }else{
@@ -205,14 +193,17 @@ export class EventBus implements IEventBus {
     }
 
     public requestStream(event: IEvent, sendControlEvents: boolean = true): Observable<IEvent> {
-        // the shared reply subscription is built on replyToCri, which a pending connect() has not set yet
-        if(this.stompConnectionManager.connected && this.replyToCri != null){
+        // The manager mints the reply destination on every CONNECTED frame and clears it on deactivate, so
+        // a connected manager always has one. The shared reply subscription was torn down at the last drop,
+        // so the first request on a connection builds it on that connection's destination.
+        const replyToCri = this.stompConnectionManager.replyToCri
+        if(this.stompConnectionManager.connected && replyToCri != null){
             return new Observable<IEvent>((subscriber) => {
 
                 if (this.requestRepliesObservable == null) {
                     this.requestRepliesSubject = new Subject<IEvent>()
                     // Reaper: before multicast, so it runs once per reply to cancel streams we no longer track.
-                    this.requestRepliesObservable = this._observe(this.replyToCri as string)
+                    this.requestRepliesObservable = this._observe(replyToCri)
                                                         .pipe(tap((value: IEvent) => this.cancelIfUnexpected(value)),
                                                               multicast(this.requestRepliesSubject)) as ConnectableObservable<IEvent>
                     this.requestRepliesSubscription = this.requestRepliesObservable.connect()
@@ -274,7 +265,7 @@ export class EventBus implements IEventBus {
 
                 subscriber.add(defaultMessagesSubscription)
 
-                event.setHeader(EventConstants.REPLY_TO_HEADER, this.replyToCri as string)
+                event.setHeader(EventConstants.REPLY_TO_HEADER, replyToCri)
                 event.setHeader(EventConstants.CORRELATION_ID_HEADER, correlationId)
 
                 this.send(event)
@@ -314,7 +305,6 @@ export class EventBus implements IEventBus {
             this.connectionLostSubject.next()
         }
         this.serverInfo = null
-        this.replyToCri = null
     }
 
     /**
@@ -358,13 +348,13 @@ export class EventBus implements IEventBus {
         cancelEvent.setHeader(EventConstants.CORRELATION_ID_HEADER, correlationId)
         // The service ignores it, but the gateway rejects any service send without a reply-to
         // and terminates the connection over the rejection.
-        cancelEvent.setHeader(EventConstants.REPLY_TO_HEADER, this.replyToCri as string)
+        cancelEvent.setHeader(EventConstants.REPLY_TO_HEADER, this.stompConnectionManager.replyToCri as string)
         this.send(cancelEvent)
     }
 
     /**
      * Tears down the shared request-replies stream so the next request rebuilds it against the
-     * current {@link replyToCri}. Any in-flight requests are failed with the given reason since
+     * connection's reply destination. Any in-flight requests are failed with the given reason since
      * their replies can no longer be delivered.
      */
     private resetRequestReplies(reason: string): void {

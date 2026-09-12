@@ -25,12 +25,6 @@ export class StompConnectionManager {
      * This will return true if a {@link ConnectOptions#maxConnectionAttempts} threshold was set and was reached
      */
     public maxConnectionAttemptsReached: boolean = false
-    /**
-     * Invoked on every reconnect with the new {@link replyToCri}. The reply destination is minted per
-     * connection, so the consumer the server still holds for the previous socket never receives this
-     * connection's replies.
-     */
-    public replyToCriChangedHandler: ((replyToCri: string) => void) | null = null
 
     /**
      * Invoked when an established connection drops, before any reconnect. The server releases everything it
@@ -64,8 +58,9 @@ export class StompConnectionManager {
     private _replyToCri: string | null = null
 
     /**
-     * The reply destination CRI for this connection, or null before a connection has been established.
-     * It is built from the server-generated replyToId returned in the CONNECTED frame.
+     * The reply destination CRI of the current connection, or null while there is none. It is minted on
+     * every CONNECTED frame from the server-generated replyToId and a discriminator of this connection's
+     * own, so the consumer the server still holds for a previous socket never receives this one's replies.
      */
     public get replyToCri(): string | null {
         return this._replyToCri
@@ -282,15 +277,12 @@ export class StompConnectionManager {
                 reject(reason)
             }
 
-            // Triggered on every CONNECTED frame, including reconnects. The replyToId is generated
-            // server side, so on reconnect it may change.
-            // serverHeaders$ is a BehaviorSubject on an rxStomp that outlives a deactivate/activate
-            // cycle, so a later activation is replayed the previous connection's frame on subscribe —
-            // skipping it stops activate() resolving with the replyToId that just went away. Stays on
-            // serverHeaders$ rather than connected$: rx-stomp emits the headers before it reports OPEN,
-            // so a changed replyToCri reaches replyToCriChangedHandler before anything can be sent on
-            // the new connection. The previous reply destination was released at the drop through
-            // connectionLostHandler, so nothing stale is re-subscribed here.
+            // Triggered on every CONNECTED frame, including reconnects; each one mints this connection's
+            // reply destination. serverHeaders$ is a BehaviorSubject on an rxStomp that outlives a
+            // deactivate/activate cycle, so a later activation is replayed the previous connection's frame
+            // on subscribe; skipping it stops activate() resolving with a destination that is gone. Stays on
+            // serverHeaders$ rather than connected$: rx-stomp emits the headers before it reports OPEN, so
+            // the destination is set before anything can be sent on the new connection.
             this.serverHeadersSubscription = this.rxStomp.serverHeaders$
                                                  .pipe(skip(this.rxStompHasConnected ? 1 : 0))
                                                  .subscribe(async (value: StompHeaders) => {
@@ -321,12 +313,9 @@ export class StompConnectionManager {
                     + connectedInfo.replyToId + ':' + uuidv4()
                     + '@kinotic.js.EventBus/replyHandler'
 
+                this._replyToCri = newReplyToCri
                 if (!this.initialConnectionSuccessful) {
-                    this._replyToCri = newReplyToCri
                     resolve(connectedInfo)
-                } else if (this._replyToCri !== newReplyToCri) {
-                    this._replyToCri = newReplyToCri
-                    this.replyToCriChangedHandler?.(newReplyToCri)
                 }
             })
 
