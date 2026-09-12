@@ -148,10 +148,10 @@ public class DefaultRpcServiceProxyHandle<T> implements RpcServiceProxyHandle<T>
 
                     String correlationId = event.metadata().get(EventConstants.CORRELATION_ID_HEADER);
                     if(correlationId != null){
-                        if(responseMap.containsKey(correlationId)){
+                        // one lookup: a cancel or a lost node can remove the entry from another context
+                        RpcReturnValueHandler handler = responseMap.get(correlationId);
+                        if(handler != null){
                             try {
-                                // provide message to handler for processing
-                                RpcReturnValueHandler handler = responseMap.get(correlationId);
                                 if(handler.processResponse(event)){
                                     settle(correlationId);
                                 }
@@ -210,11 +210,13 @@ public class DefaultRpcServiceProxyHandle<T> implements RpcServiceProxyHandle<T>
         if(released.compareAndSet(false,true)){
             replyEventConsumer.unregister();
 
-            responseMap.forEach((correlationId, returnValueHandler) -> {
-                requestLivenessWatcher.settle(correlationId);
-                returnValueHandler.cancel(serviceClass.getSimpleName() + " released. No further responses will be processed");
-            });
-            responseMap.clear();
+            for(String correlationId : responseMap.keySet()){
+                RpcReturnValueHandler returnValueHandler = responseMap.remove(correlationId);
+                if(returnValueHandler != null){
+                    requestLivenessWatcher.settle(correlationId);
+                    returnValueHandler.cancel(serviceClass.getSimpleName() + " released. No further responses will be processed");
+                }
+            }
             recentlyReaped.clear();
         }
     }
@@ -247,8 +249,10 @@ public class DefaultRpcServiceProxyHandle<T> implements RpcServiceProxyHandle<T>
      * that acknowledged it and no longer receives replies.
      */
     private void settle(String correlationId){
-        requestLivenessWatcher.settle(correlationId);
+        // the entry goes first: once it is gone the ack's computeIfPresent can no longer pin, so the lease
+        // released next is the last one this request can have
         responseMap.remove(correlationId);
+        requestLivenessWatcher.settle(correlationId);
     }
 
     @Override

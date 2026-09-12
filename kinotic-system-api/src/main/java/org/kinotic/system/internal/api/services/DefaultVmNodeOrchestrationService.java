@@ -1,13 +1,13 @@
 package org.kinotic.system.internal.api.services;
 
 import io.vertx.core.Future;
+import io.vertx.core.Vertx;
 import org.kinotic.system.api.workload.VmManagerProxy;
 import org.kinotic.core.api.utils.KinoticUtil;
 import org.kinotic.core.api.service.ServiceIdentifier;
 import org.kinotic.core.api.event.ListenerStatus;
 import org.kinotic.core.api.event.EventBusService;
 import org.kinotic.core.api.event.CRI;
-import io.vertx.core.Promise;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
@@ -44,6 +44,7 @@ public class DefaultVmNodeOrchestrationService implements VmNodeOrchestrationSer
     private final VmNodeService vmNodeService;
     private final WorkloadService workloadService;
     private final EventBusService eventBusService;
+    private final Vertx vertx;
     private ScheduledExecutorService scheduler;
 
     @PostConstruct
@@ -94,7 +95,8 @@ public class DefaultVmNodeOrchestrationService implements VmNodeOrchestrationSer
                                 .setAvailableCpus(registration.getTotalCpus() - allocatedCpus)
                                 .setAvailableMemoryMb(registration.getTotalMemoryMb() - allocatedMemoryMb)
                                 .setAvailableDiskMb(registration.getTotalDiskMb() - allocatedDiskMb)
-                                .setStatus(new VmNodeStatus());
+                                .setStatus(new VmNodeStatus())
+                                .setLastSeen(new Date());
                         log.info("Re-registering VmNode: {} ({})", existing.getName(), existing.getId());
                         ret = vmNodeService.saveSync(existing);
                     } else {
@@ -108,6 +110,7 @@ public class DefaultVmNodeOrchestrationService implements VmNodeOrchestrationSer
                         node.setAvailableDiskMb(registration.getTotalDiskMb());
                         node.setWorkloadDataDir(registration.getWorkloadDataDir());
                         node.setStatus(new VmNodeStatus());
+                        node.setLastSeen(new Date());
                         log.info("Registering new VmNode: {} ({})", node.getName(), node.getId());
                         ret = vmNodeService.saveSync(node);
                     }
@@ -130,6 +133,8 @@ public class DefaultVmNodeOrchestrationService implements VmNodeOrchestrationSer
                                 new IllegalArgumentException("Node not registered: " + nodeId));
                     } else if (node.getStatus().getType() != reported
                             || !Objects.equals(node.getStatus().getHealthMessage(), message)) {
+                        // a heartbeat is the only evidence the node is alive; no other save stamps lastSeen
+                        node.setLastSeen(new Date());
                         if (message != null) {
                             log.warn("VmNode {} is not fit for workloads: {}", nodeId, message);
                         } else {
@@ -140,10 +145,9 @@ public class DefaultVmNodeOrchestrationService implements VmNodeOrchestrationSer
                         // has to be in the index before the next placement reads it
                         ret = vmNodeService.saveSync(node);
                     } else {
-                        // lastSeen is stamped by DefaultVmNodeService.beforeSave. Only
-                        // checkNodeHealth reads it, via a search against a heartbeatTimeoutSeconds
-                        // cutoff, so a refresh wait costs the caller the index refresh interval
-                        // and buys nothing.
+                        node.setLastSeen(new Date());
+                        // Only checkNodeHealth reads lastSeen, through a search against the
+                        // heartbeatTimeoutSeconds cutoff, so waiting for the index refresh buys nothing
                         ret = vmNodeService.save(node);
                     }
                     return ret;
@@ -225,10 +229,10 @@ public class DefaultVmNodeOrchestrationService implements VmNodeOrchestrationSer
         Validate.notNull(nodeId, "Node id cannot be null");
         ServiceIdentifier vmManager = KinoticUtil.serviceIdentifierOf(VmManagerProxy.class);
         CRI address = new ServiceIdentifier(vmManager.zone(), vmManager.namespace(), vmManager.name(), nodeId, vmManager.version()).cri();
-        // the first emission is the current registration state; completes on the monitor's delivery context
-        Promise<ListenerStatus> registration = Promise.promise();
-        eventBusService.monitorListenerStatus(address).next().subscribe(registration::complete, registration::fail);
-        return registration.future()
+        // the first emission is the current registration state; it arrives on the monitor's delivery
+        // context, and the caller's context is restored before anything else runs
+        return Future.fromCompletionStage(eventBusService.monitorListenerStatus(address).next().toFuture(),
+                                          vertx.getOrCreateContext())
                            .compose(status -> status == ListenerStatus.ACTIVE
                                    ? Future.succeededFuture()
                                    : vmNodeService.findById(nodeId).compose(node -> markUnreachable(nodeId, node)));

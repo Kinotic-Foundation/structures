@@ -446,6 +446,22 @@ public class RpcTests {
     }
 
     @Test
+    public void testInvocationsOfOneServiceOverlap(){
+        // four calls whose results complete 500 ms later, off the delivery context; they are dispatched on
+        // the service's context and must not wait on one another
+        long start = System.currentTimeMillis();
+        List<CompletableFuture<String>> calls = new ArrayList<>();
+        for(int i = 0; i < 4; i++){
+            calls.add(rpcTestServiceProxy.getMonoAfterDelay("done", 500).toFuture());
+        }
+        for(CompletableFuture<String> call : calls){
+            Assertions.assertEquals("done", call.orTimeout(10, TimeUnit.SECONDS).join());
+        }
+        long elapsed = System.currentTimeMillis() - start;
+        Assertions.assertTrue(elapsed < 1500, "four 500 ms results took " + elapsed + " ms, so they were serialized");
+    }
+
+    @Test
     public void testMultipleRequests(){
         Mono<String> mono = Mono.fromFuture(rpcTestServiceProxy.getString());
 
