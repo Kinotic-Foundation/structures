@@ -1,7 +1,7 @@
 # Node failure handling for service proxies — phase plan
 
 Plan of record for making a proxy call fail when the node serving it dies, instead of hanging
-forever. Phase 1 landed in PR #476; Phase 2 in #540; Phase 3 in #544; Phase 4 is PR #545; Phase 5 is PR #546, based on #545; Phase 6 in #547; Phases 7 and 8 were built as #548 and #549 and dropped, see their section; the fail-on-disconnect rule that replaces them is PR #551; Phase 9 is PR #552, based on #551 (#550 was closed with the dropped Phase 8 base); the wrap-up is PR #553, based on #552. Everything below was re-validated against `develop` at `3adf17d`
+forever. Phase 1 landed in PR #476; Phase 2 in #540; Phase 3 in #544; Phase 4 is PR #545; Phase 5 is PR #546, based on #545; Phase 6 in #547; Phases 7 and 8 were built as #548 and #549 and dropped, see their section; the fail-on-disconnect rule that replaces them is PR #551; Phase 9 is PR #552, based on #551 (#550 was closed with the dropped Phase 8 base); the wrap-up is PR #553, based on #552; TS service streaming with cancel is PR #554, based on #553. Everything below was re-validated against `develop` at `3adf17d`
 (2026-09-08); the adjustments that pass produced are folded in, and the phase numbering below
 supersedes the earlier chat numbering (mapping at the end).
 
@@ -291,14 +291,16 @@ failure-detection window.
 
 As built. The premise on heartbeats was stale: vertx-stomp-lite already negotiates them, with a
 server default of 30 s both ways, and closes a connection silent for two intervals through
-`handler.closed()`. What the phase adds is the interval as `ApiGatewayProperties.stompHeartbeat`
-(30 s), set explicitly on `StompServerOptions`, so the detection window is a deployment setting
-rather than a library default nobody reads.
+`handler.closed()`. The phase set the same 30 s explicitly as `ApiGatewayProperties.stompHeartbeat`;
+the property was removed again in PR #554: the interval is a protocol agreement with the TS client,
+which offers 30 s both ways, and STOMP negotiates each direction to the larger offer, so a
+deployment could only widen it. The library default stands. `StompHeartbeatTests`, which pinned
+the library's own close on silence, went with it: that is vertx-stomp-lite's behaviour to test.
 
 ```java
 // ServiceSessionState — the callee side of one connection, sibling of ReplySessionState
-void deliver(Event<byte[]> event);           // in the srv:// subscription handler; a cancel forgets its invocation
-void settleIfTerminal(Event<byte[]> reply);  // in send() on the reply scheme, the way back through the connection
+void deliver(Event<byte[]> event, StompSubscriptionHandler handler);  // in the srv:// subscription handler; a cancel forgets its invocation
+void observeReply(Event<byte[]> reply);      // in send() on the reply scheme: a terminal reply settles, a stream value starts the requester watch
 void dispose();                              // shutdown(): RpcServiceUnavailableException to every reply-to still outstanding
 ```
 
@@ -308,9 +310,7 @@ states share.
 Files: `ApiGatewayProperties`, `ApiGatewayVertcleFactory`, `ServiceSessionState`,
 `EndpointConnectionHandler`, `EventUtil`, `ReplySessionState` (uses the shared helpers),
 `EndpointConnectionHandlerTests` (a closed connection answers the invocations it still owes; a
-terminal reply back through the connection settles one), `StompHeartbeatTests` (a real
-stomp-lite server on a free port: a client that offers a heartbeat and goes silent is disconnected
-after two intervals).
+terminal reply back through the connection settles one).
 
 ## Phase 6 — TS client edges (~4 files)
 
@@ -415,7 +415,7 @@ leaves it ONLINE; a silent DRAINING node goes OFFLINE with its workload FAILED.
 
 Built after the direction change, against the whole series:
 
-- The TS client's incoming heartbeat matches the gateway's `stompHeartbeat` (30 s, from 120 s). The
+- The TS client's incoming heartbeat matches the gateway's 30 s heartbeat (from 120 s). The
   client had asked the gateway for a beat every 120 s, so a gateway VM that vanished without closing
   the socket took stompjs two of those to notice, and every call on the connection hung for that
   long; the gateway itself has bounded the reverse direction at two 30 s intervals since Phase 5.
@@ -430,10 +430,16 @@ Still open, and outside this repository's harness:
   catalog ranges admit both; `kinotic-cli` pins core at 5.0.0-beta.10 exactly and needs a bump to
   fail its calls on a lost connection. Until core is published, a browser or CLI on 5.0.0-beta.10
   still waits on a dropped connection.
-- A TS service's stream keeps producing when its requester's reply consumer is gone: the gateway
-  drops the replies (no handler for the address), and nothing tells the TS supervisor to cancel.
-  The Java supervisor cancels on the reply listener's INACTIVE; the gateway could forward that as
-  a cancel to the socket that owns the invocation. A leak rather than a hang, so not built here.
+- A TS service could not stream at all: `BasicReturnValueConverter` serialised whatever a method
+  returned, an `Observable` included, and `processControlPlaneRequest` dropped every control, while
+  the streaming page documented the feature. Built as the follow-up to the wrap-up: the TS supervisor
+  streams an `Observable` result (one reply per value carrying the origin CRI, a bodiless completion
+  control at the end, an error reply on failure), honours a cancel control, ends every stream with an
+  error reply on `stop()`, and cancels them all when `IEventBus.connectionLost` fires, since the
+  gateway has already failed those requesters. The gateway's `ServiceSessionState` watches the
+  requester's reply destination once an invocation answers with a stream value and delivers a cancel
+  control over the socket on INACTIVE, which is the Java supervisor's reply-listener cancel carried
+  one hop further.
 - An end-to-end run against a cluster: a Java caller and a UI caller each mid-call while the serving
   node is killed, and a UI mid-call while its gateway node is killed.
 

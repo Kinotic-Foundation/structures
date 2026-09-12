@@ -1,12 +1,10 @@
 `StompServerOptions.setHeartbeat` in vertx-stomp-lite takes a `JsonObject` with two integer keys,
-`x` and `y`, and the gateway builds one by hand:
+`x` and `y`:
 
 ```java
-// ApiGatewayVertcleFactory.createApiGatewayVerticle
-long heartbeat = properties.getApiGateway().getStompHeartbeat();
-StompServerOptions stompServerOptions = new StompServerOptions()
-        .setWebsocketPath(STOMP_WEBSOCKET_PATH)
-        .setHeartbeat(new JsonObject().put("x", heartbeat).put("y", heartbeat))
+// vertx-stomp-lite, StompServerOptions
+public static JsonObject DEFAULT_STOMP_HEARTBEAT = new JsonObject().put("x", 30000).put("y", 30000);
+public StompServerOptions setHeartbeat(JsonObject heartbeat)
 ```
 
 A JSON object for two ints is Primitive Obsession on the library's own API: nothing checks the
@@ -30,9 +28,8 @@ What I already know, so you don't re-derive it:
   negotiated client period is `max(client.x, server.y)` and the server period
   `max(server.x, client.y)`, each `0` if either side offered `0`; a connection silent for more
   than twice the client period is closed through `handler.closed()`.
-- The gateway offers the same value both ways, from `kinotic.apiGateway.stompHeartbeat`, and
-  `StompHeartbeatTests` in `kinotic-api-gateway` builds the options the same way the factory
-  does and pins the close on a real socket. Both are the only call sites of `setHeartbeat`.
+- kinotic never calls `setHeartbeat`: the gateway runs on the library default both ways, which
+  the TS client matches. The change is entirely on the library's API.
 
 Do this:
 
@@ -44,11 +41,7 @@ Do this:
    `DefaultStompServerConnection` and the period functions use the record. If the options class
    has a `JsonObject` constructor or `toJson()` for Vert.x-style configuration, the record maps
    to and from `{x, y}` there so a JSON-configured server keeps working. Release the library.
-2. In kinotic, bump `vertxStompLiteVersion`, replace the `JsonObject` construction in
-   `ApiGatewayVertcleFactory` and `StompHeartbeatTests` with the record, and keep
-   `ApiGatewayProperties.stompHeartbeat` a single `long` unless a deployment ever needs the two
-   directions apart.
+2. In kinotic, bump `vertxStompLiteVersion`.
 
 Validate step 2 with `dependencyInsight` on `:kinotic-api-gateway:compileClasspath` for the new
-library version, `:kinotic-api-gateway:test`, and a grep for `"x"` under `kinotic-api-gateway`
-to confirm no key names survive.
+library version and `:kinotic-api-gateway:test`.

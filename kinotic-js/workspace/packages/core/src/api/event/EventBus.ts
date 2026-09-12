@@ -83,6 +83,7 @@ export class EventBus implements IEventBus {
     private requestRepliesSubscription: Subscription | null = null
     private readonly activeCorrelationIds: Set<string> = new Set<string>()
     private readonly recentlyReaped: Set<string> = new Set<string>()
+    private readonly connectionLostSubject: Subject<void> = new Subject<void>()
     // How long a sent cancel suppresses repeat cancels for the same stream before retrying.
     private static readonly REAP_DEBOUNCE_MS = 5000
 
@@ -98,11 +99,16 @@ export class EventBus implements IEventBus {
         // across a drop is failed here rather than waited on
         this.stompConnectionManager.connectionLostHandler = () => {
             this.resetRequestReplies('Connection lost')
+            this.connectionLostSubject.next()
         }
     }
 
     public get fatalErrors(): Observable<Error> {
         return this.stompConnectionManager.fatalErrors
+    }
+
+    public get connectionLost(): Observable<void> {
+        return this.connectionLostSubject.asObservable()
     }
 
     public isConnectionActive(): boolean{
@@ -172,8 +178,9 @@ export class EventBus implements IEventBus {
             }
 
             // send data over stomp. retryIfDisconnected keeps RxStomp from holding the frame and
-            // flushing it onto the next connection, which the server sees as a stale request: a
-            // reply-to scoped to a replyToId it no longer issues, which it terminates the connection over.
+            // flushing it onto the next connection: a request in flight across a drop is failed at the
+            // drop, so nobody would receive its reply, and under a NONE session its reply-to names a
+            // replyToId the server no longer issues, which it terminates the connection over.
             this.stompConnectionManager.rxStomp.publish({
                                                             destination: event.cri,
                                                             headers,
@@ -203,6 +210,7 @@ export class EventBus implements IEventBus {
                 }
 
                 let serverSignaledCompletion = false
+                let replyDestinationReset = false
                 const correlationId = uuidv4()
                 this.activeCorrelationIds.add(correlationId)
                 // registered before the request is sent so a send that throws still untracks it
@@ -245,6 +253,9 @@ export class EventBus implements IEventBus {
                                                       }
                                                   },
                                                   error(err: any): void {
+                                                      // a reset: the connection the stream ran on is gone, and
+                                                      // the gateway released the stream with it
+                                                      replyDestinationReset = true
                                                       subscriber.error(err)
                                                   },
                                                   complete(): void {
@@ -261,7 +272,7 @@ export class EventBus implements IEventBus {
 
                 // registered after the send so a request that never went out is never cancelled
                 subscriber.add(() => {
-                    if (sendControlEvents && !serverSignaledCompletion) {
+                    if (sendControlEvents && !serverSignaledCompletion && !replyDestinationReset) {
                         try {
                             this.sendCancel(event.cri, correlationId)
                         } catch (e) {
@@ -285,8 +296,11 @@ export class EventBus implements IEventBus {
         return this._observe(cri)
     }
 
+    // Runs on a fatal error, on disconnect(), and ahead of a connect(); the emission ahead of a connect finds
+    // nothing streaming
     private cleanup(): void{
         this.resetRequestReplies('Connection disconnected')
+        this.connectionLostSubject.next()
 
         this.serverInfo = null
     }
