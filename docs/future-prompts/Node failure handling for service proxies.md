@@ -209,7 +209,7 @@ Spring destroys it, and drains it, before the registry and the Vert.x behind it.
 
 ## Phase 4 — gateway, caller side: session state, leases, session touch (~10 files)
 
-**The boundary-critical phase.** Introduce a per-connection `ReplySessionState` owning what is spread through `EndpointConnectionHandler`
+**The boundary-critical phase.** Introduce a per-connection `IncomingInvocations` owning what is spread through `EndpointConnectionHandler`
 today — the `reply://` consumer and, new, the pending-request records
 `(correlationId, metadata, destination)` with a Phase 3 lease each. On lease loss, synthesize the
 error reply through the *existing* recover path (`exceptionConverter.convert` → `send`); release
@@ -235,7 +235,7 @@ happens, pinned by a test that a session outlives its timeout under an active co
 As built:
 
 ```java
-// ReplySessionState — one per connection, owned by EndpointConnectionHandler
+// IncomingInvocations — the client's calls to the cluster, one per connection, owned by EndpointConnectionHandler
 void subscribe(CRI cri, String subscriptionIdentifier, StompSubscriptionHandler handler);  // reply destinations, settling each terminal reply on the way through
 boolean unsubscribe(String subscriptionIdentifier);
 void track(Event<byte[]> request);              // at send: records the reply metadata under the correlation id; a cancel settles instead
@@ -253,7 +253,7 @@ timeout, from both the ACTIVITY touch and the CONNECTION timer. A put that fails
 version check, because a request on the same cookie flushed a newer copy, adopts the stored copy
 and retries once.
 
-Files: `ReplySessionState`, `EndpointConnectionHandler`, `Services` (+ `RequestLivenessWatcher`,
+Files: `IncomingInvocations`, `EndpointConnectionHandler`, `Services` (+ `RequestLivenessWatcher`,
 `SessionStore`), the gateway's test dependencies (`spring-boot-starter-test`, `vertx-ignite`),
 `EndpointConnectionHandlerTests` on a clustered Vert.x of its own (a lost node answers the reply
 destination with `RpcServiceUnavailableException`; a terminal reply settles the request; shutdown
@@ -298,7 +298,7 @@ deployment could only widen it. The library default stands. `StompHeartbeatTests
 the library's own close on silence, went with it: that is vertx-stomp-lite's behaviour to test.
 
 ```java
-// ServiceSessionState — the callee side of one connection, sibling of ReplySessionState
+// OutgoingInvocations — the cluster's calls to the client's published services, sibling of IncomingInvocations
 void deliver(Event<byte[]> event, StompSubscriptionHandler handler);  // in the srv:// subscription handler; a cancel forgets its invocation
 void observeReply(Event<byte[]> reply);      // in send() on the reply scheme: a terminal reply settles, a stream value starts the requester watch
 void dispose();                              // shutdown(): RpcServiceUnavailableException to every reply-to still outstanding
@@ -307,8 +307,8 @@ void dispose();                              // shutdown(): RpcServiceUnavailabl
 `EventUtil.replyMetadataOf` and `EventUtil.isTerminalReply` carry the two rules both session
 states share.
 
-Files: `ApiGatewayProperties`, `ApiGatewayVertcleFactory`, `ServiceSessionState`,
-`EndpointConnectionHandler`, `EventUtil`, `ReplySessionState` (uses the shared helpers),
+Files: `ApiGatewayProperties`, `ApiGatewayVertcleFactory`, `OutgoingInvocations`,
+`EndpointConnectionHandler`, `EventUtil`, `IncomingInvocations` (uses the shared helpers),
 `EndpointConnectionHandlerTests` (a closed connection answers the invocations it still owes; a
 terminal reply back through the connection settles one).
 
@@ -361,8 +361,8 @@ this.rxStomp.connectionState$.subscribe(state => {
 
 ```java
 // EndpointConnectionHandler.shutdown — Phase 4 as merged, the server side of the same rule
-replySessionState.dispose();      // leases settled, reply consumers unregistered → server streams cancel on INACTIVE
-serviceSessionState.dispose();    // Phase 5: the invocations this connection owed are failed to their requesters
+incomingInvocations.dispose();      // leases settled, reply consumers unregistered → server streams cancel on INACTIVE
+outgoingInvocations.dispose();    // Phase 5: the invocations this connection owed are failed to their requesters
 ```
 
 Both sides let go at the moment of the close, streams included, so nothing is held that could be
@@ -436,7 +436,7 @@ Still open, and outside this repository's harness:
   streams an `Observable` result (one reply per value carrying the origin CRI, a bodiless completion
   control at the end, an error reply on failure), honours a cancel control, ends every stream with an
   error reply on `stop()`, and cancels them all when `IEventBus.connectionLost` fires, since the
-  gateway has already failed those requesters. The gateway's `ServiceSessionState` watches the
+  gateway has already failed those requesters. The gateway's `OutgoingInvocations` watches the
   requester's reply destination once an invocation answers with a stream value and delivers a cancel
   control over the socket on INACTIVE, which is the Java supervisor's reply-listener cancel carried
   one hop further.

@@ -41,8 +41,8 @@ public class EndpointConnectionHandler {
     private final SecurityService securityService;
     private final Services services;
     private final Map<String, EventConsumer> subscriptions = new HashMap<>();
-    private final ReplySessionState replySessionState;
-    private final ServiceSessionState serviceSessionState;
+    private final IncomingInvocations incomingInvocations;
+    private final OutgoingInvocations outgoingInvocations;
     private Session session;
     private long lastSessionFlush = 0;
     private ConnectedInfo connectedInfo;
@@ -53,8 +53,8 @@ public class EndpointConnectionHandler {
     public EndpointConnectionHandler(Services services) {
         this.services = services;
         this.securityService = services.securityService;
-        this.replySessionState = new ReplySessionState(services);
-        this.serviceSessionState = new ServiceSessionState(services);
+        this.incomingInvocations = new IncomingInvocations(services);
+        this.outgoingInvocations = new OutgoingInvocations(services);
     }
 
     public Future<MultiMap> handshake(RoutingContext routingContext) {
@@ -162,14 +162,14 @@ public class EndpointConnectionHandler {
                 validateReplyToForServiceRequest(incomingEvent);
 
                 String correlationId = incomingEvent.metadata().get(EventConstants.CORRELATION_ID_HEADER);
-                replySessionState.track(incomingEvent);
+                incomingInvocations.track(incomingEvent);
 
                 return services.eventBusService
                         .sendWithAck(incomingEvent)
-                        .onSuccess(nodeId -> replySessionState.pin(correlationId, nodeId, incomingEvent.cri()))
+                        .onSuccess(nodeId -> incomingInvocations.pin(correlationId, nodeId, incomingEvent.cri()))
                         .recover(throwable -> {
                             // no reply will come for a request that never left
-                            replySessionState.settle(correlationId);
+                            incomingInvocations.settle(correlationId);
                             throwable = KinoticUtil.mapSendFailure(throwable,
                                                                    incomingEvent.cri(),
                                                                    services.serviceDirectoryProvider.getIfAvailable());
@@ -201,7 +201,7 @@ public class EndpointConnectionHandler {
 
             // A reply is a one-way delivery to the requester's reply destination. It is never
             // invoked and never itself replies, so no ack and no reply-to validation apply.
-            serviceSessionState.observeReply(incomingEvent);
+            outgoingInvocations.observeReply(incomingEvent);
             services.eventBusService.send(incomingEvent);
             return Future.succeededFuture();
 
@@ -217,8 +217,8 @@ public class EndpointConnectionHandler {
         }
         subscriptions.forEach((s, eventConsumer) -> eventConsumer.unregister());
         subscriptions.clear();
-        replySessionState.dispose();
-        serviceSessionState.dispose();
+        incomingInvocations.dispose();
+        outgoingInvocations.dispose();
         // a NONE session ends with its connection however the connection ended
         removeSession();
         session = null;
@@ -262,7 +262,7 @@ public class EndpointConnectionHandler {
                                          event);
                             }
                         }
-                        serviceSessionState.deliver(event, subscriptionHandler);
+                        outgoingInvocations.deliver(event, subscriptionHandler);
                         subscriptionHandler.handleEvent(event);
                     })
                     .exceptionHandler(subscriptionHandler::handleError);
@@ -290,7 +290,7 @@ public class EndpointConnectionHandler {
 
         } else if (cri.scheme().equals(EventConstants.REPLY_DESTINATION_SCHEME)) {
 
-            replySessionState.subscribe(cri, subscriptionIdentifier, subscriptionHandler);
+            incomingInvocations.subscribe(cri, subscriptionIdentifier, subscriptionHandler);
 
             log.debug("New Reply Subscription cri: {} id: {} for login: {}",
                       cri.raw(),
@@ -307,7 +307,7 @@ public class EndpointConnectionHandler {
 
         signalActivity();
 
-        if (!replySessionState.unsubscribe(subscriptionIdentifier)) {
+        if (!incomingInvocations.unsubscribe(subscriptionIdentifier)) {
             EventConsumer consumer = subscriptions.remove(subscriptionIdentifier);
             if (consumer != null) {
                 consumer.unregister();

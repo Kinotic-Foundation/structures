@@ -15,22 +15,22 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * The reply side of one STOMP connection: its subscriptions on its reply destinations, and the service
- * requests it forwarded whose replies are still outstanding. An outstanding request is pinned to the node
+ * The invocations one STOMP connection's client has made to services on the cluster and is still waiting
+ * on, with the subscriptions on its reply destinations they come back through. Each is pinned to the node
  * that acknowledged it, and one whose node leaves the cluster is answered on the connection's reply
  * destination with an {@link RpcServiceUnavailableException}, the way a request that fails to send is.
  *
  * Created by Navíd Mitchell 🤪 on 9/9/26.
  */
 @Slf4j
-public class ReplySessionState {
+public class IncomingInvocations {
 
     private final Services services;
     private final Map<String, EventConsumer> replySubscriptions = new HashMap<>();
-    // the reply metadata of every forwarded request, keyed by correlation id, until its terminal reply
-    private final ConcurrentHashMap<String, Metadata> pendingRequests = new ConcurrentHashMap<>();
+    // the reply metadata of every forwarded invocation, keyed by correlation id, until its terminal reply
+    private final ConcurrentHashMap<String, Metadata> invocations = new ConcurrentHashMap<>();
 
-    public ReplySessionState(Services services) {
+    public IncomingInvocations(Services services) {
         this.services = services;
     }
 
@@ -68,7 +68,7 @@ public class ReplySessionState {
         if (correlationId != null) {
             String control = request.metadata().get(EventConstants.CONTROL_HEADER);
             if (control == null) {
-                pendingRequests.put(correlationId, EventUtil.replyMetadataOf(request.metadata()));
+                invocations.put(correlationId, EventUtil.replyMetadataOf(request.metadata()));
             } else if (EventConstants.CONTROL_VALUE_CANCEL.equals(control)) {
                 // the caller gave up on the stream, so no reply is owed to it any more
                 settle(correlationId);
@@ -83,7 +83,7 @@ public class ReplySessionState {
     public void pin(String correlationId, String nodeId, CRI destination) {
         if (correlationId != null) {
             // computeIfPresent serializes with settle() on this key
-            pendingRequests.computeIfPresent(correlationId, (_, replyMetadata) -> {
+            invocations.computeIfPresent(correlationId, (_, replyMetadata) -> {
                 services.requestLivenessWatcher.watch(correlationId, nodeId, () -> fail(correlationId, destination, nodeId));
                 return replyMetadata;
             });
@@ -94,7 +94,7 @@ public class ReplySessionState {
      * Forgets a request: its reply arrived, its send failed, or its caller cancelled it.
      */
     public void settle(String correlationId) {
-        if (correlationId != null && pendingRequests.remove(correlationId) != null) {
+        if (correlationId != null && invocations.remove(correlationId) != null) {
             services.requestLivenessWatcher.settle(correlationId);
         }
     }
@@ -103,7 +103,7 @@ public class ReplySessionState {
      * Ends the reply side of the connection: nothing stays pinned and no reply destination stays subscribed.
      */
     public void dispose() {
-        pendingRequests.keySet().forEach(this::settle);
+        invocations.keySet().forEach(this::settle);
         replySubscriptions.values().forEach(EventConsumer::unregister);
         replySubscriptions.clear();
     }
@@ -117,7 +117,7 @@ public class ReplySessionState {
     // Runs on the connection's context when the node that took the request leaves the cluster. Only the
     // party that removes the record answers, so a reply that settled the request first leaves nothing to fail.
     private void fail(String correlationId, CRI destination, String nodeId) {
-        Metadata replyMetadata = pendingRequests.remove(correlationId);
+        Metadata replyMetadata = invocations.remove(correlationId);
         if (replyMetadata != null) {
             RpcServiceUnavailableException cause = new RpcServiceUnavailableException(
                     "Node " + nodeId + " left the cluster while serving the request to " + destination.raw());

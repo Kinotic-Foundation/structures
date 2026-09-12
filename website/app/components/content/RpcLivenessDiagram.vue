@@ -41,7 +41,7 @@ defineProps<{ view?: 'overview' | 'failure' }>()
       <rect class="gw" x="700" y="206" width="400" height="150" rx="8"/>
       <text class="t-name" x="900" y="228" text-anchor="middle">kinotic-server gateway · in the cluster</text>
       <line class="sep" x1="716" y1="236" x2="1084" y2="236"/>
-      <text class="t-plane-ind" x="716" y="254">CALLER SIDE · ReplySessionState</text>
+      <text class="t-plane-ind" x="716" y="254">CALLER SIDE · IncomingInvocations</text>
       <text class="t-mono" x="716" y="270">reply consumer + pending records, one lease each</text>
       <text class="t-mono" x="716" y="284">on loss → error reply to the client's reply destination</text>
       <text class="t-plane-amb" x="716" y="306">CALLEE SIDE · per service socket</text>

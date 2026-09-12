@@ -15,8 +15,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * The callee side of one STOMP connection: the invocations delivered to the services it publishes whose
- * terminal replies have not come back through it. The acknowledgement for such an invocation named this
+ * The invocations delivered to the services one STOMP connection's client publishes, whose terminal
+ * replies have not come back through it. The acknowledgement for such an invocation named this
  * gateway, so the requester's lease cannot tell one connection on it from another; the connection can, and
  * when it closes every invocation still outstanding on it is answered on the requester's reply destination
  * with an {@link RpcServiceUnavailableException}. An invocation that answers with a stream is cancelled on
@@ -25,15 +25,15 @@ import java.util.concurrent.ConcurrentHashMap;
  * Created by Navíd Mitchell 🤪 on 9/9/26.
  */
 @Slf4j
-public class ServiceSessionState {
+public class OutgoingInvocations {
 
     private final Services services;
     // every delivered invocation, keyed by correlation id, until its terminal reply
-    private final ConcurrentHashMap<String, DeliveredInvocation> outstandingInvocations = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, DeliveredInvocation> invocations = new ConcurrentHashMap<>();
     // the requester watch of every invocation that has answered with a stream value, keyed the same way
     private final ConcurrentHashMap<String, Disposable> requesterMonitors = new ConcurrentHashMap<>();
 
-    public ServiceSessionState(Services services) {
+    public OutgoingInvocations(Services services) {
         this.services = services;
     }
 
@@ -51,7 +51,7 @@ public class ServiceSessionState {
             String control = metadata.get(EventConstants.CONTROL_HEADER);
             if (control == null) {
                 if (metadata.contains(EventConstants.REPLY_TO_HEADER)) {
-                    outstandingInvocations.put(correlationId, new DeliveredInvocation(event.cri(),
+                    invocations.put(correlationId, new DeliveredInvocation(event.cri(),
                                                                                        EventUtil.replyMetadataOf(metadata),
                                                                                        subscriptionHandler,
                                                                                        services.vertx.getOrCreateContext()));
@@ -73,7 +73,7 @@ public class ServiceSessionState {
             if (EventUtil.isTerminalReply(reply.metadata())) {
                 forget(correlationId);
             } else {
-                DeliveredInvocation invocation = outstandingInvocations.get(correlationId);
+                DeliveredInvocation invocation = invocations.get(correlationId);
                 if (invocation != null) {
                     requesterMonitors.computeIfAbsent(correlationId, _ -> watchRequester(correlationId, invocation));
                 }
@@ -88,7 +88,7 @@ public class ServiceSessionState {
     public void dispose() {
         requesterMonitors.values().forEach(Disposable::dispose);
         requesterMonitors.clear();
-        outstandingInvocations.forEach((correlationId, invocation) -> {
+        invocations.forEach((correlationId, invocation) -> {
             RpcServiceUnavailableException cause = new RpcServiceUnavailableException(
                     "The connection serving the request disconnected before replying");
             try {
@@ -97,7 +97,7 @@ public class ServiceSessionState {
                 log.error("Could not answer invocation {} after its connection closed", correlationId, e);
             }
         });
-        outstandingInvocations.clear();
+        invocations.clear();
     }
 
     private Disposable watchRequester(String correlationId, DeliveredInvocation invocation) {
@@ -117,7 +117,7 @@ public class ServiceSessionState {
     // Delivers a cancel control for a stream whose requester is gone; a stream that ended in the meantime is
     // already forgotten and takes nothing
     private void cancel(String correlationId) {
-        DeliveredInvocation invocation = outstandingInvocations.get(correlationId);
+        DeliveredInvocation invocation = invocations.get(correlationId);
         if (invocation != null) {
             forget(correlationId);
             Metadata metadata = Metadata.create(Map.of(EventConstants.CONTROL_HEADER, EventConstants.CONTROL_VALUE_CANCEL,
@@ -127,7 +127,7 @@ public class ServiceSessionState {
     }
 
     private void forget(String correlationId) {
-        outstandingInvocations.remove(correlationId);
+        invocations.remove(correlationId);
         Disposable monitor = requesterMonitors.remove(correlationId);
         if (monitor != null) {
             monitor.dispose();
