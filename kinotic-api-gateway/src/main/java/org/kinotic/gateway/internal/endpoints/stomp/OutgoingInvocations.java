@@ -18,7 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * The invocations delivered to the services one STOMP connection's client publishes, whose terminal
  * replies have not come back through it. The acknowledgement for such an invocation named this
  * gateway, so the requester's lease cannot tell one connection on it from another; the connection can, and
- * when it closes every invocation still outstanding on it is answered on the requester's reply destination
+ * when it closes every invocation still pending on it is answered on the requester's reply destination
  * with an {@link RpcServiceUnavailableException}. An invocation that answers with a stream is cancelled on
  * the connection when its requester's reply destination is gone, so the service stops producing for it.
  *
@@ -82,7 +82,7 @@ public class OutgoingInvocations {
     }
 
     /**
-     * Ends the callee side of the connection: every invocation still outstanding is answered with an
+     * Ends the connection's outgoing invocations: every one still pending is answered with an
      * {@link RpcServiceUnavailableException} on its requester's reply destination.
      */
     public void dispose() {

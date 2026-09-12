@@ -18,7 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * The invocations one STOMP connection's client has made to services on the cluster and is still waiting
  * on, with the subscriptions on its reply destinations they come back through. Each is pinned to the node
  * that acknowledged it, and one whose node leaves the cluster is answered on the connection's reply
- * destination with an {@link RpcServiceUnavailableException}, the way a request that fails to send is.
+ * destination with an {@link RpcServiceUnavailableException}, the way one that fails to send is.
  *
  * Created by Navíd Mitchell 🤪 on 9/9/26.
  */
@@ -36,7 +36,7 @@ public class IncomingInvocations {
 
     /**
      * Subscribes the connection to one of its reply destinations. Every reply passing through settles the
-     * request it answers before it is handed to the subscription handler.
+     * invocation it answers before it is handed to the subscription handler.
      */
     public void subscribe(CRI cri, String subscriptionIdentifier, StompSubscriptionHandler subscriptionHandler) {
         EventConsumer eventConsumer = services.eventBusService.listen(cri);
@@ -60,8 +60,8 @@ public class IncomingInvocations {
     }
 
     /**
-     * Records a service request the connection is about to forward, or applies the control message it is.
-     * A request without a correlation id has no reply that could be matched to it and is not recorded.
+     * Records an invocation the connection is about to forward, or applies the control message it is. One
+     * without a correlation id has no reply that could be matched to it and is not recorded.
      */
     public void track(Event<byte[]> request) {
         String correlationId = request.metadata().get(EventConstants.CORRELATION_ID_HEADER);
@@ -77,7 +77,7 @@ public class IncomingInvocations {
     }
 
     /**
-     * Pins a recorded request to the node that acknowledged it. A request already settled, by a reply that
+     * Pins a recorded invocation to the node that acknowledged it. One already settled, by a reply that
      * arrived before the acknowledgement was processed, stays settled.
      */
     public void pin(String correlationId, String nodeId, CRI destination) {
@@ -91,7 +91,7 @@ public class IncomingInvocations {
     }
 
     /**
-     * Forgets a request: its reply arrived, its send failed, or its caller cancelled it.
+     * Forgets an invocation: its reply arrived, its send failed, or its caller cancelled it.
      */
     public void settle(String correlationId) {
         if (correlationId != null && invocations.remove(correlationId) != null) {
@@ -100,7 +100,7 @@ public class IncomingInvocations {
     }
 
     /**
-     * Ends the reply side of the connection: nothing stays pinned and no reply destination stays subscribed.
+     * Ends the connection's incoming invocations: nothing stays pinned and no reply destination stays subscribed.
      */
     public void dispose() {
         invocations.keySet().forEach(this::settle);
@@ -114,8 +114,8 @@ public class IncomingInvocations {
         }
     }
 
-    // Runs on the connection's context when the node that took the request leaves the cluster. Only the
-    // party that removes the record answers, so a reply that settled the request first leaves nothing to fail.
+    // Runs on the connection's context when the node that took the invocation leaves the cluster. Only the
+    // party that removes the record answers, so a reply that settled the invocation first leaves nothing to fail.
     private void fail(String correlationId, CRI destination, String nodeId) {
         Metadata replyMetadata = invocations.remove(correlationId);
         if (replyMetadata != null) {
