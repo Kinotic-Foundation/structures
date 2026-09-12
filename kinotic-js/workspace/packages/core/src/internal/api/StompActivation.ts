@@ -10,14 +10,43 @@ import type { Subscription } from 'rxjs'
  */
 export class StompActivation {
 
-    /** True once deactivate() has taken this activation; nothing it started may act afterwards. */
-    public ended: boolean = false
+    private _ended: boolean = false
+    private wake: (() => void) | null = null
 
     /** A socket produced for stompjs that stompjs has not taken yet; closed if the activation ends first. */
     public preparedSocket: IWebSocket | null = null
 
-    private failPending: ((reason: string) => void) | null = null
+    /** The beforeConnect attempt stompjs is awaiting, settled once its continuation in stompjs has run. */
+    public attempt: Promise<void> | null = null
+
+    private failPending: ((reason: Error) => void) | null = null
     private readonly subscriptions: Subscription[] = []
+
+    /** True once deactivate() has taken this activation; nothing it started may act afterwards. */
+    public get ended(): boolean {
+        return this._ended
+    }
+
+    /** Ends the activation; a delay() it is waiting on resolves at once. */
+    public end(): void {
+        this._ended = true
+        this.wake?.()
+        this.wake = null
+    }
+
+    /** Resolves after the given time, or as soon as the activation ends. */
+    public delay(ms: number): Promise<void> {
+        return new Promise(resolve => {
+            const timer = setTimeout(() => {
+                this.wake = null
+                resolve()
+            }, ms)
+            this.wake = (): void => {
+                clearTimeout(timer)
+                resolve()
+            }
+        })
+    }
 
     /** Registers a listener this activation owns. */
     public own(subscription: Subscription): void {
@@ -25,7 +54,7 @@ export class StompActivation {
     }
 
     /** Registers how to reject the activate() promise while its socket has not opened. */
-    public pending(fail: (reason: string) => void): void {
+    public pending(fail: (reason: Error) => void): void {
         this.failPending = fail
     }
 
@@ -35,7 +64,7 @@ export class StompActivation {
     }
 
     /** Rejects a still-pending activate() with the reason; no-op once established. */
-    public failIfPending(reason: string): void {
+    public failIfPending(reason: Error): void {
         const fail = this.failPending
         this.failPending = null
         fail?.(reason)

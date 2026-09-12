@@ -123,10 +123,8 @@ the status, and close the `Vertx` instance in `@AfterEach`. Add: marking UNREACH
   previous consumer, which keeps the reply address ACTIVE after the connection closes. Unregister the
   one replaced. Same pattern in `EndpointConnectionHandler.subscribe` for the other schemes.
 
-## 8. Core, three small ones
+## 8. Core, two small ones
 
-- `ServiceInvocationSupervisor.stop()` fails the streams that exist when it starts; a stream begun by
-  an invocation still draining is never failed. Fail them again once drained.
 - `McpToolInvoker`'s ack-failure path calls `ret.complete` after `pendingCalls.remove` without
   checking the removal, so an ack timeout after the reply throws. Complete only when this path
   removed the entry.
@@ -154,3 +152,27 @@ proxy's reply address is never INACTIVE while the proxy lives, so a quiet stream
 fix is a per-instance control address: the supervisor listens on
 `srv://<nodeId>@<qualifiedName>/__control`, puts it in `__origin-cri`, and the proxy cancels to the
 origin it saw on the first value. A wire change, to be decided separately.
+
+## 11. Design-level: every invocation of a service runs one at a time
+
+`ServiceInvocationSupervisor.listenAt` dispatches with `vertx.executeBlocking(callable)`, whose
+one-argument overload is `executeBlocking(callable, true)`: ordered. Vert.x delivers each event on a
+duplicated context, but a duplicate's ordered tasks share its parent's queue, and the parent is the
+consumer's context, one per supervisor. So the invocations of one service run serially on one worker
+however many nodes call it, while the participant local stays per invocation. Measured with a
+service whose method sleeps 500 ms: four concurrent calls took 2177 ms, all on
+`vert.x-worker-thread-7`; a method that reads `securityContext.currentParticipant()` saw its own
+caller's participant on every call and none for a caller without one.
+
+```java
+// ServiceInvocationSupervisor.listenAt — today: ordered, one invocation of this service at a time
+vertx.executeBlocking(() -> { ... processEvent(event); ... });
+// concurrent: every invocation on any free worker
+vertx.executeBlocking(() -> { ... processEvent(event); ... }, false);
+```
+
+The one-line change makes every published service re-entrant. A service that relied on the
+serialization without knowing it (a mutable field written by a handler, a non-thread-safe client)
+would start racing, so this is a decision to take across the published services, not a fix to slip
+in. Reactive results already leave the worker after the method returns, so only the synchronous part
+of a handler is serialized today.

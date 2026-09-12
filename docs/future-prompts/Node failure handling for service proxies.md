@@ -479,6 +479,24 @@ merged stack.
 - A NONE keep-alive connection deleted a login session it had not created; `disconnected()` duplicated
   `closed()`; membership snapshots could emit out of order.
 
+A second pass took the TS connection layer and the Java supervisor on their own, with the bar of no
+known defect.
+
+- `StompConnectionManager` is reworked around a `StompActivation` per `activate()` call, which owns
+  the listeners, the pending reject, a socket produced for stompjs, and the attempt stompjs is
+  awaiting. `deactivate()` ends only the activation it took, waits for that attempt before the next
+  activation may start, and reports an open connection's end once. A fatal raised by an ended
+  activation's attempt or listener is not published; a bad CONNECTED frame rejects the connect with
+  its own reason; a connect queued behind a `disconnect()` never starts; `activate()` rejects with
+  `Error`s; the attempt budget is granted again for each connection's reconnects. A fake STOMP server
+  behind the socket factory drives these in `ConnectionLifecycle.test.ts`.
+- `ServiceInvocationSupervisor`: a stream whose caller's reply listener goes INACTIVE, whose listener
+  monitor ends, or whose service stops after the drain began ends with an error reply instead of a
+  silent cancel; `fail()` sends that reply once whichever path gets there first; a request reusing a
+  live stream's correlation id is answered with an error instead of dropped with its span open; an
+  unknown control cancels the source it answers with an error; a single-value reply that cannot be
+  sent is answered the same way whether it came from `onNext` or an empty completion.
+
 Not fixed: `cancelRequest` sends the cancel to the request address, which on an unscoped
 multi-instance service may not be the producing instance. Routing it through `__origin-cri` would not
 help, because the Java supervisor sets that header to the request address it received, the same

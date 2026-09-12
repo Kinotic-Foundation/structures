@@ -23,6 +23,10 @@ export class FakeStompServer {
     public onSend: ((frame: FakeFrame, socket: FakeSocket) => void) | null = null
     /** When true, CONNECT is never answered. */
     public silent: boolean = false
+    /** When false, CONNECTED carries no connected-info header. */
+    public connectedInfo: boolean = true
+    /** Milliseconds a new socket stays CONNECTING before it opens. */
+    public openDelayMs: number = 0
     /** Milliseconds between the client's close() and the socket reporting closed. */
     public closeDelayMs: number = 0
     private replyToCounter: number = 0
@@ -59,7 +63,7 @@ export class FakeSocket implements IWebSocket {
                 this.readyState = 1
                 this.onopen?.({})
             }
-        }, 0)
+        }, server.openDelayMs)
     }
 
     public send(data: string | ArrayBuffer): void {
@@ -76,6 +80,10 @@ export class FakeSocket implements IWebSocket {
 
     public close(): void {
         this.closedByClient = true
+        // closing a socket that never opened reports an error first, as a WebSocket does
+        if (this.readyState === 0) {
+            this.onerror?.({})
+        }
         this.finish(1000, 'closed by client', this.server.closeDelayMs)
     }
 
@@ -113,10 +121,11 @@ export class FakeSocket implements IWebSocket {
             case 'CONNECT':
             case 'STOMP':
                 if (!this.server.silent) {
-                    const connectedInfo = JSON.stringify({ replyToId: this.replyToId, participant: { id: 'test' } })
-                    this.deliver({ command: 'CONNECTED',
-                                   headers: { version: '1.2', 'heart-beat': '0,0', [EventConstants.CONNECTED_INFO_HEADER]: connectedInfo },
-                                   body: '' })
+                    const headers: Record<string, string> = { version: '1.2', 'heart-beat': '0,0' }
+                    if (this.server.connectedInfo) {
+                        headers[EventConstants.CONNECTED_INFO_HEADER] = JSON.stringify({ replyToId: this.replyToId, participant: { id: 'test' } })
+                    }
+                    this.deliver({ command: 'CONNECTED', headers, body: '' })
                 }
                 break
             case 'SUBSCRIBE':

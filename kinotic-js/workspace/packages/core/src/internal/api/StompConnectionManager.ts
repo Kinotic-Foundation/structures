@@ -152,8 +152,7 @@ export class StompConnectionManager {
             // immediately before creating the socket — and handed back synchronously here. The
             // activation holds it until stompjs takes it, so one it never takes is closed with the
             // activation instead of being orphaned.
-            const userWebSocketFactory = options.webSocketFactory
-            const usesPreparedSocket = userWebSocketFactory != null || headerAuth
+            const usesPreparedSocket = options.webSocketFactory != null || headerAuth
             const takePreparedSocket = (): IWebSocket => {
                 const socket = activation.preparedSocket as IWebSocket
                 activation.preparedSocket = null
@@ -174,81 +173,14 @@ export class StompConnectionManager {
                 maxReconnectDelay: this.MAX_RECONNECT_DELAY,
                 reconnectTimeMode: ReconnectionTimeMode.EXPONENTIAL,
                 webSocketFactory: usesPreparedSocket ? takePreparedSocket : undefined,
-                beforeConnect: async (): Promise<void> => {
-                    if (activation.ended) {
-                        return
-                    }
-
-                    // Cookie-auth clients (browser, headerless credentials) can't read a rejected WS
-                    // upgrade, so probe the session over a readable REST status first — same host as
-                    // the socket, at the fixed SESSION_CHECK_PATH. A 401 means the cookie isn't (or is
-                    // no longer) valid — not retriable, so fail fast: this rejects the initial connect
-                    // and surfaces a fatal error on a later reconnect, instead of looping on an
-                    // unauthenticated socket. Other statuses (incl. a server without the route) proceed.
-                    if(!usesPreparedSocket){
-                        const sessionCheckUrl = buildServerUrl(server, 'http') + SESSION_CHECK_PATH
-                        try {
-                            const res = await fetch(sessionCheckUrl, { credentials: 'include' })
-                            if(res.status === 401){
-                                // Not signed in (or the session expired) — an expected outcome, not a
-                                // failure; fail the connect and the app routes to /login from here.
-                                await this.signalFatal(new Error('Authentication required'))
-                                return
-                            }
-                        } catch (e) {
-                            // Couldn't reach the check (network/CORS) — treat as transient and let the socket
-                            // try; the connection attempt that follows reports the real outcome.
-                            this.debugLogger('Session check at %s failed: %O', sessionCheckUrl, e)
-                        }
-                    }
-
-                    // If max connections are set, then make sure we have not exceeded that threshold
-                    if(options?.maxConnectionAttempts){
-                        this.connectionAttempts++
-
-                        if(this.connectionAttempts > options.maxConnectionAttempts){
-                            this.maxConnectionAttemptsReached = true
-                            // signalFatal rejects a still-pending activate() with this reason
-                            await this.signalFatal(new Error(
-                                'Max number of reconnection attempts reached',
-                                { cause: this.lastWebsocketError ?? undefined }
-                            ))
-                            return
-                        }else{
-                            await this.connectionJitterDelay();
-                        }
-                    }else{
-                        await this.connectionJitterDelay();
-                    }
-
-                    if(userWebSocketFactory){
-                        try {
-                            activation.preparedSocket = await userWebSocketFactory()
-                        } catch (e) {
-                            await this.signalFatal(new Error('WebSocket factory failed', { cause: e }))
-                        }
-                    } else if (headerAuth) {
-                        // resolved on every attempt so short-lived credentials refresh each connect
-                        try {
-                            const resolved = await credentialsResolver!.resolve(server)
-                            if (resolved?.authHeaders == null) {
-                                await this.signalFatal(new Error(
-                                    'Credentials resolver no longer supplies auth headers: ' + credentialsResolver!.name))
-                            } else {
-                                // The Node/Bun WebSocket accepts a `headers` option that the DOM lib typings omit.
-                                const WS = WebSocket as unknown as
-                                    new (url: string, opts: {headers: Record<string, string>}) => IWebSocket
-                                activation.preparedSocket = new WS(url, {headers: resolved.authHeaders})
-                            }
-                        } catch (e) {
-                            await this.signalFatal(new Error('Credential resolution failed', { cause: e }))
-                        }
-                    }
-                    // a deactivate() landed while the socket was being produced; stompjs will not take it
-                    if (activation.ended && activation.preparedSocket) {
-                        activation.preparedSocket.close()
-                        activation.preparedSocket = null
-                    }
+                beforeConnect: (): Promise<void> => {
+                    const attempt = this.prepareAttempt(activation, options, server, headerAuth)
+                    // stompjs resumes its _connect in the microtasks after the attempt settles and opens a socket
+                    // for whichever activation is active then; the teardown of this one waits one macrotask past
+                    // that so the next activation cannot be active yet
+                    const settled = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0))
+                    activation.attempt = attempt.then(settled, settled)
+                    return attempt
                 }
             }
 
@@ -265,9 +197,9 @@ export class StompConnectionManager {
                 this.lastWebsocketError = value
                 // The attempt that just failed was the last the budget allows — report now
                 // instead of paying the reconnect delay before the next beforeConnect notices.
-                if (options?.maxConnectionAttempts && this.connectionAttempts >= options.maxConnectionAttempts) {
+                if (!activation.ended && options?.maxConnectionAttempts && this.connectionAttempts >= options.maxConnectionAttempts) {
                     this.maxConnectionAttemptsReached = true
-                    await this.signalFatal(new Error(
+                    await this.signalFatal(activation, new Error(
                         'Max number of reconnection attempts reached',
                         { cause: value ?? undefined }
                     ))
@@ -278,13 +210,15 @@ export class StompConnectionManager {
             // connection and indicate an unrecoverable condition (auth failure, protocol error).
             activation.own(this.rxStomp.stompErrors$.subscribe(async (frame: IFrame) => {
                 const stompError = new Error(frame.headers['message'] as string, { cause: frame })
-                await this.signalFatal(new Error('STOMP connection error', { cause: stompError }))
+                await this.signalFatal(activation, new Error('STOMP connection error', { cause: stompError }))
             }))
 
-            // The first connection of this activation: from here the connect can only resolve
+            // The first connection of this activation: from here the connect can only resolve. Each connection
+            // gets the full attempt budget again for its reconnects.
             activation.own(this.rxStomp.connected$.subscribe(() =>{
                 activation.established()
                 this.initialConnectionSuccessful = true
+                this.connectionAttempts = 0
             }))
 
             // A fatal error or a deactivate() before the socket opened rejects the connect with its reason
@@ -304,8 +238,8 @@ export class StompConnectionManager {
                 const connectedInfoJson: string | undefined = value[EventConstants.CONNECTED_INFO_HEADER]
                 if (connectedInfoJson == null) {
                     if (!this.initialConnectionSuccessful) {
+                        activation.failIfPending(new Error('Server did not return proper data for successful login'))
                         await this.deactivate()
-                        reject('Server did not return proper data for successful login')
                     }
                     return
                 }
@@ -313,8 +247,8 @@ export class StompConnectionManager {
                 const connectedInfo: ConnectedInfo = JSON.parse(connectedInfoJson)
                 if (connectedInfo.replyToId == null) {
                     if (!this.initialConnectionSuccessful) {
+                        activation.failIfPending(new Error('Server did not return a replyToId for successful login'))
                         await this.deactivate()
-                        reject('Server did not return a replyToId for successful login')
                     }
                     return
                 }
@@ -348,6 +282,96 @@ export class StompConnectionManager {
     }
 
     /**
+     * One connection attempt of the activation, run by stompjs before it opens the socket: the session
+     * check, the attempt budget, the reconnect jitter, and the socket or headers the attempt needs.
+     * A fatal outcome ends the activation from here and the attempt still resolves.
+     */
+    private async prepareAttempt(activation: StompActivation,
+                                 options: ConnectOptions,
+                                 server: ServerInfo,
+                                 headerAuth: boolean): Promise<void> {
+        const credentialsResolver: CredentialsResolver | undefined = options.credentials
+        const userWebSocketFactory = options.webSocketFactory
+        const usesPreparedSocket = userWebSocketFactory != null || headerAuth
+        const url = buildBrokerUrl(server)
+
+        // Cookie-auth clients (browser, headerless credentials) can't read a rejected WS
+        // upgrade, so probe the session over a readable REST status first — same host as
+        // the socket, at the fixed SESSION_CHECK_PATH. A 401 means the cookie isn't (or is
+        // no longer) valid — not retriable, so fail fast: this rejects the initial connect
+        // and surfaces a fatal error on a later reconnect, instead of looping on an
+        // unauthenticated socket. Other statuses (incl. a server without the route) proceed.
+        if(!usesPreparedSocket){
+            const sessionCheckUrl = buildServerUrl(server, 'http') + SESSION_CHECK_PATH
+            try {
+                const res = await fetch(sessionCheckUrl, { credentials: 'include' })
+                if(res.status === 401){
+                    // Not signed in (or the session expired) — an expected outcome, not a
+                    // failure; fail the connect and the app routes to /login from here.
+                    await this.signalFatal(activation, new Error('Authentication required'))
+                    return
+                }
+            } catch (e) {
+                // Couldn't reach the check (network/CORS) — treat as transient and let the socket
+                // try; the connection attempt that follows reports the real outcome.
+                this.debugLogger('Session check at %s failed: %O', sessionCheckUrl, e)
+            }
+        }
+
+        // If max connections are set, then make sure we have not exceeded that threshold
+        if(options?.maxConnectionAttempts){
+            this.connectionAttempts++
+
+            if(this.connectionAttempts > options.maxConnectionAttempts){
+                this.maxConnectionAttemptsReached = true
+                // signalFatal rejects a still-pending activate() with this reason
+                await this.signalFatal(activation, new Error(
+                    'Max number of reconnection attempts reached',
+                    { cause: this.lastWebsocketError ?? undefined }
+                ))
+                return
+            }else{
+                await this.connectionJitterDelay(activation);
+            }
+        }else{
+            await this.connectionJitterDelay(activation);
+        }
+        // a deactivate() during the delay ends the attempt before it produces anything
+        if (activation.ended) {
+            return
+        }
+
+        if(userWebSocketFactory){
+            try {
+                activation.preparedSocket = await userWebSocketFactory()
+            } catch (e) {
+                await this.signalFatal(activation, new Error('WebSocket factory failed', { cause: e }))
+            }
+        } else if (headerAuth) {
+            // resolved on every attempt so short-lived credentials refresh each connect
+            try {
+                const resolved = await credentialsResolver!.resolve(server)
+                if (resolved?.authHeaders == null) {
+                    await this.signalFatal(activation, new Error(
+                        'Credentials resolver no longer supplies auth headers: ' + credentialsResolver!.name))
+                } else {
+                    // The Node/Bun WebSocket accepts a `headers` option that the DOM lib typings omit.
+                    const WS = WebSocket as unknown as
+                        new (url: string, opts: {headers: Record<string, string>}) => IWebSocket
+                    activation.preparedSocket = new WS(url, {headers: resolved.authHeaders})
+                }
+            } catch (e) {
+                await this.signalFatal(activation, new Error('Credential resolution failed', { cause: e }))
+            }
+        }
+        // a deactivate() landed while the socket was being produced; stompjs will not take it
+        if (activation.ended && activation.preparedSocket) {
+            activation.preparedSocket.close()
+            activation.preparedSocket = null
+        }
+    }
+
+    /**
      * Ends the current activation. A second call while the socket is still closing returns the same
      * teardown; a call while inactive resolves at once.
      * @param force close the socket without a DISCONNECT frame
@@ -357,21 +381,22 @@ export class StompConnectionManager {
         let ret: Promise<void>
         if (activation) {
             this.activation = null
-            activation.ended = true
+            activation.end()
             const wasOpen = this.rxStomp.connected()
             this._replyToCri = null
             // a connect still waiting for its socket is settled now, not after the close round trip
-            activation.failIfPending('Deactivated before the connection was established')
+            activation.failIfPending(new Error('Deactivated before the connection was established'))
             // a socket produced for stompjs that it never took
             activation.preparedSocket?.close()
             activation.preparedSocket = null
-            const teardown: Promise<void> = this.rxStomp.deactivate({force: force}).finally(() => {
+            // stompjs resolves at once while an attempt is still in beforeConnect, so the attempt is waited for too
+            const teardown: Promise<void> = this.rxStomp.deactivate({force: force})
+                                                .then(() => activation.attempt ?? undefined)
+                                                .finally(() => {
                 // watch() subscriptions survive deactivation and re-subscribe on the next activation; the
                 // listeners this activation owns end with it
                 activation.unsubscribeAll()
-                if (this.teardown === teardown) {
-                    this.teardown = null
-                }
+                this.teardown = null
                 if (wasOpen) {
                     this.connectionLostHandler?.()
                 }
@@ -387,26 +412,28 @@ export class StompConnectionManager {
     /**
      * Make sure clients don't all try to reconnect at the same time.
      */
-    private async connectionJitterDelay(): Promise<void> {
+    private async connectionJitterDelay(activation: StompActivation): Promise<void> {
         if(this.initialConnectionSuccessful) {
             const randomJitter = Math.random() * this.JITTER_MAX;
             this.debugLogger(`Adding ${randomJitter}ms of jitter delay`)
-            return new Promise(resolve => setTimeout(resolve, randomJitter));
+            await activation.delay(randomJitter)
         }
     }
 
     /**
-     * Tears down the connection then publishes the failure to {@link fatalErrors}. Deactivating
-     * first means subscribers see the error already in its terminal state — no further reconnection
-     * attempts, no live rxStomp — so they can react without racing the cleanup. The error is also
-     * available to subscribers via {@link fatalErrors}; this only traces it for local debugging.
+     * Tears down the activation the failure belongs to, then publishes the failure to {@link fatalErrors}.
+     * Deactivating first means subscribers see the error already in its terminal state — no further
+     * reconnection attempts, no live rxStomp — so they can react without racing the cleanup.
      */
-    private async signalFatal(err: Error): Promise<void> {
-        this.debugLogger('Fatal error, deactivating connection: %O', err)
-        // a connect still waiting learns the cause, not the generic reason deactivate() would give it
-        this.activation?.failIfPending(err.message)
-        await this.deactivate()
-        this.fatalErrorsSubject.next(err)
+    private async signalFatal(activation: StompActivation, err: Error): Promise<void> {
+        // deactivate() has ended and reported this activation; a failure of its attempt is nobody's news
+        if (!activation.ended) {
+            this.debugLogger('Fatal error, deactivating connection: %O', err)
+            // a connect still waiting learns the cause, not the generic reason deactivate() would give it
+            activation.failIfPending(err)
+            await this.deactivate()
+            this.fatalErrorsSubject.next(err)
+        }
     }
 
 }

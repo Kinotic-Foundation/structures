@@ -77,6 +77,8 @@ export class EventBus implements IEventBus {
     private readonly log: Logger = createDebugLogger('kinotic:EventBus')
     private stompConnectionManager: StompConnectionManager = new StompConnectionManager()
     private connectionLifecycle: Promise<unknown> = Promise.resolve()
+    // counts disconnect() calls, so a connect() queued before one of them never starts
+    private disconnectRequests: number = 0
     private requestRepliesObservable: ConnectableObservable<IEvent> | null = null
     private requestRepliesSubject: Subject<IEvent> | null = null
     private requestRepliesSubscription: Subscription | null = null
@@ -88,7 +90,7 @@ export class EventBus implements IEventBus {
 
     constructor() {
         // the manager has already deactivated when it reports a fatal error; in-flight requests fail here
-        this.stompConnectionManager.fatalErrors.subscribe(() => this.cleanup())
+        this.stompConnectionManager.fatalErrors.subscribe(() => this.serverInfo = null)
         // The server drops every reply consumer and lease of a closed connection, so a call in flight
         // across a drop is failed here rather than waited on. The manager reports each open connection's
         // end once, however it ends, so this is the one place connectionLost is emitted.
@@ -115,7 +117,12 @@ export class EventBus implements IEventBus {
     }
 
     public connect(options: ConnectOptions): Promise<ConnectedInfo> {
+        const disconnectsWhenQueued = this.disconnectRequests
         return this.serializeLifecycle(async () => {
+            // a disconnect() requested while this connect was queued cancels it
+            if (this.disconnectRequests !== disconnectsWhenQueued) {
+                throw new Error('Disconnected before the connection was started')
+            }
             if(!this.stompConnectionManager.active){
                 const connectedInfo = await this.stompConnectionManager.activate(options)
                 // copy so the reported server never aliases the caller's options object
@@ -129,15 +136,14 @@ export class EventBus implements IEventBus {
     }
 
     public disconnect(force?: boolean): Promise<void> {
+        this.disconnectRequests++
         // A connect() waiting for its socket holds the lifecycle queue. Deactivating now rejects it, so the
-        // teardown queued below runs at once instead of waiting on a server that may never answer. A
-        // connect() queued but not yet started is unaffected by that, so the queued teardown deactivates
-        // again once its turn comes.
+        // teardown queued below runs at once instead of waiting on a server that may never answer.
         const deactivated = this.stompConnectionManager.deactivate(force)
         return this.serializeLifecycle(async () => {
             await deactivated
             await this.stompConnectionManager.deactivate(force)
-            this.cleanup()
+            this.serverInfo = null
         })
     }
 
@@ -295,12 +301,6 @@ export class EventBus implements IEventBus {
 
     public observe(cri: string): Observable<IEvent> {
         return this._observe(cri)
-    }
-
-    // Runs on a fatal error and on disconnect(); the manager has reported the connection's end by then
-    private cleanup(): void{
-        this.resetRequestReplies('Connection disconnected')
-        this.serverInfo = null
     }
 
     /**
