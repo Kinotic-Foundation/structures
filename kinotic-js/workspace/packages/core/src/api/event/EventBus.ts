@@ -178,8 +178,9 @@ export class EventBus implements IEventBus {
             }
 
             // send data over stomp. retryIfDisconnected keeps RxStomp from holding the frame and
-            // flushing it onto the next connection, which the server sees as a stale request: a
-            // reply-to scoped to a replyToId it no longer issues, which it terminates the connection over.
+            // flushing it onto the next connection: a request in flight across a drop is failed at the
+            // drop, so nobody would receive its reply, and under a NONE session its reply-to names a
+            // replyToId the server no longer issues, which it terminates the connection over.
             this.stompConnectionManager.rxStomp.publish({
                                                             destination: event.cri,
                                                             headers,
