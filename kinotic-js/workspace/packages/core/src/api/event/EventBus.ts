@@ -94,6 +94,11 @@ export class EventBus implements IEventBus {
             this.replyToCri = replyToCri
             this.resetRequestReplies('Reply destination changed')
         }
+        // The server drops every reply consumer and lease of a closed connection, so a call in flight
+        // across a drop is failed here rather than waited on
+        this.stompConnectionManager.connectionLostHandler = () => {
+            this.resetRequestReplies('Connection lost')
+        }
     }
 
     public get fatalErrors(): Observable<Error> {

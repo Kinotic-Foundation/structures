@@ -1,7 +1,7 @@
 # Node failure handling for service proxies — phase plan
 
 Plan of record for making a proxy call fail when the node serving it dies, instead of hanging
-forever. Phase 1 landed in PR #476; Phase 2 in #540; Phase 3 in #544; Phase 4 is PR #545; Phase 5 is PR #546, based on #545; Phase 6 is PR #547, based on #546. Everything below was re-validated against `develop` at `3adf17d`
+forever. Phase 1 landed in PR #476; Phase 2 in #540; Phase 3 in #544; Phase 4 is PR #545; Phase 5 is PR #546, based on #545; Phase 6 in #547; Phases 7 and 8 were built as #548 and #549 and dropped, see their section; the fail-on-disconnect rule that replaces them is PR #551. Everything below was re-validated against `develop` at `3adf17d`
 (2026-09-08); the adjustments that pass produced are folded in, and the phase numbering below
 supersedes the earlier chat numbering (mapping at the end).
 
@@ -324,8 +324,8 @@ crosses to TS as more than a message string (the `EventBus.ts` TODO); the `NONE`
 where a network drop keeps the session and resurrects the old `replyToId` until expiry; and the
 vm-manager's overlapping heartbeat `setInterval`.
 
-Not in scope: failing in-flight calls on a sticky reconnect. That is what parking exists to
-avoid.
+Failing in-flight calls on a reconnect is the rule the dropped Phases 7 and 8 settled on; see
+their section.
 
 As built: `RpcError` (`api/event`, exported) carries `exceptionName` and `exceptionClass` parsed
 from the `ServiceExceptionWrapper` body of an error reply, falling back to the error header;
@@ -339,82 +339,42 @@ connection however the connection ended. The vm-manager heartbeat is a self-resc
 `EndpointConnectionHandlerTests` (a NONE session is gone from the store once the connection
 closes). `@kinotic-ai/core` moves to 5.0.0-beta.11 for the new export.
 
-## Phase 7 — parked reply sessions, same node (~13 files, split 7a gateway / 7b client)
+## Phases 7 and 8 — dropped: a call does not outlive its connection
 
-On `closed()` with a sticky session, `shutdown()` *parks* the `ReplySessionState` in a node-local
-`ParkedReplySessions` instead of disposing: the reply consumer keeps consuming into a bounded
-buffer, leases stay armed (a callee dying during the gap synthesizes a buffered error), and —
-because the registration stays — `ServiceInvocationSupervisor`'s reply-listener monitor stays
-ACTIVE, so long-running server streams survive the reconnect instead of being cancelled. Reattach
-and flush on same-node reconnect.
+Phase 7 parked a closed connection's reply state on its node for a window, buffering replies and
+keeping leases armed so the same client reconnecting resumed every call; Phase 8 handed that state
+across nodes with a release published to the reply destination. Both were built (PRs #548 and #549)
+and closed unmerged, for a finding about the deployment rather than the code: the STOMP port sits
+behind the cluster load balancer with no session affinity, so a reconnect lands on any node and the
+cross-node case is the normal one, not the rollover exception. Parking then pays off only with the
+handoff on top, and the handoff still loses the buffer, and the pending records with it, when the
+node holding them dies during the window, the one case a rollover produces. Each fix for that was
+another piece of held state that could be on the wrong node.
 
-Adjustments from the re-validation:
+What replaces them is one rule on both ends: a call is bound to its connection.
 
-- **The window is a gateway property**, beside `sessionTimeout`; parking never derives its
-  lifetime from the clustered session's expiry (the Phase 4 fix makes that expiry correct, but the
-  window is gateway policy either way).
-- **Replies only.** The client no longer queues requests during a gap, so a parked session holds
-  inbound replies and nothing else.
-- **A byte budget per parked session**, and a new heap term for the sizing doc: parked replies are
-  heap-resident bodies up to `maxEventPayloadSize`, and the direct-memory-exhaustion scenario in
-  NavidNotes parks many sessions on one node at once.
-
-Two exits, one outcome. Window expiry: dispose, drop the buffer, close leases (streams then cancel
-through the existing INACTIVE path). Overflow: dispose. Both **rotate the `replyToId`** in the
-session's `ConnectedInfo`, so the next CONNECT mints a new reply CRI and the client's existing
-`replyToCriChangedHandler` → `resetRequestReplies` path fails its in-flight calls — continuity
-loss signals through a mechanism that already ships, and login is untouched. Expiry has to rotate
-too: a single-value reply produced during the gap is gone with the buffer, and a client that
-reconnects within the session but after the window would otherwise find its `replyToId` intact
-and wait forever for that reply.
-
-**The client half (7b).** A client whose socket stays down longer than the window has nothing left
-to wait for, so it fails its in-flight calls itself instead of holding them for a reconnect that
-may never come. One timer per connection, armed on `connectionState$` CLOSED and cleared on the
-next CONNECTED, never a per-call timeout; on expiry it runs `resetRequestReplies`. The window comes
-from the server: `ConnectedInfo` gains `replyBufferWindow` beside `replyToId`, mirrored in
-`ConnectedInfo.ts`, so it is configured once, on the gateway. Every ordering is consistent given
-the rotation above: a reconnect inside the window flushes; the client timer first, then a reconnect
-inside the server's window, flushes to correlations already failed, which `cancelIfUnexpected`
-already handles; the server first, then a reconnect, fails through the reply CRI change; no
-reconnect at all fails on the client timer. The client's first reconnect attempt comes
-`INITIAL_RECONNECT_DELAY` (2 s) after the drop, so the window's useful range starts there; five to
-ten seconds absorbs a spotty network, and past that the network is down and failing fast is
-cheaper than holding the calls.
-
-A client that reconnects through a fresh handshake without its session (the vm-manager's
-`reconnectOnFatalError` loop re-authenticates with credentials) gets a new `replyToId`; its old
-parked session is orphaned until the window expires. The window bounds a leak, not only a wait.
-
-Files, 7a: `ParkedReplySessions`, park/reattach in `EndpointConnectionHandler` +
-`ReplySessionState`, `replyToId` rotation on both exits, `ApiGatewayProperties.replyBufferWindow`,
-`ConnectedInfo` (Java) carrying it, tests (blip mid-stream on one gateway → stream continues; a
-single-value reply during the blip → delivered on reattach; expiry and overflow → calls fail with
-the reset error). 7b: `ConnectedInfo.ts`, `StompConnectionManager.ts`, `EventBus.ts`, a TS test
-(blip shorter than the window → the call completes; longer → it fails).
-
-## Phase 8 — cross-node handoff (~9 files)
-
-The rollover case: the client reconnects to a different gateway node. `ClusteredSessionStore` is
-now unconditional on `develop`, so the session (and `replyToId`) is found on any node; the parked
-replies are on the old one. Protocol over the event bus itself:
-
-```java
-// EventBusService.java (develop) — fan-out, every consumer on the address, every node
-void publish(Event<byte[]> event);
+```ts
+// StompConnectionManager — a drop after the initial connect
+this.rxStomp.connectionState$.subscribe(state => {
+    if (state === RxStompState.CLOSED && this.isActive && this.initialConnectionSuccessful) {
+        this.connectionLostHandler?.()          // EventBus: resetRequestReplies('Connection lost')
+    }
+})
 ```
 
-The new node registers its reply consumer, then `publish`es a `control: reply-session-release` to the
-reply address — with `publish` it reaches both the parked session's consumer and the new consumer regardless of
-registration order, which removes the split-brain reasoning the earlier `send`-based sketch
-needed. The parked session stops consuming, re-sends its buffer to the same address (now routing only
-to the new node), transfers its pending records, and ends with `flush-complete`; the new node
-holds client forwarding until then, preserving per-correlation stream order. A parked session that never
-answers is bounded by the same registration monitoring, no timeouts here either.
+```java
+// EndpointConnectionHandler.shutdown — Phase 4 as merged, the server side of the same rule
+replySessionState.dispose();      // leases settled, reply consumers unregistered → server streams cancel on INACTIVE
+serviceSessionState.dispose();    // Phase 5: the invocations this connection owed are failed to their requesters
+```
 
-Files: control values in `EventConstants`, release/flush in `ParkedReplySessions`, the hold in
-`ReplySessionState`, a pending-record codec, a two-gateway test (kill gateway A mid-stream,
-reconnect to B, stream resumes complete and ordered).
+Both sides let go at the moment of the close, streams included, so nothing is held that could be
+on the wrong node or die with one. A blip costs the caller a retry, and a non-idempotent call
+carries the ambiguity `RpcServiceUnavailableException` already documents. A caller that needs a
+message to survive its connection needs a delivery guarantee, which is a queue behind the API with
+acknowledgement and redelivery, a separate layer with its own contract. The Phase 7 and 8
+branches remain on origin (`claude/node-failure-proxy-handling-phase7`, `-phase8`) should a
+sticky load balancer ever change the calculus.
 
 ## Phase 9 — orchestrator fast path (~5 files, optional)
 
@@ -443,11 +403,11 @@ that loses Loki/Tempo and then dies keeps its workloads RUNNING forever.
 | 2 watcher (address-level) | 2 ack names the node, 3 watcher (node-level) |
 | 3 gateway leases + heartbeats | 4 caller side + session touch, 5 callee side + heartbeats |
 | 4 TS edges | 6 |
-| 5 mailbox | 7 parked reply sessions |
-| 6 handoff | 8 |
+| 5 mailbox | 7, dropped |
+| 6 handoff | 8, dropped |
 | 7 orchestrator | 9 |
 
-Dependency spine: 1 → 2 → 3 → 4 → 7 → 8, with 5 after 4, 6 after 1, 9 after 3.
+Dependency spine: 1 → 2 → 3 → 4, with 5 after 4, 6 after 1, 9 after 3.
 
 ## Scaling
 
