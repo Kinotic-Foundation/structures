@@ -117,6 +117,27 @@ public class RpcLivenessTests {
     }
 
     @Test
+    public void testLeaseSurvivesASiblingSettlingOnTheSameNode() throws Exception {
+        KinoticIgniteClusterManager secondClusterManager = startSecondNode();
+        String nodeId = secondClusterManager.getNodeId();
+        CompletableFuture<Void> lost = new CompletableFuture<>();
+        withParticipant(() -> {
+            requestLivenessWatcher.watch("first", nodeId, () -> {});
+            requestLivenessWatcher.watch("second", nodeId, () -> lost.complete(null));
+            return null;
+        });
+        awaitPendingCount(2);
+
+        // settling the first must not take the node's index entry away from the second
+        requestLivenessWatcher.settle("first");
+        awaitPendingCount(1);
+        stopSecondNode();
+
+        lost.get(1, TimeUnit.MINUTES);
+        awaitPendingCount(0);
+    }
+
+    @Test
     public void testInFlightCallRepliesAfterUnregister() throws Exception {
         GatedDrainTestService service = new GatedDrainTestService();
         ServiceIdentifier serviceIdentifier = register(service);

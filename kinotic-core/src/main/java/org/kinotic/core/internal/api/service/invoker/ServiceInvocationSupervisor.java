@@ -160,10 +160,18 @@ public class ServiceInvocationSupervisor {
 
     private EventConsumer listenAt(CRI cri){
         EventConsumer consumer = eventBusService.listen(cri);
-        consumer.handler(event -> vertx.executeBlocking(() -> {
-                    processEvent(event);
-                    return null;
-                }))
+        consumer.handler(event -> {
+                    // counted at dispatch, so an event still queued for the worker pool holds stop()'s drain
+                    Runnable leaveInFlight = enterInFlight();
+                    vertx.executeBlocking(() -> {
+                        try {
+                            processEvent(event);
+                        } finally {
+                            leaveInFlight.run();
+                        }
+                        return null;
+                    });
+                })
                 .exceptionHandler(throwable -> log.error("Event listener error", throwable))
                 // Vert.x invokes the end handler on every unregistration, including the one stop() performs.
                 // stop() clears active before unregistering, so a successful CAS here means something other
@@ -338,12 +346,7 @@ public class ServiceInvocationSupervisor {
                     processControlPlaneRequest(incomingEvent);
                 }else{
                     if(validateReplyTo(incomingEvent)){
-                        Runnable leaveInFlight = enterInFlight();
-                        try {
-                            processInvocationRequest(incomingEvent);
-                        } finally {
-                            leaveInFlight.run();
-                        }
+                        processInvocationRequest(incomingEvent);
                     }else{
                         log.error("ReplyTo header is missing or invalid incoming message will be ignored\n{}", EventUtil.toString(
                                 incomingEvent,
@@ -543,7 +546,9 @@ public class ServiceInvocationSupervisor {
         private final Event<byte[]> incomingEvent;
         private final Span span;
         private final Runnable leaveInFlight;
+        private Subscription subscription;
         private boolean valueReceived = false;
+        private boolean failed = false;
 
         public SingleValueSubscriber(Metadata incomingMetadata, HandlerMethod handlerMethod, Event<byte[]> incomingEvent, Span span, Runnable leaveInFlight) {
             this.incomingMetadata = incomingMetadata;
@@ -555,13 +560,23 @@ public class ServiceInvocationSupervisor {
 
         @Override
         public void onSubscribe(Subscription s) {
+            subscription = s;
             s.request(1);
         }
 
         @Override
         public void onNext(Object value) {
             valueReceived = true;
-            convertAndSend(incomingMetadata, handlerMethod, value);
+            try {
+                convertAndSend(incomingMetadata, handlerMethod, value);
+            } catch (Exception e) {
+                // a throw out of onNext reaches no onError, so the caller is answered and the count left here
+                failed = true;
+                handleException(incomingMetadata, e);
+                failSpan(span, e);
+                leaveInFlight.run();
+                subscription.cancel();
+            }
         }
 
         @Override
@@ -578,6 +593,9 @@ public class ServiceInvocationSupervisor {
 
         @Override
         public void onComplete() {
+            if(failed){
+                return;
+            }
             if(!valueReceived){
                 convertAndSend(incomingMetadata, handlerMethod, null);
             }
