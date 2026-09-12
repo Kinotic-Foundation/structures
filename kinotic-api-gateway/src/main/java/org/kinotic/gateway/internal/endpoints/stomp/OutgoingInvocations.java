@@ -15,12 +15,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * The invocations delivered to the services one STOMP connection's client publishes, whose terminal
- * replies have not come back through it. The acknowledgement for such an invocation named this
- * gateway, so the requester's lease cannot tell one connection on it from another; the connection can, and
- * when it closes every invocation still pending on it is answered on the requester's reply destination
- * with an {@link RpcServiceUnavailableException}. An invocation that answers with a stream is cancelled on
- * the connection when its requester's reply destination is gone, so the service stops producing for it.
+ * Invocations delivered to the services the client on this connection publishes, until the client sends
+ * the terminal reply. When the connection closes, every invocation still pending is answered with an
+ * {@link RpcServiceUnavailableException} on the requester's behalf. A streaming invocation is cancelled
+ * on the client when its requester's reply destination is gone.
  *
  * Created by Navíd Mitchell 🤪 on 9/9/26.
  */
@@ -28,11 +26,9 @@ import java.util.Map;
 public class OutgoingInvocations {
 
     private final Services services;
-    // Every delivered invocation, keyed by correlation id, until its terminal reply. Every access runs on the
-    // connection's context: the consumer and frame handlers Vert.x delivers there, and cancel(), which the
-    // requester monitor dispatches there
+    // pending invocations by correlation id; only ever touched on the connection's event loop
     private final Map<String, OutgoingInvocation> invocations = new HashMap<>();
-    // the requester watch of every invocation that has answered with a stream value, keyed the same way
+    // one watch per streaming invocation, on its requester's reply destination
     private final Map<String, Disposable> requesterMonitors = new HashMap<>();
 
     public OutgoingInvocations(Services services) {
@@ -40,11 +36,10 @@ public class OutgoingInvocations {
     }
 
     /**
-     * Records an event about to be delivered to one of the connection's service subscriptions. An
-     * invocation without a correlation id or reply destination has no reply to await and is not recorded;
-     * a cancel control forgets the invocation it names.
-     * @param event the event being delivered
-     * @param subscriptionHandler the subscription delivering it, which also carries a cancel back to the service
+     * Records an invocation being delivered to the client. A cancel control forgets the invocation it
+     * names. An invocation without a correlation id or reply-to expects no reply and is not recorded.
+     * @param event the invocation
+     * @param subscriptionHandler the subscription it is delivered through; a cancel goes back through the same one
      */
     public void deliver(Event<byte[]> event, StompSubscriptionHandler subscriptionHandler) {
         Metadata metadata = event.metadata();
@@ -65,9 +60,8 @@ public class OutgoingInvocations {
     }
 
     /**
-     * Observes a reply the connection sends. A terminal reply forgets the invocation it answers; a stream
-     * value starts watching the requester's reply destination, so the stream is cancelled on the connection
-     * once nothing listens there.
+     * Handles a reply the client sent. A terminal reply forgets its invocation. A stream value starts a
+     * watch on the requester's reply destination, so the stream can be cancelled once nothing listens there.
      */
     public void observeReply(Event<byte[]> reply) {
         String correlationId = reply.metadata().get(EventConstants.CORRELATION_ID_HEADER);
@@ -84,8 +78,7 @@ public class OutgoingInvocations {
     }
 
     /**
-     * Ends the connection's outgoing invocations: every one still pending is answered with an
-     * {@link RpcServiceUnavailableException} on its requester's reply destination.
+     * Stops every watch and answers every pending invocation with an {@link RpcServiceUnavailableException}.
      */
     public void dispose() {
         requesterMonitors.values().forEach(Disposable::dispose);
@@ -107,8 +100,8 @@ public class OutgoingInvocations {
         return services.eventBusService
                        .monitorListenerStatus(replyCri)
                        .subscribe(status -> {
-                                      // the status arrives on the cluster manager's thread; the cancel is a
-                                      // frame on the connection, so it is written from the connection's context
+                                      // arrives on the cluster manager's thread; the cancel frame must be
+                                      // written on the connection's event loop
                                       if (status == ListenerStatus.INACTIVE) {
                                           invocation.context().runOnContext(_ -> cancel(correlationId));
                                       }
@@ -116,8 +109,7 @@ public class OutgoingInvocations {
                                   throwable -> log.warn("Requester watch for invocation {} failed", correlationId, throwable));
     }
 
-    // Delivers a cancel control for a stream whose requester is gone; a stream that ended in the meantime is
-    // already forgotten and takes nothing
+    // the requester is gone: forget the invocation and tell the client to stop the stream
     private void cancel(String correlationId) {
         OutgoingInvocation invocation = invocations.get(correlationId);
         if (invocation != null) {
