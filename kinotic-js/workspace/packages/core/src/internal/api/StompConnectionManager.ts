@@ -26,9 +26,9 @@ export class StompConnectionManager {
      */
     public maxConnectionAttemptsReached: boolean = false
     /**
-     * Invoked when the server issues a new replyToId on reconnect, which changes {@link replyToCri}.
-     * This always happens with {@link SessionKeepAliveMode.NONE} since no session carries the
-     * replyToId across connections.
+     * Invoked on every reconnect with the new {@link replyToCri}. The reply destination is minted per
+     * connection, so the consumer the server still holds for the previous socket never receives this
+     * connection's replies.
      */
     public replyToCriChangedHandler: ((replyToCri: string) => void) | null = null
 
@@ -59,7 +59,7 @@ export class StompConnectionManager {
     private serverHeadersSubscription: Subscription | null = null
     private stompErrorsSubscription: Subscription | null = null
     private connectionStateSubscription: Subscription | null = null
-    private readonly uuidv4 = uuidv4()
+    private failPendingActivation: ((reason: string) => void) | null = null
 
     private _replyToCri: string | null = null
 
@@ -258,6 +258,7 @@ export class StompConnectionManager {
                 // We only want these for the initial connection
                 this.initialConnectedSubscription?.unsubscribe()
                 this.initialFailureSubscription?.unsubscribe()
+                this.failPendingActivation = null
 
                 // Successful Connection
                 if(!this.initialConnectionSuccessful){
@@ -270,8 +271,16 @@ export class StompConnectionManager {
             this.initialFailureSubscription = this.fatalErrorsSubject.subscribe((err: Error) => {
                 this.initialConnectedSubscription?.unsubscribe()
                 this.initialFailureSubscription?.unsubscribe()
+                this.failPendingActivation = null
                 reject(err.message)
             })
+
+            // deactivate() settles a connect that is still waiting for its socket
+            this.failPendingActivation = (reason: string) => {
+                this.initialConnectedSubscription?.unsubscribe()
+                this.initialFailureSubscription?.unsubscribe()
+                reject(reason)
+            }
 
             // Triggered on every CONNECTED frame, including reconnects. The replyToId is generated
             // server side, so on reconnect it may change.
@@ -305,8 +314,11 @@ export class StompConnectionManager {
                     return
                 }
 
+                // A fresh discriminator per connection: the server keeps the previous socket's reply
+                // consumer until its heartbeat times out, and two consumers on one address would share
+                // the replies
                 const newReplyToCri: string = EventConstants.REPLY_DESTINATION_PREFIX
-                    + connectedInfo.replyToId + ':' + this.uuidv4
+                    + connectedInfo.replyToId + ':' + uuidv4()
                     + '@kinotic.js.EventBus/replyHandler'
 
                 if (!this.initialConnectionSuccessful) {
@@ -318,11 +330,14 @@ export class StompConnectionManager {
                 }
             })
 
-            // A drop after the initial connect: the socket and everything the server held behind it are gone
+            // An open socket closing: the socket and everything the server held behind it are gone. A failed
+            // reconnect attempt also ends in CLOSED, but from CONNECTING, and loses nothing new.
+            let previousState: RxStompState = this.rxStomp.connectionState$.getValue()
             this.connectionStateSubscription = this.rxStomp.connectionState$.subscribe((state: RxStompState) => {
-                if (state === RxStompState.CLOSED && this.isActive && this.initialConnectionSuccessful) {
+                if (state === RxStompState.CLOSED && previousState === RxStompState.OPEN && this.isActive) {
                     this.connectionLostHandler?.()
                 }
+                previousState = state
             })
 
             this.isActive = true
@@ -336,6 +351,8 @@ export class StompConnectionManager {
             // teardown is in flight) is a no-op instead of a second rxStomp.deactivate()
             this.isActive = false
             await this.rxStomp.deactivate({force: force})
+            this.failPendingActivation?.('Deactivated before the connection was established')
+            this.failPendingActivation = null
             // watch() subscriptions survive deactivation and re-subscribe on the next activation.
             // The listeners below are per-activation state that activate() recreates, so they are
             // torn down with the connection.
@@ -379,6 +396,9 @@ export class StompConnectionManager {
      */
     private async signalFatal(err: Error): Promise<void> {
         this.debugLogger('Fatal error, deactivating connection: %O', err)
+        // a connect still waiting learns the cause, not the generic reason deactivate() would give it
+        this.failPendingActivation?.(err.message)
+        this.failPendingActivation = null
         await this.deactivate()
         this.fatalErrorsSubject.next(err)
     }

@@ -212,9 +212,9 @@ export class ServiceInvocationSupervisor {
         // A control for a stream that already ended names nothing and is dropped
         const stream = this.activeStreams.get(correlationId)
         if (stream) {
-            if (control === EventConstants.CONTROL_VALUE_CANCEL) {
-                stream.subscription.unsubscribe()
-            } else {
+            // either way the stream ends: cancelled, or failed to its caller with the error thrown here
+            stream.subscription.unsubscribe()
+            if (control !== EventConstants.CONTROL_VALUE_CANCEL) {
                 throw new Error(`Unknown control header value ${control}`)
             }
         }
@@ -283,7 +283,11 @@ export class ServiceInvocationSupervisor {
                             this.handleException(event, error)
                             this.failSpan(span, error)
                         }
-                    )
+                    ).catch((e) => {
+                        // the result itself could not be sent
+                        this.handleException(event, e)
+                        this.failSpan(span, e)
+                    })
                 } else {
                     this.processMethodInvocationResult(event, result, span)
                 }
@@ -348,18 +352,29 @@ export class ServiceInvocationSupervisor {
         if (!correlationId) {
             throw new Error("Streaming results require a CORRELATION_ID_HEADER to be set")
         }
-        const subscription = stream.pipe(finalize(() => {
-                                             // Covers every way the stream can end, cancellation included
-                                             this.activeStreams.delete(correlationId)
-                                             span.end()
-                                         }))
-                                   .subscribe({
+        // hoisted so next() can end the stream on a value it cannot send
+        let subscription: Subscription | null = null
+        subscription = stream.pipe(finalize(() => {
+                                       // Covers every way the stream can end, cancellation included
+                                       this.activeStreams.delete(correlationId)
+                                       span.end()
+                                   }))
+                             .subscribe({
                                                   next: (value) => {
-                                                      const reply = this.returnValueConverter.convert(event.headers, value)
-                                                      // Names this service on every value so a caller that no longer
-                                                      // tracks the stream can route a cancel back to it
-                                                      reply.setHeader(EventConstants.ORIGIN_CRI_HEADER, event.cri)
-                                                      this.sendReply(reply)
+                                                      try {
+                                                          const reply = this.returnValueConverter.convert(event.headers, value)
+                                                          // Names this service on every value so a caller that no longer
+                                                          // tracks the stream can route a cancel back to it
+                                                          reply.setHeader(EventConstants.ORIGIN_CRI_HEADER, event.cri)
+                                                          this.sendReply(reply)
+                                                      } catch (e) {
+                                                          // rxjs would report a throw here as an uncaught exception and
+                                                          // leave the stream running
+                                                          this.handleException(event, e)
+                                                          span.recordException(e as Error)
+                                                          span.setStatus({ code: SpanStatusCode.ERROR })
+                                                          subscription?.unsubscribe()
+                                                      }
                                                   },
                                                   error: (error) => {
                                                       this.handleException(event, error)
@@ -393,15 +408,20 @@ export class ServiceInvocationSupervisor {
     }
 
     private handleException(event: IEvent, error: any): void {
-        const errorEvent = Util.createReplyEvent(
-            event.headers,
-            new Map([
-                        [EventConstants.ERROR_HEADER, error.message || "Unknown error"],
-                        [EventConstants.CONTENT_TYPE_HEADER, "application/json"]
-                    ]),
-            new TextEncoder().encode(JSON.stringify({ message: error.message }))
-        )
-        this.sendReply(errorEvent)
+        try {
+            const errorEvent = Util.createReplyEvent(
+                event.headers,
+                new Map([
+                            [EventConstants.ERROR_HEADER, error.message || "Unknown error"],
+                            [EventConstants.CONTENT_TYPE_HEADER, "application/json"]
+                        ]),
+                new TextEncoder().encode(JSON.stringify({ message: error.message }))
+            )
+            this.sendReply(errorEvent)
+        } catch (e) {
+            // a request with no reply-to has nowhere to receive its error
+            this.log.warn(`Could not build the error reply for ${event.cri}`, e)
+        }
     }
 
     private validateReplyTo(event: IEvent): boolean {

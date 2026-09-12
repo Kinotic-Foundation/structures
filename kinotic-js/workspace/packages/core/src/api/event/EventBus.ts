@@ -130,6 +130,11 @@ export class EventBus implements IEventBus {
                 // copy so the reported server never aliases the caller's options object
                 this.serverInfo = {...options.server} as ServerInfo
 
+                // the initial connection reports its reply destination here rather than through
+                // replyToCriChangedHandler; a request that raced this connect built its replies on the old one
+                if (this.replyToCri !== this.stompConnectionManager.replyToCri) {
+                    this.resetRequestReplies('Reply destination changed')
+                }
                 this.replyToCri = this.stompConnectionManager.replyToCri
 
                 return connectedInfo
@@ -140,8 +145,11 @@ export class EventBus implements IEventBus {
     }
 
     public disconnect(force?: boolean): Promise<void> {
+        // A pending connect() holds the lifecycle queue until its socket opens. Deactivating first rejects
+        // it, so the teardown queued below runs at once instead of waiting on a server that may never answer.
+        const deactivated = this.stompConnectionManager.deactivate(force)
         return this.serializeLifecycle(async () => {
-            await this.stompConnectionManager.deactivate(force)
+            await deactivated
             this.cleanup()
         })
     }
@@ -197,7 +205,8 @@ export class EventBus implements IEventBus {
     }
 
     public requestStream(event: IEvent, sendControlEvents: boolean = true): Observable<IEvent> {
-        if(this.stompConnectionManager.active){
+        // the shared reply subscription is built on replyToCri, which a pending connect() has not set yet
+        if(this.stompConnectionManager.connected && this.replyToCri != null){
             return new Observable<IEvent>((subscriber) => {
 
                 if (this.requestRepliesObservable == null) {
@@ -238,7 +247,7 @@ export class EventBus implements IEventBus {
                                                               }
                                                               subscriber.complete()
                                                           } else {
-                                                              throw new Error('Control Header ' + value.headers.get(EventConstants.CONTROL_HEADER) + ' is not supported')
+                                                              subscriber.error(new Error('Control Header ' + value.headers.get(EventConstants.CONTROL_HEADER) + ' is not supported'))
                                                           }
 
                                                       } else if (value.hasHeader(EventConstants.ERROR_HEADER)) {
@@ -300,9 +309,12 @@ export class EventBus implements IEventBus {
     // nothing streaming
     private cleanup(): void{
         this.resetRequestReplies('Connection disconnected')
-        this.connectionLostSubject.next()
-
+        // serverInfo is set once a connection is up, so nothing was lost before that
+        if (this.serverInfo !== null) {
+            this.connectionLostSubject.next()
+        }
         this.serverInfo = null
+        this.replyToCri = null
     }
 
     /**
@@ -412,7 +424,9 @@ export class EventBus implements IEventBus {
                                }
                            }
 
-                           return new Event(destination, headers, message.binaryBody)
+                           // stompjs hands over an empty array for a frame with no body; a completion control
+                           // must not look like a value
+                           return new Event(destination, headers, message.binaryBody.length > 0 ? message.binaryBody : undefined)
                        }))
     }
 
