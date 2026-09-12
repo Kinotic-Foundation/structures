@@ -590,9 +590,9 @@ Some of what a node promises can stop being true while it runs, and each failure
 
 Each node re-checks these and sends what it can no longer guarantee with its heartbeat, so a node's liveness and its fitness arrive in one call. A node reporting problems moves to `DRAINING`, so the orchestrator places no further workloads on it, and back to `ONLINE` once it reports none. The workloads already there keep running — a node that stopped enforcing a limit is unfit to take on more, not required to drop what it has.
 
-`VmNode.status` carries both parts: `status.type` is `ONLINE`, `DRAINING`, or `OFFLINE`, and `status.healthMessage` is why, or null when the node is fit. The system console shows the reason on the node.
+`VmNode.status` carries both parts: `status.type` is `ONLINE`, `DRAINING`, `UNREACHABLE`, or `OFFLINE`, and `status.healthMessage` is why, or null when the node is fit. The system console shows the reason on the node.
 
-A node that loses its connection to the server — a server restart, a network partition — reconnects on its own and is `ONLINE` again with its next heartbeat. The orchestrator marks it `OFFLINE` after `heartbeatTimeoutSeconds` without one.
+A node that loses its connection to the server — a server restart, a network partition — reconnects on its own and is `ONLINE` again with its next heartbeat. The orchestrator marks it `OFFLINE` after `heartbeatTimeoutSeconds` without one, whatever it reported last, and fails the workloads running on it. A call to the node's vm-manager that cannot be delivered is an earlier sign: the orchestrator checks the vm-manager's registration at once and, finding none, marks the node `UNREACHABLE`, so nothing is placed on it while the heartbeat timeout runs; its next heartbeat brings it back to `ONLINE`.
 
 <table>
 <thead>
