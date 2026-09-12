@@ -29,7 +29,7 @@ public class OutgoingInvocations {
 
     private final Services services;
     // every delivered invocation, keyed by correlation id, until its terminal reply
-    private final ConcurrentHashMap<String, DeliveredInvocation> invocations = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, OutgoingInvocation> invocations = new ConcurrentHashMap<>();
     // the requester watch of every invocation that has answered with a stream value, keyed the same way
     private final ConcurrentHashMap<String, Disposable> requesterMonitors = new ConcurrentHashMap<>();
 
@@ -51,7 +51,7 @@ public class OutgoingInvocations {
             String control = metadata.get(EventConstants.CONTROL_HEADER);
             if (control == null) {
                 if (metadata.contains(EventConstants.REPLY_TO_HEADER)) {
-                    invocations.put(correlationId, new DeliveredInvocation(event.cri(),
+                    invocations.put(correlationId, new OutgoingInvocation(event.cri(),
                                                                                        EventUtil.replyMetadataOf(metadata),
                                                                                        subscriptionHandler,
                                                                                        services.vertx.getOrCreateContext()));
@@ -73,7 +73,7 @@ public class OutgoingInvocations {
             if (EventUtil.isTerminalReply(reply.metadata())) {
                 forget(correlationId);
             } else {
-                DeliveredInvocation invocation = invocations.get(correlationId);
+                OutgoingInvocation invocation = invocations.get(correlationId);
                 if (invocation != null) {
                     requesterMonitors.computeIfAbsent(correlationId, _ -> watchRequester(correlationId, invocation));
                 }
@@ -100,7 +100,7 @@ public class OutgoingInvocations {
         invocations.clear();
     }
 
-    private Disposable watchRequester(String correlationId, DeliveredInvocation invocation) {
+    private Disposable watchRequester(String correlationId, OutgoingInvocation invocation) {
         CRI replyCri = CRI.create(invocation.replyMetadata().get(EventConstants.REPLY_TO_HEADER));
         return services.eventBusService
                        .monitorListenerStatus(replyCri)
@@ -117,7 +117,7 @@ public class OutgoingInvocations {
     // Delivers a cancel control for a stream whose requester is gone; a stream that ended in the meantime is
     // already forgotten and takes nothing
     private void cancel(String correlationId) {
-        DeliveredInvocation invocation = invocations.get(correlationId);
+        OutgoingInvocation invocation = invocations.get(correlationId);
         if (invocation != null) {
             forget(correlationId);
             Metadata metadata = Metadata.create(Map.of(EventConstants.CONTROL_HEADER, EventConstants.CONTROL_VALUE_CANCEL,
