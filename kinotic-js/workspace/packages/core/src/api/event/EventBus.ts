@@ -90,7 +90,8 @@ export class EventBus implements IEventBus {
         // the manager has already deactivated when it reports a fatal error; in-flight requests fail here
         this.stompConnectionManager.fatalErrors.subscribe(() => this.cleanup())
         // The server drops every reply consumer and lease of a closed connection, so a call in flight
-        // across a drop is failed here rather than waited on
+        // across a drop is failed here rather than waited on. The manager reports each open connection's
+        // end once, however it ends, so this is the one place connectionLost is emitted.
         this.stompConnectionManager.connectionLostHandler = () => {
             this.resetRequestReplies('Connection lost')
             this.connectionLostSubject.next()
@@ -296,13 +297,9 @@ export class EventBus implements IEventBus {
         return this._observe(cri)
     }
 
-    // Runs on a fatal error and on disconnect()
+    // Runs on a fatal error and on disconnect(); the manager has reported the connection's end by then
     private cleanup(): void{
         this.resetRequestReplies('Connection disconnected')
-        // serverInfo is set once a connection is up, so nothing was lost before that
-        if (this.serverInfo !== null) {
-            this.connectionLostSubject.next()
-        }
         this.serverInfo = null
     }
 

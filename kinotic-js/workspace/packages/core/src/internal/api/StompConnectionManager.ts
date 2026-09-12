@@ -5,9 +5,10 @@ import {ConnectedInfo} from '@/api/security/ConnectedInfo'
 import {type IFrame, RxStomp, RxStompConfig, StompHeaders, RxStompState} from '@stomp/rx-stomp'
 import {ReconnectionTimeMode} from '@stomp/stompjs'
 import debug from 'debug'
-import {Observable, Subject, Subscription} from 'rxjs'
+import {Observable, Subject} from 'rxjs'
 import {skip} from 'rxjs/operators'
 import {v4 as uuidv4} from 'uuid'
+import {StompActivation} from './StompActivation'
 
 /** Fixed REST route the cookie-session pre-flight probes; identical in every environment. */
 const SESSION_CHECK_PATH = '/api/auth/me'
@@ -16,7 +17,9 @@ const SESSION_CHECK_PATH = '/api/auth/me'
  * Owns the process's single RxStomp client and manages its connection lifecycle.
  * The client is created once and reused across activate/deactivate cycles, so
  * subscriptions made through it (service registrations, observed CRIs) survive a
- * disconnect and are re-subscribed by RxStomp on the next activation.
+ * disconnect and are re-subscribed by RxStomp on the next activation. Each activate()
+ * owns its own listeners and pending state, so a deactivate() only ever ends the
+ * activation it was called for, and an activate() waits for an in-flight deactivate().
  */
 export class StompConnectionManager {
 
@@ -27,8 +30,9 @@ export class StompConnectionManager {
     public maxConnectionAttemptsReached: boolean = false
 
     /**
-     * Invoked when an established connection drops, before any reconnect. The server releases everything it
-     * held for the connection at the same moment, so nothing in flight can complete any more.
+     * Invoked once each time an open connection ends: a drop before any reconnect, a fatal error, or
+     * deactivate(). The server releases everything it held for the connection at the same moment, so
+     * nothing in flight can complete any more.
      */
     public connectionLostHandler: (() => void) | null = null
     /**
@@ -37,9 +41,10 @@ export class StompConnectionManager {
      * published services and observed CRIs alive across disconnect/connect cycles.
      */
     public readonly rxStomp: RxStomp = new RxStomp()
-    private isActive: boolean = false
-    private initialConnectedSubscription: Subscription | null = null
-    private webSocketErrorsSubscription: Subscription | null = null
+    // the connection being maintained; null while inactive
+    private activation: StompActivation | null = null
+    // a deactivate() still closing its socket; the next activate() waits for it
+    private teardown: Promise<void> | null = null
     private readonly INITIAL_RECONNECT_DELAY: number = 2000
     private readonly JITTER_MAX: number = 5000
     private readonly MAX_RECONNECT_DELAY: number = 120000 // 2 mins
@@ -49,12 +54,6 @@ export class StompConnectionManager {
     private readonly _fatalErrors: Observable<Error> = this.fatalErrorsSubject.asObservable()
     private initialConnectionSuccessful: boolean = false
     private rxStompHasConnected: boolean = false
-    private serverHeadersSubscription: Subscription | null = null
-    private stompErrorsSubscription: Subscription | null = null
-    private connectionStateSubscription: Subscription | null = null
-    // Rejects the activate() promise whose socket has not opened yet, so a fatal error or a deactivate()
-    // in that window settles the connect instead of leaving it waiting; null once the connection is up
-    private failPendingActivation: ((reason: string) => void) | null = null
 
     private _replyToCri: string | null = null
 
@@ -71,14 +70,14 @@ export class StompConnectionManager {
      * @return true if this {@link StompConnectionManager} is actively trying to maintain a connection to the Stomp server, false if not.
      */
     public get active(): boolean {
-        return this.isActive
+        return this.activation !== null
     }
 
     /**
      * return true if this {@link StompConnectionManager} is active and has a connection to the stomp server
      */
     public get connected(): boolean {
-        return this.isActive && this.rxStomp.connected()
+        return this.activation !== null && this.rxStomp.connected()
     }
 
     /**
@@ -96,26 +95,45 @@ export class StompConnectionManager {
         if (!options?.server?.host) {
             throw new Error('No host provided')
         }
-        if (this.isActive) {
+        if (this.activation) {
+            throw new Error('Stomp connection already active')
+        }
+        // a deactivate() still closing its socket finishes before a new socket is opened
+        await this.teardown
+        if (this.activation) {
             throw new Error('Stomp connection already active')
         }
 
         const server: ServerInfo = options.server as ServerInfo
         const credentialsResolver: CredentialsResolver | undefined = options.credentials
 
+        // Claimed before credential resolution, so a deactivate() from here on ends this activation
+        const activation = new StompActivation()
+        this.activation = activation
+
         // The connection's auth mode is fixed for its life: a user factory owns the socket
         // outright; otherwise the initial resolution decides between upgrade-header auth and
         // the browser session cookie. Per-attempt resolution below refreshes the headers.
         let headerAuth = false
-        if (!options.webSocketFactory) {
-            if (!credentialsResolver) {
-                throw new Error('No credentials supplied and no default resolution applied')
+        try {
+            if (!options.webSocketFactory) {
+                if (!credentialsResolver) {
+                    throw new Error('No credentials supplied and no default resolution applied')
+                }
+                const resolved = await credentialsResolver.resolve(server)
+                if (resolved === null) {
+                    throw new Error('No Kinotic credentials found; consulted: ' + credentialsResolver.name)
+                }
+                headerAuth = resolved.authHeaders != null
             }
-            const resolved = await credentialsResolver.resolve(server)
-            if (resolved === null) {
-                throw new Error('No Kinotic credentials found; consulted: ' + credentialsResolver.name)
+            if (activation.ended) {
+                throw new Error('Deactivated before the connection was established')
             }
-            headerAuth = resolved.authHeaders != null
+        } catch (e) {
+            if (this.activation === activation) {
+                this.activation = null
+            }
+            throw e
         }
 
         return new Promise((resolve, reject): void => {
@@ -131,10 +149,16 @@ export class StompConnectionManager {
             // Sockets may be produced asynchronously (a user factory, or credential resolution
             // refreshing a short-lived secret), but @stomp/stompjs only accepts a synchronous
             // factory. So the socket is produced in beforeConnect — which stompjs awaits
-            // immediately before creating the socket — and handed back synchronously here.
-            let preparedSocket: IWebSocket | null = null
+            // immediately before creating the socket — and handed back synchronously here. The
+            // activation holds it until stompjs takes it, so one it never takes is closed with the
+            // activation instead of being orphaned.
             const userWebSocketFactory = options.webSocketFactory
             const usesPreparedSocket = userWebSocketFactory != null || headerAuth
+            const takePreparedSocket = (): IWebSocket => {
+                const socket = activation.preparedSocket as IWebSocket
+                activation.preparedSocket = null
+                return socket
+            }
 
             const stompConfig: RxStompConfig = {
                 brokerURL: url,
@@ -149,8 +173,11 @@ export class StompConnectionManager {
                 reconnectDelay: this.INITIAL_RECONNECT_DELAY,
                 maxReconnectDelay: this.MAX_RECONNECT_DELAY,
                 reconnectTimeMode: ReconnectionTimeMode.EXPONENTIAL,
-                webSocketFactory: usesPreparedSocket ? () => preparedSocket as IWebSocket : undefined,
+                webSocketFactory: usesPreparedSocket ? takePreparedSocket : undefined,
                 beforeConnect: async (): Promise<void> => {
+                    if (activation.ended) {
+                        return
+                    }
 
                     // Cookie-auth clients (browser, headerless credentials) can't read a rejected WS
                     // upgrade, so probe the session over a readable REST status first — same host as
@@ -181,7 +208,7 @@ export class StompConnectionManager {
 
                         if(this.connectionAttempts > options.maxConnectionAttempts){
                             this.maxConnectionAttemptsReached = true
-                            // signalFatal rejects activate() via initialFailureSubscription on the initial-connect path.
+                            // signalFatal rejects a still-pending activate() with this reason
                             await this.signalFatal(new Error(
                                 'Max number of reconnection attempts reached',
                                 { cause: this.lastWebsocketError ?? undefined }
@@ -196,7 +223,7 @@ export class StompConnectionManager {
 
                     if(userWebSocketFactory){
                         try {
-                            preparedSocket = await userWebSocketFactory()
+                            activation.preparedSocket = await userWebSocketFactory()
                         } catch (e) {
                             await this.signalFatal(new Error('WebSocket factory failed', { cause: e }))
                         }
@@ -211,11 +238,16 @@ export class StompConnectionManager {
                                 // The Node/Bun WebSocket accepts a `headers` option that the DOM lib typings omit.
                                 const WS = WebSocket as unknown as
                                     new (url: string, opts: {headers: Record<string, string>}) => IWebSocket
-                                preparedSocket = new WS(url, {headers: resolved.authHeaders})
+                                activation.preparedSocket = new WS(url, {headers: resolved.authHeaders})
                             }
                         } catch (e) {
                             await this.signalFatal(new Error('Credential resolution failed', { cause: e }))
                         }
+                    }
+                    // a deactivate() landed while the socket was being produced; stompjs will not take it
+                    if (activation.ended && activation.preparedSocket) {
+                        activation.preparedSocket.close()
+                        activation.preparedSocket = null
                     }
                 }
             }
@@ -229,7 +261,7 @@ export class StompConnectionManager {
             this.rxStomp.configure(stompConfig)
 
             // Handles Websocket Errors
-            this.webSocketErrorsSubscription = this.rxStomp.webSocketErrors$.subscribe(async value => {
+            activation.own(this.rxStomp.webSocketErrors$.subscribe(async value => {
                 this.lastWebsocketError = value
                 // The attempt that just failed was the last the budget allows — report now
                 // instead of paying the reconnect delay before the next beforeConnect notices.
@@ -240,32 +272,23 @@ export class StompConnectionManager {
                         { cause: value ?? undefined }
                     ))
                 }
-            })
+            }))
 
             // Forward STOMP ERROR frames as fatal errors. Server-issued ERROR frames close the
             // connection and indicate an unrecoverable condition (auth failure, protocol error).
-            this.stompErrorsSubscription = this.rxStomp.stompErrors$.subscribe(async (frame: IFrame) => {
+            activation.own(this.rxStomp.stompErrors$.subscribe(async (frame: IFrame) => {
                 const stompError = new Error(frame.headers['message'] as string, { cause: frame })
                 await this.signalFatal(new Error('STOMP connection error', { cause: stompError }))
-            })
+            }))
 
-            // Handles Successful Connections
-            this.initialConnectedSubscription = this.rxStomp.connected$.subscribe(() =>{
-                // We only want these for the initial connection
-                this.initialConnectedSubscription?.unsubscribe()
-                this.failPendingActivation = null
-
-                // Successful Connection
-                if(!this.initialConnectionSuccessful){
-                    this.initialConnectionSuccessful = true
-                }
-            })
+            // The first connection of this activation: from here the connect can only resolve
+            activation.own(this.rxStomp.connected$.subscribe(() =>{
+                activation.established()
+                this.initialConnectionSuccessful = true
+            }))
 
             // A fatal error or a deactivate() before the socket opened rejects the connect with its reason
-            this.failPendingActivation = (reason: string) => {
-                this.initialConnectedSubscription?.unsubscribe()
-                reject(reason)
-            }
+            activation.pending(reject)
 
             // Triggered on every CONNECTED frame, including reconnects; each one mints this connection's
             // reply destination. serverHeaders$ is a BehaviorSubject on an rxStomp that outlives a
@@ -273,7 +296,7 @@ export class StompConnectionManager {
             // on subscribe; skipping it stops activate() resolving with a destination that is gone. Stays on
             // serverHeaders$ rather than connected$: rx-stomp emits the headers before it reports OPEN, so
             // the destination is set before anything can be sent on the new connection.
-            this.serverHeadersSubscription = this.rxStomp.serverHeaders$
+            activation.own(this.rxStomp.serverHeaders$
                                                  .pipe(skip(this.rxStompHasConnected ? 1 : 0))
                                                  .subscribe(async (value: StompHeaders) => {
                 this.rxStompHasConnected = true
@@ -307,49 +330,58 @@ export class StompConnectionManager {
                 if (!this.initialConnectionSuccessful) {
                     resolve(connectedInfo)
                 }
-            })
+            }))
 
-            // An open socket closing: the socket and everything the server held behind it are gone. A failed
-            // reconnect attempt also ends in CLOSED, but from CONNECTING, and loses nothing new.
+            // An open socket dropping: the socket and everything the server held behind it are gone. A failed
+            // reconnect attempt also ends in CLOSED, but from CONNECTING, and loses nothing new. A close that
+            // deactivate() itself causes is reported by deactivate().
             let previousState: RxStompState = this.rxStomp.connectionState$.getValue()
-            this.connectionStateSubscription = this.rxStomp.connectionState$.subscribe((state: RxStompState) => {
-                if (state === RxStompState.CLOSED && previousState === RxStompState.OPEN && this.isActive) {
+            activation.own(this.rxStomp.connectionState$.subscribe((state: RxStompState) => {
+                if (state === RxStompState.CLOSED && previousState === RxStompState.OPEN && this.activation === activation) {
                     this.connectionLostHandler?.()
                 }
                 previousState = state
-            })
+            }))
 
-            this.isActive = true
             this.rxStomp.activate()
         })
     }
 
-    public async deactivate(force?: boolean): Promise<void> {
-        if(this.isActive){
-            // cleared before the await so a reentrant deactivate (signalFatal firing while this
-            // teardown is in flight) is a no-op instead of a second rxStomp.deactivate()
-            this.isActive = false
-            await this.rxStomp.deactivate({force: force})
-            this.failPendingActivation?.('Deactivated before the connection was established')
-            this.failPendingActivation = null
-            // watch() subscriptions survive deactivation and re-subscribe on the next activation.
-            // The listeners below are per-activation state that activate() recreates, so they are
-            // torn down with the connection. The connected-listener in particular: on the persistent
-            // client it would otherwise fire on the next activation's CONNECTED frame and mark the
-            // initial connection successful before the new serverHeaders handler resolves it.
-            this.initialConnectedSubscription?.unsubscribe()
-            this.initialConnectedSubscription = null
-            this.webSocketErrorsSubscription?.unsubscribe()
-            this.webSocketErrorsSubscription = null
-            this.serverHeadersSubscription?.unsubscribe()
-            this.serverHeadersSubscription = null
-            this.stompErrorsSubscription?.unsubscribe()
-            this.stompErrorsSubscription = null
-            this.connectionStateSubscription?.unsubscribe()
-            this.connectionStateSubscription = null
+    /**
+     * Ends the current activation. A second call while the socket is still closing returns the same
+     * teardown; a call while inactive resolves at once.
+     * @param force close the socket without a DISCONNECT frame
+     */
+    public deactivate(force?: boolean): Promise<void> {
+        const activation = this.activation
+        let ret: Promise<void>
+        if (activation) {
+            this.activation = null
+            activation.ended = true
+            const wasOpen = this.rxStomp.connected()
             this._replyToCri = null
+            // a connect still waiting for its socket is settled now, not after the close round trip
+            activation.failIfPending('Deactivated before the connection was established')
+            // a socket produced for stompjs that it never took
+            activation.preparedSocket?.close()
+            activation.preparedSocket = null
+            const teardown: Promise<void> = this.rxStomp.deactivate({force: force}).finally(() => {
+                // watch() subscriptions survive deactivation and re-subscribe on the next activation; the
+                // listeners this activation owns end with it
+                activation.unsubscribeAll()
+                if (this.teardown === teardown) {
+                    this.teardown = null
+                }
+                if (wasOpen) {
+                    this.connectionLostHandler?.()
+                }
+            })
+            this.teardown = teardown
+            ret = teardown
+        } else {
+            ret = this.teardown ?? Promise.resolve()
         }
-        return
+        return ret
     }
 
     /**
@@ -372,8 +404,7 @@ export class StompConnectionManager {
     private async signalFatal(err: Error): Promise<void> {
         this.debugLogger('Fatal error, deactivating connection: %O', err)
         // a connect still waiting learns the cause, not the generic reason deactivate() would give it
-        this.failPendingActivation?.(err.message)
-        this.failPendingActivation = null
+        this.activation?.failIfPending(err.message)
         await this.deactivate()
         this.fatalErrorsSubject.next(err)
     }
