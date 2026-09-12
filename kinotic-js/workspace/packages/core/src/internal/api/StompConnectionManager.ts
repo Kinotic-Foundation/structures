@@ -39,7 +39,6 @@ export class StompConnectionManager {
     public readonly rxStomp: RxStomp = new RxStomp()
     private isActive: boolean = false
     private initialConnectedSubscription: Subscription | null = null
-    private initialFailureSubscription: Subscription | null = null
     private webSocketErrorsSubscription: Subscription | null = null
     private readonly INITIAL_RECONNECT_DELAY: number = 2000
     private readonly JITTER_MAX: number = 5000
@@ -252,7 +251,6 @@ export class StompConnectionManager {
             this.initialConnectedSubscription = this.rxStomp.connected$.subscribe(() =>{
                 // We only want these for the initial connection
                 this.initialConnectedSubscription?.unsubscribe()
-                this.initialFailureSubscription?.unsubscribe()
                 this.failPendingActivation = null
 
                 // Successful Connection
@@ -261,19 +259,9 @@ export class StompConnectionManager {
                 }
             })
 
-            // Route any fatal error that arrives before the initial connection succeeds into
-            // the activate() promise so the caller learns why the connection never came up.
-            this.initialFailureSubscription = this.fatalErrorsSubject.subscribe((err: Error) => {
-                this.initialConnectedSubscription?.unsubscribe()
-                this.initialFailureSubscription?.unsubscribe()
-                this.failPendingActivation = null
-                reject(err.message)
-            })
-
-            // deactivate() settles a connect that is still waiting for its socket
+            // A fatal error or a deactivate() before the socket opened rejects the connect with its reason
             this.failPendingActivation = (reason: string) => {
                 this.initialConnectedSubscription?.unsubscribe()
-                this.initialFailureSubscription?.unsubscribe()
                 reject(reason)
             }
 
@@ -344,13 +332,9 @@ export class StompConnectionManager {
             this.failPendingActivation = null
             // watch() subscriptions survive deactivation and re-subscribe on the next activation.
             // The listeners below are per-activation state that activate() recreates, so they are
-            // torn down with the connection.
-            // initialFailureSubscription is deliberately NOT torn down here: signalFatal()
-            // deactivates before emitting, so it must stay subscribed for the fatal error to
-            // reject a pending activate(). It self-unsubscribes when it fires. The stale
-            // connected-listener must go, though — on the persistent client it would otherwise
-            // fire on the next activation's CONNECTED frame and mark the initial connection
-            // successful before the new serverHeaders handler resolves it.
+            // torn down with the connection. The connected-listener in particular: on the persistent
+            // client it would otherwise fire on the next activation's CONNECTED frame and mark the
+            // initial connection successful before the new serverHeaders handler resolves it.
             this.initialConnectedSubscription?.unsubscribe()
             this.initialConnectedSubscription = null
             this.webSocketErrorsSubscription?.unsubscribe()

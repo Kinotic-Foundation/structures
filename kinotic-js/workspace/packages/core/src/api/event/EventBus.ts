@@ -4,7 +4,7 @@ import {createDebugLogger, type Logger} from '@/internal/api/Logger'
 import {StompConnectionManager} from '@/internal/api/StompConnectionManager'
 import {context, propagation} from '@opentelemetry/api';
 import type {IMessage} from '@stomp/rx-stomp';
-import {ConnectableObservable, firstValueFrom, Observable, Subject, Subscription, throwError, type Unsubscribable} from 'rxjs'
+import {ConnectableObservable, firstValueFrom, Observable, Subject, Subscription, type Unsubscribable} from 'rxjs'
 import {filter, map, multicast, tap} from 'rxjs/operators'
 import {Optional} from 'typescript-optional'
 import {v4 as uuidv4} from 'uuid'
@@ -87,8 +87,7 @@ export class EventBus implements IEventBus {
     private static readonly REAP_DEBOUNCE_MS = 5000
 
     constructor() {
-        // We send an error any in-flight requests and clean up our connection state on fatal errors
-        // The StompConnectionManager will automatically deactivate on fatal errors
+        // the manager has already deactivated when it reports a fatal error; in-flight requests fail here
         this.stompConnectionManager.fatalErrors.subscribe(() => this.cleanup())
         // The server drops every reply consumer and lease of a closed connection, so a call in flight
         // across a drop is failed here rather than waited on
@@ -117,10 +116,6 @@ export class EventBus implements IEventBus {
     public connect(options: ConnectOptions): Promise<ConnectedInfo> {
         return this.serializeLifecycle(async () => {
             if(!this.stompConnectionManager.active){
-
-                // reset state in case connection ended due to max connection attempts
-                this.cleanup()
-
                 const connectedInfo = await this.stompConnectionManager.activate(options)
                 // copy so the reported server never aliases the caller's options object
                 this.serverInfo = {...options.server} as ServerInfo
@@ -133,11 +128,14 @@ export class EventBus implements IEventBus {
     }
 
     public disconnect(force?: boolean): Promise<void> {
-        // A pending connect() holds the lifecycle queue until its socket opens. Deactivating first rejects
-        // it, so the teardown queued below runs at once instead of waiting on a server that may never answer.
+        // A connect() waiting for its socket holds the lifecycle queue. Deactivating now rejects it, so the
+        // teardown queued below runs at once instead of waiting on a server that may never answer. A
+        // connect() queued but not yet started is unaffected by that, so the queued teardown deactivates
+        // again once its turn comes.
         const deactivated = this.stompConnectionManager.deactivate(force)
         return this.serializeLifecycle(async () => {
             await deactivated
+            await this.stompConnectionManager.deactivate(force)
             this.cleanup()
         })
     }
@@ -193,12 +191,17 @@ export class EventBus implements IEventBus {
     }
 
     public requestStream(event: IEvent, sendControlEvents: boolean = true): Observable<IEvent> {
-        // The manager mints the reply destination on every CONNECTED frame and clears it on deactivate, so
-        // a connected manager always has one. The shared reply subscription was torn down at the last drop,
-        // so the first request on a connection builds it on that connection's destination.
-        const replyToCri = this.stompConnectionManager.replyToCri
-        if(this.stompConnectionManager.connected && replyToCri != null){
-            return new Observable<IEvent>((subscriber) => {
+        return new Observable<IEvent>((subscriber) => {
+                // Read at subscribe time, not when the Observable was created: a reconnect in between
+                // mints a new destination. The manager mints it on every CONNECTED frame and clears it on
+                // deactivate, so a connected manager always has one. The shared reply subscription was torn
+                // down at the last drop, so the first request on a connection builds it on that
+                // connection's destination.
+                const replyToCri = this.stompConnectionManager.replyToCri
+                if (!this.stompConnectionManager.connected || replyToCri == null) {
+                    subscriber.error(this.createSendUnavailableError())
+                    return
+                }
 
                 if (this.requestRepliesObservable == null) {
                     this.requestRepliesSubject = new Subject<IEvent>()
@@ -282,10 +285,7 @@ export class EventBus implements IEventBus {
                         }
                     }
                 })
-            })
-        }else{
-            return throwError(() => this.createSendUnavailableError())
-        }
+        })
     }
 
     public listen(_serverInfo: ServerInfo): Promise<void> {
@@ -296,8 +296,7 @@ export class EventBus implements IEventBus {
         return this._observe(cri)
     }
 
-    // Runs on a fatal error, on disconnect(), and ahead of a connect(); the emission ahead of a connect finds
-    // nothing streaming
+    // Runs on a fatal error and on disconnect()
     private cleanup(): void{
         this.resetRequestReplies('Connection disconnected')
         // serverInfo is set once a connection is up, so nothing was lost before that
