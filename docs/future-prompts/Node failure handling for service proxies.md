@@ -291,9 +291,11 @@ failure-detection window.
 
 As built. The premise on heartbeats was stale: vertx-stomp-lite already negotiates them, with a
 server default of 30 s both ways, and closes a connection silent for two intervals through
-`handler.closed()`. What the phase adds is the interval as `ApiGatewayProperties.stompHeartbeat`
-(30 s), set explicitly on `StompServerOptions`, so the detection window is a deployment setting
-rather than a library default nobody reads.
+`handler.closed()`. The phase set the same 30 s explicitly as `ApiGatewayProperties.stompHeartbeat`;
+the property was removed again in PR #554: the interval is a protocol agreement with the TS client,
+which offers 30 s both ways, and STOMP negotiates each direction to the larger offer, so a
+deployment could only widen it. The library default stands, and `StompHeartbeatTests` shortens it
+on its own options to observe the close.
 
 ```java
 // ServiceSessionState — the callee side of one connection, sibling of ReplySessionState
@@ -415,7 +417,7 @@ leaves it ONLINE; a silent DRAINING node goes OFFLINE with its workload FAILED.
 
 Built after the direction change, against the whole series:
 
-- The TS client's incoming heartbeat matches the gateway's `stompHeartbeat` (30 s, from 120 s). The
+- The TS client's incoming heartbeat matches the gateway's 30 s heartbeat (from 120 s). The
   client had asked the gateway for a beat every 120 s, so a gateway VM that vanished without closing
   the socket took stompjs two of those to notice, and every call on the connection hung for that
   long; the gateway itself has bounded the reverse direction at two 30 s intervals since Phase 5.

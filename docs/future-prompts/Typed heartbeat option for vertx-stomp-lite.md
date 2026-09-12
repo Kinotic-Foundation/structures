@@ -1,12 +1,11 @@
 `StompServerOptions.setHeartbeat` in vertx-stomp-lite takes a `JsonObject` with two integer keys,
-`x` and `y`, and the gateway builds one by hand:
+`x` and `y`, and the one caller in kinotic builds one by hand:
 
 ```java
-// ApiGatewayVertcleFactory.createApiGatewayVerticle
-long heartbeat = properties.getApiGateway().getStompHeartbeat();
+// StompHeartbeatTests.startServer — the gateway itself runs on the library default
 StompServerOptions stompServerOptions = new StompServerOptions()
-        .setWebsocketPath(STOMP_WEBSOCKET_PATH)
-        .setHeartbeat(new JsonObject().put("x", heartbeat).put("y", heartbeat))
+        .setWebsocketPath("/v1")
+        .setHeartbeat(new JsonObject().put("x", HEARTBEAT_MS).put("y", HEARTBEAT_MS));
 ```
 
 A JSON object for two ints is Primitive Obsession on the library's own API: nothing checks the
@@ -30,9 +29,9 @@ What I already know, so you don't re-derive it:
   negotiated client period is `max(client.x, server.y)` and the server period
   `max(server.x, client.y)`, each `0` if either side offered `0`; a connection silent for more
   than twice the client period is closed through `handler.closed()`.
-- The gateway offers the same value both ways, from `kinotic.apiGateway.stompHeartbeat`, and
-  `StompHeartbeatTests` in `kinotic-api-gateway` builds the options the same way the factory
-  does and pins the close on a real socket. Both are the only call sites of `setHeartbeat`.
+- The gateway offers the library default both ways, which the TS client matches;
+  `StompHeartbeatTests` in `kinotic-api-gateway` shortens it on its own options and pins the
+  close on a real socket. It is the only call site of `setHeartbeat`.
 
 Do this:
 
@@ -44,10 +43,8 @@ Do this:
    `DefaultStompServerConnection` and the period functions use the record. If the options class
    has a `JsonObject` constructor or `toJson()` for Vert.x-style configuration, the record maps
    to and from `{x, y}` there so a JSON-configured server keeps working. Release the library.
-2. In kinotic, bump `vertxStompLiteVersion`, replace the `JsonObject` construction in
-   `ApiGatewayVertcleFactory` and `StompHeartbeatTests` with the record, and keep
-   `ApiGatewayProperties.stompHeartbeat` a single `long` unless a deployment ever needs the two
-   directions apart.
+2. In kinotic, bump `vertxStompLiteVersion` and replace the `JsonObject` construction in
+   `StompHeartbeatTests` with the record.
 
 Validate step 2 with `dependencyInsight` on `:kinotic-api-gateway:compileClasspath` for the new
 library version, `:kinotic-api-gateway:test`, and a grep for `"x"` under `kinotic-api-gateway`

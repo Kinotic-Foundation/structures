@@ -58,7 +58,6 @@ public class StompHeartbeatTests {
         Services services = new Services();
         services.vertx = vertx;
         services.apiGatewayProperties = new ApiGatewayProperties();
-        services.apiGatewayProperties.setStompHeartbeat(HEARTBEAT_MS);
         services.jsonMapper = JsonMapper.builder().build();
         services.stompAuthorizerFactory = new StompAuthorizerFactory();
         services.securityService = mock(SecurityService.class);
@@ -68,11 +67,10 @@ public class StompHeartbeatTests {
         services.requestLivenessWatcher = mock(RequestLivenessWatcher.class);
         services.serviceDirectoryProvider = mock(ObjectProvider.class);
 
-        // The same options ApiGatewayVertcleFactory builds from the property
-        long heartbeat = services.apiGatewayProperties.getStompHeartbeat();
+        // The gateway runs on the library's 30 s default; a short interval here makes the close observable
         StompServerOptions stompServerOptions = new StompServerOptions()
                 .setWebsocketPath("/v1")
-                .setHeartbeat(new JsonObject().put("x", heartbeat).put("y", heartbeat));
+                .setHeartbeat(new JsonObject().put("x", HEARTBEAT_MS).put("y", HEARTBEAT_MS));
         HttpServerOptions serverOptions = new HttpServerOptions().setPort(port).setWebSocketSubProtocols(List.of("v12.stomp"));
         vertx.deployVerticle(StompServerVerticleFactory.create(serverOptions,
                                                                stompServerOptions,
