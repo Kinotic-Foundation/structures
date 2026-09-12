@@ -1,6 +1,12 @@
 package org.kinotic.system.internal.api.services;
 
 import io.vertx.core.Future;
+import io.vertx.core.Vertx;
+import org.kinotic.core.api.event.CRI;
+import org.mockito.ArgumentCaptor;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.mock;
 import static org.mockito.ArgumentMatchers.any;
@@ -58,7 +64,7 @@ public class WorkloadOrchestrationTest {
         eventBus = mock(EventBusService.class);
         when(eventBus.monitorListenerStatus(any())).thenReturn(Flux.just(ListenerStatus.INACTIVE));
         properties = new KinoticSystemApiProperties();
-        nodeOrchestration = new DefaultVmNodeOrchestrationService(properties, nodes, workloads, eventBus);
+        nodeOrchestration = new DefaultVmNodeOrchestrationService(properties, nodes, workloads, eventBus, Vertx.vertx());
         orchestration = new DefaultWorkloadOrchestrationService(nodeOrchestration, vmManager,
                                                                 nodes, workloads);
     }
@@ -68,9 +74,38 @@ public class WorkloadOrchestrationTest {
         nodes.saveSync(nodes.availableNode);
         vmManager.failStartWith = new RpcMissingServiceException("no vm-manager registered for node-1");
 
+        Exception failure = assertThrows(Exception.class, () -> await(orchestration.deployWorkload(newWorkload())));
+        assertInstanceOf(RpcMissingServiceException.class, failure.getCause());
+
+        // the registration checked is the vm-manager scoped to this node, the address the proxy sends to
+        ArgumentCaptor<CRI> watched = ArgumentCaptor.forClass(CRI.class);
+        verify(eventBus).monitorListenerStatus(watched.capture());
+        assertEquals(NODE_ID, watched.getValue().scope());
+        assertTrue(watched.getValue().raw().contains("VmManager"), watched.getValue().raw());
+        assertEquals(VmNodeStatusType.UNREACHABLE, nodes.saved.get(NODE_ID).getStatus().getType());
+    }
+
+    @Test
+    public void ordinaryStartFailureDoesNotVerifyTheNode() throws Exception {
+        nodes.saveSync(nodes.availableNode);
+        vmManager.failStartWith = new RuntimeException("node exploded");
+
         assertThrows(Exception.class, () -> await(orchestration.deployWorkload(newWorkload())));
 
+        verify(eventBus, never()).monitorListenerStatus(any());
+        assertEquals(VmNodeStatusType.ONLINE, nodes.saved.get(NODE_ID).getStatus().getType());
+    }
+
+    @Test
+    public void heartbeatBringsAnUnreachableNodeBackOnline() throws Exception {
+        nodes.saveSync(nodes.availableNode);
+        vmManager.failStartWith = new RpcMissingServiceException("gone");
+        assertThrows(Exception.class, () -> await(orchestration.deployWorkload(newWorkload())));
         assertEquals(VmNodeStatusType.UNREACHABLE, nodes.saved.get(NODE_ID).getStatus().getType());
+
+        await(nodeOrchestration.heartbeat(NODE_ID, List.of()));
+
+        assertEquals(VmNodeStatusType.ONLINE, nodes.saved.get(NODE_ID).getStatus().getType());
     }
 
     @Test

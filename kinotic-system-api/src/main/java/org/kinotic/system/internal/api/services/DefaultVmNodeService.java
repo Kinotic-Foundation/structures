@@ -8,7 +8,6 @@ import org.kinotic.system.api.services.VmNodeService;
 import org.kinotic.system.internal.api.repositories.VmNodeRepository;
 import org.springframework.stereotype.Component;
 
-import java.util.Date;
 
 @Component
 public class DefaultVmNodeService extends AbstractCrudService<VmNode> implements VmNodeService {
@@ -29,7 +28,6 @@ public class DefaultVmNodeService extends AbstractCrudService<VmNode> implements
     protected Future<Void> beforeSave(VmNode entity) {
         Validate.notNull(entity, "VmNode cannot be null");
         Validate.notNull(entity.getId(), "VmNode id cannot be null");
-        entity.setLastSeen(new Date());
         return Future.succeededFuture();
     }
 
