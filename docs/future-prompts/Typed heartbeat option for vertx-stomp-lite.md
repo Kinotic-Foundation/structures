@@ -1,11 +1,10 @@
 `StompServerOptions.setHeartbeat` in vertx-stomp-lite takes a `JsonObject` with two integer keys,
-`x` and `y`, and the one caller in kinotic builds one by hand:
+`x` and `y`:
 
 ```java
-// StompHeartbeatTests.startServer — the gateway itself runs on the library default
-StompServerOptions stompServerOptions = new StompServerOptions()
-        .setWebsocketPath("/v1")
-        .setHeartbeat(new JsonObject().put("x", HEARTBEAT_MS).put("y", HEARTBEAT_MS));
+// vertx-stomp-lite, StompServerOptions
+public static JsonObject DEFAULT_STOMP_HEARTBEAT = new JsonObject().put("x", 30000).put("y", 30000);
+public StompServerOptions setHeartbeat(JsonObject heartbeat)
 ```
 
 A JSON object for two ints is Primitive Obsession on the library's own API: nothing checks the
@@ -29,9 +28,8 @@ What I already know, so you don't re-derive it:
   negotiated client period is `max(client.x, server.y)` and the server period
   `max(server.x, client.y)`, each `0` if either side offered `0`; a connection silent for more
   than twice the client period is closed through `handler.closed()`.
-- The gateway offers the library default both ways, which the TS client matches;
-  `StompHeartbeatTests` in `kinotic-api-gateway` shortens it on its own options and pins the
-  close on a real socket. It is the only call site of `setHeartbeat`.
+- kinotic never calls `setHeartbeat`: the gateway runs on the library default both ways, which
+  the TS client matches. The change is entirely on the library's API.
 
 Do this:
 
@@ -43,9 +41,7 @@ Do this:
    `DefaultStompServerConnection` and the period functions use the record. If the options class
    has a `JsonObject` constructor or `toJson()` for Vert.x-style configuration, the record maps
    to and from `{x, y}` there so a JSON-configured server keeps working. Release the library.
-2. In kinotic, bump `vertxStompLiteVersion` and replace the `JsonObject` construction in
-   `StompHeartbeatTests` with the record.
+2. In kinotic, bump `vertxStompLiteVersion`.
 
 Validate step 2 with `dependencyInsight` on `:kinotic-api-gateway:compileClasspath` for the new
-library version, `:kinotic-api-gateway:test`, and a grep for `"x"` under `kinotic-api-gateway`
-to confirm no key names survive.
+library version and `:kinotic-api-gateway:test`.

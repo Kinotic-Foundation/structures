@@ -294,8 +294,8 @@ server default of 30 s both ways, and closes a connection silent for two interva
 `handler.closed()`. The phase set the same 30 s explicitly as `ApiGatewayProperties.stompHeartbeat`;
 the property was removed again in PR #554: the interval is a protocol agreement with the TS client,
 which offers 30 s both ways, and STOMP negotiates each direction to the larger offer, so a
-deployment could only widen it. The library default stands, and `StompHeartbeatTests` shortens it
-on its own options to observe the close.
+deployment could only widen it. The library default stands. `StompHeartbeatTests`, which pinned
+the library's own close on silence, went with it: that is vertx-stomp-lite's behaviour to test.
 
 ```java
 // ServiceSessionState — the callee side of one connection, sibling of ReplySessionState
@@ -310,9 +310,7 @@ states share.
 Files: `ApiGatewayProperties`, `ApiGatewayVertcleFactory`, `ServiceSessionState`,
 `EndpointConnectionHandler`, `EventUtil`, `ReplySessionState` (uses the shared helpers),
 `EndpointConnectionHandlerTests` (a closed connection answers the invocations it still owes; a
-terminal reply back through the connection settles one), `StompHeartbeatTests` (a real
-stomp-lite server on a free port: a client that offers a heartbeat and goes silent is disconnected
-after two intervals).
+terminal reply back through the connection settles one).
 
 ## Phase 6 — TS client edges (~4 files)
 
