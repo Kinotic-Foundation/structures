@@ -10,7 +10,7 @@ The reason to prefer this over a timeout is that a timeout encodes a guess about
 
 <callout type="info">
 
-**Implementation status.** The terminal reply marker every part of this design reads is in place, and so are the acknowledgement that names the node, the cluster membership signal a pinned lease checks it against, and the request liveness watcher Java callers and the MCP invoker take their leases through, together with the graceful stop on the callee side, and the gateway holds a lease for every request it forwards for a TS client, answers the client with the typed error when the serving node leaves, and answers every requester of a TS service instance whose connection closes mid-call. Reply session parking and the cross-node handoff land in successive releases; sections describing them say so. The wire contract and error types below are the ones callers will see.
+**Implementation status.** The terminal reply marker every part of this design reads is in place, and so are the acknowledgement that names the node, the cluster membership signal a pinned lease checks it against, and the request liveness watcher Java callers and the MCP invoker take their leases through, together with the graceful stop on the callee side, and the gateway holds a lease for every request it forwards for a TS client, answers the client with the typed error when the serving node leaves, and answers every requester of a TS service instance whose connection closes mid-call. A connection that closes releases everything held for it on both ends, so no call outlives its connection. The wire contract and error types below are the ones callers see.
 
 </callout>
 
@@ -102,17 +102,9 @@ A service that stops, on a rolling update or any other graceful shutdown, stops 
 
 ## Reconnects and node rollovers
 
-A TS client's reply destination is stable across reconnects: the gateway mints its `replyToId` once per session and reuses it, so a client that comes back finds its replies still addressed to it. Today a socket blip still loses whatever the service produced while the socket was down, and a long-running stream is cancelled the moment the connection closes. Parking the reply session changes both.
+A call is bound to the connection it was made on. When that connection closes, for any reason, both ends let go at the same moment: the gateway unregisters the connection's reply consumer and settles its leases, so a server stream producing for it is cancelled through the reply-listener path and no reply is held anywhere, and the client fails every call it had in flight with `Connection lost`, streams included, the moment it observes the close. A reconnect starts clean. Nothing waits for a client to come back, so nothing can wait on the wrong node, and a node that dies takes no client's pending replies with it because it was holding none.
 
-<rpc-liveness-diagram view="reconnect">
-
-
-
-</rpc-liveness-diagram>
-
-When a sticky-session connection closes, the gateway *parks* the connection's reply state instead of tearing it down: the reply registration stays, so the service's stream keeps running, and replies buffer against a byte budget while its leases stay armed. A reconnect to the same node reattaches and flushes in order. A reconnect that lands on a different gateway — the normal case during a rolling update — finds the session in the clustered store, registers a reply consumer there, and publishes a release to the reply address; the old gateway flushes its buffer to that address and steps aside, and the new one forwards from then on with per-call ordering intact. The client observes a reconnect and nothing else.
-
-A parked session is bounded in two ways, both gateway properties. When its window expires, it is disposed and the streams it was holding cancel through the existing reply-listener path. When its buffer overflows, it is disposed. Either way the session's `replyToId` is rotated, so the client's next connect receives a new reply destination and its in-flight calls fail through the reset path it already has; without the rotation on expiry, a single-value reply lost with the buffer would leave a reconnecting client waiting for it forever. The client learns the window from the connect handshake and holds its own timer against it: a socket that stays down past the window fails the in-flight calls on the client, so nothing waits on a reconnect that may never come. The timer is per connection, not per call, and it is the only thing the client adds.
+This is the deliberate choice over holding replies for a returning client. The STOMP port sits behind a load balancer with no session affinity, so a reconnect lands on any gateway node; buffering replies on the node that lost the connection would only pay off with a cross-node handoff, and a handoff still loses the buffer when that node dies. Retrying a call is the cheaper contract. For a caller that needs a message to survive its connection, that is a delivery guarantee, and it belongs in a queue behind the API with acknowledgement and redelivery, not in a reply buffer on a gateway.
 
 ## What this does not cover
 
