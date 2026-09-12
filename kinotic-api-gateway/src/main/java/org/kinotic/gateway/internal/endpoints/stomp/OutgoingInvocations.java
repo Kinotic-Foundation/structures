@@ -11,8 +11,8 @@ import org.kinotic.core.internal.utils.EventUtil;
 import org.kinotic.gateway.internal.endpoints.Services;
 import reactor.core.Disposable;
 
+import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * The invocations delivered to the services one STOMP connection's client publishes, whose terminal
@@ -28,10 +28,12 @@ import java.util.concurrent.ConcurrentHashMap;
 public class OutgoingInvocations {
 
     private final Services services;
-    // every delivered invocation, keyed by correlation id, until its terminal reply
-    private final ConcurrentHashMap<String, OutgoingInvocation> invocations = new ConcurrentHashMap<>();
+    // Every delivered invocation, keyed by correlation id, until its terminal reply. Every access runs on the
+    // connection's context: the consumer and frame handlers Vert.x delivers there, and cancel(), which the
+    // requester monitor dispatches there
+    private final Map<String, OutgoingInvocation> invocations = new HashMap<>();
     // the requester watch of every invocation that has answered with a stream value, keyed the same way
-    private final ConcurrentHashMap<String, Disposable> requesterMonitors = new ConcurrentHashMap<>();
+    private final Map<String, Disposable> requesterMonitors = new HashMap<>();
 
     public OutgoingInvocations(Services services) {
         this.services = services;

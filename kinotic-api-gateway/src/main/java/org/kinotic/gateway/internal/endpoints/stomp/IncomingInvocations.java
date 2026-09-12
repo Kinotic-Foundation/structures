@@ -12,7 +12,6 @@ import org.kinotic.gateway.internal.endpoints.Services;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * The invocations one STOMP connection's client has made to services on the cluster and is still waiting
@@ -27,8 +26,10 @@ public class IncomingInvocations {
 
     private final Services services;
     private final Map<String, EventConsumer> replySubscriptions = new HashMap<>();
-    // the reply metadata of every forwarded invocation, keyed by correlation id, until its terminal reply
-    private final ConcurrentHashMap<String, Metadata> invocations = new ConcurrentHashMap<>();
+    // The reply metadata of every forwarded invocation, keyed by correlation id, until its terminal reply.
+    // Every access runs on the connection's context: the frame handler, the ack and reply handlers Vert.x
+    // delivers there, and the watcher's onLost, which is dispatched there
+    private final Map<String, Metadata> invocations = new HashMap<>();
 
     public IncomingInvocations(Services services) {
         this.services = services;
@@ -82,7 +83,7 @@ public class IncomingInvocations {
      */
     public void pin(String correlationId, String nodeId, CRI destination) {
         if (correlationId != null) {
-            // computeIfPresent serializes with settle() on this key
+            // a reply that ran through settle() before the ack was handled must not be resurrected here
             invocations.computeIfPresent(correlationId, (_, replyMetadata) -> {
                 services.requestLivenessWatcher.watch(correlationId, nodeId, () -> fail(correlationId, destination, nodeId));
                 return replyMetadata;
@@ -103,7 +104,8 @@ public class IncomingInvocations {
      * Ends the connection's incoming invocations: nothing stays pinned and no reply destination stays subscribed.
      */
     public void dispose() {
-        invocations.keySet().forEach(this::settle);
+        invocations.keySet().forEach(services.requestLivenessWatcher::settle);
+        invocations.clear();
         replySubscriptions.values().forEach(EventConsumer::unregister);
         replySubscriptions.clear();
     }
@@ -114,8 +116,8 @@ public class IncomingInvocations {
         }
     }
 
-    // Runs on the connection's context when the node that took the invocation leaves the cluster. Only the
-    // party that removes the record answers, so a reply that settled the invocation first leaves nothing to fail.
+    // Runs on the connection's context when the node that took the invocation leaves the cluster; a reply
+    // that settled the invocation first has removed the record, so there is nothing left to fail
     private void fail(String correlationId, CRI destination, String nodeId) {
         Metadata replyMetadata = invocations.remove(correlationId);
         if (replyMetadata != null) {
