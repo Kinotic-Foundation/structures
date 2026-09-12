@@ -7,6 +7,8 @@ import org.kinotic.system.api.model.workload.VmNode;
 import org.kinotic.system.api.services.VmNodeService;
 
 import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
 
 /**
@@ -68,7 +70,8 @@ public class StubVmNodeService implements VmNodeService {
 
     @Override
     public Future<Page<VmNode>> findAll(Pageable pageable) {
-        throw new UnsupportedOperationException();
+        List<VmNode> all = new ArrayList<>(saved.values());
+        return Future.succeededFuture(new Page<>(all, (long) all.size()));
     }
 
     @Override

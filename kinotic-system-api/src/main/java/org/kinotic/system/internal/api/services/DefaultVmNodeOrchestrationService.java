@@ -1,6 +1,13 @@
 package org.kinotic.system.internal.api.services;
 
 import io.vertx.core.Future;
+import org.kinotic.system.api.workload.VmManagerProxy;
+import org.kinotic.core.api.utils.KinoticUtil;
+import org.kinotic.core.api.service.ServiceIdentifier;
+import org.kinotic.core.api.event.ListenerStatus;
+import org.kinotic.core.api.event.EventBusService;
+import org.kinotic.core.api.event.CRI;
+import io.vertx.core.Promise;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +43,7 @@ public class DefaultVmNodeOrchestrationService implements VmNodeOrchestrationSer
     private final KinoticSystemApiProperties orchestratorProperties;
     private final VmNodeService vmNodeService;
     private final WorkloadService workloadService;
+    private final EventBusService eventBusService;
     private ScheduledExecutorService scheduler;
 
     @PostConstruct
@@ -212,9 +220,37 @@ public class DefaultVmNodeOrchestrationService implements VmNodeOrchestrationSer
         return vmNodeService.findAvailableNode(requiredCpus, requiredMemoryMb, requiredDiskMb);
     }
 
+    @Override
+    public Future<Void> verifyNode(String nodeId) {
+        Validate.notNull(nodeId, "Node id cannot be null");
+        ServiceIdentifier vmManager = KinoticUtil.serviceIdentifierOf(VmManagerProxy.class);
+        CRI address = new ServiceIdentifier(vmManager.zone(), vmManager.namespace(), vmManager.name(), nodeId, vmManager.version()).cri();
+        // the first emission is the current registration state; completes on the monitor's delivery context
+        Promise<ListenerStatus> registration = Promise.promise();
+        eventBusService.monitorListenerStatus(address).next().subscribe(registration::complete, registration::fail);
+        return registration.future()
+                           .compose(status -> status == ListenerStatus.ACTIVE
+                                   ? Future.succeededFuture()
+                                   : vmNodeService.findById(nodeId).compose(node -> markUnreachable(nodeId, node)));
+    }
+
+    private Future<Void> markUnreachable(String nodeId, VmNode node) {
+        Future<Void> ret;
+        if (node == null || node.getStatus().getType() == VmNodeStatusType.OFFLINE
+                || node.getStatus().getType() == VmNodeStatusType.UNREACHABLE) {
+            ret = Future.succeededFuture();
+        } else {
+            log.warn("VmNode {} ({}) is unreachable and holds no vm-manager registration, taking no workloads", node.getName(), nodeId);
+            node.setStatus(new VmNodeStatus(VmNodeStatusType.UNREACHABLE, node.getStatus().getHealthMessage()));
+            // findAvailableNode selects on status.type with a search, so the change has to be indexed first
+            ret = vmNodeService.saveSync(node).mapEmpty();
+        }
+        return ret;
+    }
+
     /**
-     * Periodically checks all ONLINE nodes and marks any that haven't sent a heartbeat
-     * within the timeout as OFFLINE. Running workloads on offline nodes are marked FAILED.
+     * Periodically marks every node that has not sent a heartbeat within the timeout OFFLINE, whatever it
+     * reported last, and marks the workloads running on it FAILED.
      */
     private void checkNodeHealth() {
         try {
@@ -225,7 +261,8 @@ public class DefaultVmNodeOrchestrationService implements VmNodeOrchestrationSer
             vmNodeService.findAll(Pageable.create(0, 500, null))
                     .onSuccess(page -> {
                         for (VmNode node : page.getContent()) {
-                            if (node.getStatus().getType() == VmNodeStatusType.ONLINE
+                            // a DRAINING or UNREACHABLE node that falls silent is as dead as an ONLINE one
+                            if (node.getStatus().getType() != VmNodeStatusType.OFFLINE
                                     && node.getLastSeen() != null
                                     && node.getLastSeen().before(cutoffDate)) {
 

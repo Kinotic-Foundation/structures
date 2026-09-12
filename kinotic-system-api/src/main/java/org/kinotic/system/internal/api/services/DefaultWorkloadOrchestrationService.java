@@ -1,6 +1,8 @@
 package org.kinotic.system.internal.api.services;
 
 import io.vertx.core.Future;
+import org.kinotic.core.api.exceptions.RpcServiceUnavailableException;
+import org.kinotic.core.api.exceptions.RpcMissingServiceException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.Validate;
@@ -32,6 +34,17 @@ public class DefaultWorkloadOrchestrationService implements WorkloadOrchestratio
     private final VmManagerProxy vmManagerProxy;
     private final VmNodeService vmNodeService;
     private final WorkloadService workloadService;
+
+    // A call the bus could not deliver, or whose serving node left, is the earliest sign a node is gone;
+    // the orchestrator checks the node at once instead of waiting for the heartbeat timeout
+    private <T> Future<T> verifyingNodeOnFailure(String nodeId, Future<T> call) {
+        return call.onFailure(error -> {
+            if (error instanceof RpcMissingServiceException || error instanceof RpcServiceUnavailableException) {
+                nodeOrchestrationService.verifyNode(nodeId)
+                                        .onFailure(verifyError -> log.warn("Could not verify node {} after an unreachable vm-manager", nodeId, verifyError));
+            }
+        });
+    }
 
     @Override
     public Future<Workload> deployWorkload(Workload workload) {
@@ -67,7 +80,7 @@ public class DefaultWorkloadOrchestrationService implements WorkloadOrchestratio
                             .compose(savedWorkload ->
                                 // Dispatch to the VmManager on the selected node. For a
                                 // non-detached workload the reply arrives once the run ends.
-                                vmManagerProxy.startWorkload(node.getId(), savedWorkload)
+                                verifyingNodeOnFailure(node.getId(), vmManagerProxy.startWorkload(node.getId(), savedWorkload))
                                         .compose(this::applyStartReply)
                                         .recover(error -> {
                                             log.error("Failed to start workload {} on node {}",
@@ -99,7 +112,7 @@ public class DefaultWorkloadOrchestrationService implements WorkloadOrchestratio
                     return workloadService.saveSync(workload);
                 })
                 .compose(workload ->
-                    vmManagerProxy.restartWorkload(workload.getNodeId(), workloadId)
+                    verifyingNodeOnFailure(workload.getNodeId(), vmManagerProxy.restartWorkload(workload.getNodeId(), workloadId))
                             .compose(this::applyStartReply)
                             .recover(error -> {
                                 log.error("Failed to restart workload {} on node {}",
@@ -126,7 +139,7 @@ public class DefaultWorkloadOrchestrationService implements WorkloadOrchestratio
                     return workloadService.saveSync(workload);
                 })
                 .compose(workload ->
-                    vmManagerProxy.stopWorkload(workload.getNodeId(), workloadId)
+                    verifyingNodeOnFailure(workload.getNodeId(), vmManagerProxy.stopWorkload(workload.getNodeId(), workloadId))
                             .compose(v -> {
                                 workload.setStatus(WorkloadStatus.STOPPED);
                                 return workloadService.saveSync(workload);
@@ -147,7 +160,7 @@ public class DefaultWorkloadOrchestrationService implements WorkloadOrchestratio
                     }
 
                     // Dispatch destroy to the VmManager on the workload's node
-                    return vmManagerProxy.destroyWorkload(workload.getNodeId(), workloadId)
+                    return verifyingNodeOnFailure(workload.getNodeId(), vmManagerProxy.destroyWorkload(workload.getNodeId(), workloadId))
                             .compose(v ->
                                 // Free allocated resources on the node
                                 vmNodeService.findById(workload.getNodeId())
