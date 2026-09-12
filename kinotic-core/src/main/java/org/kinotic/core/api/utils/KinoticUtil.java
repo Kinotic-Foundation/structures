@@ -42,25 +42,6 @@ public class KinoticUtil {
      * @param serviceDirectory the directory to report unreachability to, or null when none is configured
      * @return the throwable to propagate to the caller
      */
-    /**
-     * The identity a {@link org.kinotic.core.api.annotations.Proxy} interface addresses: its zone, namespace,
-     * name and version as declared on the interface, with no scope. A scoped call adds the scope per invocation.
-     * @param proxyInterface an interface annotated with {@link org.kinotic.core.api.annotations.Proxy}
-     * @return the identifier the interface's calls are routed by
-     */
-    public static ServiceIdentifier serviceIdentifierOf(Class<?> proxyInterface) {
-        Proxy proxyAnnotation = proxyInterface.getAnnotation(Proxy.class);
-        Validate.notNull(proxyAnnotation, "The Class provided must be annotated with @Proxy");
-        String namespace = proxyAnnotation.namespace().isEmpty() ? safeEncodeURI(proxyInterface.getPackageName()) : safeEncodeURI(proxyAnnotation.namespace());
-        String name = proxyAnnotation.name().isEmpty() ? proxyInterface.getSimpleName() : proxyAnnotation.name();
-        // A proxy targets one address; with no declaration it targets the un-zoned address
-        return new ServiceIdentifier(MetaUtil.getZone(proxyInterface),
-                                     namespace,
-                                     name,
-                                     null,
-                                     MetaUtil.getVersion(proxyInterface));
-    }
-
     public static Throwable mapSendFailure(Throwable throwable, CRI destination, ServiceDirectory serviceDirectory) {
         Throwable ret = throwable;
         if (throwable instanceof ReplyException replyException) {
@@ -79,6 +60,25 @@ public class KinoticUtil {
             }
         }
         return ret;
+    }
+
+    /**
+     * The identity a {@link org.kinotic.core.api.annotations.Proxy} interface addresses: its zone, namespace,
+     * name and version as declared on the interface, with no scope. A scoped call adds the scope per invocation.
+     * @param proxyInterface an interface annotated with {@link org.kinotic.core.api.annotations.Proxy}
+     * @return the identifier the interface's calls are routed by
+     */
+    public static ServiceIdentifier serviceIdentifierOf(Class<?> proxyInterface) {
+        Proxy proxyAnnotation = proxyInterface.getAnnotation(Proxy.class);
+        Validate.notNull(proxyAnnotation, "The Class provided must be annotated with @Proxy");
+        String namespace = proxyAnnotation.namespace().isEmpty() ? safeEncodeURI(proxyInterface.getPackageName()) : safeEncodeURI(proxyAnnotation.namespace());
+        String name = proxyAnnotation.name().isEmpty() ? proxyInterface.getSimpleName() : proxyAnnotation.name();
+        // A proxy targets one address; with no declaration it targets the un-zoned address
+        return new ServiceIdentifier(MetaUtil.getZone(proxyInterface),
+                                     namespace,
+                                     name,
+                                     null,
+                                     MetaUtil.getVersion(proxyInterface));
     }
 
     /**
