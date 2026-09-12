@@ -496,6 +496,12 @@ known defect.
   live stream's correlation id is answered with an error instead of dropped with its span open; an
   unknown control cancels the source it answers with an error; a single-value reply that cannot be
   sent is answered the same way whether it came from `onNext` or an empty completion.
+- `ServiceInvocationSupervisor` no longer dispatches through `vertx.executeBlocking`: an invocation
+  runs on its delivery context, so the synchronous slice of one service's invocations is no longer
+  serialized on one ordered worker and no worker hop or shared pool sits in the request path. A slow
+  handler hands off inside itself, the rule the platform docs now state. The stream registry uses
+  `putIfAbsent` and removes inline, and the in-flight count is a pair of plain methods. The argument
+  tokenizer is a synchronous call with no `block()` on the event loop.
 
 Not fixed: `cancelRequest` sends the cancel to the request address, which on an unscoped
 multi-instance service may not be the producing instance. Routing it through `__origin-cri` would not

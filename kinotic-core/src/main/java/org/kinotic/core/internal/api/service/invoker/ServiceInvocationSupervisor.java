@@ -160,17 +160,15 @@ public class ServiceInvocationSupervisor {
 
     private EventConsumer listenAt(CRI cri){
         EventConsumer consumer = eventBusService.listen(cri);
+        // Runs on the delivery's context: a handler that is slow hands off inside itself and returns a
+        // Future, the same contract Vert.x sets for an event loop
         consumer.handler(event -> {
-                    // counted at dispatch, so an event still queued for the worker pool holds stop()'s drain
-                    Runnable leaveInFlight = enterInFlight();
-                    vertx.executeBlocking(() -> {
-                        try {
-                            processEvent(event);
-                        } finally {
-                            leaveInFlight.run();
-                        }
-                        return null;
-                    });
+                    enterInFlight();
+                    try {
+                        processEvent(event);
+                    } finally {
+                        leaveInFlight();
+                    }
                 })
                 .exceptionHandler(throwable -> log.error("Event listener error", throwable))
                 // Vert.x invokes the end handler on every unregistration, including the one stop() performs.
@@ -231,21 +229,18 @@ public class ServiceInvocationSupervisor {
         }
     }
 
-    /**
-     * Counts an invocation as in flight until the returned callback runs; running it more than once has no
-     * further effect.
-     */
-    private Runnable enterInFlight(){
+    private void enterInFlight(){
         inFlight.incrementAndGet();
-        AtomicBoolean left = new AtomicBoolean(false);
-        return () -> {
-            if(left.compareAndSet(false, true) && inFlight.decrementAndGet() == 0){
-                Promise<Void> drainedPromise = drained;
-                if(drainedPromise != null){
-                    drainedPromise.tryComplete();
-                }
+    }
+
+    // The last invocation out completes the drain stop() is waiting on; before stop() there is no promise
+    private void leaveInFlight(){
+        if(inFlight.decrementAndGet() == 0){
+            Promise<Void> drainedPromise = drained;
+            if(drainedPromise != null){
+                drainedPromise.tryComplete();
             }
-        };
+        }
     }
 
     private Map<String, HandlerMethod> buildMethodMap(ServiceDescriptor serviceDescriptor,
@@ -330,10 +325,11 @@ public class ServiceInvocationSupervisor {
         String correlationId = incomingEvent.metadata().get(EventConstants.CORRELATION_ID_HEADER);
         Validate.notNull(correlationId, "Streaming control plain messages require a CORRELATION_ID_HEADER to be set");
 
-        activeStreamingResults.computeIfPresent(correlationId, (_, streamSubscriber) -> {
+        // outside the map's lock: a cancel ends the stream, whose hookFinally removes this entry
+        StreamSubscriber streamSubscriber = activeStreamingResults.get(correlationId);
+        if(streamSubscriber != null){
             streamSubscriber.processControlEvent(incomingEvent);
-            return streamSubscriber;
-        });
+        }
     }
 
     private void processEvent(Event<byte[]> incomingEvent){
@@ -464,7 +460,9 @@ public class ServiceInvocationSupervisor {
             if(!reactiveAdapter.isMultiValue()){
 
                 Publisher<?> publisher = reactiveAdapter.toPublisher(result);
-                publisher.subscribe(new SingleValueSubscriber(incomingMetadata, handlerMethod, incomingEvent, span, enterInFlight()));
+                // the reply is produced after this call returns, so the invocation stays in flight until then
+                enterInFlight();
+                publisher.subscribe(new SingleValueSubscriber(incomingMetadata, handlerMethod, incomingEvent, span));
 
             }else{
 
@@ -475,20 +473,17 @@ public class ServiceInvocationSupervisor {
 
                 String correlationId = incomingEvent.metadata().get(EventConstants.CORRELATION_ID_HEADER);
 
-                StreamSubscriber streamSubscriber = activeStreamingResults.computeIfAbsent(correlationId, _ -> {
-                    Flux<?> flux = Flux.from(reactiveAdapter.toPublisher(result));
+                CRI replyCRI = CRI.create(incomingEvent.metadata().get(EventConstants.REPLY_TO_HEADER));
+                Flux<ListenerStatus> replyListenerStatus = eventBusService.monitorListenerStatus(replyCRI);
+                StreamSubscriber streamSubscriber = new StreamSubscriber(incomingMetadata, handlerMethod, replyListenerStatus, incomingEvent.cri().raw(), span);
 
-                    CRI replyCRI = CRI.create(incomingEvent.metadata().get(EventConstants.REPLY_TO_HEADER));
-                    Flux<ListenerStatus> replyListenerStatus = eventBusService.monitorListenerStatus(replyCRI);
-
-                    StreamSubscriber subscriber = new StreamSubscriber(incomingMetadata, handlerMethod, replyListenerStatus, incomingEvent.cri().raw(), span);
-                    flux.subscribe(subscriber);
-                    return subscriber;
-                });
                 // a second request reusing a live stream's correlation id is answered with the error, not dropped
-                if(streamSubscriber.incomingMetadata != incomingMetadata){
+                if(activeStreamingResults.putIfAbsent(correlationId, streamSubscriber) != null){
                     throw new IllegalArgumentException("A stream with correlationId " + correlationId + " is already in progress");
                 }
+                // registered before subscribing, and subscribed outside the map's lock: control events for the
+                // stream arrive on this same context, and a synchronous source ends inside subscribe
+                Flux.from(reactiveAdapter.toPublisher(result)).subscribe(streamSubscriber);
             }
         }
     }
@@ -556,17 +551,15 @@ public class ServiceInvocationSupervisor {
         private final HandlerMethod handlerMethod;
         private final Event<byte[]> incomingEvent;
         private final Span span;
-        private final Runnable leaveInFlight;
         private Subscription subscription;
         private boolean valueReceived = false;
-        private boolean failed = false;
+        private boolean done = false;
 
-        public SingleValueSubscriber(Metadata incomingMetadata, HandlerMethod handlerMethod, Event<byte[]> incomingEvent, Span span, Runnable leaveInFlight) {
+        public SingleValueSubscriber(Metadata incomingMetadata, HandlerMethod handlerMethod, Event<byte[]> incomingEvent, Span span) {
             this.incomingMetadata = incomingMetadata;
             this.handlerMethod = handlerMethod;
             this.incomingEvent = incomingEvent;
             this.span = span;
-            this.leaveInFlight = leaveInFlight;
         }
 
         @Override
@@ -587,11 +580,18 @@ public class ServiceInvocationSupervisor {
             try {
                 convertAndSend(incomingMetadata, handlerMethod, value);
             } catch (Exception e) {
-                failed = true;
                 handleException(incomingMetadata, e);
                 failSpan(span, e);
-                leaveInFlight.run();
+                finish();
                 subscription.cancel();
+            }
+        }
+
+        // A Publisher from user code may signal twice; the invocation leaves the in-flight count once
+        private void finish() {
+            if(!done){
+                done = true;
+                leaveInFlight();
             }
         }
 
@@ -604,7 +604,7 @@ public class ServiceInvocationSupervisor {
             }
             handleException(incomingMetadata, t);
             failSpan(span, t);
-            leaveInFlight.run();
+            finish();
         }
 
         @Override
@@ -612,9 +612,9 @@ public class ServiceInvocationSupervisor {
             if(!valueReceived){
                 reply(null);
             }
-            if(!failed){
+            if(!done){
                 span.end();
-                leaveInFlight.run();
+                finish();
             }
         }
     }
@@ -724,13 +724,7 @@ public class ServiceInvocationSupervisor {
 
             replyListenerStatusSubscriber.cancel();
 
-            String correlationId = incomingMetadata.get(EventConstants.CORRELATION_ID_HEADER);
-            // we must do this in a background thread since if the flux is created like Flux.just this will be executed in the same thread as the invocation
-            // and hence inside the activeStreamingResults.computeIfAbsent block
-            vertx.executeBlocking(() -> {
-                activeStreamingResults.remove(correlationId);
-                return null;
-            });
+            activeStreamingResults.remove(incomingMetadata.get(EventConstants.CORRELATION_ID_HEADER));
         }
 
         @Override

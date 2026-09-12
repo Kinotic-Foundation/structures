@@ -153,26 +153,19 @@ fix is a per-instance control address: the supervisor listens on
 `srv://<nodeId>@<qualifiedName>/__control`, puts it in `__origin-cri`, and the proxy cancels to the
 origin it saw on the first value. A wire change, to be decided separately.
 
-## 11. Design-level: every invocation of a service runs one at a time
+## 11. Decided: invocations run on the delivery context, and a slow handler hands off itself
 
-`ServiceInvocationSupervisor.listenAt` dispatches with `vertx.executeBlocking(callable)`, whose
-one-argument overload is `executeBlocking(callable, true)`: ordered. Vert.x delivers each event on a
-duplicated context, but a duplicate's ordered tasks share its parent's queue, and the parent is the
-consumer's context, one per supervisor. So the invocations of one service run serially on one worker
-however many nodes call it, while the participant local stays per invocation. Measured with a
-service whose method sleeps 500 ms: four concurrent calls took 2177 ms, all on
-`vert.x-worker-thread-7`; a method that reads `securityContext.currentParticipant()` saw its own
-caller's participant on every call and none for a caller without one.
+`ServiceInvocationSupervisor.listenAt` dispatched with `vertx.executeBlocking(callable)`, whose
+one-argument overload is ordered. Each delivery has its own duplicated context, but a duplicate's
+ordered tasks share the consumer context's queue, so the synchronous slice of every invocation of
+one service (argument parsing, the call, up to the handler returning its `Future`) ran one at a time
+on one worker. Measured with a handler that sleeps 500 ms: four concurrent calls took 2177 ms on
+`vert.x-worker-thread-7`. For a handler that returns a `Future` at once the slice is microseconds,
+which is why a 1k-concurrent load test of `JsonEntitiesService` never showed it; a burst of large
+bodies to one service would have, since the parsing is inside the slice.
 
-```java
-// ServiceInvocationSupervisor.listenAt — today: ordered, one invocation of this service at a time
-vertx.executeBlocking(() -> { ... processEvent(event); ... });
-// concurrent: every invocation on any free worker
-vertx.executeBlocking(() -> { ... processEvent(event); ... }, false);
-```
-
-The one-line change makes every published service re-entrant. A service that relied on the
-serialization without knowing it (a mutable field written by a handler, a non-thread-safe client)
-would start racing, so this is a decision to take across the published services, not a fix to slip
-in. Reactive results already leave the worker after the method returns, so only the synchronous part
-of a handler is serialized today.
+Every `@Publish`ed interface in the tree returns `Future`, `CompletableFuture`, `Mono` or `Flux`, or
+a trivial in-memory value, and every Elasticsearch use is the async client, so the worker hop bought
+nothing. `processEvent` now runs on the delivery context, the same way the proxy has always handled
+replies, and the rule is stated in the platform docs the way Vert.x states it: never block the event
+loop; a slow handler calls `vertx.executeBlocking` inside itself and returns the `Future`.
