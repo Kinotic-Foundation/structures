@@ -146,7 +146,8 @@ export class StompConnectionManager {
                     [EventConstants.SESSION_KEEP_ALIVE_HEADER]: options.sessionKeepAlive ?? SessionKeepAliveMode.ACTIVITY
                 },
                 // Both match the gateway's 30 s heartbeat, so a gateway that vanishes without closing the
-                // socket is detected here within two intervals, the same bound the gateway applies to a client
+                // socket is closed here once it has been silent for two intervals, the same bound the gateway
+                // applies to a client
                 heartbeatIncoming: 30000,
                 heartbeatOutgoing: 30000,
                 reconnectDelay: this.INITIAL_RECONNECT_DELAY,
@@ -277,9 +278,10 @@ export class StompConnectionManager {
             // serverHeaders$ is a BehaviorSubject on an rxStomp that outlives a deactivate/activate
             // cycle, so a later activation is replayed the previous connection's frame on subscribe —
             // skipping it stops activate() resolving with the replyToId that just went away. Stays on
-            // serverHeaders$ rather than connected$: stompjs emits here before reinstating watch()
-            // subscriptions, so a changed replyToCri reaches replyToCriChangedHandler before the stale
-            // reply destination is re-subscribed and rejected.
+            // serverHeaders$ rather than connected$: rx-stomp emits the headers before it reports OPEN,
+            // so a changed replyToCri reaches replyToCriChangedHandler before anything can be sent on
+            // the new connection. The previous reply destination was released at the drop through
+            // connectionLostHandler, so nothing stale is re-subscribed here.
             this.serverHeadersSubscription = this.rxStomp.serverHeaders$
                                                  .pipe(skip(this.rxStompHasConnected ? 1 : 0))
                                                  .subscribe(async (value: StompHeaders) => {
