@@ -52,6 +52,8 @@ export class StompConnectionManager {
     private serverHeadersSubscription: Subscription | null = null
     private stompErrorsSubscription: Subscription | null = null
     private connectionStateSubscription: Subscription | null = null
+    // Rejects the activate() promise whose socket has not opened yet, so a fatal error or a deactivate()
+    // in that window settles the connect instead of leaving it waiting; null once the connection is up
     private failPendingActivation: ((reason: string) => void) | null = null
 
     private _replyToCri: string | null = null
