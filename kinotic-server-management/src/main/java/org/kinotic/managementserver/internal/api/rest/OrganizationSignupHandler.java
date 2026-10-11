@@ -9,7 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.kinotic.domain.api.model.Organization;
 import org.kinotic.domain.api.rest.support.*;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
-import org.kinotic.domain.api.model.security.PlatformOidcConfiguration;
+import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
 import org.kinotic.domain.api.model.security.PendingSignUp;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.services.security.OidcConfigurationService;
@@ -132,7 +132,7 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes {
 
         oidcFlowOrchestrator.handleCallback(
                 ctx, pathConfigId, callbackUrl(pathConfigId),
-                _ -> oidcConfigurationService.findPlatformById(pathConfigId))
+                _ -> oidcConfigurationService.findOrgSignupById(pathConfigId))
                 .onSuccess(result -> createPendingSignUp(ctx, result))
                 .onFailure(ex -> authEndpointSupport.redirectCallbackFailure(ctx, ex));
     }
@@ -143,8 +143,8 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes {
      * {@link PendingSignUp} carrying the verified identity and redirects the browser to the
      * org-naming page that posts back to {@link #handleSocialCompleteOrg}.
      */
-    private void createPendingSignUp(RoutingContext ctx, CallbackResult<PlatformOidcConfiguration> result) {
-        PlatformOidcConfiguration config = result.config();
+    private void createPendingSignUp(RoutingContext ctx, CallbackResult<OrgSignupOidcConfiguration> result) {
+        OrgSignupOidcConfiguration config = result.config();
         Map<String, Object> claims = result.claims();
 
         String sub = OAuth2Util.stringClaim(claims, "sub");

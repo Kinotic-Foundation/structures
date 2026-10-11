@@ -8,7 +8,7 @@ import org.kinotic.core.api.security.SecurityContext;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.OidcProviderKind;
 import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
-import org.kinotic.domain.api.model.security.PlatformOidcConfiguration;
+import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
 import org.kinotic.domain.api.model.security.participant.OrganizationParticipant;
 import org.kinotic.domain.api.model.security.participant.SystemParticipant;
 import org.kinotic.domain.api.repositories.ApplicationRepository;
@@ -76,15 +76,15 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
 
     /**
      * Requires the bound participant to be the owner of {@code configuration}'s kind: a system participant
-     * for a platform configuration, since a platform row names a platform secret and is offered to every
-     * sign-in; a participant of the named organization for an organization's.
+     * for a curated social provider, since that row names a secret of the platform's and is offered to
+     * every sign-in; a participant of the named organization for an organization's.
      *
      * @throws IllegalStateException  if no participant is bound to the current context
      * @throws AuthorizationException if the participant is not the owner
      */
     private void requireOwner(OidcConfiguration configuration) {
         switch (configuration) {
-            case PlatformOidcConfiguration _ -> securityContext.requireParticipant(SystemParticipant.class);
+            case OrgSignupOidcConfiguration _ -> securityContext.requireParticipant(SystemParticipant.class);
             case OrganizationOidcConfiguration owned -> {
                 Validate.notBlank(owned.getOrganizationId(), "Organization id must be set on OrganizationOidcConfiguration");
                 String orgId = securityContext.requireParticipant(OrganizationParticipant.class).getOrganizationId();
@@ -98,20 +98,20 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
     }
 
     @Override
-    public Future<List<PlatformOidcConfiguration>> findEnabledPlatformProviders() {
-        return oidcRepository.findEnabledPlatform();
+    public Future<List<OrgSignupOidcConfiguration>> findEnabledOrgSignupProviders() {
+        return oidcRepository.findEnabledOrgSignup();
     }
 
     @Override
-    public Future<PlatformOidcConfiguration> findEnabledPlatformByProvider(OidcProviderKind provider) {
+    public Future<OrgSignupOidcConfiguration> findEnabledOrgSignupByProvider(OidcProviderKind provider) {
         Validate.notNull(provider, "provider cannot be null");
-        return oidcRepository.findEnabledPlatformByProvider(provider);
+        return oidcRepository.findEnabledOrgSignupByProvider(provider);
     }
 
     @Override
-    public Future<PlatformOidcConfiguration> findPlatformById(String id) {
+    public Future<OrgSignupOidcConfiguration> findOrgSignupById(String id) {
         Validate.notBlank(id, "id cannot be blank");
-        return oidcRepository.findPlatformById(id);
+        return oidcRepository.findOrgSignupById(id);
     }
 
     @Override
@@ -156,9 +156,9 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
                                        })
                                        .map(ArrayList::new);
         } else {
-            ret = Future.all(findEnabledPlatformProviders(), findOrgLoginConfig(organizationId))
+            ret = Future.all(findEnabledOrgSignupProviders(), findOrgLoginConfig(organizationId))
                         .map(cf -> {
-                            List<PlatformOidcConfiguration> social = cf.resultAt(0);
+                            List<OrgSignupOidcConfiguration> social = cf.resultAt(0);
                             OrganizationOidcConfiguration sso = cf.resultAt(1);
                             List<OidcConfiguration> providers = new ArrayList<>(social);
                             if (sso != null) {

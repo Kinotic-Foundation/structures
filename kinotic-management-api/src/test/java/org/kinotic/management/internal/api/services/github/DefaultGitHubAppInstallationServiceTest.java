@@ -17,7 +17,7 @@ import org.kinotic.core.api.exceptions.AuthorizationException;
 import org.kinotic.core.api.secret.SecretReferenceResolver;
 import org.kinotic.core.api.security.SecurityContext;
 import org.kinotic.domain.api.model.security.OidcProviderKind;
-import org.kinotic.domain.api.model.security.PlatformOidcConfiguration;
+import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
 import org.kinotic.domain.api.model.security.participant.OrganizationParticipant;
 import org.kinotic.domain.api.services.security.OidcConfigurationService;
 import org.kinotic.management.api.config.GithubProperties;
@@ -102,11 +102,11 @@ class DefaultGitHubAppInstallationServiceTest {
         // Real state store so staging + single-use consumption are exercised
         stateService = new GitHubInstallStateService(ignite);
 
-        PlatformOidcConfiguration credential = new PlatformOidcConfiguration();
+        OrgSignupOidcConfiguration credential = new OrgSignupOidcConfiguration();
         credential.setClientId("client-id");
         credential.setSecretNameRef("github-platform");
         OidcConfigurationService oidcConfigurationService = mock(OidcConfigurationService.class);
-        when(oidcConfigurationService.findEnabledPlatformByProvider(OidcProviderKind.GITHUB))
+        when(oidcConfigurationService.findEnabledOrgSignupByProvider(OidcProviderKind.GITHUB))
                 .thenReturn(Future.succeededFuture(credential));
 
         SecretReferenceResolver secretReferenceResolver = mock(SecretReferenceResolver.class);

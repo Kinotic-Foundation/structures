@@ -13,7 +13,7 @@ import org.kinotic.domain.api.rest.support.OidcFlowOrchestrator;
 import org.kinotic.domain.api.model.security.AuthType;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
-import org.kinotic.domain.api.model.security.PlatformOidcConfiguration;
+import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.services.security.LocalAuthenticationService;
 import org.kinotic.domain.api.services.security.OidcConfigurationService;
@@ -78,11 +78,11 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes {
      * even when several configs share a kind.
      */
     private void handleProviders(RoutingContext ctx) {
-        oidcConfigurationService.findEnabledPlatformProviders()
+        oidcConfigurationService.findEnabledOrgSignupProviders()
               .onSuccess(configs -> {
                   JsonArray providers = new JsonArray();
                   Set<String> seen = new LinkedHashSet<>();
-                  for (PlatformOidcConfiguration c : configs) {
+                  for (OrgSignupOidcConfiguration c : configs) {
                       if (c.getProvider() == null) continue;
                       String key = c.getProvider().key();
                       if (seen.add(key)) providers.add(key);
@@ -105,12 +105,12 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes {
         oidcFlowOrchestrator.handleCallback(ctx,
                                             pathConfigId,
                                             socialCallbackUrl(pathConfigId),
-                                            _ -> oidcConfigurationService.findPlatformById(pathConfigId))
+                                            _ -> oidcConfigurationService.findOrgSignupById(pathConfigId))
                             .onSuccess(result -> completeSocialLogin(ctx, result))
                             .onFailure(ex -> authEndpointSupport.redirectCallbackFailure(ctx, ex));
     }
 
-    private void completeSocialLogin(RoutingContext ctx, CallbackResult<PlatformOidcConfiguration> result) {
+    private void completeSocialLogin(RoutingContext ctx, CallbackResult<OrgSignupOidcConfiguration> result) {
         authEndpointSupport.completeOidcLogin(ctx, result,
                 sub -> identityService.findOrgUserByOidcIdentity(sub, result.config().getId()));
     }

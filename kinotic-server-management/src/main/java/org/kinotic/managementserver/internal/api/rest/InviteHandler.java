@@ -257,7 +257,7 @@ public class InviteHandler implements SuppliesGatewayRoutes {
         // matched the path's configId against the flow session, and that session value was
         // written by handleOidcStart, which only accepts configs the invite's target scope
         // offers. So whatever this finds is a config the start leg already approved.
-        return oidcConfigurationService.findPlatformById(configId)
+        return oidcConfigurationService.findOrgSignupById(configId)
                 .compose(social -> {
                     Future<OidcConfiguration> ret;
                     if (social != null) {

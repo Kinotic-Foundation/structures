@@ -23,7 +23,7 @@ import org.kinotic.core.api.secret.SecretReferenceResolver;
 import org.kinotic.core.api.security.SessionBinding;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
-import org.kinotic.domain.api.model.security.PlatformOidcConfiguration;
+import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
 import org.kinotic.domain.api.services.security.OidcConfigurationService;
 import org.kinotic.domain.api.utils.DomainUtil;
 import org.springframework.stereotype.Component;
@@ -463,7 +463,7 @@ public class OidcFlowOrchestrator {
      */
     private Future<String> clientSecretOf(OidcConfiguration config) {
         return switch (config) {
-            case PlatformOidcConfiguration platform -> secretReferenceResolver.resolve(platform.getSecretNameRef());
+            case OrgSignupOidcConfiguration social -> secretReferenceResolver.resolve(social.getSecretNameRef());
             // an organization's administrator controls this row, so nothing on it may name a platform secret
             case OrganizationOidcConfiguration owned -> oidcConfigurationService.findClientSecret(owned);
         };

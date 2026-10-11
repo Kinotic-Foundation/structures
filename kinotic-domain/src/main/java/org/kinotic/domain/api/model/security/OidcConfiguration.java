@@ -13,9 +13,9 @@ import java.util.Date;
 /**
  * A persisted OIDC provider configuration: the provider, the client Kinotic registered with it, and
  * the endpoints and claims a sign-in through it uses. The concrete subtype states who owns the
- * configuration and carries the fields only that owner has — {@link PlatformOidcConfiguration} for
- * a provider the platform operator curates, {@link OrganizationOidcConfiguration} for one an
- * organization configures for itself. The client secret is never a field of a configuration: each
+ * configuration and carries the fields only that owner has — {@link OrgSignupOidcConfiguration} for
+ * a social provider the platform operator curates, through which organization users sign up and in,
+ * {@link OrganizationOidcConfiguration} for one an organization configures for itself. The client secret is never a field of a configuration: each
  * subtype says where its secret is held and who may read it. All subtypes share one id space and
  * one index; {@link #getType()} is the persisted discriminator the document is deserialized by.
  */
@@ -25,11 +25,11 @@ import java.util.Date;
 @NoArgsConstructor
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXISTING_PROPERTY, property = "type")
 @JsonSubTypes({
-        @JsonSubTypes.Type(value = PlatformOidcConfiguration.class, name = "PLATFORM"),
+        @JsonSubTypes.Type(value = OrgSignupOidcConfiguration.class, name = "ORG_SIGNUP"),
         @JsonSubTypes.Type(value = OrganizationOidcConfiguration.class, name = "ORGANIZATION")
 })
 public abstract sealed class OidcConfiguration implements Identifiable<String>
-        permits PlatformOidcConfiguration, OrganizationOidcConfiguration {
+        permits OrgSignupOidcConfiguration, OrganizationOidcConfiguration {
 
     private String id;
 

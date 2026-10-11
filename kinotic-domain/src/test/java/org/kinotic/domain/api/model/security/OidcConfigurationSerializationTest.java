@@ -21,21 +21,21 @@ class OidcConfigurationSerializationTest {
     private final JsonMapper jsonMapper = JsonMapper.builder().build();
 
     @Test
-    void platformConfigurationRoundTripsThroughBaseClassWithTypeDiscriminator() {
-        PlatformOidcConfiguration platform = new PlatformOidcConfiguration();
-        platform.setSecretNameRef("github-platform")
+    void orgSignupConfigurationRoundTripsThroughBaseClassWithTypeDiscriminator() {
+        OrgSignupOidcConfiguration social = new OrgSignupOidcConfiguration();
+        social.setSecretNameRef("github-platform")
                 .setName("GitHub")
                 .setProvider(OidcProviderKind.GITHUB)
                 .setClientId("client")
                 .setId("github-platform");
 
-        String json = jsonMapper.writeValueAsString(platform);
-        assertTrue(json.contains("\"type\":\"PLATFORM\""), "document must carry the discriminator: " + json);
+        String json = jsonMapper.writeValueAsString(social);
+        assertTrue(json.contains("\"type\":\"ORG_SIGNUP\""), "document must carry the discriminator: " + json);
 
         OidcConfiguration read = jsonMapper.readValue(json, OidcConfiguration.class);
-        PlatformOidcConfiguration readPlatform = assertInstanceOf(PlatformOidcConfiguration.class, read);
-        assertEquals("github-platform", readPlatform.getSecretNameRef());
-        assertEquals(OidcProviderKind.GITHUB, readPlatform.getProvider());
+        OrgSignupOidcConfiguration readSocial = assertInstanceOf(OrgSignupOidcConfiguration.class, read);
+        assertEquals("github-platform", readSocial.getSecretNameRef());
+        assertEquals(OidcProviderKind.GITHUB, readSocial.getProvider());
     }
 
     @Test

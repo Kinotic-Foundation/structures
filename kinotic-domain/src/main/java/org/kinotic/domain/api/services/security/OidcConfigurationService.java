@@ -6,13 +6,14 @@ import org.kinotic.domain.api.model.Organization;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.OidcProviderKind;
 import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
-import org.kinotic.domain.api.model.security.PlatformOidcConfiguration;
+import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
 
 import java.util.List;
 
 /**
- * The OIDC provider configurations of the platform and of its organizations. A write is held to its
- * kind's owner: a {@link PlatformOidcConfiguration} is saved or deleted by a system participant only,
+ * The OIDC provider configurations organizations sign up and in through: the curated social providers
+ * and each organization's own. A write is held to its kind's owner: an {@link OrgSignupOidcConfiguration}
+ * is saved or deleted by a system participant only,
  * an {@link OrganizationOidcConfiguration} by an organization participant of the organization it
  * names. The finders that serve the sign-in flows, which run before a participant is bound, check no
  * participant and say so.
@@ -20,25 +21,25 @@ import java.util.List;
 public interface OidcConfigurationService extends IdentifiableCrudService<OidcConfiguration, String> {
 
     /**
-     * Every enabled platform configuration — the source of the social button list rendered on
+     * Every enabled curated social provider — the source of the social button list rendered on
      * signup and login pages. Checks no participant.
      */
-    Future<List<PlatformOidcConfiguration>> findEnabledPlatformProviders();
+    Future<List<OrgSignupOidcConfiguration>> findEnabledOrgSignupProviders();
 
     /**
-     * The single enabled platform configuration of the given provider kind, or {@code null} when none
+     * The single enabled curated social provider of the given provider kind, or {@code null} when none
      * is configured, for the social-button start endpoints resolving the {@code :provider} path param.
      * Checks no participant.
      */
-    Future<PlatformOidcConfiguration> findEnabledPlatformByProvider(OidcProviderKind provider);
+    Future<OrgSignupOidcConfiguration> findEnabledOrgSignupByProvider(OidcProviderKind provider);
 
     /**
-     * The platform configuration {@code id}, enabled or not, or {@code null} when no platform
-     * configuration has that id, for the social callbacks. Checks no participant.
+     * The curated social provider {@code id}, enabled or not, or {@code null} when no
+     * {@link OrgSignupOidcConfiguration} has that id, for the social callbacks. Checks no participant.
      *
      * @param id the configuration id
      */
-    Future<PlatformOidcConfiguration> findPlatformById(String id);
+    Future<OrgSignupOidcConfiguration> findOrgSignupById(String id);
 
     /**
      * Fetches the given OIDC configurations in a single request, returning only those that

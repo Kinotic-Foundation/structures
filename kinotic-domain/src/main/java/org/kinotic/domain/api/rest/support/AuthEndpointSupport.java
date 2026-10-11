@@ -347,7 +347,7 @@ public abstract class AuthEndpointSupport {
 
         String returnPath = safeReturnPath(ctx.request().getParam("referer"));
 
-        oidcConfigurationService.findEnabledPlatformByProvider(providerKind)
+        oidcConfigurationService.findEnabledOrgSignupByProvider(providerKind)
               .compose(config -> {
                   if (config == null) {
                       respondError(ctx, 400, "Unknown or disabled platform provider: " + provider);

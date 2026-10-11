@@ -9,7 +9,7 @@ import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.OidcConfigurationType;
 import org.kinotic.domain.api.model.security.OidcProviderKind;
 import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
-import org.kinotic.domain.api.model.security.PlatformOidcConfiguration;
+import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
 import org.kinotic.domain.internal.api.services.CrudServiceTemplate;
 import org.springframework.stereotype.Component;
 
@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Every {@link OidcConfiguration} in one index, the platform's and the organizations' alike, told
+ * Every {@link OidcConfiguration} in one index, the curated social providers and the organizations' own alike, told
  * apart by the persisted {@code type} discriminator. The owner-specific finders filter on it, so a
  * lookup for one kind never answers with the other.
  */
@@ -33,33 +33,33 @@ public class OidcConfigurationRepository extends AbstractRepository<OidcConfigur
     }
 
     /**
-     * Every enabled platform configuration.
+     * Every enabled curated social provider.
      */
-    public Future<List<PlatformOidcConfiguration>> findEnabledPlatform() {
+    public Future<List<OrgSignupOidcConfiguration>> findEnabledOrgSignup() {
         return findAll(Pageable.ofSize(100), b -> b.query(composeFilter(
-                termFilter(TYPE_FIELD, OidcConfigurationType.PLATFORM.name()),
+                termFilter(TYPE_FIELD, OidcConfigurationType.ORG_SIGNUP.name()),
                 termFilter(ENABLED_FIELD, true))))
-                .map(page -> page.map(PlatformOidcConfiguration.class::cast))
+                .map(page -> page.map(OrgSignupOidcConfiguration.class::cast))
                 .map(Page::getContent);
     }
 
     /**
-     * The enabled platform configuration of the given provider kind, or {@code null} when there is none.
+     * The enabled curated social provider of the given provider kind, or {@code null} when there is none.
      */
-    public Future<PlatformOidcConfiguration> findEnabledPlatformByProvider(OidcProviderKind provider) {
+    public Future<OrgSignupOidcConfiguration> findEnabledOrgSignupByProvider(OidcProviderKind provider) {
         return findFirst(b -> b.query(composeFilter(
-                termFilter(TYPE_FIELD, OidcConfigurationType.PLATFORM.name()),
+                termFilter(TYPE_FIELD, OidcConfigurationType.ORG_SIGNUP.name()),
                 termFilter("provider", provider.key()),
                 termFilter(ENABLED_FIELD, true))))
-                .map(PlatformOidcConfiguration.class::cast);
+                .map(OrgSignupOidcConfiguration.class::cast);
     }
 
     /**
-     * The platform configuration {@code id}, enabled or not, or {@code null} when no platform
-     * configuration has that id.
+     * The curated social provider {@code id}, enabled or not, or {@code null} when no
+     * {@link OrgSignupOidcConfiguration} has that id.
      */
-    public Future<PlatformOidcConfiguration> findPlatformById(String id) {
-        return findById(id).map(config -> config instanceof PlatformOidcConfiguration platform ? platform : null);
+    public Future<OrgSignupOidcConfiguration> findOrgSignupById(String id) {
+        return findById(id).map(config -> config instanceof OrgSignupOidcConfiguration social ? social : null);
     }
 
     /**

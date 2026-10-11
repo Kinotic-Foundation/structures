@@ -34,7 +34,7 @@ const ENVIRONMENT_DIR = join(homedir(), '.kinotic', 'dev-environment')
 const MANAGEMENT_SERVER = 'kinotic-server-management'
 const SYSTEM_SERVER = 'kinotic-server-system'
 const APP_JSON = join(ENVIRONMENT_DIR, 'github-app.json')
-// The PlatformOidcConfiguration row id and secretNameRef seeded in V1__init.sql
+// The OrgSignupOidcConfiguration row id and secretNameRef seeded in V1__init.sql
 const SIGN_IN_CONFIG_ID = 'github-platform'
 // Organization the development migration seeds and its kinotic@kinotic.local user belongs to
 const DEFAULT_ORGANIZATION_ID = 'kinotic-test'

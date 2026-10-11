@@ -228,7 +228,7 @@ CREATE TABLE IF NOT EXISTS kinotic_identity_credential (
 );
 
 -- OIDC Configuration: every OIDC provider configuration (OidcConfiguration), discriminated by
--- type the way kinotic_participant_identity is. type=PLATFORM is a Kinotic-curated social
+-- type the way kinotic_participant_identity is. type=ORG_SIGNUP is a Kinotic-curated social
 -- provider (Google, Microsoft, GitHub) that powers the "Continue with X" buttons on org signup
 -- and email-first org login, belongs to no organization, is seeded below, and names its client
 -- secret in the platform's secret storage with secretNameRef. type=ORGANIZATION is a provider an
@@ -478,7 +478,7 @@ CREATE DATA STREAM kinotic_watch_event (type KEYWORD, id KEYWORD, scope KEYWORD,
 -- The OAuth client secret for each row is resolved at OAuth2-build time via
 -- SecretReferenceResolver — Azure Key Vault in prod (kinotic.domain.secretStorage.azure.vaultUrl)
 -- or KINOTIC_AKV_<uppercased,sanitized-secretNameRef> properties in dev. The secret name
--- here must match the AKV secret object name terraform creates. Only PLATFORM rows carry a
+-- here must match the AKV secret object name terraform creates. Only ORG_SIGNUP rows carry a
 -- secretNameRef; an ORGANIZATION row has none and cannot name a platform secret.
 --
 -- audience is intentionally not set: for these social providers (Google, Microsoft Entra
@@ -500,9 +500,9 @@ CREATE DATA STREAM kinotic_watch_event (type KEYWORD, id KEYWORD, scope KEYWORD,
 --   <apiBaseUrl>/api/auth/org/signup/social/callback/<id>
 --   <apiBaseUrl>/api/auth/invite/oidc/callback/<id>
 
-INSERT INTO kinotic_oidc_configuration (id, type, name, provider, clientId, secretNameRef, authority, enabled, created, updated) VALUES ('entra-platform', 'PLATFORM', 'Microsoft', 'azure-ad', 'f24706cc-55ff-4d17-b72c-11ddfa87966a', 'entra-platform', 'https://login.microsoftonline.com/common/v2.0', true, '2026-05-05', '2026-05-05') WITH REFRESH;
+INSERT INTO kinotic_oidc_configuration (id, type, name, provider, clientId, secretNameRef, authority, enabled, created, updated) VALUES ('entra-platform', 'ORG_SIGNUP', 'Microsoft', 'azure-ad', 'f24706cc-55ff-4d17-b72c-11ddfa87966a', 'entra-platform', 'https://login.microsoftonline.com/common/v2.0', true, '2026-05-05', '2026-05-05') WITH REFRESH;
 
-INSERT INTO kinotic_oidc_configuration (id, type, name, provider, clientId, secretNameRef, authority, enabled, created, updated) VALUES ('google-platform', 'PLATFORM', 'Google', 'google', '1018531658131-komame5nk0m59fkp4836b4hrci0r538r.apps.googleusercontent.com', 'google-platform', 'https://accounts.google.com', true, '2026-05-05', '2026-05-05') WITH REFRESH;
+INSERT INTO kinotic_oidc_configuration (id, type, name, provider, clientId, secretNameRef, authority, enabled, created, updated) VALUES ('google-platform', 'ORG_SIGNUP', 'Google', 'google', '1018531658131-komame5nk0m59fkp4836b4hrci0r538r.apps.googleusercontent.com', 'google-platform', 'https://accounts.google.com', true, '2026-05-05', '2026-05-05') WITH REFRESH;
 
 -- github-platform must be the kinotic-ai GitHub App's own OAuth credential — it signs
 -- users in AND verifies installation ownership at link time (see the Defense in Depth
@@ -512,4 +512,4 @@ INSERT INTO kinotic_oidc_configuration (id, type, name, provider, clientId, secr
 -- (install redirects go to the first callback URL) plus the URLs above; the
 -- "Email addresses: read-only" account permission. Scopes are inert for GitHub Apps.
 
-INSERT INTO kinotic_oidc_configuration (id, type, name, provider, clientId, secretNameRef, authority, authorizationUri, tokenUri, userInfoUri, userEmailsUri, scopes, enabled, created, updated) VALUES ('github-platform', 'PLATFORM', 'GitHub', 'github', 'Iv23liN1suytxICfhtOz', 'github-platform', 'https://github.com/login', 'https://github.com/login/oauth/authorize', 'https://github.com/login/oauth/access_token', 'https://api.github.com/user', 'https://api.github.com/user/emails', 'read:user user:email', true, '2026-08-01', '2026-08-01') WITH REFRESH;
+INSERT INTO kinotic_oidc_configuration (id, type, name, provider, clientId, secretNameRef, authority, authorizationUri, tokenUri, userInfoUri, userEmailsUri, scopes, enabled, created, updated) VALUES ('github-platform', 'ORG_SIGNUP', 'GitHub', 'github', 'Iv23liN1suytxICfhtOz', 'github-platform', 'https://github.com/login', 'https://github.com/login/oauth/authorize', 'https://github.com/login/oauth/access_token', 'https://api.github.com/user', 'https://api.github.com/user/emails', 'read:user user:email', true, '2026-08-01', '2026-08-01') WITH REFRESH;

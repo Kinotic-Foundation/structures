@@ -16,7 +16,7 @@ import lombok.experimental.Accessors;
 @Setter
 @Accessors(chain = true)
 @NoArgsConstructor
-public final class PlatformOidcConfiguration extends OidcConfiguration {
+public final class OrgSignupOidcConfiguration extends OidcConfiguration {
 
     /**
      * Name of the OAuth client secret in the platform's secret storage — the Azure Key Vault of
@@ -27,6 +27,6 @@ public final class PlatformOidcConfiguration extends OidcConfiguration {
 
     @Override
     public OidcConfigurationType getType() {
-        return OidcConfigurationType.PLATFORM;
+        return OidcConfigurationType.ORG_SIGNUP;
     }
 }
