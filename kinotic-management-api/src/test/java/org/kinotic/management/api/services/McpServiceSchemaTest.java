@@ -188,7 +188,7 @@ public class McpServiceSchemaTest {
         return ret;
     }
 
-    private static DefaultSchemaService schemaFactory() {
+    static DefaultSchemaService schemaFactory() {
         List<ResolvableTypeConverter> converters = List.of(new ArrayToC3Type(),
                                                            new BooleanToC3Type(),
                                                            new ByteToC3Type(),

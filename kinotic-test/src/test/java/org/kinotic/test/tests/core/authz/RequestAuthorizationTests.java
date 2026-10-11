@@ -19,6 +19,8 @@ import org.kinotic.domain.api.model.Application;
 import org.kinotic.domain.api.model.AuthzModelRevision;
 import org.kinotic.domain.api.model.AuthzStore;
 import org.kinotic.domain.api.model.ReconcileState;
+import org.kinotic.domain.api.model.persistence.EntityDefinition;
+import org.kinotic.domain.api.model.persistence.idl.decorators.MultiTenancyType;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 import org.kinotic.domain.api.model.security.participant.DefaultOrganizationParticipant;
 import org.kinotic.domain.api.repositories.AuthzStoreRepository;
@@ -27,9 +29,11 @@ import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.kinotic.management.api.model.Project;
 import org.kinotic.management.api.services.ApplicationService;
+import org.kinotic.management.api.services.EntityDefinitionService;
 import org.kinotic.management.api.services.ProjectService;
 import org.kinotic.management.api.services.security.PermissionService;
 import org.kinotic.test.support.kinotic.KinoticTestBase;
+import org.kinotic.test.support.sample.TestDataService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
@@ -55,6 +59,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class RequestAuthorizationTests extends KinoticTestBase {
 
     private static final String PROJECT_SERVICE = "management-api~org.kinotic.management.api.services.ProjectService";
+    private static final String ENTITY_DEFINITION_SERVICE = "management-api~org.kinotic.management.api.services.EntityDefinitionService";
     private static final String MEMBER_SERVICE = "management-api~org.kinotic.management.api.services.security.MemberService";
     private static final String PERMISSION_SERVICE = "management-api~org.kinotic.management.api.services.security.PermissionService";
     // the organization V2__kinotic_test_users seeds, and the user it names as the creator
@@ -69,6 +74,12 @@ public class RequestAuthorizationTests extends KinoticTestBase {
 
     @Autowired
     private ProjectService projectService;
+
+    @Autowired
+    private EntityDefinitionService entityDefinitionService;
+
+    @Autowired
+    private TestDataService testDataService;
 
     @Autowired
     private ParticipantIdentityService identityService;
@@ -127,6 +138,27 @@ public class RequestAuthorizationTests extends KinoticTestBase {
         assertRefused(PROJECT_SERVICE, "save", caller, List.of(nameless), "entity.id");
         // a listing across the organization is admitted by the zone alone and filtered to what the caller may see
         authorize(PROJECT_SERVICE, "findAll", caller, List.of(Map.of("pageNumber", 0, "pageSize", 10)));
+    }
+
+    @Test
+    public void anEditorOfAnEntityDefinitionPublishesItAndIsRefusedUnPublishingIt() throws Exception {
+        Application application = application();
+        EntityDefinition definition = definition(application, project(application));
+        UserParticipantIdentity sally = member();
+        await(runAsOrganization(() -> permissions.grant(new Subject(SubjectKind.USER, sally.getId()), "entity_definition.editor",
+                                                        new Resource(EntityDefinitionService.RESOURCE_TYPE, definition.getId()))));
+        Participant caller = participant(sally.getId(), Map.of());
+
+        authorize(ENTITY_DEFINITION_SERVICE, "publish", caller, List.of(definition.getId()));
+        // un-publishing drops the definition's rows, so it takes what deleting the definition takes
+        assertRefused(ENTITY_DEFINITION_SERVICE, "unPublish", caller, List.of(definition.getId()), "entity_definition_can_delete");
+        assertToolCallRefused(ENTITY_DEFINITION_SERVICE, "unPublish", caller, Map.of("entityDefinitionId", definition.getId()), "entity_definition_can_delete");
+        assertRefused(ENTITY_DEFINITION_SERVICE, "deleteById", caller, List.of(definition.getId()), "entity_definition_can_delete");
+
+        await(runAsOrganization(() -> permissions.grant(new Subject(SubjectKind.USER, sally.getId()), "entity_definition.admin",
+                                                        new Resource(EntityDefinitionService.RESOURCE_TYPE, definition.getId()))));
+        assertTrue(awaitUntil(() -> admitted(ENTITY_DEFINITION_SERVICE, "unPublish", caller, List.of(definition.getId()))),
+                   "the administrator of the definition never un-published it");
     }
 
     @Test
@@ -204,6 +236,17 @@ public class RequestAuthorizationTests extends KinoticTestBase {
         project.setOrganizationId(TEST_ORG_ID);
         project.setApplicationId(application.getId());
         return await(runAsOrganization(() -> projectService.createProjectIfNotExist(project)));
+    }
+
+    private EntityDefinition definition(Application application, Project project) throws Exception {
+        EntityDefinition definition = new EntityDefinition();
+        definition.setName("AuthorizedPerson" + suffix());
+        definition.setOrganizationId(TEST_ORG_ID);
+        definition.setApplicationId(application.getId());
+        definition.setProjectId(project.getId());
+        definition.setDescription("A person the request authorization test defines");
+        definition.setSchema(testDataService.createPersonSchema(MultiTenancyType.NONE, false));
+        return await(runAsOrganization(() -> entityDefinitionService.create(definition)));
     }
 
     private UserParticipantIdentity member() throws Exception {
