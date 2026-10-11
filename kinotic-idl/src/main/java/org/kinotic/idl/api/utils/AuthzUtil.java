@@ -98,7 +98,6 @@ public final class AuthzUtil {
     public static final String CAN_DELETE = "can_delete";
     /** The permissions of a definition's rows beside {@code can_edit} and {@code can_delete}. */
     public static final String CAN_READ = "can_read";
-    public static final String CAN_SEARCH = "can_search";
     public static final String CAN_CREATE = "can_create";
     /**
      * The permissions the platform's own services declare, beside the derived verbs: each named once here, so a
@@ -124,7 +123,7 @@ public final class AuthzUtil {
     public static final String CAN_VIEW_TELEMETRY = "can_view_telemetry";
     public static final String CAN_VIEW_WORKLOADS = "can_view_workloads";
     /** The permissions that only read, beside every {@code can_view_<something>}. */
-    private static final Set<String> READING = Set.of(CAN_VIEW, CAN_READ, CAN_SEARCH);
+    private static final Set<String> READING = Set.of(CAN_VIEW, CAN_READ);
 
     /** The longest relation name OpenFGA accepts; a typed permission name must fit it. */
     public static final int MAX_RELATION_NAME_LENGTH = 50;
@@ -191,7 +190,7 @@ public final class AuthzUtil {
     }
 
     /**
-     * Whether a permission only reads: {@code can_view}, {@code can_read}, {@code can_search} and every
+     * Whether a permission only reads: {@code can_view}, {@code can_read} and every
      * {@code can_view_<something>}; a viewer holds these and nothing else.
      */
     public static boolean isReading(String permission) {

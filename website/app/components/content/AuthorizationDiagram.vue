@@ -327,7 +327,7 @@ defineProps<{
       <path class="e" marker-end="url(#f4)" d="M800,308 H940 L990,299"/>
       <g class="chip perm"><rect x="818" y="298" width="79" height="20" rx="10"/><text x="857" y="312">can_create</text></g>
       <path class="e" marker-end="url(#f4)" d="M800,332 H940 L990,299"/>
-      <g class="chip perm"><rect x="818" y="322" width="79" height="20" rx="10"/><text x="857" y="336">can_search</text></g>
+      <g class="chip perm"><rect x="818" y="322" width="66" height="20" rx="10"/><text x="851" y="336">can_read</text></g>
       <text class="dm" x="610" y="372">VmNodeOrchestrationService on {nodeId}; ServiceDirectoryService on {entry…}</text>
       <text class="t" x="20" y="424">Checked on another type than the service's</text>
       <g class="box code"><rect x="20" y="438" width="190" height="102" rx="4"/>

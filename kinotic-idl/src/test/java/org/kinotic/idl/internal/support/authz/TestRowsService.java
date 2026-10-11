@@ -14,7 +14,7 @@ public interface TestRowsService {
     @AuthzCheck(resource = "tenant", permission = "can_read")
     CompletableFuture<String> findById(String entityDefinitionId, String id);
 
-    @AuthzCheck(resource = "tenant", permission = "can_search")
+    @AuthzCheck(resource = "tenant", permission = "can_read")
     CompletableFuture<Long> count(String entityDefinitionId);
 
 }

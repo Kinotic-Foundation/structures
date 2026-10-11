@@ -24,9 +24,9 @@ import java.util.List;
  * Created by Nic Padilla 🤪on 6/18/23.
  *
  * Every function is checked on the definition the request names, for the permission of its rows the function
- * needs: reading one needs {@code can_read}, listing, counting, querying and searching {@code can_search}, saving
+ * needs: reading, listing, counting, querying and searching need {@code can_read}, saving
  * {@code can_create}, updating {@code can_edit} and deleting {@code can_delete}. Deleting implies updating,
- * updating reading, and reading searching; creating stands alone. A tenant's user is checked on the
+ * and updating reading; creating stands alone. A tenant's user is checked on the
  * definition within its tenant, so a grant made on the tenant, on the definition, on the definition within the
  * tenant or on the application reaches it; a caller above every application is checked on the definition in
  * the platform's store.
@@ -65,7 +65,7 @@ public interface JsonEntitiesRepository {
      * @param participant the participant of the logged-in user
      * @return {@link Future} emitting the number of entities.
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_SEARCH, resourceId = "{entityDefinitionId}")
+    @AuthzCheck(permission = AuthzUtil.CAN_READ, resourceId = "{entityDefinitionId}")
     Future<Long> count(String entityDefinitionId, ScopedParticipant participant);
 
     /**
@@ -76,7 +76,7 @@ public interface JsonEntitiesRepository {
      * @param participant the participant of the logged-in user
      * @return {@link Future} emitting the number of entities.
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_SEARCH, resourceId = "{entityDefinitionId}")
+    @AuthzCheck(permission = AuthzUtil.CAN_READ, resourceId = "{entityDefinitionId}")
     Future<Long> countByQuery(String entityDefinitionId, String query, ScopedParticipant participant);
 
     /**
@@ -109,7 +109,7 @@ public interface JsonEntitiesRepository {
      * @param participant the participant of the logged-in user
      * @return a page of entities
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_SEARCH, resourceId = "{entityDefinitionId}")
+    @AuthzCheck(permission = AuthzUtil.CAN_READ, resourceId = "{entityDefinitionId}")
     Future<Page<FastestType>> findAll(String entityDefinitionId, Pageable pageable, ScopedParticipant participant);
 
     /**
@@ -120,7 +120,7 @@ public interface JsonEntitiesRepository {
      * @param participant the participant of the logged-in user
      * @return {@link Future} with the entity with the given id or {@link Future} emitting null if none found
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_READ, resourceId = "{entityDefinitionId}", implies = AuthzUtil.CAN_SEARCH)
+    @AuthzCheck(permission = AuthzUtil.CAN_READ, resourceId = "{entityDefinitionId}")
     Future<FastestType> findById(String entityDefinitionId, String id, ScopedParticipant participant);
 
     /**
@@ -131,7 +131,7 @@ public interface JsonEntitiesRepository {
      * @param participant the participant of the logged-in user
      * @return {@link Future} with the list of matched entities with the given ids or {@link Future} emitting an empty list if none found
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_READ, resourceId = "{entityDefinitionId}", implies = AuthzUtil.CAN_SEARCH)
+    @AuthzCheck(permission = AuthzUtil.CAN_READ, resourceId = "{entityDefinitionId}")
     Future<List<FastestType>> findByIds(String entityDefinitionId, List<String> ids, ScopedParticipant participant);
 
     /**
@@ -143,7 +143,7 @@ public interface JsonEntitiesRepository {
      * @param participant     the participant of the logged-in user
      * @return {@link Future} with the result of the query
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_SEARCH, resourceId = "{entityDefinitionId}")
+    @AuthzCheck(permission = AuthzUtil.CAN_READ, resourceId = "{entityDefinitionId}")
     Future<List<RawJson>> namedQuery(String entityDefinitionId,
                                      String queryName,
                                      List<QueryParameter> queryParameters,
@@ -159,7 +159,7 @@ public interface JsonEntitiesRepository {
      * @param participant     the participant of the logged-in user
      * @return {@link Future} with the result of the query
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_SEARCH, resourceId = "{entityDefinitionId}")
+    @AuthzCheck(permission = AuthzUtil.CAN_READ, resourceId = "{entityDefinitionId}")
     Future<Page<RawJson>> namedQueryPage(String entityDefinitionId,
                                          String queryName,
                                          List<QueryParameter> queryParameters,
@@ -189,7 +189,7 @@ public interface JsonEntitiesRepository {
      * @param participant the participant of the logged-in user
      * @return a {@link Future} of a page of entities
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_SEARCH, resourceId = "{entityDefinitionId}")
+    @AuthzCheck(permission = AuthzUtil.CAN_READ, resourceId = "{entityDefinitionId}")
     Future<Page<FastestType>> search(String entityDefinitionId, String searchText, Pageable pageable, ScopedParticipant participant);
 
     /**
