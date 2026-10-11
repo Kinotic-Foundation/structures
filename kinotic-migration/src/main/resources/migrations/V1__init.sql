@@ -236,11 +236,13 @@ CREATE TABLE IF NOT EXISTS kinotic_identity_credential (
 -- it be used" is expressed by inbound references — kinotic_organization.ssoConfigId for the org's
 -- SSO, kinotic_application.oidcConfigurationIds for application-level logins — and the row names
 -- no client secret: OidcConfigurationService.save(configuration, clientSecret) holds the secret in
--- the organization's scope of the secret storage (SecretStorageService), keyed by the row's id.
+-- the organization's scope of the secret storage (SecretStorageService), keyed by the row's id, and
+-- confidentialClient records that one is held.
 CREATE TABLE IF NOT EXISTS kinotic_oidc_configuration (
     id KEYWORD,
     type KEYWORD,
     organizationId KEYWORD,
+    confidentialClient BOOLEAN,
     name KEYWORD,
     provider KEYWORD,
     clientId KEYWORD NOT INDEXED,

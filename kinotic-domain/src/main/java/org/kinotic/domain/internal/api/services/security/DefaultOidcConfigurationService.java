@@ -172,10 +172,11 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
 
     @Override
     public Future<OrganizationOidcConfiguration> save(OrganizationOidcConfiguration configuration, String clientSecret) {
+        boolean confidential = StringUtils.isNotBlank(clientSecret);
         // saved first: a new configuration is given the id its secret is keyed by in beforeSave
-        return save(configuration).compose(saved -> {
+        return save(configuration.setConfidentialClient(confidential)).compose(saved -> {
             OrganizationOidcConfiguration owned = (OrganizationOidcConfiguration) saved;
-            Future<Void> stored = StringUtils.isNotBlank(clientSecret)
+            Future<Void> stored = confidential
                     ? secretStorageService.setSecret(owned.getOrganizationId(), owned.getId(), clientSecret)
                     : secretStorageService.deleteSecret(owned.getOrganizationId(), owned.getId());
             return stored.map(owned);
@@ -186,6 +187,8 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
     public Future<String> findClientSecret(OrganizationOidcConfiguration configuration) {
         Validate.notBlank(configuration.getId(), "The configuration has no id");
         Validate.notBlank(configuration.getOrganizationId(), "The configuration names no organization");
-        return secretStorageService.getSecret(configuration.getOrganizationId(), configuration.getId());
+        return configuration.isConfidentialClient()
+                ? secretStorageService.getSecret(configuration.getOrganizationId(), configuration.getId())
+                : Future.succeededFuture();
     }
 }

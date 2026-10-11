@@ -16,6 +16,7 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verifies where an organization's OIDC configuration keeps its client secret: given at save, it is read
@@ -35,10 +36,12 @@ public class OidcConfigurationSecretTests extends KinoticTestBase {
     @Test
     public void aConfigurationsSecretIsHeldForItsOrganizationAndNeverOnTheRow() throws Exception {
         OrganizationOidcConfiguration saved = await(runAsOrganization(() -> oidcConfigurations.save(provider("Acme Okta"), "acme-secret-1")));
+        assertTrue(saved.isConfidentialClient());
         assertEquals("acme-secret-1", await(oidcConfigurations.findClientSecret(saved)));
 
-        // what a client reads back is the row as persisted, which names nothing about the secret
+        // what a client reads back is the row as persisted, which says a secret is held and names nothing about it
         OrganizationOidcConfiguration read = await(oidcConfigurations.findById(saved.getId(), TEST_ORG_ID));
+        assertTrue(read.isConfidentialClient());
         String json = objectMapper.writeValueAsString(read);
         assertFalse(json.toLowerCase(Locale.ROOT).contains("secret"), json);
 
@@ -55,15 +58,17 @@ public class OidcConfigurationSecretTests extends KinoticTestBase {
         assertEquals("acme-secret-2", await(oidcConfigurations.findClientSecret(saved)));
 
         // null makes a public client, which can be given a secret again
-        await(runAsOrganization(() -> oidcConfigurations.save(read, null)));
-        assertNull(await(oidcConfigurations.findClientSecret(saved)));
-        await(runAsOrganization(() -> oidcConfigurations.save(read, "acme-secret-3")));
-        assertEquals("acme-secret-3", await(oidcConfigurations.findClientSecret(saved)));
+        OrganizationOidcConfiguration publicClient = await(runAsOrganization(() -> oidcConfigurations.save(read, null)));
+        assertFalse(publicClient.isConfidentialClient());
+        assertNull(await(oidcConfigurations.findClientSecret(publicClient)));
+        OrganizationOidcConfiguration confidentialAgain = await(runAsOrganization(() -> oidcConfigurations.save(read, "acme-secret-3")));
+        assertTrue(confidentialAgain.isConfidentialClient());
+        assertEquals("acme-secret-3", await(oidcConfigurations.findClientSecret(confidentialAgain)));
 
         // deleting the configuration deletes its secret
         await(runAsOrganization(() -> oidcConfigurations.deleteById(saved.getId())));
         assertNull(await(oidcConfigurations.findById(saved.getId(), TEST_ORG_ID)));
-        assertNull(await(oidcConfigurations.findClientSecret(saved)));
+        assertNull(await(oidcConfigurations.findClientSecret(confidentialAgain)));
     }
 
     private static OrganizationOidcConfiguration provider(String name) {

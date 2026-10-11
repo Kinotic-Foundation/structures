@@ -85,7 +85,8 @@ public interface OidcConfigurationService extends IdentifiableCrudService<OidcCo
      * Saves the configuration as {@link #save(Object)} does and makes {@code clientSecret} the secret it
      * sends its provider, replacing the one it had. The secret is held in the owning organization's scope
      * of the secret storage, keyed by the configuration's id, so it is never a field of the configuration
-     * and no other organization's configuration can read it. A sign-in through the configuration picks
+     * and no other organization's configuration can read it; the configuration's
+     * {@code confidentialClient} records whether one is held. A sign-in through the configuration picks
      * the new secret up on its next flow.
      *
      * @param configuration the configuration, owned by the caller's organization
@@ -96,8 +97,9 @@ public interface OidcConfigurationService extends IdentifiableCrudService<OidcCo
     Future<OrganizationOidcConfiguration> save(OrganizationOidcConfiguration configuration, String clientSecret);
 
     /**
-     * The client secret of {@code configuration}, or {@code null} for a public client. Reads the owning
-     * organization's scope of the secret storage only. Checks no participant.
+     * The client secret of {@code configuration}, or {@code null} for a public client, which the
+     * configuration's {@code confidentialClient} tells without a read of the secret storage. Reads the
+     * owning organization's scope of the secret storage only. Checks no participant.
      *
      * @param configuration the configuration as persisted, naming its organization
      */

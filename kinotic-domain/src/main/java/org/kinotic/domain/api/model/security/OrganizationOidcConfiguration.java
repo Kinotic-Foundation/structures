@@ -22,7 +22,8 @@ import org.kinotic.domain.api.model.OrganizationScoped;
  *
  * <p>The client secret is given to {@code OidcConfigurationService.save(configuration, clientSecret)}
  * and held in the owning organization's scope of the secret storage, keyed by the configuration's
- * id; nothing on the configuration names it, so a configuration read back carries no trace of it.
+ * id; nothing on the configuration names it, so a configuration read back carries only
+ * {@link #confidentialClient}, which says whether one is held.
  */
 @Getter
 @Setter
@@ -35,6 +36,14 @@ public final class OrganizationOidcConfiguration extends OidcConfiguration imple
      * enforces.
      */
     private String organizationId;
+
+    /**
+     * Whether a client secret is held for this configuration and sent on the code exchange, which
+     * OAuth 2.0 calls a confidential client; {@code false} for a public client. Set by
+     * {@code OidcConfigurationService.save(configuration, clientSecret)} from whether a secret was
+     * given, and kept as it is by a save of the configuration alone.
+     */
+    private boolean confidentialClient;
 
     @Override
     public OidcConfigurationType getType() {
