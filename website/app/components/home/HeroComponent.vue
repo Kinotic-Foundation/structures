@@ -116,7 +116,12 @@ onBeforeUnmount(() => {
 
     <div class="k-wrap hero__inner">
       <div class="hero__copy">
-        <div class="k-eyebrow" data-reveal>
+        <a href="#cloud-waitlist" class="hero__announcement" data-reveal>
+          <span class="k-livedot" />
+          <span>Kinotic OS Cloud is coming.</span>
+          <span class="hero__announcement-link">Join cloud waitlist ↗</span>
+        </a>
+        <div class="k-eyebrow hero__eyebrow" data-reveal>
           <span>KINOTIC OS</span>
         </div>
         <h1 class="k-heading hero__title" data-reveal>Prototype to production</h1>
@@ -260,6 +265,42 @@ onBeforeUnmount(() => {
 .hero__copy {
   flex: 1 1 440px;
   min-width: 380px;
+}
+
+.hero__announcement {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 8px 16px;
+  background: #0D2019;
+  border: 1px solid #244136;
+  border-radius: 20px;
+  color: var(--color-k-text);
+  font-size: 13px;
+  line-height: 1.6;
+  text-decoration: none;
+  transition: border-color 0.2s ease;
+}
+
+.hero__announcement:hover {
+  border-color: var(--color-k-mint);
+}
+
+.hero__announcement-link {
+  color: var(--color-k-mint);
+  font-family: var(--font-k-mono);
+  font-size: 12px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.hero__announcement:hover .hero__announcement-link {
+  color: var(--color-k-mint-hover);
+}
+
+.hero__eyebrow {
+  margin-top: 28px;
 }
 
 .hero__title {

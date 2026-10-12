@@ -6,7 +6,7 @@ This is the default Docus starter template that provides everything you need to 
 
 ## Kinotic OS Cloud waitlist
 
-The homepage announcement links to the closing signup form in `app/components/home/CtaComponent.vue`. The form posts directly to Waitlister, keeping the site compatible with static GitHub Pages hosting. Its `WAITLIST_URL` constant contains the public waitlist key; it is not a private account API credential.
+The homepage hero's announcement links to the closing signup form in `app/components/home/CtaComponent.vue`. The form posts directly to Waitlister, keeping the site compatible with static GitHub Pages hosting. Its `WAITLIST_URL` constant contains the public waitlist key; it is not a private account API credential.
 
 Before publishing, add `kinotic.ai` to **Settings → Whitelisted domains** in the Waitlister dashboard. Add `localhost` if you want to submit signups during local development, and whitelist any other host where the form will run. No deployment secret or backend route is required.
 
