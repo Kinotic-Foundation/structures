@@ -101,12 +101,12 @@ public class DefaultProjectService extends AbstractApplicationScopedService<Proj
                 : visibleIds().map(ids -> ids.contains(id) ? project : null));
     }
 
-    // What the caller may see: the projects it views, and those containing an entity definition it views, so a
+    // What the caller may see: the projects it reads, and those containing an entity definition it reads, so a
     // grant on an entity definition makes its project reachable
     private Future<Set<String>> visibleIds() {
         String organizationId = requireOrganizationId();
-        return Future.all(permissions.listAccessible(ProjectService.RESOURCE_TYPE, AuthzUtil.CAN_VIEW),
-                          permissions.listAccessible(EntityDefinitionService.RESOURCE_TYPE, AuthzUtil.CAN_VIEW)
+        return Future.all(permissions.listAccessible(ProjectService.RESOURCE_TYPE, AuthzUtil.CAN_READ),
+                          permissions.listAccessible(EntityDefinitionService.RESOURCE_TYPE, AuthzUtil.CAN_READ)
                                      .compose(ids -> entityDefinitionRepository.findProjectIdsOf(ids, organizationId)))
                      .map(visible -> {
                          Set<String> ret = new HashSet<>(visible.<Collection<String>>resultAt(0));

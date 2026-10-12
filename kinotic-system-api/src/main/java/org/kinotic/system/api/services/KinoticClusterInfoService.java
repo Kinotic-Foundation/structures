@@ -19,7 +19,7 @@ public interface KinoticClusterInfoService {
      * 
      * @return the information about the ignite structures cluster
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_VIEW_CLUSTER)
+    @AuthzCheck(permission = AuthzUtil.CAN_READ_CLUSTER)
     Future<KinoticClusterInfo> getClusterInfo();
 
 }

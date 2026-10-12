@@ -220,7 +220,7 @@ defineProps<{
       <path class="e" marker-end="url(#f3)" d="M375,144 V154"/>
       <text class="lbl" x="383" y="153">else</text>
       <g class="rung"><rect x="230" y="154" width="290" height="28" rx="14"/><text class="rn" x="246" y="173">3</text><text class="rm" x="262" y="173">the verb of the name</text></g>
-      <text class="d" x="230" y="200">find get count search list → can_view</text>
+      <text class="d" x="230" y="200">find get count search list → can_read</text>
       <text class="d" x="230" y="216">save update set create → can_edit</text>
       <text class="d" x="230" y="232">delete remove → can_delete</text>
       <text class="d" x="230" y="248">none → the service is refused</text>
@@ -277,7 +277,7 @@ defineProps<{
       </g>
       <g class="box model"><rect x="400" y="89" width="170" height="40" rx="4"/><text class="nm" x="485" y="106" text-anchor="middle">organization</text><text class="idt" x="485" y="121" text-anchor="middle">{@organizationId}</text></g>
       <path class="e" marker-end="url(#f4)" d="M210,94 H350 L400,109"/>
-      <g class="chip perm"><rect x="228" y="84" width="110" height="20" rx="10"/><text x="283" y="98">can_view_access</text></g>
+      <g class="chip perm"><rect x="228" y="84" width="110" height="20" rx="10"/><text x="283" y="98">can_read_access</text></g>
       <path class="e" marker-end="url(#f4)" d="M210,118 H350 L400,109"/>
       <g class="chip perm"><rect x="228" y="108" width="123" height="20" rx="10"/><text x="289" y="122">can_manage_access</text></g>
       <path class="e" marker-end="url(#f4)" d="M210,142 H350 L400,109"/>
@@ -297,7 +297,7 @@ defineProps<{
       <g class="chip perm"><rect x="818" y="108" width="142" height="20" rx="10"/><text x="889" y="122">can_manage_workloads</text></g>
       <path class="e" marker-end="url(#f4)" d="M800,142 H940 L990,109"/>
       <g class="chip perm"><rect x="818" y="132" width="142" height="20" rx="10"/><text x="889" y="146">can_manage_workloads</text></g>
-      <text class="dm" x="610" y="182">LogManager, with can_manage_cluster; the reads declare can_view_workloads</text>
+      <text class="dm" x="610" y="182">LogManager, with can_manage_cluster; the reads declare can_read_workloads</text>
       <text class="t" x="20" y="234">Derived from the verb and the id the function names</text>
       <g class="box code"><rect x="20" y="248" width="190" height="102" rx="4"/>
         <text class="ts" x="30" y="266">VmNodeService</text>
@@ -308,11 +308,11 @@ defineProps<{
       <g class="box model"><rect x="400" y="250" width="170" height="40" rx="4"/><text class="nm" x="485" y="267" text-anchor="middle">vm_node</text><text class="idt" x="485" y="282" text-anchor="middle">{nodeId}</text></g>
       <g class="box model"><rect x="400" y="300" width="170" height="40" rx="4"/><text class="nm" x="485" y="317" text-anchor="middle">platform</text><text class="idt" x="485" y="332" text-anchor="middle">kinotic</text></g>
       <path class="e" marker-end="url(#f4)" d="M210,284 H350 L400,270"/>
-      <g class="chip perm"><rect x="228" y="274" width="66" height="20" rx="10"/><text x="261" y="288">can_view</text></g>
+      <g class="chip perm"><rect x="228" y="274" width="66" height="20" rx="10"/><text x="261" y="288">can_read</text></g>
       <path class="e" marker-end="url(#f4)" d="M210,308 H350 L400,270"/>
       <g class="chip perm"><rect x="228" y="298" width="66" height="20" rx="10"/><text x="261" y="312">can_edit</text></g>
       <path class="e" marker-end="url(#f4)" d="M210,332 H350 L400,320"/>
-      <g class="chip perm"><rect x="228" y="322" width="116" height="20" rx="10"/><text x="286" y="336">vm_node_can_view</text></g>
+      <g class="chip perm"><rect x="228" y="322" width="116" height="20" rx="10"/><text x="286" y="336">vm_node_can_read</text></g>
       <text class="dm" x="20" y="372">ProjectService, ApplicationService, EntityDefinitionService: nothing declared</text>
       <text class="t" x="610" y="234">The object named per request, by a template</text>
       <g class="box code"><rect x="610" y="248" width="190" height="102" rx="4"/>
@@ -415,7 +415,7 @@ defineProps<{
       <text class="rl" x="62" y="120">project.editor</text>
       <rect class="ring" x="80" y="160" width="280" height="110" rx="10"/>
       <text class="rl" x="92" y="180">project.viewer</text>
-      <g class="chip perm"><rect x="150" y="215" width="116" height="20" rx="10"/><text x="208" y="229">project_can_view</text></g>
+      <g class="chip perm"><rect x="150" y="215" width="116" height="20" rx="10"/><text x="208" y="229">project_can_read</text></g>
       <text class="d" x="220" y="255" text-anchor="middle">every reading permission</text>
       <g class="chip perm"><rect x="150" y="274" width="116" height="20" rx="10"/><text x="208" y="288">project_can_edit</text></g>
       <g class="chip perm"><rect x="90" y="304" width="129" height="20" rx="10"/><text x="154" y="318">project_can_delete</text></g>
@@ -441,7 +441,7 @@ defineProps<{
       <g class="chip "><rect x="1030" y="44" width="123" height="20" rx="10"/><text x="1091" y="58">vm_node.registrar</text></g>
       <text class="dm" x="1042" y="84">can_register_node</text>
       <g class="chip "><rect x="1030" y="100" width="97" height="20" rx="10"/><text x="1078" y="114">vm_node.agent</text></g>
-      <text class="dm" x="1042" y="140">can_report · can_view</text>
+      <text class="dm" x="1042" y="140">can_report · can_read</text>
       <g class="chip "><rect x="1030" y="156" width="135" height="20" rx="10"/><text x="1097" y="170">application.runtime</text></g>
       <text class="dm" x="1042" y="196">can_register_services</text>
       <text class="d" x="1062" y="226">@AuthzRole on the service</text>
@@ -466,7 +466,7 @@ defineProps<{
       <g class="box model"><rect x="720" y="340" width="170" height="44" rx="4"/><text class="m" x="805" y="368" text-anchor="middle">project:p</text></g>
 
       <path class="e dash" d="M314,62 H330"/>
-      <text class="dm" x="310" y="58" text-anchor="end">role:r #project_can_view @user:*</text>
+      <text class="dm" x="310" y="58" text-anchor="end">role:r #project_can_read @user:*</text>
       <text class="dm" x="310" y="74" text-anchor="end">role:r #project_can_edit @user:*</text>
       <text class="d" x="310" y="91" text-anchor="end">the role bundles the permission</text>
 

@@ -117,7 +117,7 @@ public class SystemServiceSchemaTest {
         Assertions.assertEquals("can_edit", check(service, "verifyNode").getPermission());
         // a listing of nodes with room names none, so it is checked on the platform, which every node is on
         Assertions.assertEquals("platform:kinotic", check(service, "findAvailableNode").getResource() + ":" + check(service, "findAvailableNode").getResourceId());
-        Assertions.assertEquals("can_view", check(service, "findAvailableNode").getPermission());
+        Assertions.assertEquals("can_read", check(service, "findAvailableNode").getPermission());
     }
 
     @Test
@@ -136,7 +136,7 @@ public class SystemServiceSchemaTest {
         // the record functions a workload service inherits are checked on the platform: the reads with the permission
         // their redeclaration names, the writes with the service's
         ServiceDefinition workloads = service(namespaceDefinition, "WorkloadService");
-        Assertions.assertEquals("platform_can_view_workloads", check(workloads, "findById").getPermissionResource() + "_" + check(workloads, "findById").getPermission());
+        Assertions.assertEquals("platform_can_read_workloads", check(workloads, "findById").getPermissionResource() + "_" + check(workloads, "findById").getPermission());
         Assertions.assertEquals("can_manage_workloads", check(workloads, "deleteById").getPermission());
         Assertions.assertEquals("can_manage_workloads", check(workloads, "save").getPermission());
         Assertions.assertEquals("can_manage_workloads", check(workloads, "syncIndex").getPermission());
@@ -148,8 +148,8 @@ public class SystemServiceSchemaTest {
         // a read of one organization is checked on it, a read across them on the platform
         ServiceDefinition organizations = service(namespaceDefinition, "SystemOrganizationService");
         Assertions.assertEquals("organization:{organizationId}", check(organizations, "findApplications").getResource() + ":" + check(organizations, "findApplications").getResourceId());
-        Assertions.assertEquals("can_view", check(organizations, "findApplications").getPermission());
-        Assertions.assertEquals("can_view_members", check(organizations, "findMembers").getPermission());
+        Assertions.assertEquals("can_read", check(organizations, "findApplications").getPermission());
+        Assertions.assertEquals("can_read_members", check(organizations, "findMembers").getPermission());
         Assertions.assertEquals("platform:kinotic", check(organizations, "findOrganizations").getResource() + ":" + check(organizations, "findOrganizations").getResourceId());
         Assertions.assertEquals("organization", check(organizations, "findOrganizations").getPermissionResource());
     }

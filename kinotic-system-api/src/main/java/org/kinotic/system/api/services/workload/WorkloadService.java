@@ -14,7 +14,7 @@ import org.kinotic.management.api.model.workload.Workload;
 /**
  * The workload records as the console reads and manages them: every run deployed across the
  * cluster, its record kept after the run ends, listed by node and read back with its history.
- * Every function is checked on the platform: reading a record needs {@code can_view_workloads},
+ * Every function is checked on the platform: reading a record needs {@code can_read_workloads},
  * writing one {@code can_manage_workloads}.
  */
 @Publish
@@ -22,19 +22,19 @@ import org.kinotic.management.api.model.workload.Workload;
 public interface WorkloadService extends IdentifiableCrudService<Workload, String> {
 
     @Override
-    @AuthzCheck(permission = AuthzUtil.CAN_VIEW_WORKLOADS)
+    @AuthzCheck(permission = AuthzUtil.CAN_READ_WORKLOADS)
     Future<Workload> findById(String id);
 
     @Override
-    @AuthzCheck(permission = AuthzUtil.CAN_VIEW_WORKLOADS)
+    @AuthzCheck(permission = AuthzUtil.CAN_READ_WORKLOADS)
     Future<Long> count();
 
     @Override
-    @AuthzCheck(permission = AuthzUtil.CAN_VIEW_WORKLOADS)
+    @AuthzCheck(permission = AuthzUtil.CAN_READ_WORKLOADS)
     Future<Page<Workload>> findAll(Pageable pageable);
 
     @Override
-    @AuthzCheck(permission = AuthzUtil.CAN_VIEW_WORKLOADS)
+    @AuthzCheck(permission = AuthzUtil.CAN_READ_WORKLOADS)
     Future<Page<Workload>> search(String searchText, Pageable pageable);
 
     // CrudService declares syncIndex an edit, which only a redeclaration overrides
@@ -48,7 +48,7 @@ public interface WorkloadService extends IdentifiableCrudService<Workload, Strin
      * @param pageable the page to return
      * @return a future that will complete with a page of workloads
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_VIEW_WORKLOADS)
+    @AuthzCheck(permission = AuthzUtil.CAN_READ_WORKLOADS)
     Future<Page<Workload>> findAllForNode(String nodeId, Pageable pageable);
 
     /**
@@ -59,7 +59,7 @@ public interface WorkloadService extends IdentifiableCrudService<Workload, Strin
      * @return a future that will complete with a page of ledger entries, empty when the workload does
      * not exist
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_VIEW_WORKLOADS)
+    @AuthzCheck(permission = AuthzUtil.CAN_READ_WORKLOADS)
     Future<Page<WatchEvent>> findHistory(String workloadId, Pageable pageable);
 
 }

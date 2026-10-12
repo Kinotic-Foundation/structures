@@ -42,7 +42,7 @@ public interface AdminJsonEntitiesRepository {
      * @param participant the participant of the logged-in user
      * @return {@link Future} emitting the number of entities.
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_READ, resourceId = "{entityDefinitionId}")
+    @AuthzCheck(resourceId = "{entityDefinitionId}")
     Future<Long> count(String entityDefinitionId, List<String> tenantSelection, ScopedParticipant participant);
 
     /**
@@ -54,7 +54,7 @@ public interface AdminJsonEntitiesRepository {
      * @param participant the participant of the logged-in user
      * @return {@link Future} emitting the number of entities.
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_READ, resourceId = "{entityDefinitionId}")
+    @AuthzCheck(resourceId = "{entityDefinitionId}")
     Future<Long> countByQuery(String entityDefinitionId, String query, List<String> tenantSelection, ScopedParticipant participant);
 
     /**
@@ -89,7 +89,7 @@ public interface AdminJsonEntitiesRepository {
      * @param participant the participant of the logged-in user
      * @return a page of entities
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_READ, resourceId = "{entityDefinitionId}")
+    @AuthzCheck(resourceId = "{entityDefinitionId}")
     Future<Page<FastestType>> findAll(String entityDefinitionId, List<String> tenantSelection, Pageable pageable, ScopedParticipant participant);
 
     /**
@@ -100,7 +100,7 @@ public interface AdminJsonEntitiesRepository {
      * @param participant the participant of the logged-in user
      * @return {@link Future} with the entity with the given id or {@link Future} emitting null if none found
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_READ, resourceId = "{entityDefinitionId}")
+    @AuthzCheck(resourceId = "{entityDefinitionId}")
     Future<FastestType> findById(String entityDefinitionId, TenantSpecificId id, ScopedParticipant participant);
 
     /**
@@ -111,7 +111,7 @@ public interface AdminJsonEntitiesRepository {
      * @param participant the participant of the logged-in user
      * @return {@link Future} with the list of matched entities with the given ids or {@link Future} emitting an empty list if none found
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_READ, resourceId = "{entityDefinitionId}")
+    @AuthzCheck(resourceId = "{entityDefinitionId}")
     Future<List<FastestType>> findByIds(String entityDefinitionId, List<TenantSpecificId> ids, ScopedParticipant participant);
 
     /**
@@ -162,7 +162,7 @@ public interface AdminJsonEntitiesRepository {
      * @param participant the participant of the logged-in user
      * @return a {@link Future} of a page of entities
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_READ, resourceId = "{entityDefinitionId}")
+    @AuthzCheck(resourceId = "{entityDefinitionId}")
     Future<Page<FastestType>> search(String entityDefinitionId, String searchText, List<String> tenantSelection, Pageable pageable, ScopedParticipant participant);
 
 }

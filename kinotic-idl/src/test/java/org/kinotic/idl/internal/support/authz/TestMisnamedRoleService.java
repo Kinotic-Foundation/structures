@@ -8,7 +8,7 @@ import java.util.concurrent.CompletableFuture;
 /**
  * A resource service declaring a role not named after its type.
  */
-@AuthzResource(value = "widget", roles = @AuthzRole(id = "gadget.keeper", permissions = "can_view"))
+@AuthzResource(value = "widget", roles = @AuthzRole(id = "gadget.keeper", permissions = "can_read"))
 public interface TestMisnamedRoleService {
 
     CompletableFuture<Void> find(String id);

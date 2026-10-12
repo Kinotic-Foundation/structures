@@ -34,14 +34,14 @@ public interface PermissionService {
      * The permissions a role may bundle, by resource type: the model names of every permission the platform's
      * services declare, such as {@code project_can_edit} under {@code project}.
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_VIEW_ACCESS)
+    @AuthzCheck(permission = AuthzUtil.CAN_READ_ACCESS)
     Future<Map<String, Set<String>>> findPermissions();
 
     /**
      * Every role a grant can name: the built-in roles the model defines, then the organization's custom roles,
      * each with the permissions it bundles.
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_VIEW_ACCESS)
+    @AuthzCheck(permission = AuthzUtil.CAN_READ_ACCESS)
     Future<List<RoleDefinition>> findRoles();
 
     /**
@@ -69,7 +69,7 @@ public interface PermissionService {
      *
      * @param pageable the page to return
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_VIEW_ACCESS)
+    @AuthzCheck(permission = AuthzUtil.CAN_READ_ACCESS)
     Future<Page<Group>> findGroups(Pageable pageable);
 
     /**
@@ -95,7 +95,7 @@ public interface PermissionService {
      *
      * @param groupId the group
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_VIEW_ACCESS)
+    @AuthzCheck(permission = AuthzUtil.CAN_READ_ACCESS)
     Future<List<UserParticipantIdentity>> findGroupMembers(String groupId);
 
     /**
@@ -144,14 +144,14 @@ public interface PermissionService {
      *
      * @param resource the resource
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_VIEW_ACCESS)
+    @AuthzCheck(permission = AuthzUtil.CAN_READ_ACCESS)
     Future<List<Grant>> findGrants(Resource resource);
 
     /**
      * The resources of a type the caller holds a permission on, through any grant that reaches them.
      *
      * @param type       the resource type
-     * @param permission the permission's short name, such as {@code can_view}
+     * @param permission the permission's short name, such as {@code can_read}
      * @return the ids of the resources
      */
     @AuthzUnchecked
@@ -164,6 +164,6 @@ public interface PermissionService {
      * @param permission the permission's short name, such as {@code can_edit}
      * @param resource   the resource
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_VIEW_ACCESS)
+    @AuthzCheck(permission = AuthzUtil.CAN_READ_ACCESS)
     Future<AccessExplanation> explain(Subject subject, String permission, Resource resource);
 }

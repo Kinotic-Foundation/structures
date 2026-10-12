@@ -100,14 +100,14 @@ public class DefaultApplicationService extends AbstractOrganizationScopedService
         return visibleIds().compose(ids -> scopedRepository.search(searchText, requireOrganizationId(), ids, pageable));
     }
 
-    // What the caller may see: the applications it views, and those containing a project or an entity
-    // definition it views, so a grant anywhere inside an application makes the application reachable
+    // What the caller may see: the applications it reads, and those containing a project or an entity
+    // definition it reads, so a grant anywhere inside an application makes the application reachable
     private Future<Set<String>> visibleIds() {
         String organizationId = requireOrganizationId();
-        return Future.all(permissions.listAccessible(AuthzUtil.APPLICATION_TYPE, AuthzUtil.CAN_VIEW),
-                          permissions.listAccessible(ProjectService.RESOURCE_TYPE, AuthzUtil.CAN_VIEW)
+        return Future.all(permissions.listAccessible(AuthzUtil.APPLICATION_TYPE, AuthzUtil.CAN_READ),
+                          permissions.listAccessible(ProjectService.RESOURCE_TYPE, AuthzUtil.CAN_READ)
                                      .compose(ids -> projectRepository.findApplicationIdsOf(ids, organizationId)),
-                          permissions.listAccessible(EntityDefinitionService.RESOURCE_TYPE, AuthzUtil.CAN_VIEW)
+                          permissions.listAccessible(EntityDefinitionService.RESOURCE_TYPE, AuthzUtil.CAN_READ)
                                      .compose(ids -> entityDefinitionRepository.findApplicationIdsOf(ids, organizationId)))
                      .map(visible -> {
                          Set<String> ret = new HashSet<>();

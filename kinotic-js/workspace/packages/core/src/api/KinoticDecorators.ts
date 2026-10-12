@@ -36,7 +36,7 @@ export interface AuthzRoleDeclaration {
 export interface AuthzResourceDeclaration {
     /**
      * The resource type, a single lowercase identifier such as `report`: it names the type in the model, prefixes
-     * the type's permissions (`report_can_view`) and roles (`report.editor`), and is the type of the resource every
+     * the type's permissions (`report_can_read`) and roles (`report.editor`), and is the type of the resource every
      * function is checked on unless the function names another with {@link AuthzCheck}.
      */
     value: string
@@ -85,7 +85,7 @@ export interface AuthzCheckDeclaration {
     resourceId?: string | null
     /**
      * Short names of permissions on the same type that this permission also grants, so a role bundling
-     * `can_generate` declared with `implies: ['can_view']` views what it generates.
+     * `can_generate` declared with `implies: ['can_read']` reads what it generates.
      */
     implies?: string[] | null
     /**
@@ -264,15 +264,15 @@ function resolveEffectiveZone(constructor: Function): string | null {
  * function served with no check. A function left with no check and no marker fails the service's registration.
  *
  * The permission is derived from the first word of the function's name: `find`, `get`, `count`, `search` and
- * `list` need `can_view`; `save`, `update` and `set` need `can_edit`; `delete` and `remove` need `can_delete`;
+ * `list` need `can_read`; `save`, `update` and `set` need `can_edit`; `delete` and `remove` need `can_delete`;
  * `create` needs `can_edit` of this type on the parent. The resource's id is the parameter named `id` or
  * `<type>Id` (`reportId` for the type `report`), else the `id` of the first object parameter; a function with
  * neither is checked on the parent, whose id is found the same way with the parent's name, else on the caller's
  * own scope.
  *
  * Example: with `@AuthzResource({value: 'report', parent: 'tenant'})`, `findById(id: string)` is checked for
- * `report_can_view` on the report `id` names, `save(report: Report)` for `report_can_edit` on the report
- * `report.id` names, and `findReports()` for `report_can_view` on the caller's tenant, with nothing declared on
+ * `report_can_read` on the report `id` names, `save(report: Report)` for `report_can_edit` on the report
+ * `report.id` names, and `findReports()` for `report_can_read` on the caller's tenant, with nothing declared on
  * them. A runtime holding no definition for a service declaring a resource refuses to serve it.
  * @param declaration the resource type, or the type with its parent, resource id, permission and roles
  */

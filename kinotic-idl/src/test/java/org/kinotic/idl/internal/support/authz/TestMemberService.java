@@ -15,7 +15,7 @@ import java.util.concurrent.CompletableFuture;
 @AuthzResource(value = "organization", resourceId = "{@organizationId}")
 public interface TestMemberService {
 
-    @AuthzCheck(permission = "can_view_members")
+    @AuthzCheck(permission = "can_read_members")
     CompletableFuture<List<TestProject>> findMembers(Integer limit);
 
     @AuthzCheck(permission = "can_manage_members")
@@ -27,7 +27,7 @@ public interface TestMemberService {
     @AuthzCheck(permission = "can_manage_members", consistent = true)
     CompletableFuture<Void> removeMember(String memberId);
 
-    @AuthzCheck(permission = "can_view", resourceId = "{projectId}", resource = "project")
+    @AuthzCheck(permission = "can_read", resourceId = "{projectId}", resource = "project")
     CompletableFuture<TestProject> findProject(String projectId);
 
     @AuthzUnchecked

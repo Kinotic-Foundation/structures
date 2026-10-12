@@ -41,7 +41,7 @@ public class CheckDerivationTest {
                 function("findById", null, "reportId"),
                 function("generate", new AuthzCheckC3Decorator().setPermission("can_generate").setConsistent(true), "reportId", "options"),
                 function("ping", new AuthzCheckC3Decorator().setUnchecked(true)),
-                function("archive", new AuthzCheckC3Decorator().setPermission("can_archive").setResource("tenant").setImplies(List.of("can_view")), "arg0", "tags"));
+                function("archive", new AuthzCheckC3Decorator().setPermission("can_archive").setResource("tenant").setImplies(List.of("can_read")), "arg0", "tags"));
 
         ServiceDefinition service = schemaService.deriveChecks(declared);
 
@@ -54,10 +54,10 @@ public class CheckDerivationTest {
 
         // a listing names no report, so it is checked on the caller's tenant
         assertEquals("tenant:{@tenantId}", at(check(service, "findReports")));
-        assertEquals("report_can_view", permission(check(service, "findReports")));
+        assertEquals("report_can_read", permission(check(service, "findReports")));
         // the parameter named for the type is the report's id
         assertEquals("report:{reportId}", at(check(service, "findById")));
-        assertEquals("can_view", check(service, "findById").getPermission());
+        assertEquals("can_read", check(service, "findById").getPermission());
         assertEquals("report:{reportId}", at(check(service, "generate")));
         assertEquals("report_can_generate", permission(check(service, "generate")));
         assertTrue(check(service, "generate").isConsistent());
@@ -67,7 +67,7 @@ public class CheckDerivationTest {
         // a check on the parent is the type's permission within it
         assertEquals("tenant:{@tenantId}", at(check(service, "archive")));
         assertEquals("report_can_archive", permission(check(service, "archive")));
-        assertEquals(List.of("can_view"), check(service, "archive").getImplies());
+        assertEquals(List.of("can_read"), check(service, "archive").getImplies());
         // the function's types are kept as declared
         FunctionDefinition generate = function(service, "generate");
         assertEquals(List.of("reportId", "options"), generate.getParameters().stream().map(p -> p.getName()).toList());
@@ -106,7 +106,7 @@ public class CheckDerivationTest {
         assertEquals("tenant:{@tenantId}", at(generate));
         assertEquals("report_can_generate", permission(generate));
         assertFalse(generate.isConsistent());
-        assertEquals("report_can_view", permission(check(service, "findReports")));
+        assertEquals("report_can_read", permission(check(service, "findReports")));
     }
 
     @Test
@@ -141,7 +141,7 @@ public class CheckDerivationTest {
     public void aRoleNotNamedAfterTheTypeIsRefused() {
         ServiceDefinition service = reports();
         service.findDecorator(AuthzResourceC3Decorator.class)
-               .setRoles(List.of(new AuthzRoleDeclaration().setId("invoice.reader").setPermissions(List.of("can_view"))));
+               .setRoles(List.of(new AuthzRoleDeclaration().setId("invoice.reader").setPermissions(List.of("can_read"))));
 
         assertTrue(assertThrows(IllegalStateException.class, () -> schemaService.deriveChecks(service)).getMessage().contains("report."));
     }

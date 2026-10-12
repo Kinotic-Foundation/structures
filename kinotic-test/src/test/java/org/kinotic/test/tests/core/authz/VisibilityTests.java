@@ -51,9 +51,9 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Verifies the listings show a member what it may see and nothing else: an application the member views or one
- * containing a project or an entity definition it views, and the projects it views or those containing an
- * entity definition it views. What is hidden is absent from a listing and answered as not found by id, and the
+ * Verifies the listings show a member what it may see and nothing else: an application the member reads or one
+ * containing a project or an entity definition it reads, and the projects it reads or those containing an
+ * entity definition it reads. What is hidden is absent from a listing and answered as not found by id, and the
  * organization's administrator sees everything.
  */
 @SpringBootTest

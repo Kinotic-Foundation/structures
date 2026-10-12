@@ -124,10 +124,10 @@ public class RequestAuthorizationTests extends KinoticTestBase {
         assertRefused(PROJECT_SERVICE, "save", caller, List.of(b), "project:" + DomainUtil.authzId(ProjectService.RESOURCE_TYPE, TEST_ORG_ID, b.getId()));
         assertToolCallRefused(PROJECT_SERVICE, "save", caller, Map.of("entity", b), "project:" + DomainUtil.authzId(ProjectService.RESOURCE_TYPE, TEST_ORG_ID, b.getId()));
 
-        // editing implies viewing, and a declared permission is checked on the project the argument names
+        // editing implies reading, and a declared permission is checked on the project the argument names
         authorize(PROJECT_SERVICE, "findDependencies", caller, List.of(a.getId()));
         authorize(PROJECT_SERVICE, "retryRepoInitialization", caller, List.of(a.getId()));
-        assertRefused(PROJECT_SERVICE, "findDependencies", caller, List.of(b.getId()), "project_can_view");
+        assertRefused(PROJECT_SERVICE, "findDependencies", caller, List.of(b.getId()), "project_can_read");
         // a read by id is admitted unchecked: the service answers it by what the caller may see
         authorize(PROJECT_SERVICE, "findById", caller, List.of(b.getId()));
         // an editor does not delete
@@ -183,7 +183,7 @@ public class RequestAuthorizationTests extends KinoticTestBase {
         assertRefused(MEMBER_SERVICE, "findMembers", caller, listing, "organization:" + TEST_ORG_ID);
 
         // a listing of the caller's own access is admitted by the zone alone
-        authorize(PERMISSION_SERVICE, "listAccessible", caller, List.of(ProjectService.RESOURCE_TYPE, AuthzUtil.CAN_VIEW));
+        authorize(PERMISSION_SERVICE, "listAccessible", caller, List.of(ProjectService.RESOURCE_TYPE, AuthzUtil.CAN_READ));
 
         await(runAsOrganization(() -> permissions.grant(new Subject(SubjectKind.USER, member.getId()), "organization.viewer",
                                                         new Resource(AuthzUtil.ORGANIZATION_TYPE, TEST_ORG_ID))));

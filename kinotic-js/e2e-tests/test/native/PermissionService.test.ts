@@ -49,12 +49,12 @@ describe('Kinotic JS', () => {
 
     it('defines a custom role from the catalog and deletes it once unused', async () => {
         const saved = await Kinotic.permissions.saveRole({id: null, name: 'Release Manager e2e', description: 'ships projects',
-                                                          builtIn: false, permissions: ['project_can_edit', 'project_can_view']})
+                                                          builtIn: false, permissions: ['project_can_edit', 'project_can_read']})
         expect(saved.id).toBeTruthy()
         expect(saved.builtIn).toBe(false)
         try {
             const listed = (await Kinotic.permissions.findRoles()).find(role => role.id === saved.id) as RoleDefinition
-            expect(listed.permissions.sort()).toEqual(['project_can_edit', 'project_can_view'])
+            expect(listed.permissions.sort()).toEqual(['project_can_edit', 'project_can_read'])
 
             // a permission the model does not have is refused
             await expect(Kinotic.permissions.saveRole({...saved, permissions: ['project_can_fly']})).rejects.toThrow()
@@ -78,9 +78,9 @@ describe('Kinotic JS', () => {
             try {
                 // the listing reaches up to the organization, where the fixture administrator's grant is
                 expect((await Kinotic.permissions.findGrants(onProject)).filter(listed => listed.resource.id === onProject.id)).toEqual([grant])
-                const views = await Kinotic.permissions.explain(sally, 'can_view', onProject)
-                expect(views.allowed).toBe(true)
-                expect(views.through).toEqual([grant])
+                const reads = await Kinotic.permissions.explain(sally, 'can_read', onProject)
+                expect(reads.allowed).toBe(true)
+                expect(reads.through).toEqual([grant])
                 const edits = await Kinotic.permissions.explain(sally, 'can_edit', onProject)
                 expect(edits.allowed).toBe(false)
 
@@ -89,7 +89,7 @@ describe('Kinotic JS', () => {
             } finally {
                 await Kinotic.permissions.revoke(onProject, grant.id)
             }
-            expect((await Kinotic.permissions.explain(sally, 'can_view', onProject)).allowed).toBe(false)
+            expect((await Kinotic.permissions.explain(sally, 'can_read', onProject)).allowed).toBe(false)
             await Kinotic.permissions.removeGroupMember(savedGroup.id!, SALLY_ID)
         } finally {
             await Kinotic.permissions.deleteGroup(savedGroup.id!).catch(() => undefined)
@@ -98,6 +98,6 @@ describe('Kinotic JS', () => {
 
     it('lists what the caller holds', async () => {
         // the administrator holds everything in the organization, the project included
-        expect(await Kinotic.permissions.listAccessible('project', 'can_view')).toContain(project.id)
+        expect(await Kinotic.permissions.listAccessible('project', 'can_read')).toContain(project.id)
     })
 })

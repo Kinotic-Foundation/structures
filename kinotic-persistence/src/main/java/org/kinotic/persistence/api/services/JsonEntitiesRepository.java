@@ -55,7 +55,7 @@ public interface JsonEntitiesRepository {
      * @param participant the participant of the logged-in user
      * @return {@link Future} that will complete when all entities have been saved
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_EDIT, resourceId = "{entityDefinitionId}", implies = AuthzUtil.CAN_READ)
+    @AuthzCheck(permission = AuthzUtil.CAN_EDIT, resourceId = "{entityDefinitionId}")
     Future<Void> bulkUpdate(String entityDefinitionId, TokenBuffer entities, ScopedParticipant participant);
 
     /**
@@ -65,7 +65,7 @@ public interface JsonEntitiesRepository {
      * @param participant the participant of the logged-in user
      * @return {@link Future} emitting the number of entities.
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_READ, resourceId = "{entityDefinitionId}")
+    @AuthzCheck(resourceId = "{entityDefinitionId}")
     Future<Long> count(String entityDefinitionId, ScopedParticipant participant);
 
     /**
@@ -76,7 +76,7 @@ public interface JsonEntitiesRepository {
      * @param participant the participant of the logged-in user
      * @return {@link Future} emitting the number of entities.
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_READ, resourceId = "{entityDefinitionId}")
+    @AuthzCheck(resourceId = "{entityDefinitionId}")
     Future<Long> countByQuery(String entityDefinitionId, String query, ScopedParticipant participant);
 
     /**
@@ -87,7 +87,7 @@ public interface JsonEntitiesRepository {
      * @param participant the participant of the logged-in user
      * @return {@link Future} emitting when delete is complete
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_DELETE, resourceId = "{entityDefinitionId}", implies = AuthzUtil.CAN_EDIT)
+    @AuthzCheck(permission = AuthzUtil.CAN_DELETE, resourceId = "{entityDefinitionId}")
     Future<Void> deleteById(String entityDefinitionId, String id, ScopedParticipant participant);
 
     /**
@@ -98,7 +98,7 @@ public interface JsonEntitiesRepository {
      * @param participant the participant of the logged-in user
      * @return {@link Future} emitting when delete is complete
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_DELETE, resourceId = "{entityDefinitionId}", implies = AuthzUtil.CAN_EDIT)
+    @AuthzCheck(permission = AuthzUtil.CAN_DELETE, resourceId = "{entityDefinitionId}")
     Future<Void> deleteByQuery(String entityDefinitionId, String query, ScopedParticipant participant);
 
     /**
@@ -109,7 +109,7 @@ public interface JsonEntitiesRepository {
      * @param participant the participant of the logged-in user
      * @return a page of entities
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_READ, resourceId = "{entityDefinitionId}")
+    @AuthzCheck(resourceId = "{entityDefinitionId}")
     Future<Page<FastestType>> findAll(String entityDefinitionId, Pageable pageable, ScopedParticipant participant);
 
     /**
@@ -120,7 +120,7 @@ public interface JsonEntitiesRepository {
      * @param participant the participant of the logged-in user
      * @return {@link Future} with the entity with the given id or {@link Future} emitting null if none found
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_READ, resourceId = "{entityDefinitionId}")
+    @AuthzCheck(resourceId = "{entityDefinitionId}")
     Future<FastestType> findById(String entityDefinitionId, String id, ScopedParticipant participant);
 
     /**
@@ -131,7 +131,7 @@ public interface JsonEntitiesRepository {
      * @param participant the participant of the logged-in user
      * @return {@link Future} with the list of matched entities with the given ids or {@link Future} emitting an empty list if none found
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_READ, resourceId = "{entityDefinitionId}")
+    @AuthzCheck(resourceId = "{entityDefinitionId}")
     Future<List<FastestType>> findByIds(String entityDefinitionId, List<String> ids, ScopedParticipant participant);
 
     /**
@@ -189,7 +189,7 @@ public interface JsonEntitiesRepository {
      * @param participant the participant of the logged-in user
      * @return a {@link Future} of a page of entities
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_READ, resourceId = "{entityDefinitionId}")
+    @AuthzCheck(resourceId = "{entityDefinitionId}")
     Future<Page<FastestType>> search(String entityDefinitionId, String searchText, Pageable pageable, ScopedParticipant participant);
 
     /**
@@ -198,7 +198,7 @@ public interface JsonEntitiesRepository {
      * @param participant     the participant of the logged-in user
      * @return a {@link Future} that will complete when the operation is complete
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_EDIT, resourceId = "{entityDefinitionId}", implies = AuthzUtil.CAN_READ)
+    @AuthzCheck(permission = AuthzUtil.CAN_EDIT, resourceId = "{entityDefinitionId}")
     Future<Void> syncIndex(String entityDefinitionId, ScopedParticipant participant);
 
     /**
@@ -211,7 +211,7 @@ public interface JsonEntitiesRepository {
      * @param participant the participant of the logged-in user
      * @return {@link Future} emitting the saved entity
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_EDIT, resourceId = "{entityDefinitionId}", implies = AuthzUtil.CAN_READ)
+    @AuthzCheck(permission = AuthzUtil.CAN_EDIT, resourceId = "{entityDefinitionId}")
     Future<TokenBuffer> update(String entityDefinitionId, TokenBuffer entity, ScopedParticipant participant);
 
 }

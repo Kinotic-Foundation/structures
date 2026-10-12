@@ -77,7 +77,7 @@ public interface GitHubAppInstallationService {
      * GitHub is not yet linked. Drives the "linked / not linked" indicator in the
      * org-settings UI.
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_VIEW_INTEGRATIONS)
+    @AuthzCheck(permission = AuthzUtil.CAN_READ_INTEGRATIONS)
     Future<GitHubAppInstallation> findForCurrentOrg();
 
     /**

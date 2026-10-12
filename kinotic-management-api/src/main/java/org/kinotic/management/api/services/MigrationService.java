@@ -32,7 +32,6 @@ public interface MigrationService {
      * @param projectId the project identifier
      * @return a future that completes with the highest applied migration version, or null if no migrations have been applied
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_VIEW)
     Future<Integer> getLastAppliedMigrationVersion(String projectId);
 
     /**
@@ -42,6 +41,6 @@ public interface MigrationService {
      * @param version the migration version to check
      * @return a future that completes with true if the migration has been applied, false otherwise
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_VIEW)
+    @AuthzCheck(permission = AuthzUtil.CAN_READ)
     Future<Boolean> isMigrationApplied(String projectId, String version);
 }

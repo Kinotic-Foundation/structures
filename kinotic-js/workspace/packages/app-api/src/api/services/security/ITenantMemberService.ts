@@ -16,8 +16,8 @@ import {
 /**
  * The users of the connected user's tenant, for an application's own pages: who belongs to it, the invitations
  * into it, and the grants its users hold on it. Every function acts on the caller's tenant, and what the caller
- * may do is checked on that tenant in the application's store: viewing its members needs
- * tenant_can_view_members, managing them tenant_can_manage_members, viewing its grants tenant_can_view_access
+ * may do is checked on that tenant in the application's store: reading its members needs
+ * tenant_can_read_members, managing them tenant_can_manage_members, reading its grants tenant_can_read_access
  * and managing them tenant_can_manage_access, all of which the tenant's administrator holds.
  */
 export interface ITenantMemberService {

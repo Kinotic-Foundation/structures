@@ -82,12 +82,12 @@ describe('Kinotic JS', () => {
     it('refuses an end user granted nothing once the service is in the directory', async () => {
         // the store runs the service's type once its worker has written the model the definition implies
         await until(async () => (await admin.applicationAccess.findRoles(APP_ID)).some(role => role.id === 'report.generator'))
-        await expect(reports.invoke('findReports')).rejects.toThrowError(/report_can_view/)
+        await expect(reports.invoke('findReports')).rejects.toThrowError(/report_can_read/)
     }, 60000)
 
     it('admits what the viewer role of the type reaches and refuses the declared permission', async () => {
         const grant = await admin.applicationAccess.grant(APP_ID, subject, 'report.viewer', tenant)
-        await until(async () => (await admin.applicationAccess.explain(APP_ID, subject, 'report_can_view', tenant)).allowed)
+        await until(async () => (await admin.applicationAccess.explain(APP_ID, subject, 'report_can_read', tenant)).allowed)
 
         await expect(reports.invoke('findReports')).resolves.toEqual(['quarterly'])
         await expect(reports.invoke('generate', ['q3'])).rejects.toThrowError(/report_can_generate/)
@@ -98,7 +98,7 @@ describe('Kinotic JS', () => {
 
         await admin.applicationAccess.revoke(APP_ID, tenant, generator.id)
         await admin.applicationAccess.revoke(APP_ID, tenant, grant.id)
-        await until(async () => !(await admin.applicationAccess.explain(APP_ID, subject, 'report_can_view', tenant)).allowed)
-        await expect(reports.invoke('findReports')).rejects.toThrowError(/report_can_view/)
+        await until(async () => !(await admin.applicationAccess.explain(APP_ID, subject, 'report_can_read', tenant)).allowed)
+        await expect(reports.invoke('findReports')).rejects.toThrowError(/report_can_read/)
     }, 60000)
 })
