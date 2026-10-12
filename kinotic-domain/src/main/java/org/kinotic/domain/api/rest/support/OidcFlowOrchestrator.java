@@ -15,6 +15,7 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.Session;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
+import io.vertx.ext.web.client.WebClientOptions;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
@@ -33,8 +34,10 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 /**
  * Owns the OAuth 2.0 / OIDC flow shared by every handler that bounces the user out to
@@ -66,7 +69,8 @@ public class OidcFlowOrchestrator {
 
     @PostConstruct
     public void start() {
-        this.webClient = WebClient.create(vertx);
+        // a redirect would carry an identity endpoint fetch to an address requireRoutableEndpoints never saw
+        this.webClient = WebClient.create(vertx, new WebClientOptions().setFollowRedirects(false));
     }
 
     @PreDestroy
@@ -265,6 +269,7 @@ public class OidcFlowOrchestrator {
             }
 
             ret = OpenIDConnectAuth.discover(vertx, options)
+                                   .compose(oauth -> requireRoutableDiscovery(config, options, oauth))
                                    .map(oauth -> {
                                        if (options.getJWTOptions() != null) {
                                            // Discovery mutates JWTOptions.issuer with the
@@ -464,9 +469,34 @@ public class OidcFlowOrchestrator {
     private Future<String> clientSecretOf(OidcConfiguration config) {
         return switch (config) {
             case OrgSignupOidcConfiguration social -> secretReferenceResolver.resolve(social.getSecretNameRef());
-            // an organization's administrator controls this row, so nothing on it may name a platform secret
-            case OrganizationOidcConfiguration owned -> oidcConfigurationService.findClientSecret(owned);
+            // an organization's administrator controls this row and its endpoints, so nothing on it may name
+            // a platform secret, and its hosts are resolved again here because they may have moved to an
+            // address only this server can reach since the row was saved
+            case OrganizationOidcConfiguration owned -> oidcConfigurationService.requireRoutableEndpoints(owned)
+                                                                                .compose(v -> oidcConfigurationService.findClientSecret(owned));
         };
+    }
+
+    /**
+     * Holds the endpoints an organization's provider published in its discovery document to the rule its
+     * configured ones are held to, closing {@code oauth} when one is refused. A curated provider passes.
+     */
+    private Future<OAuth2Auth> requireRoutableDiscovery(OidcConfiguration config, OAuth2Options discovered, OAuth2Auth oauth) {
+        Future<OAuth2Auth> ret;
+        if (config instanceof OrganizationOidcConfiguration) {
+            // the endpoints this server sends requests to; discover has fetched the JWKS once by now, and
+            // close() cancels the timer that would fetch it again
+            List<String> urls = Stream.of(discovered.getTokenPath(), discovered.getJwkPath(), discovered.getUserInfoPath(),
+                                          discovered.getRevocationPath(), discovered.getIntrospectionPath())
+                                      .filter(Objects::nonNull)
+                                      .toList();
+            ret = DomainUtil.requireRoutableUrls(vertx, urls)
+                            .onFailure(err -> oauth.close())
+                            .map(oauth);
+        } else {
+            ret = Future.succeededFuture(oauth);
+        }
+        return ret;
     }
 
 }

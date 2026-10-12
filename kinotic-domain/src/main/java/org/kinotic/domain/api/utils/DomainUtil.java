@@ -1,6 +1,8 @@
 package org.kinotic.domain.api.utils;
 
 import com.github.slugify.Slugify;
+import io.vertx.core.Future;
+import io.vertx.core.Vertx;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.core.api.security.Participant;
@@ -20,11 +22,17 @@ import org.kinotic.domain.api.model.security.participant.DefaultOrganizationPart
 import org.kinotic.domain.api.model.security.participant.DefaultSystemParticipant;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
+import java.net.Inet6Address;
+import java.net.InetAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Base64;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.List;
@@ -296,6 +304,62 @@ public class DomainUtil {
      * @param numBytes number of random bytes to draw before base64url encoding
      * @return a base64url-encoded random token without padding
      */
+    /**
+     * Requires that every URL the server is about to fetch is an absolute {@code https} URL naming a host
+     * with no username or password, and that the host resolves, and only to publicly routable addresses,
+     * so whoever named the URL cannot steer the fetch at a host only this server can reach. Security: the
+     * connection resolves the host again, so a host whose addresses change between this check and the
+     * fetch is not caught.
+     *
+     * @param vertx the Vert.x instance the DNS resolution is run on
+     * @param urls  the URLs to check
+     * @return a {@link Future} failing with {@link IllegalArgumentException} when a URL is not https, or its
+     *         host does not resolve or resolves to a loopback, wildcard, link-local, private or multicast address
+     */
+    public static Future<Void> requireRoutableUrls(Vertx vertx, Collection<String> urls) {
+        // InetAddress.getAllByName blocks on DNS
+        return vertx.executeBlocking(() -> {
+            for (String url : urls) {
+                String host = requireHttpsUrl(url).getHost();
+                InetAddress[] addresses;
+                try {
+                    addresses = InetAddress.getAllByName(host);
+                } catch (UnknownHostException e) {
+                    throw new IllegalArgumentException("Host " + host + " does not resolve");
+                }
+                for (InetAddress address : addresses) {
+                    if (address.isLoopbackAddress() || address.isAnyLocalAddress()
+                            || address.isLinkLocalAddress() || address.isSiteLocalAddress()
+                            || address.isMulticastAddress()
+                            // isSiteLocalAddress knows only the deprecated fec0::/10; fc00::/7 is IPv6's private range
+                            || (address instanceof Inet6Address && (address.getAddress()[0] & 0xfe) == 0xfc)) {
+                        throw new IllegalArgumentException("Host " + host + " resolves to a special-use address");
+                    }
+                }
+            }
+            return null;
+        });
+    }
+
+    private static URI requireHttpsUrl(String url) {
+        URI uri;
+        try {
+            uri = new URI(url);
+        } catch (URISyntaxException e) {
+            throw new IllegalArgumentException("Not a valid URL: " + url);
+        }
+        if (!"https".equals(uri.getScheme())) {
+            throw new IllegalArgumentException("Must be an https URL: " + url);
+        }
+        if (uri.getHost() == null || uri.getHost().isBlank()) {
+            throw new IllegalArgumentException("Must contain a host: " + url);
+        }
+        if (uri.getUserInfo() != null) {
+            throw new IllegalArgumentException("Must not contain a username or password: " + url);
+        }
+        return uri;
+    }
+
     public static String generateUrlSafeToken(int numBytes) {
         byte[] bytes = new byte[numBytes];
         SECURE_RANDOM.nextBytes(bytes);

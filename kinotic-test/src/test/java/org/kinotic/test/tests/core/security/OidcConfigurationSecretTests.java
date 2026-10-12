@@ -10,11 +10,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import tools.jackson.databind.ObjectMapper;
 
+import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -23,6 +29,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * back for that configuration alone, under its organization, and never appears on the configuration a
  * read returns; a save without a secret keeps it, a new secret replaces it, null makes the configuration a
  * public client, a public client can be given a secret again, and deleting the configuration deletes it.
+ * A provider whose host does not resolve, or that the server could only reach over plain http or at a
+ * loopback, link-local or private address, is refused.
  */
 @SpringBootTest
 public class OidcConfigurationSecretTests extends KinoticTestBase {
@@ -71,13 +79,44 @@ public class OidcConfigurationSecretTests extends KinoticTestBase {
         assertNull(await(oidcConfigurations.findClientSecret(confidentialAgain)));
     }
 
+    @Test
+    public void aProviderTheServerCouldOnlyReachInsecurelyOrPrivatelyIsRefused() {
+        for (String authority : List.of("http://acme.okta.test", "https://acme.okta.invalid", "https://127.0.0.1", "https://localhost:8443",
+                                        "https://10.0.0.5", "https://192.168.1.10", "https://169.254.169.254",
+                                        "https://[::1]", "https://[fd00::1]", "https://user:pass@acme.okta.test")) {
+            assertInstanceOf(IllegalArgumentException.class,
+                             failure(() -> oidcConfigurations.save(provider("Acme Okta", config -> config.setAuthority(authority)), null)),
+                             authority);
+        }
+        // every endpoint the configuration names is held to the same rule as its authority
+        assertInstanceOf(IllegalArgumentException.class,
+                         failure(() -> oidcConfigurations.save(provider("Acme Okta", config -> config.setTokenUri("http://acme.okta.test/token")))));
+        assertInstanceOf(IllegalArgumentException.class,
+                         failure(() -> oidcConfigurations.save(provider("Acme Okta", config -> config.setAuthorizationUri("https://127.0.0.1/authorize")))));
+        assertInstanceOf(IllegalArgumentException.class,
+                         failure(() -> oidcConfigurations.save(provider("Acme Okta", config -> config.setUserInfoUri("https://10.0.0.5/userinfo")))));
+        assertInstanceOf(IllegalArgumentException.class,
+                         failure(() -> oidcConfigurations.save(provider("Acme Okta", config -> config.setUserEmailsUri("https://169.254.169.254/emails")))));
+    }
+
+    private Throwable failure(Supplier<Future<?>> call) {
+        return assertThrows(ExecutionException.class, () -> await(runAsOrganization(call::get))).getCause();
+    }
+
+    private static OrganizationOidcConfiguration provider(String name, Consumer<OrganizationOidcConfiguration> change) {
+        OrganizationOidcConfiguration ret = provider(name);
+        change.accept(ret);
+        return ret;
+    }
+
     private static OrganizationOidcConfiguration provider(String name) {
         OrganizationOidcConfiguration ret = new OrganizationOidcConfiguration();
         ret.setOrganizationId(TEST_ORG_ID);
         ret.setName(name)
            .setProvider(OidcProviderKind.OIDC)
            .setClientId("acme-client")
-           .setAuthority("https://acme.okta.test")
+           // an address literal from the documentation range, so the save resolves it without DNS
+           .setAuthority("https://203.0.113.10")
            .setEnabled(true);
         return ret;
     }
