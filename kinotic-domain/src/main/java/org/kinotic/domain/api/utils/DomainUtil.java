@@ -304,6 +304,12 @@ public class DomainUtil {
      * @param numBytes number of random bytes to draw before base64url encoding
      * @return a base64url-encoded random token without padding
      */
+    public static String generateUrlSafeToken(int numBytes) {
+        byte[] bytes = new byte[numBytes];
+        SECURE_RANDOM.nextBytes(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
     /**
      * Requires that every URL the server is about to fetch is an absolute {@code https} URL naming a host
      * with no username or password, and that the host resolves, and only to publicly routable addresses,
@@ -358,12 +364,6 @@ public class DomainUtil {
             throw new IllegalArgumentException("Must not contain a username or password: " + url);
         }
         return uri;
-    }
-
-    public static String generateUrlSafeToken(int numBytes) {
-        byte[] bytes = new byte[numBytes];
-        SECURE_RANDOM.nextBytes(bytes);
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 
     /**
