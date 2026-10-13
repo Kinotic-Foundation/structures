@@ -1,4 +1,5 @@
 import Clarity from '@microsoft/clarity'
+import type { ConsentChoice } from '~/utils/consent'
 
 let clarityInitialized = false
 
@@ -8,15 +9,11 @@ export function initClarity(projectId: string): void {
   Clarity.init(projectId)
 }
 
-export type ClarityConsent = 'granted' | 'denied'
-
-export function setClarityConsentV2(
-  adStorage: ClarityConsent,
-  analyticsStorage: ClarityConsent,
-): void {
-  if (typeof window === 'undefined') return
+/** Grants or revokes Clarity's analytics storage and its link to Microsoft Advertising. */
+export function setClarityConsent(choice: ConsentChoice): void {
+  if (!clarityInitialized) return
   Clarity.consentV2({
-    ad_Storage: adStorage,
-    analytics_Storage: analyticsStorage,
+    ad_Storage: choice.marketing ? 'granted' : 'denied',
+    analytics_Storage: choice.analytics ? 'granted' : 'denied',
   })
 }

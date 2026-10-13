@@ -1,3 +1,9 @@
+<script setup lang="ts">
+const nuxtApp = useNuxtApp()
+
+const openCookieSettings = () => nuxtApp.$cookieConsent.open()
+</script>
+
 <template>
   <footer class="kfoot">
     <div class="k-wrap">
@@ -45,6 +51,8 @@
           <NuxtLink to="/terms">Terms of use</NuxtLink>
           <span class="kfoot__sep" aria-hidden="true">|</span>
           <NuxtLink to="/privacy">Privacy policy</NuxtLink>
+          <span class="kfoot__sep" aria-hidden="true">|</span>
+          <button type="button" @click="openCookieSettings">Cookie settings</button>
         </span>
       </div>
     </div>
@@ -117,13 +125,23 @@
   gap: 10px;
 }
 
-.kfoot__legal a {
+.kfoot__legal a,
+.kfoot__legal button {
   color: var(--color-k-fainter);
   text-decoration: none;
   transition: color 0.2s ease;
 }
 
-.kfoot__legal a:hover {
+.kfoot__legal button {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.kfoot__legal a:hover,
+.kfoot__legal button:hover {
   color: var(--color-k-text);
 }
 
