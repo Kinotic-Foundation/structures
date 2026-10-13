@@ -7,7 +7,7 @@
         </div>
         <h2 class="k-heading cta__title" data-reveal>Let's build the next decade of software together</h2>
         <div data-reveal>
-          <a href="mailto:founders@kinotic.com" class="k-btn k-btn--red cta__button">Talk to the founders ↗</a>
+          <a href="mailto:founders@kinotic.ai" class="k-btn k-btn--red cta__button">Talk to the founders ↗</a>
         </div>
       </div>
       <FloatingCubes class="cta__visual" />
