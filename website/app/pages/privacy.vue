@@ -11,7 +11,7 @@ useHead({ title: 'Privacy Policy' })
           Privacy Policy
         </h1>
         <p class="mt-4 text-[14px] text-[#8A8A90]">
-          Last updated: October 8, 2026
+          Last updated: October 13, 2026
         </p>
 
         <div class="mt-10 space-y-8 font-[InterRegular] text-[16px] leading-[160%]">
@@ -88,6 +88,10 @@ useHead({ title: 'Privacy Policy' })
             <h2 class="font-[InterBold] text-[22px] text-white">Third-Party Services</h2>
             <p class="mt-3">
               Our website may link to third-party services such as GitHub. Those services have their own privacy policies, and we encourage you to review them. Kinotic does not control and is not responsible for the privacy practices of third-party sites.
+            </p>
+            <p class="mt-3">
+              Some pages include videos hosted on YouTube. The player loads from YouTube's privacy-enhanced domain (youtube-nocookie.com) only after you click play, at which point YouTube receives your request and handles it under
+              <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer" class="text-white underline hover:text-[#FF2D7A]">Google's Privacy Policy</a>.
             </p>
           </section>
 
