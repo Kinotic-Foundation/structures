@@ -71,7 +71,7 @@ export interface IPermissionService {
     /**
      * The ids of the resources of a type the caller holds a permission on, through any grant that reaches them.
      * @param type the resource type, such as project
-     * @param permission the permission's short name, such as can_view
+     * @param permission the permission's short name, such as can_read
      */
     listAccessible(type: string, permission: string): Promise<string[]>
 

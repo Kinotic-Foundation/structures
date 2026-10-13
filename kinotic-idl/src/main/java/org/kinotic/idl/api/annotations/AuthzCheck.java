@@ -29,7 +29,7 @@ import java.lang.annotation.Target;
 public @interface AuthzCheck {
 
     /**
-     * The permission the function needs, as a short name such as {@code can_view} or {@code can_report}. In the
+     * The permission the function needs, as a short name such as {@code can_read} or {@code can_report}. In the
      * model it is prefixed by the type it is about, so {@code can_report} on a {@code node} service is
      * {@code node_can_report}.
      */
@@ -49,9 +49,9 @@ public @interface AuthzCheck {
 
     /**
      * Short names of permissions on the same type that this permission also grants, so a role bundling
-     * {@code can_deploy} declared with {@code implies = "can_view"} views what it deploys. The derived
+     * {@code can_deploy} declared with {@code implies = "can_read"} reads what it deploys. The derived
      * permissions already imply each other: {@code can_delete} implies {@code can_edit}, which implies
-     * {@code can_view}.
+     * {@code can_read}.
      */
     String[] implies() default {};
 

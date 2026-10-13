@@ -28,7 +28,7 @@ public interface SystemMemberService {
      * @param pageable the page settings to use
      * @return a page of SYSTEM-scope {@link UserParticipantIdentity}s
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_VIEW_MEMBERS)
+    @AuthzCheck(permission = AuthzUtil.CAN_READ_MEMBERS)
     Future<Page<UserParticipantIdentity>> findUsers(Pageable pageable);
 
     /**
@@ -38,7 +38,7 @@ public interface SystemMemberService {
      * @param pageable the page settings to use
      * @return a page of matching SYSTEM-scope {@link UserParticipantIdentity}s
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_VIEW_MEMBERS)
+    @AuthzCheck(permission = AuthzUtil.CAN_READ_MEMBERS)
     Future<Page<UserParticipantIdentity>> searchUsers(String searchText, Pageable pageable);
 
     /**
@@ -47,7 +47,7 @@ public interface SystemMemberService {
      * @param pageable the page settings to use
      * @return a page of SYSTEM-scope {@link MachineParticipantIdentity}s
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_VIEW_MACHINES)
+    @AuthzCheck(permission = AuthzUtil.CAN_READ_MACHINES)
     Future<Page<MachineParticipantIdentity>> findMachines(Pageable pageable);
 
     /**

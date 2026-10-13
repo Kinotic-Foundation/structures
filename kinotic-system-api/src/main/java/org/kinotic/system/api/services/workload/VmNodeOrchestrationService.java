@@ -29,7 +29,7 @@ import java.util.List;
 @Publish
 @AuthzResource(value = VmNodeService.RESOURCE_TYPE, parent = AuthzUtil.PLATFORM_TYPE,
                roles = {@AuthzRole(id = VmNodeOrchestrationService.REGISTRAR_ROLE, permissions = AuthzUtil.CAN_REGISTER_NODE),
-                        @AuthzRole(id = VmNodeOrchestrationService.AGENT_ROLE, permissions = {AuthzUtil.CAN_REPORT, AuthzUtil.CAN_VIEW})})
+                        @AuthzRole(id = VmNodeOrchestrationService.AGENT_ROLE, permissions = {AuthzUtil.CAN_REPORT, AuthzUtil.CAN_READ})})
 public interface VmNodeOrchestrationService {
 
     /** The role a platform machine registers nodes with, granted on the platform. */

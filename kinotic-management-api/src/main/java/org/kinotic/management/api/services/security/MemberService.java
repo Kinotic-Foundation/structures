@@ -22,14 +22,14 @@ import org.kinotic.domain.api.model.security.PendingInviteSummary;
 public interface MemberService {
 
     /** Lists the members of the scope. */
-    @AuthzCheck(permission = AuthzUtil.CAN_VIEW_MEMBERS)
+    @AuthzCheck(permission = AuthzUtil.CAN_READ_MEMBERS)
     Future<Page<UserParticipantIdentity>> findMembers(String applicationId, Pageable pageable);
 
     /**
      * Searches the scope's members by free text over email and display name. Blank
      * {@code searchText} is equivalent to {@link #findMembers}.
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_VIEW_MEMBERS)
+    @AuthzCheck(permission = AuthzUtil.CAN_READ_MEMBERS)
     Future<Page<UserParticipantIdentity>> searchMembers(String searchText, String applicationId, Pageable pageable);
 
     /**
@@ -61,7 +61,7 @@ public interface MemberService {
     Future<Void> removeMember(String identityId);
 
     /** Lists the scope's live (unexpired) pending invitations. */
-    @AuthzCheck(permission = AuthzUtil.CAN_VIEW_MEMBERS)
+    @AuthzCheck(permission = AuthzUtil.CAN_READ_MEMBERS)
     Future<Page<PendingInviteSummary>> findPendingInvites(String applicationId, Pageable pageable);
 
     /** Cancels a pending invitation belonging to the caller's organization. */

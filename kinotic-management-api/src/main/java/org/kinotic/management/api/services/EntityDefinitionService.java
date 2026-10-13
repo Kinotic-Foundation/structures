@@ -25,10 +25,10 @@ public interface EntityDefinitionService extends ProjectScopedCrudService<Entity
     String RESOURCE_TYPE = AuthzUtil.ENTITY_DEFINITION_TYPE;
 
     /**
-     * Returns the entity definition with the given id when the caller may view it.
+     * Returns the entity definition with the given id when the caller may read it.
      *
      * @param id the definition's id
-     * @return a {@link Future} emitting the definition, or null when none has the id or the caller may not view it
+     * @return a {@link Future} emitting the definition, or null when none has the id or the caller may not read it
      */
     @AuthzUnchecked
     Future<EntityDefinition> findById(String id);
@@ -74,11 +74,13 @@ public interface EntityDefinitionService extends ProjectScopedCrudService<Entity
     /**
      * Un-publishes the {@link EntityDefinition} with the given id, removing the
      * underlying data index and making the definition unavailable for data operations.
+     * Every row saved under the definition is deleted with the index, so the caller
+     * needs the permission deleting the definition takes.
      *
      * @param entityDefinitionId the id of the definition to un-publish
      * @return a {@link Future} that completes when the definition has been un-published
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_EDIT)
+    @AuthzCheck(permission = AuthzUtil.CAN_DELETE)
     Future<Void> unPublish(String entityDefinitionId);
 
     /**

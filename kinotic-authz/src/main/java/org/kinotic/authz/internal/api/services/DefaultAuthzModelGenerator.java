@@ -135,7 +135,7 @@ public class DefaultAuthzModelGenerator implements AuthzModelGenerator {
             Set<String> own = modelNames(type, type.permissions.keySet());
             Set<String> editing = new TreeSet<>(own);
             editing.remove(AuthzUtil.permissionName(type.name, AuthzUtil.CAN_DELETE));
-            role(ret, AuthzUtil.roleId(type.name, AuthzUtil.VIEWER), viewing(type));
+            role(ret, AuthzUtil.roleId(type.name, AuthzUtil.VIEWER), reading(type));
             role(ret, AuthzUtil.roleId(type.name, AuthzUtil.EDITOR), editing);
             role(ret, AuthzUtil.roleId(type.name, AuthzUtil.ADMIN), inside(type, types, carried, true, false));
         }
@@ -165,19 +165,19 @@ public class DefaultAuthzModelGenerator implements AuthzModelGenerator {
                                       Map<String, ResourceType> types,
                                       Map<String, Set<String>> carried,
                                       boolean own,
-                                      boolean viewingOnly) {
+                                      boolean readingOnly) {
         Set<String> ret = new TreeSet<>();
         for (String name : carried.getOrDefault(type.name, Set.of())) {
             if (own || !name.equals(type.name)) {
                 ResourceType inside = types.get(name);
-                ret.addAll(viewingOnly ? viewing(inside) : modelNames(inside, inside.permissions.keySet()));
+                ret.addAll(readingOnly ? reading(inside) : modelNames(inside, inside.permissions.keySet()));
             }
         }
         return ret;
     }
 
-    // The model names of a type's reading permissions: the ones that only read, among them every can_view_<something>
-    private static Set<String> viewing(ResourceType type) {
+    // The model names of a type's reading permissions: can_read and every can_read_<something>
+    private static Set<String> reading(ResourceType type) {
         Set<String> ret = new TreeSet<>();
         for (String permission : type.permissions.keySet()) {
             if (AuthzUtil.isReading(permission)) {
@@ -278,11 +278,11 @@ public class DefaultAuthzModelGenerator implements AuthzModelGenerator {
         }
     }
 
-    // the derived verbs form a ladder: deleting implies editing, editing implies viewing, wherever both exist
+    // the derived verbs form a ladder: deleting implies editing, editing implies reading, wherever both exist
     private static void deriveLattice(Map<String, ResourceType> types) {
         for (ResourceType type : types.values()) {
             implyIfBoth(type, AuthzUtil.CAN_DELETE, AuthzUtil.CAN_EDIT);
-            implyIfBoth(type, AuthzUtil.CAN_EDIT, AuthzUtil.CAN_VIEW);
+            implyIfBoth(type, AuthzUtil.CAN_EDIT, AuthzUtil.CAN_READ);
         }
     }
 

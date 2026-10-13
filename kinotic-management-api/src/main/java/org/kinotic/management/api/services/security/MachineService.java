@@ -40,7 +40,7 @@ public interface MachineService {
     Future<MachineProvisionResult> createMachine(String displayName, String applicationId);
 
     /** Lists the machines of the given application of the caller's organization, disabled ones included. */
-    @AuthzCheck(permission = AuthzUtil.CAN_VIEW_MACHINES)
+    @AuthzCheck(permission = AuthzUtil.CAN_READ_MACHINES)
     Future<Page<MachineParticipantIdentity>> findMachines(String applicationId, Pageable pageable);
 
     /**
@@ -52,7 +52,7 @@ public interface MachineService {
      *
      * @param projectId a project belonging to the caller's organization
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_VIEW_MACHINES)
+    @AuthzCheck(permission = AuthzUtil.CAN_READ_MACHINES)
     Future<List<MachineParticipantIdentity>> findProjectMachines(String projectId);
 
     /**

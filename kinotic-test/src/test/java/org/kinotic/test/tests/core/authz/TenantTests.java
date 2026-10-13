@@ -160,7 +160,7 @@ public class TenantTests extends KinoticTestBase {
 
         // the colleague holds nothing on the tenant until granted; the administrator grants a role and revokes it
         Participant member = participant(orgId, appId, "acme-corp", colleague.getId());
-        assertRefused(MEMBER_SERVICE, "findMembers", member, List.of(FIRST_PAGE), "tenant_can_view_members on tenant:acme-corp");
+        assertRefused(MEMBER_SERVICE, "findMembers", member, List.of(FIRST_PAGE), "tenant_can_read_members on tenant:acme-corp");
         Subject subject = new Subject(SubjectKind.USER, colleague.getId());
         List<RoleDefinition> roles = await(runAs(admin, tenantMembers::findRoles));
         String viewer = AuthzUtil.roleId(AuthzUtil.TENANT_TYPE, AuthzUtil.VIEWER);

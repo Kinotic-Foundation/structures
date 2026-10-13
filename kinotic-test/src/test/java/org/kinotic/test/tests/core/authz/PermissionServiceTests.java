@@ -102,7 +102,7 @@ public class PermissionServiceTests extends KinoticTestBase {
         assertTrue(catalog.get(ProjectService.RESOURCE_TYPE).contains("project_can_edit"));
 
         RoleDefinition saved = await(runAsOrganization(() -> permissions.saveRole(
-                new RoleDefinition(null, "Release Manager " + suffix(), "ships projects", false, Set.of("project_can_edit", "project_can_view")))));
+                new RoleDefinition(null, "Release Manager " + suffix(), "ships projects", false, Set.of("project_can_edit", "project_can_read")))));
         assertNotNull(saved.id());
         assertFalse(saved.builtIn());
         List<RoleDefinition> roles = await(runAsOrganization(permissions::findRoles));
@@ -111,7 +111,7 @@ public class PermissionServiceTests extends KinoticTestBase {
         assertEquals("Project Editor", editor.name());
         assertTrue(editor.permissions().contains("project_can_edit"));
         RoleDefinition listed = roles.stream().filter(role -> role.id().equals(saved.id())).findFirst().orElseThrow();
-        assertEquals(Set.of("project_can_edit", "project_can_view"), listed.permissions());
+        assertEquals(Set.of("project_can_edit", "project_can_read"), listed.permissions());
 
         // a permission the model does not have, and a built-in role, are refused
         assertThrows(ExecutionException.class, () -> await(runAsOrganization(() -> permissions.saveRole(
@@ -120,8 +120,8 @@ public class PermissionServiceTests extends KinoticTestBase {
                 new RoleDefinition("project.editor", "Project Editor", null, true, Set.of("project_can_edit"))))));
 
         // reshaping the role changes what it bundles
-        await(runAsOrganization(() -> permissions.saveRole(new RoleDefinition(saved.id(), saved.name(), null, false, Set.of("project_can_view")))));
-        assertEquals(Set.of("project_can_view"), bundled(saved.id()));
+        await(runAsOrganization(() -> permissions.saveRole(new RoleDefinition(saved.id(), saved.name(), null, false, Set.of("project_can_read")))));
+        assertEquals(Set.of("project_can_read"), bundled(saved.id()));
 
         // a role a grant holds stays until the grant is revoked
         Application application = application();
@@ -183,13 +183,13 @@ public class PermissionServiceTests extends KinoticTestBase {
         Project project = project(application());
         Resource onProject = new Resource(ProjectService.RESOURCE_TYPE, project.getId());
         Grant grant = await(runAsOrganization(() -> permissions.grant(new Subject(SubjectKind.GROUP, group.getId()), "project.viewer", onProject)));
-        assertTrue(held(member, "project_can_view", onProject), "a member views what the group was granted");
-        AccessExplanation views = await(runAsOrganization(() -> permissions.explain(user(member), AuthzUtil.CAN_VIEW, onProject)));
-        assertTrue(views.allowed());
-        assertEquals(List.of(grant), views.through());
+        assertTrue(held(member, "project_can_read", onProject), "a member reads what the group was granted");
+        AccessExplanation reads = await(runAsOrganization(() -> permissions.explain(user(member), AuthzUtil.CAN_READ, onProject)));
+        assertTrue(reads.allowed());
+        assertEquals(List.of(grant), reads.through());
 
         await(runAsOrganization(() -> permissions.removeGroupMember(group.getId(), member.getId())));
-        assertFalse(held(member, "project_can_view", onProject));
+        assertFalse(held(member, "project_can_read", onProject));
 
         // a group a grant holds stays until the grant is revoked
         assertThrows(ExecutionException.class, () -> await(runAsOrganization(() -> permissions.deleteGroup(group.getId()))));
@@ -213,7 +213,7 @@ public class PermissionServiceTests extends KinoticTestBase {
                                                                                    List.of());
         // the listing accepts the engine's cache window, so a grant just made may take a moment to show
         assertTrue(awaitUntil(() -> List.of(granted.getId()).equals(
-                           await(runAs(caller, () -> permissions.listAccessible(ProjectService.RESOURCE_TYPE, AuthzUtil.CAN_VIEW))))),
+                           await(runAs(caller, () -> permissions.listAccessible(ProjectService.RESOURCE_TYPE, AuthzUtil.CAN_READ))))),
                    "the caller never listed the project it was granted");
     }
 

@@ -2,7 +2,6 @@ package org.kinotic.idl.api.utils;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -68,7 +67,7 @@ public final class AuthzUtil {
     /** Everyone, the user of every tuple that puts a permission in a role. */
     public static final String EVERYONE = USER_TYPE + ":*";
 
-    /** The levels of the built-in roles every resource type gets: viewing it, editing it, and everything. */
+    /** The levels of the built-in roles every resource type gets: reading it, editing it, and everything. */
     public static final String VIEWER = "viewer";
     public static final String EDITOR = "editor";
     public static final String ADMIN = "admin";
@@ -83,9 +82,9 @@ public final class AuthzUtil {
     public static final String APPLICATION_DEVELOPER_ROLE = APPLICATION_TYPE + "." + DEVELOPER;
     /** The built-in role holding every permission of the platform and of everything on it. */
     public static final String PLATFORM_ADMIN_ROLE = PLATFORM_TYPE + "." + ADMIN;
-    /** The built-in role holding the platform's own permissions and the viewing permissions of everything on it. */
+    /** The built-in role holding the platform's own permissions and the reading permissions of everything on it. */
     public static final String PLATFORM_OPERATOR_ROLE = PLATFORM_TYPE + "." + OPERATOR;
-    /** The built-in role holding the viewing permissions of the platform and of everything on it. */
+    /** The built-in role holding the reading permissions of the platform and of everything on it. */
     public static final String PLATFORM_SUPPORT_ROLE = PLATFORM_TYPE + "." + SUPPORT;
     /**
      * The declared role of an application's runtimes, which the contract service declares and a deployment grants
@@ -93,12 +92,10 @@ public final class AuthzUtil {
      */
     public static final String APPLICATION_RUNTIME_ROLE = APPLICATION_TYPE + ".runtime";
 
-    public static final String CAN_VIEW = "can_view";
+    public static final String CAN_READ = "can_read";
     public static final String CAN_EDIT = "can_edit";
     public static final String CAN_DELETE = "can_delete";
-    /** The permissions of a definition's rows beside {@code can_edit} and {@code can_delete}. */
-    public static final String CAN_READ = "can_read";
-    public static final String CAN_SEARCH = "can_search";
+    /** The permission of saving a definition's rows, beside the derived verbs. */
     public static final String CAN_CREATE = "can_create";
     /**
      * The permissions the platform's own services declare, beside the derived verbs: each named once here, so a
@@ -114,18 +111,15 @@ public final class AuthzUtil {
     public static final String CAN_REGISTER_NODE = "can_register_node";
     public static final String CAN_REGISTER_SERVICES = "can_register_services";
     public static final String CAN_REPORT = "can_report";
-    public static final String CAN_VIEW_ACCESS = "can_view_access";
-    public static final String CAN_VIEW_CLUSTER = "can_view_cluster";
-    public static final String CAN_VIEW_DEPLOYMENTS = "can_view_deployments";
-    public static final String CAN_VIEW_INTEGRATIONS = "can_view_integrations";
-    public static final String CAN_VIEW_JOBS = "can_view_jobs";
-    public static final String CAN_VIEW_MACHINES = "can_view_machines";
-    public static final String CAN_VIEW_MEMBERS = "can_view_members";
-    public static final String CAN_VIEW_TELEMETRY = "can_view_telemetry";
-    public static final String CAN_VIEW_WORKLOADS = "can_view_workloads";
-    /** The permissions that only read, beside every {@code can_view_<something>}. */
-    private static final Set<String> READING = Set.of(CAN_VIEW, CAN_READ, CAN_SEARCH);
-
+    public static final String CAN_READ_ACCESS = "can_read_access";
+    public static final String CAN_READ_CLUSTER = "can_read_cluster";
+    public static final String CAN_READ_DEPLOYMENTS = "can_read_deployments";
+    public static final String CAN_READ_INTEGRATIONS = "can_read_integrations";
+    public static final String CAN_READ_JOBS = "can_read_jobs";
+    public static final String CAN_READ_MACHINES = "can_read_machines";
+    public static final String CAN_READ_MEMBERS = "can_read_members";
+    public static final String CAN_READ_TELEMETRY = "can_read_telemetry";
+    public static final String CAN_READ_WORKLOADS = "can_read_workloads";
     /** The longest relation name OpenFGA accepts; a typed permission name must fit it. */
     public static final int MAX_RELATION_NAME_LENGTH = 50;
 
@@ -191,11 +185,11 @@ public final class AuthzUtil {
     }
 
     /**
-     * Whether a permission only reads: {@code can_view}, {@code can_read}, {@code can_search} and every
-     * {@code can_view_<something>}; a viewer holds these and nothing else.
+     * Whether a permission only reads: {@code can_read} and every {@code can_read_<something>}; a viewer holds
+     * these and nothing else.
      */
     public static boolean isReading(String permission) {
-        return READING.contains(permission) || permission.startsWith(CAN_VIEW + "_");
+        return permission.equals(CAN_READ) || permission.startsWith(CAN_READ + "_");
     }
 
     /**

@@ -15,7 +15,7 @@ public interface TestWorkloadService {
 
     CompletableFuture<Void> deleteWorkload(String workloadId);
 
-    @AuthzCheck(permission = "can_view_workloads")
+    @AuthzCheck(permission = "can_read_workloads")
     CompletableFuture<Void> findWorkload(String workloadId);
 
 }

@@ -20,7 +20,7 @@ import java.util.List;
  * removed here.
  *
  * <p>A deployment is named by its id alone, which is in no authorization graph, so a function naming one is
- * checked on the caller's organization: reading a deployment's history needs {@code can_view_deployments} of
+ * checked on the caller's organization: reading a deployment's history needs {@code can_read_deployments} of
  * the organization, and removing or restarting one {@code can_manage_deployments}. A listing names the project
  * or the application it is of, and is checked on that.
  */
@@ -36,7 +36,7 @@ public interface MicroserviceDeploymentService {
      * @return a future emitting the deployments, empty when the project has none
      */
     @McpTool
-    @AuthzCheck(resource = AuthzUtil.PROJECT_TYPE, resourceId = "{projectId}", permission = AuthzUtil.CAN_VIEW)
+    @AuthzCheck(resource = AuthzUtil.PROJECT_TYPE, resourceId = "{projectId}")
     Future<List<MicroserviceDeployment>> findAllForProject(String projectId);
 
     /**
@@ -50,7 +50,7 @@ public interface MicroserviceDeploymentService {
      * @return a future emitting a page of ledger entries, empty when nothing has happened to the deployment
      */
     @McpTool
-    @AuthzCheck(permission = AuthzUtil.CAN_VIEW_DEPLOYMENTS)
+    @AuthzCheck(permission = AuthzUtil.CAN_READ_DEPLOYMENTS)
     Future<Page<WatchEvent>> findHistory(String deploymentId, Pageable pageable);
 
     /**

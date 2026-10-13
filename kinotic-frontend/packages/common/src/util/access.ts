@@ -21,7 +21,7 @@ export function typeLabel(type: string): string {
   return TYPE_LABELS[type] ?? humanize(type)
 }
 
-/** Splits a model permission name, type_can_x, at its can_: entity_definition_can_view is about entity_definition. */
+/** Splits a model permission name, type_can_x, at its can_: entity_definition_can_read is about entity_definition. */
 export function splitPermission(name: string): PermissionName {
   const at = name.indexOf('_can_')
   return at < 0
@@ -29,7 +29,7 @@ export function splitPermission(name: string): PermissionName {
       : { name, type: name.substring(0, at), permission: name.substring(at + 1) }
 }
 
-/** The readable name of a permission's short name: can_view is View, can_manage_members is Manage members. */
+/** The readable name of a permission's short name: can_read is Read, can_manage_members is Manage members. */
 export function permissionLabel(permission: string): string {
   return humanize(permission.startsWith('can_') ? permission.substring(4) : permission)
 }

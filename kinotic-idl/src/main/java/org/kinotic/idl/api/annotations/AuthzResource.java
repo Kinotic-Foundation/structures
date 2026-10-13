@@ -18,10 +18,10 @@ import java.lang.annotation.Target;
  * registration, so no function of a resource service is served unchecked by accident.
  *
  * <p>The permission is derived from the first word of the function's name: {@code find}, {@code get},
- * {@code count}, {@code search} and {@code list} need {@code can_view}; {@code save}, {@code update} and
+ * {@code count}, {@code search} and {@code list} need {@code can_read}; {@code save}, {@code update} and
  * {@code set} need {@code can_edit}; {@code delete} and {@code remove} need {@code can_delete}; {@code create}
  * needs {@code can_edit} of this type on the parent. {@code can_delete} implies {@code can_edit}, which implies
- * {@code can_view}.
+ * {@code can_read}.
  *
  * <p>The resource is derived from the parameters: its id is the {@code String} parameter named {@code id} or
  * {@code <type>Id} ({@code projectId} for the type {@code project}), else the id of the first
@@ -29,9 +29,9 @@ import java.lang.annotation.Target;
  * way with the parent's name, else on the caller's own scope.
  *
  * <p>Example: with {@code @AuthzResource(value = "project", parent = "application")}, {@code findById(String id)}
- * is checked for {@code project_can_view} on the project {@code id} names, {@code save(Project project)} for
+ * is checked for {@code project_can_read} on the project {@code id} names, {@code save(Project project)} for
  * {@code project_can_edit} on the project {@code project.getId()} names, and
- * {@code findAll(String applicationId, Pageable pageable)} for {@code project_can_view} on the application
+ * {@code findAll(String applicationId, Pageable pageable)} for {@code project_can_read} on the application
  * {@code applicationId} names, with nothing declared on them.
  *
  * <p>Permissions are named {@code <type>_<permission>} in the model, and a role bundling one grants it wherever
@@ -45,7 +45,7 @@ public @interface AuthzResource {
 
     /**
      * The resource type, a single lowercase identifier such as {@code project}. It names the type in the model,
-     * prefixes the type's permissions ({@code project_can_view}) and roles ({@code project.editor}), and is the
+     * prefixes the type's permissions ({@code project_can_read}) and roles ({@code project.editor}), and is the
      * type of the resource every function is checked on unless the function names another with
      * {@link AuthzCheck}. Several services may declare one type; each adds its functions' permissions to it.
      *

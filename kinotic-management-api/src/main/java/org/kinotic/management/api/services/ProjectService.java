@@ -31,8 +31,8 @@ public interface ProjectService extends ApplicationScopedCrudService<Project, St
     String RESOURCE_TYPE = AuthzUtil.PROJECT_TYPE;
 
     /**
-     * Returns the project with the given id when the caller may see it: a project the caller may view, or one
-     * containing an entity definition the caller may view.
+     * Returns the project with the given id when the caller may see it: a project the caller may read, or one
+     * containing an entity definition the caller may read.
      *
      * @param id the project's id
      * @return a {@link Future} emitting the project, or null when none has the id or the caller may not see it
@@ -41,8 +41,8 @@ public interface ProjectService extends ApplicationScopedCrudService<Project, St
     Future<Project> findById(String id);
 
     /**
-     * Returns the number of projects the caller may see: those the caller may view, and those containing an
-     * entity definition the caller may view.
+     * Returns the number of projects the caller may see: those the caller may read, and those containing an
+     * entity definition the caller may read.
      *
      * @return {@link Future} emitting the number of projects
      */
@@ -51,8 +51,8 @@ public interface ProjectService extends ApplicationScopedCrudService<Project, St
     Future<Long> count();
 
     /**
-     * Returns a {@link Page} of the projects the caller may see: those the caller may view, and those containing
-     * an entity definition the caller may view.
+     * Returns a {@link Page} of the projects the caller may see: those the caller may read, and those containing
+     * an entity definition the caller may read.
      *
      * @param pageable the page settings to be used
      * @return a page of projects

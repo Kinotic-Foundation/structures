@@ -11,7 +11,7 @@ import java.util.concurrent.CompletableFuture;
 @AuthzResource("widget")
 public interface TestMisreferencingService {
 
-    @AuthzCheck(permission = "can_view", resourceId = "{missing}")
+    @AuthzCheck(permission = "can_read", resourceId = "{missing}")
     CompletableFuture<Void> find(String id);
 
 }

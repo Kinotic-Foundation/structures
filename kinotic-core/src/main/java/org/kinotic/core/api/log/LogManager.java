@@ -26,14 +26,14 @@ public interface LogManager {
     /**
      * @return a {@link LoggersDescriptor} containing all the loggers and their levels
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_VIEW_CLUSTER)
+    @AuthzCheck(permission = AuthzUtil.CAN_READ_CLUSTER)
     LoggersDescriptor loggers();
 
     /**
      * @param name the name of the logger to get
      * @return a {@link LoggerLevelsDescriptor} containing the logger and its levels
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_VIEW_CLUSTER)
+    @AuthzCheck(permission = AuthzUtil.CAN_READ_CLUSTER)
     LoggerLevelsDescriptor loggerLevels(String name);
 
     /**
@@ -46,7 +46,7 @@ public interface LogManager {
     /**
      * @return the CRI patterns currently deciding what this node trace logs
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_VIEW_CLUSTER)
+    @AuthzCheck(permission = AuthzUtil.CAN_READ_CLUSTER)
     TraceLogProperties traceLog();
 
     /**

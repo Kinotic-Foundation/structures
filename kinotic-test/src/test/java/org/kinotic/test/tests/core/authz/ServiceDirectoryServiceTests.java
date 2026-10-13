@@ -133,7 +133,7 @@ public class ServiceDirectoryServiceTests extends KinoticTestBase {
         Participant caller = applicationParticipant(tenantId, bob.getId());
         Subject subject = new Subject(SubjectKind.USER, bob.getId());
         Resource tenant = new Resource(AuthzUtil.TENANT_TYPE, tenantId);
-        assertRefused(service, "findReports", caller, List.of(), type + "_can_view on tenant:" + tenantId);
+        assertRefused(service, "findReports", caller, List.of(), type + "_can_read on tenant:" + tenantId);
         await(runAsOrganization(() -> access.grant(TEST_APP_ID, subject, AuthzUtil.roleId(type, AuthzUtil.VIEWER), tenant)));
         assertTrue(awaitUntil(() -> admitted(service, "findReports", caller, List.of())), "the viewer was never admitted");
         assertRefused(service, "generate", caller, List.of("q3"), type + "_can_generate");

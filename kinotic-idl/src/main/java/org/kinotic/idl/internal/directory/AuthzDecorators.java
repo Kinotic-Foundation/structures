@@ -37,7 +37,7 @@ import java.util.regex.Pattern;
 final class AuthzDecorators {
 
     private static final Pattern LEADING_WORD = Pattern.compile("^[a-z]+");
-    private static final Set<String> VIEW_VERBS = Set.of("find", "get", "count", "search", "list");
+    private static final Set<String> READ_VERBS = Set.of("find", "get", "count", "search", "list");
     private static final Set<String> EDIT_VERBS = Set.of("save", "update", "set");
     private static final Set<String> DELETE_VERBS = Set.of("delete", "remove");
     private static final String CREATE_VERB = "create";
@@ -366,8 +366,8 @@ final class AuthzDecorators {
     private static String derivedPermission(String functionName) {
         String verb = leadingWord(functionName);
         String ret;
-        if (VIEW_VERBS.contains(verb)) {
-            ret = AuthzUtil.CAN_VIEW;
+        if (READ_VERBS.contains(verb)) {
+            ret = AuthzUtil.CAN_READ;
         } else if (EDIT_VERBS.contains(verb) || CREATE_VERB.equals(verb)) {
             ret = AuthzUtil.CAN_EDIT;
         } else if (DELETE_VERBS.contains(verb)) {

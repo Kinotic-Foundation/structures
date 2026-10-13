@@ -85,7 +85,7 @@ public class SchemaServiceAuthzTest {
         assertEquals("project", findById.getResource());
         assertEquals("{id}", findById.getResourceId());
         assertEquals("project", findById.getPermissionResource());
-        assertEquals("can_view", findById.getPermission());
+        assertEquals("can_read", findById.getPermission());
     }
 
     @Test
@@ -95,7 +95,7 @@ public class SchemaServiceAuthzTest {
         assertEquals("application", findAll.getResource());
         assertEquals("{applicationId}", findAll.getResourceId());
         assertEquals("project", findAll.getPermissionResource());
-        assertEquals("can_view", findAll.getPermission());
+        assertEquals("can_read", findAll.getPermission());
     }
 
     @Test
@@ -135,7 +135,7 @@ public class SchemaServiceAuthzTest {
         AuthzCheckC3Decorator check = deploy.findDecorator(AuthzCheckC3Decorator.class);
         assertEquals("{projectId}", check.getResourceId());
         assertEquals("can_deploy", check.getPermission());
-        assertEquals(List.of("can_view"), check.getImplies());
+        assertEquals(List.of("can_read"), check.getImplies());
     }
 
     @Test
@@ -191,7 +191,7 @@ public class SchemaServiceAuthzTest {
         assertEquals("organization", findMembers.getResource());
         assertEquals("{@organizationId}", findMembers.getResourceId());
         assertEquals("organization", findMembers.getPermissionResource());
-        assertEquals("can_view_members", findMembers.getPermission());
+        assertEquals("can_read_members", findMembers.getPermission());
         assertFalse(findMembers.isConsistent());
         // an argument with an id, and a create, are checked on the service's object too
         assertEquals("{@organizationId}", check(service, "saveRole").getResourceId());
@@ -277,7 +277,7 @@ public class SchemaServiceAuthzTest {
         assertEquals("can_manage_workloads", check(service, "deployWorkload").getPermission());
         assertEquals("can_manage_workloads", check(service, "deleteWorkload").getPermission());
         assertEquals("platform:kinotic", check(service, "deployWorkload").getResource() + ":" + check(service, "deployWorkload").getResourceId());
-        assertEquals("can_view_workloads", check(service, "findWorkload").getPermission());
+        assertEquals("can_read_workloads", check(service, "findWorkload").getPermission());
     }
 
     @Test

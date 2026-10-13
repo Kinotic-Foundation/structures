@@ -13,7 +13,7 @@ import java.util.concurrent.CompletableFuture;
 public interface TestContradictoryService {
 
     @AuthzUnchecked
-    @AuthzCheck(permission = "can_view_members")
+    @AuthzCheck(permission = "can_read_members")
     CompletableFuture<Void> findMembers();
 
 }

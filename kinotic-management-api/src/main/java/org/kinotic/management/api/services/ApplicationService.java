@@ -27,8 +27,8 @@ import java.util.Set;
 public interface ApplicationService extends IdentifiableCrudService<Application, String> {
 
     /**
-     * Returns the application with the given id when the caller may see it: an application the caller may view,
-     * or one containing a project or an entity definition the caller may view.
+     * Returns the application with the given id when the caller may see it: an application the caller may read,
+     * or one containing a project or an entity definition the caller may read.
      *
      * @param id the application's id
      * @return a {@link Future} emitting the application, or null when none has the id or the caller may not see it
@@ -37,8 +37,8 @@ public interface ApplicationService extends IdentifiableCrudService<Application,
     Future<Application> findById(String id);
 
     /**
-     * Returns the number of applications the caller may see: those the caller may view, and those containing a
-     * project or an entity definition the caller may view.
+     * Returns the number of applications the caller may see: those the caller may read, and those containing a
+     * project or an entity definition the caller may read.
      *
      * @return a {@link Future} emitting the count
      */
@@ -46,8 +46,8 @@ public interface ApplicationService extends IdentifiableCrudService<Application,
     Future<Long> count();
 
     /**
-     * Returns a page of the applications the caller may see: those the caller may view, and those containing a
-     * project or an entity definition the caller may view.
+     * Returns a page of the applications the caller may see: those the caller may read, and those containing a
+     * project or an entity definition the caller may read.
      *
      * @param pageable the page to return
      * @return a {@link Future} emitting the page
@@ -56,8 +56,8 @@ public interface ApplicationService extends IdentifiableCrudService<Application,
     Future<Page<Application>> findAll(Pageable pageable);
 
     /**
-     * Searches the applications the caller may see: those the caller may view, and those containing a project
-     * or an entity definition the caller may view.
+     * Searches the applications the caller may see: those the caller may read, and those containing a project
+     * or an entity definition the caller may read.
      *
      * @param searchText the text to search for
      * @param pageable   the page to return

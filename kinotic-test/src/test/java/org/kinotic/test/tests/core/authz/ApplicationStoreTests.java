@@ -63,6 +63,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class ApplicationStoreTests extends KinoticTestBase {
 
     private static final String ENTITIES_SERVICE = DomainUtil.APP_API_ZONE + "~org.kinotic.persistence.api.services.JsonEntitiesRepository";
+    private static final String ADMIN_ENTITIES_SERVICE = DomainUtil.APP_API_ZONE + "~org.kinotic.persistence.api.services.AdminJsonEntitiesRepository";
 
     @Autowired
     private ApplicationService applicationService;
@@ -137,7 +138,7 @@ public class ApplicationStoreTests extends KinoticTestBase {
         // the contract carries the arguments a client sends; the participant is stamped on by the gateway
         assertRefused(ENTITIES_SERVICE, "findById", caller, readRow, AuthzUtil.permissionName(AuthzUtil.ENTITY_DEFINITION_TYPE, AuthzUtil.CAN_READ)
                 + " on " + AuthzUtil.object(AuthzUtil.TENANT_DEFINITION_TYPE, personHere.id()));
-        assertRefused(ENTITIES_SERVICE, "count", caller, List.of(person.getId()), AuthzUtil.permissionName(AuthzUtil.ENTITY_DEFINITION_TYPE, AuthzUtil.CAN_SEARCH));
+        assertRefused(ENTITIES_SERVICE, "count", caller, List.of(person.getId()), AuthzUtil.permissionName(AuthzUtil.ENTITY_DEFINITION_TYPE, AuthzUtil.CAN_READ));
 
         Grant grant = await(runAsOrganization(() -> access.grant(TEST_APP_ID, subject, AuthzUtil.roleId(AuthzUtil.ENTITY_DEFINITION_TYPE, AuthzUtil.EDITOR), personHere)));
 
@@ -146,6 +147,12 @@ public class ApplicationStoreTests extends KinoticTestBase {
         authorize(ENTITIES_SERVICE, "bulkUpdate", caller, List.of(person.getId(), List.of(Map.of("id", "row-1"))));
         // an editor neither deletes nor reads another definition's rows, and another tenant's user holds nothing
         assertRefused(ENTITIES_SERVICE, "deleteById", caller, readRow, AuthzUtil.permissionName(AuthzUtil.ENTITY_DEFINITION_TYPE, AuthzUtil.CAN_DELETE));
+        // the admin repository checks each function for the permission the entities repository does
+        List<Object> adminRow = List.of(person.getId(), Map.of("entityId", "row-1", "tenantId", tenantId));
+        authorize(ADMIN_ENTITIES_SERVICE, "findById", caller, adminRow);
+        authorize(ADMIN_ENTITIES_SERVICE, "count", caller, List.of(person.getId(), List.of(tenantId)));
+        assertRefused(ADMIN_ENTITIES_SERVICE, "deleteById", caller, adminRow, AuthzUtil.permissionName(AuthzUtil.ENTITY_DEFINITION_TYPE, AuthzUtil.CAN_DELETE));
+        assertRefused(ADMIN_ENTITIES_SERVICE, "deleteByQuery", caller, List.of(person.getId(), "*", List.of(tenantId)), AuthzUtil.permissionName(AuthzUtil.ENTITY_DEFINITION_TYPE, AuthzUtil.CAN_DELETE));
         assertRefused(ENTITIES_SERVICE, "findById", caller, List.of(car.getId(), "row-1"), AuthzUtil.object(AuthzUtil.TENANT_DEFINITION_TYPE, carHere.id()));
         String otherTenant = "tenant-" + suffix();
         UserParticipantIdentity alice = endUser(TEST_APP_ID, otherTenant);

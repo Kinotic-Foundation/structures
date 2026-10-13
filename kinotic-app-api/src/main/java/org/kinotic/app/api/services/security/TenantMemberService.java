@@ -35,7 +35,7 @@ public interface TenantMemberService {
     /**
      * The users of the tenant.
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_VIEW_MEMBERS)
+    @AuthzCheck(permission = AuthzUtil.CAN_READ_MEMBERS)
     Future<Page<UserParticipantIdentity>> findMembers(Pageable pageable);
 
     /**
@@ -52,7 +52,7 @@ public interface TenantMemberService {
     /**
      * The live (unexpired) invitations into the tenant.
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_VIEW_MEMBERS)
+    @AuthzCheck(permission = AuthzUtil.CAN_READ_MEMBERS)
     Future<Page<PendingInviteSummary>> findPendingInvites(Pageable pageable);
 
     /**
@@ -72,13 +72,13 @@ public interface TenantMemberService {
      * Every role a grant on the tenant can name: the built-in roles of the tenant and of the rows of each entity
      * definition inside it, each with the permissions it bundles.
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_VIEW_ACCESS)
+    @AuthzCheck(permission = AuthzUtil.CAN_READ_ACCESS)
     Future<List<RoleDefinition>> findRoles();
 
     /**
      * The grants made on the tenant.
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_VIEW_ACCESS)
+    @AuthzCheck(permission = AuthzUtil.CAN_READ_ACCESS)
     Future<List<Grant>> findGrants();
 
     /**

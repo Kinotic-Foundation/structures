@@ -103,8 +103,8 @@ class DefaultRequestAuthorizerTest {
         service.addFunction(function("save", check("project", "{entity.id}", "project", "can_edit", false), "entity"));
         // the Participant parameter of deploy is not in the contract, so projectId is the body's first element
         service.addFunction(function("deploy", check("project", "{projectId}", "project", "can_deploy", true), "projectId"));
-        service.addFunction(function("findMembers", check("organization", "{@organizationId}", "organization", "can_view_members", false)));
-        service.addFunction(function("count", check("application", "{@applicationId}", "project", "can_view", false)));
+        service.addFunction(function("findMembers", check("organization", "{@organizationId}", "organization", "can_read_members", false)));
+        service.addFunction(function("count", check("application", "{@applicationId}", "project", "can_read", false)));
         service.addFunction(function("listAccessible", unchecked(), "type", "permission"));
         // a function the contract marks neither way
         service.addFunction(function("describe", null, "projectId"));
@@ -179,7 +179,7 @@ class DefaultRequestAuthorizerTest {
     void aScopeReferenceReadsTheCallersScope() throws Exception {
         authorize("findMembers", sally(), EventConstants.CONTENT_TYPE_JSON, "[]");
 
-        assertEquals(new RelationshipTuple("user:sally", "organization_can_view_members", "organization:acme"), checked(Consistency.MINIMIZE_LATENCY));
+        assertEquals(new RelationshipTuple("user:sally", "organization_can_read_members", "organization:acme"), checked(Consistency.MINIMIZE_LATENCY));
     }
 
     @Test
@@ -187,7 +187,7 @@ class DefaultRequestAuthorizerTest {
         // an organization member has no application in its scope, so the application's projects are its organization's
         authorize("count", sally(), EventConstants.CONTENT_TYPE_JSON, "[]");
 
-        assertEquals(new RelationshipTuple("user:sally", "project_can_view", "organization:acme"), checked(Consistency.MINIMIZE_LATENCY));
+        assertEquals(new RelationshipTuple("user:sally", "project_can_read", "organization:acme"), checked(Consistency.MINIMIZE_LATENCY));
     }
 
     @Test
@@ -242,7 +242,7 @@ class DefaultRequestAuthorizerTest {
 
     @Test
     void anUncheckedFunctionPassesWithoutTheEngine() throws Exception {
-        authorize("listAccessible", sally(), EventConstants.CONTENT_TYPE_JSON, "[\"project\",\"can_view\"]");
+        authorize("listAccessible", sally(), EventConstants.CONTENT_TYPE_JSON, "[\"project\",\"can_read\"]");
 
         verify(relationships, never()).check(any(), any(), any(), any(), any());
     }
@@ -365,7 +365,7 @@ class DefaultRequestAuthorizerTest {
 
         // a check on the caller's organization is made on the platform
         authorize("findMembers", operator, EventConstants.CONTENT_TYPE_JSON, "[]");
-        assertEquals(new RelationshipTuple("user:ops", "organization_can_view_members", "platform:kinotic"), checked(Consistency.MINIMIZE_LATENCY));
+        assertEquals(new RelationshipTuple("user:ops", "organization_can_read_members", "platform:kinotic"), checked(Consistency.MINIMIZE_LATENCY));
     }
 
     @Test

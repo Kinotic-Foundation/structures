@@ -161,7 +161,7 @@ public class SystemTierTests extends KinoticTestBase {
         assertRefused(WORKLOAD_SERVICE, "stopWorkload", caller, List.of("wl-1"), "platform_can_manage_workloads");
         assertRefused(ACCESS_SERVICE, "grant", caller, List.of(subject, AuthzUtil.PLATFORM_SUPPORT_ROLE), "platform_can_manage_access");
 
-        AccessExplanation explanation = await(access.explain(subject, "can_view_cluster"));
+        AccessExplanation explanation = await(access.explain(subject, "can_read_cluster"));
         assertTrue(explanation.allowed());
         assertEquals(List.of(grant.id()), explanation.through().stream().map(Grant::id).toList());
         assertFalse(await(access.explain(subject, "can_manage_machines")).allowed());

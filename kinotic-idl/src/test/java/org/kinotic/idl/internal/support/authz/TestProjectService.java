@@ -23,7 +23,7 @@ public interface TestProjectService {
     @AuthzCheck(permission = "can_edit")
     CompletableFuture<Void> retryRepoInitialization(String projectId);
 
-    @AuthzCheck(permission = "can_deploy", implies = "can_view")
+    @AuthzCheck(permission = "can_deploy", implies = "can_read")
     CompletableFuture<Void> deploy(TestCallerContext context, String projectId);
 
     CompletableFuture<Long> count();

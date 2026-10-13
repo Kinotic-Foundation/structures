@@ -24,8 +24,10 @@ import java.util.List;
  * Admin access allows you to read and write data for tenants other than the one that is logged into by the participant.
  * Created by Nic Padilla 🤪on 6/18/23.
  *
- * Every function is checked on the entity definition named, as the organization's developers hold it: reading
- * its rows needs {@code can_view} of the definition, deleting them {@code can_edit}.
+ * Every function is checked on the entity definition named, for the permission of its rows the function needs,
+ * the one {@link JsonEntitiesRepository} checks for the same function: reading, listing, counting, querying
+ * and searching need {@code can_read}, and deleting {@code can_delete}. Deleting implies updating, and
+ * updating reading.
  */
 @Publish
 @Zone(DomainUtil.APP_API_ZONE)
@@ -40,7 +42,7 @@ public interface AdminJsonEntitiesRepository {
      * @param participant the participant of the logged-in user
      * @return {@link Future} emitting the number of entities.
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_VIEW, resourceId = "{entityDefinitionId}")
+    @AuthzCheck(resourceId = "{entityDefinitionId}")
     Future<Long> count(String entityDefinitionId, List<String> tenantSelection, ScopedParticipant participant);
 
     /**
@@ -52,7 +54,7 @@ public interface AdminJsonEntitiesRepository {
      * @param participant the participant of the logged-in user
      * @return {@link Future} emitting the number of entities.
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_VIEW, resourceId = "{entityDefinitionId}")
+    @AuthzCheck(resourceId = "{entityDefinitionId}")
     Future<Long> countByQuery(String entityDefinitionId, String query, List<String> tenantSelection, ScopedParticipant participant);
 
     /**
@@ -63,7 +65,7 @@ public interface AdminJsonEntitiesRepository {
      * @param participant the participant of the logged-in user
      * @return {@link Future} emitting when delete is complete
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_EDIT, resourceId = "{entityDefinitionId}")
+    @AuthzCheck(permission = AuthzUtil.CAN_DELETE, resourceId = "{entityDefinitionId}")
     Future<Void> deleteById(String entityDefinitionId, TenantSpecificId id, ScopedParticipant participant);
 
     /**
@@ -75,7 +77,7 @@ public interface AdminJsonEntitiesRepository {
      * @param participant the participant of the logged-in user
      * @return {@link Future} emitting when delete is complete
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_EDIT, resourceId = "{entityDefinitionId}")
+    @AuthzCheck(permission = AuthzUtil.CAN_DELETE, resourceId = "{entityDefinitionId}")
     Future<Void> deleteByQuery(String entityDefinitionId, String query, List<String> tenantSelection, ScopedParticipant participant);
 
     /**
@@ -87,7 +89,7 @@ public interface AdminJsonEntitiesRepository {
      * @param participant the participant of the logged-in user
      * @return a page of entities
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_VIEW, resourceId = "{entityDefinitionId}")
+    @AuthzCheck(resourceId = "{entityDefinitionId}")
     Future<Page<FastestType>> findAll(String entityDefinitionId, List<String> tenantSelection, Pageable pageable, ScopedParticipant participant);
 
     /**
@@ -98,7 +100,7 @@ public interface AdminJsonEntitiesRepository {
      * @param participant the participant of the logged-in user
      * @return {@link Future} with the entity with the given id or {@link Future} emitting null if none found
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_VIEW, resourceId = "{entityDefinitionId}")
+    @AuthzCheck(resourceId = "{entityDefinitionId}")
     Future<FastestType> findById(String entityDefinitionId, TenantSpecificId id, ScopedParticipant participant);
 
     /**
@@ -109,7 +111,7 @@ public interface AdminJsonEntitiesRepository {
      * @param participant the participant of the logged-in user
      * @return {@link Future} with the list of matched entities with the given ids or {@link Future} emitting an empty list if none found
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_VIEW, resourceId = "{entityDefinitionId}")
+    @AuthzCheck(resourceId = "{entityDefinitionId}")
     Future<List<FastestType>> findByIds(String entityDefinitionId, List<TenantSpecificId> ids, ScopedParticipant participant);
 
     /**
@@ -122,7 +124,7 @@ public interface AdminJsonEntitiesRepository {
      * @param participant     the participant of the logged-in user
      * @return {@link Future} with the result of the query
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_VIEW, resourceId = "{entityDefinitionId}")
+    @AuthzCheck(permission = AuthzUtil.CAN_READ, resourceId = "{entityDefinitionId}")
     Future<List<RawJson>> namedQuery(String entityDefinitionId,
                                      String queryName,
                                      List<QueryParameter> queryParameters,
@@ -140,7 +142,7 @@ public interface AdminJsonEntitiesRepository {
      * @param participant     the participant of the logged-in user
      * @return {@link Future} with the result of the query
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_VIEW, resourceId = "{entityDefinitionId}")
+    @AuthzCheck(permission = AuthzUtil.CAN_READ, resourceId = "{entityDefinitionId}")
     Future<Page<RawJson>> namedQueryPage(String entityDefinitionId,
                                          String queryName,
                                          List<QueryParameter> queryParameters,
@@ -160,7 +162,7 @@ public interface AdminJsonEntitiesRepository {
      * @param participant the participant of the logged-in user
      * @return a {@link Future} of a page of entities
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_VIEW, resourceId = "{entityDefinitionId}")
+    @AuthzCheck(resourceId = "{entityDefinitionId}")
     Future<Page<FastestType>> search(String entityDefinitionId, String searchText, List<String> tenantSelection, Pageable pageable, ScopedParticipant participant);
 
 }

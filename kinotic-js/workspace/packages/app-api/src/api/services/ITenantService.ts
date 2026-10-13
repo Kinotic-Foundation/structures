@@ -9,7 +9,7 @@ import type { Tenant } from '@/api/model/Tenant'
  */
 export interface ITenantService {
 
-    /** The caller's tenant. Needs tenant_can_view. */
+    /** The caller's tenant. Needs tenant_can_read. */
     getTenant(): Promise<Tenant>
 
     /** Renames the caller's tenant; its id stays what it was. Needs tenant_can_edit. */

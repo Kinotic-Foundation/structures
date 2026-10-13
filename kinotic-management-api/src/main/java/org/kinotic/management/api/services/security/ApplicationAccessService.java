@@ -32,7 +32,7 @@ public interface ApplicationAccessService {
      *
      * @param applicationId the application
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_VIEW_ACCESS)
+    @AuthzCheck(permission = AuthzUtil.CAN_READ_ACCESS)
     Future<List<RoleDefinition>> findRoles(String applicationId);
 
     /**
@@ -44,7 +44,7 @@ public interface ApplicationAccessService {
      * @param resource      the application itself, one of its tenants, one of its entity definitions or a
      *                      definition within a tenant
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_VIEW_ACCESS)
+    @AuthzCheck(permission = AuthzUtil.CAN_READ_ACCESS)
     Future<List<Grant>> findGrants(String applicationId, Resource resource);
 
     /**
@@ -85,7 +85,7 @@ public interface ApplicationAccessService {
      * @param resource      the application itself, one of its tenants, one of its entity definitions or a
      *                      definition within a tenant
      */
-    @AuthzCheck(permission = AuthzUtil.CAN_VIEW_ACCESS)
+    @AuthzCheck(permission = AuthzUtil.CAN_READ_ACCESS)
     Future<AccessExplanation> explain(String applicationId, Subject subject, String permission, Resource resource);
 
 }

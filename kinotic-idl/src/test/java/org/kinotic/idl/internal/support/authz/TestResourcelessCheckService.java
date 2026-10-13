@@ -9,7 +9,7 @@ import java.util.concurrent.CompletableFuture;
  */
 public interface TestResourcelessCheckService {
 
-    @AuthzCheck(permission = "can_view")
+    @AuthzCheck(permission = "can_read")
     CompletableFuture<String> findById(String id);
 
 }

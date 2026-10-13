@@ -15,7 +15,7 @@ import org.kinotic.idl.api.utils.AuthzUtil;
  * reverts the application to the built-in invitation email.
  *
  * <p>The template is the application's: saving one needs {@code can_edit} of the application it names, and
- * reading the application's needs {@code can_view} of it. A template addressed by its own id, which is in no
+ * reading the application's needs {@code can_read} of it. A template addressed by its own id, which is in no
  * authorization graph, is read or deleted with the same permission on the caller's organization.
  */
 @Publish
@@ -30,7 +30,7 @@ public interface InviteEmailTemplateService extends ApplicationScopedCrudService
     @Override
     Future<InviteEmailTemplate> saveSync(InviteEmailTemplate entity);
 
-    @AuthzCheck(permission = AuthzUtil.CAN_VIEW, resource = AuthzUtil.ORGANIZATION_TYPE, resourceId = "{@organizationId}")
+    @AuthzCheck(resource = AuthzUtil.ORGANIZATION_TYPE, resourceId = "{@organizationId}")
     @Override
     Future<InviteEmailTemplate> findById(String id);
 
