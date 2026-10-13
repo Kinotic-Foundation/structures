@@ -125,6 +125,14 @@ sets:
 </tbody>
 </table>
 
+`kinotic.domain.secretStorage.backend` selects where `SecretStorageService` persists secrets.
+`IN_MEMORY`, the default, keeps them in process memory, so a restart loses every stored secret. `AZURE` stores them in
+the Key Vault at `kinotic.domain.secretStorage.azure.vaultUrl`; that backend is an Enterprise
+Feature in the `kinotic-ee` module, which the org, system and app servers include, and its
+production use needs a Kinotic Enterprise License agreement with Minds Ignited (see
+[Enterprise License](/platform/enterprise-license)). A server
+configured with a backend whose module is not on its classpath fails at startup.
+
 A server picks up a rotated JWT key set while it runs, and an imported secret when it restarts.
 On Azure the global terraform seeds the master key and takes the GitHub App's key and webhook
 secret from `TF_VAR_github_app_private_key` and `TF_VAR_github_webhook_secret`. KinD's Secret

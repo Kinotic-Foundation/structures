@@ -49,6 +49,18 @@ We welcome contributions to Kinotic OS. This guide covers the repository structu
   <tr>
     <td>
       <code>
+        kinotic-ee/
+      </code>
+    </td>
+    
+    <td>
+      Enterprise Features, licensed under the Kinotic Enterprise License — the Azure Key Vault secret storage backend
+    </td>
+  </tr>
+  
+  <tr>
+    <td>
+      <code>
         kinotic-js/
       </code>
     </td>
@@ -749,3 +761,20 @@ bun test
 2. Make your changes with clear, descriptive commit messages
 3. Ensure all tests pass before submitting
 4. Submit a pull request against the `develop` branch
+5. Accept the [Contributor License Agreement](https://github.com/kinotic-ai/kinotic/blob/develop/CLA.md)
+on your first pull request by commenting `I have read the Kinotic CLA Document and I hereby sign the CLA`
+
+## Licensing
+
+Everything outside `kinotic-ee/` is licensed under the Elastic License 2.0 with the Kinotic
+Additional Limitations; `kinotic-ee/` holds the Enterprise Features, licensed under the Kinotic
+Enterprise License. The root
+[`LICENSE.md`](https://github.com/kinotic-ai/kinotic/blob/develop/LICENSE.md) routes each part of
+the repository to its license. Any interface in an Elastic-licensed package with an `ee`
+segment, such as `org.kinotic.domain.api.ee.services.SecretStorageBackend`, is an Enterprise
+Extension Point: its implementations for production use are Enterprise Features and belong in
+`kinotic-ee/`. [Enterprise License](/platform/enterprise-license) describes what production use of
+them requires.
+
+The CLA grants Minds Ignited the right to license your contribution under any of these licenses,
+including as part of an Enterprise Feature; you keep the copyright in it.

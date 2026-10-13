@@ -149,7 +149,8 @@ The servers' Key Vault is kept deliberately. Without it the secret storage backe
 (`SecretStorageConfiguration`): nothing stored survives a restart and nothing can be carried to
 the cloud. Nothing calls `SecretStorageService` today, so the cost is nil this week; the first
 feature that stores a peer's secret would turn it into silent data loss. With the `AZURE`
-backend the peers' secrets are already in Azure on migration day.
+backend, which the servers load from the `kinotic-ee` module, the peers' secrets are already in
+Azure on migration day.
 
 ### Migrations become append-only from the first peer sign-up
 
