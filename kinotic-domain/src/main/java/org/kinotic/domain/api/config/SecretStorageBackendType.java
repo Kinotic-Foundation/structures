@@ -5,6 +5,10 @@ package org.kinotic.domain.api.config;
  */
 public enum SecretStorageBackendType {
     /**
+     * Process-memory secret storage; every stored secret is lost when the process stops.
+     */
+    IN_MEMORY,
+    /**
      * Azure Key Vault backed secret storage, provided by the {@code kinotic-ee} module.
      */
     AZURE
