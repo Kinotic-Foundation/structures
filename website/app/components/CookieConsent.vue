@@ -15,8 +15,8 @@ defineEmits<{
       <p class="font-[InterRegular] text-[14px] leading-[150%] text-[#AFAFB4]">
         We use Microsoft Clarity and Google Analytics to understand how visitors
         use our site. By default we collect only anonymous, cookieless data.
-        Accept to allow analytics and advertising cookies and anonymized session
-        recordings so we can improve the site further.
+        Accept to allow analytics and advertising cookies, anonymized session
+        recordings, and use of this data for ad measurement and personalization.
         <a href="/privacy" class="text-white underline hover:text-[#FF2D7A]">
           Learn more
         </a>.
