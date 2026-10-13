@@ -140,7 +140,12 @@ async function joinWaitlist() {
   color: var(--color-k-muted);
 }
 
-.waitlist__email:focus-visible,
+/* The field is joined to the button, so it shows focus on its own border rather than an offset ring. */
+.waitlist__email:focus {
+  outline: none;
+  border-color: var(--color-k-mint);
+}
+
 .waitlist__submit:focus-visible {
   outline: 2px solid var(--color-k-mint);
   outline-offset: 3px;
