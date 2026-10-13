@@ -74,7 +74,7 @@ useHead({ title: 'Privacy Policy' })
               <a href="https://marketingplatform.google.com/about/analytics/" target="_blank" rel="noreferrer" class="text-white underline hover:text-[#FF2D7A]">Google Analytics</a>.
             </p>
             <p class="mt-3">
-              By default, both services run in <strong class="text-white">cookieless mode</strong> on our site: no first- or third-party cookies are set, and visits are not linked across pageviews. We only enable analytics cookies, and Clarity's continuous session recordings, if you explicitly accept the consent banner. Advertising storage stays disabled either way.
+              By default, both services run in <strong class="text-white">cookieless mode</strong> on our site: no first- or third-party cookies are set, and visits are not linked across pageviews. We only enable analytics and advertising cookies, and Clarity's continuous session recordings, if you explicitly accept the consent banner.
             </p>
           </section>
 
@@ -92,7 +92,7 @@ useHead({ title: 'Privacy Policy' })
           <section>
             <h2 class="font-[InterBold] text-[22px] text-white">Cookies</h2>
             <p class="mt-3">
-              Our website does not use advertising cookies. We may use cookies or similar browser storage for essential site functionality and for the analytics described above.
+              We may use cookies or similar browser storage for essential site functionality and, if you accept the consent banner, for the analytics described above and for advertising.
             </p>
           </section>
 

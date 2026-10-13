@@ -3,7 +3,7 @@ import CookieConsent from '~/components/CookieConsent.vue'
 import { initClarity, setClarityConsentV2 } from '~/utils/clarity'
 import { initGoogleAnalytics, setGoogleAnalyticsConsent } from '~/utils/googleAnalytics'
 
-const STORAGE_KEY = 'kinotic-analytics-consent'
+const STORAGE_KEY = 'kinotic-clarity-consent'
 
 type StoredConsent = 'accepted' | 'declined'
 

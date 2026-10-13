@@ -39,8 +39,9 @@ export function initGoogleAnalytics(): void {
   document.head.appendChild(script)
 }
 
-/** Grants or revokes analytics cookies. Advertising storage stays denied. */
+/** Grants or revokes analytics and advertising cookies. */
 export function setGoogleAnalyticsConsent(granted: boolean): void {
   if (!googleAnalyticsInitialized) return
-  gtag('consent', 'update', { analytics_storage: granted ? 'granted' : 'denied' })
+  const value = granted ? 'granted' : 'denied'
+  gtag('consent', 'update', { analytics_storage: value, ad_storage: value })
 }
