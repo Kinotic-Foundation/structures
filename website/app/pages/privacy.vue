@@ -64,7 +64,7 @@ useHead({ title: 'Privacy Policy' })
               </li>
             </ul>
             <p class="mt-3">
-              We use this information in aggregate to measure site performance and usage trends, and we do not use it to identify individual visitors. If you accept the consent banner, Google may also use the data Google Analytics collects for advertising, including measuring ad performance and personalizing the ads you see on Google and its partners, and Microsoft may connect Clarity data to Microsoft Advertising. Their handling of this data is governed by the
+              We use this information in aggregate to measure site performance and usage trends, and we do not use it to identify individual visitors. If you allow Marketing cookies, Google may also use the data Google Analytics collects for advertising, including measuring ad performance and personalizing the ads you see on Google and its partners, and Microsoft may connect Clarity data to Microsoft Advertising. Their handling of this data is governed by the
               <a href="https://privacy.microsoft.com/privacystatement" target="_blank" rel="noreferrer" class="text-white underline hover:text-[#FF2D7A]">Microsoft Privacy Statement</a>
               and
               <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer" class="text-white underline hover:text-[#FF2D7A]">Google's Privacy Policy</a>.
@@ -74,7 +74,7 @@ useHead({ title: 'Privacy Policy' })
               <a href="https://marketingplatform.google.com/about/analytics/" target="_blank" rel="noreferrer" class="text-white underline hover:text-[#FF2D7A]">Google Analytics</a>.
             </p>
             <p class="mt-3">
-              By default, both services run in <strong class="text-white">cookieless mode</strong> on our site: no first- or third-party cookies are set, and visits are not linked across pageviews. We only enable analytics and advertising cookies, Clarity's continuous session recordings, and Google's use of the data for advertising if you explicitly accept the consent banner. You can control how Google personalizes ads in <a href="https://myadcenter.google.com/" target="_blank" rel="noreferrer" class="text-white underline hover:text-[#FF2D7A]">Google's My Ad Center</a>.
+              By default, both services run in <strong class="text-white">cookieless mode</strong> on our site: no first- or third-party cookies are set, and visits are not linked across pageviews. The consent banner lets you choose two categories separately: <strong class="text-white">Analytics</strong> turns on analytics cookies and Clarity's continuous session recordings, and <strong class="text-white">Marketing</strong> turns on advertising cookies and Google's and Microsoft's use of the data for advertising. Each stays off until you turn it on, and you can change your choice at any time with <strong class="text-white">Cookie settings</strong> in the site footer. You can control how Google personalizes ads in <a href="https://myadcenter.google.com/" target="_blank" rel="noreferrer" class="text-white underline hover:text-[#FF2D7A]">Google's My Ad Center</a>.
             </p>
           </section>
 
@@ -92,7 +92,7 @@ useHead({ title: 'Privacy Policy' })
           <section>
             <h2 class="font-[InterBold] text-[22px] text-white">Cookies</h2>
             <p class="mt-3">
-              We may use cookies or similar browser storage for essential site functionality and, if you accept the consent banner, for the analytics described above and for advertising.
+              We may use cookies or similar browser storage for essential site functionality, and for analytics and advertising when you allow those categories in the consent banner.
             </p>
           </section>
 

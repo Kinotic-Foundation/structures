@@ -1,51 +1,30 @@
 import { createApp, h } from 'vue'
 import CookieConsent from '~/components/CookieConsent.vue'
-import { initClarity, setClarityConsentV2 } from '~/utils/clarity'
+import { initClarity, setClarityConsent } from '~/utils/clarity'
+import { NO_CONSENT, persistConsent, readConsent, type ConsentChoice } from '~/utils/consent'
 import { initGoogleAnalytics, setGoogleAnalyticsConsent } from '~/utils/googleAnalytics'
 
-const STORAGE_KEY = 'kinotic-clarity-consent'
-
-type StoredConsent = 'accepted' | 'declined'
-
-function readStored(): StoredConsent | null {
-  try {
-    const v = localStorage.getItem(STORAGE_KEY)
-    return v === 'accepted' || v === 'declined' ? v : null
-  } catch {
-    return null
-  }
+function applyConsent(choice: ConsentChoice): void {
+  setClarityConsent(choice)
+  setGoogleAnalyticsConsent(choice)
 }
 
-function persist(value: StoredConsent): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, value)
-  } catch {
-    // ignore (private mode, etc.)
-  }
-}
-
-function mountBanner(onDecision: (accepted: boolean) => void): void {
+function mountBanner(current: ConsentChoice | null, onSave: (choice: ConsentChoice) => void): void {
   const container = document.createElement('div')
   container.setAttribute('data-cookie-consent', '')
   document.body.appendChild(container)
 
   const app = createApp({
     setup() {
-      const handle = (accepted: boolean) => {
-        onDecision(accepted)
+      const handle = (choice: ConsentChoice) => {
+        onSave(choice)
         app.unmount()
         container.remove()
       }
-      return () => h(CookieConsent, { onDecision: handle })
+      return () => h(CookieConsent, { current, onSave: handle })
     },
   })
   app.mount(container)
-}
-
-function applyConsent(accepted: boolean): void {
-  const value = accepted ? 'granted' : 'denied'
-  setClarityConsentV2(value, value)
-  setGoogleAnalyticsConsent(accepted)
 }
 
 export default defineNuxtPlugin(() => {
@@ -57,16 +36,27 @@ export default defineNuxtPlugin(() => {
   if (projectId) initClarity(projectId)
   initGoogleAnalytics()
 
-  const stored = readStored()
-  if (stored) {
-    applyConsent(stored === 'accepted')
-    return
+  let current = readConsent()
+  applyConsent(current ?? NO_CONSENT)
+
+  let bannerOpen = false
+  const open = () => {
+    if (bannerOpen) return
+    bannerOpen = true
+    mountBanner(current, (choice) => {
+      current = choice
+      persistConsent(choice)
+      applyConsent(choice)
+      bannerOpen = false
+    })
   }
 
-  // No prior choice: stay cookieless and ask the visitor.
-  applyConsent(false)
-  mountBanner((accepted) => {
-    persist(accepted ? 'accepted' : 'declined')
-    applyConsent(accepted)
-  })
+  if (!current) open()
+
+  return {
+    provide: {
+      /** Shows the cookie banner, opened to the category toggles when the visitor has already chosen. */
+      cookieConsent: { open },
+    },
+  }
 })
