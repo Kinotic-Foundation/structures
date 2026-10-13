@@ -1,4 +1,52 @@
-Elastic License 2.0
+Copyright (c) 2026 Minds Ignited LLC. All rights reserved.
+
+Portions of this software are licensed as follows:
+
+- All content that resides in the [`kinotic-ee/`](kinotic-ee) directory of this repository is
+  licensed under the Kinotic Enterprise License defined in
+  [`kinotic-ee/LICENSE`](kinotic-ee/LICENSE).
+
+- All third-party components incorporated into the Kinotic software are licensed under the
+  original license provided by the owner of the applicable component.
+
+- Content outside of the above-mentioned directory is available under the "Elastic License 2.0"
+  as defined below, subject to the Kinotic Additional Limitations that precede it.
+
+# Kinotic Additional Limitations
+
+The licensor grants the Elastic License 2.0 subject to the following limitations, in addition to
+the limitations the Elastic License 2.0 itself sets out. These limitations are part of the
+"limitations and conditions" to which the Elastic License 2.0 grant is subject, so a use that
+violates them is not licensed. The terms "Development and Testing", "Enterprise Feature", and
+"Production Use" have the meanings given in the Kinotic Enterprise License.
+
+## Enterprise Extension Points
+
+Any interface, abstract class, or annotation in a Java package that has a segment named `ee`
+(for example `org.kinotic.domain.api.ee.services`), or in a directory named `ee`, outside the
+`kinotic-ee/` directory, is an Enterprise Extension Point. The capability an Enterprise
+Extension Point provides is an Enterprise Feature, licensed only under the Kinotic Enterprise
+License. A type is an Enterprise Extension Point in every published version of the software that
+places it in such a package or directory.
+
+## Substitute implementations
+
+Except as a written agreement with the licensor expressly permits, you may not, for Production
+Use:
+
+1. implement or extend an Enterprise Extension Point, or use such an implementation, other than
+   one the licensor provides in `kinotic-ee/` or includes in the software under the Elastic
+   License 2.0 and that you use unmodified;
+2. modify the software to move a type out of such a package or directory, or to replace, bypass,
+   or wrap an Enterprise Extension Point or the code that uses it, so that its capability is
+   provided by other software; or
+3. otherwise provide the capability of an Enterprise Extension Point in a manner designed to
+   avoid the need for a license to the corresponding Enterprise Feature.
+
+You may implement an Enterprise Extension Point, and modify the software, for your own
+Development and Testing.
+
+# Elastic License 2.0
 
 URL: https://www.elastic.co/licensing/elastic-license
 
