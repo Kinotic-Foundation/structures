@@ -7,7 +7,7 @@ import com.azure.security.keyvault.secrets.models.KeyVaultSecret;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import org.kinotic.domain.api.config.AzureProperties;
-import org.kinotic.domain.api.services.SecretStorageBackend;
+import org.kinotic.domain.api.ee.services.SecretStorageBackend;
 import reactor.core.publisher.Flux;
 
 import java.util.List;

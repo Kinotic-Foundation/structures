@@ -17,9 +17,9 @@ Enterprise Features are made available in source-available form. They are not op
 
 “Development and Testing” means running an Enterprise Feature locally or in a non-production environment for the purpose of evaluating it, developing it, developing against it, or testing it or modifications to it, in each case where the environment does not serve, support or process the data of your end users, customers or business operations.
 
-“Enterprise Capability” means a capability of the Kinotic software designated as an Enterprise Capability in the Kinotic Additional Limitations.
+“Enterprise Extension Point” means a type of the Kinotic software that the Kinotic Additional Limitations designate as an Enterprise Extension Point.
 
-“Enterprise Feature” means any component, module, feature, or functionality of the Kinotic software that Minds Ignited designates as an Enterprise Feature, including in the applicable source repository, in the software itself, in its documentation, or in a Component Exhibit. Enterprise Features include the contents of the `kinotic-ee` module and every Enterprise Capability. Enterprise Features are identified by designation and not by name in this License.
+“Enterprise Feature” means any component, module, feature, or functionality of the Kinotic software that Minds Ignited designates as an Enterprise Feature, including in the applicable source repository, in the software itself, in its documentation, or in a Component Exhibit. Enterprise Features include the contents of the `kinotic-ee` module and the capability every Enterprise Extension Point provides. Enterprise Features are identified by designation and not by name in this License.
 
 “License Key” means a credential issued by Minds Ignited that enables one or more Enterprise Features and records the scope, permitted purpose, and expiry of that enablement.
 
@@ -39,7 +39,7 @@ Production Use of an Enterprise Feature in the absence of either condition is un
 (b) make an Enterprise Feature available to third parties as a hosted or managed service;
 (c) remove, obscure, or alter any copyright, trademark, license, or other proprietary notice in or on an Enterprise Feature;
 (d) circumvent, disable, or interfere with any License Key, entitlement check, or other technical measure by which Minds Ignited enables or verifies an Enterprise Feature, or use an Enterprise Feature without a License Key where a License Key is required; or
-(e) make Production Use of an Enterprise Capability through any implementation other than the Enterprise Feature Minds Ignited provides for it, or write, obtain, modify, or distribute software that provides an Enterprise Capability for Production Use in place of that Enterprise Feature, as the Kinotic Additional Limitations further describe.
+(e) make Production Use of the capability an Enterprise Extension Point provides through any implementation other than the Enterprise Feature Minds Ignited provides for it, or write, obtain, modify, or distribute software that provides that capability for Production Use in place of that Enterprise Feature, as the Kinotic Additional Limitations further describe.
 
 4. LICENSE KEYS.
 4.1. Issuance.  License Keys are obtained from Minds Ignited. Minds Ignited issues you one License Key, which enumerates each Enterprise Feature enabled for you together with the scope, permitted purpose, and expiry of that enablement. Enabling an additional Enterprise Feature, or ceasing to enable one, is a change to your existing License Key; it does not require a new License Key and does not create a separate license document.

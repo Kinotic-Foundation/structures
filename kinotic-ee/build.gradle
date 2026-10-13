@@ -3,6 +3,7 @@ plugins {
 }
 
 dependencies {
+    implementation project(':kinotic-core')
     implementation project(':kinotic-domain')
 
     implementation 'com.azure:azure-identity'

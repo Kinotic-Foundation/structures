@@ -1,4 +1,4 @@
-package org.kinotic.domain.api.services;
+package org.kinotic.domain.api.ee.services;
 
 import io.vertx.core.Future;
 
@@ -9,8 +9,8 @@ import java.util.Map;
  * SPI for secret storage backends. All methods operate on HKDF-derived opaque names,
  * never on raw scope/key values.
  *
- * <p>Secret storage is an Enterprise Capability: Production Use of any implementation other than
- * the licensor's Enterprise Feature or the unmodified {@code InMemoryBackend} requires a Kinotic
+ * <p>This is an Enterprise Extension Point: Production Use of any implementation other than the
+ * ones in {@code kinotic-ee} or the unmodified {@code InMemoryBackend} requires a Kinotic
  * Enterprise License. See the Kinotic Additional Limitations in {@code LICENSE.md}.
  */
 public interface SecretStorageBackend {

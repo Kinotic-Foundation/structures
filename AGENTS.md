@@ -29,7 +29,7 @@ This flag has no effect on normal builds — omitting it uses the default Java 2
 
 ## Enterprise Features live in kinotic-ee
 
-The root `LICENSE.md` licenses everything under the Elastic License 2.0 with the Kinotic Additional Limitations, except `kinotic-ee/`, which holds the Enterprise Features under the Kinotic Enterprise License (`kinotic-ee/LICENSE`). An Enterprise Capability is an extension point in the ELv2 code (`SecretStorageBackend`) whose production implementations are Enterprise Features: put any new implementation of one in `kinotic-ee`, never in an ELv2 module, and when a change makes another capability enterprise-only, add its row to the Enterprise Capabilities table in `LICENSE.md` in the same change.
+The root `LICENSE.md` licenses everything under the Elastic License 2.0 with the Kinotic Additional Limitations, except `kinotic-ee/`, which holds the Enterprise Features under the Kinotic Enterprise License (`kinotic-ee/LICENSE`). Every interface in an ELv2 package with an `ee` segment (`org.kinotic.domain.api.ee.services.SecretStorageBackend`) is an Enterprise Extension Point whose production implementations are Enterprise Features. To make a capability enterprise-only, put its interface in the module's `api/ee/` tree, mirroring `api/` (`api/ee/services/`), and put its implementations in `kinotic-ee`, never in an ELv2 module. The package name is the license designation, so an `ee` package may hold a single file.
 
 ## Don't guess from names
 

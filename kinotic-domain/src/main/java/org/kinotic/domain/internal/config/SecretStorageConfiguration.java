@@ -3,7 +3,7 @@ package org.kinotic.domain.internal.config;
 import lombok.extern.slf4j.Slf4j;
 import org.kinotic.domain.api.config.KinoticDomainProperties;
 import org.kinotic.domain.api.config.SecretStorageProperties;
-import org.kinotic.domain.api.services.SecretStorageBackend;
+import org.kinotic.domain.api.ee.services.SecretStorageBackend;
 import org.kinotic.domain.internal.api.services.secret.InMemoryBackend;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;

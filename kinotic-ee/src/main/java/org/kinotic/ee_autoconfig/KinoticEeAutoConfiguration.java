@@ -3,7 +3,7 @@ package org.kinotic.ee_autoconfig;
 import io.vertx.core.Vertx;
 import lombok.extern.slf4j.Slf4j;
 import org.kinotic.domain.api.config.KinoticDomainProperties;
-import org.kinotic.domain.api.services.SecretStorageBackend;
+import org.kinotic.domain.api.ee.services.SecretStorageBackend;
 import org.kinotic.domain_autoconfig.KinoticDomainAutoConfiguration;
 import org.kinotic.ee.internal.api.services.AzureKeyVaultBackend;
 import org.springframework.boot.autoconfigure.AutoConfiguration;

@@ -20,35 +20,30 @@ the limitations the Elastic License 2.0 itself sets out. These limitations are p
 violates them is not licensed. The terms "Development and Testing", "Enterprise Feature", and
 "Production Use" have the meanings given in the Kinotic Enterprise License.
 
-## Enterprise Capabilities
+## Enterprise Extension Points
 
-The licensor designates the capabilities of the software listed below as Enterprise
-Capabilities. Each is reached through an extension point in the software that is licensed under
-the Elastic License 2.0, so that you may read it and build against it, but the capability itself
-is an Enterprise Feature, licensed only under the Kinotic Enterprise License.
-
-| Enterprise Capability | Extension point | Implementation included under the Elastic License 2.0 |
-|---|---|---|
-| Secret storage: persisting secrets stored through `SecretStorageService` | `org.kinotic.domain.api.services.SecretStorageBackend` | `InMemoryBackend`, which keeps secrets in process memory only and loses them when the process stops |
-
-The licensor may designate further Enterprise Capabilities by adding them to this table. A
-designation applies prospectively, from the date it is published.
+Any interface, abstract class, or annotation in a Java package that has a segment named `ee`
+(for example `org.kinotic.domain.api.ee.services`), or in a directory named `ee`, outside the
+`kinotic-ee/` directory, is an Enterprise Extension Point. The capability an Enterprise
+Extension Point provides is an Enterprise Feature, licensed only under the Kinotic Enterprise
+License. A type is an Enterprise Extension Point in every published version of the software that
+places it in such a package or directory.
 
 ## Substitute implementations
 
-Except as a written agreement with the licensor expressly permits, you may not make Production
-Use of an Enterprise Capability through any implementation other than the Enterprise Feature the
-licensor provides for it. In particular, you may not, for Production Use:
+Except as a written agreement with the licensor expressly permits, you may not, for Production
+Use:
 
-1. write, obtain, use, or distribute an implementation of an Enterprise Capability's extension
-   point other than the implementation included under the Elastic License 2.0, used unmodified;
-2. modify, replace, extend, or wrap the software, including `SecretStorageService` and the
-   classes that implement and configure it, so that an Enterprise Capability is provided by
-   software other than the licensor's Enterprise Feature; or
-3. otherwise provide the functionality of an Enterprise Capability in a manner designed to avoid
-   the need for a license to the corresponding Enterprise Feature.
+1. implement or extend an Enterprise Extension Point, or use such an implementation, other than
+   one the licensor provides in `kinotic-ee/` or includes in the software under the Elastic
+   License 2.0 and that you use unmodified;
+2. modify the software to move a type out of such a package or directory, or to replace, bypass,
+   or wrap an Enterprise Extension Point or the code that uses it, so that its capability is
+   provided by other software; or
+3. otherwise provide the capability of an Enterprise Extension Point in a manner designed to
+   avoid the need for a license to the corresponding Enterprise Feature.
 
-You may implement an extension point listed above, and modify the software, for your own
+You may implement an Enterprise Extension Point, and modify the software, for your own
 Development and Testing.
 
 # Elastic License 2.0
