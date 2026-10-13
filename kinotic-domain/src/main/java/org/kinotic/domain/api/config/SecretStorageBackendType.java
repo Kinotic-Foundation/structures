@@ -5,7 +5,7 @@ package org.kinotic.domain.api.config;
  */
 public enum SecretStorageBackendType {
     /**
-     * Azure Key Vault backed secret storage.
+     * Azure Key Vault backed secret storage, provided by the {@code kinotic-ee} module.
      */
     AZURE
 }

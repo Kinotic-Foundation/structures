@@ -1,6 +1,7 @@
 package org.kinotic.domain.internal.api.services.secret;
 
 import io.vertx.core.Future;
+import org.kinotic.domain.api.services.SecretStorageBackend;
 
 import java.util.List;
 import java.util.Map;

@@ -1,4 +1,57 @@
-Elastic License 2.0
+Copyright (c) 2026 Minds Ignited LLC. All rights reserved.
+
+Portions of this software are licensed as follows:
+
+- All content that resides in the [`kinotic-ee/`](kinotic-ee) directory of this repository is
+  licensed under the Kinotic Enterprise License defined in
+  [`kinotic-ee/LICENSE`](kinotic-ee/LICENSE).
+
+- All third-party components incorporated into the Kinotic software are licensed under the
+  original license provided by the owner of the applicable component.
+
+- Content outside of the above-mentioned directory is available under the "Elastic License 2.0"
+  as defined below, subject to the Kinotic Additional Limitations that precede it.
+
+# Kinotic Additional Limitations
+
+The licensor grants the Elastic License 2.0 subject to the following limitations, in addition to
+the limitations the Elastic License 2.0 itself sets out. These limitations are part of the
+"limitations and conditions" to which the Elastic License 2.0 grant is subject, so a use that
+violates them is not licensed. The terms "Development and Testing", "Enterprise Feature", and
+"Production Use" have the meanings given in the Kinotic Enterprise License.
+
+## Enterprise Capabilities
+
+The licensor designates the capabilities of the software listed below as Enterprise
+Capabilities. Each is reached through an extension point in the software that is licensed under
+the Elastic License 2.0, so that you may read it and build against it, but the capability itself
+is an Enterprise Feature, licensed only under the Kinotic Enterprise License.
+
+| Enterprise Capability | Extension point | Implementation included under the Elastic License 2.0 |
+|---|---|---|
+| Secret storage: persisting secrets stored through `SecretStorageService` | `org.kinotic.domain.api.services.SecretStorageBackend` | `InMemoryBackend`, which keeps secrets in process memory only and loses them when the process stops |
+
+The licensor may designate further Enterprise Capabilities by adding them to this table. A
+designation applies prospectively, from the date it is published.
+
+## Substitute implementations
+
+Except as a written agreement with the licensor expressly permits, you may not make Production
+Use of an Enterprise Capability through any implementation other than the Enterprise Feature the
+licensor provides for it. In particular, you may not, for Production Use:
+
+1. write, obtain, use, or distribute an implementation of an Enterprise Capability's extension
+   point other than the implementation included under the Elastic License 2.0, used unmodified;
+2. modify, replace, extend, or wrap the software, including `SecretStorageService` and the
+   classes that implement and configure it, so that an Enterprise Capability is provided by
+   software other than the licensor's Enterprise Feature; or
+3. otherwise provide the functionality of an Enterprise Capability in a manner designed to avoid
+   the need for a license to the corresponding Enterprise Feature.
+
+You may implement an extension point listed above, and modify the software, for your own
+Development and Testing.
+
+# Elastic License 2.0
 
 URL: https://www.elastic.co/licensing/elastic-license
 

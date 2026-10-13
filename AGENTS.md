@@ -27,6 +27,10 @@ CLAUDE_CLOUD_COMPILE=true ./gradlew :kinotic-core:compileJava \
 
 This flag has no effect on normal builds — omitting it uses the default Java 25 toolchain with full publishing and frontend support.
 
+## Enterprise Features live in kinotic-ee
+
+The root `LICENSE.md` licenses everything under the Elastic License 2.0 with the Kinotic Additional Limitations, except `kinotic-ee/`, which holds the Enterprise Features under the Kinotic Enterprise License (`kinotic-ee/LICENSE`). An Enterprise Capability is an extension point in the ELv2 code (`SecretStorageBackend`) whose production implementations are Enterprise Features: put any new implementation of one in `kinotic-ee`, never in an ELv2 module, and when a change makes another capability enterprise-only, add its row to the Enterprise Capabilities table in `LICENSE.md` in the same change.
+
 ## Don't guess from names
 
 Names suggest meaning but don't define it. Before using an annotation, framework hook, base class, or library helper you haven't used in this codebase before, read its source or docs and confirm what it actually does. Don't infer behaviour from a plausible-sounding name and ship it. If you can't verify the behaviour, ask — don't write a comment justifying the guess.
