@@ -1,5 +1,16 @@
 <script setup lang="ts">
+import type { HeaderLink } from '~~/page-meta'
+
+const SITE_LINKS: HeaderLink[] = [
+  { label: 'Home', to: '/' },
+  { label: 'Docs', to: '/apps/introduction' },
+  { label: 'Test Reports', to: '/test-results/', external: true },
+]
+const SITE_CTA: HeaderLink = { label: 'Get Started', to: '/apps/quick-start' }
+
 const route = useRoute()
+const links = computed(() => route.meta.headerNav?.links ?? SITE_LINKS)
+const cta = computed(() => route.meta.headerNav?.cta ?? SITE_CTA)
 
 const scrolled = ref(false)
 const menuOpen = ref(false)
@@ -33,12 +44,10 @@ watch(() => route.fullPath, () => {
 
       <div class="knav__right">
         <nav class="knav__links" aria-label="Main">
-          <NuxtLink to="/">Home</NuxtLink>
-          <NuxtLink to="/apps/introduction">Docs</NuxtLink>
-          <a href="/test-results/">Test Reports</a>
+          <NuxtLink v-for="link in links" :key="link.to" :to="link.to" :external="link.external">{{ link.label }}</NuxtLink>
         </nav>
 
-        <NuxtLink to="/apps/quick-start" class="knav__cta">Get Started</NuxtLink>
+        <NuxtLink :to="cta.to" :external="cta.external" class="knav__cta">{{ cta.label }}</NuxtLink>
 
         <button
           class="knav__toggle"
@@ -56,10 +65,7 @@ watch(() => route.fullPath, () => {
     </div>
 
     <nav v-show="menuOpen" id="knav-menu" class="knav__menu" aria-label="Main" @click="menuOpen = false">
-      <NuxtLink to="/">Home</NuxtLink>
-      <NuxtLink to="/apps/introduction">Docs</NuxtLink>
-      <a href="/test-results/">Test Reports</a>
-      <NuxtLink to="/apps/quick-start">Get Started</NuxtLink>
+      <NuxtLink v-for="link in [...links, cta]" :key="link.to" :to="link.to" :external="link.external">{{ link.label }}</NuxtLink>
     </nav>
   </header>
 </template>
