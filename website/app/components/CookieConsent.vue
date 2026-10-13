@@ -90,7 +90,7 @@ const save = (choice: ConsentChoice) => emit('save', choice)
       </button>
       <button
         type="button"
-        class="consent__button consent__button--solid"
+        class="consent__button consent__button--outline"
         @click="save({ analytics: false, marketing: false })"
       >
         Reject all
