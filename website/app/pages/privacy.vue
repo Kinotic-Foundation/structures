@@ -53,16 +53,28 @@ useHead({ title: 'Privacy Policy' })
           <section>
             <h2 class="font-[InterBold] text-[22px] text-white">Analytics</h2>
             <p class="mt-3">
-              We use <strong class="text-white">Microsoft Clarity</strong>, a behavioral analytics service provided by Microsoft, to understand how visitors interact with our website so we can improve it. Clarity may collect information such as pages viewed, clicks, scrolling, mouse movement, approximate geographic region, browser and device type, referring URL, and session recordings. Clarity automatically masks sensitive content (such as text in input fields) before it is transmitted, and Microsoft states that Clarity is <strong class="text-white">GDPR and CCPA ready</strong>.
+              We use two analytics services to understand how visitors interact with our website so we can improve it:
+            </p>
+            <ul class="mt-3 list-disc space-y-2 pl-6">
+              <li>
+                <strong class="text-white">Microsoft Clarity</strong>, a behavioral analytics service provided by Microsoft. Clarity may collect information such as pages viewed, clicks, scrolling, mouse movement, approximate geographic region, browser and device type, referring URL, and session recordings. Clarity automatically masks sensitive content (such as text in input fields) before it is transmitted, and Microsoft states that Clarity is <strong class="text-white">GDPR and CCPA ready</strong>.
+              </li>
+              <li>
+                <strong class="text-white">Google Analytics</strong>, a web analytics service provided by Google. Google Analytics may collect information such as pages viewed, time on page, scrolling, outbound link clicks, approximate geographic region, browser and device type, and referring URL.
+              </li>
+            </ul>
+            <p class="mt-3">
+              We use this information only in aggregate to measure site performance and usage trends. We do not use analytics data to identify individual visitors, and we do not share this data with any third party beyond Microsoft's and Google's roles as the analytics providers. Their handling of this data is governed by the
+              <a href="https://privacy.microsoft.com/privacystatement" target="_blank" rel="noreferrer" class="text-white underline hover:text-[#FF2D7A]">Microsoft Privacy Statement</a>
+              and
+              <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer" class="text-white underline hover:text-[#FF2D7A]">Google's Privacy Policy</a>.
+              You can learn more at
+              <a href="https://clarity.microsoft.com/" target="_blank" rel="noreferrer" class="text-white underline hover:text-[#FF2D7A]">clarity.microsoft.com</a>
+              and
+              <a href="https://marketingplatform.google.com/about/analytics/" target="_blank" rel="noreferrer" class="text-white underline hover:text-[#FF2D7A]">Google Analytics</a>.
             </p>
             <p class="mt-3">
-              We use this information only in aggregate to measure site performance and usage trends. We do not use analytics data to identify individual visitors, and we do not share this data with any third party beyond Microsoft's role as the analytics provider. Microsoft's handling of this data is governed by the
-              <a href="https://privacy.microsoft.com/privacystatement" target="_blank" rel="noreferrer" class="text-white underline hover:text-[#FF2D7A]">Microsoft Privacy Statement</a>.
-              You can learn more about Clarity at
-              <a href="https://clarity.microsoft.com/" target="_blank" rel="noreferrer" class="text-white underline hover:text-[#FF2D7A]">clarity.microsoft.com</a>.
-            </p>
-            <p class="mt-3">
-              By default, Clarity runs in <strong class="text-white">cookieless mode</strong> on our site: no first- or third-party cookies are set, and each pageview is treated as a new session. We only enable cookies and continuous session recordings if you explicitly accept the consent banner.
+              By default, both services run in <strong class="text-white">cookieless mode</strong> on our site: no first- or third-party cookies are set, and visits are not linked across pageviews. We only enable analytics cookies, and Clarity's continuous session recordings, if you explicitly accept the consent banner. Advertising storage stays disabled either way.
             </p>
           </section>
 

@@ -1,8 +1,9 @@
 import { createApp, h } from 'vue'
 import CookieConsent from '~/components/CookieConsent.vue'
 import { initClarity, setClarityConsentV2 } from '~/utils/clarity'
+import { initGoogleAnalytics, setGoogleAnalyticsConsent } from '~/utils/googleAnalytics'
 
-const STORAGE_KEY = 'kinotic-clarity-consent'
+const STORAGE_KEY = 'kinotic-analytics-consent'
 
 type StoredConsent = 'accepted' | 'declined'
 
@@ -41,36 +42,31 @@ function mountBanner(onDecision: (accepted: boolean) => void): void {
   app.mount(container)
 }
 
+function applyConsent(accepted: boolean): void {
+  const value = accepted ? 'granted' : 'denied'
+  setClarityConsentV2(value, value)
+  setGoogleAnalyticsConsent(accepted)
+}
+
 export default defineNuxtPlugin(() => {
   const config = useRuntimeConfig()
   const projectId = (config.public.clarityProjectId as string | undefined) || ''
-  if (!projectId) return
 
-  // Always initialize Clarity. With Consent Mode enabled in the Clarity
-  // project settings, Clarity starts in denied/cookieless mode and only
-  // upgrades when we call consentV2 with granted values.
-  initClarity(projectId)
+  // Both providers start in denied/cookieless mode (Clarity through Consent Mode
+  // in its project settings) and only upgrade once applyConsent grants storage.
+  if (projectId) initClarity(projectId)
+  initGoogleAnalytics()
 
   const stored = readStored()
-
-  if (stored === 'accepted') {
-    setClarityConsentV2('granted', 'granted')
-    return
-  }
-  if (stored === 'declined') {
-    setClarityConsentV2('denied', 'denied')
+  if (stored) {
+    applyConsent(stored === 'accepted')
     return
   }
 
   // No prior choice: stay cookieless and ask the visitor.
-  setClarityConsentV2('denied', 'denied')
+  applyConsent(false)
   mountBanner((accepted) => {
-    if (accepted) {
-      persist('accepted')
-      setClarityConsentV2('granted', 'granted')
-    } else {
-      persist('declined')
-      setClarityConsentV2('denied', 'denied')
-    }
+    persist(accepted ? 'accepted' : 'declined')
+    applyConsent(accepted)
   })
 })

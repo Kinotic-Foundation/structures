@@ -14,7 +14,7 @@ export function setClarityConsentV2(
   adStorage: ClarityConsent,
   analyticsStorage: ClarityConsent,
 ): void {
-  if (typeof window === 'undefined') return
+  if (!clarityInitialized) return
   Clarity.consentV2({
     ad_Storage: adStorage,
     analytics_Storage: analyticsStorage,
