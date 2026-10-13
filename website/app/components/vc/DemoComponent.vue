@@ -1,5 +1,5 @@
 <template>
-  <section id="demo" class="k-section demo">
+  <section id="getting-started" class="k-section demo">
     <div class="k-wrap">
       <div class="k-eyebrow demo__eyebrow" data-reveal>
         <span>GETTING STARTED</span>

@@ -9,7 +9,7 @@ definePageMeta({
   headerNav: {
     links: [
       { label: 'About us', to: '#about', external: true },
-      { label: 'Demo', to: '#demo', external: true },
+      { label: 'Getting started', to: '#getting-started', external: true },
     ],
     cta: { label: 'Contact us', to: '#cta', external: true },
   },
