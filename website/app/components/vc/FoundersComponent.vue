@@ -207,15 +207,18 @@ const founders: Founder[] = [
   line-height: 1.65;
 }
 
+/* A single card spans the column, so the photo keeps its own proportions instead of
+   a fixed height that would crop it, and the card width caps how far it upscales. */
 @media (max-width: 1020px) {
   .founders__grid {
     grid-template-columns: 1fr;
+    max-width: 440px;
+    margin: 0 auto;
   }
-}
 
-@media (max-width: 600px) {
   .founder__photo {
-    height: 250px;
+    height: auto;
+    aspect-ratio: 342 / 360;
   }
 }
 </style>
