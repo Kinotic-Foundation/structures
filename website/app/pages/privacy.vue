@@ -11,7 +11,7 @@ useHead({ title: 'Privacy Policy' })
           Privacy Policy
         </h1>
         <p class="mt-4 text-[14px] text-[#8A8A90]">
-          Last updated: October 13, 2026
+          Last updated: October 14, 2026
         </p>
 
         <div class="mt-10 space-y-8 font-[InterRegular] text-[16px] leading-[160%]">
@@ -104,6 +104,10 @@ useHead({ title: 'Privacy Policy' })
             <p class="mt-3">
               Some pages include videos hosted on YouTube. The player loads from YouTube's privacy-enhanced domain (youtube-nocookie.com) only after you click play, at which point YouTube receives your request and handles it under
               <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer" class="text-white underline hover:text-[#FF2D7A]">Google's Privacy Policy</a>.
+            </p>
+            <p class="mt-3">
+              Our investor page embeds a presentation hosted on Figma. The embed loads when the page opens, at which point Figma receives your request and handles it under
+              <a href="https://www.figma.com/legal/privacy/" target="_blank" rel="noreferrer" class="text-white underline hover:text-[#FF2D7A]">Figma's Privacy Policy</a>.
             </p>
           </section>
 

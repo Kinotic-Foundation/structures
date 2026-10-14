@@ -1,5 +1,8 @@
 <script setup lang="ts">
-const FOUNDERS_VIDEO_EMBED = 'https://www.youtube-nocookie.com/embed/K3du2BlRYPI?autoplay=1&rel=0&playsinline=1'
+const FOUNDERS_VIDEO = 'K3du2BlRYPI'
+const FULL_STORY_VIDEO = '9b5afQQb0o0'
+
+defineEmits<{ play: [videoId: string] }>()
 </script>
 
 <template>
@@ -19,20 +22,36 @@ const FOUNDERS_VIDEO_EMBED = 'https://www.youtube-nocookie.com/embed/K3du2BlRYPI
         <div class="about__glow about__glow--left" />
         <div class="about__glow about__glow--right" />
         <div class="about__glow about__glow--bottom" />
-        <VcVideoFacade
+        <VcVideoPoster
           class="about__player"
           poster="/images/vc/founders-video-poster.webp"
           label="Play the founders video"
-        >
-          <iframe
-            :src="FOUNDERS_VIDEO_EMBED"
-            title="Kinotic founders video"
-            referrerpolicy="strict-origin-when-cross-origin"
-            allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
-            allowfullscreen
-          />
-        </VcVideoFacade>
+          @play="$emit('play', FOUNDERS_VIDEO)"
+        />
         <div class="about__rule" />
+      </div>
+
+      <div class="about__story" data-reveal>
+        <div class="about__story-copy">
+          <span class="about__chip">LONG-FORM · 1 HR 13 MIN</span>
+          <h3 class="k-heading about__story-title">Really want to know our story?</h3>
+          <p class="about__story-blurb">
+            The full founders conversation — where the idea came from, why now, and how two decades
+            of shipping led to Kinotic.
+          </p>
+          <button type="button" class="k-btn k-btn--red about__story-button" @click="$emit('play', FULL_STORY_VIDEO)">
+            <svg width="12" height="12" viewBox="0 0 44 44" fill="none" aria-hidden="true">
+              <path d="M35.5 18.6c2.9 1.7 2.9 5.1 0 6.8L15.9 36.7c-2.9 1.7-6.5-.4-6.5-3.4V10.7c0-3 3.6-5.1 6.5-3.4L35.5 18.6Z" fill="#fff" />
+            </svg>
+            <span>Watch the full story</span>
+          </button>
+        </div>
+        <VcVideoPoster
+          class="about__story-thumb"
+          poster="/images/vc/full-story-poster.webp"
+          label="Play the full founders story"
+          @play="$emit('play', FULL_STORY_VIDEO)"
+        />
       </div>
     </div>
   </section>
@@ -126,6 +145,64 @@ const FOUNDERS_VIDEO_EMBED = 'https://www.youtube-nocookie.com/embed/K3du2BlRYPI
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.18), transparent);
 }
 
+.about__story {
+  display: flex;
+  align-items: center;
+  gap: 48px;
+  max-width: 900px;
+  margin: 40px auto 0;
+  padding: 40px 44px;
+  border: 1px solid var(--color-k-border);
+  border-radius: 18px;
+  background: var(--color-k-bg-card);
+}
+
+.about__story-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.about__chip {
+  display: inline-flex;
+  margin-bottom: 18px;
+  padding: 6px 10px;
+  border-radius: 3px;
+  background: #101E19;
+  color: var(--color-k-mint);
+  font-family: var(--font-k-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+}
+
+.about__story-title {
+  margin-bottom: 12px;
+  font-size: clamp(22px, 2.2vw, 28px);
+  line-height: 1.2;
+}
+
+.about__story-blurb {
+  max-width: 460px;
+  margin: 0 0 26px;
+  color: var(--color-k-muted);
+  font-size: 14.5px;
+  line-height: 1.65;
+}
+
+.about__story-button {
+  padding: 13px 22px;
+  border: 0;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.about__story-thumb {
+  flex: none;
+  width: 300px;
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--color-k-border);
+  border-radius: 10px;
+}
+
 @media (max-width: 768px) {
   .about {
     padding: 148px 0 64px;
@@ -137,6 +214,18 @@ const FOUNDERS_VIDEO_EMBED = 'https://www.youtube-nocookie.com/embed/K3du2BlRYPI
 
   .about__player {
     border-radius: 12px;
+  }
+
+  .about__story {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 28px;
+    padding: 28px 24px;
+    border-radius: 12px;
+  }
+
+  .about__story-thumb {
+    width: 100%;
   }
 }
 </style>
