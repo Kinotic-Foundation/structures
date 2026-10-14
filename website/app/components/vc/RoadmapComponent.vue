@@ -44,7 +44,7 @@ const milestones: Milestone[] = [
     label: 'Q2 2027',
     status: 'upcoming',
     title: 'Repeatable sales',
-    summary: 'More customers live, proven pricing, and published case studies.',
+    summary: 'More customers live, proven pricing, published case studies, and partner channels through the MCP ecosystem.',
   },
   {
     label: 'Q3 2027',
@@ -56,7 +56,7 @@ const milestones: Milestone[] = [
     label: 'Q4 2027',
     status: 'upcoming',
     title: 'Scale',
-    summary: 'A go-to-market team, partner channels through the MCP ecosystem and cloud marketplaces, and SOC 2 Type II.',
+    summary: 'Nationwide advertising, a sales team and cloud marketplace listings to grow the customer base, backed by SOC 2 Type II.',
   },
 ]
 
