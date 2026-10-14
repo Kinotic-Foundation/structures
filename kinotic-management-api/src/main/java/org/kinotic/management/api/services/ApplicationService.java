@@ -4,6 +4,7 @@ import io.vertx.core.Future;
 import org.kinotic.core.api.annotations.Publish;
 import org.kinotic.core.api.crud.IdentifiableCrudService;
 import org.kinotic.domain.api.model.Application;
+import org.kinotic.domain.api.model.TenantManagement;
 import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
 import org.kinotic.idl.api.annotations.McpTool;
 
@@ -23,15 +24,14 @@ public interface ApplicationService extends IdentifiableCrudService<Application,
      * The organization id is derived from the authenticated participant.
      * @param name the name of the application to create
      * @param description the description of the application to create
-     * @param tenantPerUser true to give every APPLICATION-scope user of this application its own
-     *                      tenant, isolating each user's {@code MultiTenancyType.SHARED} entity
-     *                      data; false or null to leave all users sharing one set of data.
-     *                      Applies to users created while it is enabled, so it is chosen before
-     *                      the application has users
+     * @param tenantManagement who creates and administers the application's tenants, or null for
+     *                         {@link TenantManagement#TENANT_ADMINISTRATORS}. {@code PLATFORM} applies
+     *                         to users created while it is in force, so it is chosen before the
+     *                         application has users
      * @return {@link Future} emitting the created application, or the existing
      *         application whose id matches the slugified name
      */
-    Future<Application> createApplicationIfNotExist(String name, String description, Boolean tenantPerUser);
+    Future<Application> createApplicationIfNotExist(String name, String description, TenantManagement tenantManagement);
 
     /**
      * Returns the enabled OIDC configurations registered on the given application.

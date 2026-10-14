@@ -5,6 +5,7 @@ import org.apache.commons.lang3.Validate;
 import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.core.api.crud.Sort;
+import org.kinotic.domain.api.model.TenantManagement;
 import org.kinotic.domain.api.model.security.AuthType;
 import org.kinotic.domain.api.model.security.identity.ParticipantIdentity;
 import org.kinotic.domain.api.model.security.DelegateKind;
@@ -225,7 +226,7 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
 
     /**
      * Applies the owning application's tenant policy to a new APPLICATION-scope user: when the
-     * app has {@code tenantPerUser} enabled and no explicit tenantId was supplied, a fresh UUID
+     * platform manages the app's tenants and no explicit tenantId was supplied, a fresh UUID
      * becomes the user's tenantId. Deliberately NOT the user's id — the tenantId is an ES
      * routing key and part of the immutable _id of every SHARED entity the user writes, while
      * createUser accepts caller-supplied ids of any shape; a dedicated UUID keeps tenant
@@ -242,7 +243,7 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
                                 "Application " + user.getApplicationId() + " not found in organization "
                                 + user.getOrganizationId());
                     }
-                    if (app.isTenantPerUser()) {
+                    if (app.getTenantManagement() == TenantManagement.PLATFORM) {
                         user.setTenantId(UUID.randomUUID().toString());
                     }
                     return user;

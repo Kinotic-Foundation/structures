@@ -29,12 +29,12 @@ public class Application implements OrganizationScoped<String> {
     private List<String> oidcConfigurationIds;
 
     /**
-     * When true, every APPLICATION-scope {@link ParticipantIdentity}
-     * created for this application receives an auto-generated unique {@code tenantId},
-     * isolating each user's {@code MultiTenancyType.SHARED} entity data in its own tenant.
-     * Applies only to users created after it is enabled; existing users are not backfilled.
+     * Who creates and administers this application's tenants. Under {@link TenantManagement#PLATFORM}
+     * every APPLICATION-scope {@link ParticipantIdentity} created for the application receives a tenant
+     * of its own; it applies to users created while it is in force, and existing users are not
+     * backfilled.
      */
-    private boolean tenantPerUser = false;
+    private TenantManagement tenantManagement = TenantManagement.TENANT_ADMINISTRATORS;
 
     /**
      * Name of the UI whose site this application's browser flows return to, such as its OAuth consent

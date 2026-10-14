@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS kinotic_application (
     name KEYWORD,
     description TEXT,
     oidcConfigurationIds KEYWORD,
-    tenantPerUser BOOLEAN,
+    tenantManagement KEYWORD,
     primaryUiId KEYWORD,
     primaryUiUrl KEYWORD,
     updated DATE

@@ -7,6 +7,7 @@ import org.kinotic.core.api.security.SecurityContext;
 import org.kinotic.domain.api.model.ApplicationKey;
 import org.kinotic.domain.api.utils.HostLabelUtil;
 import org.kinotic.domain.api.model.Application;
+import org.kinotic.domain.api.model.TenantManagement;
 import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
 import org.kinotic.domain.api.repositories.ApplicationRepository;
 import org.kinotic.domain.internal.api.services.AbstractOrganizationScopedService;
@@ -43,7 +44,7 @@ public class DefaultApplicationService extends AbstractOrganizationScopedService
     }
 
     @Override
-    public Future<Application> createApplicationIfNotExist(String name, String description, Boolean tenantPerUser) {
+    public Future<Application> createApplicationIfNotExist(String name, String description, TenantManagement tenantManagement) {
         String applicationId = DomainUtil.slugifyId(name);
         String organizationId = requireOrganizationId();
         return findById(applicationId)
@@ -58,8 +59,8 @@ public class DefaultApplicationService extends AbstractOrganizationScopedService
                         Application newApplication = new Application(name, description);
                         newApplication.setOrganizationId(organizationId);
                         // a caller with no tenancy opinion, such as the CLI ensuring the app row exists,
-                        // omits the argument and gets the shared default
-                        newApplication.setTenantPerUser(Boolean.TRUE.equals(tenantPerUser));
+                        // omits the argument and leaves tenants to their administrators
+                        newApplication.setTenantManagement(tenantManagement != null ? tenantManagement : TenantManagement.TENANT_ADMINISTRATORS);
                         ret = save(newApplication);
                     }
                     return ret;

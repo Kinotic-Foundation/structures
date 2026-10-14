@@ -78,8 +78,8 @@ public interface ParticipantIdentityService extends IdentifiableCrudService<Part
      * Creates a user, assigning id and dates, enabling it, and detecting the auth type from
      * password presence (LOCAL when given, OIDC otherwise — a LOCAL credential is created
      * alongside). Enforces one user per email within the scope. For APPLICATION-scope users
-     * whose application has {@code tenantPerUser} enabled, a unique {@code tenantId} is
-     * auto-generated unless one was supplied.
+     * whose application's tenants are {@code TenantManagement.PLATFORM} managed, a unique
+     * {@code tenantId} is auto-generated unless one was supplied.
      *
      * @param user     the unsaved user carrying email, scope, and optional display name / OIDC identity
      * @param password the password for a LOCAL user, or null for an OIDC user
