@@ -5,7 +5,7 @@ import org.kinotic.core.api.annotations.Publish;
 import org.kinotic.core.api.crud.IdentifiableCrudService;
 import org.kinotic.domain.api.model.Application;
 import org.kinotic.domain.api.model.TenantManagement;
-import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
+import org.kinotic.domain.api.model.security.LoginProviderSummary;
 import org.kinotic.idl.api.annotations.McpTool;
 
 import java.util.List;
@@ -34,14 +34,14 @@ public interface ApplicationService extends IdentifiableCrudService<Application,
     Future<Application> createApplicationIfNotExist(String name, String description, TenantManagement tenantManagement);
 
     /**
-     * Returns the enabled OIDC configurations the given application's login offers, in the order they
-     * are presented.
+     * Returns the enabled providers the given application's login offers, in the order they are presented,
+     * as what a page needs to render them.
      *
      * @param applicationId the id of the application
-     * @return the enabled configurations, or an empty list if the application's login offers none;
-     *         fails when the id names no application in the caller's organization
+     * @return the providers, or an empty list if the application's login offers none; fails when the id
+     *         names no application in the caller's organization
      */
-    Future<List<OrganizationOidcConfiguration>> getOidcConfigurations(String applicationId);
+    Future<List<LoginProviderSummary>> getLoginProviders(String applicationId);
 
 }
 

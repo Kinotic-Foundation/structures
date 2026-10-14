@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -48,9 +49,13 @@ public class DefaultLoginProviderService extends AbstractOrganizationScopedServi
         }
         entity.setUpdated(new Date());
         String orgId = entity.getOrganizationId();
-        return oidcConfigurationService.findById(entity.getConfigurationId(), orgId)
+        return oidcConfigurationService.findOfferable(entity.getConfigurationId(), orgId)
                 .compose(configuration -> {
-                    Validate.notNull(configuration, "Organization %s has no OIDC configuration %s", orgId, entity.getConfigurationId());
+                    Validate.notNull(configuration, "Organization %s has no OIDC configuration %s to offer", orgId, entity.getConfigurationId());
+                    // Kinotic's social registrations sign in applications' users; the organization's own login
+                    // offers the organization's own configurations only
+                    Validate.isTrue(entity.getApplicationId() != null || configuration instanceof OrganizationOidcConfiguration,
+                                    "Configuration %s is offered at an application's login only", entity.getConfigurationId());
                     return entity.getApplicationId() == null
                             ? Future.succeededFuture()
                             : applicationRepository.findById(entity.getApplicationId(), orgId)
@@ -88,13 +93,13 @@ public class DefaultLoginProviderService extends AbstractOrganizationScopedServi
     }
 
     @Override
-    public Future<OrganizationOidcConfiguration> findOffered(String configurationId, String organizationId, String applicationId) {
+    public Future<OidcConfiguration> findOffered(String configurationId, String organizationId, String applicationId) {
         Validate.notBlank(configurationId, "configurationId cannot be blank");
         Validate.notBlank(organizationId, "organizationId cannot be blank");
         return loginProviderRepository.findByScopeAndConfiguration(organizationId, applicationId, configurationId)
                 .compose(row -> row == null
                         ? Future.succeededFuture()
-                        : oidcConfigurationService.findById(configurationId, organizationId))
+                        : oidcConfigurationService.findOfferable(configurationId, organizationId))
                 .map(configuration -> configuration != null && configuration.isEnabled() ? configuration : null);
     }
 
@@ -107,12 +112,11 @@ public class DefaultLoginProviderService extends AbstractOrganizationScopedServi
             List<String> ids = rows.stream().map(LoginProvider::getConfigurationId).toList();
             ret = oidcConfigurationService.findEnabledByIds(ids, organizationId)
                                           .map(configurations -> {
-                                              Map<String, OrganizationOidcConfiguration> byId = configurations.stream()
-                                                      .collect(Collectors.toMap(OrganizationOidcConfiguration::getId, Function.identity()));
+                                              Map<String, OidcConfiguration> byId = configurations.stream()
+                                                      .collect(Collectors.toMap(OidcConfiguration::getId, Function.identity()));
                                               return ids.stream()
                                                         .map(byId::get)
-                                                        .filter(configuration -> configuration != null)
-                                                        .map(configuration -> (OidcConfiguration) configuration)
+                                                        .filter(Objects::nonNull)
                                                         .toList();
                                           });
         }

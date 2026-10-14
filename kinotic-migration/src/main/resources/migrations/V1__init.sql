@@ -227,17 +227,19 @@ CREATE TABLE IF NOT EXISTS kinotic_identity_credential (
 );
 
 -- OIDC Configuration: every OIDC provider configuration (OidcConfiguration), discriminated by
--- type the way kinotic_participant_identity is. type=ORG_SIGNUP is a Kinotic-curated social
--- provider (Google, Microsoft, GitHub) that powers the "Continue with X" buttons on org signup
--- and email-first org login, belongs to no organization, is seeded below, and names its client
--- secret in the platform's secret storage with secretNameRef. type=ORGANIZATION is a provider an
+-- type the way kinotic_participant_identity is. ORG_SIGNUP and APP_SOCIAL rows are the platform's
+-- managed registrations (ManagedOidcConfiguration): they belong to no organization, are seeded below,
+-- and name their client secret in the platform's secret storage with secretNameRef. type=ORG_SIGNUP
+-- (GitHub) powers the "Continue with X" buttons on org signup and email-first org login;
+-- type=APP_SOCIAL (Google, Microsoft) is offered to applications' users by the kinotic_login_provider
+-- rows an organization adds for its application. type=ORGANIZATION is a provider an
 -- organization configured for itself (organizationId set, enforced by the service); where it is
 -- used is expressed by the kinotic_login_provider rows that name it — and the row names
 -- no client secret: OidcConfigurationService.save(configuration, clientSecret) holds the secret in
 -- the organization's scope of the secret storage (SecretStorageService), keyed by the row's id, and
 -- confidentialClient records that one is held. Nor does it name a URL: it names the organization's
 -- account at the provider (providerAccount), and the authority is derived from the provider kind's
--- template on save. The endpoint overrides and scopes are ORG_SIGNUP columns only.
+-- template on save. The endpoint overrides and scopes are columns of the managed kinds only.
 CREATE TABLE IF NOT EXISTS kinotic_oidc_configuration (
     id KEYWORD,
     type KEYWORD,
@@ -270,9 +272,10 @@ CREATE TABLE IF NOT EXISTS kinotic_organization (
     updated DATE
 );
 
--- Login provider (LoginProvider): an ORGANIZATION row of kinotic_oidc_configuration offered at one
--- sign-in scope of its organization — the organization's own login when applicationId is null, else
--- that application's login. One row per scope and configuration, so a configuration is set up once
+-- Login provider (LoginProvider): a row of kinotic_oidc_configuration offered at one sign-in scope of
+-- its organization — the organization's own login when applicationId is null, else that application's
+-- login. The organization's own ORGANIZATION rows may be offered at either scope; an APP_SOCIAL row
+-- at an application's only. One row per scope and configuration, so a configuration is set up once
 -- and offered wherever it serves. Owned by the organization (organizationId enforced by the service).
 CREATE TABLE IF NOT EXISTS kinotic_login_provider (
     id KEYWORD,
@@ -484,13 +487,14 @@ CREATE TABLE IF NOT EXISTS kinotic_task_record (
 -- The record says what it is now; its entries say how it got there. @timestamp is the write's time.
 CREATE DATA STREAM kinotic_watch_event (type KEYWORD, id KEYWORD, scope KEYWORD, parent KEYWORD, kind KEYWORD, source KEYWORD, serverNodeId KEYWORD, generation LONG, message TEXT, value JSON NOT INDEXED) WITH (DATA_RETENTION = '30d') ;
 
--- Kinotic-curated social IdP configurations powering the "Continue with X" buttons on
--- /api/login/providers and the org-signup flow.
+-- The platform's managed IdP registrations: github-platform (ORG_SIGNUP) powers the "Continue with
+-- GitHub" button on org signup and login; google-platform and entra-platform (APP_SOCIAL) are the
+-- social sign-in an organization may offer to its application's users.
 --
 -- The OAuth client secret for each row is resolved at OAuth2-build time via
 -- SecretReferenceResolver — Azure Key Vault in prod (kinotic.domain.secretStorage.azure.vaultUrl)
 -- or KINOTIC_AKV_<uppercased,sanitized-secretNameRef> properties in dev. The secret name
--- here must match the AKV secret object name terraform creates. Only ORG_SIGNUP rows carry a
+-- here must match the AKV secret object name terraform creates. Only the managed kinds carry a
 -- secretNameRef; an ORGANIZATION row has none and cannot name a platform secret.
 --
 -- audience is intentionally not set: for these social providers (Google, Microsoft Entra
@@ -507,21 +511,25 @@ CREATE DATA STREAM kinotic_watch_event (type KEYWORD, id KEYWORD, scope KEYWORD,
 -- flow, userInfoUri for identity, userEmailsUri for a GitHub-style verified-email lookup,
 -- and scopes as the space-delimited OAuth scope string.
 --
--- Each IdP application registration must list these redirect URIs, per environment origin:
---   <apiBaseUrl>/api/auth/org/login/social/callback/<id>
---   <apiBaseUrl>/api/auth/org/signup/social/callback/<id>
---   <apiBaseUrl>/api/auth/invite/oidc/callback/<id>
+-- Each IdP application registration must list its redirect URIs, per environment origin.
+-- An ORG_SIGNUP registration:
+--   <managementApiBaseUrl>/api/auth/org/login/social/callback/<id>
+--   <managementApiBaseUrl>/api/auth/org/signup/social/callback/<id>
+--   <managementApiBaseUrl>/api/auth/invite/oidc/callback/<id>
+-- An APP_SOCIAL registration (the app server's apex host answers the callback for every application):
+--   <appServerApiBaseUrl>/api/auth/app/login/social/callback/<id>
+--   <managementApiBaseUrl>/api/auth/invite/oidc/callback/<id>
 
-INSERT INTO kinotic_oidc_configuration (id, type, name, provider, clientId, secretNameRef, authority, enabled, created, updated) VALUES ('entra-platform', 'ORG_SIGNUP', 'Microsoft', 'azure-ad', 'f24706cc-55ff-4d17-b72c-11ddfa87966a', 'entra-platform', 'https://login.microsoftonline.com/common/v2.0', true, '2026-05-05', '2026-05-05') WITH REFRESH;
+INSERT INTO kinotic_oidc_configuration (id, type, name, provider, clientId, secretNameRef, authority, enabled, created, updated) VALUES ('entra-platform', 'APP_SOCIAL', 'Microsoft', 'azure-ad', 'f24706cc-55ff-4d17-b72c-11ddfa87966a', 'entra-platform', 'https://login.microsoftonline.com/common/v2.0', true, '2026-05-05', '2026-05-05') WITH REFRESH;
 
-INSERT INTO kinotic_oidc_configuration (id, type, name, provider, clientId, secretNameRef, authority, enabled, created, updated) VALUES ('google-platform', 'ORG_SIGNUP', 'Google', 'google', '1018531658131-komame5nk0m59fkp4836b4hrci0r538r.apps.googleusercontent.com', 'google-platform', 'https://accounts.google.com', true, '2026-05-05', '2026-05-05') WITH REFRESH;
+INSERT INTO kinotic_oidc_configuration (id, type, name, provider, clientId, secretNameRef, authority, enabled, created, updated) VALUES ('google-platform', 'APP_SOCIAL', 'Google', 'google', '1018531658131-komame5nk0m59fkp4836b4hrci0r538r.apps.googleusercontent.com', 'google-platform', 'https://accounts.google.com', true, '2026-05-05', '2026-05-05') WITH REFRESH;
 
 -- github-platform must be the kinotic-ai GitHub App's own OAuth credential — it signs
 -- users in AND verifies installation ownership at link time (see the Defense in Depth
 -- doc). Required App settings: a client secret (AKV name = secretNameRef); "Request
 -- user authorization (OAuth) during installation" checked; callback URLs under
 -- "Identifying and authorizing users" = <portalBaseUrl>/github/install/callback FIRST
--- (install redirects go to the first callback URL) plus the URLs above; the
+-- (install redirects go to the first callback URL) plus the ORG_SIGNUP URLs above; the
 -- "Email addresses: read-only" account permission. Scopes are inert for GitHub Apps.
 
 INSERT INTO kinotic_oidc_configuration (id, type, name, provider, clientId, secretNameRef, authority, authorizationUri, tokenUri, userInfoUri, userEmailsUri, scopes, enabled, created, updated) VALUES ('github-platform', 'ORG_SIGNUP', 'GitHub', 'github', 'Iv23liN1suytxICfhtOz', 'github-platform', 'https://github.com/login', 'https://github.com/login/oauth/authorize', 'https://github.com/login/oauth/access_token', 'https://api.github.com/user', 'https://api.github.com/user/emails', 'read:user user:email', true, '2026-08-01', '2026-08-01') WITH REFRESH;

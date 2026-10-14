@@ -24,7 +24,7 @@ import org.kinotic.core.api.secret.SecretReferenceResolver;
 import org.kinotic.core.api.security.SessionBinding;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
-import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
+import org.kinotic.domain.api.model.security.ManagedOidcConfiguration;
 import org.kinotic.domain.api.services.security.OidcConfigurationService;
 import org.kinotic.domain.api.utils.DomainUtil;
 import org.springframework.stereotype.Component;
@@ -139,11 +139,11 @@ public class OidcFlowOrchestrator {
     /**
      * Produces the verified identity claims for an exchanged token: id_token claims validated
      * against issuer, audience and nonce for OIDC providers, or claims fetched from the
-     * provider's identity endpoint for a curated row that sets {@code userInfoUri}.
+     * provider's identity endpoint for a managed registration that sets {@code userInfoUri}.
      */
     private Future<Map<String, Object>> verifiedClaims(OidcConfiguration config, User user, OidcFlowSession flowSession) {
         Future<Map<String, Object>> ret;
-        if (config instanceof OrgSignupOidcConfiguration social && social.getUserInfoUri() != null && !social.getUserInfoUri().isBlank()) {
+        if (config instanceof ManagedOidcConfiguration social && social.getUserInfoUri() != null && !social.getUserInfoUri().isBlank()) {
             // A provider configured with an identity endpoint issues no id_token, so there is no
             // issuer/audience/nonce to check — the state match in handleCallback plus the direct
             // TLS code exchange are the security boundary, and identity comes from the provider's
@@ -206,9 +206,9 @@ public class OidcFlowOrchestrator {
         session.put(OIDC_FLOW_SESSION_KEY, new OidcFlowSession(state, nonce, pkceVerifier, config.getId(), orgId,
                                                                inviteToken, SessionBinding.origin(ctx)));
 
-        // Scopes ride as RFC 6749's space-delimited string; a curated row may name its own, every
+        // Scopes ride as RFC 6749's space-delimited string; a managed registration may name its own, every
         // other configuration gets the standard OIDC triple.
-        List<String> scopes = config instanceof OrgSignupOidcConfiguration social
+        List<String> scopes = config instanceof ManagedOidcConfiguration social
                               && social.getScopes() != null && !social.getScopes().isBlank()
                 ? List.of(social.getScopes().split(" "))
                 : List.of("openid", "email", "profile");
@@ -230,8 +230,8 @@ public class OidcFlowOrchestrator {
      */
     private Future<OAuth2Auth> createOAuth2Auth(OidcConfiguration config, String clientSecret) {
         Future<OAuth2Auth> ret;
-        // only a curated row may name endpoints in place of discovery
-        OrgSignupOidcConfiguration explicit = config instanceof OrgSignupOidcConfiguration social
+        // only a managed registration may name endpoints in place of discovery
+        ManagedOidcConfiguration explicit = config instanceof ManagedOidcConfiguration social
                                               && (social.getAuthorizationUri() != null || social.getTokenUri() != null)
                 ? social : null;
         if (explicit != null) {
@@ -334,7 +334,7 @@ public class OidcFlowOrchestrator {
      * {@code email}; {@code userEmailsUri}, when set, supplies the definitive {@code email}
      * and {@code email_verified} from a GitHub-style emails array.
      */
-    private Future<Map<String, Object>> fetchApiClaims(OrgSignupOidcConfiguration config, User user) {
+    private Future<Map<String, Object>> fetchApiClaims(ManagedOidcConfiguration config, User user) {
         String accessToken = user.principal().getString("access_token");
         return apiGet(accessToken, config.getUserInfoUri())
                 .map(response -> profileClaims(response.bodyAsJsonObject()))
@@ -465,12 +465,12 @@ public class OidcFlowOrchestrator {
     /**
      * The client secret {@code config} sends its provider, or null for a public client, read from where
      * its kind of configuration keeps it: the platform's secret storage, under the name the operator
-     * gave a curated provider, or the owning organization's scope of the secret storage for a
+     * gave a managed registration, or the owning organization's scope of the secret storage for a
      * configuration an organization saved.
      */
     private Future<String> clientSecretOf(OidcConfiguration config) {
         return switch (config) {
-            case OrgSignupOidcConfiguration social -> secretReferenceResolver.resolve(social.getSecretNameRef());
+            case ManagedOidcConfiguration managed -> secretReferenceResolver.resolve(managed.getSecretNameRef());
             // an organization's administrator controls this row, so nothing on it may name a platform secret
             case OrganizationOidcConfiguration owned -> oidcConfigurationService.findClientSecret(owned);
         };

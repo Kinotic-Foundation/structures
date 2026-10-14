@@ -8,7 +8,7 @@ import org.kinotic.domain.api.model.ApplicationKey;
 import org.kinotic.domain.api.utils.HostLabelUtil;
 import org.kinotic.domain.api.model.Application;
 import org.kinotic.domain.api.model.TenantManagement;
-import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
+import org.kinotic.domain.api.model.security.LoginProviderSummary;
 import org.kinotic.domain.api.repositories.ApplicationRepository;
 import org.kinotic.domain.internal.api.services.AbstractOrganizationScopedService;
 import org.kinotic.domain.api.utils.DomainUtil;
@@ -141,17 +141,13 @@ public class DefaultApplicationService extends AbstractOrganizationScopedService
     }
 
     @Override
-    public Future<List<OrganizationOidcConfiguration>> getOidcConfigurations(String applicationId) {
+    public Future<List<LoginProviderSummary>> getLoginProviders(String applicationId) {
         Validate.notNull(applicationId, "applicationId cannot be null");
         return findById(applicationId)
                 .compose(application -> {
                     Validate.notNull(application, "Application not found: %s", applicationId);
-                    // an application's login offers the organization's own configurations only
                     return loginProviderService.findEnabledForScope(application.getOrganizationId(), applicationId)
-                                               .map(offered -> offered.stream()
-                                                                      .filter(OrganizationOidcConfiguration.class::isInstance)
-                                                                      .map(OrganizationOidcConfiguration.class::cast)
-                                                                      .toList());
+                                               .map(offered -> offered.stream().map(LoginProviderSummary::of).toList());
                 });
     }
 

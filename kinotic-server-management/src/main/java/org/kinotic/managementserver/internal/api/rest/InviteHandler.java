@@ -269,9 +269,7 @@ public class InviteHandler implements SuppliesGatewayRoutes {
                         // session into config_not_found instead of a failed lookup.
                         ret = Future.succeededFuture(null);
                     } else {
-                        // The cast widens the future's element type — Future is invariant.
-                        ret = oidcConfigurationService.findById(configId, orgId)
-                                                      .map(c -> (OidcConfiguration) c);
+                        ret = oidcConfigurationService.findOfferable(configId, orgId);
                     }
                     return ret;
                 });

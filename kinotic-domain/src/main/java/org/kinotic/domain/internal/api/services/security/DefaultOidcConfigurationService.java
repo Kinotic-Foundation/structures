@@ -5,6 +5,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.core.api.exceptions.AuthorizationException;
 import org.kinotic.core.api.security.SecurityContext;
+import org.kinotic.domain.api.model.security.ManagedOidcConfiguration;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.OidcProviderKind;
 import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
@@ -73,15 +74,15 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
 
     /**
      * Requires the bound participant to be the owner of {@code configuration}'s kind: a system participant
-     * for a curated social provider, since that row names a secret of the platform's and is offered to
-     * every sign-in; a participant of the named organization for an organization's.
+     * for a managed registration, since that row names a secret of the platform's and is offered to
+     * every organization; a participant of the named organization for an organization's.
      *
      * @throws IllegalStateException  if no participant is bound to the current context
      * @throws AuthorizationException if the participant is not the owner
      */
     private void requireOwner(OidcConfiguration configuration) {
         switch (configuration) {
-            case OrgSignupOidcConfiguration _ -> securityContext.requireParticipant(SystemParticipant.class);
+            case ManagedOidcConfiguration _ -> securityContext.requireParticipant(SystemParticipant.class);
             case OrganizationOidcConfiguration owned -> {
                 Validate.notBlank(owned.getOrganizationId(), "Organization id must be set on OrganizationOidcConfiguration");
                 String orgId = securityContext.requireParticipant(OrganizationParticipant.class).getOrganizationId();
@@ -112,10 +113,17 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
     }
 
     @Override
-    public Future<List<OrganizationOidcConfiguration>> findEnabledByIds(List<String> ids, String orgId) {
+    public Future<List<OidcConfiguration>> findEnabledByIds(List<String> ids, String orgId) {
         Validate.notEmpty(ids, "ids cannot be null or empty");
         Validate.notBlank(orgId, "orgId cannot be blank");
         return oidcRepository.findEnabledByIds(ids, orgId);
+    }
+
+    @Override
+    public Future<OidcConfiguration> findOfferable(String id, String organizationId) {
+        Validate.notBlank(id, "id cannot be blank");
+        Validate.notBlank(organizationId, "organizationId cannot be blank");
+        return oidcRepository.findOfferable(id, organizationId);
     }
 
     @Override

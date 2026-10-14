@@ -12,7 +12,7 @@ import org.kinotic.domain.api.rest.support.CallbackResult;
 import org.kinotic.domain.api.rest.support.OidcFlowOrchestrator;
 import org.kinotic.domain.api.model.security.AuthType;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
-import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
+import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.services.security.LocalAuthenticationService;
@@ -132,8 +132,8 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes {
     private void handleSsoCallback(RoutingContext ctx) {
         String pathConfigId = ctx.pathParam("configId");
 
-        // OrganizationOidcConfiguration is OrganizationScoped; the pre-auth callback has no participant
-        // bound, so the lookup is scoped by the orgId stashed on the flow session at startFlow.
+        // the pre-auth callback has no participant bound, so the configuration is resolved against the orgId
+        // stashed on the flow session at startFlow, which also confirms the organization offers it.
         // The configId is trusted — it came from the IdP redirect we issued ourselves.
         oidcFlowOrchestrator.handleCallback(ctx,
                                             pathConfigId,
@@ -143,7 +143,7 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes {
                             .onFailure(ex -> authEndpointSupport.redirectCallbackFailure(ctx, ex));
     }
 
-    private void completeSsoLogin(RoutingContext ctx, CallbackResult<OrganizationOidcConfiguration> result) {
+    private void completeSsoLogin(RoutingContext ctx, CallbackResult<OidcConfiguration> result) {
         authEndpointSupport.completeOidcLogin(ctx, result,
                 sub -> identityService.findByOidcIdentity(sub, result.config().getId(), result.orgId(), null));
     }

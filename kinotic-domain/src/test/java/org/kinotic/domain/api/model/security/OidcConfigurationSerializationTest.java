@@ -13,8 +13,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Covers the polymorphic wire and index shape of {@link OidcConfiguration}: the {@code type}
  * discriminator each document carries, resolution back to the concrete subtype when deserializing
- * through the base class — the shape every repository read depends on — and that an organization's
- * configuration carries no field naming a secret.
+ * through the base class — the shape every repository read depends on — for each managed kind and the
+ * organization's, and that an organization's configuration carries no field naming a secret.
  */
 class OidcConfigurationSerializationTest {
 
@@ -38,6 +38,25 @@ class OidcConfigurationSerializationTest {
         assertEquals("github-platform", readSocial.getSecretNameRef());
         assertEquals("https://github.com/login/oauth/access_token", readSocial.getTokenUri());
         assertEquals(OidcProviderKind.GITHUB, readSocial.getProvider());
+    }
+
+    @Test
+    void applicationSocialConfigurationRoundTripsThroughBaseClassWithTypeDiscriminator() {
+        ApplicationSocialOidcConfiguration social = new ApplicationSocialOidcConfiguration();
+        social.setSecretNameRef("google-platform")
+              .setName("Google")
+              .setProvider(OidcProviderKind.GOOGLE)
+              .setClientId("client")
+              .setAuthority("https://accounts.google.com")
+              .setId("google-platform");
+
+        String json = jsonMapper.writeValueAsString(social);
+        assertTrue(json.contains("\"type\":\"APP_SOCIAL\""), "document must carry the discriminator: " + json);
+
+        OidcConfiguration read = jsonMapper.readValue(json, OidcConfiguration.class);
+        ApplicationSocialOidcConfiguration readSocial = assertInstanceOf(ApplicationSocialOidcConfiguration.class, read);
+        assertEquals("google-platform", readSocial.getSecretNameRef());
+        assertEquals(OidcProviderKind.GOOGLE, readSocial.getProvider());
     }
 
     @Test

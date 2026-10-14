@@ -16,7 +16,7 @@ import org.kinotic.domain.api.rest.support.CallbackResult;
 import org.kinotic.domain.api.rest.support.OidcFlowOrchestrator;
 import org.kinotic.domain.api.model.security.AuthType;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
-import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
+import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.services.security.LocalAuthenticationService;
 import org.kinotic.domain.api.services.security.LoginProviderService;
@@ -56,8 +56,8 @@ public class ApplicationLoginHandler implements SuppliesGatewayRoutes {
     }
 
     /**
-     * {@code GET /api/auth/app/login/providers} — lists the enabled
-     * {@link OrganizationOidcConfiguration} rows the application's login offers.
+     * {@code GET /api/auth/app/login/providers} — lists the enabled configurations the application's
+     * login offers.
      */
     private void handleProviders(RoutingContext ctx) {
         ApplicationKey applicationKey = authEndpointSupport.applicationKey(ctx);
@@ -131,7 +131,7 @@ public class ApplicationLoginHandler implements SuppliesGatewayRoutes {
         ApplicationKey applicationKey = authEndpointSupport.applicationKey(ctx);
         String pathConfigId = ctx.pathParam("configId");
 
-        oidcFlowOrchestrator.<OrganizationOidcConfiguration>handleCallback(
+        oidcFlowOrchestrator.<OidcConfiguration>handleCallback(
                 ctx, pathConfigId, callbackUrl(applicationKey, pathConfigId),
                 _ -> loginProviderService.findOffered(pathConfigId, applicationKey.organizationId(), applicationKey.applicationId()))
                 .onSuccess(result -> completeAppLogin(ctx, result, applicationKey))
@@ -139,7 +139,7 @@ public class ApplicationLoginHandler implements SuppliesGatewayRoutes {
     }
 
     private void completeAppLogin(RoutingContext ctx,
-                                  CallbackResult<OrganizationOidcConfiguration> result,
+                                  CallbackResult<OidcConfiguration> result,
                                   ApplicationKey applicationKey) {
         authEndpointSupport.completeOidcLogin(ctx, result,
                 sub -> identityService.findByOidcIdentity(sub, result.config().getId(),
