@@ -134,8 +134,8 @@ public class DefaultApplicationService extends AbstractOrganizationScopedService
         // a site's label names its application and UI, so a site with this label is one of this application's UIs
         return uiDeploymentRepository.findById(HostLabelUtil.siteLabel(applicationKey, uiName))
                 .map(site -> {
-                    Validate.isTrue(site != null, "The application '%s' has no published UI named '%s'",
-                                    applicationKey.applicationId(), uiName);
+                    Validate.notNull(site, "The application '%s' has no published UI named '%s'",
+                                     applicationKey.applicationId(), uiName);
                     return site.getUrl();
                 });
     }
