@@ -53,14 +53,16 @@ public class LoginProviderTests extends KinoticTestBase {
         String appId = "login-provider-app-" + suffix();
         Application application = await(runAsOrganization(() -> applicationService.createApplicationIfNotExist(appId, "Login provider application", null)));
         OrganizationOidcConfiguration okta = await(runAsOrganization(() -> oidcConfigurations.save(provider("Acme Okta"), null)));
+        // the offered list is a search, which sees a write only once the index has refreshed
+        await(oidcConfigurations.syncIndex());
 
         // offered nowhere until a row names it
         assertNull(await(loginProviders.findOffered(okta.getId(), TEST_ORG_ID, null)));
         assertNull(await(loginProviders.findOffered(okta.getId(), TEST_ORG_ID, application.getId())));
         assertTrue(await(loginProviders.findEnabledForScope(TEST_ORG_ID, application.getId())).isEmpty());
 
-        await(runAsOrganization(() -> loginProviders.save(row(okta, null))));
-        await(runAsOrganization(() -> loginProviders.save(row(okta, application.getId()))));
+        await(runAsOrganization(() -> loginProviders.saveSync(row(okta, null))));
+        await(runAsOrganization(() -> loginProviders.saveSync(row(okta, application.getId()))));
         assertEquals(okta.getId(), await(loginProviders.findOffered(okta.getId(), TEST_ORG_ID, null)).getId());
         assertEquals(okta.getId(), await(loginProviders.findOffered(okta.getId(), TEST_ORG_ID, application.getId())).getId());
         assertEquals(List.of(okta.getId()), ids(await(loginProviders.findEnabledForScope(TEST_ORG_ID, application.getId()))));
@@ -78,7 +80,7 @@ public class LoginProviderTests extends KinoticTestBase {
         assertNull(await(loginProviders.findOffered(okta.getId(), TEST_ORG_ID, otherAppId)));
 
         // a disabled configuration is offered nowhere, whatever rows name it
-        await(runAsOrganization(() -> oidcConfigurations.save(okta.setEnabled(false))));
+        await(runAsOrganization(() -> oidcConfigurations.saveSync(okta.setEnabled(false))));
         assertNull(await(loginProviders.findOffered(okta.getId(), TEST_ORG_ID, application.getId())));
         assertTrue(await(loginProviders.findEnabledForScope(TEST_ORG_ID, application.getId())).isEmpty());
     }
@@ -92,11 +94,11 @@ public class LoginProviderTests extends KinoticTestBase {
         OrganizationOidcConfiguration unknown = new OrganizationOidcConfiguration();
         unknown.setOrganizationId(TEST_ORG_ID);
         unknown.setId(UUID.randomUUID().toString());
-        assertInstanceOf(IllegalArgumentException.class, failure(() -> loginProviders.save(row(unknown, null))));
-        assertInstanceOf(IllegalArgumentException.class, failure(() -> loginProviders.save(row(okta, "no-such-application-" + suffix()))));
+        assertInstanceOf(IllegalArgumentException.class, failure(() -> loginProviders.saveSync(row(unknown, null))));
+        assertInstanceOf(IllegalArgumentException.class, failure(() -> loginProviders.saveSync(row(okta, "no-such-application-" + suffix()))));
 
-        await(runAsOrganization(() -> loginProviders.save(row(okta, application.getId()))));
-        assertInstanceOf(IllegalArgumentException.class, failure(() -> loginProviders.save(row(okta, application.getId()))));
+        await(runAsOrganization(() -> loginProviders.saveSync(row(okta, application.getId()))));
+        assertInstanceOf(IllegalArgumentException.class, failure(() -> loginProviders.saveSync(row(okta, application.getId()))));
     }
 
     @Test
@@ -107,10 +109,10 @@ public class LoginProviderTests extends KinoticTestBase {
         OidcConfiguration google = await(oidcConfigurations.findOfferable("google-platform", TEST_ORG_ID));
         assertInstanceOf(ApplicationSocialOidcConfiguration.class, google);
 
-        assertInstanceOf(IllegalArgumentException.class, failure(() -> loginProviders.save(row(google, null))));
+        assertInstanceOf(IllegalArgumentException.class, failure(() -> loginProviders.saveSync(row(google, null))));
         assertNull(await(loginProviders.findOffered(google.getId(), TEST_ORG_ID, application.getId())));
 
-        await(runAsOrganization(() -> loginProviders.save(row(google, application.getId()))));
+        await(runAsOrganization(() -> loginProviders.saveSync(row(google, application.getId()))));
         assertEquals(google.getId(), await(loginProviders.findOffered(google.getId(), TEST_ORG_ID, application.getId())).getId());
         assertEquals(List.of(google.getId()), ids(await(loginProviders.findEnabledForScope(TEST_ORG_ID, application.getId()))));
         // the organization's own login never offers it
