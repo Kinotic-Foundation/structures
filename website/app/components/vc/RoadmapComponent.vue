@@ -32,14 +32,14 @@ const milestones: Milestone[] = [
   {
     label: 'Q4 2026 · WE ARE HERE',
     status: 'current',
-    title: 'Enterprise identity',
-    summary: 'Enterprise SSO and relationship-based access control on every service and agent tool.',
+    title: 'Governed delivery',
+    summary: 'Relationship-based access and SSO decide who can act; gated dev, stage and prod decide what reaches production.',
   },
   {
     label: 'H1 2027 · NEXT',
     status: 'upcoming',
-    title: 'Governed delivery',
-    summary: 'Gated dev, stage and prod, a complete audit trail, SCIM and deployment into your cloud.',
+    title: 'Enterprise ready',
+    summary: 'A complete audit trail, agent-operated apps, SCIM, backups with an SLA, and deployment into your cloud.',
   },
   {
     label: 'H2 2027 · THEN',
@@ -77,7 +77,13 @@ const features: Feature[] = [
   {
     status: 'in-progress',
     title: 'Relationship-based access control',
-    summary: 'Roles, groups and per-tenant permissions, enforced at the gateway on every service call and MCP tool.',
+    summary: 'Who can act: roles, groups and per-tenant permissions, enforced on every service call and MCP tool.',
+    when: 'Q4 2026',
+  },
+  {
+    status: 'in-progress',
+    title: 'Gated dev, stage & prod',
+    summary: 'What ships: a live preview for every branch, vulnerability and migration checks before stage, human sign-off for prod.',
     when: 'Q4 2026',
   },
   {
@@ -85,12 +91,6 @@ const features: Feature[] = [
     title: 'Enterprise SSO',
     summary: 'Okta, Microsoft Entra ID and Google sign-in for organizations and for the apps they build.',
     when: 'Q4 2026',
-  },
-  {
-    status: 'planned',
-    title: 'Dev, stage & prod environments',
-    summary: 'A live preview for every branch, vulnerability and migration checks before stage, and human sign-off for prod.',
-    when: 'H1 2027',
   },
   {
     status: 'planned',
