@@ -33,7 +33,7 @@ kinotic:
         host: "localhost"
         port: "9200"
     secretStorage:
-      backend: ~
+      backend: IN_MEMORY
       # Base64-encoded 32-byte key used by SecretNameDeriver to derive opaque, deterministic
       # storage names. Dev-only value — production supplies this via Azure Key Vault.
       masterKey: 0qWH2oHEp27LLD7iBHEiABqJFf1q5GRYK6OdMc5Wdv4=

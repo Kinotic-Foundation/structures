@@ -1,4 +1,4 @@
-package org.kinotic.domain.internal.api.services.secret;
+package org.kinotic.ee.internal.api.services;
 
 import com.azure.core.exception.HttpResponseException;
 import com.azure.core.exception.ResourceNotFoundException;
@@ -9,6 +9,7 @@ import com.azure.security.keyvault.secrets.models.KeyVaultSecret;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import org.kinotic.domain.api.config.AzureProperties;
+import org.kinotic.domain.api.ee.services.SecretStorageBackend;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 

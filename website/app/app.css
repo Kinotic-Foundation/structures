@@ -363,7 +363,16 @@ html.k-canvas-dark body {
   }
 }
 
+/* Pages whose header links jump to their own sections opt in to animated scrolling. */
+html.k-smooth-scroll {
+  scroll-behavior: smooth;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  html.k-smooth-scroll {
+    scroll-behavior: auto;
+  }
+
   [data-reveal] {
     opacity: 1 !important;
     transform: none !important;
