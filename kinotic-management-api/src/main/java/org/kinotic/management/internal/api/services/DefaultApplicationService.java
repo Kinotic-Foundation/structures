@@ -145,7 +145,7 @@ public class DefaultApplicationService extends AbstractOrganizationScopedService
         Validate.notNull(applicationId, "applicationId cannot be null");
         return findById(applicationId)
                 .compose(application -> {
-                    Validate.isTrue(application != null, "Application not found: %s", applicationId);
+                    Validate.notNull(application, "Application not found: %s", applicationId);
                     return loginProviderService.findEnabledForScope(application.getOrganizationId(), applicationId)
                                                .map(offered -> offered.stream().map(LoginProviderSummary::of).toList());
                 });

@@ -51,7 +51,7 @@ public class DefaultLoginProviderService extends AbstractOrganizationScopedServi
         String orgId = entity.getOrganizationId();
         return oidcConfigurationService.findOfferable(entity.getConfigurationId(), orgId)
                 .compose(configuration -> {
-                    Validate.isTrue(configuration != null, "Organization %s has no OIDC configuration %s to offer", orgId, entity.getConfigurationId());
+                    Validate.notNull(configuration, "Organization %s has no OIDC configuration %s to offer", orgId, entity.getConfigurationId());
                     // Kinotic's social registrations sign in applications' users; the organization's own login
                     // offers the organization's own configurations only
                     Validate.isTrue(entity.getApplicationId() != null || configuration instanceof OrganizationOidcConfiguration,
@@ -60,7 +60,7 @@ public class DefaultLoginProviderService extends AbstractOrganizationScopedServi
                             ? Future.succeededFuture()
                             : applicationRepository.findById(entity.getApplicationId(), orgId)
                                                    .map(application -> {
-                                                       Validate.isTrue(application != null, "Organization %s has no application %s", orgId, entity.getApplicationId());
+                                                       Validate.notNull(application, "Organization %s has no application %s", orgId, entity.getApplicationId());
                                                        return null;
                                                    });
                 })

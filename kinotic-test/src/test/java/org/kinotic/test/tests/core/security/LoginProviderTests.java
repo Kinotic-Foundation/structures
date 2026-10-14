@@ -33,8 +33,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * organization's own login and at an application's login is found at each, and nowhere it is not offered;
  * the organization's login offers the org sign-up providers before its own; a disabled configuration
  * is offered nowhere; the platform's social registrations may be offered at an application's login and
- * not at the organization's; and a row naming a configuration or an application the organization does not
- * have, or offering a configuration twice at one scope, is refused.
+ * not at the organization's; a row naming a configuration or an application the organization does not have
+ * fails as a missing value, and one offering a configuration twice at one scope, or a social registration at
+ * the organization's own login, is refused as an illegal argument.
  */
 @SpringBootTest
 public class LoginProviderTests extends KinoticTestBase {
@@ -94,8 +95,9 @@ public class LoginProviderTests extends KinoticTestBase {
         OrganizationOidcConfiguration unknown = new OrganizationOidcConfiguration();
         unknown.setOrganizationId(TEST_ORG_ID);
         unknown.setId(UUID.randomUUID().toString());
-        assertInstanceOf(IllegalArgumentException.class, failure(() -> loginProviders.saveSync(row(unknown, null))));
-        assertInstanceOf(IllegalArgumentException.class, failure(() -> loginProviders.saveSync(row(okta, "no-such-application-" + suffix()))));
+        // a configuration or application that does not exist is a missing value; offering twice breaks a rule
+        assertInstanceOf(NullPointerException.class, failure(() -> loginProviders.saveSync(row(unknown, null))));
+        assertInstanceOf(NullPointerException.class, failure(() -> loginProviders.saveSync(row(okta, "no-such-application-" + suffix()))));
 
         await(runAsOrganization(() -> loginProviders.saveSync(row(okta, application.getId()))));
         assertInstanceOf(IllegalArgumentException.class, failure(() -> loginProviders.saveSync(row(okta, application.getId()))));
