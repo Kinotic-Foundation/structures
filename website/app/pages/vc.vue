@@ -5,12 +5,12 @@ definePageMeta({
   layout: 'home',
   header: false,
   footer: false,
-  // Add { label: 'Roadmap', to: '#roadmap', external: true } once VcRoadmapComponent is rendered.
   headerNav: {
     links: [
       { label: 'About us', to: '#about', external: true },
       { label: 'Product demo', to: '#demo', external: true },
       { label: 'Investor deck', to: '#deck', external: true },
+      { label: 'Roadmap', to: '#roadmap', external: true },
     ],
     cta: { label: 'Contact us', to: '#cta', external: true },
   },
@@ -36,7 +36,7 @@ const video = ref<string | null>(null)
   <VcStoryComponent />
   <VcDemoComponent @play="video = $event" />
   <VcDeckComponent />
-  <!-- The roadmap stays unpublished until its content is revised; render <VcRoadmapComponent /> here and add its header link to show it. -->
+  <VcRoadmapComponent />
   <VcCtaComponent />
   <VcVideoModal :video-id="video" @close="video = null" />
 </template>
