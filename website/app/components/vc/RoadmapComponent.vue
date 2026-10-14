@@ -38,13 +38,13 @@ const milestones: Milestone[] = [
     label: 'Q1 2027',
     status: 'upcoming',
     title: 'First customers',
-    summary: 'Kinotic OS Cloud launches, pipeline customers go live with one running Kinotic OS in its own cloud, and the engineering team grows.',
+    summary: 'Kinotic OS Cloud launches, pipeline customers go live in our cloud or theirs, and the engineering team grows.',
   },
   {
     label: 'Q2 2027',
     status: 'upcoming',
     title: 'Repeatable sales',
-    summary: 'More customers live, proven pricing, case studies, and more enterprises running Kinotic OS in their own clouds.',
+    summary: 'More customers live, proven pricing, and published case studies.',
   },
   {
     label: 'Q3 2027',
