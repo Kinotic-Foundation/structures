@@ -114,7 +114,7 @@ public class ApplicationAuthEndpointSupport extends AuthEndpointSupport {
      *
      * @throws HttpException with {@code 404} when the request names no application's API host, or names an
      *                       application that does not exist
-     * @throws NullPointerException     while the application has no primary UI designated, which the
+     * @throws IllegalArgumentException while the application has no primary UI designated, which the
      *                                  gateway answers with {@code 400}
      */
     @Override
@@ -127,7 +127,7 @@ public class ApplicationAuthEndpointSupport extends AuthEndpointSupport {
             if (found == null) {
                 throw new HttpException(404);
             }
-            Validate.notNull(found.getPrimaryUiUrl(), "The application '%s' has no primary UI", found.getId());
+            Validate.isTrue(found.getPrimaryUiUrl() != null, "The application '%s' has no primary UI", found.getId());
             return found.getPrimaryUiUrl() + path;
         });
     }

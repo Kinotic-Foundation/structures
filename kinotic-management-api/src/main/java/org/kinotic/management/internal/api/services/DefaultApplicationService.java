@@ -134,8 +134,8 @@ public class DefaultApplicationService extends AbstractOrganizationScopedService
         // a site's label names its application and UI, so a site with this label is one of this application's UIs
         return uiDeploymentRepository.findById(HostLabelUtil.siteLabel(applicationKey, uiName))
                 .map(site -> {
-                    Validate.notNull(site, "The application '%s' has no published UI named '%s'",
-                                     applicationKey.applicationId(), uiName);
+                    Validate.isTrue(site != null, "The application '%s' has no published UI named '%s'",
+                                    applicationKey.applicationId(), uiName);
                     return site.getUrl();
                 });
     }
@@ -145,7 +145,7 @@ public class DefaultApplicationService extends AbstractOrganizationScopedService
         Validate.notNull(applicationId, "applicationId cannot be null");
         return findById(applicationId)
                 .compose(application -> {
-                    Validate.notNull(application, "Application not found: %s", applicationId);
+                    Validate.isTrue(application != null, "Application not found: %s", applicationId);
                     return loginProviderService.findEnabledForScope(application.getOrganizationId(), applicationId)
                                                .map(offered -> offered.stream().map(LoginProviderSummary::of).toList());
                 });
