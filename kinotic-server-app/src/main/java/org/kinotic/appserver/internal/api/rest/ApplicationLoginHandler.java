@@ -7,12 +7,15 @@ import io.vertx.ext.web.RoutingContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.kinotic.appserver.api.config.AppServerProperties;
+import org.kinotic.core.api.security.SessionBinding;
 import org.kinotic.domain.api.model.ApplicationKey;
 import org.kinotic.domain.api.utils.HostLabelUtil;
 import org.kinotic.domain.api.rest.support.CallbackResult;
+import org.kinotic.domain.api.rest.support.OidcCallbackException;
+import org.kinotic.domain.api.rest.support.OidcErrorCodes;
 import org.kinotic.domain.api.rest.support.OidcFlowOrchestrator;
-import org.kinotic.domain.api.model.security.AuthType;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
+import org.kinotic.domain.api.model.security.ApplicationSocialOidcConfiguration;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.services.security.LocalAuthenticationService;
@@ -26,9 +29,11 @@ import org.springframework.stereotype.Component;
  * APP-scope {@link UserParticipantIdentity} — {@code organizationId} + {@code applicationId} both set),
  * not into the platform-managed org admin surface. The application is the one whose API host the request
  * was addressed to (see {@link ApplicationAuthEndpointSupport#applicationKey}), a login is made only from a page that is one of
- * that application's UIs, and OIDC flows started here return to this handler's own callback at the application's
- * API host. A sign-in through one of the platform's social registrations, whose callback every application
- * shares, is {@link ApplicationSocialLoginHandler}'s.
+ * that application's UIs, and a page offers the methods the login supports — email and password, and the
+ * configurations {@code GET /api/auth/app/login/providers} lists — without asking about an email first, so no
+ * endpoint tells whether an email has an account. An OIDC flow started here returns to this handler's own
+ * callback at the application's API host; a sign-in through one of the platform's social registrations, whose
+ * callback every application shares, runs through {@link ApplicationSocialLoginHandler}.
  */
 @Slf4j
 @Component
@@ -45,7 +50,7 @@ public class ApplicationLoginHandler implements SuppliesGatewayRoutes {
     @Override
     public void mountRoutes(Router router) {
         router.get("/api/auth/app/login/providers").handler(this::handleProviders);
-        router.post("/api/auth/app/login/lookup").handler(this::handleLookup);
+        router.post("/api/auth/app/login/oidc/start/:configId").handler(this::handleStart);
         router.post("/api/auth/app/login").handler(this::handleLogin);
         router.get("/api/auth/app/login/oidc/callback/:configId").handler(this::handleCallback);
     }
@@ -65,44 +70,44 @@ public class ApplicationLoginHandler implements SuppliesGatewayRoutes {
     }
 
     /**
-     * {@code POST /api/auth/app/login/lookup {email}} — email-first SSO/password
-     * decision: {@code {type:"sso", redirect:"…"}} when the user is OIDC with a live
-     * config, otherwise {@code {type:"password"}}. Refused with {@code 403} from a page that is
-     * not one of the application's UIs.
+     * {@code POST /api/auth/app/login/oidc/start/:configId} — begins a sign-in through a configuration the
+     * application's login offers, answering {@code {redirect}} with the URL the page sends the browser to:
+     * the provider's authorization URL for a configuration of the organization, whose flow returns to this
+     * handler's callback, or the shared host's authorize URL for one of the platform's social registrations
+     * (see {@link ApplicationSocialLoginHandler}). {@code 400} for a configuration the login does not offer;
+     * {@code 403} from a page that is not one of the application's UIs.
      */
-    private void handleLookup(RoutingContext ctx) {
+    private void handleStart(RoutingContext ctx) {
         ApplicationKey applicationKey = authEndpointSupport.requireApplicationUi(ctx);
-        JsonObject body = authEndpointSupport.readJsonBody(ctx);
-        String email = body.getString("email");
-        if (email == null || email.isBlank()) {
-            authEndpointSupport.respondError(ctx, 400, "email is required");
+        String configId = ctx.pathParam("configId");
+        String origin = SessionBinding.origin(ctx);
+        if (origin == null) {
+            authEndpointSupport.respondError(ctx, 400, "A sign-in is started by a page");
             return;
         }
 
-        identityService.findByEmail(email, applicationKey.organizationId(), applicationKey.applicationId())
-              .compose(user -> resolveSsoOrPassword(ctx, applicationKey, user))
+        loginProviderService.findOffered(configId, applicationKey.organizationId(), applicationKey.applicationId())
+              .compose(config -> {
+                  Future<String> ret;
+                  switch (config) {
+                      case null -> ret = Future.failedFuture(new OidcCallbackException(OidcErrorCodes.CONFIG_NOT_FOUND));
+                      // the registration is shared, so its provider returns to the shared host, not to this one
+                      case ApplicationSocialOidcConfiguration _ ->
+                              ret = Future.succeededFuture(authEndpointSupport.socialAuthorizeUrl(applicationKey, configId, origin));
+                      default -> ret = oidcFlowOrchestrator.startFlow(ctx, config, callbackUrl(applicationKey, configId), null);
+                  }
+                  return ret;
+              })
+              .onSuccess(url -> ctx.response().putHeader("Content-Type", "application/json")
+                                   .end(new JsonObject().put("redirect", url).encode()))
               .onFailure(err -> {
-                  log.warn("App login lookup failed for {}/{}: {}", HostLabelUtil.label(applicationKey), email, err.getMessage());
-                  authEndpointSupport.respondError(ctx, 500, "Lookup failed");
+                  if (err instanceof OidcCallbackException) {
+                      authEndpointSupport.respondError(ctx, 400, "The application's login does not offer " + configId);
+                  } else {
+                      log.warn("App login start failed for {}/{}: {}", HostLabelUtil.label(applicationKey), configId, err.getMessage());
+                      authEndpointSupport.respondError(ctx, 500, "Failed to start sign-in");
+                  }
               });
-    }
-
-    private Future<Void> resolveSsoOrPassword(RoutingContext ctx, ApplicationKey applicationKey, UserParticipantIdentity user) {
-        if (user == null
-                || user.getAuthType() != AuthType.OIDC
-                || user.getOidcConfigId() == null) {
-            return authEndpointSupport.respondPasswordPath(ctx);
-        }
-
-        String configId = user.getOidcConfigId();
-        return loginProviderService.findOffered(configId, applicationKey.organizationId(), applicationKey.applicationId())
-                     .compose(match -> {
-                         if (match == null) {
-                             return authEndpointSupport.respondPasswordPath(ctx);
-                         }
-                         return oidcFlowOrchestrator.startFlow(ctx, match, callbackUrl(applicationKey, match.getId()), null)
-                                 .compose(url -> authEndpointSupport.respondSsoRedirect(ctx, url));
-                     });
     }
 
     /**

@@ -21,16 +21,15 @@ import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.utils.HostLabelUtil;
 import org.springframework.stereotype.Component;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 
 /**
  * Sign-in to an application through one of the platform's social registrations
  * ({@link ApplicationSocialOidcConfiguration}). The registration is shared by every application that offers
  * it, and a provider returns the browser only to a redirect URI registered in advance, so the provider
  * returns to one host for all of them: the app server's own, {@code kinotic.appServer.apiBaseUrl}. The flow
- * therefore runs across two hosts. The application's API host starts it and answers with the authorize URL
- * on the shared host, which runs the provider round-trip on its own session; the shared host's callback
+ * therefore runs across two hosts. The application's API host starts it ({@link ApplicationLoginHandler}'s
+ * start answers with the authorize URL on the shared host), the shared host runs the provider round-trip on
+ * its own session, and its callback
  * verifies the identity and hands it to the application's API host under a single-use code, where the
  * session is established, so the browser ends signed in at the host the application's UI connects to.
  */
@@ -39,7 +38,6 @@ import java.nio.charset.StandardCharsets;
 @RequiredArgsConstructor
 public class ApplicationSocialLoginHandler implements SuppliesGatewayRoutes {
 
-    private static final String AUTHORIZE_PATH = "/api/auth/app/login/social/authorize";
     private static final String CALLBACK_PATH = "/api/auth/app/login/social/callback/";
     private static final String COMPLETE_PATH = "/api/auth/app/login/social/complete/";
 
@@ -52,43 +50,9 @@ public class ApplicationSocialLoginHandler implements SuppliesGatewayRoutes {
 
     @Override
     public void mountRoutes(Router router) {
-        router.post("/api/auth/app/login/social/start/:configId").handler(this::handleStart);
-        router.get(AUTHORIZE_PATH).handler(this::handleAuthorize);
+        router.get(ApplicationAuthEndpointSupport.SOCIAL_AUTHORIZE_PATH).handler(this::handleAuthorize);
         router.get(CALLBACK_PATH + ":configId").handler(this::handleCallback);
         router.get(COMPLETE_PATH + ":code").handler(this::handleComplete);
-    }
-
-    /**
-     * {@code POST /api/auth/app/login/social/start/:configId}, at the application's API host — answers
-     * {@code {type:"sso", redirect}} with the URL the page sends the browser to, which begins the sign-in on
-     * the shared host for this application and the page that asked. {@code 400} for a configuration the
-     * application does not offer or that is not one of the platform's social registrations; {@code 403} from
-     * a page that is not one of the application's UIs.
-     */
-    private void handleStart(RoutingContext ctx) {
-        ApplicationKey applicationKey = authEndpointSupport.requireApplicationUi(ctx);
-        String configId = ctx.pathParam("configId");
-        String origin = ctx.request().getHeader("Origin");
-        if (origin == null) {
-            authEndpointSupport.respondError(ctx, 400, "A social sign-in is started by a page");
-            return;
-        }
-
-        loginProviderService.findOffered(configId, applicationKey.organizationId(), applicationKey.applicationId())
-              .compose(config -> {
-                  Future<Void> ret;
-                  if (config instanceof ApplicationSocialOidcConfiguration) {
-                      ret = authEndpointSupport.respondSsoRedirect(ctx, authorizeUrl(applicationKey, configId, origin));
-                  } else {
-                      authEndpointSupport.respondError(ctx, 400, "The application offers no social sign-in " + configId);
-                      ret = Future.succeededFuture();
-                  }
-                  return ret;
-              })
-              .onFailure(err -> {
-                  log.warn("Social login start failed for {}/{}: {}", HostLabelUtil.label(applicationKey), configId, err.getMessage());
-                  authEndpointSupport.respondError(ctx, 500, "Failed to start sign-in");
-              });
     }
 
     /**
@@ -185,20 +149,8 @@ public class ApplicationSocialLoginHandler implements SuppliesGatewayRoutes {
         }
     }
 
-    private String authorizeUrl(ApplicationKey applicationKey, String configId, String origin) {
-        return properties.getApiBaseUrl() + AUTHORIZE_PATH
-                + "?organizationId=" + encode(applicationKey.organizationId())
-                + "&applicationId=" + encode(applicationKey.applicationId())
-                + "&configurationId=" + encode(configId)
-                + "&origin=" + encode(origin);
-    }
-
     // the shared host is the callback's base: the one redirect URI the registration lists for every application
     private String callbackUrl(String configId) {
         return properties.getApiBaseUrl() + CALLBACK_PATH + configId;
-    }
-
-    private static String encode(String value) {
-        return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 }

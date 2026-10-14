@@ -1,11 +1,11 @@
 package org.kinotic.domain.api.services.security;
 
 import io.vertx.core.Future;
-import org.kinotic.core.api.crud.IdentifiableCrudService;
 import org.kinotic.domain.api.model.security.ApplicationSocialOidcConfiguration;
 import org.kinotic.domain.api.model.security.LoginProvider;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
+import org.kinotic.domain.api.services.OrganizationScopedCrudService;
 
 import java.util.List;
 
@@ -17,7 +17,7 @@ import java.util.List;
  * application, one of the organization's, and is unique per scope and configuration. The finders serve the
  * sign-in flows, which run before a participant is bound, and check none.
  */
-public interface LoginProviderService extends IdentifiableCrudService<LoginProvider, String> {
+public interface LoginProviderService extends OrganizationScopedCrudService<LoginProvider, String> {
 
     /**
      * The enabled configurations a sign-in scope offers, in the order they should be presented. An

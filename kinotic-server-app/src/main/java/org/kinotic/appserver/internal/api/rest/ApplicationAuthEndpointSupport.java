@@ -22,6 +22,8 @@ import org.kinotic.domain.api.services.security.RefreshTokenService;
 import org.springframework.stereotype.Component;
 
 import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.regex.Pattern;
 
 /**
@@ -31,6 +33,12 @@ import java.util.regex.Pattern;
  */
 @Component
 public class ApplicationAuthEndpointSupport extends AuthEndpointSupport {
+
+    /**
+     * Path on the shared host, {@code kinotic.appServer.apiBaseUrl}, that begins a sign-in through one of the
+     * platform's social registrations; {@link #socialAuthorizeUrl} builds the URL a start answers with.
+     */
+    public static final String SOCIAL_AUTHORIZE_PATH = "/api/auth/app/login/social/authorize";
 
     private final AppServerProperties properties;
     private final ApplicationRepository applicationRepository;
@@ -87,6 +95,18 @@ public class ApplicationAuthEndpointSupport extends AuthEndpointSupport {
         // the CORS pattern holds sites to the sites domain, so a site is named by the first label of its host
         return (host != null && HostLabelUtil.isSiteLabel(applicationKey, StringUtils.substringBefore(host, ".")))
                 || (localUiOrigins != null && localUiOrigins.matcher(origin).matches());
+    }
+
+    /**
+     * The URL on the shared host that begins a sign-in to {@code applicationKey} through the platform social
+     * registration {@code configId}, for the page at {@code origin}.
+     */
+    public String socialAuthorizeUrl(ApplicationKey applicationKey, String configId, String origin) {
+        return properties.getApiBaseUrl() + SOCIAL_AUTHORIZE_PATH
+                + "?organizationId=" + URLEncoder.encode(applicationKey.organizationId(), StandardCharsets.UTF_8)
+                + "&applicationId=" + URLEncoder.encode(applicationKey.applicationId(), StandardCharsets.UTF_8)
+                + "&configurationId=" + URLEncoder.encode(configId, StandardCharsets.UTF_8)
+                + "&origin=" + URLEncoder.encode(origin, StandardCharsets.UTF_8);
     }
 
     /**
