@@ -26,71 +26,143 @@ const milestones: Milestone[] = [
   {
     label: 'Q3 2026 · SHIPPED',
     status: 'shipped',
-    title: 'Core platform',
-    summary: 'Frontends, microservices, persistence and CI/CD from a single description.',
+    title: 'Core platform & MCP',
+    summary: 'Data, services and frontends from one description, built and deployed by Claude over MCP.',
   },
   {
     label: 'Q4 2026 · WE ARE HERE',
     status: 'current',
-    title: 'MCP & agents',
-    summary: 'Build with Claude, ChatGPT or Cursor over MCP; every service exposed as a tool.',
+    title: 'Enterprise identity',
+    summary: 'Enterprise SSO and relationship-based access control on every service and agent tool.',
   },
   {
     label: 'H1 2027 · NEXT',
     status: 'upcoming',
-    title: 'Enterprise controls',
-    summary: 'RBAC, audit, private deployments and multi-region.',
+    title: 'Governed delivery',
+    summary: 'Gated dev, stage and prod, a complete audit trail, SCIM and deployment into your cloud.',
   },
   {
-    label: 'H2 2027 · LATER',
+    label: 'H2 2027 · THEN',
     status: 'upcoming',
-    title: 'Marketplace',
-    summary: 'Shared structures, services and templates across the Kinotic network.',
+    title: 'AI & data governance',
+    summary: 'LLM cost controls, data residency, PII controls and SOC 2 Type II.',
+  },
+  {
+    label: '2028 · LATER',
+    status: 'upcoming',
+    title: 'Ecosystem',
+    summary: 'A marketplace for Kinotic apps, plus sovereign and air-gapped deployments.',
   },
 ]
 
 const features: Feature[] = [
   {
     status: 'shipped',
-    title: 'Prototype-to-production continuity',
-    summary: 'The same artifact moves from dev to stage to prod with no rewrite.',
+    title: 'Core platform',
+    summary: 'Applications, typed services, tenant-isolated persistence and hosted frontends, deployed from GitHub on every push.',
     when: 'Q3 2026',
   },
   {
     status: 'shipped',
-    title: 'Identity & access management',
-    summary: 'OIDC sign-in and Cedar policy enforcement built into every service.',
+    title: 'MCP server & Claude plugin',
+    summary: 'Claude creates, builds and deploys applications through OAuth-secured MCP tools.',
+    when: 'Q3 2026',
+  },
+  {
+    status: 'shipped',
+    title: 'Isolation, observability & SBOMs',
+    summary: 'Every build and service in its own microVM, OpenTelemetry on every call, an SBOM for every project.',
     when: 'Q3 2026',
   },
   {
     status: 'in-progress',
-    title: 'MCP tool generation',
-    summary: 'Every structure and service published as an MCP tool for any agent.',
+    title: 'Relationship-based access control',
+    summary: 'Roles, groups and per-tenant permissions, enforced at the gateway on every service call and MCP tool.',
     when: 'Q4 2026',
   },
   {
     status: 'in-progress',
-    title: 'Live usage & cost metering',
-    summary: 'Per-application observability with spend attribution.',
+    title: 'Enterprise SSO',
+    summary: 'Okta, Microsoft Entra ID and Google sign-in for organizations and for the apps they build.',
     when: 'Q4 2026',
   },
   {
     status: 'planned',
-    title: 'RBAC & audit trail',
-    summary: 'Role-based access across workspaces with immutable change history.',
+    title: 'Dev, stage & prod environments',
+    summary: 'A live preview for every branch, vulnerability and migration checks before stage, and human sign-off for prod.',
     when: 'H1 2027',
   },
   {
     status: 'planned',
-    title: 'Private & multi-region deployments',
-    summary: 'Run the factory inside a customer\'s cloud account, in any region.',
+    title: 'Audit trail',
+    summary: 'Every sign-in, access change, deploy and agent tool call recorded, retained and streamed to your SIEM.',
     when: 'H1 2027',
   },
   {
     status: 'planned',
-    title: 'Structures marketplace',
-    summary: 'Publish and reuse data models, services and app templates.',
+    title: 'Agent-operated apps',
+    summary: 'Your app\'s own services become MCP tools, scoped by the same permissions, with approval on destructive calls.',
+    when: 'H1 2027',
+  },
+  {
+    status: 'planned',
+    title: 'Directory sync, SAML & MFA',
+    summary: 'SCIM provisioning, deprovisioning that revokes every session and agent grant, SAML 2.0, enforced SSO and passkeys.',
+    when: 'H1 2027',
+  },
+  {
+    status: 'planned',
+    title: 'Forward deployment',
+    summary: 'Kinotic OS on your own Kubernetes cluster, in your network, with your own key vault.',
+    when: 'H1 2027',
+  },
+  {
+    status: 'planned',
+    title: 'Backups & uptime SLA',
+    summary: 'Automated backups and point-in-time restore for application data, and a published uptime SLA.',
+    when: 'H1 2027',
+  },
+  {
+    status: 'planned',
+    title: 'Usage metering & billing',
+    summary: 'Plans, invoicing and spend broken down by application and environment.',
+    when: 'H1 2027',
+  },
+  {
+    status: 'planned',
+    title: 'LLM gateway & AI cost controls',
+    summary: 'Approved models, your own provider keys, token budgets per app, prompt traces and cost attribution.',
     when: 'H2 2027',
+  },
+  {
+    status: 'planned',
+    title: 'Agent identity federation',
+    summary: 'Agents authorized by your identity provider through Okta Cross App Access and Microsoft Entra Agent ID, with an inventory and revoke.',
+    when: 'H2 2027',
+  },
+  {
+    status: 'planned',
+    title: 'Data residency & privacy controls',
+    summary: 'EU hosting, customer-managed keys, PII tagging and masking, and retention policies per application.',
+    when: 'H2 2027',
+  },
+  {
+    status: 'planned',
+    title: 'SOC 2 Type II & ISO 27001',
+    summary: 'Independent attestation of Kinotic OS Cloud, with a trust center for security reviews.',
+    when: 'H2 2027',
+  },
+  {
+    status: 'planned',
+    title: 'Marketplace',
+    summary: 'Publish and sell apps, services and templates, with Kinotic as merchant of record.',
+    when: '2028',
+  },
+  {
+    status: 'planned',
+    title: 'Sovereign & air-gapped deployments',
+    summary: 'Disconnected installs and sovereign-cloud regions for regulated and public-sector buyers.',
+    when: '2028',
   },
 ]
 
@@ -179,7 +251,8 @@ const progress = computed(() => {
 .timeline__items {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
   gap: 24px;
   margin: 0;
   padding: 0;
@@ -322,7 +395,7 @@ const progress = computed(() => {
   }
 
   .timeline__items {
-    grid-template-columns: 1fr;
+    grid-auto-flow: row;
     gap: 0;
   }
 
