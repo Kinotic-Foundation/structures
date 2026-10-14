@@ -45,7 +45,7 @@ const milestones: Milestone[] = [
     label: 'H2 2027 · THEN',
     status: 'upcoming',
     title: 'AI & data governance',
-    summary: 'LLM cost controls, data residency, PII controls and SOC 2 Type II.',
+    summary: 'AI cost controls, agent identity, data residency, PII controls and SOC 2 Type II.',
   },
   {
     label: '2028 · LATER',
@@ -130,8 +130,8 @@ const features: Feature[] = [
   },
   {
     status: 'planned',
-    title: 'LLM gateway & AI cost controls',
-    summary: 'Approved models, your own provider keys, token budgets per app, prompt traces and cost attribution.',
+    title: 'AI model governance & cost controls',
+    summary: 'Approved models and your own provider keys per organization, token budgets per app, prompt traces and cost attribution.',
     when: 'H2 2027',
   },
   {
