@@ -24,7 +24,8 @@ class OidcConfigurationSerializationTest {
     void orgSignupConfigurationRoundTripsThroughBaseClassWithTypeDiscriminator() {
         OrgSignupOidcConfiguration social = new OrgSignupOidcConfiguration();
         social.setSecretNameRef("github-platform")
-                .setName("GitHub")
+              .setTokenUri("https://github.com/login/oauth/access_token")
+              .setName("GitHub")
                 .setProvider(OidcProviderKind.GITHUB)
                 .setClientId("client")
                 .setId("github-platform");
@@ -35,15 +36,17 @@ class OidcConfigurationSerializationTest {
         OidcConfiguration read = jsonMapper.readValue(json, OidcConfiguration.class);
         OrgSignupOidcConfiguration readSocial = assertInstanceOf(OrgSignupOidcConfiguration.class, read);
         assertEquals("github-platform", readSocial.getSecretNameRef());
+        assertEquals("https://github.com/login/oauth/access_token", readSocial.getTokenUri());
         assertEquals(OidcProviderKind.GITHUB, readSocial.getProvider());
     }
 
     @Test
     void organizationConfigurationRoundTripsWithoutNamingASecret() {
         OrganizationOidcConfiguration owned = new OrganizationOidcConfiguration();
-        owned.setOrganizationId("acme")
-             .setName("Acme Okta")
-             .setProvider(OidcProviderKind.OIDC)
+        owned.setOrganizationId("acme");
+        owned.setProviderAccount("acme.okta.com");
+        owned.setName("Acme Okta")
+             .setProvider(OidcProviderKind.OKTA)
              .setClientId("client")
              .setId("config-1");
 
@@ -54,5 +57,6 @@ class OidcConfigurationSerializationTest {
         OidcConfiguration read = jsonMapper.readValue(json, OidcConfiguration.class);
         OrganizationOidcConfiguration readOwned = assertInstanceOf(OrganizationOidcConfiguration.class, read);
         assertEquals("acme", readOwned.getOrganizationId());
+        assertEquals("acme.okta.com", readOwned.getProviderAccount());
     }
 }

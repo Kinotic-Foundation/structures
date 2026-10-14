@@ -15,8 +15,10 @@ import java.util.List;
  * and each organization's own. A write is held to its kind's owner: an {@link OrgSignupOidcConfiguration}
  * is saved or deleted by a system participant only,
  * an {@link OrganizationOidcConfiguration} by an organization participant of the organization it
- * names. The finders that serve the sign-in flows, which run before a participant is bound, check no
- * participant and say so.
+ * names. An organization's configuration must name a provider kind
+ * {@link OidcProviderKind#offeredToOrganizations() offered to organizations} and its account there in the
+ * form the kind expects; its authority is derived from the two on every save. The finders that serve
+ * the sign-in flows, which run before a participant is bound, check no participant and say so.
  */
 public interface OidcConfigurationService extends IdentifiableCrudService<OidcConfiguration, String> {
 
@@ -87,8 +89,7 @@ public interface OidcConfigurationService extends IdentifiableCrudService<OidcCo
      * of the secret storage, keyed by the configuration's id, so it is never a field of the configuration
      * and no other organization's configuration can read it; the configuration's
      * {@code confidentialClient} records whether one is held. A sign-in through the configuration picks
-     * the new secret up on its next flow. The configuration must pass {@link #requireRoutableEndpoints},
-     * as every save of an {@link OrganizationOidcConfiguration} must.
+     * the new secret up on its next flow.
      *
      * @param configuration the configuration, owned by the caller's organization
      * @param clientSecret  the client secret's value, or {@code null} or blank for a public client, whose
@@ -96,18 +97,6 @@ public interface OidcConfigurationService extends IdentifiableCrudService<OidcCo
      * @return the configuration as saved
      */
     Future<OrganizationOidcConfiguration> save(OrganizationOidcConfiguration configuration, String clientSecret);
-
-    /**
-     * Requires that the authority and every endpoint an organization's configuration names is an
-     * {@code https} URL whose host resolves, and to no loopback, link-local or private address, so the
-     * sign-in flow fetches nothing the organization could point at a host only the server can reach.
-     * Security: checks the addresses the hosts have when called; a host may resolve differently when a
-     * sign-in later connects to it.
-     *
-     * @param configuration the configuration to check
-     * @return a {@link Future} failing with {@link IllegalArgumentException} when a URL is refused
-     */
-    Future<Void> requireRoutableEndpoints(OrganizationOidcConfiguration configuration);
 
     /**
      * The client secret of {@code configuration}, or {@code null} for a public client, which the

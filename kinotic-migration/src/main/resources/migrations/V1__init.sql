@@ -237,11 +237,14 @@ CREATE TABLE IF NOT EXISTS kinotic_identity_credential (
 -- SSO, kinotic_application.oidcConfigurationIds for application-level logins — and the row names
 -- no client secret: OidcConfigurationService.save(configuration, clientSecret) holds the secret in
 -- the organization's scope of the secret storage (SecretStorageService), keyed by the row's id, and
--- confidentialClient records that one is held.
+-- confidentialClient records that one is held. Nor does it name a URL: it names the organization's
+-- account at the provider (providerAccount), and the authority is derived from the provider kind's
+-- template on save. The endpoint overrides and scopes are ORG_SIGNUP columns only.
 CREATE TABLE IF NOT EXISTS kinotic_oidc_configuration (
     id KEYWORD,
     type KEYWORD,
     organizationId KEYWORD,
+    providerAccount KEYWORD NOT INDEXED,
     confidentialClient BOOLEAN,
     name KEYWORD,
     provider KEYWORD,

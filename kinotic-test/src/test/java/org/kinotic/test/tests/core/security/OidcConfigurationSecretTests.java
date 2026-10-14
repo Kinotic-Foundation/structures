@@ -29,8 +29,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * back for that configuration alone, under its organization, and never appears on the configuration a
  * read returns; a save without a secret keeps it, a new secret replaces it, null makes the configuration a
  * public client, a public client can be given a secret again, and deleting the configuration deletes it.
- * A provider whose host does not resolve, or that the server could only reach over plain http or at a
- * loopback, link-local or private address, is refused.
+ * An organization names its account at a provider offered to organizations, never a URL: the authority is
+ * derived from the kind's template, and an account not in the kind's form or a kind not offered is refused.
  */
 @SpringBootTest
 public class OidcConfigurationSecretTests extends KinoticTestBase {
@@ -80,23 +80,29 @@ public class OidcConfigurationSecretTests extends KinoticTestBase {
     }
 
     @Test
-    public void aProviderTheServerCouldOnlyReachInsecurelyOrPrivatelyIsRefused() {
-        for (String authority : List.of("http://acme.okta.test", "https://acme.okta.invalid", "https://127.0.0.1", "https://localhost:8443",
-                                        "https://10.0.0.5", "https://192.168.1.10", "https://169.254.169.254",
-                                        "https://[::1]", "https://[fd00::1]", "https://user:pass@acme.okta.test")) {
+    public void anOrganizationNamesItsAccountAtTheProviderAndNeverAUrl() throws Exception {
+        // the authority comes from the kind's template, whatever the caller sent
+        OrganizationOidcConfiguration okta = await(runAsOrganization(
+                () -> oidcConfigurations.save(provider("Acme Okta", config -> config.setAuthority("https://evil.example")), null)));
+        assertEquals("https://acme.okta.com", okta.getAuthority());
+        OrganizationOidcConfiguration entra = await(runAsOrganization(() -> oidcConfigurations.save(provider("Acme Entra", config -> {
+            config.setProvider(OidcProviderKind.AZURE_AD);
+            config.setProviderAccount("9f1a4c2e-3b7d-4e8f-a1b2-c3d4e5f60718");
+        }), null)));
+        assertEquals("https://login.microsoftonline.com/9f1a4c2e-3b7d-4e8f-a1b2-c3d4e5f60718/v2.0", entra.getAuthority());
+
+        // an account not in the kind's form, or a kind no organization may configure, is refused
+        for (String account : List.of("acme.okta.com/x", "evil.example", "acme.okta.com.evil.example")) {
             assertInstanceOf(IllegalArgumentException.class,
-                             failure(() -> oidcConfigurations.save(provider("Acme Okta", config -> config.setAuthority(authority)), null)),
-                             authority);
+                             failure(() -> oidcConfigurations.save(provider("Acme Okta", config -> config.setProviderAccount(account)))),
+                             account);
         }
-        // every endpoint the configuration names is held to the same rule as its authority
         assertInstanceOf(IllegalArgumentException.class,
-                         failure(() -> oidcConfigurations.save(provider("Acme Okta", config -> config.setTokenUri("http://acme.okta.test/token")))));
+                         failure(() -> oidcConfigurations.save(provider("Acme Okta", config -> config.setProviderAccount(null)))));
         assertInstanceOf(IllegalArgumentException.class,
-                         failure(() -> oidcConfigurations.save(provider("Acme Okta", config -> config.setAuthorizationUri("https://127.0.0.1/authorize")))));
+                         failure(() -> oidcConfigurations.save(provider("Acme Keycloak", config -> config.setProvider(OidcProviderKind.KEYCLOAK)))));
         assertInstanceOf(IllegalArgumentException.class,
-                         failure(() -> oidcConfigurations.save(provider("Acme Okta", config -> config.setUserInfoUri("https://10.0.0.5/userinfo")))));
-        assertInstanceOf(IllegalArgumentException.class,
-                         failure(() -> oidcConfigurations.save(provider("Acme Okta", config -> config.setUserEmailsUri("https://169.254.169.254/emails")))));
+                         failure(() -> oidcConfigurations.save(provider("Anything", config -> config.setProvider(OidcProviderKind.OIDC)))));
     }
 
     private Throwable failure(Supplier<Future<?>> call) {
@@ -112,11 +118,10 @@ public class OidcConfigurationSecretTests extends KinoticTestBase {
     private static OrganizationOidcConfiguration provider(String name) {
         OrganizationOidcConfiguration ret = new OrganizationOidcConfiguration();
         ret.setOrganizationId(TEST_ORG_ID);
+        ret.setProviderAccount("acme.okta.com");
         ret.setName(name)
-           .setProvider(OidcProviderKind.OIDC)
+           .setProvider(OidcProviderKind.OKTA)
            .setClientId("acme-client")
-           // an address literal from the documentation range, so the save resolves it without DNS
-           .setAuthority("https://203.0.113.10")
            .setEnabled(true);
         return ret;
     }

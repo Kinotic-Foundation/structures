@@ -12,7 +12,7 @@ import java.util.Date;
 
 /**
  * A persisted OIDC provider configuration: the provider, the client Kinotic registered with it, and
- * the endpoints and claims a sign-in through it uses. The concrete subtype states who owns the
+ * the issuer a sign-in through it uses. The concrete subtype states who owns the
  * configuration and carries the fields only that owner has — {@link OrgSignupOidcConfiguration} for
  * a social provider the platform operator curates, through which organization users sign up and in,
  * {@link OrganizationOidcConfiguration} for one an organization configures for itself. The client secret is never a field of a configuration: each
@@ -51,41 +51,10 @@ public abstract sealed class OidcConfiguration implements Identifiable<String>
     private String clientId;
 
     /**
-     * The browser-facing issuer URL. Must match the {@code iss} claim in JWTs from this provider.
+     * The browser-facing issuer URL, whose OIDC discovery document names the provider's endpoints.
+     * Must match the {@code iss} claim in JWTs from this provider.
      */
     private String authority;
-
-    /**
-     * Full URL of the provider's OAuth 2.0 authorization endpoint. {@code null} when the
-     * provider supports OIDC discovery, which supplies it from {@link #authority}.
-     */
-    private String authorizationUri;
-
-    /**
-     * Full URL of the provider's OAuth 2.0 token endpoint. {@code null} when the provider
-     * supports OIDC discovery, which supplies it from {@link #authority}.
-     */
-    private String tokenUri;
-
-    /**
-     * Full URL of the identity endpoint queried with the access token when the provider
-     * issues no id_token (e.g. {@code https://api.github.com/user}). {@code null} for
-     * OIDC providers, whose identity claims come from the id_token.
-     */
-    private String userInfoUri;
-
-    /**
-     * Full URL of a GitHub-style emails endpoint — an array of {@code {email, primary,
-     * verified}} — supplying the verified email when the {@link #userInfoUri} profile
-     * omits it. {@code null} when the identity endpoint or id_token carries the email.
-     */
-    private String userEmailsUri;
-
-    /**
-     * Space-delimited OAuth scope string sent on the authorization request (RFC 6749 wire
-     * format). {@code null} requests the standard OIDC {@code openid email profile}.
-     */
-    private String scopes;
 
     /**
      * Expected {@code aud} claim, or {@code null} to default to {@link #clientId}.

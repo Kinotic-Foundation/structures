@@ -20,6 +20,12 @@ import org.kinotic.domain.api.model.OrganizationScoped;
  * The same config id may legitimately appear in both — e.g. an org uses the same Okta tenant for
  * org-admin SSO and for one of its customer-facing apps.
  *
+ * <p>The organization names no URL. It chooses a {@link OidcProviderKind} that
+ * {@link OidcProviderKind#offeredToOrganizations() is offered to organizations} and gives its
+ * {@link #providerAccount} at that provider; the authority is derived from the kind's template when the
+ * configuration is saved, replacing any value sent, so the server connects to the provider's own hosts
+ * only.
+ *
  * <p>The client secret is given to {@code OidcConfigurationService.save(configuration, clientSecret)}
  * and held in the owning organization's scope of the secret storage, keyed by the configuration's
  * id; nothing on the configuration names it, so a configuration read back carries only
@@ -36,6 +42,13 @@ public final class OrganizationOidcConfiguration extends OidcConfiguration imple
      * enforces.
      */
     private String organizationId;
+
+    /**
+     * The organization's account at the provider, in the form
+     * {@link OidcProviderKind#providerAccountLabel()} asks for: an Entra directory's tenant id, an Okta
+     * domain. {@code null} for a kind with one issuer for everyone, such as Google.
+     */
+    private String providerAccount;
 
     /**
      * Whether a client secret is held for this configuration and sent on the code exchange, which

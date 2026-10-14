@@ -1,7 +1,6 @@
 package org.kinotic.domain.internal.api.services.security;
 
 import io.vertx.core.Future;
-import io.vertx.core.Vertx;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.core.api.exceptions.AuthorizationException;
@@ -16,7 +15,6 @@ import org.kinotic.domain.api.repositories.ApplicationRepository;
 import org.kinotic.domain.api.services.OrganizationService;
 import org.kinotic.domain.api.services.SecretStorageService;
 import org.kinotic.domain.api.services.security.OidcConfigurationService;
-import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.domain.internal.api.repositories.OidcConfigurationRepository;
 import org.kinotic.domain.internal.api.services.AbstractCrudService;
 import org.springframework.stereotype.Component;
@@ -25,7 +23,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Stream;
 
 @Component
 public class DefaultOidcConfigurationService extends AbstractCrudService<OidcConfiguration> implements OidcConfigurationService {
@@ -35,47 +32,36 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
     private final ApplicationRepository applicationRepository;
     private final SecretStorageService secretStorageService;
     private final SecurityContext securityContext;
-    private final Vertx vertx;
 
     public DefaultOidcConfigurationService(OidcConfigurationRepository repository,
                                            OrganizationService organizationService,
                                            ApplicationRepository applicationRepository,
                                            SecretStorageService secretStorageService,
-                                           SecurityContext securityContext,
-                                           Vertx vertx) {
+                                           SecurityContext securityContext) {
         super(repository);
         this.oidcRepository = repository;
         this.organizationService = organizationService;
         this.applicationRepository = applicationRepository;
         this.secretStorageService = secretStorageService;
         this.securityContext = securityContext;
-        this.vertx = vertx;
     }
 
     @Override
     protected Future<Void> beforeSave(OidcConfiguration entity) {
         Validate.notNull(entity.getName(), "OidcConfiguration name cannot be null");
+        Validate.notNull(entity.getProvider(), "OidcConfiguration provider cannot be null");
         requireOwner(entity);
+        if (entity instanceof OrganizationOidcConfiguration owned) {
+            // the organization names its account at the provider, never a URL: the kind's template
+            // decides the issuer, so the server only ever connects to the provider's own hosts
+            owned.setAuthority(owned.getProvider().authority(owned.getProviderAccount()));
+        }
         if (entity.getId() == null) {
             entity.setId(UUID.randomUUID().toString());
             entity.setCreated(new Date());
         }
         entity.setUpdated(new Date());
-        // an organization's administrator names the endpoints the sign-in flow fetches; the operator's rows
-        // may legitimately name hosts this rule would refuse
-        return entity instanceof OrganizationOidcConfiguration owned
-                ? requireRoutableEndpoints(owned)
-                : Future.succeededFuture();
-    }
-
-    @Override
-    public Future<Void> requireRoutableEndpoints(OrganizationOidcConfiguration configuration) {
-        return DomainUtil.requireRoutableUrls(vertx,
-                                              Stream.of(configuration.getAuthority(), configuration.getAuthorizationUri(),
-                                                        configuration.getTokenUri(), configuration.getUserInfoUri(),
-                                                        configuration.getUserEmailsUri())
-                                                    .filter(StringUtils::isNotBlank)
-                                                    .toList());
+        return Future.succeededFuture();
     }
 
     @Override

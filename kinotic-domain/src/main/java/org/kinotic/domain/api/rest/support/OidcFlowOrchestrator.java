@@ -34,10 +34,8 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
-import java.util.stream.Stream;
 
 /**
  * Owns the OAuth 2.0 / OIDC flow shared by every handler that bounces the user out to
@@ -69,7 +67,7 @@ public class OidcFlowOrchestrator {
 
     @PostConstruct
     public void start() {
-        // a redirect would carry an identity endpoint fetch to an address requireRoutableEndpoints never saw
+        // an identity endpoint answers with the profile itself; a redirect is not followed to wherever it points
         this.webClient = WebClient.create(vertx, new WebClientOptions().setFollowRedirects(false));
     }
 
@@ -141,16 +139,16 @@ public class OidcFlowOrchestrator {
     /**
      * Produces the verified identity claims for an exchanged token: id_token claims validated
      * against issuer, audience and nonce for OIDC providers, or claims fetched from the
-     * provider's identity endpoint for rows that set {@code userInfoUri}.
+     * provider's identity endpoint for a curated row that sets {@code userInfoUri}.
      */
     private Future<Map<String, Object>> verifiedClaims(OidcConfiguration config, User user, OidcFlowSession flowSession) {
         Future<Map<String, Object>> ret;
-        if (config.getUserInfoUri() != null && !config.getUserInfoUri().isBlank()) {
+        if (config instanceof OrgSignupOidcConfiguration social && social.getUserInfoUri() != null && !social.getUserInfoUri().isBlank()) {
             // A provider configured with an identity endpoint issues no id_token, so there is no
             // issuer/audience/nonce to check — the state match in handleCallback plus the direct
             // TLS code exchange are the security boundary, and identity comes from the provider's
             // API using the exchanged access token.
-            ret = fetchApiClaims(config, user);
+            ret = fetchApiClaims(social, user);
         } else {
             Map<String, Object> claims = flattenClaims(user);
             if (!OAuth2Util.isIssuerValid(claims, config.getAuthority())) {
@@ -208,10 +206,11 @@ public class OidcFlowOrchestrator {
         session.put(OIDC_FLOW_SESSION_KEY, new OidcFlowSession(state, nonce, pkceVerifier, config.getId(), orgId,
                                                                inviteToken, SessionBinding.origin(ctx)));
 
-        // Scopes ride as RFC 6749's space-delimited string; a row without them gets the
-        // standard OIDC triple.
-        List<String> scopes = config.getScopes() != null && !config.getScopes().isBlank()
-                ? List.of(config.getScopes().split(" "))
+        // Scopes ride as RFC 6749's space-delimited string; a curated row may name its own, every
+        // other configuration gets the standard OIDC triple.
+        List<String> scopes = config instanceof OrgSignupOidcConfiguration social
+                              && social.getScopes() != null && !social.getScopes().isBlank()
+                ? List.of(social.getScopes().split(" "))
                 : List.of("openid", "email", "profile");
 
         return getOAuth2Auth(config)
@@ -231,8 +230,12 @@ public class OidcFlowOrchestrator {
      */
     private Future<OAuth2Auth> createOAuth2Auth(OidcConfiguration config, String clientSecret) {
         Future<OAuth2Auth> ret;
-        if (config.getAuthorizationUri() != null || config.getTokenUri() != null) {
-            if (config.getAuthorizationUri() == null || config.getTokenUri() == null) {
+        // only a curated row may name endpoints in place of discovery
+        OrgSignupOidcConfiguration explicit = config instanceof OrgSignupOidcConfiguration social
+                                              && (social.getAuthorizationUri() != null || social.getTokenUri() != null)
+                ? social : null;
+        if (explicit != null) {
+            if (explicit.getAuthorizationUri() == null || explicit.getTokenUri() == null) {
                 ret = Future.failedFuture(new IllegalArgumentException(
                         "OidcConfiguration " + config.getId()
                                 + " must set both authorizationUri and tokenUri to bypass OIDC discovery"));
@@ -243,8 +246,8 @@ public class OidcFlowOrchestrator {
                 OAuth2Options options = new OAuth2Options()
                         .setClientId(config.getClientId())
                         .setSite(config.getAuthority())
-                        .setAuthorizationPath(config.getAuthorizationUri())
-                        .setTokenPath(config.getTokenUri())
+                        .setAuthorizationPath(explicit.getAuthorizationUri())
+                        .setTokenPath(explicit.getTokenUri())
                         // some providers (github.com) reject requests that carry no User-Agent
                         .setHeaders(new JsonObject().put("User-Agent", USER_AGENT));
                 if (clientSecret != null) {
@@ -269,7 +272,6 @@ public class OidcFlowOrchestrator {
             }
 
             ret = OpenIDConnectAuth.discover(vertx, options)
-                                   .compose(oauth -> requireRoutableDiscovery(config, options, oauth))
                                    .map(oauth -> {
                                        if (options.getJWTOptions() != null) {
                                            // Discovery mutates JWTOptions.issuer with the
@@ -332,7 +334,7 @@ public class OidcFlowOrchestrator {
      * {@code email}; {@code userEmailsUri}, when set, supplies the definitive {@code email}
      * and {@code email_verified} from a GitHub-style emails array.
      */
-    private Future<Map<String, Object>> fetchApiClaims(OidcConfiguration config, User user) {
+    private Future<Map<String, Object>> fetchApiClaims(OrgSignupOidcConfiguration config, User user) {
         String accessToken = user.principal().getString("access_token");
         return apiGet(accessToken, config.getUserInfoUri())
                 .map(response -> profileClaims(response.bodyAsJsonObject()))
@@ -469,34 +471,9 @@ public class OidcFlowOrchestrator {
     private Future<String> clientSecretOf(OidcConfiguration config) {
         return switch (config) {
             case OrgSignupOidcConfiguration social -> secretReferenceResolver.resolve(social.getSecretNameRef());
-            // an organization's administrator controls this row and its endpoints, so nothing on it may name
-            // a platform secret, and its hosts are resolved again here because they may have moved to an
-            // address only this server can reach since the row was saved
-            case OrganizationOidcConfiguration owned -> oidcConfigurationService.requireRoutableEndpoints(owned)
-                                                                                .compose(v -> oidcConfigurationService.findClientSecret(owned));
+            // an organization's administrator controls this row, so nothing on it may name a platform secret
+            case OrganizationOidcConfiguration owned -> oidcConfigurationService.findClientSecret(owned);
         };
-    }
-
-    /**
-     * Holds the endpoints an organization's provider published in its discovery document to the rule its
-     * configured ones are held to, closing {@code oauth} when one is refused. A curated provider passes.
-     */
-    private Future<OAuth2Auth> requireRoutableDiscovery(OidcConfiguration config, OAuth2Options discovered, OAuth2Auth oauth) {
-        Future<OAuth2Auth> ret;
-        if (config instanceof OrganizationOidcConfiguration) {
-            // the endpoints this server sends requests to; discover has fetched the JWKS once by now, and
-            // close() cancels the timer that would fetch it again
-            List<String> urls = Stream.of(discovered.getTokenPath(), discovered.getJwkPath(), discovered.getUserInfoPath(),
-                                          discovered.getRevocationPath(), discovered.getIntrospectionPath())
-                                      .filter(Objects::nonNull)
-                                      .toList();
-            ret = DomainUtil.requireRoutableUrls(vertx, urls)
-                            .onFailure(err -> oauth.close())
-                            .map(oauth);
-        } else {
-            ret = Future.succeededFuture(oauth);
-        }
-        return ret;
     }
 
 }
