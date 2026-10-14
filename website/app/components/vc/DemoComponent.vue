@@ -1,5 +1,11 @@
+<script setup lang="ts">
+const DEMO_VIDEO = 'VwkE1fdu0F4'
+
+defineEmits<{ play: [videoId: string] }>()
+</script>
+
 <template>
-  <section id="getting-started" class="k-section demo">
+  <section class="k-section demo">
     <div class="k-wrap">
       <div class="k-eyebrow demo__eyebrow" data-reveal>
         <span>GETTING STARTED</span>
@@ -7,14 +13,13 @@
       <h2 class="k-heading demo__title" data-reveal>See the product in motion</h2>
       <p class="demo__lede" data-reveal>A walkthrough from a blank workspace to a running application.</p>
 
-      <div class="demo__card" data-reveal>
-        <VcVideoFacade
+      <div id="demo" class="demo__card" data-reveal>
+        <VcVideoPoster
           class="demo__player"
           poster="/images/vc/product-demo-poster.webp"
           label="Play the getting started demo"
-        >
-          <video src="/product_demo.mp4" title="Getting started demo" controls autoplay playsinline />
-        </VcVideoFacade>
+          @play="$emit('play', DEMO_VIDEO)"
+        />
         <div class="demo__body">
           <div class="demo__kicker">PRODUCT</div>
           <h3 class="demo__name">Getting started demo</h3>
@@ -31,7 +36,6 @@
 <style scoped>
 .demo {
   border-top: 1px solid var(--color-k-border);
-  scroll-margin-top: 76px;
 }
 
 .demo__eyebrow {
@@ -54,6 +58,7 @@
 .demo__card {
   border: 1px solid var(--color-k-border);
   background: var(--color-k-bg-card);
+  scroll-margin-top: 132px;
 }
 
 .demo__player {

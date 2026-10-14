@@ -9,7 +9,8 @@ definePageMeta({
   headerNav: {
     links: [
       { label: 'About us', to: '#about', external: true },
-      { label: 'Getting started', to: '#getting-started', external: true },
+      { label: 'Product demo', to: '#demo', external: true },
+      { label: 'Investor deck', to: '#deck', external: true },
     ],
     cta: { label: 'Contact us', to: '#cta', external: true },
   },
@@ -24,13 +25,18 @@ useSeoMeta({
 })
 
 useMarketingMotion()
+
+// The YouTube video open in the modal, or null while it is closed.
+const video = ref<string | null>(null)
 </script>
 
 <template>
-  <VcAboutComponent />
+  <VcAboutComponent @play="video = $event" />
   <VcFoundersComponent />
   <VcStoryComponent />
-  <VcDemoComponent />
+  <VcDemoComponent @play="video = $event" />
+  <VcDeckComponent />
   <!-- The roadmap stays unpublished until its content is revised; render <VcRoadmapComponent /> here and add its header link to show it. -->
   <VcCtaComponent />
+  <VcVideoModal :video-id="video" @close="video = null" />
 </template>
