@@ -34,12 +34,12 @@ public interface ApplicationService extends IdentifiableCrudService<Application,
     Future<Application> createApplicationIfNotExist(String name, String description, TenantManagement tenantManagement);
 
     /**
-     * Returns the enabled OIDC configurations registered on the given application.
+     * Returns the enabled OIDC configurations the given application's login offers, in the order they
+     * are presented.
      *
      * @param applicationId the id of the application
-     * @return the enabled configurations, or an empty list if the application has no
-     *         configurations attached; fails when the id names no application in the
-     *         caller's organization
+     * @return the enabled configurations, or an empty list if the application's login offers none;
+     *         fails when the id names no application in the caller's organization
      */
     Future<List<OrganizationOidcConfiguration>> getOidcConfigurations(String applicationId);
 

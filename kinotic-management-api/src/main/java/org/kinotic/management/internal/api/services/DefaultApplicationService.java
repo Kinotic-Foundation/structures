@@ -15,10 +15,9 @@ import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.management.api.repositories.UiDeploymentRepository;
 import org.kinotic.management.api.services.ApplicationService;
 import org.kinotic.management.api.services.ProjectService;
-import org.kinotic.domain.api.services.security.OidcConfigurationService;
+import org.kinotic.domain.api.services.security.LoginProviderService;
 import org.springframework.stereotype.Component;
 
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
@@ -29,17 +28,17 @@ public class DefaultApplicationService extends AbstractOrganizationScopedService
     private static final int MIN_UI_NAME_LENGTH = 1;
 
     private final ProjectService projectService;
-    private final OidcConfigurationService oidcConfigurationService;
+    private final LoginProviderService loginProviderService;
     private final UiDeploymentRepository uiDeploymentRepository;
 
     public DefaultApplicationService(ApplicationRepository repository,
                                      ProjectService projectService,
-                                     OidcConfigurationService oidcConfigurationService,
+                                     LoginProviderService loginProviderService,
                                      UiDeploymentRepository uiDeploymentRepository,
                                      SecurityContext securityContext) {
         super(repository, securityContext);
         this.projectService = projectService;
-        this.oidcConfigurationService = oidcConfigurationService;
+        this.loginProviderService = loginProviderService;
         this.uiDeploymentRepository = uiDeploymentRepository;
     }
 
@@ -147,11 +146,12 @@ public class DefaultApplicationService extends AbstractOrganizationScopedService
         return findById(applicationId)
                 .compose(application -> {
                     Validate.notNull(application, "Application not found: %s", applicationId);
-                    List<String> ids = application.getOidcConfigurationIds();
-                    if (ids == null || ids.isEmpty()) {
-                        return Future.succeededFuture(Collections.emptyList());
-                    }
-                    return oidcConfigurationService.findEnabledByIds(ids, application.getOrganizationId());
+                    // an application's login offers the organization's own configurations only
+                    return loginProviderService.findEnabledForScope(application.getOrganizationId(), applicationId)
+                                               .map(offered -> offered.stream()
+                                                                      .filter(OrganizationOidcConfiguration.class::isInstance)
+                                                                      .map(OrganizationOidcConfiguration.class::cast)
+                                                                      .toList());
                 });
     }
 

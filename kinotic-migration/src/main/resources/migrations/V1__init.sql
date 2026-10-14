@@ -4,7 +4,6 @@ CREATE TABLE IF NOT EXISTS kinotic_application (
     organizationId KEYWORD,
     name KEYWORD,
     description TEXT,
-    oidcConfigurationIds KEYWORD,
     tenantManagement KEYWORD,
     primaryUiId KEYWORD,
     primaryUiUrl KEYWORD,
@@ -232,9 +231,8 @@ CREATE TABLE IF NOT EXISTS kinotic_identity_credential (
 -- provider (Google, Microsoft, GitHub) that powers the "Continue with X" buttons on org signup
 -- and email-first org login, belongs to no organization, is seeded below, and names its client
 -- secret in the platform's secret storage with secretNameRef. type=ORGANIZATION is a provider an
--- organization configured for itself (organizationId set, enforced by the service); "where can
--- it be used" is expressed by inbound references — kinotic_organization.ssoConfigId for the org's
--- SSO, kinotic_application.oidcConfigurationIds for application-level logins — and the row names
+-- organization configured for itself (organizationId set, enforced by the service); where it is
+-- used is expressed by the kinotic_login_provider rows that name it — and the row names
 -- no client secret: OidcConfigurationService.save(configuration, clientSecret) holds the secret in
 -- the organization's scope of the secret storage (SecretStorageService), keyed by the row's id, and
 -- confidentialClient records that one is held. Nor does it name a URL: it names the organization's
@@ -263,15 +261,24 @@ CREATE TABLE IF NOT EXISTS kinotic_oidc_configuration (
 );
 
 -- Organization: orgs developing applications on the platform.
--- ssoConfigId points at the org's single OrganizationOidcConfiguration used as its SSO provider for
--- org-level Kinotic login (null when the org has no SSO). All other OrganizationOidcConfigurations
--- the org owns are referenced from the org's apps via kinotic_application.oidcConfigurationIds.
 CREATE TABLE IF NOT EXISTS kinotic_organization (
     id KEYWORD,
     name KEYWORD,
     description TEXT,
-    ssoConfigId KEYWORD NOT INDEXED,
     createdBy KEYWORD,
+    created DATE,
+    updated DATE
+);
+
+-- Login provider (LoginProvider): an ORGANIZATION row of kinotic_oidc_configuration offered at one
+-- sign-in scope of its organization — the organization's own login when applicationId is null, else
+-- that application's login. One row per scope and configuration, so a configuration is set up once
+-- and offered wherever it serves. Owned by the organization (organizationId enforced by the service).
+CREATE TABLE IF NOT EXISTS kinotic_login_provider (
+    id KEYWORD,
+    organizationId KEYWORD,
+    applicationId KEYWORD,
+    configurationId KEYWORD,
     created DATE,
     updated DATE
 );

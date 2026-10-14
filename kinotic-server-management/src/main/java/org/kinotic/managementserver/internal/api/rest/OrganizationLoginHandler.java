@@ -16,6 +16,7 @@ import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
 import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.services.security.LocalAuthenticationService;
+import org.kinotic.domain.api.services.security.LoginProviderService;
 import org.kinotic.domain.api.services.security.OidcConfigurationService;
 import org.kinotic.domain.api.rest.SuppliesGatewayRoutes;
 import org.kinotic.managementserver.api.config.ManagementServerProperties;
@@ -40,6 +41,7 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes {
     private final ParticipantIdentityService identityService;
     private final LocalAuthenticationService localAuthenticationService;
     private final OidcConfigurationService oidcConfigurationService;
+    private final LoginProviderService loginProviderService;
     private final OidcFlowOrchestrator oidcFlowOrchestrator;
 
     @Override
@@ -136,7 +138,7 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes {
         oidcFlowOrchestrator.handleCallback(ctx,
                                             pathConfigId,
                                             ssoCallbackUrl(pathConfigId),
-                                            orgId -> oidcConfigurationService.findById(pathConfigId, orgId))
+                                            orgId -> loginProviderService.findOffered(pathConfigId, orgId, null))
                             .onSuccess(result -> completeSsoLogin(ctx, result))
                             .onFailure(ex -> authEndpointSupport.redirectCallbackFailure(ctx, ex));
     }
@@ -155,23 +157,23 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes {
     }
 
     /**
-     * Returns the JSON body for the lookup. If the user is missing, local, or has a dead
-     * OIDC config → "password" (frontend reveals password field). If OIDC and the org
-     * config is live → "sso" with a pre-built redirect URL; the session cookie is set so
-     * the callback can validate state.
+     * Returns the JSON body for the lookup. If the user is missing, local, or signs in with a
+     * configuration the organization's login no longer offers → "password" (frontend reveals
+     * password field). If OIDC and the configuration is offered and live → "sso" with a pre-built
+     * redirect URL; the session cookie is set so the callback can validate state.
      */
     private Future<Void> resolveSsoOrPassword(RoutingContext ctx, UserParticipantIdentity user) {
-        if (user == null || user.getAuthType() != AuthType.OIDC) {
+        if (user == null || user.getAuthType() != AuthType.OIDC || user.getOidcConfigId() == null) {
             return authEndpointSupport.respondPasswordPath(ctx);
         }
 
         String orgId = user.getOrganizationId();
-        return oidcConfigurationService.findOrgLoginConfig(orgId)
+        return loginProviderService.findOffered(user.getOidcConfigId(), orgId, null)
                      .compose(match -> {
                          if (match == null) {
-                             // Org has no enabled SSO config — fall back to password (which will
-                             // fail with invalid creds since OIDC users have no password).
-                             // Deliberately generic so we don't leak which orgs use SSO.
+                             // The org's login no longer offers the user's provider — fall back to
+                             // password (which will fail with invalid creds since OIDC users have no
+                             // password). Deliberately generic so we don't leak which orgs use SSO.
                              return authEndpointSupport.respondPasswordPath(ctx);
                          }
                          return oidcFlowOrchestrator.startFlow(ctx,

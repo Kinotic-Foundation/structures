@@ -1,0 +1,121 @@
+package org.kinotic.domain.internal.api.services.security;
+
+import io.vertx.core.Future;
+import org.apache.commons.lang3.Validate;
+import org.kinotic.core.api.security.SecurityContext;
+import org.kinotic.domain.api.model.security.LoginProvider;
+import org.kinotic.domain.api.model.security.OidcConfiguration;
+import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
+import org.kinotic.domain.api.repositories.ApplicationRepository;
+import org.kinotic.domain.api.services.security.LoginProviderService;
+import org.kinotic.domain.api.services.security.OidcConfigurationService;
+import org.kinotic.domain.internal.api.repositories.LoginProviderRepository;
+import org.kinotic.domain.internal.api.services.AbstractOrganizationScopedService;
+import org.springframework.stereotype.Component;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+@Component
+public class DefaultLoginProviderService extends AbstractOrganizationScopedService<LoginProvider> implements LoginProviderService {
+
+    private final LoginProviderRepository loginProviderRepository;
+    private final OidcConfigurationService oidcConfigurationService;
+    private final ApplicationRepository applicationRepository;
+
+    public DefaultLoginProviderService(LoginProviderRepository repository,
+                                       OidcConfigurationService oidcConfigurationService,
+                                       ApplicationRepository applicationRepository,
+                                       SecurityContext securityContext) {
+        super(repository, securityContext);
+        this.loginProviderRepository = repository;
+        this.oidcConfigurationService = oidcConfigurationService;
+        this.applicationRepository = applicationRepository;
+    }
+
+    @Override
+    protected Future<Void> beforeSave(LoginProvider entity) {
+        Validate.notBlank(entity.getOrganizationId(), "LoginProvider organizationId cannot be blank");
+        Validate.notBlank(entity.getConfigurationId(), "LoginProvider configurationId cannot be blank");
+        if (entity.getId() == null) {
+            entity.setId(UUID.randomUUID().toString());
+            entity.setCreated(new Date());
+        }
+        entity.setUpdated(new Date());
+        String orgId = entity.getOrganizationId();
+        return oidcConfigurationService.findById(entity.getConfigurationId(), orgId)
+                .compose(configuration -> {
+                    Validate.notNull(configuration, "Organization %s has no OIDC configuration %s", orgId, entity.getConfigurationId());
+                    return entity.getApplicationId() == null
+                            ? Future.succeededFuture()
+                            : applicationRepository.findById(entity.getApplicationId(), orgId)
+                                                   .map(application -> {
+                                                       Validate.notNull(application, "Organization %s has no application %s", orgId, entity.getApplicationId());
+                                                       return null;
+                                                   });
+                })
+                .compose(v -> loginProviderRepository.findByScopeAndConfiguration(orgId, entity.getApplicationId(), entity.getConfigurationId()))
+                .map(existing -> {
+                    // one row per scope and configuration; a save of the row itself passes its own
+                    Validate.isTrue(existing == null || existing.getId().equals(entity.getId()),
+                                    "The scope already offers configuration %s", entity.getConfigurationId());
+                    return null;
+                });
+    }
+
+    @Override
+    public Future<List<OidcConfiguration>> findEnabledForScope(String organizationId, String applicationId) {
+        Validate.notBlank(organizationId, "organizationId cannot be blank");
+        Future<List<OidcConfiguration>> own = loginProviderRepository.findByScope(organizationId, applicationId)
+                                                                     .compose(rows -> enabledInOrder(rows, organizationId));
+        Future<List<OidcConfiguration>> ret;
+        if (applicationId != null) {
+            ret = own;
+        } else {
+            ret = Future.all(oidcConfigurationService.findEnabledOrgSignupProviders(), own)
+                        .map(cf -> {
+                            List<OidcConfiguration> providers = new ArrayList<>(cf.<List<OidcConfiguration>>resultAt(0));
+                            providers.addAll(cf.resultAt(1));
+                            return providers;
+                        });
+        }
+        return ret;
+    }
+
+    @Override
+    public Future<OrganizationOidcConfiguration> findOffered(String configurationId, String organizationId, String applicationId) {
+        Validate.notBlank(configurationId, "configurationId cannot be blank");
+        Validate.notBlank(organizationId, "organizationId cannot be blank");
+        return loginProviderRepository.findByScopeAndConfiguration(organizationId, applicationId, configurationId)
+                .compose(row -> row == null
+                        ? Future.succeededFuture()
+                        : oidcConfigurationService.findById(configurationId, organizationId))
+                .map(configuration -> configuration != null && configuration.isEnabled() ? configuration : null);
+    }
+
+    // The enabled configurations the rows name, in the rows' order
+    private Future<List<OidcConfiguration>> enabledInOrder(List<LoginProvider> rows, String organizationId) {
+        Future<List<OidcConfiguration>> ret;
+        if (rows.isEmpty()) {
+            ret = Future.succeededFuture(List.of());
+        } else {
+            List<String> ids = rows.stream().map(LoginProvider::getConfigurationId).toList();
+            ret = oidcConfigurationService.findEnabledByIds(ids, organizationId)
+                                          .map(configurations -> {
+                                              Map<String, OrganizationOidcConfiguration> byId = configurations.stream()
+                                                      .collect(Collectors.toMap(OrganizationOidcConfiguration::getId, Function.identity()));
+                                              return ids.stream()
+                                                        .map(byId::get)
+                                                        .filter(configuration -> configuration != null)
+                                                        .map(configuration -> (OidcConfiguration) configuration)
+                                                        .toList();
+                                          });
+        }
+        return ret;
+    }
+}

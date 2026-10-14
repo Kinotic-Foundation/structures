@@ -2,7 +2,6 @@ package org.kinotic.domain.api.services.security;
 
 import io.vertx.core.Future;
 import org.kinotic.core.api.crud.IdentifiableCrudService;
-import org.kinotic.domain.api.model.Organization;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.OidcProviderKind;
 import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
@@ -62,26 +61,6 @@ public interface OidcConfigurationService extends IdentifiableCrudService<OidcCo
      * @param organizationId the organization that owns the configuration
      */
     Future<OrganizationOidcConfiguration> findById(String id, String organizationId);
-
-    /**
-     * Returns the {@link OrganizationOidcConfiguration} the given organization uses as its SSO
-     * provider, or {@code null} if the org has no SSO configured. Sources from
-     * {@link Organization#getSsoConfigId()} — structurally one-per-org, no scope flag needed on the
-     * config row itself. Checks no participant.
-     */
-    Future<OrganizationOidcConfiguration> findOrgLoginConfig(String organizationId);
-
-    /**
-     * The enabled OIDC configurations a login scope offers its users, in the order they should be
-     * presented. An application scope ({@code applicationId} set) offers the configurations that
-     * application references; an organization scope offers the Kinotic-curated social providers
-     * followed by the organization's own SSO configuration. Empty when the scope offers none.
-     * Checks no participant.
-     *
-     * @param organizationId the organization the scope belongs to
-     * @param applicationId the application within it, or {@code null} for the organization scope
-     */
-    Future<List<OidcConfiguration>> findEnabledForScope(String organizationId, String applicationId);
 
     /**
      * Saves the configuration as {@link #save(Object)} does and makes {@code clientSecret} the secret it

@@ -11,15 +11,12 @@ import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
 import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
 import org.kinotic.domain.api.model.security.participant.OrganizationParticipant;
 import org.kinotic.domain.api.model.security.participant.SystemParticipant;
-import org.kinotic.domain.api.repositories.ApplicationRepository;
-import org.kinotic.domain.api.services.OrganizationService;
 import org.kinotic.domain.api.services.SecretStorageService;
 import org.kinotic.domain.api.services.security.OidcConfigurationService;
 import org.kinotic.domain.internal.api.repositories.OidcConfigurationRepository;
 import org.kinotic.domain.internal.api.services.AbstractCrudService;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
@@ -28,20 +25,14 @@ import java.util.UUID;
 public class DefaultOidcConfigurationService extends AbstractCrudService<OidcConfiguration> implements OidcConfigurationService {
 
     private final OidcConfigurationRepository oidcRepository;
-    private final OrganizationService organizationService;
-    private final ApplicationRepository applicationRepository;
     private final SecretStorageService secretStorageService;
     private final SecurityContext securityContext;
 
     public DefaultOidcConfigurationService(OidcConfigurationRepository repository,
-                                           OrganizationService organizationService,
-                                           ApplicationRepository applicationRepository,
                                            SecretStorageService secretStorageService,
                                            SecurityContext securityContext) {
         super(repository);
         this.oidcRepository = repository;
-        this.organizationService = organizationService;
-        this.applicationRepository = applicationRepository;
         this.secretStorageService = secretStorageService;
         this.securityContext = securityContext;
     }
@@ -132,48 +123,6 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
         Validate.notBlank(id, "id cannot be blank");
         Validate.notBlank(organizationId, "organizationId cannot be blank");
         return oidcRepository.findById(id, organizationId);
-    }
-
-    @Override
-    public Future<OrganizationOidcConfiguration> findOrgLoginConfig(String organizationId) {
-        Validate.notBlank(organizationId, "organizationId cannot be blank");
-        return organizationService.findById(organizationId).compose(org -> {
-            if (org == null || org.getSsoConfigId() == null) {
-                return Future.succeededFuture();
-            }
-            return oidcRepository.findById(org.getSsoConfigId(), organizationId)
-                                 .map(config -> config != null && config.isEnabled() ? config : null);
-        });
-    }
-
-    @Override
-    public Future<List<OidcConfiguration>> findEnabledForScope(String organizationId, String applicationId) {
-        Validate.notBlank(organizationId, "organizationId cannot be blank");
-        Future<List<OidcConfiguration>> ret;
-        if (applicationId != null) {
-            ret = applicationRepository.findById(applicationId, organizationId)
-                                       .compose(app -> {
-                                           if (app == null
-                                                   || app.getOidcConfigurationIds() == null
-                                                   || app.getOidcConfigurationIds().isEmpty()) {
-                                               return Future.succeededFuture(List.<OrganizationOidcConfiguration>of());
-                                           }
-                                           return findEnabledByIds(app.getOidcConfigurationIds(), organizationId);
-                                       })
-                                       .map(ArrayList::new);
-        } else {
-            ret = Future.all(findEnabledOrgSignupProviders(), findOrgLoginConfig(organizationId))
-                        .map(cf -> {
-                            List<OrgSignupOidcConfiguration> social = cf.resultAt(0);
-                            OrganizationOidcConfiguration sso = cf.resultAt(1);
-                            List<OidcConfiguration> providers = new ArrayList<>(social);
-                            if (sso != null) {
-                                providers.add(sso);
-                            }
-                            return providers;
-                        });
-        }
-        return ret;
     }
 
     @Override

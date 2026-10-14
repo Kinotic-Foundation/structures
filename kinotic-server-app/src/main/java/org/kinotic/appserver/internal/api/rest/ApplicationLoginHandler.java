@@ -19,7 +19,7 @@ import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.services.security.LocalAuthenticationService;
-import org.kinotic.domain.api.services.security.OidcConfigurationService;
+import org.kinotic.domain.api.services.security.LoginProviderService;
 import org.kinotic.domain.api.rest.SuppliesGatewayRoutes;
 import org.springframework.stereotype.Component;
 
@@ -41,7 +41,7 @@ import java.util.regex.Pattern;
 public class ApplicationLoginHandler implements SuppliesGatewayRoutes {
 
     private final ParticipantIdentityService identityService;
-    private final OidcConfigurationService oidcConfigurationService;
+    private final LoginProviderService loginProviderService;
     private final LocalAuthenticationService localAuthenticationService;
     private final OidcFlowOrchestrator oidcFlowOrchestrator;
     private final ApplicationAuthEndpointSupport authEndpointSupport;
@@ -57,12 +57,11 @@ public class ApplicationLoginHandler implements SuppliesGatewayRoutes {
 
     /**
      * {@code GET /api/auth/app/login/providers} — lists the enabled
-     * {@link OrganizationOidcConfiguration} rows the app references via
-     * {@code Application.oidcConfigurationIds}.
+     * {@link OrganizationOidcConfiguration} rows the application's login offers.
      */
     private void handleProviders(RoutingContext ctx) {
         ApplicationKey applicationKey = authEndpointSupport.applicationKey(ctx);
-        oidcConfigurationService.findEnabledForScope(applicationKey.organizationId(), applicationKey.applicationId())
+        loginProviderService.findEnabledForScope(applicationKey.organizationId(), applicationKey.applicationId())
               .onSuccess(configs -> authEndpointSupport.respondProvidersList(ctx, configs))
               .onFailure(err -> {
                   log.warn("Failed to list app providers for {}: {}", HostLabelUtil.label(applicationKey), err.getMessage());
@@ -101,9 +100,9 @@ public class ApplicationLoginHandler implements SuppliesGatewayRoutes {
         }
 
         String configId = user.getOidcConfigId();
-        return oidcConfigurationService.findById(configId, applicationKey.organizationId())
+        return loginProviderService.findOffered(configId, applicationKey.organizationId(), applicationKey.applicationId())
                      .compose(match -> {
-                         if (match == null || !match.isEnabled()) {
+                         if (match == null) {
                              return authEndpointSupport.respondPasswordPath(ctx);
                          }
                          return oidcFlowOrchestrator.startFlow(ctx, match, callbackUrl(applicationKey, match.getId()), null)
@@ -134,7 +133,7 @@ public class ApplicationLoginHandler implements SuppliesGatewayRoutes {
 
         oidcFlowOrchestrator.<OrganizationOidcConfiguration>handleCallback(
                 ctx, pathConfigId, callbackUrl(applicationKey, pathConfigId),
-                _ -> oidcConfigurationService.findById(pathConfigId, applicationKey.organizationId()))
+                _ -> loginProviderService.findOffered(pathConfigId, applicationKey.organizationId(), applicationKey.applicationId()))
                 .onSuccess(result -> completeAppLogin(ctx, result, applicationKey))
                 .onFailure(ex -> authEndpointSupport.redirectCallbackFailure(ctx, ex));
     }

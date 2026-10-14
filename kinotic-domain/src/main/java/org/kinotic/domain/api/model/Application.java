@@ -7,7 +7,6 @@ import lombok.experimental.Accessors;
 import org.kinotic.domain.api.model.security.identity.ParticipantIdentity;
 
 import java.util.Date;
-import java.util.List;
 
 @Getter
 @Setter
@@ -25,8 +24,6 @@ public class Application implements OrganizationScoped<String> {
     private String name;
 
     private String description;
-
-    private List<String> oidcConfigurationIds;
 
     /**
      * Who creates and administers this application's tenants. Under {@link TenantManagement#PLATFORM}

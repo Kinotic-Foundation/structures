@@ -11,6 +11,7 @@ import org.kinotic.domain.api.model.security.PendingInvite;
 import org.kinotic.domain.api.services.OrganizationService;
 import org.kinotic.domain.api.exceptions.InviteEmailMismatchException;
 import org.kinotic.domain.api.services.security.InviteService;
+import org.kinotic.domain.api.services.security.LoginProviderService;
 import org.kinotic.domain.api.services.security.OidcConfigurationService;
 import org.kinotic.domain.api.rest.support.AuthEndpointSupport;
 import org.kinotic.domain.api.rest.support.CallbackResult;
@@ -44,6 +45,7 @@ public class InviteHandler implements SuppliesGatewayRoutes {
     private final InviteService inviteService;
     private final OrganizationService organizationService;
     private final OidcConfigurationService oidcConfigurationService;
+    private final LoginProviderService loginProviderService;
     private final OidcFlowOrchestrator oidcFlowOrchestrator;
     private final AuthEndpointSupport authEndpointSupport;
     private final ManagementServerProperties properties;
@@ -72,7 +74,7 @@ public class InviteHandler implements SuppliesGatewayRoutes {
                   Future<String> orgName = organizationService.findById(invite.getOrganizationId())
                           .map(org -> org == null ? null : org.getName());
                   Future<List<OidcConfiguration>> providers =
-                          oidcConfigurationService.findEnabledForScope(invite.getOrganizationId(),
+                          loginProviderService.findEnabledForScope(invite.getOrganizationId(),
                                                                       invite.getApplicationId());
                   return Future.all(orgName, providers)
                                .map(v -> new JsonObject()
@@ -230,7 +232,7 @@ public class InviteHandler implements SuppliesGatewayRoutes {
      * carries the accept token on the session and returns to {@link #handleOidcCallback}.
      */
     private Future<String> startFlowForInvite(RoutingContext ctx, PendingInvite invite, String configId, String token) {
-        return oidcConfigurationService.findEnabledForScope(invite.getOrganizationId(),
+        return loginProviderService.findEnabledForScope(invite.getOrganizationId(),
                                                             invite.getApplicationId())
                      .compose(offered -> {
                          OidcConfiguration chosen = offered.stream()
