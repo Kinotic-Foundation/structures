@@ -1,6 +1,6 @@
 <script setup lang="ts">
 type MilestoneStatus = 'shipped' | 'current' | 'upcoming'
-type FeatureStatus = 'shipped' | 'in-progress' | 'planned'
+type FeatureStatus = 'shipped' | 'in-progress'
 
 interface Milestone {
   label: string
@@ -19,7 +19,6 @@ interface Feature {
 const FEATURE_STATUS_LABELS: Record<FeatureStatus, string> = {
   'shipped': 'SHIPPED',
   'in-progress': 'IN PROGRESS',
-  'planned': 'PLANNED',
 }
 
 const milestones: Milestone[] = [
@@ -32,32 +31,32 @@ const milestones: Milestone[] = [
   {
     label: 'Q4 2026 · NOW',
     status: 'current',
-    title: 'Governed delivery',
-    summary: 'Relationship-based access and SSO decide who can act; gated dev, stage and prod decide what reaches production.',
+    title: 'Production ready',
+    summary: 'Access control, enterprise SSO and gated releases ready for real workloads, alongside our seed round.',
   },
   {
     label: 'Q1 2027',
     status: 'upcoming',
-    title: 'Enterprise ready',
-    summary: 'A complete audit trail, SCIM and MFA, production hosting with an SLA, billing and SOC 2 Type I.',
+    title: 'Launch',
+    summary: 'Kinotic OS Cloud opens to everyone, design partners start building, and the engineering team grows.',
   },
   {
     label: 'Q2 2027',
     status: 'upcoming',
-    title: 'Agent operations',
-    summary: 'Apps that agents operate under policy, agent identity from your IdP, AI cost controls and deployment into your cloud.',
+    title: 'First customers',
+    summary: 'Design partners convert to paid plans, and the first enterprise runs Kinotic OS in its own cloud.',
   },
   {
     label: 'Q3 2027',
     status: 'upcoming',
-    title: 'Data & compliance',
-    summary: 'EU data residency, customer-managed keys, PII controls, automated QA and SOC 2 Type II.',
+    title: 'Repeatable sales',
+    summary: 'Proven pricing, SOC 2 in hand, and partner channels through the MCP ecosystem and cloud marketplaces.',
   },
   {
     label: 'Q4 2027',
     status: 'upcoming',
-    title: 'Ecosystem',
-    summary: 'A marketplace for Kinotic apps, procurement through cloud marketplaces, and sovereign deployments.',
+    title: 'Series A ready',
+    summary: 'Revenue, retention and pipeline that support a Series A, with customers setting the roadmap.',
   },
 ]
 
@@ -98,114 +97,6 @@ const features: Feature[] = [
     summary: 'Okta, Microsoft Entra ID and Google sign-in for organizations and for the apps they build.',
     when: 'Q4 2026',
   },
-  {
-    status: 'planned',
-    title: 'Audit trail',
-    summary: 'Every sign-in, access change, deploy and agent tool call recorded, retained and streamed to your SIEM.',
-    when: 'Q1 2027',
-  },
-  {
-    status: 'planned',
-    title: 'Directory sync, SAML & MFA',
-    summary: 'SCIM provisioning, deprovisioning that revokes every session and agent grant, SAML 2.0, enforced SSO and passkeys.',
-    when: 'Q1 2027',
-  },
-  {
-    status: 'planned',
-    title: 'Production hosting',
-    summary: 'Custom domains, automated backups with point-in-time restore, and a published uptime SLA.',
-    when: 'Q1 2027',
-  },
-  {
-    status: 'planned',
-    title: 'Usage metering & billing',
-    summary: 'Plans, invoicing and spend broken down by application and environment.',
-    when: 'Q1 2027',
-  },
-  {
-    status: 'planned',
-    title: 'SOC 2 Type I & trust center',
-    summary: 'An audited report on Kinotic OS Cloud\'s controls, with policies, subprocessors and a DPA published for security reviews.',
-    when: 'Q1 2027',
-  },
-  {
-    status: 'planned',
-    title: 'Agent-operated apps',
-    summary: 'Your app\'s own services become MCP tools, scoped by the same permissions, with approval on destructive calls.',
-    when: 'Q2 2027',
-  },
-  {
-    status: 'planned',
-    title: 'Agent identity federation',
-    summary: 'Agents authorized by your identity provider through Okta Cross App Access and Microsoft Entra Agent ID, with an inventory and revoke.',
-    when: 'Q2 2027',
-  },
-  {
-    status: 'planned',
-    title: 'AI model governance & cost controls',
-    summary: 'Approved models and your own provider keys per organization, token budgets per app, prompt traces and cost attribution.',
-    when: 'Q2 2027',
-  },
-  {
-    status: 'planned',
-    title: 'Forward deployment',
-    summary: 'Kinotic OS on your own Kubernetes cluster, in your network, with your own key vault.',
-    when: 'Q2 2027',
-  },
-  {
-    status: 'planned',
-    title: 'GitLab support',
-    summary: 'Repositories on GitLab.com or self-managed GitLab, with the same push-to-deploy flow as GitHub.',
-    when: 'Q2 2027',
-  },
-  {
-    status: 'planned',
-    title: 'Data residency & privacy controls',
-    summary: 'EU hosting, customer-managed keys, PII tagging and masking, and retention policies per application.',
-    when: 'Q3 2027',
-  },
-  {
-    status: 'planned',
-    title: 'SOC 2 Type II & ISO 27001',
-    summary: 'Independent attestation that Kinotic OS Cloud\'s controls operate over time, kept current in the trust center.',
-    when: 'Q3 2027',
-  },
-  {
-    status: 'planned',
-    title: 'Automated QA',
-    summary: 'Agent-written end-to-end tests run against stage and gate every promotion to prod.',
-    when: 'Q3 2027',
-  },
-  {
-    status: 'planned',
-    title: 'Jobs, components & shared libraries',
-    summary: 'Scheduled batch jobs, reusable UI components, and packages shared across applications through an organization registry.',
-    when: 'Q3 2027',
-  },
-  {
-    status: 'planned',
-    title: 'Marketplace',
-    summary: 'Publish and sell apps, services and templates, with Kinotic as merchant of record.',
-    when: 'Q4 2027',
-  },
-  {
-    status: 'planned',
-    title: 'AWS & Azure Marketplace',
-    summary: 'Buy Kinotic OS through your cloud marketplace and draw down committed cloud spend.',
-    when: 'Q4 2027',
-  },
-  {
-    status: 'planned',
-    title: 'Sovereign & air-gapped deployments',
-    summary: 'Disconnected installs and sovereign-cloud regions for regulated and public-sector buyers.',
-    when: 'Q4 2027',
-  },
-  {
-    status: 'planned',
-    title: 'EU AI Act & CRA readiness',
-    summary: 'Signed builds with provenance, plus the logs and oversight records customers need for the December 2027 deadlines.',
-    when: 'Q4 2027',
-  },
 ]
 
 // The progress bar ends halfway through the current milestone's column.
@@ -219,9 +110,13 @@ const progress = computed(() => {
   <section id="roadmap" class="k-section roadmap">
     <div class="k-wrap">
       <div class="k-eyebrow roadmap__eyebrow" data-reveal>
-        <span>PRODUCT ROADMAP</span>
+        <span>ROADMAP</span>
       </div>
       <h2 class="k-heading roadmap__title" data-reveal>Where we're headed</h2>
+      <p class="roadmap__lede" data-reveal>
+        This quarter Kinotic becomes production ready. After that, the customers we land decide what we
+        build next, so 2027 is planned in business milestones rather than features.
+      </p>
 
       <div class="timeline" data-reveal>
         <div class="timeline__track" />
@@ -264,8 +159,16 @@ const progress = computed(() => {
 }
 
 .roadmap__title {
-  margin-bottom: 64px;
+  margin-bottom: 16px;
   font-size: clamp(29px, 3.4vw, 44px);
+}
+
+.roadmap__lede {
+  max-width: 560px;
+  margin: 0 0 64px;
+  color: var(--color-k-muted);
+  font-size: 16px;
+  line-height: 1.6;
 }
 
 .timeline {
