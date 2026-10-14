@@ -47,4 +47,7 @@ public final class OidcErrorCodes {
 
     /** Invitation token is unknown, expired, or already consumed. */
     public static final String INVITE_INVALID = "invite_invalid";
+
+    /** The code handing a completed social sign-in to the application's API host is unknown, expired, already consumed, or for another application. */
+    public static final String HANDOFF_INVALID = "handoff_invalid";
 }

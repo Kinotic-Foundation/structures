@@ -132,7 +132,7 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes {
 
         oidcFlowOrchestrator.handleCallback(
                 ctx, pathConfigId, callbackUrl(pathConfigId),
-                _ -> oidcConfigurationService.findOrgSignupById(pathConfigId))
+                (_, _) -> oidcConfigurationService.findOrgSignupById(pathConfigId))
                 .onSuccess(result -> createPendingSignUp(ctx, result))
                 .onFailure(ex -> authEndpointSupport.redirectCallbackFailure(ctx, ex));
     }

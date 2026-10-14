@@ -4,7 +4,10 @@ import io.vertx.core.Future;
 import io.vertx.core.net.HostAndPort;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
+import org.kinotic.core.api.exceptions.AuthorizationException;
+import org.kinotic.core.api.security.SessionBinding;
 import org.kinotic.appserver.api.config.AppServerProperties;
 import org.kinotic.domain.api.model.ApplicationKey;
 import org.kinotic.domain.api.utils.HostLabelUtil;
@@ -17,6 +20,9 @@ import org.kinotic.domain.api.services.security.OidcConfigurationService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.services.security.RefreshTokenService;
 import org.springframework.stereotype.Component;
+
+import java.net.URI;
+import java.util.regex.Pattern;
 
 /**
  * The app server's {@link AuthEndpointSupport}. Every request the app server serves is addressed to one
@@ -54,6 +60,33 @@ public class ApplicationAuthEndpointSupport extends AuthEndpointSupport {
             throw new HttpException(404);
         }
         return ret;
+    }
+
+    /**
+     * The application the request was addressed to. Fails the request with {@code 403} when the
+     * page that sent it is not one of the application's UIs.
+     */
+    public ApplicationKey requireApplicationUi(RoutingContext ctx) {
+        ApplicationKey applicationKey = applicationKey(ctx);
+        String origin = SessionBinding.origin(ctx);
+        // a login authenticates the page that made it, so a login made from another application's UI would
+        // hand that UI this application's user; a request naming no page comes from a client outside a browser
+        if (origin != null && !isApplicationUi(applicationKey, origin)) {
+            throw new AuthorizationException("The page is not a UI of this application");
+        }
+        return applicationKey;
+    }
+
+    /**
+     * Whether the page at {@code origin} is one of the application's UIs: one of its published sites, or a
+     * local origin {@code kinotic.appServer.localUiOriginPattern} admits.
+     */
+    public boolean isApplicationUi(ApplicationKey applicationKey, String origin) {
+        String host = URI.create(origin).getHost();
+        Pattern localUiOrigins = properties.getLocalUiOriginPattern();
+        // the CORS pattern holds sites to the sites domain, so a site is named by the first label of its host
+        return (host != null && HostLabelUtil.isSiteLabel(applicationKey, StringUtils.substringBefore(host, ".")))
+                || (localUiOrigins != null && localUiOrigins.matcher(origin).matches());
     }
 
     /**

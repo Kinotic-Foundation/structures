@@ -416,29 +416,54 @@ public abstract class AuthEndpointSupport {
     public void completeOidcLogin(RoutingContext ctx,
                                   CallbackResult<? extends OidcConfiguration> result,
                                   Function<String, Future<UserParticipantIdentity>> userLookup) {
+        String sub = verifiedSubject(ctx, result);
+        if (sub != null) {
+            completeLogin(ctx, result.origin(), userLookup.apply(sub));
+        }
+    }
+
+    /**
+     * The {@code sub} claim of an identity the IdP returned that may sign in: one with a {@code sub}
+     * and, for a provider that asserts it, a verified email. Otherwise redirects the browser to the
+     * error page of the page that started the flow and returns {@code null}.
+     */
+    public String verifiedSubject(RoutingContext ctx, CallbackResult<? extends OidcConfiguration> result) {
         Map<String, Object> claims = result.claims();
         String sub = OAuth2Util.stringClaim(claims, "sub");
+        String ret;
         if (sub == null) {
             redirectError(ctx, result.origin(), OidcErrorCodes.INVALID_TOKEN);
-            return;
-        }
-        if (!OAuth2Util.isEmailVerified(claims, result.config().getProvider())) {
+            ret = null;
+        } else if (!OAuth2Util.isEmailVerified(claims, result.config().getProvider())) {
             redirectError(ctx, result.origin(), OidcErrorCodes.EMAIL_NOT_VERIFIED);
-            return;
+            ret = null;
+        } else {
+            ret = sub;
         }
-        userLookup.apply(sub)
-              .onSuccess(user -> {
+        return ret;
+    }
+
+    /**
+     * Finishes a sign-in from the {@link UserParticipantIdentity} lookup for a verified identity: an
+     * enabled user is signed in, bound to the page at {@code origin}, and the browser sent back to it;
+     * no user, a disabled one, or a failed lookup sends the browser to that page's error page instead.
+     *
+     * @param origin the page the sign-in belongs to, or {@code null} for this server's UI
+     * @param lookup the user for the identity, or {@code null} when there is none
+     */
+    public void completeLogin(RoutingContext ctx, String origin, Future<UserParticipantIdentity> lookup) {
+        lookup.onSuccess(user -> {
                   if (user == null) {
-                      redirectError(ctx, result.origin(), OidcErrorCodes.NO_ACCOUNT);
+                      redirectError(ctx, origin, OidcErrorCodes.NO_ACCOUNT);
                   } else if (!user.isEnabled()) {
-                      redirectError(ctx, result.origin(), OidcErrorCodes.ACCOUNT_DISABLED);
+                      redirectError(ctx, origin, OidcErrorCodes.ACCOUNT_DISABLED);
                   } else {
-                      redirectSuccess(ctx, result.origin(), user);
+                      redirectSuccess(ctx, origin, user);
                   }
               })
               .onFailure(err -> {
                   log.warn("Login resolution failed: {}", err.getMessage());
-                  redirectError(ctx, result.origin(), OidcErrorCodes.LOOKUP_FAILED);
+                  redirectError(ctx, origin, OidcErrorCodes.LOOKUP_FAILED);
               });
     }
 }

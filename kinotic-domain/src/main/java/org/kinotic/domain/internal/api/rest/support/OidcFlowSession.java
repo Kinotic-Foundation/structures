@@ -26,7 +26,13 @@ public class OidcFlowSession implements ClusterSerializable {
     private String nonce;
     private String pkceVerifier;
     private String configId;
+
+    /**
+     * The sign-in scope the flow is for — the organization, and the application when the flow signs a user
+     * in to one — or {@code null} for a flow that scopes its configuration lookup otherwise.
+     */
     private String orgId;
+    private String applicationId;
 
     /**
      * Accept token of the invitation this flow is accepting, or {@code null} for a plain
@@ -49,6 +55,7 @@ public class OidcFlowSession implements ClusterSerializable {
                 .put("pkceVerifier", pkceVerifier)
                 .put("configId", configId)
                 .put("orgId", orgId)
+                .put("applicationId", applicationId)
                 .put("inviteToken", inviteToken)
                 .put("origin", origin)
                 .writeToBuffer(buffer);
@@ -63,6 +70,7 @@ public class OidcFlowSession implements ClusterSerializable {
         this.pkceVerifier = json.getString("pkceVerifier");
         this.configId = json.getString("configId");
         this.orgId = json.getString("orgId");
+        this.applicationId = json.getString("applicationId");
         this.inviteToken = json.getString("inviteToken");
         this.origin = json.getString("origin");
         return read;

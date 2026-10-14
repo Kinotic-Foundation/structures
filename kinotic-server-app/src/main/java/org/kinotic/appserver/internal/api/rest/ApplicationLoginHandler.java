@@ -6,9 +6,6 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
-import org.kinotic.core.api.exceptions.AuthorizationException;
-import org.kinotic.core.api.security.SessionBinding;
 import org.kinotic.appserver.api.config.AppServerProperties;
 import org.kinotic.domain.api.model.ApplicationKey;
 import org.kinotic.domain.api.utils.HostLabelUtil;
@@ -23,17 +20,15 @@ import org.kinotic.domain.api.services.security.LoginProviderService;
 import org.kinotic.domain.api.rest.SuppliesGatewayRoutes;
 import org.springframework.stereotype.Component;
 
-import java.net.URI;
-import java.util.regex.Pattern;
-
-
 /**
  * Login routes for end-users of an application built on Kinotic, served at the application's own API host.
  * Distinct from the org-login handler: the user is logging into an application's own user base (an
  * APP-scope {@link UserParticipantIdentity} — {@code organizationId} + {@code applicationId} both set),
  * not into the platform-managed org admin surface. The application is the one whose API host the request
  * was addressed to (see {@link ApplicationAuthEndpointSupport#applicationKey}), a login is made only from a page that is one of
- * that application's UIs, and OIDC flows started here return to this handler's own callback.
+ * that application's UIs, and OIDC flows started here return to this handler's own callback at the application's
+ * API host. A sign-in through one of the platform's social registrations, whose callback every application
+ * shares, is {@link ApplicationSocialLoginHandler}'s.
  */
 @Slf4j
 @Component
@@ -76,7 +71,7 @@ public class ApplicationLoginHandler implements SuppliesGatewayRoutes {
      * not one of the application's UIs.
      */
     private void handleLookup(RoutingContext ctx) {
-        ApplicationKey applicationKey = requireApplicationUi(ctx);
+        ApplicationKey applicationKey = authEndpointSupport.requireApplicationUi(ctx);
         JsonObject body = authEndpointSupport.readJsonBody(ctx);
         String email = body.getString("email");
         if (email == null || email.isBlank()) {
@@ -116,7 +111,7 @@ public class ApplicationLoginHandler implements SuppliesGatewayRoutes {
      * with {@code 403} from a page that is not one of the application's UIs.
      */
     private void handleLogin(RoutingContext ctx) {
-        ApplicationKey applicationKey = requireApplicationUi(ctx);
+        ApplicationKey applicationKey = authEndpointSupport.requireApplicationUi(ctx);
         authEndpointSupport.handlePasswordLogin(ctx,
                 (email, password) -> localAuthenticationService.authenticateLocal(
                         email, password, applicationKey.organizationId(), applicationKey.applicationId()));
@@ -133,7 +128,7 @@ public class ApplicationLoginHandler implements SuppliesGatewayRoutes {
 
         oidcFlowOrchestrator.<OidcConfiguration>handleCallback(
                 ctx, pathConfigId, callbackUrl(applicationKey, pathConfigId),
-                _ -> loginProviderService.findOffered(pathConfigId, applicationKey.organizationId(), applicationKey.applicationId()))
+                (_, _) -> loginProviderService.findOffered(pathConfigId, applicationKey.organizationId(), applicationKey.applicationId()))
                 .onSuccess(result -> completeAppLogin(ctx, result, applicationKey))
                 .onFailure(ex -> authEndpointSupport.redirectCallbackFailure(ctx, ex));
     }
@@ -144,29 +139,6 @@ public class ApplicationLoginHandler implements SuppliesGatewayRoutes {
         authEndpointSupport.completeOidcLogin(ctx, result,
                 sub -> identityService.findByOidcIdentity(sub, result.config().getId(),
                                                          applicationKey.organizationId(), applicationKey.applicationId()));
-    }
-
-    /**
-     * The application the request was addressed to. Fails the request with {@code 403} when the
-     * page that sent it is not one of the application's UIs.
-     */
-    private ApplicationKey requireApplicationUi(RoutingContext ctx) {
-        ApplicationKey applicationKey = authEndpointSupport.applicationKey(ctx);
-        String origin = SessionBinding.origin(ctx);
-        // a login authenticates the page that made it, so a login made from another application's UI would
-        // hand that UI this application's user; a request naming no page comes from a client outside a browser
-        if (origin != null && !isApplicationUi(applicationKey, origin)) {
-            throw new AuthorizationException("The page is not a UI of this application");
-        }
-        return applicationKey;
-    }
-
-    private boolean isApplicationUi(ApplicationKey applicationKey, String origin) {
-        String host = URI.create(origin).getHost();
-        Pattern localUiOrigins = properties.getLocalUiOriginPattern();
-        // the CORS pattern holds sites to the sites domain, so a site is named by the first label of its host
-        return (host != null && HostLabelUtil.isSiteLabel(applicationKey, StringUtils.substringBefore(host, ".")))
-                || (localUiOrigins != null && localUiOrigins.matcher(origin).matches());
     }
 
     // the application's API host is the callback's base, so the IdP returns the browser to the host it left

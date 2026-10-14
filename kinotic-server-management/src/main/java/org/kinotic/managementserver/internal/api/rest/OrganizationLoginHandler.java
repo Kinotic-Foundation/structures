@@ -107,7 +107,7 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes {
         oidcFlowOrchestrator.handleCallback(ctx,
                                             pathConfigId,
                                             socialCallbackUrl(pathConfigId),
-                                            _ -> oidcConfigurationService.findOrgSignupById(pathConfigId))
+                                            (_, _) -> oidcConfigurationService.findOrgSignupById(pathConfigId))
                             .onSuccess(result -> completeSocialLogin(ctx, result))
                             .onFailure(ex -> authEndpointSupport.redirectCallbackFailure(ctx, ex));
     }
@@ -138,7 +138,7 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes {
         oidcFlowOrchestrator.handleCallback(ctx,
                                             pathConfigId,
                                             ssoCallbackUrl(pathConfigId),
-                                            orgId -> loginProviderService.findOffered(pathConfigId, orgId, null))
+                                            (orgId, _) -> loginProviderService.findOffered(pathConfigId, orgId, null))
                             .onSuccess(result -> completeSsoLogin(ctx, result))
                             .onFailure(ex -> authEndpointSupport.redirectCallbackFailure(ctx, ex));
     }
