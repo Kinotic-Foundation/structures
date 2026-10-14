@@ -37,26 +37,26 @@ const milestones: Milestone[] = [
   {
     label: 'Q1 2027',
     status: 'upcoming',
-    title: 'Launch',
-    summary: 'Kinotic OS Cloud opens to everyone, design partners start building, and the engineering team grows.',
+    title: 'First customers',
+    summary: 'Kinotic OS Cloud launches, customers from today\'s pipeline go live, and the engineering team grows.',
   },
   {
     label: 'Q2 2027',
     status: 'upcoming',
-    title: 'First customers',
-    summary: 'Design partners convert to paid plans, and the first enterprise runs Kinotic OS in its own cloud.',
+    title: 'Repeatable sales',
+    summary: 'More customers live, proven pricing, case studies, and the first enterprise running Kinotic OS in its own cloud.',
   },
   {
     label: 'Q3 2027',
     status: 'upcoming',
-    title: 'Repeatable sales',
-    summary: 'Proven pricing, SOC 2 in hand, and partner channels through the MCP ecosystem and cloud marketplaces.',
+    title: 'Series A ready',
+    summary: 'Revenue, retention and pipeline that support a Series A, with customers setting the roadmap.',
   },
   {
     label: 'Q4 2027',
     status: 'upcoming',
-    title: 'Series A ready',
-    summary: 'Revenue, retention and pipeline that support a Series A, with customers setting the roadmap.',
+    title: 'Scale',
+    summary: 'A go-to-market team, partner channels through the MCP ecosystem and cloud marketplaces, and SOC 2 Type II.',
   },
 ]
 
