@@ -20,12 +20,24 @@ public interface Task<T> {
     Store getStore();
 
     /**
+     * @return the key of the icon a console shows for this {@link Task}, one of {@link TaskIcons}
+     *         or another the console knows, or null for its default
+     */
+    String getIcon();
+
+    /**
      * @param store how the result is kept: its {@link StoreType} governs resume behavior, its name
      *              places the value in the job scope for later tasks, and its wire flag publishes
      *              the value to watchers of the run
      * @return a copy of this {@link Task} that keeps its result as the given {@link Store} declares
      */
     Task<T> store(Store store);
+
+    /**
+     * @param icon the key of the icon a console shows for the task, see {@link #getIcon()}
+     * @return a copy of this {@link Task} shown with the given icon
+     */
+    Task<T> icon(String icon);
 
     /**
      * Performs the work of this {@link Task}.

@@ -471,6 +471,7 @@ CREATE TABLE IF NOT EXISTS kinotic_task_record (
     jobRunId KEYWORD,
     taskPath KEYWORD,
     description TEXT,
+    icon KEYWORD,
     status KEYWORD,
     storeType KEYWORD,
     dynamicTasks BOOLEAN,

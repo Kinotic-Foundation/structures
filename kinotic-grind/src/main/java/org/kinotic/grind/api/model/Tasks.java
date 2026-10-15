@@ -118,7 +118,8 @@ public class Tasks {
      * @return the task
      */
     public static <T, R> Task<R> transformResult(Task<T> from, Function<T, R> transformer) {
-        return DefaultTask.of(from.getDescription(), context -> transformer.apply(from.execute(context)));
+        return DefaultTask.<R>of(from.getDescription(), context -> transformer.apply(from.execute(context)))
+                          .icon(from.getIcon());
     }
 
 }

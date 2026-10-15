@@ -356,6 +356,7 @@ public class JobInterpreter {
                                             .setJobRunId(runId)
                                             .setTaskPath(path)
                                             .setDescription(node.description())
+                                            .setIcon(node.icon())
                                             .setStatus(ExecutionStatus.PENDING);
         // A store named in the definition is a fact of the task, not of its completion:
         // recorded now so a watcher can tell the tasks apart by what they will store

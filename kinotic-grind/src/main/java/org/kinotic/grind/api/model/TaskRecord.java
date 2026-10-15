@@ -43,6 +43,12 @@ public class TaskRecord implements Identifiable<String> {
     private String description;
 
     /**
+     * The key of the icon a console shows for the task, or null for its default. Recorded from
+     * discovery.
+     */
+    private String icon;
+
+    /**
      * Current status of the task.
      */
     private ExecutionStatus status = ExecutionStatus.RUNNING;

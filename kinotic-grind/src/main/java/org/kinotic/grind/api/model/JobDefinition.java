@@ -21,6 +21,12 @@ public interface JobDefinition {
     String getDescription();
 
     /**
+     * @return the key of the icon a console shows for this {@link JobDefinition} where it runs
+     *         as one task of another, see {@link Task#getIcon()}, or null for the default
+     */
+    String getIcon();
+
+    /**
      * The stable name identifying this job across runs, recorded with every execution.
      * Required by {@link JobService#run(JobDefinition, JobOwner)}, optional for definitions
      * that are only nested within others.
@@ -61,6 +67,12 @@ public interface JobDefinition {
      * @return this for fluent use
      */
     JobDefinition version(String version);
+
+    /**
+     * @param icon the key of the icon a console shows for this definition, see {@link #getIcon()}
+     * @return this for fluent use
+     */
+    JobDefinition icon(String icon);
 
     /**
      * Seeds the given values into the job scope before the first task runs, each stored as a

@@ -53,8 +53,8 @@ public class TaskClassCompiler {
             org.kinotic.grind.api.annotations.Task meta = method.getAnnotation(org.kinotic.grind.api.annotations.Task.class);
             String description = meta.value().isEmpty() ? method.getName() : meta.value();
             Class<?> produced = producedType(method);
-            Task<Object> task = methodTask(taskClass, method, description);
-            ret.task(task.store(effectiveStore(taskClass, method, meta, produced)));
+            Task<Object> task = methodTask(taskClass, method, description).store(effectiveStore(taskClass, method, meta, produced));
+            ret.task(meta.icon().isEmpty() ? task : task.icon(meta.icon()));
         }
         return ret;
     }

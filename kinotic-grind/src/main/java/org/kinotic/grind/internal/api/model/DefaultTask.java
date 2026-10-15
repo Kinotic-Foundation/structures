@@ -23,6 +23,9 @@ public final class DefaultTask<R> implements Task<R> {
     @Getter
     private final Store store;
 
+    @Getter
+    private final String icon;
+
     private final TaskBody<R> body;
 
     /**
@@ -34,13 +37,18 @@ public final class DefaultTask<R> implements Task<R> {
      */
     public static <R> DefaultTask<R> of(String description, TaskBody<R> body) {
         Validate.notNull(body, "body cannot be null");
-        return new DefaultTask<>(description, null, body);
+        return new DefaultTask<>(description, null, null, body);
     }
 
     @Override
     public Task<R> store(Store store) {
         Validate.notNull(store, "store cannot be null");
-        return new DefaultTask<>(description, store, body);
+        return new DefaultTask<>(description, store, icon, body);
+    }
+
+    @Override
+    public Task<R> icon(String icon) {
+        return new DefaultTask<>(description, store, icon, body);
     }
 
     @Override

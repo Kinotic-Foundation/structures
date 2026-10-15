@@ -20,4 +20,9 @@ public record TaskNode(int sequence,
         return task.getDescription();
     }
 
+    @Override
+    public String icon() {
+        return task.getIcon();
+    }
+
 }

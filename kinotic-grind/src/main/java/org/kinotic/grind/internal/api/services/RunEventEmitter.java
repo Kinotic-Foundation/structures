@@ -79,6 +79,7 @@ public class RunEventEmitter implements RunListener {
                                .setJobRunId(record.getJobRunId())
                                .setTaskPath(record.getTaskPath())
                                .setDescription(record.getDescription())
+                               .setIcon(record.getIcon())
                                .setStatus(record.getStatus())
                                .setStoreType(record.getStoreType())
                                .setStoredName(record.getStoredName());
