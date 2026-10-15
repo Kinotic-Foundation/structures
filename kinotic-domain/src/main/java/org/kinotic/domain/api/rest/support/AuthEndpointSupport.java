@@ -148,10 +148,21 @@ public abstract class AuthEndpointSupport {
      * that started the flow, or of this server's UI when {@code origin} is null.
      */
     public void redirectError(RoutingContext ctx, String origin, String errorCode) {
+        redirectError(ctx, origin, errorCode, Map.of());
+    }
+
+    /**
+     * {@link #redirectError(RoutingContext, String, String)} carrying {@code details} as further query
+     * parameters of the login page, for an error the page can act on with more than its code.
+     */
+    public void redirectError(RoutingContext ctx, String origin, String errorCode, Map<String, String> details) {
         // the flow that stored a return path ends here, so it must not outlive it and send an
         // unrelated later login somewhere the user never asked for
         ctx.session().remove(RETURN_PATH_SESSION_KEY);
-        redirectToPage(ctx, origin, "/login?error=" + URLEncoder.encode(errorCode, StandardCharsets.UTF_8));
+        StringBuilder path = new StringBuilder("/login?error=").append(URLEncoder.encode(errorCode, StandardCharsets.UTF_8));
+        details.forEach((name, value) -> path.append('&').append(URLEncoder.encode(name, StandardCharsets.UTF_8))
+                                             .append('=').append(URLEncoder.encode(value, StandardCharsets.UTF_8)));
+        redirectToPage(ctx, origin, path.toString());
     }
 
     // the path on the page that started the flow, or on this server's UI when the flow named no page

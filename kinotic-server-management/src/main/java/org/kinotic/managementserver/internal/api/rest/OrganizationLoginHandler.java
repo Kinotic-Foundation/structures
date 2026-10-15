@@ -14,7 +14,6 @@ import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 import org.kinotic.domain.api.rest.SuppliesGatewayRoutes;
 import org.kinotic.domain.api.rest.support.AuthEndpointSupport;
 import org.kinotic.domain.api.rest.support.CallbackResult;
-import org.kinotic.domain.api.rest.support.OidcCallbackException;
 import org.kinotic.domain.api.rest.support.OidcErrorCodes;
 import org.kinotic.domain.api.rest.support.OidcFlowOrchestrator;
 import org.kinotic.domain.api.services.OrganizationService;
@@ -27,7 +26,9 @@ import org.springframework.stereotype.Component;
 import java.net.URI;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Login routes for an organization's members. A login is addressed to the organization by its id, the
@@ -208,7 +209,8 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes {
      * {@code GET /api/auth/org/login/social/callback/:configId} — the social IdP returns here; validates the
      * callback and logs the user in. A flow the landing page started names no organization: the identity
      * signs in to the one organization it is a member of, and one that is a member of several is sent back
-     * with {@link OidcErrorCodes#MULTIPLE_ORGANIZATIONS} to sign in at one organization's own login.
+     * with {@link OidcErrorCodes#MULTIPLE_ORGANIZATIONS} and those organizations, to choose one and sign in at
+     * its own login.
      */
     private void handleSocialCallback(RoutingContext ctx) {
         String pathConfigId = ctx.pathParam("configId");
@@ -223,20 +225,28 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes {
 
     private void completeSocialLogin(RoutingContext ctx, CallbackResult<OrgSignupOidcConfiguration> result) {
         String configId = result.config().getId();
-        authEndpointSupport.completeOidcLogin(ctx, result, sub -> result.orgId() != null
-                ? identityService.findByOidcIdentity(sub, configId, result.orgId(), null)
-                : identityService.findOrgUsersByOidcIdentity(sub, configId).compose(this::onlyMembership));
+        if (result.orgId() != null) {
+            authEndpointSupport.completeOidcLogin(ctx, result,
+                    sub -> identityService.findByOidcIdentity(sub, configId, result.orgId(), null));
+        } else {
+            String sub = authEndpointSupport.verifiedSubject(ctx, result);
+            if (sub != null) {
+                identityService.findOrgUsersByOidcIdentity(sub, configId)
+                               .onSuccess(memberships -> completeLandingLogin(ctx, result.origin(), memberships))
+                               .onFailure(err -> authEndpointSupport.completeLogin(ctx, result.origin(), Future.failedFuture(err)));
+            }
+        }
     }
 
-    // the one organization membership of an identity, or none; several cannot pick one for the person
-    private Future<UserParticipantIdentity> onlyMembership(List<UserParticipantIdentity> memberships) {
-        Future<UserParticipantIdentity> ret;
+    // an identity that is a member of several organizations has proven who it is, so the landing page may
+    // offer those organizations for the person to choose from, where a stranger learns nothing
+    private void completeLandingLogin(RoutingContext ctx, String origin, List<UserParticipantIdentity> memberships) {
         if (memberships.size() > 1) {
-            ret = Future.failedFuture(new OidcCallbackException(OidcErrorCodes.MULTIPLE_ORGANIZATIONS));
+            String organizations = memberships.stream().map(UserParticipantIdentity::getOrganizationId).collect(Collectors.joining(","));
+            authEndpointSupport.redirectError(ctx, origin, OidcErrorCodes.MULTIPLE_ORGANIZATIONS, Map.of("organizations", organizations));
         } else {
-            ret = Future.succeededFuture(memberships.isEmpty() ? null : memberships.getFirst());
+            authEndpointSupport.completeLogin(ctx, origin, Future.succeededFuture(memberships.isEmpty() ? null : memberships.getFirst()));
         }
-        return ret;
     }
 
     /**

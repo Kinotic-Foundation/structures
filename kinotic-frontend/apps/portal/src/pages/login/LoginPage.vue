@@ -12,6 +12,20 @@
         <div class="login-divider"><span>or</span></div>
       </div>
 
+      <!-- The organizations a social sign-in found the identity a member of; the person picks one. -->
+      <div v-if="memberships.length > 0" class="login-memberships">
+        <p class="login-memberships__hint">Your account belongs to several organizations. Choose one to sign in to.</p>
+        <Button
+          v-for="membership in memberships"
+          :key="membership"
+          :label="membership"
+          class="login-submit login-memberships__choice"
+          severity="secondary"
+          @click="continueTo(membership)"
+        />
+        <div class="login-divider"><span>or</span></div>
+      </div>
+
       <!-- A login is addressed to an organization: its page, /login/<organization>, offers the
            methods that organization's login supports. -->
       <div class="login-form__step">
@@ -92,6 +106,7 @@ const email = ref<string>('')
 const finding = ref<boolean>(false)
 const sending = ref<boolean>(false)
 const providers = ref<string[]>([])
+const memberships = ref<string[]>([])
 
 const organizationInput = ref<any>()
 const emailInput = ref<any>()
@@ -125,17 +140,27 @@ function socialStartUrl(provider: string): string {
   return referer ? `${url}?referer=${encodeURIComponent(referer)}` : url
 }
 
-/** Every auth flow (login, signup, invite) redirects here with ?error=<code> on failure. */
+/**
+ * Every auth flow (login, signup, invite) redirects here with ?error=<code> on failure. A social sign-in
+ * that found the identity a member of several organizations names them in ?organizations=, and the page
+ * offers them instead of an error.
+ */
 function consumeUrlError() {
-  const error = (route.query.error as string | undefined)
-      ?? new URLSearchParams(window.location.search).get('error')
+  const search = new URLSearchParams(window.location.search)
+  const error = (route.query.error as string | undefined) ?? search.get('error')
   if (!error) return
 
-  displayError(errorCodeToMessage(error))
+  const organizations = (route.query.organizations as string | undefined) ?? search.get('organizations')
+  if (error === 'multiple_organizations' && organizations) {
+    memberships.value = organizations.split(',').filter(id => id.length > 0)
+  } else {
+    displayError(errorCodeToMessage(error))
+  }
 
   // Clean the query string so a refresh doesn't replay the error.
   const newQuery = { ...route.query }
   delete newQuery.error
+  delete newQuery.organizations
   router.replace({ query: newQuery })
 }
 
@@ -143,7 +168,6 @@ function errorCodeToMessage(code: string): string {
   switch (code) {
     case 'no_account':             return 'No account is linked to that identity. Please sign up first.'
     case 'account_exists':         return 'An account already exists for this identity. Please sign in instead.'
-    case 'multiple_organizations': return 'That identity belongs to several organizations. Enter the organization to sign in to.'
     case 'email_not_verified':     return 'Your identity provider has not verified your email address.'
     case 'state_mismatch':         return 'Login session expired or was tampered with. Please try again.'
     case 'access_denied':          return 'You declined to authorize Kinotic. Please try again to continue.'
@@ -177,7 +201,11 @@ function continueToOrganization() {
     displayError('Please enter your organization')
     return
   }
-  router.push({ path: organizationLoginPath(slug), query: route.query })
+  continueTo(slug)
+}
+
+function continueTo(organizationId: string) {
+  router.push({ path: organizationLoginPath(organizationId), query: route.query })
 }
 
 async function findOrganizations() {
@@ -253,6 +281,23 @@ function displayError(text: string) {
 .login-form :deep(input:-webkit-autofill) {
   box-shadow: 0 0 0 1000px var(--lp-input-bg) inset;
   -webkit-text-fill-color: var(--lp-input-color);
+}
+
+.login-memberships {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 2.25rem;
+}
+
+.login-memberships__hint {
+  margin: 0 0 0.5rem;
+  text-align: center;
+  color: var(--lp-text);
+}
+
+.login-memberships .login-divider {
+  margin-top: 1.5rem;
 }
 
 .login-find {
