@@ -4,7 +4,6 @@ import io.vertx.core.Future;
 import io.vertx.core.net.HostAndPort;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.core.api.exceptions.AuthorizationException;
 import org.kinotic.core.api.security.SessionBinding;
@@ -92,8 +91,8 @@ public class ApplicationAuthEndpointSupport extends AuthEndpointSupport {
     public boolean isApplicationUi(ApplicationKey applicationKey, String origin) {
         String host = URI.create(origin).getHost();
         Pattern localUiOrigins = properties.getLocalUiOriginPattern();
-        // the CORS pattern holds sites to the sites domain, so a site is named by the first label of its host
-        return (host != null && HostLabelUtil.isSiteLabel(applicationKey, StringUtils.substringBefore(host, ".")))
+        // the CORS pattern holds sites to the sites domain, so a site is named by the first two labels of its host
+        return (host != null && HostLabelUtil.isSiteOf(applicationKey, host))
                 || (localUiOrigins != null && localUiOrigins.matcher(origin).matches());
     }
 

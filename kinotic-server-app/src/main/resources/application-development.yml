@@ -20,7 +20,7 @@ kinotic:
     cors:
       # An application UI's vite dev server on any local port, and the sites a developer publishes
       # under apps-<environment>.kinotic.ai
-      allowedOriginPattern: "http:\\/\\/localhost:\\d+|https:\\/\\/[a-z0-9-]+\\.apps-[a-z0-9-]+\\.kinotic\\.ai"
+      allowedOriginPattern: "http:\\/\\/localhost:\\d+|https:\\/\\/[a-z0-9-]+\\.[a-z0-9-]+\\.apps-[a-z0-9-]+\\.kinotic\\.ai"
       allowCredentials: true
   maxNumberOfCoresToUse: 4
   ignite:

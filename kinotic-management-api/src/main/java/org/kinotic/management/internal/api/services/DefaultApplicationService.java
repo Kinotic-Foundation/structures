@@ -25,7 +25,7 @@ import java.util.List;
 @Component
 public class DefaultApplicationService extends AbstractOrganizationScopedService<Application> implements ApplicationService {
 
-    // every site label, <org>--<app>--<ui>, must leave room for at least this long a UI name
+    // every site label, <app>--<ui>, must leave room for at least this long a UI name
     private static final int MIN_UI_NAME_LENGTH = 1;
 
     private final ProjectService projectService;
@@ -109,11 +109,11 @@ public class DefaultApplicationService extends AbstractOrganizationScopedService
         // Validate only; re-minting an update's id would silently write a new document
         DomainUtil.validateApplicationId(entity.getId());
         ApplicationKey applicationKey = new ApplicationKey(requireOrganizationId(), entity.getId());
-        // neither id changes after creation, so an application too long for a site label could never publish a UI
-        Validate.isTrue(HostLabelUtil.label(applicationKey).length() + HostLabelUtil.HOST_LABEL_SEPARATOR.length() + MIN_UI_NAME_LENGTH <= HostLabelUtil.MAX_HOST_LABEL_LENGTH,
-                        "The application's host label '%s' leaves no room for a UI name in its sites' labels, which DNS limits"
+        // the id never changes after creation, so an application too long for a site label could never publish a UI
+        Validate.isTrue(entity.getId().length() + HostLabelUtil.HOST_LABEL_SEPARATOR.length() + MIN_UI_NAME_LENGTH <= HostLabelUtil.MAX_HOST_LABEL_LENGTH,
+                        "The application id '%s' leaves no room for a UI name in its sites' labels, which DNS limits"
                                 + " to %d characters; shorten the application name",
-                        HostLabelUtil.label(applicationKey), HostLabelUtil.MAX_HOST_LABEL_LENGTH);
+                        entity.getId(), HostLabelUtil.MAX_HOST_LABEL_LENGTH);
         if (entity.getSocialProviders() == null) {
             entity.setSocialProviders(new ArrayList<>());
         }
@@ -138,8 +138,8 @@ public class DefaultApplicationService extends AbstractOrganizationScopedService
     }
 
     private Future<String> publishedUiUrl(ApplicationKey applicationKey, String uiName) {
-        // a site's label names its application and UI, so a site with this label is one of this application's UIs
-        return uiDeploymentRepository.findById(HostLabelUtil.siteLabel(applicationKey, uiName))
+        // a site's id names its organization, application and UI, so a site with this id is one of this application's UIs
+        return uiDeploymentRepository.findById(HostLabelUtil.siteId(applicationKey, uiName))
                 .map(site -> {
                     Validate.isTrue(site != null, "The application '%s' has no published UI named '%s'",
                                     applicationKey.applicationId(), uiName);

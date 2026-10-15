@@ -76,23 +76,25 @@ public class UiSitePublisher {
     }
 
     /**
-     * Mints the site's label, {@code <org>--<app>--<ui>}, and its URL under the sites domain. The store
-     * enforces the label's uniqueness on create, which keeps a UI name to one project of the application.
+     * Mints the site's id, {@code <app>--<ui>.<org>}, its hostname under the sites domain, and its URL. The store
+     * enforces the id's uniqueness on create, which keeps a UI name to one project of the application.
      */
     private Future<UiDeployment> mintDeployment(Project project, UiArtifact ui) {
         String label = HostLabelUtil.siteLabel(project.applicationKey(), ui.name());
         // guards rows written around the services that validate each part, such as a migration's seed data:
         // a label outside DNS's grammar names no host under the sites domain
         ZoneUtil.validateLabel(label);
+        ZoneUtil.validateLabel(project.getOrganizationId());
         Future<UiDeployment> ret;
         if (label.length() > HostLabelUtil.MAX_HOST_LABEL_LENGTH) {
             ret = Future.failedFuture(new IllegalStateException("The hostname label " + label + " for UI " + ui.name()
                     + " of application " + project.getApplicationId() + " of organization " + project.getOrganizationId()
                     + " is longer than " + HostLabelUtil.MAX_HOST_LABEL_LENGTH + " characters; shorten the application or UI name"));
         } else {
+            String siteId = HostLabelUtil.siteId(project.applicationKey(), ui.name());
             UiDeployment deployment = new UiDeployment()
-                    .setId(label)
-                    .setUrl(uiDeployment().resolveSiteUrl(label))
+                    .setId(siteId)
+                    .setUrl(uiDeployment().resolveSiteUrl(siteId))
                     .setOrganizationId(project.getOrganizationId())
                     .setApplicationId(project.getApplicationId())
                     .setProjectId(project.getId())

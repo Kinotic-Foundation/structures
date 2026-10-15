@@ -12,7 +12,7 @@ kinotic:
       webhookSecret: "-"
       appPrivateKey: "-"
   managementServer:
-    # Plain localhost dev (pnpm dev, no tunnel): vite serves the portal and proxies /api, /v1
+    # Plain localhost dev (pnpm dev, no tunnel): vite serves the portal and proxies /api (REST and the STOMP WebSocket at /api/v1)
     # (WebSocket), /.well-known, and /mcp to 58503, so the API base is the portal's. A developer's
     # ngrok tunnel and GitHub App replace both from ~/.kinotic/dev-environment/kinotic-server-management/application.yml,
     # imported below, so SPA links, OIDC/OAuth redirect_uris, GitHub callbacks, and the MCP
