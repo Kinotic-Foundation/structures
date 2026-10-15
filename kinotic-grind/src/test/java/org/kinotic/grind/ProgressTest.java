@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.kinotic.grind.api.model.JobDefinition;
 import org.kinotic.grind.api.model.JobOwner;
 import org.kinotic.grind.api.model.JobScope;
-import org.kinotic.grind.api.model.ProgressReporter;
+import org.kinotic.grind.api.model.TaskReporter;
 import org.kinotic.grind.api.model.events.JobRunEvent;
 import org.kinotic.grind.api.model.events.TaskCompletedEvent;
 import org.kinotic.grind.api.model.events.TaskProgressEvent;
@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Progress reporting: a task injects the scope's {@link ProgressReporter}, and each report
+ * Progress reporting: a task injects the scope's {@link TaskReporter}, and each report
  * reaches watchers as a {@link TaskProgressEvent} attributed to the reporting task.
  */
 public class ProgressTest extends AbstractGrindTest {
@@ -34,12 +34,12 @@ public class ProgressTest extends AbstractGrindTest {
                 .task(Tasks.fromCallable("pull image", new Callable<Void>() {
 
                     @Autowired
-                    private ProgressReporter progress;
+                    private TaskReporter progress;
 
                     @Override
                     public Void call() {
-                        progress.report(30, "downloading layers");
-                        progress.report(80, "extracting");
+                        progress.progress(30, "downloading layers");
+                        progress.progress(80, "extracting");
                         return null;
                     }
                 }));
@@ -48,11 +48,11 @@ public class ProgressTest extends AbstractGrindTest {
 
         assertNull(result.error());
         List<JobRunEvent> events = result.events();
-        assertEquals(List.of(new TaskProgressEvent("0/1", 30, "downloading layers"),
-                             new TaskProgressEvent("0/1", 80, "extracting")),
+        assertEquals(List.of(new TaskProgressEvent("0/1", 30, "downloading layers", null),
+                             new TaskProgressEvent("0/1", 80, "extracting", null)),
                      events.stream().filter(TaskProgressEvent.class::isInstance).toList());
-        int started = events.indexOf(new TaskStartedEvent("0/1", "pull image"));
-        int firstReport = events.indexOf(new TaskProgressEvent("0/1", 30, "downloading layers"));
+        int started = events.indexOf(new TaskStartedEvent("0/1", "pull image", null));
+        int firstReport = events.indexOf(new TaskProgressEvent("0/1", 30, "downloading layers", null));
         int completed = indexOfCompletion(events, "0/1");
         assertTrue(started < firstReport && firstReport < completed);
     }
@@ -64,7 +64,7 @@ public class ProgressTest extends AbstractGrindTest {
         RunResult result = await(jobService.run(job, JobOwner.system()));
 
         assertNull(result.error());
-        assertEquals(List.of(new TaskProgressEvent("0/1", 50, "halfway")),
+        assertEquals(List.of(new TaskProgressEvent("0/1", 50, "halfway", null)),
                      result.events().stream().filter(TaskProgressEvent.class::isInstance).toList());
     }
 
@@ -83,8 +83,8 @@ public class ProgressTest extends AbstractGrindTest {
                                                 .map(TaskProgressEvent.class::cast)
                                                 .toList();
         assertEquals(2, reports.size());
-        assertTrue(reports.contains(new TaskProgressEvent("0/1", 10, "left")));
-        assertTrue(reports.contains(new TaskProgressEvent("0/2", 20, "right")));
+        assertTrue(reports.contains(new TaskProgressEvent("0/1", 10, "left", null)));
+        assertTrue(reports.contains(new TaskProgressEvent("0/2", 20, "right", null)));
     }
 
     @Test
@@ -94,20 +94,20 @@ public class ProgressTest extends AbstractGrindTest {
                 .task(Tasks.fromCallable("wait", new Callable<Future<String>>() {
 
                     @Autowired
-                    private ProgressReporter progress;
+                    private TaskReporter progress;
 
                     @Override
                     public Future<String> call() {
                         return vertx.timer(10)
                                     .map(v -> "ticked")
-                                    .onSuccess(value -> progress.report(100, value));
+                                    .onSuccess(value -> progress.progress(100, value));
                     }
                 }));
 
         RunResult result = await(jobService.run(job, JobOwner.system()));
 
         assertNull(result.error());
-        assertEquals(List.of(new TaskProgressEvent("0/1", 100, "ticked")),
+        assertEquals(List.of(new TaskProgressEvent("0/1", 100, "ticked", null)),
                      result.events().stream().filter(TaskProgressEvent.class::isInstance).toList());
     }
 
@@ -119,11 +119,11 @@ public class ProgressTest extends AbstractGrindTest {
                 .task(Tasks.fromCallable("spawn", new Callable<Void>() {
 
                     @Autowired
-                    private ProgressReporter progress;
+                    private TaskReporter progress;
 
                     @Override
                     public Void call() throws InterruptedException {
-                        Thread spawned = new Thread(() -> progress.report(50, "from elsewhere"));
+                        Thread spawned = new Thread(() -> progress.progress(50, "from elsewhere"));
                         spawned.setUncaughtExceptionHandler((thread, error) -> spawnedError.set(error));
                         spawned.start();
                         spawned.join();
@@ -142,11 +142,11 @@ public class ProgressTest extends AbstractGrindTest {
         return Tasks.fromCallable(message, new Callable<>() {
 
             @Autowired
-            private ProgressReporter progress;
+            private TaskReporter progress;
 
             @Override
             public Void call() {
-                progress.report(percentage, message);
+                progress.progress(percentage, message);
                 return null;
             }
         });

@@ -16,6 +16,8 @@ import org.kinotic.grind.api.model.TaskRecord;
 import org.kinotic.grind.api.model.Store;
 import org.kinotic.grind.api.model.StoreType;
 
+import tools.jackson.databind.JsonNode;
+
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -106,7 +108,7 @@ public class RunRecorder implements RunListener {
     }
 
     @Override
-    public void taskStarted(String taskPath, String description) {
+    public void taskStarted(String taskPath, String description, JsonNode view) {
         TaskRecord record = recordsByPath.computeIfAbsent(taskPath,
                                                           path -> new TaskRecord().setId(jobRunId + ":" + path)
                                                                                   .setJobRunId(jobRunId)
@@ -114,6 +116,9 @@ public class RunRecorder implements RunListener {
         record.setDescription(description)
               .setStatus(ExecutionStatus.RUNNING)
               .setStarted(new Date());
+        if (view != null) {
+            record.setView(view);
+        }
         awaitWrite(() -> saveTask(record));
     }
 
@@ -124,8 +129,21 @@ public class RunRecorder implements RunListener {
     }
 
     @Override
+    public void taskViewed(String taskPath, JsonNode view) {
+        TaskRecord record = recordsByPath.get(taskPath);
+        if (record == null) {
+            log.warn("Task view for unknown task path {} in run {}", taskPath, jobRunId);
+        } else {
+            // written through, unlike progress: a view changes rarely, and a run whose node leaves
+            // mid-task still shows the view it was showing
+            record.setView(view);
+            awaitWrite(() -> saveTask(record));
+        }
+    }
+
+    @Override
     public void taskCompleted(String taskPath, Store store, String storedName,
-                              Object storedValue, SerializedState serializedState) {
+                              Object storedValue, SerializedState serializedState, JsonNode view) {
         TaskRecord record = recordsByPath.get(taskPath);
         if (record == null) {
             log.warn("Task completed for unknown task path {} in run {}", taskPath, jobRunId);
@@ -142,6 +160,9 @@ public class RunRecorder implements RunListener {
             }
             if (store.isWire() && serializedState != null) {
                 record.setWireValue(serializedState.value());
+            }
+            if (view != null) {
+                record.setView(view);
             }
             awaitWrite(() -> saveTask(record));
         }

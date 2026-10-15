@@ -1,7 +1,13 @@
 package org.kinotic.grind.api.model;
 
+import java.util.function.BiFunction;
+import java.util.function.Function;
+
 /**
- * A unit of work executed as one task of a {@link JobDefinition}. A task is an immutable value:
+ * A unit of work executed as one task of a {@link JobDefinition}, and how a console presents it:
+ * its icon and the {@link TaskView} it shows as it starts, runs and completes; while it runs, the
+ * view is replaced through the scope's {@link TaskReporter}, and the latest view is the one its
+ * record keeps. A task is an immutable value:
  * the fluent methods return copies, so one instance can serve several definitions, or a step and
  * another step's {@link Store#reload(Task) reload task}, without either seeing the other's settings.
  */
@@ -38,6 +44,35 @@ public interface Task<T> {
      * @return a copy of this {@link Task} shown with the given icon
      */
     Task<T> icon(String icon);
+
+    /**
+     * Declares the view a console shows for the task from the moment it starts, for following
+     * what the task does while it runs. Just before the task executes, the value of the given type
+     * is looked up in the job scope the way {@code @Autowired} looks it up, and the producer builds
+     * the view from it; a value the scope does not hold fails the task.
+     * @param source the type of the scope value the view is built from
+     * @param producer builds the view from that value
+     * @param <S> the source type
+     * @return a copy of this {@link Task} showing the view from its start
+     */
+    <S> Task<T> startView(Class<S> source, Function<S, TaskView<?>> producer);
+
+    /**
+     * Declares the view a console shows for the task once it completes, built from its result.
+     * @param producer builds the view from the task's result
+     * @return a copy of this {@link Task} showing the view on completion
+     */
+    Task<T> resultView(Function<T, TaskView<?>> producer);
+
+    /**
+     * As {@link #resultView(Function)}, the producer also given the value of the given type, looked
+     * up in the job scope as {@link #startView(Class, Function)} looks it up.
+     * @param source the type of the scope value the view is also built from
+     * @param producer builds the view from the task's result and that value
+     * @param <S> the source type
+     * @return a copy of this {@link Task} showing the view on completion
+     */
+    <S> Task<T> resultView(Class<S> source, BiFunction<T, S, TaskView<?>> producer);
 
     /**
      * Performs the work of this {@link Task}.

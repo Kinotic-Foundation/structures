@@ -97,7 +97,8 @@ public class DefaultJobMonitoringService implements JobMonitoringService {
                                          completed.storeType(),
                                          completed.storedName(),
                                          null,
-                                         completed.wireValue());
+                                         completed.wireValue(),
+                                         completed.view());
         }else{
             ret = event;
         }

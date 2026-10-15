@@ -91,6 +91,12 @@ public class TaskRecord implements Identifiable<String> {
     private JsonNode wireValue;
 
     /**
+     * The latest {@link TaskView} the task showed, serialized as JSON, or null when it showed none.
+     * A failed task keeps the view it showed when it failed.
+     */
+    private JsonNode view;
+
+    /**
      * The failure message when {@link #status} is {@link ExecutionStatus#FAILED}.
      */
     private String error;

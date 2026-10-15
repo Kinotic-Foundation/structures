@@ -52,11 +52,11 @@ public class EventsAndRecordingTest extends AbstractGrindTest {
                      discovered.tasks().stream().map(record -> record.getTaskPath()).toList());
         assertEquals(List.of(ExecutionStatus.PENDING, ExecutionStatus.PENDING, ExecutionStatus.PENDING),
                      discovered.tasks().stream().map(record -> record.getStatus()).toList());
-        assertEquals(new TaskStartedEvent("0", "two tasks"), events.get(1));
-        assertEquals(new TaskStartedEvent("0/1", "first"), events.get(2));
+        assertEquals(new TaskStartedEvent("0", "two tasks", null), events.get(1));
+        assertEquals(new TaskStartedEvent("0/1", "first", null), events.get(2));
         assertInstanceOf(TaskCompletedEvent.class, events.get(3));
         assertEquals("0/1", events.get(3).taskPath());
-        assertEquals(new TaskStartedEvent("0/2", "second"), events.get(4));
+        assertEquals(new TaskStartedEvent("0/2", "second", null), events.get(4));
         assertEquals("0/2", events.get(5).taskPath());
         TaskCompletedEvent rootCompleted = assertInstanceOf(TaskCompletedEvent.class, events.get(6));
         assertEquals("0", rootCompleted.taskPath());
