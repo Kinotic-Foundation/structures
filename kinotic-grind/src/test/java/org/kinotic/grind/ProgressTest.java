@@ -1,5 +1,6 @@
 package org.kinotic.grind;
 
+import io.vertx.core.Future;
 import org.junit.jupiter.api.Test;
 import org.kinotic.grind.api.model.JobDefinition;
 import org.kinotic.grind.api.model.JobOwner;
@@ -14,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -83,6 +85,57 @@ public class ProgressTest extends AbstractGrindTest {
         assertEquals(2, reports.size());
         assertTrue(reports.contains(new TaskProgressEvent("0/1", 10, "left")));
         assertTrue(reports.contains(new TaskProgressEvent("0/2", 20, "right")));
+    }
+
+    @Test
+    public void reportsFromCallbacksOfTheTasksFuturesAttachToTheTask() throws Exception {
+        JobDefinition job = JobDefinition.create("timed")
+                .name("timed").version("1")
+                .task(Tasks.fromCallable("wait", new Callable<Future<String>>() {
+
+                    @Autowired
+                    private ProgressReporter progress;
+
+                    @Override
+                    public Future<String> call() {
+                        return vertx.timer(10)
+                                    .map(v -> "ticked")
+                                    .onSuccess(value -> progress.report(100, value));
+                    }
+                }));
+
+        RunResult result = await(jobService.run(job, JobOwner.system()));
+
+        assertNull(result.error());
+        assertEquals(List.of(new TaskProgressEvent("0/1", 100, "ticked")),
+                     result.events().stream().filter(TaskProgressEvent.class::isInstance).toList());
+    }
+
+    @Test
+    public void reportsFromAThreadTheTaskSpawnedAreDropped() throws Exception {
+        AtomicReference<Throwable> spawnedError = new AtomicReference<>();
+        JobDefinition job = JobDefinition.create("spawning")
+                .name("spawning").version("1")
+                .task(Tasks.fromCallable("spawn", new Callable<Void>() {
+
+                    @Autowired
+                    private ProgressReporter progress;
+
+                    @Override
+                    public Void call() throws InterruptedException {
+                        Thread spawned = new Thread(() -> progress.report(50, "from elsewhere"));
+                        spawned.setUncaughtExceptionHandler((thread, error) -> spawnedError.set(error));
+                        spawned.start();
+                        spawned.join();
+                        return null;
+                    }
+                }));
+
+        RunResult result = await(jobService.run(job, JobOwner.system()));
+
+        assertNull(result.error());
+        assertNull(spawnedError.get());
+        assertTrue(result.events().stream().noneMatch(TaskProgressEvent.class::isInstance));
     }
 
     private org.kinotic.grind.api.model.Task<Void> reportingTask(String message, int percentage) {
