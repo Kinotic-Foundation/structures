@@ -7,7 +7,7 @@ import lombok.experimental.Accessors;
 
 /**
  * A Kinotic-curated social IdP registration (GitHub today) that powers the "Continue with X" buttons on
- * both the new-org signup page and the email-first org login fallback. Belongs to no organization,
+ * the new-org signup page and on every organization's login page. Belongs to no organization,
  * because signup happens before one exists. Seeded via SQL migration and saved by the platform operator
  * only.
  */

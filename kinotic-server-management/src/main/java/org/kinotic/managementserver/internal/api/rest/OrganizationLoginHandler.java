@@ -16,7 +16,6 @@ import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.services.security.LocalAuthenticationService;
-import org.kinotic.domain.api.services.security.LoginProviderService;
 import org.kinotic.domain.api.services.security.OidcConfigurationService;
 import org.kinotic.domain.api.rest.SuppliesGatewayRoutes;
 import org.kinotic.managementserver.api.config.ManagementServerProperties;
@@ -41,7 +40,6 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes {
     private final ParticipantIdentityService identityService;
     private final LocalAuthenticationService localAuthenticationService;
     private final OidcConfigurationService oidcConfigurationService;
-    private final LoginProviderService loginProviderService;
     private final OidcFlowOrchestrator oidcFlowOrchestrator;
 
     @Override
@@ -138,14 +136,20 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes {
         oidcFlowOrchestrator.handleCallback(ctx,
                                             pathConfigId,
                                             ssoCallbackUrl(pathConfigId),
-                                            (orgId, _) -> loginProviderService.findOffered(pathConfigId, orgId, null))
+                                            (orgId, _) -> oidcConfigurationService.findOffered(pathConfigId, orgId, null))
                             .onSuccess(result -> completeSsoLogin(ctx, result))
                             .onFailure(ex -> authEndpointSupport.redirectCallbackFailure(ctx, ex));
     }
 
+    // an identity no member is bound to becomes a member of the organization when the configuration creates users on sign-in
     private void completeSsoLogin(RoutingContext ctx, CallbackResult<OidcConfiguration> result) {
         authEndpointSupport.completeOidcLogin(ctx, result,
-                sub -> identityService.findByOidcIdentity(sub, result.config().getId(), result.orgId(), null));
+                sub -> identityService.findByOidcIdentity(sub, result.config().getId(), result.orgId(), null),
+                () -> {
+                    UserParticipantIdentity member = new UserParticipantIdentity();
+                    member.setOrganizationId(result.orgId());
+                    return Future.succeededFuture(member);
+                });
     }
 
     /**
@@ -168,7 +172,7 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes {
         }
 
         String orgId = user.getOrganizationId();
-        return loginProviderService.findOffered(user.getOidcConfigId(), orgId, null)
+        return oidcConfigurationService.findOffered(user.getOidcConfigId(), orgId, null)
                      .compose(match -> {
                          if (match == null) {
                              // The org's login no longer offers the user's provider — fall back to

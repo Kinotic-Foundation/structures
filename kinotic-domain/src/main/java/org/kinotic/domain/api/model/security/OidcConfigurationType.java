@@ -1,11 +1,12 @@
 package org.kinotic.domain.api.model.security;
 
 /**
- * Who owns an {@link OidcConfiguration} and whom it signs in. Mirrors the concrete subtype one-to-one —
+ * Who owns an {@link OidcConfiguration} and where it is offered. Mirrors the concrete subtype one-to-one —
  * {@link #ORG_SIGNUP} for {@link OrgSignupOidcConfiguration}, {@link #APP_SOCIAL} for
  * {@link ApplicationSocialOidcConfiguration}, {@link #ORGANIZATION} for
- * {@link OrganizationOidcConfiguration} — and is persisted as the document's polymorphic
- * discriminator, so it is also the value queries filter configurations by kind with.
+ * {@link OrganizationOidcConfiguration}, {@link #APPLICATION} for {@link ApplicationOidcConfiguration}
+ * — and is persisted as the document's polymorphic discriminator, so it is also the value queries
+ * filter configurations by kind with.
  */
 public enum OidcConfigurationType {
     /**
@@ -13,12 +14,16 @@ public enum OidcConfigurationType {
      */
     ORG_SIGNUP,
     /**
-     * A registration the platform operator holds with a social provider, which any organization may offer
-     * at its applications' sign-in.
+     * A registration the platform operator holds with a social provider, which any application may offer
+     * at its sign-in by naming the provider kind.
      */
     APP_SOCIAL,
     /**
-     * A provider an organization configured for its own members or its applications' users.
+     * A provider an organization configured for its own login.
      */
-    ORGANIZATION
+    ORGANIZATION,
+    /**
+     * A provider an organization configured for one of its applications' logins.
+     */
+    APPLICATION
 }

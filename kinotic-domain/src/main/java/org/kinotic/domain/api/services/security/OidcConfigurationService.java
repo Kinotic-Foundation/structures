@@ -2,24 +2,27 @@ package org.kinotic.domain.api.services.security;
 
 import io.vertx.core.Future;
 import org.kinotic.core.api.crud.IdentifiableCrudService;
+import org.kinotic.domain.api.model.security.ApplicationOidcConfiguration;
 import org.kinotic.domain.api.model.security.ApplicationSocialOidcConfiguration;
 import org.kinotic.domain.api.model.security.ManagedOidcConfiguration;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.OidcProviderKind;
 import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
 import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
+import org.kinotic.domain.api.model.security.OwnedOidcConfiguration;
 
 import java.util.List;
 
 /**
  * The OIDC provider configurations users sign up and in through: the platform's managed registrations
- * and each organization's own. A write is held to its kind's owner: a {@link ManagedOidcConfiguration}
- * is saved or deleted by a system participant only,
- * an {@link OrganizationOidcConfiguration} by an organization participant of the organization it
- * names. An organization's configuration must name a provider kind
- * {@link OidcProviderKind#offeredToOrganizations() offered to organizations} and its account there in the
- * form the kind expects; its authority is derived from the two on every save. The finders that serve
- * the sign-in flows, which run before a participant is bound, check no participant and say so.
+ * and each organization's own, each made for one sign-in scope. A write is held to its kind's owner: a
+ * {@link ManagedOidcConfiguration} is saved or deleted by a system participant only, an
+ * {@link OwnedOidcConfiguration} by an organization participant of the organization it names, and an
+ * {@link ApplicationOidcConfiguration} must name an application of that organization. An organization's
+ * configuration must name a provider kind {@link OidcProviderKind#offeredToOrganizations() offered to
+ * organizations} and its account there in the form the kind expects; its authority is derived from the
+ * two on every save. The finders that serve the sign-in flows, which run before a participant is bound,
+ * check no participant and say so.
  */
 public interface OidcConfigurationService extends IdentifiableCrudService<OidcConfiguration, String> {
 
@@ -45,35 +48,40 @@ public interface OidcConfigurationService extends IdentifiableCrudService<OidcCo
     Future<OrgSignupOidcConfiguration> findOrgSignupById(String id);
 
     /**
-     * Fetches the given OIDC configurations in a single request, returning only those organization
-     * {@code orgId} may offer at a sign-in — its own and the {@link ApplicationSocialOidcConfiguration}s —
-     * and whose {@code enabled} flag is true. Missing, disabled and foreign configurations are silently
-     * omitted. Checks no participant.
+     * The enabled configurations a sign-in scope offers, in the order to present them. The organization's
+     * own login ({@code applicationId} null) offers the org sign-up registrations followed by the
+     * organization's {@link OrganizationOidcConfiguration}s; an application's login offers its
+     * {@link ApplicationOidcConfiguration}s followed by the platform's
+     * {@link ApplicationSocialOidcConfiguration}s whose provider kinds the application names. Empty when
+     * the scope offers none. Checks no participant.
      *
-     * @param ids the configuration ids to load; must be non-null and non-empty
-     * @param orgId the organization offering the configurations
-     * @return the enabled configurations
+     * @param organizationId the organization the scope belongs to
+     * @param applicationId  the application within it, or {@code null} for the organization's own login
      */
-    Future<List<OidcConfiguration>> findEnabledByIds(List<String> ids, String orgId);
+    Future<List<OidcConfiguration>> findEnabledForScope(String organizationId, String applicationId);
 
     /**
-     * The configuration {@code id} that organization {@code organizationId} may offer at a sign-in, enabled
-     * or not: its own {@link OrganizationOidcConfiguration}, or an {@link ApplicationSocialOidcConfiguration}.
-     * {@code null} when no such configuration has that id. Checks no participant.
+     * The enabled configuration {@code configurationId} when the scope offers it, or {@code null} when the
+     * scope does not offer it or it is disabled, for the sign-in starts and callbacks that name a
+     * configuration: an {@link OwnedOidcConfiguration} the organization made for the scope, or an
+     * {@link ApplicationSocialOidcConfiguration} the application names. The org sign-up registrations are
+     * started by provider kind through {@link #findEnabledOrgSignupByProvider} and never named here.
+     * Checks no participant.
      *
-     * @param id             the configuration id
-     * @param organizationId the organization offering the configuration
+     * @param configurationId the configuration a sign-in names
+     * @param organizationId  the organization the scope belongs to
+     * @param applicationId   the application within it, or {@code null} for the organization's own login
      */
-    Future<OidcConfiguration> findOfferable(String id, String organizationId);
+    Future<OidcConfiguration> findOffered(String configurationId, String organizationId, String applicationId);
 
     /**
-     * The OIDC configuration {@code id} of organization {@code organizationId}, enabled or not, or
-     * {@code null} when the organization has none by that id. Checks no participant.
+     * The configuration {@code id} organization {@code organizationId} owns, of any owned kind, enabled or
+     * not, or {@code null} when the organization owns none by that id. Checks no participant.
      *
      * @param id             the configuration id
      * @param organizationId the organization that owns the configuration
      */
-    Future<OrganizationOidcConfiguration> findById(String id, String organizationId);
+    Future<OwnedOidcConfiguration> findOwnedById(String id, String organizationId);
 
     /**
      * Saves the configuration as {@link #save(Object)} does and makes {@code clientSecret} the secret it
@@ -88,7 +96,24 @@ public interface OidcConfigurationService extends IdentifiableCrudService<OidcCo
      *                      stored secret is deleted
      * @return the configuration as saved
      */
-    Future<OrganizationOidcConfiguration> save(OrganizationOidcConfiguration configuration, String clientSecret);
+    <C extends OwnedOidcConfiguration> Future<C> save(C configuration, String clientSecret);
+
+    /**
+     * Creates a copy of the caller's organization's configuration {@code sourceId} for another of its
+     * sign-in scopes: the login of application {@code applicationId}, or the organization's own login when
+     * {@code applicationId} is null. The copy is a new configuration of the target scope's kind with the
+     * source's name, provider, account, client id and client secret, enabled, creating no users on sign-in
+     * until told to. It has its own id and therefore its own callback URL, which the provider must be given
+     * before a sign-in through it succeeds; a later change to either configuration leaves the other as it
+     * is.
+     *
+     * @param sourceId      the configuration to copy, owned by the caller's organization
+     * @param applicationId the application whose login the copy is offered at, or {@code null} for the
+     *                      organization's own login
+     * @return the copy as saved; fails when the source is not the organization's or the application is
+     *         not the organization's
+     */
+    Future<OwnedOidcConfiguration> copy(String sourceId, String applicationId);
 
     /**
      * The client secret of {@code configuration}, or {@code null} for a public client, which the
@@ -97,5 +122,5 @@ public interface OidcConfigurationService extends IdentifiableCrudService<OidcCo
      *
      * @param configuration the configuration as persisted, naming its organization
      */
-    Future<String> findClientSecret(OrganizationOidcConfiguration configuration);
+    Future<String> findClientSecret(OwnedOidcConfiguration configuration);
 }

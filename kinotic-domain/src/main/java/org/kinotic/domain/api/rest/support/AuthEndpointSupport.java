@@ -6,12 +6,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import org.kinotic.core.api.exceptions.AuthenticationException;
 import org.kinotic.core.api.security.ConnectedInfo;
 import org.kinotic.core.api.security.Participant;
 import org.kinotic.core.api.security.SessionBinding;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
+import org.kinotic.domain.api.model.security.OwnedOidcConfiguration;
 import org.kinotic.domain.api.model.security.DelegateKind;
 import org.kinotic.domain.api.model.security.identity.ParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
@@ -416,10 +418,61 @@ public abstract class AuthEndpointSupport {
     public void completeOidcLogin(RoutingContext ctx,
                                   CallbackResult<? extends OidcConfiguration> result,
                                   Function<String, Future<UserParticipantIdentity>> userLookup) {
+        completeOidcLogin(ctx, result, userLookup, () -> Future.succeededFuture(null));
+    }
+
+    /**
+     * {@link #completeOidcLogin(RoutingContext, CallbackResult, Function)} for a scope that may create a
+     * user on first sign-in: when the lookup finds no user, the configuration is one an organization made
+     * for the scope and it creates users on sign-in, and {@code newUser} supplies the unsaved user carrying
+     * the scope, the identity's verified email and name become that user, bound to the identity, and the
+     * user is signed in. An email the scope already holds under another method is refused with
+     * {@link OidcErrorCodes#ACCOUNT_EXISTS}; a scope that supplies no user refuses the identity with
+     * {@link OidcErrorCodes#NO_ACCOUNT} as a plain login does.
+     *
+     * @param newUser the unsaved user an unknown identity becomes, carrying only its scope, or {@code null}
+     *                when the scope admits no new user; consulted only when a user would be created
+     */
+    public void completeOidcLogin(RoutingContext ctx,
+                                  CallbackResult<? extends OidcConfiguration> result,
+                                  Function<String, Future<UserParticipantIdentity>> userLookup,
+                                  Supplier<Future<UserParticipantIdentity>> newUser) {
         String sub = verifiedSubject(ctx, result);
         if (sub != null) {
-            completeLogin(ctx, result.origin(), userLookup.apply(sub));
+            Future<UserParticipantIdentity> user = userLookup.apply(sub).compose(found -> {
+                Future<UserParticipantIdentity> ret;
+                if (found == null && result.config() instanceof OwnedOidcConfiguration owned && owned.isCreateUserOnSignIn()) {
+                    ret = newUser.get().compose(template -> template == null
+                            ? Future.succeededFuture()
+                            : createOnSignIn(template, sub, result));
+                } else {
+                    ret = Future.succeededFuture(found);
+                }
+                return ret;
+            });
+            completeLogin(ctx, result.origin(), user);
         }
+    }
+
+    // the provider's verified email names the user; a scope that already holds that email refuses the identity
+    private Future<UserParticipantIdentity> createOnSignIn(UserParticipantIdentity template,
+                                                           String sub,
+                                                           CallbackResult<? extends OidcConfiguration> result) {
+        Map<String, Object> claims = result.claims();
+        String email = OAuth2Util.stringClaim(claims, "email");
+        Future<UserParticipantIdentity> ret;
+        if (email == null) {
+            ret = Future.failedFuture(new OidcCallbackException(OidcErrorCodes.INVALID_TOKEN));
+        } else {
+            template.setOidcSubject(sub)
+                    .setOidcConfigId(result.config().getId())
+                    .setEmail(email)
+                    .setDisplayName(OAuth2Util.firstPresent(claims, "name", "preferred_username", "email"));
+            ret = identityService.createUser(template, null)
+                                 .recover(err -> Future.failedFuture(err instanceof IllegalArgumentException
+                                         ? new OidcCallbackException(OidcErrorCodes.ACCOUNT_EXISTS) : err));
+        }
+        return ret;
     }
 
     /**
@@ -462,8 +515,14 @@ public abstract class AuthEndpointSupport {
                   }
               })
               .onFailure(err -> {
-                  log.warn("Login resolution failed: {}", err.getMessage());
-                  redirectError(ctx, origin, OidcErrorCodes.LOOKUP_FAILED);
+                  String code;
+                  if (err instanceof OidcCallbackException oce) {
+                      code = oce.getErrorCode();
+                  } else {
+                      log.warn("Login resolution failed: {}", err.getMessage());
+                      code = OidcErrorCodes.LOOKUP_FAILED;
+                  }
+                  redirectError(ctx, origin, code);
               });
     }
 }

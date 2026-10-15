@@ -14,12 +14,14 @@ import org.kinotic.domain.api.rest.support.CallbackResult;
 import org.kinotic.domain.api.rest.support.OidcCallbackException;
 import org.kinotic.domain.api.rest.support.OidcErrorCodes;
 import org.kinotic.domain.api.rest.support.OidcFlowOrchestrator;
+import org.kinotic.domain.api.model.TenantManagement;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 import org.kinotic.domain.api.model.security.ApplicationSocialOidcConfiguration;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
+import org.kinotic.domain.api.repositories.ApplicationRepository;
+import org.kinotic.domain.api.services.security.OidcConfigurationService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.services.security.LocalAuthenticationService;
-import org.kinotic.domain.api.services.security.LoginProviderService;
 import org.kinotic.domain.api.rest.SuppliesGatewayRoutes;
 import org.springframework.stereotype.Component;
 
@@ -41,7 +43,8 @@ import org.springframework.stereotype.Component;
 public class ApplicationLoginHandler implements SuppliesGatewayRoutes {
 
     private final ParticipantIdentityService identityService;
-    private final LoginProviderService loginProviderService;
+    private final OidcConfigurationService oidcConfigurationService;
+    private final ApplicationRepository applicationRepository;
     private final LocalAuthenticationService localAuthenticationService;
     private final OidcFlowOrchestrator oidcFlowOrchestrator;
     private final ApplicationAuthEndpointSupport authEndpointSupport;
@@ -61,7 +64,7 @@ public class ApplicationLoginHandler implements SuppliesGatewayRoutes {
      */
     private void handleProviders(RoutingContext ctx) {
         ApplicationKey applicationKey = authEndpointSupport.applicationKey(ctx);
-        loginProviderService.findEnabledForScope(applicationKey.organizationId(), applicationKey.applicationId())
+        oidcConfigurationService.findEnabledForScope(applicationKey.organizationId(), applicationKey.applicationId())
               .onSuccess(configs -> authEndpointSupport.respondProvidersList(ctx, configs))
               .onFailure(err -> {
                   log.warn("Failed to list app providers for {}: {}", HostLabelUtil.label(applicationKey), err.getMessage());
@@ -86,7 +89,7 @@ public class ApplicationLoginHandler implements SuppliesGatewayRoutes {
             return;
         }
 
-        loginProviderService.findOffered(configId, applicationKey.organizationId(), applicationKey.applicationId())
+        oidcConfigurationService.findOffered(configId, applicationKey.organizationId(), applicationKey.applicationId())
               .compose(config -> {
                   Future<String> ret;
                   switch (config) {
@@ -126,6 +129,10 @@ public class ApplicationLoginHandler implements SuppliesGatewayRoutes {
      * {@code GET /api/auth/app/login/oidc/callback/:configId} — the IdP returns here;
      * validates the callback and logs the user into the application. The pre-auth flow has
      * no participant bound, so the config lookup is scoped by the application's organization.
+     * An identity no user is bound to becomes a user of the application when the configuration
+     * creates users on sign-in and the platform manages the application's tenants, which gives
+     * the new user a tenant; under tenant administrators a user is created by an administrator or
+     * an invitation, since a user without a tenant is not allowed there.
      */
     private void handleCallback(RoutingContext ctx) {
         ApplicationKey applicationKey = authEndpointSupport.applicationKey(ctx);
@@ -133,7 +140,7 @@ public class ApplicationLoginHandler implements SuppliesGatewayRoutes {
 
         oidcFlowOrchestrator.<OidcConfiguration>handleCallback(
                 ctx, pathConfigId, callbackUrl(applicationKey, pathConfigId),
-                (_, _) -> loginProviderService.findOffered(pathConfigId, applicationKey.organizationId(), applicationKey.applicationId()))
+                (_, _) -> oidcConfigurationService.findOffered(pathConfigId, applicationKey.organizationId(), applicationKey.applicationId()))
                 .onSuccess(result -> completeAppLogin(ctx, result, applicationKey))
                 .onFailure(ex -> authEndpointSupport.redirectCallbackFailure(ctx, ex));
     }
@@ -143,7 +150,23 @@ public class ApplicationLoginHandler implements SuppliesGatewayRoutes {
                                   ApplicationKey applicationKey) {
         authEndpointSupport.completeOidcLogin(ctx, result,
                 sub -> identityService.findByOidcIdentity(sub, result.config().getId(),
-                                                         applicationKey.organizationId(), applicationKey.applicationId()));
+                                                         applicationKey.organizationId(), applicationKey.applicationId()),
+                () -> newUserOf(applicationKey));
+    }
+
+    // the unsaved user an unknown identity becomes, or null while the application's tenants are its administrators'
+    // to assign, since a user there is never without a tenant
+    private Future<UserParticipantIdentity> newUserOf(ApplicationKey applicationKey) {
+        return applicationRepository.findById(applicationKey.applicationId(), applicationKey.organizationId())
+                                    .map(application -> {
+                                        UserParticipantIdentity ret = null;
+                                        if (application != null && application.getTenantManagement() == TenantManagement.PLATFORM) {
+                                            ret = new UserParticipantIdentity();
+                                            ret.setOrganizationId(applicationKey.organizationId())
+                                               .setApplicationId(applicationKey.applicationId());
+                                        }
+                                        return ret;
+                                    });
     }
 
     // the application's API host is the callback's base, so the IdP returns the browser to the host it left

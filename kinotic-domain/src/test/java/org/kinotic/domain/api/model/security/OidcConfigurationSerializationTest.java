@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Covers the polymorphic wire and index shape of {@link OidcConfiguration}: the {@code type}
  * discriminator each document carries, resolution back to the concrete subtype when deserializing
  * through the base class — the shape every repository read depends on — for each managed kind and the
- * organization's, and that an organization's configuration carries no field naming a secret.
+ * organization's own kinds, and that an organization's configuration carries no field naming a secret.
  */
 class OidcConfigurationSerializationTest {
 
@@ -77,5 +77,28 @@ class OidcConfigurationSerializationTest {
         OrganizationOidcConfiguration readOwned = assertInstanceOf(OrganizationOidcConfiguration.class, read);
         assertEquals("acme", readOwned.getOrganizationId());
         assertEquals("acme.okta.com", readOwned.getProviderAccount());
+    }
+
+    @Test
+    void applicationConfigurationRoundTripsWithItsScope() {
+        ApplicationOidcConfiguration owned = new ApplicationOidcConfiguration();
+        owned.setApplicationId("orders");
+        owned.setOrganizationId("acme")
+             .setProviderAccount("9f1a4c2e-3b7d-4e8f-a1b2-c3d4e5f60718")
+             .setCreateUserOnSignIn(true);
+        owned.setName("Acme Entra")
+             .setProvider(OidcProviderKind.AZURE_AD)
+             .setClientId("client")
+             .setId("config-2");
+
+        String json = jsonMapper.writeValueAsString(owned);
+        assertTrue(json.contains("\"type\":\"APPLICATION\""), "document must carry the discriminator: " + json);
+        assertFalse(json.toLowerCase(Locale.ROOT).contains("secret"), "an organization's row names no secret: " + json);
+
+        OidcConfiguration read = jsonMapper.readValue(json, OidcConfiguration.class);
+        ApplicationOidcConfiguration readOwned = assertInstanceOf(ApplicationOidcConfiguration.class, read);
+        assertEquals("acme", readOwned.getOrganizationId());
+        assertEquals("orders", readOwned.getApplicationId());
+        assertTrue(readOwned.isCreateUserOnSignIn());
     }
 }

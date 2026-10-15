@@ -13,13 +13,14 @@ import java.util.Date;
 /**
  * A persisted OIDC provider configuration: the provider, the client Kinotic registered with it, and
  * the issuer a sign-in through it uses. The concrete subtype states who owns the configuration and
- * carries the fields only that owner has: a {@link ManagedOidcConfiguration} is a registration the
- * platform operator holds with a provider, offered as {@link OrgSignupOidcConfiguration} to
- * organization sign-up or as {@link ApplicationSocialOidcConfiguration} to applications' sign-in,
- * and an {@link OrganizationOidcConfiguration} is one an organization configures for itself. The
- * client secret is never a field of a configuration: each subtype says where its secret is held and
- * who may read it. All subtypes share one id space and one index; {@link #getType()} is the
- * persisted discriminator the document is deserialized by.
+ * where it is offered, and carries the fields only that owner has: a {@link ManagedOidcConfiguration}
+ * is a registration the platform operator holds with a provider, offered as
+ * {@link OrgSignupOidcConfiguration} to organization sign-up and sign-in or as
+ * {@link ApplicationSocialOidcConfiguration} to the applications that name its provider; an
+ * {@link OwnedOidcConfiguration} is one an organization configures for exactly one of its sign-in
+ * scopes. The client secret is never a field of a configuration: each subtype says where its secret
+ * is held and who may read it. All subtypes share one id space and one index; {@link #getType()} is
+ * the persisted discriminator the document is deserialized by.
  */
 @Getter
 @Setter
@@ -29,10 +30,11 @@ import java.util.Date;
 @JsonSubTypes({
         @JsonSubTypes.Type(value = OrgSignupOidcConfiguration.class, name = "ORG_SIGNUP"),
         @JsonSubTypes.Type(value = ApplicationSocialOidcConfiguration.class, name = "APP_SOCIAL"),
-        @JsonSubTypes.Type(value = OrganizationOidcConfiguration.class, name = "ORGANIZATION")
+        @JsonSubTypes.Type(value = OrganizationOidcConfiguration.class, name = "ORGANIZATION"),
+        @JsonSubTypes.Type(value = ApplicationOidcConfiguration.class, name = "APPLICATION")
 })
 public abstract sealed class OidcConfiguration implements Identifiable<String>
-        permits ManagedOidcConfiguration, OrganizationOidcConfiguration {
+        permits ManagedOidcConfiguration, OwnedOidcConfiguration {
 
     private String id;
 
@@ -65,8 +67,8 @@ public abstract sealed class OidcConfiguration implements Identifiable<String>
     private String audience;
 
     /**
-     * Disabled rows are kept in their table for audit/history but excluded from runtime
-     * provider lists.
+     * Whether the configuration is offered at its scope's sign-in. A disabled configuration is kept for
+     * audit and history, signs no one in, and is listed on no login page.
      */
     private boolean enabled;
 
@@ -75,8 +77,8 @@ public abstract sealed class OidcConfiguration implements Identifiable<String>
     private Date updated;
 
     /**
-     * Who owns this configuration; fixed by the concrete subtype and persisted as the polymorphic
-     * discriminator of the document.
+     * Who owns this configuration and where it is offered; fixed by the concrete subtype and persisted
+     * as the polymorphic discriminator of the document.
      */
     public abstract OidcConfigurationType getType();
 }

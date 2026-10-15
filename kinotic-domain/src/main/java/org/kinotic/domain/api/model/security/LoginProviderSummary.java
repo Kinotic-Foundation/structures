@@ -8,7 +8,7 @@ package org.kinotic.domain.api.model.security;
  * @param configurationId the id of the {@link OidcConfiguration} offered
  * @param name            the name the provider is shown by
  * @param provider        the provider kind, for branding
- * @param type            whose registration it is: the organization's own, or one Kinotic manages
+ * @param type            whose registration it is: one the organization made for the scope, or one Kinotic manages
  */
 public record LoginProviderSummary(String configurationId, String name, OidcProviderKind provider, OidcConfigurationType type) {
 

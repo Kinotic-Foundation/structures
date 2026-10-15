@@ -23,7 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.kinotic.core.api.secret.SecretReferenceResolver;
 import org.kinotic.core.api.security.SessionBinding;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
-import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
+import org.kinotic.domain.api.model.security.OwnedOidcConfiguration;
 import org.kinotic.domain.api.model.ApplicationKey;
 import org.kinotic.domain.api.model.security.ManagedOidcConfiguration;
 import org.kinotic.domain.api.services.security.OidcConfigurationService;
@@ -191,15 +191,17 @@ public class OidcFlowOrchestrator {
 
     /**
      * {@link #startFlow(RoutingContext, OidcConfiguration, String, String)} for an
-     * invitation-accept flow: additionally stashes the invite's accept token on the session
-     * so the callback can complete the acceptance.
+     * invitation-accept flow: stashes the invitation's scope, the organization and the application
+     * when the invitation is to one, for the callback to resolve its configuration by, and the
+     * invite's accept token so the callback can complete the acceptance.
      */
     public Future<String> startFlow(RoutingContext ctx,
                                     OidcConfiguration config,
                                     String callbackUrl,
                                     String orgId,
+                                    String applicationId,
                                     String inviteToken) {
-        return startFlow(ctx, config, callbackUrl, orgId, null, inviteToken, SessionBinding.origin(ctx));
+        return startFlow(ctx, config, callbackUrl, orgId, applicationId, inviteToken, SessionBinding.origin(ctx));
     }
 
     /**
@@ -499,7 +501,7 @@ public class OidcFlowOrchestrator {
         return switch (config) {
             case ManagedOidcConfiguration managed -> secretReferenceResolver.resolve(managed.getSecretNameRef());
             // an organization's administrator controls this row, so nothing on it may name a platform secret
-            case OrganizationOidcConfiguration owned -> oidcConfigurationService.findClientSecret(owned);
+            case OwnedOidcConfiguration owned -> oidcConfigurationService.findClientSecret(owned);
         };
     }
 

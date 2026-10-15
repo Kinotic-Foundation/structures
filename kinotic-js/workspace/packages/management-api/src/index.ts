@@ -79,6 +79,7 @@ export * from '@/api/model/workload/Workload'
 export * from '@/api/model/workload/WorkloadStatus'
 
 export * from '@/api/model/security/AuthType'
+export * from '@/api/model/security/OidcProviderKind'
 export * from '@/api/model/security/ParticipantIdentity'
 export * from '@/api/model/security/UserParticipantIdentity'
 export * from '@/api/model/security/DelegatingParticipantIdentity'

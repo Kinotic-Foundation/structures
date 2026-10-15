@@ -48,7 +48,7 @@ public class OidcConfigurationSecretTests extends KinoticTestBase {
         assertEquals("acme-secret-1", await(oidcConfigurations.findClientSecret(saved)));
 
         // what a client reads back is the row as persisted, which says a secret is held and names nothing about it
-        OrganizationOidcConfiguration read = await(oidcConfigurations.findById(saved.getId(), TEST_ORG_ID));
+        OrganizationOidcConfiguration read = (OrganizationOidcConfiguration) await(oidcConfigurations.findOwnedById(saved.getId(), TEST_ORG_ID));
         assertTrue(read.isConfidentialClient());
         String json = objectMapper.writeValueAsString(read);
         assertFalse(json.toLowerCase(Locale.ROOT).contains("secret"), json);
@@ -75,7 +75,7 @@ public class OidcConfigurationSecretTests extends KinoticTestBase {
 
         // deleting the configuration deletes its secret
         await(runAsOrganization(() -> oidcConfigurations.deleteById(saved.getId())));
-        assertNull(await(oidcConfigurations.findById(saved.getId(), TEST_ORG_ID)));
+        assertNull(await(oidcConfigurations.findOwnedById(saved.getId(), TEST_ORG_ID)));
         assertNull(await(oidcConfigurations.findClientSecret(confidentialAgain)));
     }
 

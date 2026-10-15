@@ -15,9 +15,10 @@ import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.management.api.repositories.UiDeploymentRepository;
 import org.kinotic.management.api.services.ApplicationService;
 import org.kinotic.management.api.services.ProjectService;
-import org.kinotic.domain.api.services.security.LoginProviderService;
+import org.kinotic.domain.api.services.security.OidcConfigurationService;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -28,17 +29,17 @@ public class DefaultApplicationService extends AbstractOrganizationScopedService
     private static final int MIN_UI_NAME_LENGTH = 1;
 
     private final ProjectService projectService;
-    private final LoginProviderService loginProviderService;
+    private final OidcConfigurationService oidcConfigurationService;
     private final UiDeploymentRepository uiDeploymentRepository;
 
     public DefaultApplicationService(ApplicationRepository repository,
                                      ProjectService projectService,
-                                     LoginProviderService loginProviderService,
+                                     OidcConfigurationService oidcConfigurationService,
                                      UiDeploymentRepository uiDeploymentRepository,
                                      SecurityContext securityContext) {
         super(repository, securityContext);
         this.projectService = projectService;
-        this.loginProviderService = loginProviderService;
+        this.oidcConfigurationService = oidcConfigurationService;
         this.uiDeploymentRepository = uiDeploymentRepository;
     }
 
@@ -113,6 +114,12 @@ public class DefaultApplicationService extends AbstractOrganizationScopedService
                         "The application's host label '%s' leaves no room for a UI name in its sites' labels, which DNS limits"
                                 + " to %d characters; shorten the application name",
                         HostLabelUtil.label(applicationKey), HostLabelUtil.MAX_HOST_LABEL_LENGTH);
+        if (entity.getSocialProviders() == null) {
+            entity.setSocialProviders(new ArrayList<>());
+        }
+        Validate.noNullElements(entity.getSocialProviders(), "socialProviders cannot hold null");
+        Validate.isTrue(entity.getSocialProviders().stream().distinct().count() == entity.getSocialProviders().size(),
+                        "socialProviders names a provider twice");
         entity.setUpdated(new Date());
         Future<String> primaryUiUrl;
         if (entity.getPrimaryUiId() == null) {
@@ -146,7 +153,7 @@ public class DefaultApplicationService extends AbstractOrganizationScopedService
         return findById(applicationId)
                 .compose(application -> {
                     Validate.isTrue(application != null, "Application not found: %s", applicationId);
-                    return loginProviderService.findEnabledForScope(application.getOrganizationId(), applicationId)
+                    return oidcConfigurationService.findEnabledForScope(application.getOrganizationId(), applicationId)
                                                .map(offered -> offered.stream().map(LoginProviderSummary::of).toList());
                 });
     }

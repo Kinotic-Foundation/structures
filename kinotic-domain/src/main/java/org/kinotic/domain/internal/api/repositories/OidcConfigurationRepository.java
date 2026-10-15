@@ -1,6 +1,6 @@
 package org.kinotic.domain.internal.api.repositories;
 
-import co.elastic.clients.elasticsearch._types.query_dsl.IdsQuery;
+import co.elastic.clients.elasticsearch._types.FieldValue;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import io.vertx.core.Future;
 import org.apache.commons.lang3.Validate;
@@ -10,24 +10,27 @@ import org.kinotic.domain.api.model.security.ApplicationSocialOidcConfiguration;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.OidcConfigurationType;
 import org.kinotic.domain.api.model.security.OidcProviderKind;
-import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
 import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
+import org.kinotic.domain.api.model.security.OwnedOidcConfiguration;
 import org.kinotic.domain.internal.api.services.CrudServiceTemplate;
 import org.springframework.stereotype.Component;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 
 /**
- * Every {@link OidcConfiguration} in one index, the platform's managed registrations and the organizations' own alike, told
- * apart by the persisted {@code type} discriminator. The owner-specific finders filter on it, so a
- * lookup for one kind never answers with the other.
+ * Every {@link OidcConfiguration} in one index, the platform's managed registrations and the organizations' own
+ * alike, told apart by the persisted {@code type} discriminator. The owner-specific finders filter on it, so a
+ * lookup for one kind never answers with another.
  */
 @Component
 public class OidcConfigurationRepository extends AbstractRepository<OidcConfiguration> {
 
     private static final String TYPE_FIELD = "type";
     private static final String ORGANIZATION_ID_FIELD = "organizationId";
+    private static final String APPLICATION_ID_FIELD = "applicationId";
+    private static final String PROVIDER_FIELD = "provider";
     private static final String ENABLED_FIELD = "enabled";
 
     public OidcConfigurationRepository(CrudServiceTemplate crudServiceTemplate) {
@@ -51,7 +54,7 @@ public class OidcConfigurationRepository extends AbstractRepository<OidcConfigur
     public Future<OrgSignupOidcConfiguration> findEnabledOrgSignupByProvider(OidcProviderKind provider) {
         return findFirst(b -> b.query(composeFilter(
                 termFilter(TYPE_FIELD, OidcConfigurationType.ORG_SIGNUP.name()),
-                termFilter("provider", provider.key()),
+                termFilter(PROVIDER_FIELD, provider.key()),
                 termFilter(ENABLED_FIELD, true))))
                 .map(OrgSignupOidcConfiguration.class::cast);
     }
@@ -65,45 +68,72 @@ public class OidcConfigurationRepository extends AbstractRepository<OidcConfigur
     }
 
     /**
-     * The configuration {@code id} of organization {@code orgId}, enabled or not, or {@code null} when
-     * that organization has none by that id.
+     * The social registration {@code id}, enabled or not, or {@code null} when no
+     * {@link ApplicationSocialOidcConfiguration} has that id.
      */
-    public Future<OrganizationOidcConfiguration> findById(String id, String orgId) {
+    public Future<ApplicationSocialOidcConfiguration> findSocialById(String id) {
+        return findById(id).map(config -> config instanceof ApplicationSocialOidcConfiguration social ? social : null);
+    }
+
+    /**
+     * The social registrations of the given provider kinds, enabled or not, in the order of {@code providers}.
+     * A kind the platform holds no registration for is left out.
+     */
+    public Future<List<ApplicationSocialOidcConfiguration>> findSocialByProviders(Collection<OidcProviderKind> providers) {
+        Future<List<ApplicationSocialOidcConfiguration>> ret;
+        if (providers.isEmpty()) {
+            ret = Future.succeededFuture(List.of());
+        } else {
+            List<FieldValue> keys = providers.stream().map(kind -> FieldValue.of(kind.key())).toList();
+            ret = findAll(Pageable.ofSize(providers.size()), b -> b.query(composeFilter(
+                    termFilter(TYPE_FIELD, OidcConfigurationType.APP_SOCIAL.name()),
+                    Query.of(q -> q.terms(t -> t.field(PROVIDER_FIELD).terms(v -> v.value(keys)))))))
+                    .map(Page::getContent)
+                    .map(found -> providers.stream()
+                                           .map(kind -> found.stream()
+                                                             .map(ApplicationSocialOidcConfiguration.class::cast)
+                                                             .filter(config -> config.getProvider() == kind)
+                                                             .findFirst()
+                                                             .orElse(null))
+                                           .filter(Objects::nonNull)
+                                           .toList());
+        }
+        return ret;
+    }
+
+    /**
+     * The configuration {@code id} that organization {@code orgId} owns, of any owned kind, enabled or not, or
+     * {@code null} when that organization owns none by that id.
+     */
+    public Future<OwnedOidcConfiguration> findOwnedById(String id, String orgId) {
         Validate.notBlank(orgId, "orgId cannot be blank");
-        return findById(id).map(config -> config instanceof OrganizationOidcConfiguration owned
+        return findById(id).map(config -> config instanceof OwnedOidcConfiguration owned
                                           && Objects.equals(orgId, owned.getOrganizationId()) ? owned : null);
     }
 
     /**
-     * The configuration {@code id} that organization {@code orgId} may offer at a sign-in, enabled or not:
-     * its own {@link OrganizationOidcConfiguration}, or an {@link ApplicationSocialOidcConfiguration}, which
-     * every organization may offer. {@code null} when no such configuration has that id.
+     * The enabled configurations organization {@code orgId} made for one of its sign-in scopes, oldest first: its
+     * {@link org.kinotic.domain.api.model.security.OrganizationOidcConfiguration}s when {@code applicationId} is
+     * null, else the {@link org.kinotic.domain.api.model.security.ApplicationOidcConfiguration}s of that
+     * application.
      */
-    public Future<OidcConfiguration> findOfferable(String id, String orgId) {
+    public Future<List<OwnedOidcConfiguration>> findEnabledOwnedByScope(String orgId, String applicationId) {
         Validate.notBlank(orgId, "orgId cannot be blank");
-        return findById(id).map(config -> switch (config) {
-            case OrganizationOidcConfiguration owned when Objects.equals(orgId, owned.getOrganizationId()) -> owned;
-            case ApplicationSocialOidcConfiguration social -> social;
-            case null, default -> null;
-        });
+        return findAll(Pageable.ofSize(100), b -> b.query(composeFilter(
+                scopeFilter(orgId, applicationId),
+                termFilter(ENABLED_FIELD, true)))
+                .sort(s -> s.field(f -> f.field("created"))))
+                .map(page -> page.map(OwnedOidcConfiguration.class::cast))
+                .map(Page::getContent);
     }
 
-    /**
-     * Returns the enabled configurations among {@code ids} that organization {@code orgId} may offer at a
-     * sign-in: its own and the {@link ApplicationSocialOidcConfiguration}s.
-     */
-    public Future<List<OidcConfiguration>> findEnabledByIds(List<String> ids, String orgId) {
-        Validate.notBlank(orgId, "orgId cannot be blank");
-        Validate.notEmpty(ids, "ids cannot be null or empty");
-        Query ownedByOrg = composeFilter(termFilter(TYPE_FIELD, OidcConfigurationType.ORGANIZATION.name()),
-                                         termFilter(ORGANIZATION_ID_FIELD, orgId));
-        Query offerable = Query.of(q -> q.bool(b -> b
-                .should(ownedByOrg, termFilter(TYPE_FIELD, OidcConfigurationType.APP_SOCIAL.name()))
-                .minimumShouldMatch("1")));
-        return findAll(Pageable.ofSize(ids.size()), b -> b.query(composeFilter(
-                IdsQuery.of(i -> i.values(ids))._toQuery(),
-                offerable,
-                termFilter(ENABLED_FIELD, true))))
-                .map(Page::getContent);
+    // the owned kind of a scope is its discriminator, so a scope's configurations are one kind at one owner
+    private Query scopeFilter(String orgId, String applicationId) {
+        return applicationId == null
+                ? composeFilter(termFilter(TYPE_FIELD, OidcConfigurationType.ORGANIZATION.name()),
+                                termFilter(ORGANIZATION_ID_FIELD, orgId))
+                : composeFilter(termFilter(TYPE_FIELD, OidcConfigurationType.APPLICATION.name()),
+                                termFilter(ORGANIZATION_ID_FIELD, orgId),
+                                termFilter(APPLICATION_ID_FIELD, applicationId));
     }
 }

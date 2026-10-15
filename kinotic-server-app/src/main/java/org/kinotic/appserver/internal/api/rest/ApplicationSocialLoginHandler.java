@@ -16,7 +16,7 @@ import org.kinotic.domain.api.rest.support.CallbackResult;
 import org.kinotic.domain.api.rest.support.OidcCallbackException;
 import org.kinotic.domain.api.rest.support.OidcErrorCodes;
 import org.kinotic.domain.api.rest.support.OidcFlowOrchestrator;
-import org.kinotic.domain.api.services.security.LoginProviderService;
+import org.kinotic.domain.api.services.security.OidcConfigurationService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.utils.HostLabelUtil;
 import org.springframework.stereotype.Component;
@@ -42,7 +42,7 @@ public class ApplicationSocialLoginHandler implements SuppliesGatewayRoutes {
     private static final String COMPLETE_PATH = "/api/auth/app/login/social/complete/";
 
     private final ParticipantIdentityService identityService;
-    private final LoginProviderService loginProviderService;
+    private final OidcConfigurationService oidcConfigurationService;
     private final OidcFlowOrchestrator oidcFlowOrchestrator;
     private final SocialLoginHandoffService handoffService;
     private final ApplicationAuthEndpointSupport authEndpointSupport;
@@ -72,7 +72,7 @@ public class ApplicationSocialLoginHandler implements SuppliesGatewayRoutes {
             return;
         }
 
-        loginProviderService.findOffered(configId, applicationKey.organizationId(), applicationKey.applicationId())
+        oidcConfigurationService.findOffered(configId, applicationKey.organizationId(), applicationKey.applicationId())
               .compose(config -> {
                   Future<String> ret;
                   if (config instanceof ApplicationSocialOidcConfiguration) {
@@ -103,7 +103,7 @@ public class ApplicationSocialLoginHandler implements SuppliesGatewayRoutes {
 
         oidcFlowOrchestrator.<OidcConfiguration>handleCallback(
                 ctx, pathConfigId, callbackUrl(pathConfigId),
-                (orgId, applicationId) -> loginProviderService.findOffered(pathConfigId, orgId, applicationId))
+                (orgId, applicationId) -> oidcConfigurationService.findOffered(pathConfigId, orgId, applicationId))
                 .onSuccess(result -> handOff(ctx, result))
                 .onFailure(ex -> {
                     String code = ex instanceof OidcCallbackException oce ? oce.getErrorCode() : OidcErrorCodes.EXCHANGE_FAILED;

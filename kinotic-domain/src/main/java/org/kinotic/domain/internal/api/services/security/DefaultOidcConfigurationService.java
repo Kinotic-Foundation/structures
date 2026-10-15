@@ -5,19 +5,25 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.core.api.exceptions.AuthorizationException;
 import org.kinotic.core.api.security.SecurityContext;
+import org.kinotic.domain.api.model.Application;
+import org.kinotic.domain.api.model.security.ApplicationOidcConfiguration;
+import org.kinotic.domain.api.model.security.ApplicationSocialOidcConfiguration;
 import org.kinotic.domain.api.model.security.ManagedOidcConfiguration;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.OidcProviderKind;
 import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
 import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
+import org.kinotic.domain.api.model.security.OwnedOidcConfiguration;
 import org.kinotic.domain.api.model.security.participant.OrganizationParticipant;
 import org.kinotic.domain.api.model.security.participant.SystemParticipant;
+import org.kinotic.domain.api.repositories.ApplicationRepository;
 import org.kinotic.domain.api.services.SecretStorageService;
 import org.kinotic.domain.api.services.security.OidcConfigurationService;
 import org.kinotic.domain.internal.api.repositories.OidcConfigurationRepository;
 import org.kinotic.domain.internal.api.services.AbstractCrudService;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
@@ -26,14 +32,17 @@ import java.util.UUID;
 public class DefaultOidcConfigurationService extends AbstractCrudService<OidcConfiguration> implements OidcConfigurationService {
 
     private final OidcConfigurationRepository oidcRepository;
+    private final ApplicationRepository applicationRepository;
     private final SecretStorageService secretStorageService;
     private final SecurityContext securityContext;
 
     public DefaultOidcConfigurationService(OidcConfigurationRepository repository,
+                                           ApplicationRepository applicationRepository,
                                            SecretStorageService secretStorageService,
                                            SecurityContext securityContext) {
         super(repository);
         this.oidcRepository = repository;
+        this.applicationRepository = applicationRepository;
         this.secretStorageService = secretStorageService;
         this.securityContext = securityContext;
     }
@@ -43,17 +52,21 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
         Validate.notNull(entity.getName(), "OidcConfiguration name cannot be null");
         Validate.notNull(entity.getProvider(), "OidcConfiguration provider cannot be null");
         requireOwner(entity);
-        if (entity instanceof OrganizationOidcConfiguration owned) {
+        Future<Void> ret = Future.succeededFuture();
+        if (entity instanceof OwnedOidcConfiguration owned) {
             // the organization names its account at the provider, never a URL: the kind's template
             // decides the issuer, so the server only ever connects to the provider's own hosts
             owned.setAuthority(owned.getProvider().authority(owned.getProviderAccount()));
+            if (owned instanceof ApplicationOidcConfiguration forApplication) {
+                ret = requireApplication(forApplication.getOrganizationId(), forApplication.getApplicationId()).mapEmpty();
+            }
         }
         if (entity.getId() == null) {
             entity.setId(UUID.randomUUID().toString());
             entity.setCreated(new Date());
         }
         entity.setUpdated(new Date());
-        return Future.succeededFuture();
+        return ret;
     }
 
     @Override
@@ -64,7 +77,7 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
                 ret = Future.succeededFuture();
             } else {
                 requireOwner(existing);
-                ret = existing instanceof OrganizationOidcConfiguration owned
+                ret = existing instanceof OwnedOidcConfiguration owned
                         ? secretStorageService.deleteSecret(owned.getOrganizationId(), id)
                         : Future.succeededFuture();
             }
@@ -83,16 +96,29 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
     private void requireOwner(OidcConfiguration configuration) {
         switch (configuration) {
             case ManagedOidcConfiguration _ -> securityContext.requireParticipant(SystemParticipant.class);
-            case OrganizationOidcConfiguration owned -> {
-                Validate.notBlank(owned.getOrganizationId(), "Organization id must be set on OrganizationOidcConfiguration");
-                String orgId = securityContext.requireParticipant(OrganizationParticipant.class).getOrganizationId();
+            case OwnedOidcConfiguration owned -> {
+                Validate.notBlank(owned.getOrganizationId(), "Organization id must be set on %s", owned.getClass().getSimpleName());
+                String orgId = requireOrganizationId();
                 if (!orgId.equals(owned.getOrganizationId())) {
-                    throw new AuthorizationException("Cannot write OrganizationOidcConfiguration with organizationId '"
+                    throw new AuthorizationException("Cannot write " + owned.getClass().getSimpleName() + " with organizationId '"
                                                      + owned.getOrganizationId() + "' while authenticated as organization '"
                                                      + orgId + "'");
                 }
             }
         }
+    }
+
+    private String requireOrganizationId() {
+        return securityContext.requireParticipant(OrganizationParticipant.class).getOrganizationId();
+    }
+
+    // the application whose login an ApplicationOidcConfiguration is offered at must be the organization's own
+    private Future<Application> requireApplication(String orgId, String applicationId) {
+        Validate.isTrue(StringUtils.isNotBlank(applicationId), "Application id must be set on ApplicationOidcConfiguration");
+        return applicationRepository.findById(applicationId, orgId).map(application -> {
+            Validate.isTrue(application != null, "Organization %s has no application %s", orgId, applicationId);
+            return application;
+        });
     }
 
     @Override
@@ -113,32 +139,74 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
     }
 
     @Override
-    public Future<List<OidcConfiguration>> findEnabledByIds(List<String> ids, String orgId) {
-        Validate.notEmpty(ids, "ids cannot be null or empty");
-        Validate.notBlank(orgId, "orgId cannot be blank");
-        return oidcRepository.findEnabledByIds(ids, orgId);
+    public Future<List<OidcConfiguration>> findEnabledForScope(String organizationId, String applicationId) {
+        Validate.notBlank(organizationId, "organizationId cannot be blank");
+        Future<List<OwnedOidcConfiguration>> own = oidcRepository.findEnabledOwnedByScope(organizationId, applicationId);
+        Future<List<OidcConfiguration>> ret;
+        if (applicationId == null) {
+            ret = Future.all(oidcRepository.findEnabledOrgSignup(), own)
+                        .map(cf -> {
+                            List<OidcConfiguration> offered = new ArrayList<>(cf.<List<OidcConfiguration>>resultAt(0));
+                            offered.addAll(cf.<List<OidcConfiguration>>resultAt(1));
+                            return offered;
+                        });
+        } else {
+            ret = Future.all(own, findEnabledSocial(organizationId, applicationId))
+                        .map(cf -> {
+                            List<OidcConfiguration> offered = new ArrayList<>(cf.<List<OidcConfiguration>>resultAt(0));
+                            offered.addAll(cf.<List<OidcConfiguration>>resultAt(1));
+                            return offered;
+                        });
+        }
+        return ret;
+    }
+
+    // the enabled platform social registrations the application names, in the application's order
+    private Future<List<ApplicationSocialOidcConfiguration>> findEnabledSocial(String organizationId, String applicationId) {
+        return applicationRepository.findById(applicationId, organizationId)
+                                    .compose(application -> application == null || application.getSocialProviders().isEmpty()
+                                            ? Future.succeededFuture(List.of())
+                                            : oidcRepository.findSocialByProviders(application.getSocialProviders()))
+                                    .map(registrations -> registrations.stream().filter(OidcConfiguration::isEnabled).toList());
     }
 
     @Override
-    public Future<OidcConfiguration> findOfferable(String id, String organizationId) {
+    public Future<OidcConfiguration> findOffered(String configurationId, String organizationId, String applicationId) {
+        Validate.notBlank(configurationId, "configurationId cannot be blank");
+        Validate.notBlank(organizationId, "organizationId cannot be blank");
+        return oidcRepository.findById(configurationId)
+                             .compose(configuration -> {
+                                 Future<Boolean> offered = switch (configuration) {
+                                     case OrganizationOidcConfiguration owned ->
+                                             Future.succeededFuture(applicationId == null && organizationId.equals(owned.getOrganizationId()));
+                                     case ApplicationOidcConfiguration owned ->
+                                             Future.succeededFuture(organizationId.equals(owned.getOrganizationId())
+                                                                    && owned.getApplicationId().equals(applicationId));
+                                     case ApplicationSocialOidcConfiguration social when applicationId != null ->
+                                             applicationRepository.findById(applicationId, organizationId)
+                                                                  .map(application -> application != null
+                                                                                      && application.getSocialProviders().contains(social.getProvider()));
+                                     // an org sign-up registration is started by its provider kind, never named by id
+                                     case null, default -> Future.succeededFuture(false);
+                                 };
+                                 return offered.map(yes -> yes && configuration.isEnabled() ? configuration : null);
+                             });
+    }
+
+    @Override
+    public Future<OwnedOidcConfiguration> findOwnedById(String id, String organizationId) {
         Validate.notBlank(id, "id cannot be blank");
         Validate.notBlank(organizationId, "organizationId cannot be blank");
-        return oidcRepository.findOfferable(id, organizationId);
+        return oidcRepository.findOwnedById(id, organizationId);
     }
 
     @Override
-    public Future<OrganizationOidcConfiguration> findById(String id, String organizationId) {
-        Validate.notBlank(id, "id cannot be blank");
-        Validate.notBlank(organizationId, "organizationId cannot be blank");
-        return oidcRepository.findById(id, organizationId);
-    }
-
-    @Override
-    public Future<OrganizationOidcConfiguration> save(OrganizationOidcConfiguration configuration, String clientSecret) {
+    public <C extends OwnedOidcConfiguration> Future<C> save(C configuration, String clientSecret) {
         boolean confidential = StringUtils.isNotBlank(clientSecret);
         // saved first: a new configuration is given the id its secret is keyed by in beforeSave
         return save(configuration.setConfidentialClient(confidential)).compose(saved -> {
-            OrganizationOidcConfiguration owned = (OrganizationOidcConfiguration) saved;
+            @SuppressWarnings("unchecked")
+            C owned = (C) saved;
             Future<Void> stored = confidential
                     ? secretStorageService.setSecret(owned.getOrganizationId(), owned.getId(), clientSecret)
                     : secretStorageService.deleteSecret(owned.getOrganizationId(), owned.getId());
@@ -147,7 +215,31 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
     }
 
     @Override
-    public Future<String> findClientSecret(OrganizationOidcConfiguration configuration) {
+    public Future<OwnedOidcConfiguration> copy(String sourceId, String applicationId) {
+        Validate.notBlank(sourceId, "sourceId cannot be blank");
+        String orgId = requireOrganizationId();
+        return oidcRepository.findOwnedById(sourceId, orgId)
+                             .compose(source -> {
+                                 Validate.isTrue(source != null, "Organization %s has no OIDC configuration %s", orgId, sourceId);
+                                 OwnedOidcConfiguration target;
+                                 if (applicationId == null) {
+                                     target = new OrganizationOidcConfiguration();
+                                 } else {
+                                     target = new ApplicationOidcConfiguration().setApplicationId(applicationId);
+                                 }
+                                 target.setOrganizationId(orgId)
+                                       .setProviderAccount(source.getProviderAccount())
+                                       .setName(source.getName())
+                                       .setProvider(source.getProvider())
+                                       .setClientId(source.getClientId())
+                                       .setAudience(source.getAudience())
+                                       .setEnabled(true);
+                                 return findClientSecret(source).compose(secret -> save(target, secret));
+                             });
+    }
+
+    @Override
+    public Future<String> findClientSecret(OwnedOidcConfiguration configuration) {
         Validate.notBlank(configuration.getId(), "The configuration has no id");
         Validate.notBlank(configuration.getOrganizationId(), "The configuration names no organization");
         return configuration.isConfidentialClient()

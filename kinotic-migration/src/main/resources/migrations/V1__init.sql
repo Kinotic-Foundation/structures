@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS kinotic_application (
     tenantManagement KEYWORD,
     primaryUiId KEYWORD,
     primaryUiUrl KEYWORD,
+    socialProviders KEYWORD,
     updated DATE
 );
 
@@ -230,22 +231,28 @@ CREATE TABLE IF NOT EXISTS kinotic_identity_credential (
 -- type the way kinotic_participant_identity is. ORG_SIGNUP and APP_SOCIAL rows are the platform's
 -- managed registrations (ManagedOidcConfiguration): they belong to no organization, are seeded below,
 -- and name their client secret in the platform's secret storage with secretNameRef. type=ORG_SIGNUP
--- (GitHub) powers the "Continue with X" buttons on org signup and email-first org login;
--- type=APP_SOCIAL (Google, Microsoft) is offered to applications' users by the kinotic_login_provider
--- rows an organization adds for its application. type=ORGANIZATION is a provider an
--- organization configured for itself (organizationId set, enforced by the service); where it is
--- used is expressed by the kinotic_login_provider rows that name it — and the row names
--- no client secret: OidcConfigurationService.save(configuration, clientSecret) holds the secret in
--- the organization's scope of the secret storage (SecretStorageService), keyed by the row's id, and
--- confidentialClient records that one is held. Nor does it name a URL: it names the organization's
--- account at the provider (providerAccount), and the authority is derived from the provider kind's
--- template on save. The endpoint overrides and scopes are columns of the managed kinds only.
+-- (GitHub) powers the "Continue with X" buttons on org signup and org login; type=APP_SOCIAL
+-- (Google, Microsoft) is offered at an application's login when kinotic_application.socialProviders
+-- names its provider kind. type=ORGANIZATION and type=APPLICATION are providers an organization
+-- configured for one of its own sign-in scopes (OwnedOidcConfiguration: organizationId set and enforced
+-- by the service, applicationId set for APPLICATION): the organization's own login, or that
+-- application's. A configuration is offered at its own scope only; an organization wanting the same
+-- provider at another scope copies it there (OidcConfigurationService.copy). createUserOnSignIn says
+-- whether an identity the provider verifies that no user of the scope is bound to becomes a user on
+-- first sign-in. The row names no client secret: OidcConfigurationService.save(configuration,
+-- clientSecret) holds the secret in the organization's scope of the secret storage
+-- (SecretStorageService), keyed by the row's id, and confidentialClient records that one is held. Nor
+-- does it name a URL: it names the organization's account at the provider (providerAccount), and the
+-- authority is derived from the provider kind's template on save. The endpoint overrides and scopes
+-- are columns of the managed kinds only.
 CREATE TABLE IF NOT EXISTS kinotic_oidc_configuration (
     id KEYWORD,
     type KEYWORD,
     organizationId KEYWORD,
+    applicationId KEYWORD,
     providerAccount KEYWORD NOT INDEXED,
     confidentialClient BOOLEAN,
+    createUserOnSignIn BOOLEAN,
     name KEYWORD,
     provider KEYWORD,
     clientId KEYWORD NOT INDEXED,
@@ -268,20 +275,6 @@ CREATE TABLE IF NOT EXISTS kinotic_organization (
     name KEYWORD,
     description TEXT,
     createdBy KEYWORD,
-    created DATE,
-    updated DATE
-);
-
--- Login provider (LoginProvider): a row of kinotic_oidc_configuration offered at one sign-in scope of
--- its organization — the organization's own login when applicationId is null, else that application's
--- login. The organization's own ORGANIZATION rows may be offered at either scope; an APP_SOCIAL row
--- at an application's only. One row per scope and configuration, so a configuration is set up once
--- and offered wherever it serves. Owned by the organization (organizationId enforced by the service).
-CREATE TABLE IF NOT EXISTS kinotic_login_provider (
-    id KEYWORD,
-    organizationId KEYWORD,
-    applicationId KEYWORD,
-    configurationId KEYWORD,
     created DATE,
     updated DATE
 );

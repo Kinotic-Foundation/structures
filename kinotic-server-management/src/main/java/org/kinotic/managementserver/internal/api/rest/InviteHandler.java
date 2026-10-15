@@ -11,7 +11,6 @@ import org.kinotic.domain.api.model.security.PendingInvite;
 import org.kinotic.domain.api.services.OrganizationService;
 import org.kinotic.domain.api.exceptions.InviteEmailMismatchException;
 import org.kinotic.domain.api.services.security.InviteService;
-import org.kinotic.domain.api.services.security.LoginProviderService;
 import org.kinotic.domain.api.services.security.OidcConfigurationService;
 import org.kinotic.domain.api.rest.support.AuthEndpointSupport;
 import org.kinotic.domain.api.rest.support.CallbackResult;
@@ -45,7 +44,6 @@ public class InviteHandler implements SuppliesGatewayRoutes {
     private final InviteService inviteService;
     private final OrganizationService organizationService;
     private final OidcConfigurationService oidcConfigurationService;
-    private final LoginProviderService loginProviderService;
     private final OidcFlowOrchestrator oidcFlowOrchestrator;
     private final AuthEndpointSupport authEndpointSupport;
     private final ManagementServerProperties properties;
@@ -74,8 +72,8 @@ public class InviteHandler implements SuppliesGatewayRoutes {
                   Future<String> orgName = organizationService.findById(invite.getOrganizationId())
                           .map(org -> org == null ? null : org.getName());
                   Future<List<OidcConfiguration>> providers =
-                          loginProviderService.findEnabledForScope(invite.getOrganizationId(),
-                                                                      invite.getApplicationId());
+                          oidcConfigurationService.findEnabledForScope(invite.getOrganizationId(),
+                                                                          invite.getApplicationId());
                   return Future.all(orgName, providers)
                                .map(v -> new JsonObject()
                                        .put("email", invite.getEmail())
@@ -158,7 +156,7 @@ public class InviteHandler implements SuppliesGatewayRoutes {
 
         oidcFlowOrchestrator.<OidcConfiguration>handleCallback(
                 ctx, pathConfigId, inviteCallbackUrl(pathConfigId),
-                (orgId, _) -> resolveCallbackConfig(pathConfigId, orgId))
+                (orgId, applicationId) -> resolveCallbackConfig(pathConfigId, orgId, applicationId))
                 .onSuccess(result -> completeOidcAccept(ctx, result))
                 .onFailure(ex -> {
                     String code = ex instanceof OidcCallbackException oce
@@ -232,8 +230,8 @@ public class InviteHandler implements SuppliesGatewayRoutes {
      * carries the accept token on the session and returns to {@link #handleOidcCallback}.
      */
     private Future<String> startFlowForInvite(RoutingContext ctx, PendingInvite invite, String configId, String token) {
-        return loginProviderService.findEnabledForScope(invite.getOrganizationId(),
-                                                            invite.getApplicationId())
+        return oidcConfigurationService.findEnabledForScope(invite.getOrganizationId(),
+                                                                invite.getApplicationId())
                      .compose(offered -> {
                          OidcConfiguration chosen = offered.stream()
                                                               .filter(c -> configId.equals(c.getId()))
@@ -244,35 +242,26 @@ public class InviteHandler implements SuppliesGatewayRoutes {
                              ret = Future.failedFuture(new OidcCallbackException(OidcErrorCodes.CONFIG_NOT_FOUND));
                          } else {
                              ret = oidcFlowOrchestrator.startFlow(ctx, chosen, inviteCallbackUrl(configId),
-                                                                  invite.getOrganizationId(), token);
+                                                                  invite.getOrganizationId(), invite.getApplicationId(), token);
                          }
                          return ret;
                      });
     }
 
     /**
-     * Resolves the callback's config, which may be of either kind: a platform social config
-     * (unscoped) or an org SSO / app config (org-scoped by the flow session's orgId).
+     * Resolves the callback's config: one the invitation's scope offers, resolved by the scope the flow
+     * session stashed at start, which is the same list {@link #handleDetails} rendered.
      */
-    private Future<OidcConfiguration> resolveCallbackConfig(String configId, String orgId) {
-        // Looking both kinds up by bare id is safe: we only get here after the orchestrator
-        // matched the path's configId against the flow session, and that session value was
-        // written by handleOidcStart, which only accepts configs the invite's target scope
-        // offers. So whatever this finds is a config the start leg already approved.
-        return oidcConfigurationService.findOrgSignupById(configId)
-                .compose(social -> {
-                    Future<OidcConfiguration> ret;
-                    if (social != null) {
-                        ret = Future.succeededFuture(social);
-                    } else if (orgId == null) {
-                        // Invite flows always stash an orgId; this guard only turns a corrupted
-                        // session into config_not_found instead of a failed lookup.
-                        ret = Future.succeededFuture(null);
-                    } else {
-                        ret = oidcConfigurationService.findOfferable(configId, orgId);
-                    }
-                    return ret;
-                });
+    private Future<OidcConfiguration> resolveCallbackConfig(String configId, String orgId, String applicationId) {
+        Future<OidcConfiguration> ret;
+        if (orgId == null) {
+            // Invite flows always stash an orgId; this guard only turns a corrupted
+            // session into config_not_found instead of a failed lookup.
+            ret = Future.succeededFuture(null);
+        } else {
+            ret = oidcConfigurationService.findOffered(configId, orgId, applicationId);
+        }
+        return ret;
     }
 
     private String inviteCallbackUrl(String configId) {
