@@ -137,6 +137,20 @@ public class DomainUtil {
         validateHostLabelPart(uiName);
     }
 
+    /**
+     * Validates that the given tenant id contains only lowercase letters, digits, and interior dashes,
+     * never {@code --}, since it is the first name of the tenant's site labels.
+     *
+     * @param tenantId to validate
+     * @throws IllegalArgumentException if the tenant id is null or invalid
+     */
+    public static void validateTenantId(String tenantId) {
+        if (tenantId == null) {
+            throw new IllegalArgumentException("Tenant Id must not be null");
+        }
+        validateHostLabelPart(tenantId);
+    }
+
     private static void validateZoneLabelId(String id) {
         validateHostLabelPart(id);
         Validate.isTrue(!SYSTEM_API_ZONE.equals(id), "Id '%s' is reserved by the platform", id);

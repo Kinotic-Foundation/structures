@@ -36,7 +36,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 
 /**
@@ -89,18 +88,17 @@ public class OidcFlowOrchestrator {
      *
      * <p>The session is consumed regardless of outcome — replay protection.
      *
-     * @param configResolver loads the config for this route, scoped by the {@code orgId} and
-     *                       {@code applicationId} recovered from the flow session (each {@code null}
-     *                       when the flow stashed none — routes scoped otherwise ignore them). Must
-     *                       return a {@link Future} resolving to {@code null} when
-     *                       the config is unknown; a config that is no longer enabled is
-     *                       rejected here, so the resolver need not check it.
+     * @param configResolver loads the config for this route, scoped by the organization, application and
+     *                       tenant recovered from the flow session (each {@code null} when the flow stashed
+     *                       none — routes scoped otherwise ignore them). Must resolve to {@code null} when
+     *                       the config is unknown; a config that is no longer enabled is rejected here, so
+     *                       the resolver need not check it.
      */
     public <C extends OidcConfiguration> Future<CallbackResult<C>> handleCallback(
             RoutingContext ctx,
             String pathConfigId,
             String callbackUrl,
-            BiFunction<String, String, Future<C>> configResolver) {
+            FlowConfigResolver<C> configResolver) {
 
         String code = ctx.request().getParam("code");
         String state = ctx.request().getParam("state");
@@ -123,7 +121,7 @@ public class OidcFlowOrchestrator {
             return Future.failedFuture(new OidcCallbackException(OidcErrorCodes.STATE_MISMATCH));
         }
 
-        return configResolver.apply(flowSession.orgId(), flowSession.applicationId())
+        return configResolver.resolve(flowSession.orgId(), flowSession.applicationId(), flowSession.tenantId())
                      .compose(config -> {
                          // Re-checked here rather than in each resolver: a config disabled while the
                          // user was at the IdP must not complete the flow it started.
@@ -134,7 +132,7 @@ public class OidcFlowOrchestrator {
                                  .compose(oauth2 -> exchangeCode(oauth2, code, callbackUrl, flowSession.pkceVerifier()))
                                  .compose(user -> verifiedClaims(config, user, flowSession))
                                  .map(claims -> new CallbackResult<>(config, claims, flowSession.orgId(),
-                                                                   flowSession.applicationId(),
+                                                                   flowSession.applicationId(), flowSession.tenantId(),
                                                                    flowSession.inviteToken(), flowSession.origin()));
                      });
     }
@@ -186,7 +184,7 @@ public class OidcFlowOrchestrator {
                                     OidcConfiguration config,
                                     String callbackUrl,
                                     String orgId) {
-        return startFlow(ctx, config, callbackUrl, orgId, null, null, SessionBinding.origin(ctx));
+        return startFlow(ctx, config, callbackUrl, orgId, null, null, null, SessionBinding.origin(ctx));
     }
 
     /**
@@ -201,7 +199,7 @@ public class OidcFlowOrchestrator {
                                     String orgId,
                                     String applicationId,
                                     String inviteToken) {
-        return startFlow(ctx, config, callbackUrl, orgId, applicationId, inviteToken, SessionBinding.origin(ctx));
+        return startFlow(ctx, config, callbackUrl, orgId, applicationId, null, inviteToken, SessionBinding.origin(ctx));
     }
 
     /**
@@ -214,21 +212,22 @@ public class OidcFlowOrchestrator {
                                     String callbackUrl,
                                     String orgId,
                                     String origin) {
-        return startFlow(ctx, config, callbackUrl, orgId, null, null, origin);
+        return startFlow(ctx, config, callbackUrl, orgId, null, null, null, origin);
     }
 
     /**
      * {@link #startFlow(RoutingContext, OidcConfiguration, String, String)} for a sign-in to
-     * {@code application}: stashes both ids of its scope for the callback to resolve its configuration by,
-     * and binds the flow to the page at {@code origin}, named by the caller because a start reached by
-     * redirect carries no {@code Origin} of its own.
+     * {@code application}, or to its tenant {@code tenantId} when one is named: stashes the ids of the scope
+     * for the callback to resolve its configuration by, and binds the flow to the page at {@code origin},
+     * named by the caller because a start reached by redirect carries no {@code Origin} of its own.
      */
     public Future<String> startFlow(RoutingContext ctx,
                                     OidcConfiguration config,
                                     String callbackUrl,
                                     ApplicationKey application,
+                                    String tenantId,
                                     String origin) {
-        return startFlow(ctx, config, callbackUrl, application.organizationId(), application.applicationId(), null, origin);
+        return startFlow(ctx, config, callbackUrl, application.organizationId(), application.applicationId(), tenantId, null, origin);
     }
 
     private Future<String> startFlow(RoutingContext ctx,
@@ -236,6 +235,7 @@ public class OidcFlowOrchestrator {
                                      String callbackUrl,
                                      String orgId,
                                      String applicationId,
+                                     String tenantId,
                                      String inviteToken,
                                      String origin) {
         String state = DomainUtil.generateUrlSafeToken(32);
@@ -246,7 +246,7 @@ public class OidcFlowOrchestrator {
         Session session = ctx.session();
         session.regenerateId();
         session.put(OIDC_FLOW_SESSION_KEY, new OidcFlowSession(state, nonce, pkceVerifier, config.getId(), orgId,
-                                                               applicationId, inviteToken, origin));
+                                                               applicationId, tenantId, inviteToken, origin));
 
         // Scopes ride as RFC 6749's space-delimited string; a managed registration may name its own, every
         // other configuration gets the standard OIDC triple.

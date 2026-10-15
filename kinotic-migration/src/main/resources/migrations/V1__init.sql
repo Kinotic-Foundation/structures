@@ -11,6 +11,20 @@ CREATE TABLE IF NOT EXISTS kinotic_application (
     updated DATE
 );
 
+-- Tenant (Tenant): a tenant of an application whose tenants its administrators manage. Its id is the
+-- tenantId its users carry and the first name of the tenant's site labels,
+-- <id>--<applicationId>--<uiName>, where the tenant's users sign in. An application whose tenants the
+-- platform manages has no rows here.
+CREATE TABLE IF NOT EXISTS kinotic_tenant (
+    id KEYWORD,
+    organizationId KEYWORD,
+    applicationId KEYWORD,
+    name KEYWORD,
+    description TEXT,
+    created DATE,
+    updated DATE
+);
+
 -- Create the named_query_service_definition table if it does not exist
 CREATE TABLE IF NOT EXISTS kinotic_named_query_service_definition (
     id KEYWORD,
@@ -233,10 +247,11 @@ CREATE TABLE IF NOT EXISTS kinotic_identity_credential (
 -- and name their client secret in the platform's secret storage with secretNameRef. type=ORG_SIGNUP
 -- (GitHub) powers the "Continue with X" buttons on org signup and org login; type=APP_SOCIAL
 -- (Google, Microsoft) is offered at an application's login when kinotic_application.socialProviders
--- names its provider kind. type=ORGANIZATION and type=APPLICATION are providers an organization
--- configured for one of its own sign-in scopes (OwnedOidcConfiguration: organizationId set and enforced
--- by the service, applicationId set for APPLICATION): the organization's own login, or that
--- application's. A configuration is offered at its own scope only; an organization wanting the same
+-- names its provider kind. type=ORGANIZATION, type=APPLICATION and type=TENANT are providers an
+-- organization configured for one of its own sign-in scopes (OwnedOidcConfiguration: organizationId set
+-- and enforced by the service, applicationId set for APPLICATION and TENANT, tenantId for TENANT): the
+-- organization's own login, that application's, or the login of that tenant of the application, which
+-- also offers what the application's does. A configuration is offered at its own scope only; an organization wanting the same
 -- provider at another scope copies it there (OidcConfigurationService.copy). createUserOnSignIn says
 -- whether an identity the provider verifies that no user of the scope is bound to becomes a user on
 -- first sign-in. The row names no client secret: OidcConfigurationService.save(configuration,
@@ -250,6 +265,7 @@ CREATE TABLE IF NOT EXISTS kinotic_oidc_configuration (
     type KEYWORD,
     organizationId KEYWORD,
     applicationId KEYWORD,
+    tenantId KEYWORD,
     providerAccount KEYWORD NOT INDEXED,
     confidentialClient BOOLEAN,
     createUserOnSignIn BOOLEAN,

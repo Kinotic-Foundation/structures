@@ -14,9 +14,11 @@ import org.kinotic.domain.api.model.security.OidcProviderKind;
 import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
 import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
 import org.kinotic.domain.api.model.security.OwnedOidcConfiguration;
+import org.kinotic.domain.api.model.security.TenantOidcConfiguration;
 import org.kinotic.domain.api.model.security.participant.OrganizationParticipant;
 import org.kinotic.domain.api.model.security.participant.SystemParticipant;
 import org.kinotic.domain.api.repositories.ApplicationRepository;
+import org.kinotic.domain.api.repositories.TenantRepository;
 import org.kinotic.domain.api.services.SecretStorageService;
 import org.kinotic.domain.api.services.security.OidcConfigurationService;
 import org.kinotic.domain.internal.api.repositories.OidcConfigurationRepository;
@@ -33,16 +35,19 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
 
     private final OidcConfigurationRepository oidcRepository;
     private final ApplicationRepository applicationRepository;
+    private final TenantRepository tenantRepository;
     private final SecretStorageService secretStorageService;
     private final SecurityContext securityContext;
 
     public DefaultOidcConfigurationService(OidcConfigurationRepository repository,
                                            ApplicationRepository applicationRepository,
+                                           TenantRepository tenantRepository,
                                            SecretStorageService secretStorageService,
                                            SecurityContext securityContext) {
         super(repository);
         this.oidcRepository = repository;
         this.applicationRepository = applicationRepository;
+        this.tenantRepository = tenantRepository;
         this.secretStorageService = secretStorageService;
         this.securityContext = securityContext;
     }
@@ -59,6 +64,8 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
             owned.setAuthority(owned.getProvider().authority(owned.getProviderAccount()));
             if (owned instanceof ApplicationOidcConfiguration forApplication) {
                 ret = requireApplication(forApplication.getOrganizationId(), forApplication.getApplicationId()).mapEmpty();
+            } else if (owned instanceof TenantOidcConfiguration forTenant) {
+                ret = requireTenant(forTenant.getOrganizationId(), forTenant.getApplicationId(), forTenant.getTenantId());
             }
         }
         if (entity.getId() == null) {
@@ -121,6 +128,16 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
         });
     }
 
+    // the tenant whose login a TenantOidcConfiguration is offered at must be one of the organization's application's
+    private Future<Void> requireTenant(String orgId, String applicationId, String tenantId) {
+        Validate.isTrue(StringUtils.isNotBlank(applicationId), "Application id must be set on TenantOidcConfiguration");
+        Validate.isTrue(StringUtils.isNotBlank(tenantId), "Tenant id must be set on TenantOidcConfiguration");
+        return tenantRepository.findById(tenantId, applicationId, orgId).map(tenant -> {
+            Validate.isTrue(tenant != null, "Application %s of organization %s has no tenant %s", applicationId, orgId, tenantId);
+            return null;
+        });
+    }
+
     @Override
     public Future<List<OrgSignupOidcConfiguration>> findEnabledOrgSignupProviders() {
         return oidcRepository.findEnabledOrgSignup();
@@ -139,26 +156,32 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
     }
 
     @Override
-    public Future<List<OidcConfiguration>> findEnabledForScope(String organizationId, String applicationId) {
+    public Future<List<OidcConfiguration>> findEnabledForScope(String organizationId, String applicationId, String tenantId) {
         Validate.notBlank(organizationId, "organizationId cannot be blank");
-        Future<List<OwnedOidcConfiguration>> own = oidcRepository.findEnabledOwnedByScope(organizationId, applicationId);
-        Future<List<OidcConfiguration>> ret;
-        if (applicationId == null) {
-            ret = Future.all(oidcRepository.findEnabledOrgSignup(), own)
-                        .map(cf -> {
-                            List<OidcConfiguration> offered = new ArrayList<>(cf.<List<OidcConfiguration>>resultAt(0));
-                            offered.addAll(cf.<List<OidcConfiguration>>resultAt(1));
-                            return offered;
-                        });
-        } else {
-            ret = Future.all(own, findEnabledSocial(organizationId, applicationId))
-                        .map(cf -> {
-                            List<OidcConfiguration> offered = new ArrayList<>(cf.<List<OidcConfiguration>>resultAt(0));
-                            offered.addAll(cf.<List<OidcConfiguration>>resultAt(1));
-                            return offered;
-                        });
+        if (tenantId != null) {
+            Validate.notBlank(applicationId, "applicationId is required when tenantId is supplied");
         }
-        return ret;
+        Future<List<OwnedOidcConfiguration>> own = oidcRepository.findEnabledOwnedByScope(organizationId, applicationId, tenantId);
+        Future<List<? extends OidcConfiguration>> rest;
+        if (applicationId == null) {
+            rest = oidcRepository.findEnabledOrgSignup().map(signup -> signup);
+            return concat(rest, own.map(owned -> owned));
+        } else if (tenantId == null) {
+            rest = findEnabledSocial(organizationId, applicationId).map(social -> social);
+        } else {
+            // a tenant's login offers the tenant's own providers before everything the application's offers
+            rest = findEnabledForScope(organizationId, applicationId, null).map(offered -> offered);
+        }
+        return concat(own.map(owned -> owned), rest);
+    }
+
+    private static Future<List<OidcConfiguration>> concat(Future<List<? extends OidcConfiguration>> first,
+                                                          Future<List<? extends OidcConfiguration>> second) {
+        return Future.all(first, second).map(cf -> {
+            List<OidcConfiguration> offered = new ArrayList<>(cf.<List<OidcConfiguration>>resultAt(0));
+            offered.addAll(cf.<List<OidcConfiguration>>resultAt(1));
+            return offered;
+        });
     }
 
     // the enabled platform social registrations the application names, in the application's order
@@ -171,17 +194,25 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
     }
 
     @Override
-    public Future<OidcConfiguration> findOffered(String configurationId, String organizationId, String applicationId) {
+    public Future<OidcConfiguration> findOffered(String configurationId, String organizationId, String applicationId, String tenantId) {
         Validate.notBlank(configurationId, "configurationId cannot be blank");
         Validate.notBlank(organizationId, "organizationId cannot be blank");
+        if (tenantId != null) {
+            Validate.notBlank(applicationId, "applicationId is required when tenantId is supplied");
+        }
         return oidcRepository.findById(configurationId)
                              .compose(configuration -> {
                                  Future<Boolean> offered = switch (configuration) {
                                      case OrganizationOidcConfiguration owned ->
                                              Future.succeededFuture(applicationId == null && organizationId.equals(owned.getOrganizationId()));
+                                     // offered at the application's login and at every one of its tenants'
                                      case ApplicationOidcConfiguration owned ->
                                              Future.succeededFuture(organizationId.equals(owned.getOrganizationId())
                                                                     && owned.getApplicationId().equals(applicationId));
+                                     case TenantOidcConfiguration owned ->
+                                             Future.succeededFuture(organizationId.equals(owned.getOrganizationId())
+                                                                    && owned.getApplicationId().equals(applicationId)
+                                                                    && owned.getTenantId().equals(tenantId));
                                      case ApplicationSocialOidcConfiguration social when applicationId != null ->
                                              applicationRepository.findById(applicationId, organizationId)
                                                                   .map(application -> application != null

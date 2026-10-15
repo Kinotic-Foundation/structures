@@ -101,4 +101,26 @@ class OidcConfigurationSerializationTest {
         assertEquals("orders", readOwned.getApplicationId());
         assertTrue(readOwned.isCreateUserOnSignIn());
     }
+
+    @Test
+    void tenantConfigurationRoundTripsWithItsScope() {
+        TenantOidcConfiguration owned = new TenantOidcConfiguration();
+        owned.setApplicationId("orders")
+             .setTenantId("globex");
+        owned.setOrganizationId("acme")
+             .setProviderAccount("globex.okta.com");
+        owned.setName("Globex Okta")
+             .setProvider(OidcProviderKind.OKTA)
+             .setClientId("client")
+             .setId("config-3");
+
+        String json = jsonMapper.writeValueAsString(owned);
+        assertTrue(json.contains("\"type\":\"TENANT\""), "document must carry the discriminator: " + json);
+
+        OidcConfiguration read = jsonMapper.readValue(json, OidcConfiguration.class);
+        TenantOidcConfiguration readOwned = assertInstanceOf(TenantOidcConfiguration.class, read);
+        assertEquals("acme", readOwned.getOrganizationId());
+        assertEquals("orders", readOwned.getApplicationId());
+        assertEquals("globex", readOwned.getTenantId());
+    }
 }

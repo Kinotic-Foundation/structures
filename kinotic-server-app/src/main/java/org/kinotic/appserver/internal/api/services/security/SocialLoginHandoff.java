@@ -25,6 +25,9 @@ public class SocialLoginHandoff implements Serializable {
 
     private String applicationId;
 
+    /** The tenant of the application the sign-in is to, or {@code null} for the application itself. */
+    private String tenantId;
+
     /** The configuration the identity was verified through. */
     private String configurationId;
 

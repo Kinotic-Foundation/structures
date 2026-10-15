@@ -11,7 +11,8 @@ import org.kinotic.domain.api.model.OrganizationScoped;
  * An OIDC provider configuration an {@link Organization} made for exactly one of its sign-in scopes,
  * saved by that organization alone. The concrete subtype is the scope: an
  * {@link OrganizationOidcConfiguration} is offered at the organization's own login, an
- * {@link ApplicationOidcConfiguration} at one of its applications' logins. A configuration is offered
+ * {@link ApplicationOidcConfiguration} at one of its applications' logins, a {@link TenantOidcConfiguration}
+ * at the login of one tenant of one of its applications. A configuration is offered
  * nowhere else; an organization that wants the same provider at a second scope copies the
  * configuration into that scope, and each copy is registered with the provider under its own
  * callback URL.
@@ -32,7 +33,7 @@ import org.kinotic.domain.api.model.OrganizationScoped;
 @Accessors(chain = true)
 @NoArgsConstructor
 public abstract sealed class OwnedOidcConfiguration extends OidcConfiguration implements OrganizationScoped<String>
-        permits OrganizationOidcConfiguration, ApplicationOidcConfiguration {
+        permits OrganizationOidcConfiguration, ApplicationOidcConfiguration, TenantOidcConfiguration {
 
     /**
      * Owning organization: the one of the participant saving the configuration, which the service

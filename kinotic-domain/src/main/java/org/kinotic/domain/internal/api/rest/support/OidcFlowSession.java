@@ -28,11 +28,13 @@ public class OidcFlowSession implements ClusterSerializable {
     private String configId;
 
     /**
-     * The sign-in scope the flow is for — the organization, and the application when the flow signs a user
-     * in to one — or {@code null} for a flow that scopes its configuration lookup otherwise.
+     * The sign-in scope the flow is for — the organization, the application when the flow signs a user in to
+     * one, and the tenant when it signs a user in to one tenant of the application — or {@code null} for a flow
+     * that scopes its configuration lookup otherwise.
      */
     private String orgId;
     private String applicationId;
+    private String tenantId;
 
     /**
      * Accept token of the invitation this flow is accepting, or {@code null} for a plain
@@ -56,6 +58,7 @@ public class OidcFlowSession implements ClusterSerializable {
                 .put("configId", configId)
                 .put("orgId", orgId)
                 .put("applicationId", applicationId)
+                .put("tenantId", tenantId)
                 .put("inviteToken", inviteToken)
                 .put("origin", origin)
                 .writeToBuffer(buffer);
@@ -71,6 +74,7 @@ public class OidcFlowSession implements ClusterSerializable {
         this.configId = json.getString("configId");
         this.orgId = json.getString("orgId");
         this.applicationId = json.getString("applicationId");
+        this.tenantId = json.getString("tenantId");
         this.inviteToken = json.getString("inviteToken");
         this.origin = json.getString("origin");
         return read;

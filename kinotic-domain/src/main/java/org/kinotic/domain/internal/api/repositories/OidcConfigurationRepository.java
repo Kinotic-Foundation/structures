@@ -30,6 +30,7 @@ public class OidcConfigurationRepository extends AbstractRepository<OidcConfigur
     private static final String TYPE_FIELD = "type";
     private static final String ORGANIZATION_ID_FIELD = "organizationId";
     private static final String APPLICATION_ID_FIELD = "applicationId";
+    private static final String TENANT_ID_FIELD = "tenantId";
     private static final String PROVIDER_FIELD = "provider";
     private static final String ENABLED_FIELD = "enabled";
 
@@ -114,13 +115,14 @@ public class OidcConfigurationRepository extends AbstractRepository<OidcConfigur
     /**
      * The enabled configurations organization {@code orgId} made for one of its sign-in scopes, oldest first: its
      * {@link org.kinotic.domain.api.model.security.OrganizationOidcConfiguration}s when {@code applicationId} is
-     * null, else the {@link org.kinotic.domain.api.model.security.ApplicationOidcConfiguration}s of that
-     * application.
+     * null, the {@link org.kinotic.domain.api.model.security.ApplicationOidcConfiguration}s of that application
+     * when {@code tenantId} is null, else the {@link org.kinotic.domain.api.model.security.TenantOidcConfiguration}s
+     * of that tenant of the application.
      */
-    public Future<List<OwnedOidcConfiguration>> findEnabledOwnedByScope(String orgId, String applicationId) {
+    public Future<List<OwnedOidcConfiguration>> findEnabledOwnedByScope(String orgId, String applicationId, String tenantId) {
         Validate.notBlank(orgId, "orgId cannot be blank");
         return findAll(Pageable.ofSize(100), b -> b.query(composeFilter(
-                scopeFilter(orgId, applicationId),
+                scopeFilter(orgId, applicationId, tenantId),
                 termFilter(ENABLED_FIELD, true)))
                 .sort(s -> s.field(f -> f.field("created"))))
                 .map(page -> page.map(OwnedOidcConfiguration.class::cast))
@@ -128,12 +130,21 @@ public class OidcConfigurationRepository extends AbstractRepository<OidcConfigur
     }
 
     // the owned kind of a scope is its discriminator, so a scope's configurations are one kind at one owner
-    private Query scopeFilter(String orgId, String applicationId) {
-        return applicationId == null
-                ? composeFilter(termFilter(TYPE_FIELD, OidcConfigurationType.ORGANIZATION.name()),
-                                termFilter(ORGANIZATION_ID_FIELD, orgId))
-                : composeFilter(termFilter(TYPE_FIELD, OidcConfigurationType.APPLICATION.name()),
+    private Query scopeFilter(String orgId, String applicationId, String tenantId) {
+        Query ret;
+        if (applicationId == null) {
+            ret = composeFilter(termFilter(TYPE_FIELD, OidcConfigurationType.ORGANIZATION.name()),
+                                termFilter(ORGANIZATION_ID_FIELD, orgId));
+        } else if (tenantId == null) {
+            ret = composeFilter(termFilter(TYPE_FIELD, OidcConfigurationType.APPLICATION.name()),
                                 termFilter(ORGANIZATION_ID_FIELD, orgId),
                                 termFilter(APPLICATION_ID_FIELD, applicationId));
+        } else {
+            ret = composeFilter(termFilter(TYPE_FIELD, OidcConfigurationType.TENANT.name()),
+                                termFilter(ORGANIZATION_ID_FIELD, orgId),
+                                termFilter(APPLICATION_ID_FIELD, applicationId),
+                                termFilter(TENANT_ID_FIELD, tenantId));
+        }
+        return ret;
     }
 }

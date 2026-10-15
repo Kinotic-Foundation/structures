@@ -56,10 +56,11 @@ public class ApplicationSocialLoginHandler implements SuppliesGatewayRoutes {
     }
 
     /**
-     * {@code GET /api/auth/app/login/social/authorize?organizationId&applicationId&configurationId&origin}, at
-     * the shared host — begins the provider round-trip for a sign-in to the application from the page at
-     * {@code origin}, redirecting the browser to the provider. {@code 400} for a configuration the application
-     * does not offer, or a page that is not one of its UIs.
+     * {@code GET /api/auth/app/login/social/authorize?organizationId&applicationId&configurationId&origin[&tenantId]},
+     * at the shared host — begins the provider round-trip for a sign-in to the application, or to its tenant
+     * from one of the tenant's sites or when {@code tenantId} names one, from the page at {@code origin},
+     * redirecting the browser to the provider. {@code 400} for a configuration the login does not offer, or a
+     * page that is not one of the application's UIs.
      */
     private void handleAuthorize(RoutingContext ctx) {
         ApplicationKey applicationKey = new ApplicationKey(ctx.request().getParam("organizationId"),
@@ -72,16 +73,18 @@ public class ApplicationSocialLoginHandler implements SuppliesGatewayRoutes {
             return;
         }
 
-        oidcConfigurationService.findOffered(configId, applicationKey.organizationId(), applicationKey.applicationId())
-              .compose(config -> {
+        authEndpointSupport.loginScope(applicationKey, origin, ctx.request().getParam("tenantId"))
+              .compose(scope -> oidcConfigurationService.findOffered(configId, applicationKey.organizationId(),
+                                                                     applicationKey.applicationId(), scope.tenantId())
+                                                        .compose(config -> {
                   Future<String> ret;
                   if (config instanceof ApplicationSocialOidcConfiguration) {
-                      ret = oidcFlowOrchestrator.startFlow(ctx, config, callbackUrl(configId), applicationKey, origin);
+                      ret = oidcFlowOrchestrator.startFlow(ctx, config, callbackUrl(configId), applicationKey, scope.tenantId(), origin);
                   } else {
                       ret = Future.failedFuture(new OidcCallbackException(OidcErrorCodes.CONFIG_NOT_FOUND));
                   }
                   return ret;
-              })
+              }))
               .onSuccess(url -> ctx.response().setStatusCode(302).putHeader("Location", url).end())
               .onFailure(err -> {
                   log.warn("Social login authorize failed for {}/{}: {}", HostLabelUtil.label(applicationKey), configId, err.getMessage());
@@ -103,7 +106,7 @@ public class ApplicationSocialLoginHandler implements SuppliesGatewayRoutes {
 
         oidcFlowOrchestrator.<OidcConfiguration>handleCallback(
                 ctx, pathConfigId, callbackUrl(pathConfigId),
-                (orgId, applicationId) -> oidcConfigurationService.findOffered(pathConfigId, orgId, applicationId))
+                (orgId, applicationId, tenantId) -> oidcConfigurationService.findOffered(pathConfigId, orgId, applicationId, tenantId))
                 .onSuccess(result -> handOff(ctx, result))
                 .onFailure(ex -> {
                     String code = ex instanceof OidcCallbackException oce ? oce.getErrorCode() : OidcErrorCodes.EXCHANGE_FAILED;
@@ -119,6 +122,7 @@ public class ApplicationSocialLoginHandler implements SuppliesGatewayRoutes {
             String code = handoffService.stage(new SocialLoginHandoff()
                                                        .setOrganizationId(applicationKey.organizationId())
                                                        .setApplicationId(applicationKey.applicationId())
+                                                       .setTenantId(result.tenantId())
                                                        .setConfigurationId(result.config().getId())
                                                        .setSubject(sub)
                                                        .setOrigin(result.origin()));
@@ -130,8 +134,8 @@ public class ApplicationSocialLoginHandler implements SuppliesGatewayRoutes {
 
     /**
      * {@code GET /api/auth/app/login/social/complete/:code}, at the application's API host — consumes the
-     * staged sign-in and logs its identity into the application, bound to the page that started it, as
-     * {@link ApplicationLoginHandler}'s own callback does. A code that is unknown, spent, or staged for
+     * staged sign-in and logs its identity into the application, or into the tenant the sign-in was to, bound
+     * to the page that started it, as {@link ApplicationLoginHandler}'s own callback does. A code that is unknown, spent, or staged for
      * another application sends the browser to the application's login page with {@code handoff_invalid}.
      */
     private void handleComplete(RoutingContext ctx) {
@@ -143,9 +147,11 @@ public class ApplicationSocialLoginHandler implements SuppliesGatewayRoutes {
                 || !applicationKey.equals(new ApplicationKey(handoff.getOrganizationId(), handoff.getApplicationId()))) {
             authEndpointSupport.redirectError(ctx, null, OidcErrorCodes.HANDOFF_INVALID);
         } else {
+            LoginScope scope = new LoginScope(applicationKey, handoff.getTenantId());
             authEndpointSupport.completeLogin(ctx, handoff.getOrigin(),
                     identityService.findByOidcIdentity(handoff.getSubject(), handoff.getConfigurationId(),
-                                                       applicationKey.organizationId(), applicationKey.applicationId()));
+                                                       applicationKey.organizationId(), applicationKey.applicationId())
+                                   .map(scope::memberOf));
         }
     }
 

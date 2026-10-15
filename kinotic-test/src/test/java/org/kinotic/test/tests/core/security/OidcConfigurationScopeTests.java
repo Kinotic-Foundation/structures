@@ -3,6 +3,7 @@ package org.kinotic.test.tests.core.security;
 import io.vertx.core.Future;
 import org.junit.jupiter.api.Test;
 import org.kinotic.domain.api.model.Application;
+import org.kinotic.domain.api.model.Tenant;
 import org.kinotic.domain.api.model.security.ApplicationOidcConfiguration;
 import org.kinotic.domain.api.model.security.ApplicationSocialOidcConfiguration;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
@@ -10,8 +11,10 @@ import org.kinotic.domain.api.model.security.OidcProviderKind;
 import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
 import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
 import org.kinotic.domain.api.model.security.OwnedOidcConfiguration;
+import org.kinotic.domain.api.model.security.TenantOidcConfiguration;
 import org.kinotic.domain.api.services.security.OidcConfigurationService;
 import org.kinotic.management.api.services.ApplicationService;
+import org.kinotic.management.api.services.TenantService;
 import org.kinotic.test.support.kinotic.KinoticTestBase;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -35,8 +38,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * is offered there, after the org sign-up providers, and at none of its applications; one made for an
  * application is offered at that application only and must name one of the organization's; a disabled
  * configuration is offered nowhere; an application offers the platform's social registrations it names and no
- * other; and a copy of a configuration into another scope is a configuration of that scope, with the source's
- * secret and an id of its own.
+ * other; one made for a tenant of an application is offered at that tenant's login, which also offers the
+ * application's, and nowhere else; and a copy of a configuration into another scope is a configuration of that
+ * scope, with the source's secret and an id of its own.
  */
 @SpringBootTest
 public class OidcConfigurationScopeTests extends KinoticTestBase {
@@ -46,6 +50,9 @@ public class OidcConfigurationScopeTests extends KinoticTestBase {
 
     @Autowired
     private ApplicationService applicationService;
+
+    @Autowired
+    private TenantService tenantService;
 
     @Test
     public void aConfigurationIsOfferedAtTheScopeItWasMadeFor() throws Exception {
@@ -82,6 +89,32 @@ public class OidcConfigurationScopeTests extends KinoticTestBase {
         assertNull(await(oidcConfigurations.findOffered(appOkta.getId(), TEST_ORG_ID, appId)));
         assertTrue(await(oidcConfigurations.findEnabledForScope(TEST_ORG_ID, appId)).isEmpty());
         assertEquals(application.getId(), appId);
+    }
+
+    @Test
+    public void aTenantConfigurationIsOfferedAtTheTenantsLoginWithTheApplications() throws Exception {
+        String appId = "oidc-scope-app-" + suffix();
+        await(runAsOrganization(() -> applicationService.createApplicationIfNotExist(appId, "Tenant application", null)));
+        Tenant globex = await(runAsOrganization(() -> tenantService.createTenantIfNotExist(appId, "Globex", "A customer")));
+        assertEquals("globex", globex.getId());
+        ApplicationOidcConfiguration appOkta = await(runAsOrganization(() -> oidcConfigurations.save(forApplication("Orders Okta", appId), null)));
+        TenantOidcConfiguration tenantOkta = await(runAsOrganization(() -> oidcConfigurations.save(forTenant("Globex Okta", appId, globex.getId()), null)));
+        await(oidcConfigurations.syncIndex());
+
+        // the tenant's login offers the tenant's own configuration first, then the application's
+        assertEquals(List.of(tenantOkta.getId(), appOkta.getId()), ids(await(oidcConfigurations.findEnabledForScope(TEST_ORG_ID, appId, globex.getId()))));
+        assertEquals(tenantOkta.getId(), await(oidcConfigurations.findOffered(tenantOkta.getId(), TEST_ORG_ID, appId, globex.getId())).getId());
+        assertEquals(appOkta.getId(), await(oidcConfigurations.findOffered(appOkta.getId(), TEST_ORG_ID, appId, globex.getId())).getId());
+        // the application's own login and its other tenants do not offer it
+        assertEquals(List.of(appOkta.getId()), ids(await(oidcConfigurations.findEnabledForScope(TEST_ORG_ID, appId))));
+        assertNull(await(oidcConfigurations.findOffered(tenantOkta.getId(), TEST_ORG_ID, appId, null)));
+        assertNull(await(oidcConfigurations.findOffered(tenantOkta.getId(), TEST_ORG_ID, appId, "initech")));
+
+        // a tenant configuration must name a tenant of the application
+        assertInstanceOf(IllegalArgumentException.class,
+                         failure(() -> oidcConfigurations.save(forTenant("Nowhere Okta", appId, "no-such-tenant"), null)));
+        assertInstanceOf(IllegalArgumentException.class,
+                         failure(() -> oidcConfigurations.save(forTenant("Nowhere Okta", appId, null), null)));
     }
 
     @Test
@@ -152,6 +185,14 @@ public class OidcConfigurationScopeTests extends KinoticTestBase {
     private static ApplicationOidcConfiguration forApplication(String name, String applicationId) {
         ApplicationOidcConfiguration ret = new ApplicationOidcConfiguration();
         ret.setApplicationId(applicationId);
+        okta(ret, name);
+        return ret;
+    }
+
+    private static TenantOidcConfiguration forTenant(String name, String applicationId, String tenantId) {
+        TenantOidcConfiguration ret = new TenantOidcConfiguration();
+        ret.setApplicationId(applicationId)
+           .setTenantId(tenantId);
         okta(ret, name);
         return ret;
     }

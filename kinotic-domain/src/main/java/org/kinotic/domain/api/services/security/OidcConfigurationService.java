@@ -10,6 +10,7 @@ import org.kinotic.domain.api.model.security.OidcProviderKind;
 import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
 import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
 import org.kinotic.domain.api.model.security.OwnedOidcConfiguration;
+import org.kinotic.domain.api.model.security.TenantOidcConfiguration;
 
 import java.util.List;
 
@@ -52,27 +53,41 @@ public interface OidcConfigurationService extends IdentifiableCrudService<OidcCo
      * own login ({@code applicationId} null) offers the org sign-up registrations followed by the
      * organization's {@link OrganizationOidcConfiguration}s; an application's login offers its
      * {@link ApplicationOidcConfiguration}s followed by the platform's
-     * {@link ApplicationSocialOidcConfiguration}s whose provider kinds the application names. Empty when
-     * the scope offers none. Checks no participant.
+     * {@link ApplicationSocialOidcConfiguration}s whose provider kinds the application names; the login of
+     * one tenant of the application offers the tenant's {@link TenantOidcConfiguration}s followed by what
+     * the application's login offers. Empty when the scope offers none. Checks no participant.
      *
      * @param organizationId the organization the scope belongs to
      * @param applicationId  the application within it, or {@code null} for the organization's own login
+     * @param tenantId       the tenant of the application, or {@code null} for the application's own login
      */
-    Future<List<OidcConfiguration>> findEnabledForScope(String organizationId, String applicationId);
+    Future<List<OidcConfiguration>> findEnabledForScope(String organizationId, String applicationId, String tenantId);
+
+    /** {@link #findEnabledForScope(String, String, String)} for a scope that is no tenant's. */
+    default Future<List<OidcConfiguration>> findEnabledForScope(String organizationId, String applicationId) {
+        return findEnabledForScope(organizationId, applicationId, null);
+    }
 
     /**
      * The enabled configuration {@code configurationId} when the scope offers it, or {@code null} when the
      * scope does not offer it or it is disabled, for the sign-in starts and callbacks that name a
      * configuration: an {@link OwnedOidcConfiguration} the organization made for the scope, or an
-     * {@link ApplicationSocialOidcConfiguration} the application names. The org sign-up registrations are
-     * started by provider kind through {@link #findEnabledOrgSignupByProvider} and never named here.
-     * Checks no participant.
+     * {@link ApplicationSocialOidcConfiguration} the application names. A tenant's login offers what the
+     * application's offers as well as the tenant's own. The org sign-up registrations are started by
+     * provider kind through {@link #findEnabledOrgSignupByProvider} and never named here. Checks no
+     * participant.
      *
      * @param configurationId the configuration a sign-in names
      * @param organizationId  the organization the scope belongs to
      * @param applicationId   the application within it, or {@code null} for the organization's own login
+     * @param tenantId        the tenant of the application, or {@code null} for the application's own login
      */
-    Future<OidcConfiguration> findOffered(String configurationId, String organizationId, String applicationId);
+    Future<OidcConfiguration> findOffered(String configurationId, String organizationId, String applicationId, String tenantId);
+
+    /** {@link #findOffered(String, String, String, String)} for a scope that is no tenant's. */
+    default Future<OidcConfiguration> findOffered(String configurationId, String organizationId, String applicationId) {
+        return findOffered(configurationId, organizationId, applicationId, null);
+    }
 
     /**
      * The configuration {@code id} organization {@code organizationId} owns, of any owned kind, enabled or

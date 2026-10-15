@@ -156,7 +156,7 @@ public class InviteHandler implements SuppliesGatewayRoutes {
 
         oidcFlowOrchestrator.<OidcConfiguration>handleCallback(
                 ctx, pathConfigId, inviteCallbackUrl(pathConfigId),
-                (orgId, applicationId) -> resolveCallbackConfig(pathConfigId, orgId, applicationId))
+                (orgId, applicationId, _) -> resolveCallbackConfig(pathConfigId, orgId, applicationId))
                 .onSuccess(result -> completeOidcAccept(ctx, result))
                 .onFailure(ex -> {
                     String code = ex instanceof OidcCallbackException oce

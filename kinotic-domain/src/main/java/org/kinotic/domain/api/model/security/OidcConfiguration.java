@@ -31,7 +31,8 @@ import java.util.Date;
         @JsonSubTypes.Type(value = OrgSignupOidcConfiguration.class, name = "ORG_SIGNUP"),
         @JsonSubTypes.Type(value = ApplicationSocialOidcConfiguration.class, name = "APP_SOCIAL"),
         @JsonSubTypes.Type(value = OrganizationOidcConfiguration.class, name = "ORGANIZATION"),
-        @JsonSubTypes.Type(value = ApplicationOidcConfiguration.class, name = "APPLICATION")
+        @JsonSubTypes.Type(value = ApplicationOidcConfiguration.class, name = "APPLICATION"),
+        @JsonSubTypes.Type(value = TenantOidcConfiguration.class, name = "TENANT")
 })
 public abstract sealed class OidcConfiguration implements Identifiable<String>
         permits ManagedOidcConfiguration, OwnedOidcConfiguration {
