@@ -90,8 +90,8 @@ export function useJobRunProgress(jobRunId: string) {
     node.started = DatetimeUtil.toEpochMillis(record.started)
     node.finished = DatetimeUtil.toEpochMillis(record.finished)
     node.storedName = record.storedName ?? node.storedName
-    if (record.stateValue !== null && record.stateValue !== undefined) {
-      node.storedValue = record.stateValue
+    if (record.wireValue !== null && record.wireValue !== undefined) {
+      node.storedValue = record.wireValue
     }
     if (record.status !== ExecutionStatus.RUNNING) {
       node.progress = null

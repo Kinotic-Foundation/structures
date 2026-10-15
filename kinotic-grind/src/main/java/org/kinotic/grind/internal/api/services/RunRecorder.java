@@ -134,11 +134,14 @@ public class RunRecorder implements RunListener {
                   .setFinished(new Date())
                   .setStoreType(store.getType())
                   .setStoredName(storedName);
-            // wire publication rides the event stream only; the record persists just the
-            // durable STATE the resume replays
+            // the resume replays the durable STATE; watchers read the wired value, so a finished
+            // run renders what the live stream showed
             if (store.getType() == StoreType.STATE && serializedState != null) {
                 record.setStateValueType(serializedState.valueType())
                       .setStateValue(serializedState.value());
+            }
+            if (store.isWire() && serializedState != null) {
+                record.setWireValue(serializedState.value());
             }
             awaitWrite(() -> saveTask(record));
         }

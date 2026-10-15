@@ -477,6 +477,7 @@ CREATE TABLE IF NOT EXISTS kinotic_task_record (
     storedName KEYWORD,
     stateValueType KEYWORD,
     stateValue JSON NOT INDEXED,
+    wireValue JSON NOT INDEXED,
     error TEXT,
     started DATE,
     finished DATE

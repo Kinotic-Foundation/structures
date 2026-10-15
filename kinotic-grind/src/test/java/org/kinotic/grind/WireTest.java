@@ -23,13 +23,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Wire publication is its own axis, independent of the {@code StoreType}: only values whose
- * {@link Store} declares {@code wire()} reach the event's and record's JSON form, whatever
- * their resume behavior.
+ * {@link Store} declares {@code wire()} reach the event's {@code wireValue} and the record's,
+ * whatever their resume behavior.
  */
 public class WireTest extends AbstractGrindTest {
 
     @Test
-    public void wiredResultReachesTheEventButNotTheRecord() throws Exception {
+    public void wiredResultReachesTheEventAndTheRecordsWireValue() throws Exception {
         JobDefinition job = JobDefinition.create("wired result")
                 .name("wired-result").version("1")
                 .task(Tasks.fromValue("allocate widget", new Widget("wl-123")),
@@ -44,8 +44,9 @@ public class WireTest extends AbstractGrindTest {
         assertNotNull(completed.wireValue());
         assertEquals("wl-123", completed.wireValue().get("name").stringValue());
 
-        // published, not persisted: the record carries no state columns for a RESULT store
+        // published, not durable: the record keeps the wired form for watchers and no state columns
         TaskRecord record = repository.taskAt(handle.getJobRunId(), "0/1");
+        assertEquals("wl-123", record.getWireValue().get("name").stringValue());
         assertNull(record.getStateValue());
         assertNull(record.getStateValueType());
     }
@@ -65,6 +66,8 @@ public class WireTest extends AbstractGrindTest {
         assertNull(completionAt(result, "0/2").wireValue());
         // durable but not published: STATE keeps its replay columns without reaching the wire
         assertNotNull(repository.taskAt(handle.getJobRunId(), "0/2").getStateValue());
+        assertNull(repository.taskAt(handle.getJobRunId(), "0/1").getWireValue());
+        assertNull(repository.taskAt(handle.getJobRunId(), "0/2").getWireValue());
     }
 
     @Test
@@ -79,7 +82,9 @@ public class WireTest extends AbstractGrindTest {
 
         assertNull(result.error());
         assertEquals("shown", completionAt(result, "0/1").wireValue().get("name").stringValue());
-        assertNotNull(repository.taskAt(handle.getJobRunId(), "0/1").getStateValue());
+        TaskRecord record = repository.taskAt(handle.getJobRunId(), "0/1");
+        assertNotNull(record.getStateValue());
+        assertEquals("shown", record.getWireValue().get("name").stringValue());
     }
 
     @Test
@@ -114,6 +119,7 @@ public class WireTest extends AbstractGrindTest {
         TaskRecord record = repository.taskAt(handle.getJobRunId(), "0/1");
         assertNull(record.getStoredName());
         assertNull(record.getStateValue());
+        assertEquals("observed", record.getWireValue().get("name").stringValue());
     }
 
     @Test

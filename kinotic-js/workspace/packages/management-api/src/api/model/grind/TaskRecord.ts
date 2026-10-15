@@ -53,15 +53,10 @@ export class TaskRecord implements Identifiable<string> {
     public storedName: string | null = null
 
     /**
-     * The Java type of the durable state. Only set when storeType is STATE.
+     * The task's value as JSON, set when its store declared wire publication. The durable state a
+     * resume replays never leaves the server.
      */
-    public stateValueType: string | null = null
-
-    /**
-     * The durable state as JSON, replayed when the run is resumed. Only set when storeType
-     * is STATE.
-     */
-    public stateValue: any = null
+    public wireValue: any = null
 
     /**
      * The failure message when status is FAILED.

@@ -79,6 +79,12 @@ public class TaskRecord implements Identifiable<String> {
     private JsonNode stateValue;
 
     /**
+     * The completed value serialized as JSON for watchers of the run. Only set when the task's
+     * {@link Store} declared {@link Store#wire()}, whatever its {@link #storeType}.
+     */
+    private JsonNode wireValue;
+
+    /**
      * The failure message when {@link #status} is {@link ExecutionStatus#FAILED}.
      */
     private String error;
