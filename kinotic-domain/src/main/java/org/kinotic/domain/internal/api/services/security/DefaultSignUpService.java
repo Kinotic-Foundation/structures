@@ -9,6 +9,7 @@ import org.kinotic.domain.api.model.security.AuthType;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 import org.kinotic.domain.api.model.security.PendingSignUp;
 import org.kinotic.domain.api.services.OrganizationService;
+import org.kinotic.domain.api.services.SiteDomainProvisioner;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.services.security.SignUpService;
 import org.kinotic.domain.internal.api.repositories.PendingSignUpRepository;
@@ -30,6 +31,7 @@ public class DefaultSignUpService implements SignUpService {
     private final ParticipantIdentityService identityService;
     private final OrganizationService organizationService;
     private final EmailService emailService;
+    private final SiteDomainProvisioner siteDomainProvisioner;
 
     @Override
     public Future<Void> initiateLocalSignUp(String email, String displayName) {
@@ -102,9 +104,9 @@ public class DefaultSignUpService implements SignUpService {
 
     /**
      * Creates the organization (failing if the name is taken), makes {@code admin} its first
-     * member and creator. The admin (and its credential, when
-     * {@code password} is non-null) is created through {@link ParticipantIdentityService#createUser}
-     * so member creation has a single code path.
+     * member and creator, and provisions the organization's sites subdomain at the edge. The admin
+     * (and its credential, when {@code password} is non-null) is created through
+     * {@link ParticipantIdentityService#createUser} so member creation has a single code path.
      */
     private Future<UserParticipantIdentity> createOrgWithAdmin(String orgName, String orgDescription, UserParticipantIdentity admin, String password) {
         Organization org = new Organization().setName(orgName).setDescription(orgDescription);
@@ -115,7 +117,16 @@ public class DefaultSignUpService implements SignUpService {
                             .compose(savedAdmin -> {
                                 savedOrg.setCreatedBy(savedAdmin.getId());
                                 return organizationService.save(savedOrg).map(savedAdmin);
-                            });
+                            })
+                            // the edge is provisioned again before the organization's first site is published, so a
+                            // refusal here costs the sign-up nothing
+                            .compose(savedAdmin -> siteDomainProvisioner.ensure(savedOrg.getId())
+                                                                        .recover(err -> {
+                                                                            log.warn("Could not provision the sites subdomain of organization {}: {}",
+                                                                                     savedOrg.getId(), err.getMessage());
+                                                                            return Future.succeededFuture();
+                                                                        })
+                                                                        .map(savedAdmin));
                 });
     }
 

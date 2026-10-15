@@ -8,6 +8,7 @@ import org.kinotic.core.api.utils.ZoneUtil;
 import org.kinotic.domain.api.utils.HostLabelUtil;
 import org.kinotic.domain.api.model.WatchedParent;
 import org.kinotic.domain.api.model.WatchedType;
+import org.kinotic.domain.api.services.SiteDomainProvisioner;
 import org.kinotic.management.api.model.Project;
 import org.kinotic.management.api.model.deployment.UiArtifact;
 import org.kinotic.management.api.model.deployment.UiDeployment;
@@ -42,14 +43,18 @@ public class UiSitePublisher {
     private final SiteStorageService siteStorageService;
     private final SiteWorkloadFactory siteWorkloadFactory;
     private final WorkloadOrchestrationService workloadOrchestrationService;
+    private final SiteDomainProvisioner siteDomainProvisioner;
     private final KinoticSystemApiProperties properties;
 
     /**
-     * The row a UI publishes to: its existing site, or one minted for its first publish. Fails when
-     * the site of a UI of the same name belongs to another project of the application.
+     * The row a UI publishes to: its existing site, or one minted for its first publish, which also ensures
+     * the organization's subdomain is provisioned at the edge. Fails when the site of a UI of the same name
+     * belongs to another project of the application, or the edge refused the subdomain.
      */
     public Future<UiDeployment> deploymentFor(Project project, UiArtifact ui, UiDeployment existing) {
-        return existing == null ? mintDeployment(project, ui) : Future.succeededFuture(existing);
+        return existing == null
+                ? siteDomainProvisioner.ensure(project.getOrganizationId()).compose(v -> mintDeployment(project, ui))
+                : Future.succeededFuture(existing);
     }
 
     /**

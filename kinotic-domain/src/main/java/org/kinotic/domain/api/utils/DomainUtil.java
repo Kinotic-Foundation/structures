@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.function.Predicate;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
@@ -70,6 +71,9 @@ public class DomainUtil {
     // organization wherever it is its own tenant — the owner of VM workloads the OS runs for
     // the OS, for instance
     private static final String RESERVED_ID_PREFIX = "kinotic";
+    // the labels the platform itself holds under its domains, which an organization's subdomain must never shadow
+    private static final Set<String> RESERVED_ORGANIZATION_IDS = Set.of("www", "api", "apps-api", "system-api", "portal",
+                                                                         "console", "mail", "admin", "login", "status", "docs");
 
     // Project ids may start with a digit because they embed application ids, which may
     // themselves start with a digit
@@ -114,6 +118,8 @@ public class DomainUtil {
         // The platform's own organizations are seeded by db migrations, which do not come
         // through here, so the prefix needs no escape hatch
         Validate.isTrue(!organizationId.startsWith(RESERVED_ID_PREFIX),
+                        "Organization Id '%s' is reserved by the platform", organizationId);
+        Validate.isTrue(!RESERVED_ORGANIZATION_IDS.contains(organizationId),
                         "Organization Id '%s' is reserved by the platform", organizationId);
     }
 

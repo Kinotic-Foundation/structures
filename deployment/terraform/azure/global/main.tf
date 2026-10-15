@@ -99,6 +99,13 @@ variable "github_app_private_key" {
   default     = ""
 }
 
+variable "cloudflare_dns_api_token" {
+  description = "A Cloudflare API token holding DNS edit on the customer zone (kinotic.io) and nothing else, which the management and system servers create each organization's sites record with; the cluster root gives cert-manager the same token"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 variable "github_webhook_secret" {
   description = "Webhook secret of the kinotic-ai GitHub App, which the management server verifies webhook deliveries with"
   type        = string
