@@ -68,12 +68,26 @@ public class TaskViewTest extends AbstractGrindTest {
     }
 
     @Test
+    public void aResultViewOfAnAsynchronousTaskIsBuiltFromTheValueItCompletesWith() throws Exception {
+        JobDefinition job = JobDefinition.create("async result view")
+                .name("async-result-view").version("1")
+                .task(Tasks.fromCallable("produce later", () -> vertx.timer(10).map(v -> new Widget("later")))
+                           .resultView(WIDGET::of));
+
+        JobRunHandle handle = jobService.run(job, JobOwner.system());
+        RunResult result = await(handle);
+
+        assertNull(result.error());
+        assertWidgetView(recordAt(handle, "0/1").getView(), "widget", "later");
+    }
+
+    @Test
     public void aResultViewCanAlsoReadAScopeValue() throws Exception {
         JobDefinition job = JobDefinition.create("result view with source")
                 .name("result-view-source").version("1")
                 .input(new Widget("target"))
                 .task(Tasks.fromValue("decide", new WidgetState("decided"))
-                           .resultView(Widget.class, (decision, target) -> WIDGET_STATE.of(
+                           .resultView(Widget.class, (WidgetState decision, Widget target) -> WIDGET_STATE.of(
                                    new WidgetState(decision.name() + " for " + target.name()))));
 
         JobRunHandle handle = jobService.run(job, JobOwner.system());

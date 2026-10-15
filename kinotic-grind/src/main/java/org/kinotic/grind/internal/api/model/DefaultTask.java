@@ -79,18 +79,18 @@ public final class DefaultTask<R> implements Task<R> {
 
     @Override
     @SuppressWarnings("unchecked")
-    public Task<R> resultView(Function<R, TaskView<?>> producer) {
+    public <V> Task<R> resultView(Function<V, TaskView<?>> producer) {
         Validate.notNull(producer, "producer cannot be null");
-        ViewProducer view = new ViewProducer(null, (result, value) -> producer.apply((R) result));
+        ViewProducer view = new ViewProducer(null, (result, value) -> producer.apply((V) result));
         return new DefaultTask<>(description, store, icon, startView, view, body);
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    public <S> Task<R> resultView(Class<S> source, BiFunction<R, S, TaskView<?>> producer) {
+    public <V, S> Task<R> resultView(Class<S> source, BiFunction<V, S, TaskView<?>> producer) {
         Validate.notNull(source, "source cannot be null");
         Validate.notNull(producer, "producer cannot be null");
-        ViewProducer view = new ViewProducer(source, (result, value) -> producer.apply((R) result, (S) value));
+        ViewProducer view = new ViewProducer(source, (result, value) -> producer.apply((V) result, (S) value));
         return new DefaultTask<>(description, store, icon, startView, view, body);
     }
 

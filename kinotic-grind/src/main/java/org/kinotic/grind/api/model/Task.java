@@ -58,21 +58,26 @@ public interface Task<T> {
     <S> Task<T> startView(Class<S> source, Function<S, TaskView<?>> producer);
 
     /**
-     * Declares the view a console shows for the task once it completes, built from its result.
+     * Declares the view a console shows for the task once it completes, built from its result: the
+     * value it returns, or the value a returned {@code Future}, {@code CompletionStage} or
+     * {@code Publisher} completes with. A result of another type than the producer takes fails the
+     * task.
      * @param producer builds the view from the task's result
+     * @param <V> the type of the task's result
      * @return a copy of this {@link Task} showing the view on completion
      */
-    Task<T> resultView(Function<T, TaskView<?>> producer);
+    <V> Task<T> resultView(Function<V, TaskView<?>> producer);
 
     /**
      * As {@link #resultView(Function)}, the producer also given the value of the given type, looked
      * up in the job scope as {@link #startView(Class, Function)} looks it up.
      * @param source the type of the scope value the view is also built from
      * @param producer builds the view from the task's result and that value
+     * @param <V> the type of the task's result
      * @param <S> the source type
      * @return a copy of this {@link Task} showing the view on completion
      */
-    <S> Task<T> resultView(Class<S> source, BiFunction<T, S, TaskView<?>> producer);
+    <V, S> Task<T> resultView(Class<S> source, BiFunction<V, S, TaskView<?>> producer);
 
     /**
      * Performs the work of this {@link Task}.
