@@ -67,8 +67,9 @@ public class EventsAndRecordingTest extends AbstractGrindTest {
     public void discoveryCarriesTheDeclaredStoreName() throws Exception {
         JobDefinition job = JobDefinition.create("declared")
                 .name("declared").version("1")
-                .task(Tasks.fromValue("produce widget", new Widget("named")), Store.state("widgetOfRecord"))
-                .task(Tasks.fromValue("produce another", new Widget("derived")), Store.result());
+                .task(Tasks.fromValue("produce widget", new Widget("named"))
+                      .store(Store.state("widgetOfRecord")))
+                .task(Tasks.fromValue("produce another", new Widget("derived")).store(Store.result()));
 
         RunResult result = await(jobService.run(job, JobOwner.system()));
 
@@ -85,7 +86,7 @@ public class EventsAndRecordingTest extends AbstractGrindTest {
     public void completionCarriesStoredValueInProcess() throws Exception {
         JobDefinition job = JobDefinition.create("carrying")
                 .name("carrying").version("1")
-                .task(Tasks.fromValue("produce widget", new Widget("carried")), Store.result());
+                .task(Tasks.fromValue("produce widget", new Widget("carried")).store(Store.result()));
 
         RunResult result = await(jobService.run(job, JobOwner.system()));
 
@@ -147,7 +148,7 @@ public class EventsAndRecordingTest extends AbstractGrindTest {
                     firstStatusSeenBySecond.set(repository.taskAt(runId.get(), "0/1").getStatus());
                     ownStatusSeenBySecond.set(repository.taskAt(runId.get(), "0/2").getStatus());
                 }))
-                .task(Tasks.fromValue("third", new Widget("ahead")), Store.state("widgetOfRecord"));
+                .task(Tasks.fromValue("third", new Widget("ahead")).store(Store.state("widgetOfRecord")));
 
         JobRunHandle handle = jobService.run(job, JobOwner.system());
         runId.set(handle.getJobRunId());

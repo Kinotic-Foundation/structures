@@ -1,7 +1,6 @@
 package org.kinotic.grind;
 
 import org.junit.jupiter.api.Test;
-import org.kinotic.grind.api.model.JobContext;
 import org.kinotic.grind.api.model.JobDefinition;
 import org.kinotic.grind.api.model.JobOwner;
 import org.kinotic.grind.api.model.JobRunHandle;
@@ -10,9 +9,11 @@ import org.kinotic.grind.api.model.TaskRecord;
 import org.kinotic.grind.api.model.Store;
 import org.kinotic.grind.api.model.StoreType;
 import org.kinotic.grind.api.model.Tasks;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -32,8 +33,8 @@ public class WireTest extends AbstractGrindTest {
     public void wiredResultReachesTheEventAndTheRecordsWireValue() throws Exception {
         JobDefinition job = JobDefinition.create("wired result")
                 .name("wired-result").version("1")
-                .task(Tasks.fromValue("allocate widget", new Widget("wl-123")),
-                      Store.result("widget").wire());
+                .task(Tasks.fromValue("allocate widget", new Widget("wl-123"))
+                      .store(Store.result("widget").wire()));
 
         JobRunHandle handle = jobService.run(job, JobOwner.system());
         RunResult result = await(handle);
@@ -55,8 +56,8 @@ public class WireTest extends AbstractGrindTest {
     public void unwiredValuesStayOffTheWire() throws Exception {
         JobDefinition job = JobDefinition.create("dark")
                 .name("dark").version("1")
-                .task(Tasks.fromValue("produce widget", new Widget("private")), Store.result("widget"))
-                .task(Tasks.fromValue("decide", new WidgetState("secret")), Store.state("widgetState"));
+                .task(Tasks.fromValue("produce widget", new Widget("private")).store(Store.result("widget")))
+                .task(Tasks.fromValue("decide", new WidgetState("secret")).store(Store.state("widgetState")));
 
         JobRunHandle handle = jobService.run(job, JobOwner.system());
         RunResult result = await(handle);
@@ -74,8 +75,8 @@ public class WireTest extends AbstractGrindTest {
     public void wiredStatePublishesItsDurableForm() throws Exception {
         JobDefinition job = JobDefinition.create("wired state")
                 .name("wired-state").version("1")
-                .task(Tasks.fromValue("decide", new WidgetState("shown")),
-                      Store.state("widgetState").wire());
+                .task(Tasks.fromValue("decide", new WidgetState("shown"))
+                      .store(Store.state("widgetState").wire()));
 
         JobRunHandle handle = jobService.run(job, JobOwner.system());
         RunResult result = await(handle);
@@ -92,19 +93,18 @@ public class WireTest extends AbstractGrindTest {
         AtomicReference<Widget> inScope = new AtomicReference<>(new Widget("sentinel"));
         JobDefinition job = JobDefinition.create("wire only")
                 .name("wire-only").version("1")
-                .task(Tasks.fromValue("observe widget", new Widget("observed")), Store.none().wire())
-                .task(new org.kinotic.grind.api.model.Task<Void>() {
-                    @Override
-                    public String getDescription() {
-                        return "probe scope";
-                    }
+                .task(Tasks.fromValue("observe widget", new Widget("observed")).store(Store.none().wire()))
+                .task(Tasks.fromCallable("probe scope", new Callable<Void>() {
+
+                    @Autowired(required = false)
+                    private Widget widget;
 
                     @Override
-                    public Void execute(JobContext context) {
-                        inScope.set(context.getBeanOrNull(Widget.class));
+                    public Void call() {
+                        inScope.set(widget);
                         return null;
                     }
-                });
+                }));
 
         JobRunHandle handle = jobService.run(job, JobOwner.system());
         RunResult result = await(handle);
@@ -138,8 +138,8 @@ public class WireTest extends AbstractGrindTest {
     public void wireAcceptsGenericValuesThatStateRejects() throws Exception {
         JobDefinition job = JobDefinition.create("generic wire")
                 .name("generic-wire").version("1")
-                .task(Tasks.fromValue("collect labels", new ArrayList<>(List.of("a", "b"))),
-                      Store.result("labels").wire());
+                .task(Tasks.fromValue("collect labels", new ArrayList<>(List.of("a", "b")))
+                      .store(Store.result("labels").wire()));
 
         RunResult result = await(jobService.run(job, JobOwner.system()));
 
@@ -152,7 +152,7 @@ public class WireTest extends AbstractGrindTest {
     public void unserializableWireValueFailsTheTask() throws Exception {
         JobDefinition job = JobDefinition.create("bad wire")
                 .name("bad-wire").version("1")
-                .task(Tasks.fromValue("produce cycle", new Cyclic()), Store.result("cycle").wire());
+                .task(Tasks.fromValue("produce cycle", new Cyclic()).store(Store.result("cycle").wire()));
 
         RunResult result = await(jobService.run(job, JobOwner.system()));
 

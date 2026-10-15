@@ -1,7 +1,9 @@
 package org.kinotic.grind.api.model;
 
 /**
- * A unit of work executed as one task of a {@link JobDefinition}.
+ * A unit of work executed as one task of a {@link JobDefinition}. A task is an immutable value:
+ * the fluent methods return copies, so one instance can serve several definitions, or a step and
+ * another step's {@link Store#reload(Task) reload task}, without either seeing the other's settings.
  */
 public interface Task<T> {
 
@@ -9,6 +11,21 @@ public interface Task<T> {
      * @return the description of this {@link Task} shown in run records
      */
     String getDescription();
+
+    /**
+     * @return how this {@link Task}'s result is kept, or null when it declares no {@link Store} of
+     *         its own: a task added to a definition then keeps nothing, and a dynamic task keeps its
+     *         result as the task that produced it declares
+     */
+    Store getStore();
+
+    /**
+     * @param store how the result is kept: its {@link StoreType} governs resume behavior, its name
+     *              places the value in the job scope for later tasks, and its wire flag publishes
+     *              the value to watchers of the run
+     * @return a copy of this {@link Task} that keeps its result as the given {@link Store} declares
+     */
+    Task<T> store(Store store);
 
     /**
      * Performs the work of this {@link Task}.

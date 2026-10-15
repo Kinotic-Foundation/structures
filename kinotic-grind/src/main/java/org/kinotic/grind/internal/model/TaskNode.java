@@ -8,7 +8,8 @@ import org.kinotic.grind.api.model.Task;
  *
  * @param sequence the node's position within its parent definition
  * @param task     the task to execute
- * @param store    how the task's result is kept
+ * @param store    how the task's result is kept: the task's own {@link Store}, or the one it
+ *                 inherits when it declares none
  */
 public record TaskNode(int sequence,
                        Task<?> task,

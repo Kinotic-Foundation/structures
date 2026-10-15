@@ -161,8 +161,9 @@ public class JobInterpreter {
         try {
             Object raw = executeOnPath(path, taskToRun, scope);
             if (raw instanceof Task<?> dynamicTask) {
-                // The dynamic task carries this task's store, so it stores the value
-                TaskNode dynamicNode = new TaskNode(1, dynamicTask, node.store());
+                // A dynamic task that declares no store of its own keeps the value as this task's store does
+                Store dynamicStore = dynamicTask.getStore() != null ? dynamicTask.getStore() : node.store();
+                TaskNode dynamicNode = new TaskNode(1, dynamicTask, dynamicStore);
                 discoverDynamic(path, dynamicNode);
                 executeTask(path + "/1", scope, dynamicNode);
                 notifyTaskCompleted(path, Store.none(), null, null, null);
