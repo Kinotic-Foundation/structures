@@ -1,6 +1,6 @@
 <script setup lang="ts">
 type MilestoneStatus = 'shipped' | 'current' | 'upcoming'
-type FeatureStatus = 'shipped' | 'in-progress' | 'planned'
+type FeatureStatus = 'shipped' | 'in-progress'
 
 interface Milestone {
   label: string
@@ -19,7 +19,6 @@ interface Feature {
 const FEATURE_STATUS_LABELS: Record<FeatureStatus, string> = {
   'shipped': 'SHIPPED',
   'in-progress': 'IN PROGRESS',
-  'planned': 'PLANNED',
 }
 
 const milestones: Milestone[] = [
@@ -27,70 +26,76 @@ const milestones: Milestone[] = [
     label: 'Q3 2026 · SHIPPED',
     status: 'shipped',
     title: 'Core platform',
-    summary: 'Frontends, microservices, persistence and CI/CD from a single description.',
+    summary: 'Data, services and frontends from one description, built and deployed by Claude over MCP.',
   },
   {
-    label: 'Q4 2026 · WE ARE HERE',
+    label: 'Q4 2026 · NOW',
     status: 'current',
-    title: 'MCP & agents',
-    summary: 'Build with Claude, ChatGPT or Cursor over MCP; every service exposed as a tool.',
+    title: 'Production ready',
+    summary: 'Access control, enterprise SSO and gated releases ready for real workloads, alongside our seed round.',
   },
   {
-    label: 'H1 2027 · NEXT',
+    label: 'Q1 2027',
     status: 'upcoming',
-    title: 'Enterprise controls',
-    summary: 'RBAC, audit, private deployments and multi-region.',
+    title: 'First customers',
+    summary: 'Kinotic OS Cloud launches, pipeline customers go live in our cloud or theirs, and the engineering team grows.',
   },
   {
-    label: 'H2 2027 · LATER',
+    label: 'Q2 2027',
     status: 'upcoming',
-    title: 'Marketplace',
-    summary: 'Shared structures, services and templates across the Kinotic network.',
+    title: 'Repeatable sales',
+    summary: 'More customers live, proven pricing, published case studies, and partner channels through the MCP ecosystem.',
+  },
+  {
+    label: 'Q3 2027',
+    status: 'upcoming',
+    title: 'Series A ready',
+    summary: 'Revenue, retention and pipeline that support a Series A, with customers setting the roadmap.',
+  },
+  {
+    label: 'Q4 2027',
+    status: 'upcoming',
+    title: 'Scale',
+    summary: 'Nationwide advertising, a sales team and cloud marketplace listings to grow the customer base, backed by SOC 2 Type II.',
   },
 ]
 
 const features: Feature[] = [
   {
     status: 'shipped',
-    title: 'Prototype-to-production continuity',
-    summary: 'The same artifact moves from dev to stage to prod with no rewrite.',
+    title: 'Core platform',
+    summary: 'Applications, typed services, tenant-isolated persistence and hosted frontends, deployed from GitHub on every push.',
     when: 'Q3 2026',
   },
   {
     status: 'shipped',
-    title: 'Identity & access management',
-    summary: 'OIDC sign-in and Cedar policy enforcement built into every service.',
+    title: 'MCP server & Claude plugin',
+    summary: 'Claude creates, builds and deploys applications through OAuth-secured MCP tools.',
+    when: 'Q3 2026',
+  },
+  {
+    status: 'shipped',
+    title: 'Isolation, observability & SBOMs',
+    summary: 'Every build and service in its own microVM, OpenTelemetry on every call, an SBOM for every project.',
     when: 'Q3 2026',
   },
   {
     status: 'in-progress',
-    title: 'MCP tool generation',
-    summary: 'Every structure and service published as an MCP tool for any agent.',
+    title: 'Relationship-based access control',
+    summary: 'Who can act: roles, groups and per-tenant permissions, enforced on every service call and MCP tool.',
     when: 'Q4 2026',
   },
   {
     status: 'in-progress',
-    title: 'Live usage & cost metering',
-    summary: 'Per-application observability with spend attribution.',
+    title: 'Gated dev, stage & prod',
+    summary: 'What ships: a live preview for every branch, vulnerability and migration checks before stage, human sign-off for prod.',
     when: 'Q4 2026',
   },
   {
-    status: 'planned',
-    title: 'RBAC & audit trail',
-    summary: 'Role-based access across workspaces with immutable change history.',
-    when: 'H1 2027',
-  },
-  {
-    status: 'planned',
-    title: 'Private & multi-region deployments',
-    summary: 'Run the factory inside a customer\'s cloud account, in any region.',
-    when: 'H1 2027',
-  },
-  {
-    status: 'planned',
-    title: 'Structures marketplace',
-    summary: 'Publish and reuse data models, services and app templates.',
-    when: 'H2 2027',
+    status: 'in-progress',
+    title: 'Enterprise SSO',
+    summary: 'Okta, Microsoft Entra ID and Google sign-in for organizations and for the apps they build.',
+    when: 'Q4 2026',
   },
 ]
 
@@ -105,9 +110,13 @@ const progress = computed(() => {
   <section id="roadmap" class="k-section roadmap">
     <div class="k-wrap">
       <div class="k-eyebrow roadmap__eyebrow" data-reveal>
-        <span>PRODUCT ROADMAP</span>
+        <span>ROADMAP</span>
       </div>
       <h2 class="k-heading roadmap__title" data-reveal>Where we're headed</h2>
+      <p class="roadmap__lede" data-reveal>
+        This quarter Kinotic becomes production ready. After that, the customers we land decide what we
+        build next, so 2027 is planned in business milestones rather than features.
+      </p>
 
       <div class="timeline" data-reveal>
         <div class="timeline__track" />
@@ -150,8 +159,16 @@ const progress = computed(() => {
 }
 
 .roadmap__title {
-  margin-bottom: 64px;
+  margin-bottom: 16px;
   font-size: clamp(29px, 3.4vw, 44px);
+}
+
+.roadmap__lede {
+  max-width: 560px;
+  margin: 0 0 64px;
+  color: var(--color-k-muted);
+  font-size: 16px;
+  line-height: 1.6;
 }
 
 .timeline {
@@ -179,8 +196,9 @@ const progress = computed(() => {
 .timeline__items {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 24px;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  gap: 16px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -315,14 +333,14 @@ const progress = computed(() => {
   font-size: 12px;
 }
 
-@media (max-width: 930px) {
+@media (max-width: 1080px) {
   .timeline__track,
   .timeline__progress {
     display: none;
   }
 
   .timeline__items {
-    grid-template-columns: 1fr;
+    grid-auto-flow: row;
     gap: 0;
   }
 
