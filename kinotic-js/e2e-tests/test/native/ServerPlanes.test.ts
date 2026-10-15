@@ -154,7 +154,7 @@ describe('Server planes', () => {
     })
 
     it('authenticates a session only at the server that issued it', async () => {
-        const login = await fetch(`${restBase(managementServer())}/api/auth/org/login`, {
+        const login = await fetch(`${restBase(managementServer())}/api/auth/org/login/${E2E_ORGANIZATION_ID}`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({email: E2E_ORG_USER_EMAIL, password: E2E_FIXTURE_PASSWORD})

@@ -12,6 +12,8 @@ import org.kinotic.domain.api.model.security.identity.MachineProvisionResult;
 import org.kinotic.domain.api.model.security.identity.ParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 
+import java.util.List;
+
 public interface ParticipantIdentityService extends IdentifiableCrudService<ParticipantIdentity, String> {
 
     /**
@@ -33,11 +35,10 @@ public interface ParticipantIdentityService extends IdentifiableCrudService<Part
     Future<UserParticipantIdentity> findByEmail(String email, String organizationId, String applicationId);
 
     /**
-     * Finds the first ORG-scope user with the given email across all organizations, for a flow
-     * that runs before an organization is known: the sign-up flow enforcing one user per email
-     * before the new organization's id exists, and organization login.
+     * Finds the ORGANIZATION-scope users with the given email, one per organization the address is a
+     * member of, for telling a person which organizations they can sign in to.
      */
-    Future<UserParticipantIdentity> findFirstOrgUserByEmail(String email);
+    Future<List<UserParticipantIdentity>> findOrgUsersByEmail(String email);
 
     /**
      * Finds the {@link UserParticipantIdentity} (if any) with the given OIDC identity within a specific
@@ -50,12 +51,11 @@ public interface ParticipantIdentityService extends IdentifiableCrudService<Part
                                                        String applicationId);
 
     /**
-     * Finds the ORGANIZATION-scope user (if any) for the given OIDC identity, across all
-     * organizations. Org-tier social login and sign-up resolve identities with this lookup;
-     * it is unambiguous because an email may belong to at most one organization, so a given
-     * {@code (oidcSubject, oidcConfigId)} identity maps to at most one org-scope user.
+     * Finds the ORGANIZATION-scope users bound to the given OIDC identity, one per organization it is a
+     * member of, for a sign-in or sign-up through a platform social registration that names no
+     * organization.
      */
-    Future<UserParticipantIdentity> findOrgUserByOidcIdentity(String oidcSubject, String oidcConfigId);
+    Future<List<UserParticipantIdentity>> findOrgUsersByOidcIdentity(String oidcSubject, String oidcConfigId);
 
     /**
      * Finds all users (never delegates) within the given scope, identified structurally by

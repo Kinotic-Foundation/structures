@@ -205,6 +205,19 @@ public class OidcFlowOrchestrator {
     }
 
     /**
+     * {@link #startFlow(RoutingContext, OidcConfiguration, String, String)} for a sign-in to the
+     * organization {@code orgId} that binds the flow to the page at {@code origin}, named by the caller
+     * because a start reached by a link carries no {@code Origin} of its own.
+     */
+    public Future<String> startFlow(RoutingContext ctx,
+                                    OidcConfiguration config,
+                                    String callbackUrl,
+                                    String orgId,
+                                    String origin) {
+        return startFlow(ctx, config, callbackUrl, orgId, null, null, origin);
+    }
+
+    /**
      * {@link #startFlow(RoutingContext, OidcConfiguration, String, String)} for a sign-in to
      * {@code application}: stashes both ids of its scope for the callback to resolve its configuration by,
      * and binds the flow to the page at {@code origin}, named by the caller because a start reached by

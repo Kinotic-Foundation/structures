@@ -14,8 +14,13 @@ import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.domain.internal.api.services.CrudServiceTemplate;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 @Component
 public class ParticipantIdentityRepository extends AbstractRepository<ParticipantIdentity> {
+
+    // the most organizations one person's email or social identity is looked up across
+    private static final int MAX_MEMBERSHIPS = 100;
 
     public ParticipantIdentityRepository(CrudServiceTemplate crudServiceTemplate) {
         super("kinotic_participant_identity", ParticipantIdentity.class, crudServiceTemplate);
@@ -33,12 +38,15 @@ public class ParticipantIdentityRepository extends AbstractRepository<Participan
                 .map(UserParticipantIdentity.class::cast);
     }
 
-    public Future<UserParticipantIdentity> findFirstOrgUserByEmail(String email) {
-        return findFirst(b -> b.query(composeFilter(
+    /** The ORGANIZATION-scope users with the given email, one per organization the address is a member of. */
+    public Future<List<UserParticipantIdentity>> findOrgUsersByEmail(String email) {
+        Validate.notBlank(email, "email cannot be blank");
+        return findAll(Pageable.ofSize(MAX_MEMBERSHIPS), b -> b.query(composeFilter(
                 termFilter("email", DomainUtil.normalizeEmail(email)),
                 existsFilter("organizationId"),
                 missingFilter("applicationId"))))
-                .map(UserParticipantIdentity.class::cast);
+                .map(page -> page.map(UserParticipantIdentity.class::cast))
+                .map(Page::getContent);
     }
 
     /** Users only — delegates share their owner's scope and must not appear in member listings. */
@@ -100,13 +108,15 @@ public class ParticipantIdentityRepository extends AbstractRepository<Participan
                 .map(UserParticipantIdentity.class::cast);
     }
 
-    public Future<UserParticipantIdentity> findOrgUserByOidcIdentity(String oidcSubject, String oidcConfigId) {
-        return findFirst(b -> b.query(composeFilter(
+    /** The ORGANIZATION-scope users bound to the given OIDC identity, one per organization it is a member of. */
+    public Future<List<UserParticipantIdentity>> findOrgUsersByOidcIdentity(String oidcSubject, String oidcConfigId) {
+        return findAll(Pageable.ofSize(MAX_MEMBERSHIPS), b -> b.query(composeFilter(
                 termFilter("oidcSubject", oidcSubject),
                 termFilter("oidcConfigId", oidcConfigId),
                 existsFilter("organizationId"),
                 missingFilter("applicationId"))))
-                .map(UserParticipantIdentity.class::cast);
+                .map(page -> page.map(UserParticipantIdentity.class::cast))
+                .map(Page::getContent);
     }
 
     /**

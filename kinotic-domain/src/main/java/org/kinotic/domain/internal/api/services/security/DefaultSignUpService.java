@@ -44,13 +44,6 @@ public class DefaultSignUpService implements SignUpService {
                         return Future.failedFuture(new IllegalArgumentException(
                                 "A sign-up is already pending for this email. Check your inbox for the verification link."));
                     }
-                    return identityService.findFirstOrgUserByEmail(email);
-                })
-                .compose(existingUser -> {
-                    if (existingUser != null) {
-                        return Future.failedFuture(new IllegalArgumentException(
-                                "An account with this email already exists."));
-                    }
                     String token = UUID.randomUUID().toString();
                     Date now = new Date();
                     PendingSignUp pending = new PendingSignUp()

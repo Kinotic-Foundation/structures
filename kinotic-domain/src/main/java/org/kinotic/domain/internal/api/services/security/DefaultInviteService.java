@@ -66,24 +66,17 @@ public class DefaultInviteService implements InviteService {
     }
 
     /**
-     * Scope-branched availability check. Org invites reject an email with an org-scope account
-     * in ANY organization — org login resolves users by unscoped email lookups, so a second
-     * org-scope row for the same email would make login nondeterministic. App login is fully
-     * scoped, so app invites only check within the target application. Both also reject when
-     * an invitation is already pending in the scope.
+     * Rejects an invitation to a scope that already holds a user with the email, or one for which an
+     * invitation is already pending. Every login is addressed to its scope, so an email may be a
+     * member of any number of organizations and applications.
      */
     private Future<Void> checkEmailAvailable(PendingInvite invite) {
-        Future<UserParticipantIdentity> existingUser = invite.getApplicationId() == null
-                ? identityService.findFirstOrgUserByEmail(invite.getEmail())
-                : identityService.findByEmail(invite.getEmail(),
-                                             invite.getOrganizationId(),
-                                             invite.getApplicationId());
-        return existingUser
+        return identityService.findByEmail(invite.getEmail(), invite.getOrganizationId(), invite.getApplicationId())
                 .compose(user -> {
                     if (user != null) {
                         return Future.<PendingInvite>failedFuture(new IllegalArgumentException(
                                 invite.getApplicationId() == null
-                                        ? "This email already belongs to an organization."
+                                        ? "A member with this email already exists in this organization."
                                         : "A user with this email already exists in this application."));
                     }
                     return pendingInviteRepository.findByEmailAndScope(invite.getEmail(),

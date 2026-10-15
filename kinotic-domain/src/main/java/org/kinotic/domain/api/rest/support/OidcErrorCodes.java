@@ -30,6 +30,12 @@ public final class OidcErrorCodes {
     /** Verified IdP identity has no ParticipantIdentity in the target scope — login refuses to auto-create. */
     public static final String NO_ACCOUNT = "no_account";
 
+    /**
+     * A sign-in through a platform social registration that named no organization found the identity a
+     * member of several, so the person signs in at one organization's own login instead.
+     */
+    public static final String MULTIPLE_ORGANIZATIONS = "multiple_organizations";
+
     /** Found ParticipantIdentity but {@code enabled=false}. */
     public static final String ACCOUNT_DISABLED = "account_disabled";
 

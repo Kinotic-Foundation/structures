@@ -157,9 +157,9 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
     }
 
     @Override
-    public Future<UserParticipantIdentity> findFirstOrgUserByEmail(String email) {
+    public Future<List<UserParticipantIdentity>> findOrgUsersByEmail(String email) {
         Validate.notBlank(email, "email cannot be blank");
-        return identityRepository.findFirstOrgUserByEmail(email);
+        return identityRepository.findOrgUsersByEmail(email);
     }
 
     @Override
@@ -174,10 +174,10 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
     }
 
     @Override
-    public Future<UserParticipantIdentity> findOrgUserByOidcIdentity(String oidcSubject, String oidcConfigId) {
+    public Future<List<UserParticipantIdentity>> findOrgUsersByOidcIdentity(String oidcSubject, String oidcConfigId) {
         Validate.notBlank(oidcSubject, "oidcSubject cannot be blank");
         Validate.notBlank(oidcConfigId, "oidcConfigId cannot be blank");
-        return identityRepository.findOrgUserByOidcIdentity(oidcSubject, oidcConfigId);
+        return identityRepository.findOrgUsersByOidcIdentity(oidcSubject, oidcConfigId);
     }
 
     @Override

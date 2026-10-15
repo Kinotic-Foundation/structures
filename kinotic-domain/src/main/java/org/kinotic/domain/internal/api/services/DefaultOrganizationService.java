@@ -6,16 +6,25 @@ import org.kinotic.core.api.exceptions.AlreadyExistsException;
 import org.kinotic.domain.api.model.Organization;
 import org.kinotic.domain.api.services.OrganizationService;
 import org.kinotic.domain.internal.api.repositories.OrganizationRepository;
+import org.kinotic.domain.internal.api.repositories.ParticipantIdentityRepository;
 import org.kinotic.domain.api.utils.DomainUtil;
 import org.springframework.stereotype.Component;
 
 import java.util.Date;
+import java.util.Objects;
 
 @Component
 public class DefaultOrganizationService extends AbstractCrudService<Organization> implements OrganizationService {
 
-    public DefaultOrganizationService(OrganizationRepository repository) {
+    private final ParticipantIdentityRepository identityRepository;
+    private final EmailService emailService;
+
+    public DefaultOrganizationService(OrganizationRepository repository,
+                                      ParticipantIdentityRepository identityRepository,
+                                      EmailService emailService) {
         super(repository);
+        this.identityRepository = identityRepository;
+        this.emailService = emailService;
     }
 
     @Override
@@ -48,5 +57,16 @@ public class DefaultOrganizationService extends AbstractCrudService<Organization
                             ? Future.failedFuture(new AlreadyExistsException(
                                     "An organization named '" + entity.getName() + "' already exists"))
                             : Future.failedFuture(ex));
+    }
+
+    @Override
+    public Future<Void> sendMembershipsEmail(String email) {
+        Validate.notBlank(email, "email cannot be blank");
+        return identityRepository.findOrgUsersByEmail(email)
+                                 .compose(members -> Future.all(members.stream()
+                                                                       .map(member -> findById(member.getOrganizationId()))
+                                                                       .toList()))
+                                 .map(cf -> cf.<Organization>list().stream().filter(Objects::nonNull).toList())
+                                 .compose(organizations -> emailService.sendOrganizationsEmail(email, organizations));
     }
 }

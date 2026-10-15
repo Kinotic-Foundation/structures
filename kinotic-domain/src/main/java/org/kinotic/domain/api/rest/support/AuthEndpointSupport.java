@@ -295,20 +295,6 @@ public abstract class AuthEndpointSupport {
                 .mapEmpty();
     }
 
-    /** Login-lookup path-fork response indicating the frontend should reveal the password field. */
-    public Future<Void> respondPasswordPath(RoutingContext ctx) {
-        ctx.response().putHeader("Content-Type", "application/json")
-           .end(new JsonObject().put("type", "password").encode());
-        return Future.succeededFuture();
-    }
-
-    /** Login-lookup path-fork response carrying the IdP authorize URL the frontend should redirect to. */
-    public Future<Void> respondSsoRedirect(RoutingContext ctx, String redirectUrl) {
-        ctx.response().putHeader("Content-Type", "application/json")
-           .end(new JsonObject().put("type", "sso").put("redirect", redirectUrl).encode());
-        return Future.succeededFuture();
-    }
-
     /** Standard {@code [{id, name, provider}]} shape for "list of OIDC configs to choose from". */
     public void respondProvidersList(RoutingContext ctx, List<? extends OidcConfiguration> configs) {
         ctx.response().putHeader("Content-Type", "application/json").end(providersJson(configs).encode());
@@ -332,7 +318,8 @@ public abstract class AuthEndpointSupport {
      * Standard social start endpoint: resolves the {@code :provider} path parameter to the enabled
      * Kinotic-curated configuration for that provider kind and redirects the browser to its IdP,
      * writing a {@code 400} for an unknown or disabled provider. The caller supplies the callback
-     * URL the IdP returns to, which is what distinguishes a signup start from a login start.
+     * URL the IdP returns to, which is what distinguishes a signup start from a login start. The
+     * flow names no organization: its callback resolves the identity across every organization.
      * <p>
      * A {@code referer} query parameter naming a path within the SPA is where the browser lands
      * once the flow completes.
@@ -347,32 +334,42 @@ public abstract class AuthEndpointSupport {
             return;
         }
 
-        String returnPath = safeReturnPath(ctx.request().getParam("referer"));
-
         oidcConfigurationService.findEnabledOrgSignupByProvider(providerKind)
-              .compose(config -> {
+              .onSuccess(config -> {
                   if (config == null) {
                       respondError(ctx, 400, "Unknown or disabled platform provider: " + provider);
-                      return Future.succeededFuture();
-                  }
-                  return oidcFlowOrchestrator.startFlow(ctx, config, callbackUrl.apply(config.getId()), null);
-              })
-              .onSuccess(url -> {
-                  // null means the compose above already answered the unknown-provider case
-                  if (url != null) {
-                      // written after startFlow, which regenerates the session id. each start
-                      // defines where its own flow lands, so a path a previous one abandoned at
-                      // the IdP is replaced rather than inherited
-                      if (returnPath != null) {
-                          ctx.session().put(RETURN_PATH_SESSION_KEY, returnPath);
-                      } else {
-                          ctx.session().remove(RETURN_PATH_SESSION_KEY);
-                      }
-                      ctx.response().setStatusCode(302).putHeader("Location", url).end();
+                  } else {
+                      redirectToIdp(ctx, config, callbackUrl.apply(config.getId()), null, SessionBinding.origin(ctx));
                   }
               })
               .onFailure(ex -> {
                   log.error("Social start failed for provider {}", provider, ex);
+                  respondError(ctx, 500, "Provider initialization failed");
+              });
+    }
+
+    /**
+     * Begins a sign-in through {@code config} and redirects the browser to its IdP, which returns to
+     * {@code callbackUrl}. The completed login is bound to the page at {@code origin}, and the flow is
+     * scoped to the organization {@code orgId}, or to none when it is {@code null}. A {@code referer}
+     * query parameter naming a path within the SPA is where the browser lands once the flow completes.
+     */
+    public void redirectToIdp(RoutingContext ctx, OidcConfiguration config, String callbackUrl, String orgId, String origin) {
+        String returnPath = safeReturnPath(ctx.request().getParam("referer"));
+        oidcFlowOrchestrator.startFlow(ctx, config, callbackUrl, orgId, origin)
+              .onSuccess(url -> {
+                  // written after startFlow, which regenerates the session id. each start
+                  // defines where its own flow lands, so a path a previous one abandoned at
+                  // the IdP is replaced rather than inherited
+                  if (returnPath != null) {
+                      ctx.session().put(RETURN_PATH_SESSION_KEY, returnPath);
+                  } else {
+                      ctx.session().remove(RETURN_PATH_SESSION_KEY);
+                  }
+                  ctx.response().setStatusCode(302).putHeader("Location", url).end();
+              })
+              .onFailure(ex -> {
+                  log.error("Sign-in start failed for configuration {}", config.getId(), ex);
                   respondError(ctx, 500, "Provider initialization failed");
               });
     }

@@ -160,9 +160,9 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes {
             return;
         }
 
-        identityService.findOrgUserByOidcIdentity(sub, config.getId())
+        identityService.findOrgUsersByOidcIdentity(sub, config.getId())
               .compose(existing -> {
-                  if (existing != null) {
+                  if (!existing.isEmpty()) {
                       // Already have an account for this identity — push them to log in instead.
                       return Future.failedFuture(new AccountExistsException());
                   }
