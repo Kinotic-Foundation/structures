@@ -2,6 +2,7 @@ package org.kinotic.domain.internal.api.services.secret;
 
 import io.vertx.core.Future;
 import lombok.RequiredArgsConstructor;
+import org.kinotic.domain.api.ee.services.SecretStorageBackend;
 import org.kinotic.domain.api.services.SecretStorageService;
 import org.springframework.stereotype.Component;
 

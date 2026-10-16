@@ -1,5 +1,6 @@
 import type { JobRunEventType } from '@/api/model/grind/events/JobRunEventType'
 import type { StoreType } from '@/api/model/grind/StoreType'
+import type { TaskView } from '@/api/model/grind/TaskView'
 
 /**
  * A task finished successfully, describing what it stored in the job scope. The stored object
@@ -29,5 +30,10 @@ export interface TaskCompletedEvent {
      * The stored value as JSON, or null unless the task's store declared wire publication.
      */
     readonly wireValue: any
+
+    /**
+     * The view the task shows on completion, or null when completion leaves it unchanged.
+     */
+    readonly view: TaskView | null
 
 }
