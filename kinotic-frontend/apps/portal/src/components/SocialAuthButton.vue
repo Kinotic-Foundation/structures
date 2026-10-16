@@ -39,7 +39,8 @@ import googleSignUpLight from '@/assets/social/google/web_light_rd_SU.svg'
 import googleSignUpDark  from '@/assets/social/google/web_dark_rd_SU.svg'
 import microsoftLogoUrl  from '@/assets/social/entra/ms-symbollockup_mssymbol_19.svg'
 
-export type Intent = 'sign-in' | 'sign-up'
+/** What the button does: signs in, signs up, or connects the provider to the signed-in account. */
+export type Intent = 'sign-in' | 'sign-up' | 'connect'
 
 const props = defineProps<{
   provider: string
@@ -60,13 +61,18 @@ const brandedAsset = computed<string | null>(() => {
 
 const microsoftLogo = microsoftLogoUrl
 
-const microsoftLabel = computed<string>(() => {
-  return props.intent === 'sign-up' ? 'Sign up with Microsoft' : 'Sign in with Microsoft'
+/** The verb the intent reads as before the provider's name. */
+const verb = computed<string>(() => {
+  switch (props.intent) {
+    case 'sign-up': return 'Sign up with'
+    case 'connect': return 'Connect'
+    default:        return 'Sign in with'
+  }
 })
 
-const githubLabel = computed<string>(() => {
-  return props.intent === 'sign-up' ? 'Sign up with GitHub' : 'Sign in with GitHub'
-})
+const microsoftLabel = computed<string>(() => `${verb.value} Microsoft`)
+
+const githubLabel = computed<string>(() => `${verb.value} GitHub`)
 
 const providerDisplayName = computed<string>(() => {
   switch (props.provider) {
@@ -77,9 +83,7 @@ const providerDisplayName = computed<string>(() => {
   }
 })
 
-const genericLabel = computed<string>(() => {
-  return `${props.intent === 'sign-up' ? 'Sign up' : 'Sign in'} with ${providerDisplayName.value}`
-})
+const genericLabel = computed<string>(() => `${verb.value} ${providerDisplayName.value}`)
 
 const ariaLabel = genericLabel
 </script>

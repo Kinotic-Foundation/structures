@@ -80,17 +80,109 @@
           </div>
         </div>
       </section>
+
+      <!-- One account, several ways in: the password and every provider identity bound to it. The last
+           remaining method cannot be removed, so the account always keeps a way to sign in. -->
+      <section class="rounded-2xl border border-surface-200 bg-surface-0 dark:border-surface-700 dark:bg-surface-800/30">
+        <div class="flex flex-col gap-1 px-6 pt-6">
+          <h3 class="text-sm font-medium">Sign-in methods</h3>
+          <small class="text-muted-color">How you sign in to Kinotic, whichever organization you open.</small>
+        </div>
+
+        <ul class="mt-4 border-t border-surface-200 dark:border-surface-700">
+          <li v-for="method in methods" :key="method.id"
+              class="flex flex-wrap items-center gap-3 border-b border-surface-100 px-6 py-3.5 dark:border-surface-800">
+            <component :is="method.kind === SignInMethodKind.PASSWORD ? KeyRound : ShieldCheck" :size="18" :stroke-width="1.75"
+                       class="shrink-0 text-surface-600 dark:text-surface-300" aria-hidden="true" />
+            <div class="flex min-w-0 flex-1 flex-col">
+              <span class="truncate text-sm text-surface-950 dark:text-surface-0">{{ method.name }}</span>
+              <span v-if="method.created" class="text-xs text-muted-color">Connected {{ DatetimeUtil.formatMonthDayYear(method.created) }}</span>
+            </div>
+            <Button v-if="method.kind === SignInMethodKind.PASSWORD" label="Change password" size="small" severity="secondary" outlined
+                    @click="openPasswordDialog" />
+            <Button v-else label="Remove" size="small" severity="secondary" text :disabled="methods.length < 2"
+                    v-tooltip.top="methods.length < 2 ? 'Add another sign-in method first' : undefined"
+                    @click="removeMethod(method)" />
+          </li>
+          <li v-if="!hasPassword" class="flex flex-wrap items-center gap-3 border-b border-surface-100 px-6 py-3.5 dark:border-surface-800">
+            <KeyRound :size="18" :stroke-width="1.75" class="shrink-0 text-surface-400" aria-hidden="true" />
+            <span class="flex-1 text-sm text-muted-color">No password set</span>
+            <Button label="Set password" size="small" severity="secondary" outlined @click="openPasswordDialog" />
+          </li>
+        </ul>
+
+        <div v-if="connectableProviders.length > 0" class="flex flex-wrap items-center gap-3 px-6 py-4">
+          <span class="text-xs text-muted-color">Connect another way to sign in:</span>
+          <SocialAuthButton v-for="provider in connectableProviders" :key="provider" :provider="provider"
+                            :action="apiUrl('/api/auth/account/methods/start/' + provider)" intent="connect" />
+        </div>
+      </section>
+
+      <!-- The organizations the account is a member of; switching replaces the page's login and reloads -->
+      <section class="rounded-2xl border border-surface-200 bg-surface-0 dark:border-surface-700 dark:bg-surface-800/30">
+        <div class="flex flex-col gap-1 px-6 pt-6">
+          <h3 class="text-sm font-medium">Organizations</h3>
+          <small class="text-muted-color">The organizations you belong to. You are signed in to one at a time.</small>
+        </div>
+
+        <ul class="mt-4 border-t border-surface-200 dark:border-surface-700">
+          <li v-for="organization in organizations" :key="organization.id ?? ''"
+              class="flex flex-wrap items-center gap-3 border-b border-surface-100 px-6 py-3.5 dark:border-surface-800">
+            <Building2 :size="18" :stroke-width="1.75" class="shrink-0 text-surface-600 dark:text-surface-300" aria-hidden="true" />
+            <div class="flex min-w-0 flex-1 flex-col">
+              <span class="truncate text-sm text-surface-950 dark:text-surface-0">{{ organization.name }}</span>
+              <span class="font-mono text-xs text-muted-color">{{ organization.id }}</span>
+            </div>
+            <Tag v-if="organization.id === currentOrganizationId" value="Current" severity="success" rounded />
+            <Button v-else label="Switch" size="small" severity="secondary" outlined :loading="switchingTo === organization.id"
+                    @click="switchTo(organization.id ?? '')" />
+          </li>
+        </ul>
+      </section>
     </div>
+
+    <FormDialog v-model:visible="passwordDialogVisible" :icon="KeyRound"
+                :title="hasPassword ? 'Change password' : 'Set a password'"
+                :description="hasPassword ? 'Enter your current password, then the new one.' : 'A password lets you sign in without a provider.'"
+                @submit="savePassword">
+      <div class="flex flex-col gap-4">
+        <div v-if="hasPassword">
+          <label for="current-password" class="mb-2 block text-sm font-medium">Current password</label>
+          <Password id="current-password" v-model="currentPassword" :feedback="false" toggleMask class="w-full" input-class="w-full" autofocus />
+        </div>
+        <div>
+          <label for="new-password" class="mb-2 block text-sm font-medium">New password</label>
+          <Password id="new-password" v-model="newPassword" :feedback="false" toggleMask class="w-full" input-class="w-full" />
+        </div>
+        <div>
+          <label for="confirm-password" class="mb-2 block text-sm font-medium">Confirm new password</label>
+          <Password id="confirm-password" v-model="confirmPassword" :feedback="false" toggleMask class="w-full" input-class="w-full"
+                    :invalid="confirmPassword !== '' && confirmPassword !== newPassword" />
+        </div>
+      </div>
+      <template #footer>
+        <Button type="button" label="Cancel" severity="secondary" outlined @click="passwordDialogVisible = false" />
+        <Button type="submit" :label="hasPassword ? 'Change password' : 'Set password'" :loading="savingPassword" :disabled="!canSavePassword" />
+      </template>
+    </FormDialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
+import Password from 'primevue/password'
 import Skeleton from 'primevue/skeleton'
 import Tag from 'primevue/tag'
 import { useToast } from 'primevue/usetoast'
+import { Building2, KeyRound, ShieldCheck } from '@lucide/vue'
+import { Kinotic } from '@kinotic-ai/core'
+import { type Organization, PASSWORD_SIGN_IN_METHOD_ID, type SignInMethod, SignInMethodKind } from '@kinotic-ai/management-api'
+import { FormDialog, apiUrl, createDebug } from '@kinotic-ai/frontend-common'
+import SocialAuthButton from '@/components/SocialAuthButton.vue'
+import { USER_STATE } from '@/states/IUserState'
 
 import { DatetimeUtil, showErrorToast, statusSeverity } from '@kinotic-ai/frontend-common'
 import { PageHeader } from '@kinotic-ai/frontend-common'
@@ -107,7 +199,30 @@ interface ProfileDetail {
 /** How long the copy button shows its confirmation before returning to the copy icon. */
 const COPIED_FEEDBACK_MILLIS = 2000
 
+/** The platform registrations an account may connect as a sign-in method; any other provider offered is omitted. */
+const CONNECTABLE_PROVIDERS = ['github']
+
+const debug = createDebug('profile')
 const toast = useToast()
+const route = useRoute()
+const router = useRouter()
+
+const methods = ref<SignInMethod[]>([])
+const platformProviders = ref<string[]>([])
+const organizations = ref<Organization[]>([])
+const switchingTo = ref<string | null>(null)
+
+const passwordDialogVisible = ref(false)
+const currentPassword = ref('')
+const newPassword = ref('')
+const confirmPassword = ref('')
+const savingPassword = ref(false)
+
+const hasPassword = computed(() => methods.value.some(method => method.id === PASSWORD_SIGN_IN_METHOD_ID))
+const connectableProviders = computed(() => platformProviders.value.filter(provider => CONNECTABLE_PROVIDERS.includes(provider)))
+const currentOrganizationId = computed(() => USER_STATE.getOrganizationId())
+const canSavePassword = computed(() => newPassword.value.length > 0 && newPassword.value === confirmPassword.value
+    && (!hasPassword.value || currentPassword.value.length > 0))
 
 const displayName = ref('')
 const loading = ref(true)
@@ -130,7 +245,101 @@ const details = computed<ProfileDetail[]>(() => [
   { label: 'User ID', value: PROFILE_STATE.profile?.id ?? '—', icon: 'pi pi-hashtag', copyable: true }
 ])
 
-onMounted(load)
+onMounted(() => {
+  consumeConnectResult()
+  load()
+  void loadSignIn()
+})
+
+/** The connect round-trip returns here with ?connected=<provider> or ?error=<code>. */
+function consumeConnectResult() {
+  const connected = route.query.connected as string | undefined
+  const error = route.query.error as string | undefined
+  if (connected) {
+    toast.add({ severity: 'success', summary: 'Sign-in method connected', detail: `You can now sign in with ${connected}.`, life: 6000 })
+  } else if (error === 'identity_in_use') {
+    toast.add({ severity: 'error', summary: 'Already connected elsewhere', detail: 'That account already signs in another Kinotic account.', life: 10000 })
+  } else if (error) {
+    toast.add({ severity: 'error', summary: 'Could not connect', detail: 'The provider did not complete the sign-in. Please try again.', life: 10000 })
+  }
+  if (connected || error) {
+    const newQuery = { ...route.query }
+    delete newQuery.connected
+    delete newQuery.error
+    router.replace({ query: newQuery })
+  }
+}
+
+async function loadSignIn() {
+  try {
+    const [found, orgs] = await Promise.all([Kinotic.profile.findMySignInMethods(), Kinotic.profile.findMyOrganizations()])
+    methods.value = found
+    organizations.value = orgs
+  } catch (err) {
+    showErrorToast(toast, 'Failed to load your sign-in methods', err, { life: 8000 })
+  }
+  try {
+    const res = await fetch(apiUrl('/api/auth/org/login/providers'), { credentials: 'same-origin' })
+    if (res.ok) {
+      const data = await res.json()
+      if (Array.isArray(data)) platformProviders.value = data
+    }
+  } catch (err) {
+    debug('Failed to load providers: %O', err)
+  }
+}
+
+function openPasswordDialog() {
+  currentPassword.value = ''
+  newPassword.value = ''
+  confirmPassword.value = ''
+  passwordDialogVisible.value = true
+}
+
+async function savePassword() {
+  if (!canSavePassword.value) return
+  savingPassword.value = true
+  try {
+    await Kinotic.profile.setPassword(hasPassword.value ? currentPassword.value : null, newPassword.value)
+    passwordDialogVisible.value = false
+    toast.add({ severity: 'success', summary: hasPassword.value ? 'Password changed' : 'Password set', life: 5000 })
+    methods.value = await Kinotic.profile.findMySignInMethods()
+  } catch (err) {
+    showErrorToast(toast, 'Failed to save the password', err, { life: 8000 })
+  } finally {
+    savingPassword.value = false
+  }
+}
+
+async function removeMethod(method: SignInMethod) {
+  try {
+    await Kinotic.profile.removeSignInMethod(method.id)
+    methods.value = await Kinotic.profile.findMySignInMethods()
+    toast.add({ severity: 'success', summary: 'Sign-in method removed', detail: method.name, life: 5000 })
+  } catch (err) {
+    showErrorToast(toast, 'Failed to remove the sign-in method', err, { life: 8000 })
+  }
+}
+
+/** Signs the account in to another of its organizations and reloads, so the realtime connection reconnects as that member. */
+async function switchTo(organizationId: string) {
+  switchingTo.value = organizationId
+  try {
+    const res = await fetch(apiUrl('/api/auth/org/switch'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ organizationId })
+    })
+    if (!res.ok) {
+      throw new Error(`The switch was refused (${res.status})`)
+    }
+    window.location.assign('/applications')
+  } catch (err) {
+    showErrorToast(toast, 'Failed to switch organization', err, { life: 8000 })
+    switchingTo.value = null
+  }
+}
 
 onBeforeUnmount(() => {
   if (copiedTimer) clearTimeout(copiedTimer)

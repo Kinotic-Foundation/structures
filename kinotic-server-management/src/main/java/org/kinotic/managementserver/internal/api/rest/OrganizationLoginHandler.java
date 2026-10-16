@@ -79,6 +79,34 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes {
         router.post("/api/auth/org/login/:orgId/start/:configId").handler(this::handleStart);
         // a link, as from a provider's own tile of applications, starts the same flow
         router.get("/api/auth/org/login/:orgId/start/:configId").handler(this::handleStart);
+        // a signed-in account moves between the organizations it is a member of
+        router.post("/api/auth/org/switch").handler(this::handleSwitch);
+    }
+
+    /**
+     * {@code POST /api/auth/org/switch {organizationId}} — signs the page's signed-in account in to another
+     * organization it is a member of, replacing the page's login; {@code 204} once switched, {@code 403} for an
+     * organization the account may not sign in to, {@code 401} without a signed-in user.
+     */
+    private void handleSwitch(RoutingContext ctx) {
+        Participant current = authEndpointSupport.requireSessionUser(ctx);
+        String organizationId = authEndpointSupport.readJsonBody(ctx).getString("organizationId");
+        if (organizationId == null || organizationId.isBlank()) {
+            authEndpointSupport.respondError(ctx, 400, "organizationId is required");
+            return;
+        }
+        identityService.resolveParticipant(current.getId(), organizationId, null)
+                       .onSuccess(participant -> {
+                           if (participant == null) {
+                               authEndpointSupport.respondError(ctx, 403, "You are not a member of that organization");
+                           } else {
+                               authEndpointSupport.respondSuccess(ctx, participant);
+                           }
+                       })
+                       .onFailure(err -> {
+                           log.warn("Switching {} to organization {} failed: {}", current.getId(), organizationId, err.getMessage());
+                           authEndpointSupport.respondError(ctx, 500, "Failed to switch organization");
+                       });
     }
 
     /**
