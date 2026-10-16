@@ -17,6 +17,7 @@ import org.kinotic.domain.internal.api.services.EmailService;
 import org.springframework.stereotype.Component;
 
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 
 @Slf4j
@@ -43,6 +44,13 @@ public class DefaultSignUpService implements SignUpService {
                     if (existing != null) {
                         return Future.failedFuture(new IllegalArgumentException(
                                 "A sign-up is already pending for this email. Check your inbox for the verification link."));
+                    }
+                    return identityService.findOrgUsersByEmail(email);
+                })
+                .compose(memberships -> {
+                    if (!memberships.isEmpty()) {
+                        return Future.failedFuture(new IllegalArgumentException(
+                                "An account with this email already exists."));
                     }
                     String token = UUID.randomUUID().toString();
                     Date now = new Date();
@@ -81,7 +89,8 @@ public class DefaultSignUpService implements SignUpService {
         Validate.notBlank(password, "Password is required");
 
         return pendingSignUpRepository.findValidByToken(token)
-                .compose(pending -> createOrgWithAdmin(orgName, orgDescription, newUser(pending), password)
+                .compose(pending -> requireNoOrganization(pending)
+                        .compose(v -> createOrgWithAdmin(orgName, orgDescription, newUser(pending), password))
                         .compose(savedAdmin -> pendingSignUpRepository.deleteById(pending.getId())
                                 .map(savedAdmin)));
     }
@@ -90,9 +99,25 @@ public class DefaultSignUpService implements SignUpService {
     public Future<UserParticipantIdentity> completeOidcWithNewOrg(String token, String orgName, String orgDescription) {
         Validate.notBlank(orgName, "Organization name is required");
         return pendingSignUpRepository.findValidByToken(token)
-                .compose(pending -> createOrgWithAdmin(orgName, orgDescription, newUser(pending), null)
+                .compose(pending -> requireNoOrganization(pending)
+                        .compose(v -> createOrgWithAdmin(orgName, orgDescription, newUser(pending), null))
                         .compose(savedAdmin -> pendingSignUpRepository.deleteById(pending.getId())
                                 .map(savedAdmin)));
+    }
+
+    /**
+     * Fails when the identity of {@code pending} is already a member of an organization: an identity founds
+     * one organization at most, and joins others by invitation. Checked here, at completion, as well as
+     * when the sign-up starts, so two sign-ups of one identity in flight at once cannot both found an
+     * organization.
+     */
+    private Future<Void> requireNoOrganization(PendingSignUp pending) {
+        Future<List<UserParticipantIdentity>> memberships = pending.getAuthType() == AuthType.OIDC
+                ? identityService.findOrgUsersByOidcIdentity(pending.getOidcSubject(), pending.getOidcConfigId())
+                : identityService.findOrgUsersByEmail(pending.getEmail());
+        return memberships.compose(found -> found.isEmpty()
+                ? Future.succeededFuture()
+                : Future.failedFuture(new IllegalArgumentException("An account for this identity already exists. Sign in instead.")));
     }
 
     /**
