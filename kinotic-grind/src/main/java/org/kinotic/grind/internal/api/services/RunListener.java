@@ -63,15 +63,12 @@ public interface RunListener {
      * @param storedValue the stored value, or null
      * @param serializedState the value's JSON form, or null unless the store is
      *                        {@link StoreType#STATE} or wire-published
-     * @param view the view the task shows on completion as JSON, or null when completion leaves it
-     *             unchanged
      */
     void taskCompleted(String taskPath,
                        Store store,
                        String storedName,
                        Object storedValue,
-                       SerializedState serializedState,
-                       JsonNode view);
+                       SerializedState serializedState);
 
     /**
      * A task terminated with a failure.

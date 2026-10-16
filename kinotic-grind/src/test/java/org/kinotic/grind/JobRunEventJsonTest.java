@@ -34,14 +34,14 @@ public class JobRunEventJsonTest {
         assertEquals("tasksDiscovered", typeOf(new TasksDiscoveredEvent("0", List.of(), false)));
         assertEquals("taskStarted", typeOf(new TaskStartedEvent("0/1", "work", null)));
         assertEquals("taskProgress", typeOf(new TaskProgressEvent("0/1", 40, "halfway", null)));
-        assertEquals("taskCompleted", typeOf(new TaskCompletedEvent("0/1", StoreType.NONE, null, null, null, null)));
+        assertEquals("taskCompleted", typeOf(new TaskCompletedEvent("0/1", StoreType.NONE, null, null, null)));
         assertEquals("taskFailed", typeOf(new TaskFailedEvent("0/1", "boom")));
     }
 
     @Test
     public void aCompletionRoundTripsThroughItsWireValue() {
         TaskCompletedEvent completed = new TaskCompletedEvent("0/3", StoreType.RESULT, "runtimeWorkloadId",
-                                                              null, StringNode.valueOf("wl-8f21"), null);
+                                                              null, StringNode.valueOf("wl-8f21"));
 
         JobRunEvent restored = objectMapper.readValue(objectMapper.writeValueAsString(completed), JobRunEvent.class);
 

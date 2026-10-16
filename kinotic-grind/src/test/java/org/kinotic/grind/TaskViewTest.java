@@ -11,6 +11,7 @@ import org.kinotic.grind.api.model.TaskReporter;
 import org.kinotic.grind.api.model.TaskRecord;
 import org.kinotic.grind.api.model.TaskViewKind;
 import org.kinotic.grind.api.model.Tasks;
+import org.kinotic.grind.api.model.events.JobRunEvent;
 import org.kinotic.grind.api.model.events.TaskCompletedEvent;
 import org.kinotic.grind.api.model.events.TaskProgressEvent;
 import org.kinotic.grind.api.model.events.TaskStartedEvent;
@@ -63,7 +64,7 @@ public class TaskViewTest extends AbstractGrindTest {
 
         assertNull(result.error());
         assertNull(startOf(result, "0/1").view());
-        assertWidgetView(completionOf(result, "0/1").view(), "widget", "made");
+        assertWidgetView(lastViewReportedBeforeCompletion(result, "0/1"), "widget", "made");
         assertWidgetView(recordAt(handle, "0/1").getView(), "widget", "made");
     }
 
@@ -82,6 +83,23 @@ public class TaskViewTest extends AbstractGrindTest {
     }
 
     @Test
+    public void aResultViewLeavesTheTasksResultAsItWas() throws Exception {
+        JobDefinition job = JobDefinition.create("result kept")
+                .name("result-kept").version("1")
+                .task(Tasks.fromValue("produce", new Widget("made"))
+                           .store(Store.result("widget").wire())
+                           .resultView(WIDGET::of));
+
+        JobRunHandle handle = jobService.run(job, JobOwner.system());
+        RunResult result = await(handle);
+
+        assertNull(result.error());
+        TaskCompletedEvent completed = completionOf(result, "0/1");
+        assertEquals(new Widget("made"), completed.storedValue());
+        assertEquals("made", completed.wireValue().get("name").stringValue());
+    }
+
+    @Test
     public void aResultViewCanAlsoReadAScopeValue() throws Exception {
         JobDefinition job = JobDefinition.create("result view with source")
                 .name("result-view-source").version("1")
@@ -94,7 +112,7 @@ public class TaskViewTest extends AbstractGrindTest {
         RunResult result = await(handle);
 
         assertNull(result.error());
-        assertWidgetView(completionOf(result, "0/1").view(), "widgetState", "decided for target");
+        assertWidgetView(lastViewReportedBeforeCompletion(result, "0/1"), "widgetState", "decided for target");
     }
 
     @Test
@@ -122,9 +140,10 @@ public class TaskViewTest extends AbstractGrindTest {
                                                 .filter(TaskProgressEvent.class::isInstance)
                                                 .map(TaskProgressEvent.class::cast)
                                                 .toList();
-        assertEquals(1, reports.size());
+        assertEquals(2, reports.size());
         assertNull(reports.getFirst().percentageComplete());
         assertWidgetView(reports.getFirst().view(), "widget", "second");
+        assertWidgetView(reports.get(1).view(), "widget", "third");
         assertWidgetView(startOf(result, "0/1").view(), "widget", "first");
         assertWidgetView(recordAt(handle, "0/1").getView(), "widget", "third");
     }
@@ -188,7 +207,7 @@ public class TaskViewTest extends AbstractGrindTest {
         RunResult result = await(resumed);
 
         assertNull(result.error());
-        assertWidgetView(completionOf(result, "0/1").view(), "widget", "reported");
+        assertWidgetView(lastViewReportedBeforeCompletion(result, "0/1"), "widget", "reported");
         assertWidgetView(recordAt(resumed, "0/1").getView(), "widget", "reported");
     }
 
@@ -243,6 +262,19 @@ public class TaskViewTest extends AbstractGrindTest {
                      .map(TaskStartedEvent.class::cast)
                      .findFirst()
                      .orElseThrow();
+    }
+
+    // The view of the last report for the task, which must come before the task's completion
+    private JsonNode lastViewReportedBeforeCompletion(RunResult result, String taskPath) {
+        List<JobRunEvent> events = result.events();
+        int completed = events.indexOf(completionOf(result, taskPath));
+        JsonNode ret = null;
+        for (int i = 0; i < completed; i++) {
+            if (events.get(i) instanceof TaskProgressEvent report && report.taskPath().equals(taskPath) && report.view() != null) {
+                ret = report.view();
+            }
+        }
+        return ret;
     }
 
     private TaskCompletedEvent completionOf(RunResult result, String taskPath) {

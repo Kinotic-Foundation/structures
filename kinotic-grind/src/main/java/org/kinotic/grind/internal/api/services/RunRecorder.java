@@ -143,7 +143,7 @@ public class RunRecorder implements RunListener {
 
     @Override
     public void taskCompleted(String taskPath, Store store, String storedName,
-                              Object storedValue, SerializedState serializedState, JsonNode view) {
+                              Object storedValue, SerializedState serializedState) {
         TaskRecord record = recordsByPath.get(taskPath);
         if (record == null) {
             log.warn("Task completed for unknown task path {} in run {}", taskPath, jobRunId);
@@ -160,9 +160,6 @@ public class RunRecorder implements RunListener {
             }
             if (store.isWire() && serializedState != null) {
                 record.setWireValue(serializedState.value());
-            }
-            if (view != null) {
-                record.setView(view);
             }
             awaitWrite(() -> saveTask(record));
         }

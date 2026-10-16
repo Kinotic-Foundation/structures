@@ -121,7 +121,7 @@ public class JobInterpreter {
                     executeChild(path, scope, child);
                 }
             }
-            notifyTaskCompleted(path, Store.none(), null, null, null, null);
+            notifyTaskCompleted(path, Store.none(), null, null, null);
         } catch (Throwable t) {
             handleTaskFailure(path, t);
         } finally {
@@ -152,7 +152,8 @@ public class JobInterpreter {
         if (completedInOriginal && node.store().getType() == StoreType.NONE) {
             // a skipped task keeps showing what it showed when the original run completed it
             notifyTaskStarted(path, node.description(), null);
-            notifyTaskCompleted(path, node.store(), null, null, null, entry.view());
+            reportView(path, entry.view());
+            notifyTaskCompleted(path, node.store(), null, null, null);
             return;
         }
         try {
@@ -178,7 +179,8 @@ public class JobInterpreter {
         JsonNode view = node.startView() == null && node.resultView() == null
                 ? entry.view()
                 : buildView(node, node.resultView(), entry.value(), scope);
-        notifyTaskCompleted(path, node.store(), storedName, entry.value(), state, view);
+        reportView(path, view);
+        notifyTaskCompleted(path, node.store(), storedName, entry.value(), state);
     }
 
     private void runTask(String path, DefaultJobContext scope, TaskNode node, boolean completedInOriginal) throws Exception {
@@ -194,16 +196,24 @@ public class JobInterpreter {
             TaskNode dynamicNode = new TaskNode(1, dynamicTask, dynamicStore);
             discoverDynamic(path, dynamicNode);
             executeTask(path + "/1", scope, dynamicNode);
-            notifyTaskCompleted(path, Store.none(), null, null, null, null);
+            notifyTaskCompleted(path, Store.none(), null, null, null);
         } else if (result instanceof JobDefinition dynamicDefinition) {
             DefinitionNode dynamicNode = new DefinitionNode(1, (DefaultJobDefinition) dynamicDefinition);
             discoverDynamic(path, dynamicNode);
             executeDefinition(path + "/1", scope, dynamicNode.definition());
-            notifyTaskCompleted(path, Store.none(), null, null, null, null);
+            notifyTaskCompleted(path, Store.none(), null, null, null);
         } else {
+            // the result view is reported as the task's last view, exactly as TaskReporter.view reports
+            // one, before the task completes with its result
+            reportView(path, buildView(node, node.resultView(), result, scope));
             String storedName = ScopeWriter.store(scope, node.store().getType(), node.store().getName(), result);
-            JsonNode view = buildView(node, node.resultView(), result, scope);
-            notifyTaskCompleted(path, node.store(), storedName, result, serializeIfNeeded(node, result), view);
+            notifyTaskCompleted(path, node.store(), storedName, result, serializeIfNeeded(node, result));
+        }
+    }
+
+    private void reportView(String path, JsonNode view) {
+        if (view != null) {
+            notifyTaskViewed(path, view);
         }
     }
 
@@ -497,10 +507,10 @@ public class JobInterpreter {
     }
 
     private void notifyTaskCompleted(String taskPath, Store store, String storedName,
-                                     Object storedValue, SerializedState serializedState, JsonNode view) {
+                                     Object storedValue, SerializedState serializedState) {
         synchronized (dispatchLock) {
             listeners.forEach(listener -> listener.taskCompleted(taskPath, store, storedName,
-                                                                 storedValue, serializedState, view));
+                                                                 storedValue, serializedState));
         }
     }
 

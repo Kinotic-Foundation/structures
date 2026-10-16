@@ -60,8 +60,9 @@ public interface Task<T> {
     /**
      * Declares the view a console shows for the task once it completes, built from its result: the
      * value it returns, or the value a returned {@code Future}, {@code CompletionStage} or
-     * {@code Publisher} completes with. A result of another type than the producer takes fails the
-     * task.
+     * {@code Publisher} completes with. The view is reported as the task's last view, as
+     * {@link TaskReporter#view(TaskView)} reports one, and the task then completes with its result
+     * unchanged. A result of another type than the producer takes fails the task.
      * @param producer builds the view from the task's result
      * @param <V> the type of the task's result
      * @return a copy of this {@link Task} showing the view on completion

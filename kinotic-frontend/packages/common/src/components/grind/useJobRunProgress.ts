@@ -125,7 +125,6 @@ export function useJobRunProgress(jobRunId: string) {
         if (event.wireValue !== null && event.wireValue !== undefined) {
           node.storedValue = event.wireValue
         }
-        node.view = event.view ?? node.view
         break
       }
       case JobRunEventType.TASK_FAILED: {
