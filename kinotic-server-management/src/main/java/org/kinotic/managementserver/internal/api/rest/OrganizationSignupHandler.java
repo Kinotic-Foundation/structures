@@ -24,8 +24,8 @@ import java.util.Map;
 
 /**
  * Organization sign-up routes — the sign-up counterpart to {@link OrganizationLoginHandler}.
- * Both email/password and social (OIDC) sign-up create a new {@link Organization} and its admin
- * {@link UserParticipantIdentity}; each handler method documents its own step.
+ * Both email/password and social (OIDC) sign-up create a new {@link Organization}, its founder's account
+ * ({@link UserParticipantIdentity}) and the founder's membership; each handler method documents its own step.
  */
 @Slf4j
 @Component
@@ -160,9 +160,9 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes {
             return;
         }
 
-        identityService.findOrgUsersByOidcIdentity(sub, config.getId())
+        identityService.findByOidcIdentity(config.getId(), sub, null, null)
               .compose(existing -> {
-                  if (!existing.isEmpty()) {
+                  if (existing != null) {
                       // Already have an account for this identity — push them to log in instead.
                       return Future.failedFuture(new AccountExistsException());
                   }
@@ -186,8 +186,8 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes {
 
     /**
      * {@code POST /api/auth/org/signup/social/complete} — finish social sign-up. The user has named their org;
-     * creates the organization and its admin {@link UserParticipantIdentity} (AuthType=OIDC) from the pending
-     * sign-up identified by the token.
+     * creates the organization, the founder's account bound to the verified identity, and the membership, from
+     * the pending sign-up identified by the token.
      */
     private void handleSocialCompleteOrg(RoutingContext ctx) {
         JsonObject body = authEndpointSupport.readJsonBody(ctx);

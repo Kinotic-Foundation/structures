@@ -9,7 +9,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.PendingInvite;
 import org.kinotic.domain.api.services.OrganizationService;
+import org.kinotic.domain.api.exceptions.ExistingAccountException;
 import org.kinotic.domain.api.exceptions.InviteEmailMismatchException;
+import org.kinotic.domain.api.model.security.participant.ApplicationParticipant;
+import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.services.security.InviteService;
 import org.kinotic.domain.api.services.security.OidcConfigurationService;
 import org.kinotic.domain.api.rest.support.AuthEndpointSupport;
@@ -42,6 +45,7 @@ public class InviteHandler implements SuppliesGatewayRoutes {
     private static final String INVITE_ACCEPT_PATH = "/invite/accept";
 
     private final InviteService inviteService;
+    private final ParticipantIdentityService identityService;
     private final OrganizationService organizationService;
     private final OidcConfigurationService oidcConfigurationService;
     private final OidcFlowOrchestrator oidcFlowOrchestrator;
@@ -74,7 +78,12 @@ public class InviteHandler implements SuppliesGatewayRoutes {
                   Future<List<OidcConfiguration>> providers =
                           oidcConfigurationService.findEnabledForScope(invite.getOrganizationId(),
                                                                           invite.getApplicationId());
-                  return Future.all(orgName, providers)
+                  // the holder of the invitation owns the invited email, so telling them an account exists for it
+                  // tells a stranger nothing; the page then asks for that account's password instead of a new one
+                  Future<Boolean> accountExists = invite.getApplicationId() != null
+                          ? Future.succeededFuture(false)
+                          : identityService.findByEmail(invite.getEmail(), null, null).map(account -> account != null);
+                  return Future.all(orgName, providers, accountExists)
                                .map(v -> new JsonObject()
                                        .put("email", invite.getEmail())
                                        .put("displayName", invite.getDisplayName())
@@ -83,6 +92,7 @@ public class InviteHandler implements SuppliesGatewayRoutes {
                                        .put("invitedByName", invite.getInvitedByName())
                                        .put("expiresAt", invite.getExpiresAt().toInstant())
                                        .put("localEnabled", true)
+                                       .put("accountExists", accountExists.result())
                                        .put("providers", authEndpointSupport.providersJson(providers.result())));
               })
               .onSuccess(json -> ctx.response().putHeader("Content-Type", "application/json").end(json.encode()))
@@ -106,8 +116,8 @@ public class InviteHandler implements SuppliesGatewayRoutes {
         }
 
         inviteService.acceptLocalInvite(token, password, displayName)
-              .onSuccess(user -> {
-                  if (user.getApplicationId() != null) {
+              .onSuccess(member -> {
+                  if (member instanceof ApplicationParticipant user) {
                       // the management server holds organization logins only, so an application member
                       // signs in at the application; the payload names it for the accept page
                       ctx.response().putHeader("Content-Type", "application/json")
@@ -117,10 +127,17 @@ public class InviteHandler implements SuppliesGatewayRoutes {
                                  .put("applicationId", user.getApplicationId())
                                  .encode());
                   } else {
-                      authEndpointSupport.respondSuccess(ctx, user);
+                      authEndpointSupport.respondSuccess(ctx, member);
                   }
               })
-              .onFailure(err -> respondInviteFailure(ctx, err, "Failed to accept invitation"));
+              .onFailure(err -> {
+                  if (err instanceof ExistingAccountException) {
+                      // the invitation stays valid: the page asks for the existing account's password
+                      authEndpointSupport.respondError(ctx, 401, err.getMessage());
+                  } else {
+                      respondInviteFailure(ctx, err, "Failed to accept invitation");
+                  }
+              });
     }
 
     /**
@@ -201,14 +218,14 @@ public class InviteHandler implements SuppliesGatewayRoutes {
         }
 
         inviteService.acceptOidcInvite(token, sub, result.config().getId(), email)
-              .onSuccess(user -> {
-                  if (user.getApplicationId() != null) {
+              .onSuccess(member -> {
+                  if (member instanceof ApplicationParticipant user) {
                       // the management server holds organization logins only, so an application member
                       // signs in at the application
                       authEndpointSupport.redirectToUi(ctx, INVITE_ACCEPT_PATH + "?accepted=app&application="
                               + URLEncoder.encode(user.getApplicationId(), StandardCharsets.UTF_8));
                   } else {
-                      authEndpointSupport.redirectSuccess(ctx, result.origin(), user);
+                      authEndpointSupport.redirectSuccess(ctx, result.origin(), member);
                   }
               })
               .onFailure(err -> {
@@ -216,6 +233,9 @@ public class InviteHandler implements SuppliesGatewayRoutes {
                       // The invite is NOT consumed on mismatch — keep the token so the
                       // invitee can retry with another provider or a password.
                       redirectInviteError(ctx, OidcErrorCodes.EMAIL_MISMATCH, token);
+                  } else if (err instanceof ExistingAccountException) {
+                      // nor here: the account's holder accepts with the account's password
+                      redirectInviteError(ctx, OidcErrorCodes.ACCOUNT_EXISTS, token);
                   } else {
                       log.warn("Invite acceptance failed: {}", err.getMessage());
                       redirectInviteError(ctx, OidcErrorCodes.INVITE_INVALID, null);

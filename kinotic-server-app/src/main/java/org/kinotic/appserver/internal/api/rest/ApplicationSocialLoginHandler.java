@@ -12,6 +12,7 @@ import org.kinotic.domain.api.model.ApplicationKey;
 import org.kinotic.domain.api.model.security.ApplicationSocialOidcConfiguration;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.rest.SuppliesGatewayRoutes;
+import org.kinotic.domain.api.rest.support.AuthEndpointSupport;
 import org.kinotic.domain.api.rest.support.CallbackResult;
 import org.kinotic.domain.api.rest.support.OidcCallbackException;
 import org.kinotic.domain.api.rest.support.OidcErrorCodes;
@@ -149,9 +150,10 @@ public class ApplicationSocialLoginHandler implements SuppliesGatewayRoutes {
         } else {
             LoginScope scope = new LoginScope(applicationKey, handoff.getTenantId());
             authEndpointSupport.completeLogin(ctx, handoff.getOrigin(),
-                    identityService.findByOidcIdentity(handoff.getSubject(), handoff.getConfigurationId(),
+                    identityService.findByOidcIdentity(handoff.getConfigurationId(), handoff.getSubject(),
                                                        applicationKey.organizationId(), applicationKey.applicationId())
-                                   .map(scope::memberOf));
+                                   .map(scope::memberOf)
+                                   .map(user -> user == null ? null : AuthEndpointSupport.participantOf(user)));
         }
     }
 

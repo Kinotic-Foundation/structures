@@ -209,20 +209,22 @@ CREATE TABLE IF NOT EXISTS kinotic_service_directory (
     livenessVerifiedAt LONG
 );
 
--- Participant Identity: authenticated identities at each scope layer — a person (type=USER)
--- or a client acting on a person's behalf (type=DELEGATE). Scope is encoded structurally by
--- which of organizationId / applicationId is set: both null = SYSTEM, organizationId only =
--- ORGANIZATION, both set = APPLICATION.
+-- Participant Identity: authenticated identities — a person (type=USER), a client acting on a
+-- person's behalf (type=DELEGATE), or a machine (type=MACHINE). Scope is encoded structurally by
+-- which of organizationId / applicationId is set: organizationId only = ORGANIZATION, both set =
+-- APPLICATION, both null = SYSTEM for a machine or delegate and, for a USER, an account: a person's
+-- single identity on the platform, which acts in the scopes its kinotic_membership rows name. A
+-- user's sign-in methods are its kinotic_identity_credential and its kinotic_oidc_binding rows, so
+-- a USER row carries no authType.
 -- Uniqueness rules (enforced in service layer): one USER per (email, organizationId,
--- applicationId); one DELEGATE per (ownerId, clientKey).
+-- applicationId), so one account per email; one DELEGATE per (ownerId, clientKey, organizationId,
+-- applicationId).
 CREATE TABLE IF NOT EXISTS kinotic_participant_identity (
     id KEYWORD,
     type KEYWORD,
     email KEYWORD,
     displayName KEYWORD,
     authType KEYWORD,
-    oidcSubject KEYWORD,
-    oidcConfigId KEYWORD,
     ownerId KEYWORD,
     clientKey KEYWORD,
     delegateKind KEYWORD,
@@ -239,6 +241,30 @@ CREATE TABLE IF NOT EXISTS kinotic_participant_identity (
 CREATE TABLE IF NOT EXISTS kinotic_identity_credential (
     id KEYWORD,
     secretHash KEYWORD NOT INDEXED
+);
+
+-- Membership: an account's membership of an organization, or of the platform when organizationId
+-- is null (a platform operator). id is <identityId>:<organizationId or "system">, so a login reads
+-- it by a get and an account is a member of a scope at most once. enabled is the account's standing
+-- in that scope alone.
+CREATE TABLE IF NOT EXISTS kinotic_membership (
+    id KEYWORD,
+    identityId KEYWORD,
+    organizationId KEYWORD,
+    enabled BOOLEAN,
+    created DATE,
+    updated DATE
+);
+
+-- OIDC Binding: a user's sign-in method through a provider — the sub claim asserted under one OIDC
+-- configuration, bound to the user it signs in. id is <oidcConfigId>:<subject>, so a callback reads
+-- the binding by a get and a provider identity signs in at most one user.
+CREATE TABLE IF NOT EXISTS kinotic_oidc_binding (
+    id KEYWORD,
+    identityId KEYWORD,
+    oidcConfigId KEYWORD,
+    subject KEYWORD,
+    created DATE
 );
 
 -- OIDC Configuration: every OIDC provider configuration (OidcConfiguration), discriminated by
@@ -349,6 +375,8 @@ CREATE TABLE IF NOT EXISTS kinotic_device_code_grant (
     deviceCodeHash KEYWORD,
     userCode KEYWORD,
     identityId KEYWORD,
+    organizationId KEYWORD,
+    applicationId KEYWORD,
     deviceName KEYWORD NOT INDEXED,
     created DATE,
     expiresAt DATE,
@@ -396,6 +424,8 @@ CREATE TABLE IF NOT EXISTS kinotic_oauth_authorization_grant (
     resource KEYWORD NOT INDEXED,
     state KEYWORD NOT INDEXED,
     identityId KEYWORD,
+    organizationId KEYWORD,
+    applicationId KEYWORD,
     codeHash KEYWORD,
     created DATE,
     expiresAt DATE

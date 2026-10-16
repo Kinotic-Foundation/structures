@@ -4,7 +4,6 @@ import io.vertx.core.Future;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.Validate;
-import org.kinotic.domain.api.model.security.AuthType;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 import org.kinotic.domain.internal.api.repositories.ParticipantIdentityRepository;
 import org.kinotic.domain.api.services.security.LocalAuthenticationService;
@@ -31,9 +30,7 @@ public class DefaultLocalAuthenticationService implements LocalAuthenticationSer
             Validate.notBlank(organizationId, "organizationId is required when applicationId is supplied");
         }
         return identityRepository.findByEmail(email, organizationId, applicationId).compose(user -> {
-            if (user == null
-                    || user.getAuthType() != AuthType.LOCAL
-                    || !user.isEnabled()) {
+            if (user == null || !user.isEnabled()) {
                 return Future.succeededFuture(null);
             }
             return credentialRepository.findById(user.getId())

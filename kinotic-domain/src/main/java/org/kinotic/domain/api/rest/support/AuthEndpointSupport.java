@@ -66,29 +66,28 @@ public abstract class AuthEndpointSupport {
     // ── Browser session login ─────────────────────────────────────────────────
 
     /**
-     * Authenticates the page at {@code origin} by binding the logged-in user's {@link Participant}
-     * to it in the Vert.x session (see {@link SessionBinding}). The subsequent STOMP WebSocket
-     * handshake from that page reads it back, so the browser is authenticated by its session
-     * cookie and never handles a token. The participant type follows the user's scope (org users
-     * get an OrganizationParticipant, app users an ApplicationParticipant), which is what scopes
-     * their authority.
+     * Authenticates the page at {@code origin} by binding the logged-in {@link Participant} to it in the
+     * Vert.x session (see {@link SessionBinding}). The subsequent STOMP WebSocket handshake from that page
+     * reads it back, so the browser is authenticated by its session cookie and never handles a token. The
+     * participant's type is what scopes its authority: an account signs in as an OrganizationParticipant
+     * or SystemParticipant through one of its memberships, an application's user as an
+     * ApplicationParticipant.
      */
-    public void establishSession(RoutingContext ctx, String origin, UserParticipantIdentity user) {
+    public void establishSession(RoutingContext ctx, String origin, Participant participant) {
         // Rotate the session id on the privilege change so a pre-auth (possibly fixed)
         // id cannot be reused to ride the now-authenticated session.
         ctx.session().regenerateId();
-        Participant participant = DomainUtil.createParticipant(user);
         ConnectedInfo connectedInfo = new ConnectedInfo();
         connectedInfo.setParticipant(participant);
         SessionBinding.bind(ctx, origin, connectedInfo);
     }
 
     /**
-     * Establishes the browser session for {@code user}, bound to the page that sent the request,
+     * Establishes the browser session for {@code participant}, bound to the page that sent the request,
      * and writes {@code 204 No Content}.
      */
-    public void respondSuccess(RoutingContext ctx, UserParticipantIdentity user) {
-        establishSession(ctx, SessionBinding.origin(ctx), user);
+    public void respondSuccess(RoutingContext ctx, Participant participant) {
+        establishSession(ctx, SessionBinding.origin(ctx), participant);
         ctx.response().setStatusCode(204).end();
     }
 
@@ -111,10 +110,10 @@ public abstract class AuthEndpointSupport {
      * page) — to the path the login started from when there was one, otherwise the root. No token
      * travels in the URL — the browser is authenticated by its session cookie.
      */
-    public void redirectSuccess(RoutingContext ctx, String origin, UserParticipantIdentity user) {
+    public void redirectSuccess(RoutingContext ctx, String origin, Participant participant) {
         // read before establishSession, which regenerates the session id
         String returnPath = ctx.session().remove(RETURN_PATH_SESSION_KEY);
-        establishSession(ctx, origin, user);
+        establishSession(ctx, origin, participant);
         redirectToPage(ctx, origin, returnPath != null ? returnPath : "/");
     }
 
@@ -287,12 +286,13 @@ public abstract class AuthEndpointSupport {
 
     /**
      * Answers a token request for a delegate-minting grant: finds or creates {@code approver}'s
-     * delegate of the given {@code kind} for the client {@code clientKey}, issues a refresh token
-     * for the audience of {@code kind}, and responds with the token pair. Both tokens act as the
-     * delegate. {@code sessionLabel} names the refresh-token family where the client supplied one.
+     * delegate of the given {@code kind} for the client {@code clientKey} in the scope the approver acts
+     * in, issues a refresh token for the audience of {@code kind}, and responds with the token pair. Both
+     * tokens act as the delegate. {@code sessionLabel} names the refresh-token family where the client
+     * supplied one.
      */
     public Future<Void> issueDelegateTokens(RoutingContext ctx,
-                                            UserParticipantIdentity approver,
+                                            Participant approver,
                                             DelegateKind kind,
                                             String clientKey,
                                             String clientName,
@@ -386,13 +386,14 @@ public abstract class AuthEndpointSupport {
     }
 
     /**
-     * Standard email/password login endpoint: parses the JSON body, validates fields,
-     * runs the supplied authenticate function, and on success establishes the browser
-     * session — otherwise writes a generic {@code 401}. The handler only needs to provide
-     * the authenticate call (already scope-aware where appropriate).
+     * Standard email/password login endpoint: parses the JSON body, validates fields, runs the supplied
+     * authenticate function, and on success establishes the browser session for the participant it
+     * resolves — otherwise writes a generic {@code 401}. The handler only needs to provide the
+     * authenticate call, which resolves the credentials to the participant of its scope, or
+     * {@code null} for any failure.
      */
     public void handlePasswordLogin(RoutingContext ctx,
-                                    BiFunction<String, String, Future<UserParticipantIdentity>> authenticate) {
+                                    BiFunction<String, String, Future<Participant>> authenticate) {
         JsonObject body = readJsonBody(ctx);
         String email = body.getString("email");
         String password = body.getString("password");
@@ -401,13 +402,13 @@ public abstract class AuthEndpointSupport {
             return;
         }
         authenticate.apply(email, password)
-              .onSuccess(user -> {
-                  if (user == null) {
-                      // Generic 401 — covers unknown email, wrong password, OIDC user, disabled.
+              .onSuccess(participant -> {
+                  if (participant == null) {
+                      // Generic 401 — covers unknown email, wrong password, no password, disabled, not a member.
                       respondError(ctx, 401, "Invalid credentials");
                       return;
                   }
-                  respondSuccess(ctx, user);
+                  respondSuccess(ctx, participant);
               })
               .onFailure(err -> {
                   log.warn("Password login error: {}", err.getMessage());
@@ -416,30 +417,20 @@ public abstract class AuthEndpointSupport {
     }
 
     /**
-     * "After the IdP returned" composite flow used by every login callback: validates
-     * {@code sub} + {@code email_verified}, looks up the {@link UserParticipantIdentity} via the
-     * supplied function, and redirects success or error accordingly. A successful login is bound
-     * to the page that started the flow. Never creates users — the signup path owns provisioning.
+     * "After the IdP returned" composite flow for an application's login callback: validates {@code sub} +
+     * {@code email_verified}, looks up the application's user bound to the identity via the supplied
+     * function, and signs it in to the application, redirecting success or error accordingly. A successful
+     * login is bound to the page that started the flow. When the lookup finds no user, the configuration is
+     * one an organization made for the scope and it creates users on sign-in, and {@code newUser} supplies
+     * the unsaved user carrying the scope, the identity's verified email and name become that user, bound
+     * to the identity, and the user is signed in. An email the scope already holds under another method is
+     * refused with {@link OidcErrorCodes#ACCOUNT_EXISTS}; a scope that supplies no user refuses the
+     * identity with {@link OidcErrorCodes#NO_ACCOUNT} as a plain login does. An account, which signs in
+     * through a membership, is signed in by {@link #completeLogin} instead.
      *
-     * @param userLookup takes the OIDC {@code sub} claim and returns the UserParticipantIdentity (or null).
-     */
-    public void completeOidcLogin(RoutingContext ctx,
-                                  CallbackResult<? extends OidcConfiguration> result,
-                                  Function<String, Future<UserParticipantIdentity>> userLookup) {
-        completeOidcLogin(ctx, result, userLookup, () -> Future.succeededFuture(null));
-    }
-
-    /**
-     * {@link #completeOidcLogin(RoutingContext, CallbackResult, Function)} for a scope that may create a
-     * user on first sign-in: when the lookup finds no user, the configuration is one an organization made
-     * for the scope and it creates users on sign-in, and {@code newUser} supplies the unsaved user carrying
-     * the scope, the identity's verified email and name become that user, bound to the identity, and the
-     * user is signed in. An email the scope already holds under another method is refused with
-     * {@link OidcErrorCodes#ACCOUNT_EXISTS}; a scope that supplies no user refuses the identity with
-     * {@link OidcErrorCodes#NO_ACCOUNT} as a plain login does.
-     *
-     * @param newUser the unsaved user an unknown identity becomes, carrying only its scope, or {@code null}
-     *                when the scope admits no new user; consulted only when a user would be created
+     * @param userLookup takes the OIDC {@code sub} claim and returns the application's user, or null
+     * @param newUser    the unsaved user an unknown identity becomes, carrying only its scope, or {@code null}
+     *                   when the scope admits no new user; consulted only when a user would be created
      */
     public void completeOidcLogin(RoutingContext ctx,
                                   CallbackResult<? extends OidcConfiguration> result,
@@ -452,31 +443,46 @@ public abstract class AuthEndpointSupport {
                 if (found == null && result.config() instanceof OwnedOidcConfiguration owned && owned.isCreateUserOnSignIn()) {
                     ret = newUser.get().compose(template -> template == null
                             ? Future.succeededFuture()
-                            : createOnSignIn(template, sub, result));
+                            : createUserFromClaims(template, sub, result));
                 } else {
                     ret = Future.succeededFuture(found);
                 }
                 return ret;
             });
-            completeLogin(ctx, result.origin(), user);
+            completeLogin(ctx, result.origin(), user.map(found -> found == null ? null : participantOf(found)));
         }
     }
 
-    // the provider's verified email names the user; a scope that already holds that email refuses the identity
-    private Future<UserParticipantIdentity> createOnSignIn(UserParticipantIdentity template,
-                                                           String sub,
-                                                           CallbackResult<? extends OidcConfiguration> result) {
+    /**
+     * The participant an application's user signs in as, itself; a disabled user fails the sign-in with
+     * {@link OidcErrorCodes#ACCOUNT_DISABLED}.
+     */
+    public static Participant participantOf(UserParticipantIdentity user) {
+        if (!user.isEnabled()) {
+            throw new OidcCallbackException(OidcErrorCodes.ACCOUNT_DISABLED);
+        }
+        return DomainUtil.createParticipant(user);
+    }
+
+    /**
+     * Creates the user an identity the provider verified becomes on its first sign-in: {@code template},
+     * carrying only its scope, given the identity's verified email and name and bound to the identity. A
+     * scope that already holds the email under another method refuses the identity with
+     * {@link OidcErrorCodes#ACCOUNT_EXISTS}, and an identity whose provider asserts no email with
+     * {@link OidcErrorCodes#INVALID_TOKEN}.
+     */
+    public Future<UserParticipantIdentity> createUserFromClaims(UserParticipantIdentity template,
+                                                                String sub,
+                                                                CallbackResult<? extends OidcConfiguration> result) {
         Map<String, Object> claims = result.claims();
         String email = OAuth2Util.stringClaim(claims, "email");
         Future<UserParticipantIdentity> ret;
         if (email == null) {
             ret = Future.failedFuture(new OidcCallbackException(OidcErrorCodes.INVALID_TOKEN));
         } else {
-            template.setOidcSubject(sub)
-                    .setOidcConfigId(result.config().getId())
-                    .setEmail(email)
+            template.setEmail(email)
                     .setDisplayName(OAuth2Util.firstPresent(claims, "name", "preferred_username", "email"));
-            ret = identityService.createUser(template, null)
+            ret = identityService.createOidcUser(template, result.config().getId(), sub)
                                  .recover(err -> Future.failedFuture(err instanceof IllegalArgumentException
                                          ? new OidcCallbackException(OidcErrorCodes.ACCOUNT_EXISTS) : err));
         }
@@ -505,21 +511,21 @@ public abstract class AuthEndpointSupport {
     }
 
     /**
-     * Finishes a sign-in from the {@link UserParticipantIdentity} lookup for a verified identity: an
-     * enabled user is signed in, bound to the page at {@code origin}, and the browser sent back to it;
-     * no user, a disabled one, or a failed lookup sends the browser to that page's error page instead.
+     * Finishes a sign-in from the participant a verified identity resolves to: the participant is signed
+     * in, bound to the page at {@code origin}, and the browser sent back to it; no participant sends the
+     * browser to that page's error page with {@link OidcErrorCodes#NO_ACCOUNT}, and a failed resolution
+     * with the {@link OidcCallbackException}'s code, or {@link OidcErrorCodes#LOOKUP_FAILED} for any
+     * other failure.
      *
-     * @param origin the page the sign-in belongs to, or {@code null} for this server's UI
-     * @param lookup the user for the identity, or {@code null} when there is none
+     * @param origin      the page the sign-in belongs to, or {@code null} for this server's UI
+     * @param participant the participant the identity signs in as, or {@code null} when there is none
      */
-    public void completeLogin(RoutingContext ctx, String origin, Future<UserParticipantIdentity> lookup) {
-        lookup.onSuccess(user -> {
-                  if (user == null) {
+    public void completeLogin(RoutingContext ctx, String origin, Future<Participant> participant) {
+        participant.onSuccess(found -> {
+                  if (found == null) {
                       redirectError(ctx, origin, OidcErrorCodes.NO_ACCOUNT);
-                  } else if (!user.isEnabled()) {
-                      redirectError(ctx, origin, OidcErrorCodes.ACCOUNT_DISABLED);
                   } else {
-                      redirectSuccess(ctx, origin, user);
+                      redirectSuccess(ctx, origin, found);
                   }
               })
               .onFailure(err -> {

@@ -92,7 +92,6 @@ import Skeleton from 'primevue/skeleton'
 import Tag from 'primevue/tag'
 import { useToast } from 'primevue/usetoast'
 
-import { AuthType } from '@kinotic-ai/management-api'
 import { DatetimeUtil, showErrorToast, statusSeverity } from '@kinotic-ai/frontend-common'
 import { PageHeader } from '@kinotic-ai/frontend-common'
 import { PROFILE_STATE } from '@/states/IProfileState'
@@ -127,7 +126,6 @@ const emptyName = computed(() => !loading.value && displayName.value.trim().leng
 const canSave = computed(() => dirty.value && !emptyName.value)
 
 const details = computed<ProfileDetail[]>(() => [
-  { label: 'Sign-in method', value: signInMethod(), icon: 'pi pi-shield' },
   { label: 'Member since', value: DatetimeUtil.formatMonthDayYear(PROFILE_STATE.profile?.created ?? 0) || '—', icon: 'pi pi-calendar' },
   { label: 'User ID', value: PROFILE_STATE.profile?.id ?? '—', icon: 'pi pi-hashtag', copyable: true }
 ])
@@ -137,14 +135,6 @@ onMounted(load)
 onBeforeUnmount(() => {
   if (copiedTimer) clearTimeout(copiedTimer)
 })
-
-function signInMethod(): string {
-  switch (PROFILE_STATE.profile?.authType) {
-    case AuthType.LOCAL: return 'Password'
-    case AuthType.OIDC:  return 'Single sign-on'
-    default:             return '—'
-  }
-}
 
 async function load() {
   try {

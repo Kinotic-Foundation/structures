@@ -12,12 +12,15 @@ import org.kinotic.domain.api.model.persistence.EntityDefinition;
 import org.kinotic.domain.api.model.persistence.idl.decorators.MultiTenancyType;
 import org.kinotic.domain.api.model.security.identity.DelegatingParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.MachineParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.Membership;
 import org.kinotic.domain.api.model.security.identity.ParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.ParticipantIdentityType;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 import org.kinotic.domain.api.model.security.participant.DefaultApplicationParticipant;
 import org.kinotic.domain.api.model.security.participant.DefaultOrganizationParticipant;
 import org.kinotic.domain.api.model.security.participant.DefaultSystemParticipant;
+import org.kinotic.domain.api.model.security.participant.ParticipantScope;
+import org.kinotic.domain.api.model.security.participant.ScopedParticipant;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import java.nio.charset.StandardCharsets;
@@ -353,6 +356,8 @@ public class DomainUtil {
      * @return the typed participant for the given user
      */
     public static Participant createParticipant(ParticipantIdentity user) {
+        Validate.isTrue(!(user instanceof UserParticipantIdentity person && person.isAccount()),
+                        "An account acts through one of its memberships");
         Map<String, String> metadata = participantMetadata(user);
         if (user.getOrganizationId() == null) {
             return DefaultSystemParticipant.builder()
@@ -444,10 +449,45 @@ public class DomainUtil {
         return "APPLICATION/" + organizationId + "/" + applicationId;
     }
 
+    /**
+     * The participant account {@code account} acts as through {@code membership}: an
+     * {@link OrganizationParticipant} of the membership's organization, or a {@link SystemParticipant} for a
+     * membership of the platform. The participant's id is the account's, so what the person creates is
+     * attributed to them whichever membership they act through.
+     */
+    public static Participant createParticipant(UserParticipantIdentity account, Membership membership) {
+        Validate.isTrue(account.isAccount(), "%s is an application's user, which acts as itself", account.getId());
+        Validate.isTrue(account.getId().equals(membership.getIdentityId()), "The membership is not the account's");
+        Map<String, String> metadata = participantMetadata(account);
+        Participant ret;
+        if (membership.getOrganizationId() == null) {
+            ret = DefaultSystemParticipant.builder()
+                                          .id(account.getId())
+                                          .metadata(metadata)
+                                          .roles(List.of())
+                                          .build();
+        } else {
+            ret = DefaultOrganizationParticipant.builder()
+                                                .id(account.getId())
+                                                .organizationId(membership.getOrganizationId())
+                                                .metadata(metadata)
+                                                .roles(List.of())
+                                                .build();
+        }
+        return ret;
+    }
+
+    /** The scope a participant acts in: its own for a scoped participant, the platform's (all null) otherwise. */
+    public static ParticipantScope scopeOf(Participant participant) {
+        return participant instanceof ScopedParticipant scoped ? scoped.getScope() : new ParticipantScope(null, null, null);
+    }
+
     private static Map<String, String> participantMetadata(ParticipantIdentity identity) {
         Map<String, String> metadata = new HashMap<>();
         metadata.put(ParticipantConstants.PARTICIPANT_TYPE_METADATA_KEY, participantTypeFor(identity.getType()));
-        metadata.put("authType", identity.getAuthType().name());
+        if (identity.getAuthType() != null) {
+            metadata.put("authType", identity.getAuthType().name());
+        }
         switch (identity) {
             case UserParticipantIdentity user -> {
                 metadata.put("email", user.getEmail());

@@ -23,6 +23,7 @@ import org.kinotic.domain.api.rest.support.OidcFlowOrchestrator;
 import org.kinotic.domain.api.services.security.LocalAuthenticationService;
 import org.kinotic.domain.api.services.security.OidcConfigurationService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
+import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.domain.api.utils.HostLabelUtil;
 import org.springframework.stereotype.Component;
 
@@ -129,7 +130,7 @@ public class ApplicationLoginHandler implements SuppliesGatewayRoutes {
               .onSuccess(scope -> authEndpointSupport.handlePasswordLogin(ctx,
                       (email, password) -> localAuthenticationService.authenticateLocal(
                               email, password, scope.application().organizationId(), scope.application().applicationId())
-                                                                       .map(scope::memberOf)))
+                                                                       .map(user -> scope.memberOf(user) == null ? null : DomainUtil.createParticipant(user))))
               .onFailure(err -> fail(ctx, err, "Failed to sign in"));
     }
 
@@ -157,7 +158,7 @@ public class ApplicationLoginHandler implements SuppliesGatewayRoutes {
                                   CallbackResult<OidcConfiguration> result,
                                   LoginScope scope) {
         authEndpointSupport.completeOidcLogin(ctx, result,
-                sub -> identityService.findByOidcIdentity(sub, result.config().getId(), scope.application().organizationId(),
+                sub -> identityService.findByOidcIdentity(result.config().getId(), sub, scope.application().organizationId(),
                                                          scope.application().applicationId())
                                       .map(scope::memberOf),
                 () -> newUserOf(scope, result.config()));

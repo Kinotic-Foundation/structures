@@ -14,13 +14,9 @@ import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.domain.internal.api.services.CrudServiceTemplate;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
 
 @Component
 public class ParticipantIdentityRepository extends AbstractRepository<ParticipantIdentity> {
-
-    // the most organizations one person's email or social identity is looked up across
-    private static final int MAX_MEMBERSHIPS = 100;
 
     public ParticipantIdentityRepository(CrudServiceTemplate crudServiceTemplate) {
         super("kinotic_participant_identity", ParticipantIdentity.class, crudServiceTemplate);
@@ -36,17 +32,6 @@ public class ParticipantIdentityRepository extends AbstractRepository<Participan
                 termFilter("email", DomainUtil.normalizeEmail(email)),
                 scopeFilter(organizationId, applicationId))))
                 .map(UserParticipantIdentity.class::cast);
-    }
-
-    /** The ORGANIZATION-scope users with the given email, one per organization the address is a member of. */
-    public Future<List<UserParticipantIdentity>> findOrgUsersByEmail(String email) {
-        Validate.notBlank(email, "email cannot be blank");
-        return findAll(Pageable.ofSize(MAX_MEMBERSHIPS), b -> b.query(composeFilter(
-                termFilter("email", DomainUtil.normalizeEmail(email)),
-                existsFilter("organizationId"),
-                missingFilter("applicationId"))))
-                .map(page -> page.map(UserParticipantIdentity.class::cast))
-                .map(Page::getContent);
     }
 
     /** Users only — delegates share their owner's scope and must not appear in member listings. */
@@ -82,47 +67,43 @@ public class ParticipantIdentityRepository extends AbstractRepository<Participan
                 .map(page -> page.map(MachineParticipantIdentity.class::cast));
     }
 
-    public Future<Page<DelegatingParticipantIdentity>> findDelegatesByOwner(String ownerId, Pageable pageable) {
+    /** The delegates owner {@code ownerId} authorized in the scope {@code (organizationId, applicationId)}. */
+    public Future<Page<DelegatingParticipantIdentity>> findDelegatesByOwner(String ownerId,
+                                                                            String organizationId,
+                                                                            String applicationId,
+                                                                            Pageable pageable) {
+        Validate.notBlank(ownerId, "ownerId cannot be blank");
+        return findAll(pageable, b -> b.query(composeFilter(
+                termFilter("ownerId", ownerId),
+                scopeFilter(organizationId, applicationId))))
+                .map(page -> page.map(DelegatingParticipantIdentity.class::cast));
+    }
+
+    /** Every delegate owner {@code ownerId} authorized, in any scope. */
+    public Future<Page<DelegatingParticipantIdentity>> findAllDelegatesByOwner(String ownerId, Pageable pageable) {
         Validate.notBlank(ownerId, "ownerId cannot be blank");
         return findAll(pageable, b -> b.query(termFilter("ownerId", ownerId)))
                 .map(page -> page.map(DelegatingParticipantIdentity.class::cast));
     }
 
-    public Future<DelegatingParticipantIdentity> findByOwnerAndClientKey(String ownerId, String clientKey) {
+    /** The delegate owner {@code ownerId} authorized for client {@code clientKey} in the scope, or {@code null}. */
+    public Future<DelegatingParticipantIdentity> findByOwnerAndClientKey(String ownerId,
+                                                                         String clientKey,
+                                                                         String organizationId,
+                                                                         String applicationId) {
         Validate.notBlank(ownerId, "ownerId cannot be blank");
         Validate.notBlank(clientKey, "clientKey cannot be blank");
         return findFirst(b -> b.query(composeFilter(
                 termFilter("ownerId", ownerId),
-                termFilter("clientKey", clientKey))))
-                .map(DelegatingParticipantIdentity.class::cast);
-    }
-
-    public Future<UserParticipantIdentity> findByOidcIdentity(String oidcSubject,
-                                                              String oidcConfigId,
-                                                              String organizationId,
-                                                              String applicationId) {
-        return findFirst(b -> b.query(composeFilter(
-                termFilter("oidcSubject", oidcSubject),
-                termFilter("oidcConfigId", oidcConfigId),
+                termFilter("clientKey", clientKey),
                 scopeFilter(organizationId, applicationId))))
-                .map(UserParticipantIdentity.class::cast);
-    }
-
-    /** The ORGANIZATION-scope users bound to the given OIDC identity, one per organization it is a member of. */
-    public Future<List<UserParticipantIdentity>> findOrgUsersByOidcIdentity(String oidcSubject, String oidcConfigId) {
-        return findAll(Pageable.ofSize(MAX_MEMBERSHIPS), b -> b.query(composeFilter(
-                termFilter("oidcSubject", oidcSubject),
-                termFilter("oidcConfigId", oidcConfigId),
-                existsFilter("organizationId"),
-                missingFilter("applicationId"))))
-                .map(page -> page.map(UserParticipantIdentity.class::cast))
-                .map(Page::getContent);
+                .map(DelegatingParticipantIdentity.class::cast);
     }
 
     /**
      * Structural scope filter against the typed scope fields on the document:
      * <ul>
-     *   <li>both null → {@code organizationId} and {@code applicationId} must be missing (SYSTEM).</li>
+     *   <li>both null → {@code organizationId} and {@code applicationId} must be missing: an account, or a platform machine or delegate.</li>
      *   <li>only {@code organizationId} set → matches that org AND {@code applicationId} is missing (ORG)</li>
      *   <li>both set → matches both fields (APP)</li>
      * </ul>

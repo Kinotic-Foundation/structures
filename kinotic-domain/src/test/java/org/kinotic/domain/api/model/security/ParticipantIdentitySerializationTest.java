@@ -24,7 +24,6 @@ class ParticipantIdentitySerializationTest {
         UserParticipantIdentity user = new UserParticipantIdentity();
         user.setEmail("jane@example.com")
             .setDisplayName("Jane")
-            .setAuthType(AuthType.LOCAL)
             .setOrganizationId("acme")
             .setId("user-1");
 

@@ -10,6 +10,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.kinotic.core.api.security.SessionBinding;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
+import org.kinotic.domain.api.model.security.OwnedOidcConfiguration;
+import org.kinotic.domain.api.model.security.identity.Membership;
+import org.kinotic.domain.api.rest.support.OidcCallbackException;
+import org.kinotic.domain.api.services.security.MembershipService;
+import org.kinotic.domain.api.utils.DomainUtil;
+import org.kinotic.core.api.security.Participant;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 import org.kinotic.domain.api.rest.SuppliesGatewayRoutes;
 import org.kinotic.domain.api.rest.support.AuthEndpointSupport;
@@ -41,6 +47,9 @@ import java.util.stream.Collectors;
  * not remember their organizations the list. On success each login establishes the browser session;
  * the STOMP WebSocket handshake then authenticates from that session cookie, so the browser never
  * handles a token. OIDC flows started here return to this handler's own callbacks.
+ *
+ * <p>A member is an account with a membership of the organization: the login finds the account by its
+ * email or by the identity its provider asserts, then signs it in through that membership.
  */
 @Slf4j
 @Component
@@ -50,6 +59,7 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes {
     private final AuthEndpointSupport authEndpointSupport;
     private final ManagementServerProperties properties;
     private final ParticipantIdentityService identityService;
+    private final MembershipService membershipService;
     private final OrganizationService organizationService;
     private final LocalAuthenticationService localAuthenticationService;
     private final OidcConfigurationService oidcConfigurationService;
@@ -149,7 +159,10 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes {
     private void handleLogin(RoutingContext ctx) {
         String orgId = ctx.pathParam("orgId");
         authEndpointSupport.handlePasswordLogin(ctx,
-                (email, password) -> localAuthenticationService.authenticateLocal(email, password, orgId, null));
+                (email, password) -> localAuthenticationService.authenticateLocal(email, password, null, null)
+                                                               .compose(account -> account == null
+                                                                       ? Future.succeededFuture()
+                                                                       : identityService.resolveParticipant(account.getId(), orgId, null)));
     }
 
     /**
@@ -224,35 +237,45 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes {
     }
 
     private void completeSocialLogin(RoutingContext ctx, CallbackResult<OrgSignupOidcConfiguration> result) {
-        String configId = result.config().getId();
-        if (result.orgId() != null) {
-            authEndpointSupport.completeOidcLogin(ctx, result,
-                    sub -> identityService.findByOidcIdentity(sub, configId, result.orgId(), null));
-        } else {
-            String sub = authEndpointSupport.verifiedSubject(ctx, result);
-            if (sub != null) {
-                identityService.findOrgUsersByOidcIdentity(sub, configId)
-                               .onSuccess(memberships -> completeLandingLogin(ctx, result.origin(), memberships))
-                               .onFailure(err -> authEndpointSupport.completeLogin(ctx, result.origin(), Future.failedFuture(err)));
+        String sub = authEndpointSupport.verifiedSubject(ctx, result);
+        if (sub != null) {
+            Future<UserParticipantIdentity> account = identityService.findByOidcIdentity(result.config().getId(), sub, null, null);
+            if (result.orgId() != null) {
+                authEndpointSupport.completeLogin(ctx, result.origin(), account.compose(found -> memberOf(found, result.orgId())));
+            } else {
+                account.compose(found -> found == null
+                               ? Future.succeededFuture(List.<Membership>of())
+                               : membershipService.findMemberships(found.getId()).map(memberships -> organizationMemberships(found, memberships)))
+                       .onSuccess(memberships -> completeLandingLogin(ctx, result.origin(), account.result(), memberships))
+                       .onFailure(err -> authEndpointSupport.completeLogin(ctx, result.origin(), Future.failedFuture(err)));
             }
         }
     }
 
-    // an identity that is a member of several organizations has proven who it is, so the landing page may
+    // the enabled memberships of organizations the account may sign in to; a disabled account has none
+    private static List<Membership> organizationMemberships(UserParticipantIdentity account, List<Membership> memberships) {
+        return account.isEnabled()
+                ? memberships.stream().filter(m -> m.getOrganizationId() != null && m.isEnabled()).toList()
+                : List.of();
+    }
+
+    // an account that is a member of several organizations has proven who it is, so the landing page may
     // offer those organizations for the person to choose from, where a stranger learns nothing
-    private void completeLandingLogin(RoutingContext ctx, String origin, List<UserParticipantIdentity> memberships) {
+    private void completeLandingLogin(RoutingContext ctx, String origin, UserParticipantIdentity account, List<Membership> memberships) {
         if (memberships.size() > 1) {
-            String organizations = memberships.stream().map(UserParticipantIdentity::getOrganizationId).collect(Collectors.joining(","));
+            String organizations = memberships.stream().map(Membership::getOrganizationId).collect(Collectors.joining(","));
             authEndpointSupport.redirectError(ctx, origin, OidcErrorCodes.MULTIPLE_ORGANIZATIONS, Map.of("organizations", organizations));
         } else {
-            authEndpointSupport.completeLogin(ctx, origin, Future.succeededFuture(memberships.isEmpty() ? null : memberships.getFirst()));
+            authEndpointSupport.completeLogin(ctx, origin, Future.succeededFuture(
+                    memberships.isEmpty() ? null : DomainUtil.createParticipant(account, memberships.getFirst())));
         }
     }
 
     /**
      * {@code GET /api/auth/org/login/sso/callback/:configId} — the org's own IdP returns here; validates the
-     * callback and logs the user into that organization. An identity no member is bound to becomes a
-     * member when the configuration creates users on sign-in.
+     * callback and logs the account bound to the identity into that organization. When the configuration
+     * creates users on sign-in, an identity bound to no account becomes a new account, and an account that is
+     * not yet a member joins the organization.
      */
     private void handleSsoCallback(RoutingContext ctx) {
         String pathConfigId = ctx.pathParam("configId");
@@ -269,13 +292,51 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes {
     }
 
     private void completeSsoLogin(RoutingContext ctx, CallbackResult<OidcConfiguration> result) {
-        authEndpointSupport.completeOidcLogin(ctx, result,
-                sub -> identityService.findByOidcIdentity(sub, result.config().getId(), result.orgId(), null),
-                () -> {
-                    UserParticipantIdentity member = new UserParticipantIdentity();
-                    member.setOrganizationId(result.orgId());
-                    return Future.succeededFuture(member);
-                });
+        String sub = authEndpointSupport.verifiedSubject(ctx, result);
+        if (sub != null) {
+            boolean joinsOnSignIn = result.config() instanceof OwnedOidcConfiguration owned && owned.isCreateUserOnSignIn();
+            Future<Participant> participant = identityService.findByOidcIdentity(result.config().getId(), sub, null, null)
+                    .compose(account -> {
+                        Future<UserParticipantIdentity> ret;
+                        if (account != null || !joinsOnSignIn) {
+                            ret = Future.succeededFuture(account);
+                        } else {
+                            // the organization's own provider verified the person, so a new account is created for them;
+                            // an email with an account already is refused, since only that account's holder may connect it
+                            ret = authEndpointSupport.createUserFromClaims(new UserParticipantIdentity(), sub, result);
+                        }
+                        return ret;
+                    })
+                    .compose(account -> account == null
+                            ? Future.succeededFuture()
+                            : joinsOnSignIn
+                                    ? membershipService.addMember(account.getId(), result.orgId()).compose(m -> memberOf(account, result.orgId()))
+                                    : memberOf(account, result.orgId()));
+            authEndpointSupport.completeLogin(ctx, result.origin(), participant);
+        }
+    }
+
+    /**
+     * The participant {@code account} signs in to organization {@code orgId} as, or {@code null} when it is not a
+     * member; a disabled account or membership fails the sign-in with {@link OidcErrorCodes#ACCOUNT_DISABLED}.
+     */
+    private Future<Participant> memberOf(UserParticipantIdentity account, String orgId) {
+        Future<Participant> ret;
+        if (account == null) {
+            ret = Future.succeededFuture();
+        } else {
+            ret = membershipService.findMembership(account.getId(), orgId).map(membership -> {
+                Participant participant = null;
+                if (membership != null) {
+                    if (!account.isEnabled() || !membership.isEnabled()) {
+                        throw new OidcCallbackException(OidcErrorCodes.ACCOUNT_DISABLED);
+                    }
+                    participant = DomainUtil.createParticipant(account, membership);
+                }
+                return participant;
+            });
+        }
+        return ret;
     }
 
     private String socialCallbackUrl(String configId) {
