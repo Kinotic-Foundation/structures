@@ -1,5 +1,6 @@
 package org.kinotic.domain.api.model.security.identity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -33,6 +34,7 @@ public final class UserParticipantIdentity extends ParticipantIdentity {
     }
 
     /** Whether this is an account, a person's platform-wide identity, as opposed to an application's user. */
+    @JsonIgnore
     public boolean isAccount() {
         return getOrganizationId() == null && getApplicationId() == null;
     }

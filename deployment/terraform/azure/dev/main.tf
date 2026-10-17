@@ -237,6 +237,16 @@ output "server_client_id" {
   value       = module.environment.server_client_id
 }
 
+output "app_server_application_local_yml" {
+  description = "The `local` profile kinotic-server-app runs with, naming the sites domain its logins admit pages from: write it to kinotic-server-app/src/main/resources/application-local.yml"
+  value       = <<-EOT
+    kinotic:
+      domain:
+        siteDomain:
+          domain: ${module.environment.sites_domain}
+  EOT
+}
+
 output "application_local_yml" {
   description = "The `local` profile kinotic-server-system runs with: write it to kinotic-server-system/src/main/resources/application-local.yml"
   value       = <<-EOT

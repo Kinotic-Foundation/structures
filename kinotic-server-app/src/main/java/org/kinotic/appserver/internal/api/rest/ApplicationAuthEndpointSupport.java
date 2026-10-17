@@ -108,9 +108,15 @@ public class ApplicationAuthEndpointSupport extends AuthEndpointSupport {
 
     // the application's published site the page at origin is, or null for any other page
     private SiteAddress site(ApplicationKey applicationKey, String origin) {
-        String host = URI.create(origin).getHost();
-        // the origin may come from a query parameter, so the site labels are read only from a host directly
-        // under the sites domain: a foreign host that imitates them is not one of the application's pages
+        String host;
+        try {
+            host = URI.create(origin).getHost();
+        } catch (IllegalArgumentException e) {
+            // the origin may come from a query parameter, and a malformed one names no page
+            host = null;
+        }
+        // the site labels are read only from a host directly under the sites domain: a foreign host that
+        // imitates them is not one of the application's pages
         SiteAddress site = host != null && isSiteHost(host) ? HostLabelUtil.fromSiteHost(host) : null;
         return site != null && site.application().equals(applicationKey) ? site : null;
     }

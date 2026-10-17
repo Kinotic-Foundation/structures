@@ -7,12 +7,15 @@ export function organizationLoginPath(organizationId: string): string {
 }
 
 /**
- * The organization id named by what a person typed: the id itself, or the organization's host
- * (`acme.kinotic.io`) or sites URL, whose first label is the id. Empty when nothing was typed.
+ * The organization id named by what a person typed: the id itself, the organization's host
+ * (`acme.kinotic.io`), whose first label is the id, or one of its sites' URLs
+ * (`orders--web.acme.kinotic.io`), whose second label is. Empty when nothing was typed.
  */
 export function organizationSlug(typed: string): string {
     let ret = typed.trim().toLowerCase()
     ret = ret.replace(/^[a-z]+:\/\//, '')
-    const label = ret.split(/[./]/)[0] ?? ''
-    return label
+    const labels = (ret.split('/')[0] ?? '').split('.')
+    // a site's label joins its names with --, which an organization id never contains
+    const label = labels[0]?.includes('--') ? labels[1] : labels[0]
+    return label ?? ''
 }

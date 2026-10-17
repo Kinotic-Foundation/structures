@@ -82,6 +82,13 @@ IDE's `SystemServerApplication` run configuration does); the management server r
 SPRING_PROFILES_ACTIVE=development,local
 ```
 
+The app server admits a sign-in only from a page under the sites domain, so to sign in to a
+published site run it with the same two profiles after writing its own `local` profile:
+
+```bash
+terraform output -raw app_server_application_local_yml > ../../../../kinotic-server-app/src/main/resources/application-local.yml
+```
+
 `DefaultAzureCredential` takes the three `AZURE_*` variables before anything else, so the
 server signs as the principal whatever `az login` is signed in as.
 

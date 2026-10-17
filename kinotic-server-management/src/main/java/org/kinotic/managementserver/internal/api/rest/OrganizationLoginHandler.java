@@ -5,6 +5,7 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.HttpException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.kinotic.core.api.security.SessionBinding;
@@ -163,7 +164,7 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes {
                            .compose(organization -> {
                                Future<List<OidcConfiguration>> ret;
                                if (organization == null) {
-                                   ret = Future.failedFuture(new UnknownOrganizationException());
+                                   ret = Future.failedFuture(new HttpException(404));
                                } else {
                                    ret = oidcConfigurationService.findEnabledForScope(orgId, null);
                                }
@@ -171,7 +172,7 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes {
                            })
                            .onSuccess(configs -> authEndpointSupport.respondProvidersList(ctx, configs))
                            .onFailure(err -> {
-                               if (err instanceof UnknownOrganizationException) {
+                               if (err instanceof HttpException http && http.getStatusCode() == 404) {
                                    authEndpointSupport.respondError(ctx, 404, "Unknown organization: " + orgId);
                                } else {
                                    log.warn("Failed to list the providers of organization {}: {}", orgId, err.getMessage());
@@ -366,5 +367,4 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes {
         return portal.getScheme() + "://" + portal.getAuthority();
     }
 
-    private static class UnknownOrganizationException extends RuntimeException {}
 }

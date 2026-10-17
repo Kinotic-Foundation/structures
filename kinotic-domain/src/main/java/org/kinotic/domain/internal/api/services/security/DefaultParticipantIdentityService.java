@@ -179,13 +179,11 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
         Validate.notBlank(oidcConfigId, "oidcConfigId cannot be blank");
         Validate.notBlank(subject, "subject cannot be blank");
         requireOrgWithApp(organizationId, applicationId);
-        return bindingRepository.findById(OidcBinding.idOf(oidcConfigId, subject))
+        return bindingRepository.findById(OidcBinding.idOf(oidcConfigId, subject, organizationId, applicationId))
                                 .compose(binding -> binding == null
                                         ? Future.succeededFuture()
                                         : identityRepository.findById(binding.getIdentityId()))
-                                .map(identity -> identity instanceof UserParticipantIdentity user
-                                                 && Objects.equals(organizationId, user.getOrganizationId())
-                                                 && Objects.equals(applicationId, user.getApplicationId()) ? user : null);
+                                .map(identity -> identity instanceof UserParticipantIdentity user ? user : null);
     }
 
     @Override
@@ -193,16 +191,27 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
         Validate.notBlank(identityId, "identityId cannot be blank");
         Validate.notBlank(oidcConfigId, "oidcConfigId cannot be blank");
         Validate.notBlank(subject, "subject cannot be blank");
-        String bindingId = OidcBinding.idOf(oidcConfigId, subject);
+        return identityRepository.findById(identityId).compose(identity -> {
+            Validate.isTrue(identity instanceof UserParticipantIdentity, "User not found: %s", identityId);
+            return bind((UserParticipantIdentity) identity, oidcConfigId, subject);
+        });
+    }
+
+    // the binding's id carries the user's scope, so the same provider identity binds to one account and to
+    // one user of each application
+    private Future<OidcBinding> bind(UserParticipantIdentity user, String oidcConfigId, String subject) {
+        String bindingId = OidcBinding.idOf(oidcConfigId, subject, user.getOrganizationId(), user.getApplicationId());
         return bindingRepository.findById(bindingId).compose(existing -> {
             Future<OidcBinding> ret;
             if (existing != null) {
-                Validate.isTrue(identityId.equals(existing.getIdentityId()), "This identity already signs in another user");
+                Validate.isTrue(user.getId().equals(existing.getIdentityId()), "This identity already signs in another user");
                 ret = Future.succeededFuture(existing);
             } else {
                 // sync so the profile's list of sign-in methods shows the binding at once
                 ret = bindingRepository.saveSync(new OidcBinding().setId(bindingId)
-                                                                  .setIdentityId(identityId)
+                                                                  .setIdentityId(user.getId())
+                                                                  .setOrganizationId(user.getOrganizationId())
+                                                                  .setApplicationId(user.getApplicationId())
                                                                   .setOidcConfigId(oidcConfigId)
                                                                   .setSubject(subject)
                                                                   .setCreated(new Date()));
@@ -284,10 +293,12 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
         Validate.notBlank(oidcConfigId, "oidcConfigId cannot be blank");
         Validate.notBlank(subject, "subject cannot be blank");
         // checked before the user exists, so a bound identity leaves no user behind that no method signs in
-        return bindingRepository.findById(OidcBinding.idOf(oidcConfigId, subject)).compose(existing -> {
-            Validate.isTrue(existing == null, "This identity already signs in another user");
-            return createUser(user, null);
-        }).compose(created -> bindOidcIdentity(created.getId(), oidcConfigId, subject).map(created));
+        return bindingRepository.findById(OidcBinding.idOf(oidcConfigId, subject, user.getOrganizationId(), user.getApplicationId()))
+                                .compose(existing -> {
+                                    Validate.isTrue(existing == null, "This identity already signs in another user");
+                                    return createUser(user, null);
+                                })
+                                .compose(created -> bind(created, oidcConfigId, subject).map(created));
     }
 
     @Override

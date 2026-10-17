@@ -257,11 +257,15 @@ CREATE TABLE IF NOT EXISTS kinotic_membership (
 );
 
 -- OIDC Binding: a user's sign-in method through a provider — the sub claim asserted under one OIDC
--- configuration, bound to the user it signs in. id is <oidcConfigId>:<subject>, so a callback reads
--- the binding by a get and a provider identity signs in at most one user.
+-- configuration, bound to the user it signs in. id is <oidcConfigId>:<subject> for an account and
+-- <organizationId>/<applicationId>/<oidcConfigId>:<subject> for an application's user, so a callback
+-- reads the binding by a get and a provider identity signs in at most one account and one user of
+-- each application. organizationId and applicationId are the bound user's scope, null for an account.
 CREATE TABLE IF NOT EXISTS kinotic_oidc_binding (
     id KEYWORD,
     identityId KEYWORD,
+    organizationId KEYWORD,
+    applicationId KEYWORD,
     oidcConfigId KEYWORD,
     subject KEYWORD,
     created DATE

@@ -37,10 +37,11 @@ public interface ParticipantIdentityService extends IdentifiableCrudService<Part
     Future<UserParticipantIdentity> findByEmail(String email, String organizationId, String applicationId);
 
     /**
-     * Finds the user the OIDC identity {@code (oidcConfigId, subject)} is bound to, when that user is of the
-     * scope {@code (organizationId, applicationId)}, with the same null conventions as
-     * {@link #findByEmail(String, String, String)}: both null finds an account. {@code null} when the
-     * identity is bound to no user, or to a user of another scope.
+     * Finds the user of the scope {@code (organizationId, applicationId)} the OIDC identity
+     * {@code (oidcConfigId, subject)} is bound to, with the same null conventions as
+     * {@link #findByEmail(String, String, String)}: both null finds an account. A provider identity binds to
+     * one account and to one user of each application, so {@code null} says it is bound to no user of that
+     * scope.
      */
     Future<UserParticipantIdentity> findByOidcIdentity(String oidcConfigId,
                                                        String subject,
@@ -53,7 +54,7 @@ public interface ParticipantIdentityService extends IdentifiableCrudService<Part
      * the same user changes nothing.
      *
      * @return the binding, readable at once; fails with {@link IllegalArgumentException} when the identity is
-     *         bound to another user
+     *         bound to another user of the same scope, or {@code identityId} is not a user
      */
     Future<OidcBinding> bindOidcIdentity(String identityId, String oidcConfigId, String subject);
 
@@ -112,7 +113,7 @@ public interface ParticipantIdentityService extends IdentifiableCrudService<Part
     /**
      * {@link #createUser(UserParticipantIdentity, String)} for a user that signs in by the OIDC identity
      * {@code (oidcConfigId, subject)}, which the new user is bound to. Fails with
-     * {@link IllegalArgumentException} when the identity is bound to a user already.
+     * {@link IllegalArgumentException} when the identity is bound to a user of the new user's scope already.
      */
     Future<UserParticipantIdentity> createOidcUser(UserParticipantIdentity user, String oidcConfigId, String subject);
 
