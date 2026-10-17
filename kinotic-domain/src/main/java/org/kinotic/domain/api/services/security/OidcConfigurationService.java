@@ -13,6 +13,7 @@ import org.kinotic.domain.api.model.security.OwnedOidcConfiguration;
 import org.kinotic.domain.api.model.security.TenantOidcConfiguration;
 
 import java.util.List;
+import java.util.Collection;
 
 /**
  * The OIDC provider configurations users sign up and in through: the platform's managed registrations
@@ -26,6 +27,9 @@ import java.util.List;
  * check no participant and say so.
  */
 public interface OidcConfigurationService extends IdentifiableCrudService<OidcConfiguration, String> {
+
+    /** The configurations among {@code ids} that exist, of any kind, in one read. */
+    Future<List<OidcConfiguration>> findAllById(Collection<String> ids);
 
     /**
      * Every enabled registration offered to organization sign-up — the source of the social button list

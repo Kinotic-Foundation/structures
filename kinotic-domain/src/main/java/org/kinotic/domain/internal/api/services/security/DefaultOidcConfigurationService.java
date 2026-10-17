@@ -190,8 +190,7 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
         return applicationRepository.findById(applicationId, organizationId)
                                     .compose(application -> application == null || application.getSocialProviders().isEmpty()
                                             ? Future.succeededFuture(List.of())
-                                            : oidcRepository.findSocialByProviders(application.getSocialProviders()))
-                                    .map(registrations -> registrations.stream().filter(OidcConfiguration::isEnabled).toList());
+                                            : oidcRepository.findEnabledSocialByProviders(application.getSocialProviders()));
     }
 
     @Override
@@ -243,7 +242,9 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
             Future<Void> stored = confidential
                     ? secretStorageService.setSecret(owned.getOrganizationId(), owned.getId(), clientSecret)
                     : secretStorageService.deleteSecret(owned.getOrganizationId(), owned.getId());
-            return stored.map(owned);
+            // a secret the vault refused is not held, so the row says so rather than claiming one at sign-in
+            return stored.recover(err -> save(owned.setConfidentialClient(false)).compose(v -> Future.failedFuture(err)))
+                         .map(owned);
         });
     }
 

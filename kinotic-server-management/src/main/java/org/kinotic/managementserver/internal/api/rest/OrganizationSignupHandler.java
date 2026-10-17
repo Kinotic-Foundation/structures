@@ -10,6 +10,7 @@ import org.kinotic.domain.api.model.Organization;
 import org.kinotic.domain.api.rest.support.*;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
+import org.kinotic.domain.api.exceptions.ExistingAccountException;
 import org.kinotic.domain.api.model.security.PendingSignUp;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.services.security.OidcConfigurationService;
@@ -160,11 +161,12 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes {
             return;
         }
 
+        // the identity, or its verified email, with an account already signs in instead of founding another
         identityService.findByOidcIdentity(config.getId(), sub, null, null)
+              .compose(bound -> bound != null ? Future.succeededFuture(bound) : identityService.findByEmail(email, null, null))
               .compose(existing -> {
                   if (existing != null) {
-                      // Already have an account for this identity — push them to log in instead.
-                      return Future.failedFuture(new AccountExistsException());
+                      return Future.failedFuture(new ExistingAccountException("An account for this identity already exists. Sign in instead."));
                   }
                   PendingSignUp pending = new PendingSignUp();
                   pending.setOidcSubject(sub);
@@ -175,7 +177,7 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes {
               })
               .onSuccess(pending -> redirectToCompleteOrg(ctx, pending.getVerificationToken()))
               .onFailure(ex -> {
-                  if (ex instanceof AccountExistsException) {
+                  if (ex instanceof ExistingAccountException) {
                       authEndpointSupport.redirectError(ctx, result.origin(), OidcErrorCodes.ACCOUNT_EXISTS);
                   } else {
                       log.warn("Signup resolution failed: {}", ex.getMessage());
@@ -218,5 +220,4 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes {
         authEndpointSupport.redirectToUi(ctx, "/register?token=" + URLEncoder.encode(token, StandardCharsets.UTF_8));
     }
 
-    private static class AccountExistsException extends RuntimeException {}
 }

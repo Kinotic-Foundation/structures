@@ -17,6 +17,8 @@ import org.kinotic.domain.api.model.security.identity.Membership;
 import org.kinotic.domain.api.model.security.identity.OidcBinding;
 import org.kinotic.domain.api.model.security.participant.ParticipantScope;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
+import org.kinotic.domain.api.exceptions.AccountDisabledException;
+import org.kinotic.domain.api.services.security.MembershipService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.internal.api.model.IdentityCredential;
 import org.kinotic.domain.api.repositories.ApplicationRepository;
@@ -44,18 +46,21 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
     private final OidcBindingRepository bindingRepository;
     private final MembershipRepository membershipRepository;
     private final ApplicationRepository applicationRepository;
+    private final MembershipService membershipService;
 
     public DefaultParticipantIdentityService(ParticipantIdentityRepository repository,
                                              IdentityCredentialRepository credentialRepository,
                                              OidcBindingRepository bindingRepository,
                                              MembershipRepository membershipRepository,
-                                             ApplicationRepository applicationRepository) {
+                                             ApplicationRepository applicationRepository,
+                                             MembershipService membershipService) {
         super(repository);
         this.identityRepository = repository;
         this.credentialRepository = credentialRepository;
         this.bindingRepository = bindingRepository;
         this.membershipRepository = membershipRepository;
         this.applicationRepository = applicationRepository;
+        this.membershipService = membershipService;
     }
 
     @Override
@@ -304,30 +309,33 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
     @Override
     public Future<Participant> resolveParticipant(String identityId, String organizationId, String applicationId) {
         Validate.notBlank(identityId, "identityId cannot be blank");
+        return identityRepository.findById(identityId).compose(identity -> resolveParticipant(identity, organizationId, applicationId));
+    }
+
+    @Override
+    public Future<Participant> resolveParticipant(ParticipantIdentity identity, String organizationId, String applicationId) {
         requireOrgWithApp(organizationId, applicationId);
-        return identityRepository.findById(identityId).compose(identity -> {
-            Future<Participant> ret;
-            if (identity == null || !identity.isEnabled()) {
-                ret = Future.succeededFuture();
-            } else if (identity instanceof UserParticipantIdentity user && user.isAccount()) {
-                ret = applicationId != null
-                        ? Future.succeededFuture()
-                        : membershipRepository.findById(Membership.idOf(identityId, organizationId))
-                                              .map(membership -> membership != null && membership.isEnabled()
-                                                      ? DomainUtil.createParticipant(user, membership) : null);
-            } else if (!Objects.equals(identity.getOrganizationId(), organizationId)
-                    || !Objects.equals(identity.getApplicationId(), applicationId)) {
-                ret = Future.succeededFuture();
-            } else if (identity instanceof DelegatingParticipantIdentity delegate) {
-                // a delegate wields its owner's authority in the delegate's scope, so revoking the owner there
-                // revokes every delegate on the next request, with no cascade to miss
-                ret = resolveParticipant(delegate.getOwnerId(), organizationId, applicationId)
-                        .map(owner -> owner != null ? DomainUtil.createParticipant(delegate) : null);
-            } else {
-                ret = Future.succeededFuture(DomainUtil.createParticipant(identity));
-            }
-            return ret;
-        });
+        Future<Participant> ret;
+        if (identity == null || !identity.isEnabled()) {
+            ret = Future.succeededFuture();
+        } else if (identity instanceof UserParticipantIdentity user && user.isAccount()) {
+            // a login answers a refused account the way it answers a wrong password, so the reason stays here
+            ret = applicationId != null
+                    ? Future.succeededFuture()
+                    : membershipService.resolveMember(user, organizationId)
+                                       .recover(err -> err instanceof AccountDisabledException ? Future.succeededFuture() : Future.failedFuture(err));
+        } else if (!Objects.equals(identity.getOrganizationId(), organizationId)
+                || !Objects.equals(identity.getApplicationId(), applicationId)) {
+            ret = Future.succeededFuture();
+        } else if (identity instanceof DelegatingParticipantIdentity delegate) {
+            // a delegate wields its owner's authority in the delegate's scope, so revoking the owner there
+            // revokes every delegate on the next request, with no cascade to miss
+            ret = resolveParticipant(delegate.getOwnerId(), organizationId, applicationId)
+                    .map(owner -> owner != null ? DomainUtil.createParticipant(delegate) : null);
+        } else {
+            ret = Future.succeededFuture(DomainUtil.createParticipant(identity));
+        }
+        return ret;
     }
 
     /**

@@ -206,16 +206,18 @@ public class DefaultInviteService implements InviteService {
         return user;
     }
 
-    // the account becomes a member of the invitation's organization and signs in there; a membership that
-    // already exists is reused, so one disabled before the acceptance refuses the sign-in as a login would
+    // the account becomes a member of the invitation's organization and signs in there; a disabled account
+    // joins nothing, and a membership that already exists is reused, so one disabled before the acceptance
+    // refuses the sign-in as a login would
     private Future<Participant> join(UserParticipantIdentity account, PendingInvite invite) {
-        return membershipService.addMember(account.getId(), invite.getOrganizationId())
-                                .map(membership -> {
-                                    if (!account.isEnabled() || !membership.isEnabled()) {
-                                        throw new AccountDisabledException("This account cannot sign in to the organization.");
-                                    }
-                                    return DomainUtil.createParticipant(account, membership);
-                                });
+        Future<Participant> ret;
+        if (!account.isEnabled()) {
+            ret = Future.failedFuture(new AccountDisabledException("This account cannot sign in to the organization."));
+        } else {
+            ret = membershipService.addMember(account.getId(), invite.getOrganizationId())
+                                   .compose(membership -> membershipService.resolveMember(account, invite.getOrganizationId()));
+        }
+        return ret;
     }
 
     // an existing account is joined only by someone who knows its password

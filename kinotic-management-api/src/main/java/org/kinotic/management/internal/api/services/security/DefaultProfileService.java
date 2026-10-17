@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.core.api.security.Participant;
 import org.kinotic.domain.api.model.Organization;
+import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.identity.Membership;
 import org.kinotic.domain.api.model.security.identity.OidcBinding;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
@@ -21,7 +22,9 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -51,8 +54,8 @@ public class DefaultProfileService implements ProfileService {
         DomainUtil.requireUserParticipant(participant);
         Future<Boolean> hasPassword = identityService.hasPassword(participant.getId());
         Future<List<SignInMethod>> bindings = identityService.findOidcBindings(participant.getId())
-                .compose(found -> Future.all(found.stream().map(this::methodOf).toList()))
-                .map(cf -> cf.<SignInMethod>list().stream().filter(Objects::nonNull).toList());
+                .compose(found -> oidcConfigurationService.findAllById(found.stream().map(OidcBinding::getOidcConfigId).toList())
+                                                          .map(configurations -> methodsOf(found, configurations)));
         return Future.all(hasPassword, bindings).map(cf -> {
             List<SignInMethod> methods = new ArrayList<>();
             if (hasPassword.result()) {
@@ -63,12 +66,18 @@ public class DefaultProfileService implements ProfileService {
         });
     }
 
-    // the binding as a method, named by its configuration; a binding whose configuration is gone is left out
-    private Future<SignInMethod> methodOf(OidcBinding binding) {
-        return oidcConfigurationService.findById(binding.getOidcConfigId())
-                                       .map(configuration -> configuration == null ? null
-                                               : new SignInMethod(binding.getId(), SignInMethodKind.OIDC, configuration.getName(),
-                                                                  configuration.getProvider(), binding.getCreated()));
+    // the bindings as methods, each named by its configuration, in the bindings' order; a binding whose
+    // configuration is gone is left out
+    private static List<SignInMethod> methodsOf(List<OidcBinding> bindings, List<OidcConfiguration> configurations) {
+        Map<String, OidcConfiguration> byId = configurations.stream().collect(Collectors.toMap(OidcConfiguration::getId, Function.identity()));
+        return bindings.stream()
+                       .filter(binding -> byId.containsKey(binding.getOidcConfigId()))
+                       .map(binding -> {
+                           OidcConfiguration configuration = byId.get(binding.getOidcConfigId());
+                           return new SignInMethod(binding.getId(), SignInMethodKind.OIDC, configuration.getName(),
+                                                   configuration.getProvider(), binding.getCreated());
+                       })
+                       .toList();
     }
 
     @Override
@@ -108,12 +117,10 @@ public class DefaultProfileService implements ProfileService {
     public Future<List<Organization>> findMyOrganizations(Participant participant) {
         DomainUtil.requireUserParticipant(participant);
         return membershipService.findMemberships(participant.getId())
-                                .compose(memberships -> Future.all(memberships.stream()
-                                                                              .filter(m -> m.getOrganizationId() != null && m.isEnabled())
-                                                                              .map(Membership::getOrganizationId)
-                                                                              .map(organizationService::findById)
-                                                                              .toList()))
-                                .map(cf -> cf.<Organization>list().stream().filter(Objects::nonNull).toList());
+                                .compose(memberships -> organizationService.findAllById(memberships.stream()
+                                                                                                  .filter(m -> m.getOrganizationId() != null && m.isEnabled())
+                                                                                                  .map(Membership::getOrganizationId)
+                                                                                                  .toList()));
     }
 
     /** Loads the account behind the calling participant. */

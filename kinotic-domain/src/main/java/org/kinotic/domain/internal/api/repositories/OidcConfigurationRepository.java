@@ -77,10 +77,10 @@ public class OidcConfigurationRepository extends AbstractRepository<OidcConfigur
     }
 
     /**
-     * The social registrations of the given provider kinds, enabled or not, in the order of {@code providers}.
-     * A kind the platform holds no registration for is left out.
+     * The enabled social registrations of the given provider kinds, in the order of {@code providers}. A kind
+     * the platform holds no enabled registration for is left out.
      */
-    public Future<List<ApplicationSocialOidcConfiguration>> findSocialByProviders(Collection<OidcProviderKind> providers) {
+    public Future<List<ApplicationSocialOidcConfiguration>> findEnabledSocialByProviders(Collection<OidcProviderKind> providers) {
         Future<List<ApplicationSocialOidcConfiguration>> ret;
         if (providers.isEmpty()) {
             ret = Future.succeededFuture(List.of());
@@ -88,6 +88,7 @@ public class OidcConfigurationRepository extends AbstractRepository<OidcConfigur
             List<FieldValue> keys = providers.stream().map(kind -> FieldValue.of(kind.key())).toList();
             ret = findAll(Pageable.ofSize(providers.size()), b -> b.query(composeFilter(
                     termFilter(TYPE_FIELD, OidcConfigurationType.APP_SOCIAL.name()),
+                    termFilter(ENABLED_FIELD, true),
                     Query.of(q -> q.terms(t -> t.field(PROVIDER_FIELD).terms(v -> v.value(keys)))))))
                     .map(Page::getContent)
                     .map(found -> providers.stream()

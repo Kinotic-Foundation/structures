@@ -13,6 +13,7 @@ import org.kinotic.domain.api.services.security.CredentialAuthenticationService;
 import org.kinotic.domain.api.services.security.LocalAuthenticationService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.utils.DomainUtil;
+import org.kinotic.domain.internal.api.model.AuthenticatedIdentity;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -70,10 +71,7 @@ public class DefaultCredentialAuthenticationService implements CredentialAuthent
                 });
     }
 
-    // the identity the credentials proved, and the participant it acts as in the scope the request named
-    private record Authenticated(ParticipantIdentity identity, Participant participant) {}
-
-    private Future<Authenticated> authenticateIdentity(Map<String, String> authenticationInfo) {
+    private Future<AuthenticatedIdentity> authenticateIdentity(Map<String, String> authenticationInfo) {
         // HTTP callers (AuthenticationHandler) lowercase all header names; STOMP preserves case.
         // Wrap in a case-insensitive view so both transports work with the same camelCase names.
         Map<String, String> authInfo = caseInsensitive(authenticationInfo);
@@ -90,7 +88,7 @@ public class DefaultCredentialAuthenticationService implements CredentialAuthent
         String clientId = authInfo.get("clientId");
         String clientSecret = authInfo.get("clientSecret");
 
-        Future<Authenticated> ret;
+        Future<AuthenticatedIdentity> ret;
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             ret = authenticateKinoticJwt(authHeader.substring(7));
         } else if (clientId != null || clientSecret != null) {
@@ -124,7 +122,7 @@ public class DefaultCredentialAuthenticationService implements CredentialAuthent
      * password, no membership — is the same generic error, matching the machine path: the upgrade headers
      * get no account oracle.
      */
-    private Future<Authenticated> authenticateEmailPassword(String organizationId,
+    private Future<AuthenticatedIdentity> authenticateEmailPassword(String organizationId,
                                                             String applicationId,
                                                             String email,
                                                             String password) {
@@ -138,7 +136,7 @@ public class DefaultCredentialAuthenticationService implements CredentialAuthent
                      .compose(user -> user == null
                              ? Future.succeededFuture()
                              : identityService.resolveParticipant(user.getId(), organizationId, applicationId)
-                                              .map(participant -> participant == null ? null : new Authenticated(user, participant)))
+                                              .map(participant -> participant == null ? null : new AuthenticatedIdentity(user, participant)))
                      .compose(authenticated -> authenticated == null
                              ? Future.failedFuture(new AuthenticationException("Invalid credentials"))
                              : Future.succeededFuture(authenticated));
@@ -150,7 +148,7 @@ public class DefaultCredentialAuthenticationService implements CredentialAuthent
      * a client configured for the wrong organization or application is rejected. Every
      * failure is the same generic error.
      */
-    private Future<Authenticated> authenticateMachine(String organizationId,
+    private Future<AuthenticatedIdentity> authenticateMachine(String organizationId,
                                                       String applicationId,
                                                       String clientId,
                                                       String clientSecret) {
@@ -160,12 +158,12 @@ public class DefaultCredentialAuthenticationService implements CredentialAuthent
         }
         return identityService.verifyMachineCredentials(clientId, clientSecret)
                               .compose(machine -> {
-                                  Future<Authenticated> ret;
+                                  Future<AuthenticatedIdentity> ret;
                                   if ((organizationId != null && !organizationId.equals(machine.getOrganizationId()))
                                           || (applicationId != null && !applicationId.equals(machine.getApplicationId()))) {
                                       ret = Future.failedFuture(new AuthenticationException("Invalid credentials"));
                                   } else {
-                                      ret = Future.succeededFuture(new Authenticated(machine, DomainUtil.createParticipant(machine)));
+                                      ret = Future.succeededFuture(new AuthenticatedIdentity(machine, DomainUtil.createParticipant(machine)));
                                   }
                                   return ret;
                               })
@@ -178,7 +176,7 @@ public class DefaultCredentialAuthenticationService implements CredentialAuthent
      * that may act there, a delegate only while its owner may (defense in depth against a token outliving
      * the membership or scope it was minted for).
      */
-    private Future<Authenticated> authenticateKinoticJwt(String token) {
+    private Future<AuthenticatedIdentity> authenticateKinoticJwt(String token) {
         return jwtIssuer.authenticate(token)
                         .recover(err -> Future.failedFuture(
                                 new AuthenticationException("JWT validation failed: " + err.getMessage(), err)))
@@ -186,7 +184,7 @@ public class DefaultCredentialAuthenticationService implements CredentialAuthent
                             JsonObject p = user.principal();
                             String sub = p.getString("sub");
 
-                            Future<Authenticated> ret;
+                            Future<AuthenticatedIdentity> ret;
                             if (sub == null) {
                                 ret = Future.failedFuture(new AuthenticationException("JWT missing sub claim"));
                             } else {
@@ -198,14 +196,14 @@ public class DefaultCredentialAuthenticationService implements CredentialAuthent
                         });
     }
 
-    private Future<Authenticated> resolveIdentity(String sub, String jwtOrgId, String jwtAppId) {
+    private Future<AuthenticatedIdentity> resolveIdentity(String sub, String jwtOrgId, String jwtAppId) {
         return identityService.findById(sub)
                               .recover(err -> Future.failedFuture(new AuthenticationException("User lookup failed", err)))
                               .compose(identity -> identity == null
                                       ? Future.failedFuture(new AuthenticationException("No user for sub " + sub))
-                                      : identityService.resolveParticipant(sub, jwtOrgId, jwtAppId)
+                                      : identityService.resolveParticipant(identity, jwtOrgId, jwtAppId)
                                                        .compose(participant -> {
-                                                           Future<Authenticated> ret;
+                                                           Future<AuthenticatedIdentity> ret;
                                                            if (participant == null) {
                                                                // disabled, re-scoped, or no longer a member of the scope
                                                                // the token was minted for. The ids stay in the log; the
@@ -214,7 +212,7 @@ public class DefaultCredentialAuthenticationService implements CredentialAuthent
                                                                         DomainUtil.describeScope(jwtOrgId, jwtAppId));
                                                                ret = Future.failedFuture(new AuthenticationException("JWT scope does not match user scope"));
                                                            } else {
-                                                               ret = Future.succeededFuture(new Authenticated(identity, participant));
+                                                               ret = Future.succeededFuture(new AuthenticatedIdentity(identity, participant));
                                                            }
                                                            return ret;
                                                        }));

@@ -9,13 +9,13 @@ import io.vertx.ext.web.handler.HttpException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.kinotic.core.api.security.SessionBinding;
+import org.kinotic.domain.api.exceptions.AccountDisabledException;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
 import org.kinotic.domain.api.model.security.OwnedOidcConfiguration;
 import org.kinotic.domain.api.model.security.identity.Membership;
 import org.kinotic.domain.api.rest.support.OidcCallbackException;
 import org.kinotic.domain.api.services.security.MembershipService;
-import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.core.api.security.Participant;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 import org.kinotic.domain.api.rest.SuppliesGatewayRoutes;
@@ -280,8 +280,9 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes {
             String organizations = memberships.stream().map(Membership::getOrganizationId).collect(Collectors.joining(","));
             authEndpointSupport.redirectError(ctx, origin, OidcErrorCodes.MULTIPLE_ORGANIZATIONS, Map.of("organizations", organizations));
         } else {
-            authEndpointSupport.completeLogin(ctx, origin, Future.succeededFuture(
-                    memberships.isEmpty() ? null : DomainUtil.createParticipant(account, memberships.getFirst())));
+            authEndpointSupport.completeLogin(ctx, origin, memberships.isEmpty()
+                    ? Future.succeededFuture()
+                    : memberOf(account, memberships.getFirst().getOrganizationId()));
         }
     }
 
@@ -335,22 +336,11 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes {
      * member; a disabled account or membership fails the sign-in with {@link OidcErrorCodes#ACCOUNT_DISABLED}.
      */
     private Future<Participant> memberOf(UserParticipantIdentity account, String orgId) {
-        Future<Participant> ret;
-        if (account == null) {
-            ret = Future.succeededFuture();
-        } else {
-            ret = membershipService.findMembership(account.getId(), orgId).map(membership -> {
-                Participant participant = null;
-                if (membership != null) {
-                    if (!account.isEnabled() || !membership.isEnabled()) {
-                        throw new OidcCallbackException(OidcErrorCodes.ACCOUNT_DISABLED);
-                    }
-                    participant = DomainUtil.createParticipant(account, membership);
-                }
-                return participant;
-            });
-        }
-        return ret;
+        return account == null
+                ? Future.succeededFuture()
+                : membershipService.resolveMember(account, orgId)
+                                   .recover(err -> Future.failedFuture(err instanceof AccountDisabledException
+                                           ? new OidcCallbackException(OidcErrorCodes.ACCOUNT_DISABLED) : err));
     }
 
     private String socialCallbackUrl(String configId) {

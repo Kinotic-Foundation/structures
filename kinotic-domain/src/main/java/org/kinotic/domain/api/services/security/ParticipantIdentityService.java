@@ -130,6 +130,12 @@ public interface ParticipantIdentityService extends IdentifiableCrudService<Part
     Future<Participant> resolveParticipant(String identityId, String organizationId, String applicationId);
 
     /**
+     * {@link #resolveParticipant(String, String, String)} for an identity the caller has already loaded, so
+     * the authentication of every request reads it once.
+     */
+    Future<Participant> resolveParticipant(ParticipantIdentity identity, String organizationId, String applicationId);
+
+    /**
      * Resolves the delegate for {@code (owner, clientKey)} in the scope {@code owner} acts in, creating it on
      * first approval. The delegate carries that scope — the membership an account was signed in to when it
      * approved — and authenticates with DELEGATED tokens only. A re-approval refreshes {@code displayName}

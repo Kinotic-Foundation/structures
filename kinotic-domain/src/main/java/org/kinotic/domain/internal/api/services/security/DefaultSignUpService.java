@@ -109,17 +109,19 @@ public class DefaultSignUpService implements SignUpService {
     }
 
     /**
-     * Fails when the identity of {@code pending} already has an account: a person founds one organization at
-     * most, by signing up once, and joins others by invitation. Checked here, at completion, as well as when
-     * the sign-up starts, so two sign-ups of one identity in flight at once cannot both found an organization.
+     * Fails when the identity of {@code pending}, or its verified email, already has an account: a person
+     * founds one organization at most, by signing up once, and joins others by invitation. Checked here, at
+     * completion, as well as when the sign-up starts, so two sign-ups of one identity in flight at once cannot
+     * both found an organization, and so the organization is never created for an account that cannot be.
      */
     private Future<Void> requireNoAccount(PendingSignUp pending) {
-        Future<UserParticipantIdentity> account = pending.getAuthType() == AuthType.OIDC
+        Future<UserParticipantIdentity> bound = pending.getAuthType() == AuthType.OIDC
                 ? identityService.findByOidcIdentity(pending.getOidcConfigId(), pending.getOidcSubject(), null, null)
-                : identityService.findByEmail(pending.getEmail(), null, null);
-        return account.compose(found -> found == null
-                ? Future.succeededFuture()
-                : Future.failedFuture(new IllegalArgumentException("An account for this identity already exists. Sign in instead.")));
+                : Future.succeededFuture();
+        return bound.compose(found -> found != null ? Future.succeededFuture(found) : identityService.findByEmail(pending.getEmail(), null, null))
+                    .compose(found -> found == null
+                            ? Future.succeededFuture()
+                            : Future.failedFuture(new IllegalArgumentException("An account for this identity already exists. Sign in instead.")));
     }
 
     /**

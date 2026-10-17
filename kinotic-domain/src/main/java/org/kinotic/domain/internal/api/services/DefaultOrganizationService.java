@@ -14,7 +14,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.Date;
 import java.util.List;
-import java.util.Objects;
 
 @Component
 public class DefaultOrganizationService extends AbstractCrudService<Organization> implements OrganizationService {
@@ -72,11 +71,10 @@ public class DefaultOrganizationService extends AbstractCrudService<Organization
                                  .compose(account -> account == null
                                          ? Future.succeededFuture(List.<Membership>of())
                                          : membershipRepository.findByIdentity(account.getId()))
-                                 .compose(memberships -> Future.all(memberships.stream()
-                                                                               .filter(membership -> membership.getOrganizationId() != null && membership.isEnabled())
-                                                                               .map(membership -> findById(membership.getOrganizationId()))
-                                                                               .toList()))
-                                 .map(cf -> cf.<Organization>list().stream().filter(Objects::nonNull).toList())
+                                 .compose(memberships -> findAllById(memberships.stream()
+                                                                                .filter(membership -> membership.getOrganizationId() != null && membership.isEnabled())
+                                                                                .map(Membership::getOrganizationId)
+                                                                                .toList()))
                                  .compose(organizations -> emailService.sendOrganizationsEmail(email, organizations));
     }
 }

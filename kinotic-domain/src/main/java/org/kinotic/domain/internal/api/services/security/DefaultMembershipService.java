@@ -5,12 +5,15 @@ import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
+import org.kinotic.core.api.security.Participant;
+import org.kinotic.domain.api.exceptions.AccountDisabledException;
 import org.kinotic.domain.api.model.security.Member;
 import org.kinotic.domain.api.model.security.identity.DelegatingParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.Membership;
 import org.kinotic.domain.api.model.security.identity.ParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 import org.kinotic.domain.api.services.security.MembershipService;
+import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.domain.internal.api.repositories.MembershipRepository;
 import org.kinotic.domain.internal.api.repositories.ParticipantIdentityRepository;
 import org.springframework.stereotype.Component;
@@ -105,6 +108,22 @@ public class DefaultMembershipService implements MembershipService {
                                       });
         }
         return ret;
+    }
+
+    @Override
+    public Future<Participant> resolveMember(UserParticipantIdentity account, String organizationId) {
+        Validate.notNull(account, "account cannot be null");
+        Validate.isTrue(account.isAccount(), "%s is not an account", account.getId());
+        return membershipRepository.findById(Membership.idOf(account.getId(), organizationId)).map(membership -> {
+            Participant ret = null;
+            if (membership != null) {
+                if (!account.isEnabled() || !membership.isEnabled()) {
+                    throw new AccountDisabledException("This account cannot sign in to the organization.");
+                }
+                ret = DomainUtil.createParticipant(account, membership);
+            }
+            return ret;
+        });
     }
 
     @Override
