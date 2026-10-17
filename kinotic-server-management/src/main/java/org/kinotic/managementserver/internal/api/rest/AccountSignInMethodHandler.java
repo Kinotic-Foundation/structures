@@ -36,6 +36,9 @@ public class AccountSignInMethodHandler implements SuppliesGatewayRoutes {
 
     /** The identity is bound to another account already. */
     private static final String IDENTITY_IN_USE = "identity_in_use";
+    // the provider returns the browser by a navigation that names no page, so the account connecting a method is
+    // recorded on the session at the start and read back at the callback
+    private static final String CONNECTING_ACCOUNT_KEY = AccountSignInMethodHandler.class.getName() + ".account";
 
     private final AuthEndpointSupport authEndpointSupport;
     private final OidcConfigurationService oidcConfigurationService;
@@ -55,7 +58,7 @@ public class AccountSignInMethodHandler implements SuppliesGatewayRoutes {
      * unknown or disabled provider, {@code 401} without a signed-in user.
      */
     private void handleStart(RoutingContext ctx) {
-        authEndpointSupport.requireSessionUser(ctx);
+        Participant account = authEndpointSupport.requireSessionUser(ctx);
         String provider = ctx.pathParam("provider");
         OidcProviderKind providerKind;
         try {
@@ -64,6 +67,7 @@ public class AccountSignInMethodHandler implements SuppliesGatewayRoutes {
             authEndpointSupport.respondError(ctx, 400, "Unknown platform provider: " + provider);
             return;
         }
+        ctx.session().put(CONNECTING_ACCOUNT_KEY, account.getId());
         oidcConfigurationService.findEnabledOrgSignupByProvider(providerKind)
               .compose(config -> config == null
                       ? Future.<String>failedFuture(new IllegalArgumentException("Unknown or disabled platform provider: " + provider))
@@ -81,32 +85,37 @@ public class AccountSignInMethodHandler implements SuppliesGatewayRoutes {
 
     /**
      * {@code GET /api/auth/account/methods/callback/:configId} — the provider returns here; validates the
-     * callback and binds the asserted identity to the signed-in account, then sends the browser back to the
-     * profile page with {@code connected=<provider>}, or with {@code error=identity_in_use} when the identity
-     * already signs in another account.
+     * callback and binds the asserted identity to the account that started the flow, then sends the browser
+     * back to the profile page with {@code connected=<provider>}, or with {@code error=identity_in_use} when
+     * the identity already signs in another account, or {@code error=exchange_failed} when no flow this
+     * session started is in progress.
      */
     private void handleCallback(RoutingContext ctx) {
         String pathConfigId = ctx.pathParam("configId");
-        Participant account = authEndpointSupport.requireSessionUser(ctx);
+        String accountId = ctx.session().remove(CONNECTING_ACCOUNT_KEY);
+        if (accountId == null) {
+            authEndpointSupport.redirectToUi(ctx, PROFILE_PATH + "?error=exchange_failed");
+            return;
+        }
 
         oidcFlowOrchestrator.handleCallback(ctx, pathConfigId, callbackUrl(pathConfigId),
                                             (_, _, _) -> oidcConfigurationService.findOrgSignupById(pathConfigId))
-                            .onSuccess(result -> connect(ctx, account, result))
+                            .onSuccess(result -> connect(ctx, accountId, result))
                             .onFailure(ex -> {
                                 log.warn("Connecting a sign-in method failed for config {}: {}", pathConfigId, ex.getMessage());
                                 authEndpointSupport.redirectToUi(ctx, PROFILE_PATH + "?error=exchange_failed");
                             });
     }
 
-    private void connect(RoutingContext ctx, Participant account, CallbackResult<OrgSignupOidcConfiguration> result) {
+    private void connect(RoutingContext ctx, String accountId, CallbackResult<OrgSignupOidcConfiguration> result) {
         String sub = authEndpointSupport.verifiedSubject(ctx, result);
         if (sub != null) {
-            identityService.bindOidcIdentity(account.getId(), result.config().getId(), sub)
+            identityService.bindOidcIdentity(accountId, result.config().getId(), sub)
                            .onSuccess(binding -> authEndpointSupport.redirectToUi(ctx, PROFILE_PATH + "?connected="
                                    + URLEncoder.encode(result.config().getProvider().key(), StandardCharsets.UTF_8)))
                            .onFailure(err -> {
                                String code = err instanceof IllegalArgumentException ? IDENTITY_IN_USE : "exchange_failed";
-                               log.warn("Could not connect a sign-in method to account {}: {}", account.getId(), err.getMessage());
+                               log.warn("Could not connect a sign-in method to account {}: {}", accountId, err.getMessage());
                                authEndpointSupport.redirectToUi(ctx, PROFILE_PATH + "?error=" + code);
                            });
         }

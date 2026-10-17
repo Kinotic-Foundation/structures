@@ -92,6 +92,17 @@ public class OidcConfigurationScopeTests extends KinoticTestBase {
     }
 
     @Test
+    public void anOrgSignupRegistrationIsOfferedAtEveryOrganizationsLoginOnly() throws Exception {
+        String appId = "oidc-scope-app-" + suffix();
+        await(runAsOrganization(() -> applicationService.createApplicationIfNotExist(appId, "Sign-up application", null)));
+        OrgSignupOidcConfiguration github = await(oidcConfigurations.findEnabledOrgSignupProviders()).getFirst();
+
+        assertEquals(github.getId(), await(oidcConfigurations.findOffered(github.getId(), TEST_ORG_ID, null)).getId());
+        assertEquals(github.getId(), await(oidcConfigurations.findOffered(github.getId(), "globex", null)).getId());
+        assertNull(await(oidcConfigurations.findOffered(github.getId(), TEST_ORG_ID, appId)));
+    }
+
+    @Test
     public void aTenantConfigurationIsOfferedAtTheTenantsLoginWithTheApplications() throws Exception {
         String appId = "oidc-scope-app-" + suffix();
         await(runAsOrganization(() -> applicationService.createApplicationIfNotExist(appId, "Tenant application", null)));

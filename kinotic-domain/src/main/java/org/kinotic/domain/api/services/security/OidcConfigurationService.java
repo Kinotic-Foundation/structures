@@ -71,11 +71,10 @@ public interface OidcConfigurationService extends IdentifiableCrudService<OidcCo
     /**
      * The enabled configuration {@code configurationId} when the scope offers it, or {@code null} when the
      * scope does not offer it or it is disabled, for the sign-in starts and callbacks that name a
-     * configuration: an {@link OwnedOidcConfiguration} the organization made for the scope, or an
-     * {@link ApplicationSocialOidcConfiguration} the application names. A tenant's login offers what the
-     * application's offers as well as the tenant's own. The org sign-up registrations are started by
-     * provider kind through {@link #findEnabledOrgSignupByProvider} and never named here. Checks no
-     * participant.
+     * configuration: an {@link OwnedOidcConfiguration} the organization made for the scope, an
+     * {@link ApplicationSocialOidcConfiguration} the application names, or at an organization's own login
+     * any {@link OrgSignupOidcConfiguration}, which every organization's login offers. A tenant's login
+     * offers what the application's offers as well as the tenant's own. Checks no participant.
      *
      * @param configurationId the configuration a sign-in names
      * @param organizationId  the organization the scope belongs to

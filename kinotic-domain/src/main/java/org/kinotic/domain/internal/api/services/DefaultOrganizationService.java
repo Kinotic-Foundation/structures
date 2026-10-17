@@ -73,7 +73,7 @@ public class DefaultOrganizationService extends AbstractCrudService<Organization
                                          ? Future.succeededFuture(List.<Membership>of())
                                          : membershipRepository.findByIdentity(account.getId()))
                                  .compose(memberships -> Future.all(memberships.stream()
-                                                                               .filter(membership -> membership.getOrganizationId() != null)
+                                                                               .filter(membership -> membership.getOrganizationId() != null && membership.isEnabled())
                                                                                .map(membership -> findById(membership.getOrganizationId()))
                                                                                .toList()))
                                  .map(cf -> cf.<Organization>list().stream().filter(Objects::nonNull).toList())

@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.PendingInvite;
 import org.kinotic.domain.api.services.OrganizationService;
+import org.kinotic.domain.api.exceptions.AccountDisabledException;
 import org.kinotic.domain.api.exceptions.ExistingAccountException;
 import org.kinotic.domain.api.exceptions.InviteEmailMismatchException;
 import org.kinotic.domain.api.model.security.participant.ApplicationParticipant;
@@ -134,6 +135,8 @@ public class InviteHandler implements SuppliesGatewayRoutes {
                   if (err instanceof ExistingAccountException) {
                       // the invitation stays valid: the page asks for the existing account's password
                       authEndpointSupport.respondError(ctx, 401, err.getMessage());
+                  } else if (err instanceof AccountDisabledException) {
+                      authEndpointSupport.respondError(ctx, 403, err.getMessage());
                   } else {
                       respondInviteFailure(ctx, err, "Failed to accept invitation");
                   }
@@ -236,6 +239,8 @@ public class InviteHandler implements SuppliesGatewayRoutes {
                   } else if (err instanceof ExistingAccountException) {
                       // nor here: the account's holder accepts with the account's password
                       redirectInviteError(ctx, OidcErrorCodes.ACCOUNT_EXISTS, token);
+                  } else if (err instanceof AccountDisabledException) {
+                      redirectInviteError(ctx, OidcErrorCodes.ACCOUNT_DISABLED, token);
                   } else {
                       log.warn("Invite acceptance failed: {}", err.getMessage());
                       redirectInviteError(ctx, OidcErrorCodes.INVITE_INVALID, null);

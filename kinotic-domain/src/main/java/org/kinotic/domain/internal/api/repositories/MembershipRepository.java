@@ -16,6 +16,8 @@ public class MembershipRepository extends AbstractRepository<Membership> {
 
     // the most organizations one account is a member of
     private static final int MAX_MEMBERSHIPS = 100;
+    // the most members one organization is searched across
+    private static final int MAX_MEMBERS = 10_000;
 
     public MembershipRepository(CrudServiceTemplate crudServiceTemplate) {
         super("kinotic_membership", Membership.class, crudServiceTemplate);
@@ -25,6 +27,11 @@ public class MembershipRepository extends AbstractRepository<Membership> {
     public Future<Page<Membership>> findByOrganization(String organizationId, Pageable pageable) {
         return findAll(pageable, b -> b.query(organizationFilter(organizationId))
                                        .sort(s -> s.field(f -> f.field("created"))));
+    }
+
+    /** Every membership of organization {@code organizationId}, or of the platform when it is {@code null}, oldest first. */
+    public Future<List<Membership>> findAllByOrganization(String organizationId) {
+        return findByOrganization(organizationId, Pageable.ofSize(MAX_MEMBERS)).map(Page::getContent);
     }
 
     /** Every membership of account {@code identityId}, oldest first. */

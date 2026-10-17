@@ -14,6 +14,8 @@ import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.domain.internal.api.services.CrudServiceTemplate;
 import org.springframework.stereotype.Component;
 
+import java.util.Collection;
+import java.util.List;
 
 @Component
 public class ParticipantIdentityRepository extends AbstractRepository<ParticipantIdentity> {
@@ -57,6 +59,19 @@ public class ParticipantIdentityRepository extends AbstractRepository<Participan
                 .filter(composeFilter(
                         termFilter("type", ParticipantIdentityType.USER.name()),
                         scopeFilter(organizationId, applicationId)))))))
+                .map(page -> page.map(UserParticipantIdentity.class::cast));
+    }
+
+    /** The users among {@code ids} whose email or display name matches {@code searchText}. */
+    public Future<Page<UserParticipantIdentity>> searchUsersById(String searchText, Collection<String> ids, Pageable pageable) {
+        Validate.notBlank(searchText, "searchText cannot be blank");
+        return findAll(pageable, b -> b.query(Query.of(q -> q.bool(bq -> bq
+                .must(m -> m.queryString(qs -> qs.query(searchText)
+                                                 .fields("email", "displayName")
+                                                 .analyzeWildcard(true)))
+                .filter(composeFilter(
+                        termFilter("type", ParticipantIdentityType.USER.name()),
+                        Query.of(f -> f.ids(i -> i.values(List.copyOf(ids))))))))))
                 .map(page -> page.map(UserParticipantIdentity.class::cast));
     }
 

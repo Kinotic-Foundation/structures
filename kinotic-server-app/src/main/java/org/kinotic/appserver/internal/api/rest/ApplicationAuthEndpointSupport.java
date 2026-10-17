@@ -4,10 +4,12 @@ import io.vertx.core.Future;
 import io.vertx.core.net.HostAndPort;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.core.api.exceptions.AuthorizationException;
 import org.kinotic.core.api.security.SessionBinding;
 import org.kinotic.appserver.api.config.AppServerProperties;
+import org.kinotic.domain.api.config.KinoticDomainProperties;
 import org.kinotic.domain.api.model.ApplicationKey;
 import org.kinotic.domain.api.model.SiteAddress;
 import org.kinotic.domain.api.model.Tenant;
@@ -26,6 +28,7 @@ import org.springframework.stereotype.Component;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 import java.util.regex.Pattern;
 
 /**
@@ -43,10 +46,12 @@ public class ApplicationAuthEndpointSupport extends AuthEndpointSupport {
     public static final String SOCIAL_AUTHORIZE_PATH = "/api/auth/app/login/social/authorize";
 
     private final AppServerProperties properties;
+    private final KinoticDomainProperties domainProperties;
     private final ApplicationRepository applicationRepository;
     private final TenantRepository tenantRepository;
 
     public ApplicationAuthEndpointSupport(AppServerProperties properties,
+                                          KinoticDomainProperties domainProperties,
                                           ApplicationRepository applicationRepository,
                                           TenantRepository tenantRepository,
                                           KinoticJwtIssuer jwtIssuer,
@@ -56,6 +61,7 @@ public class ApplicationAuthEndpointSupport extends AuthEndpointSupport {
                                           RefreshTokenService refreshTokenService) {
         super(jwtIssuer, oidcConfigurationService, oidcFlowOrchestrator, identityService, refreshTokenService);
         this.properties = properties;
+        this.domainProperties = domainProperties;
         this.applicationRepository = applicationRepository;
         this.tenantRepository = tenantRepository;
     }
@@ -101,11 +107,24 @@ public class ApplicationAuthEndpointSupport extends AuthEndpointSupport {
     }
 
     // the application's published site the page at origin is, or null for any other page
-    private static SiteAddress site(ApplicationKey applicationKey, String origin) {
+    private SiteAddress site(ApplicationKey applicationKey, String origin) {
         String host = URI.create(origin).getHost();
-        // the CORS pattern holds sites to the sites domain, so a site is named by the first two labels of its host
-        SiteAddress site = host != null ? HostLabelUtil.fromSiteHost(host) : null;
+        // the origin may come from a query parameter, so the site labels are read only from a host directly
+        // under the sites domain: a foreign host that imitates them is not one of the application's pages
+        SiteAddress site = host != null && isSiteHost(host) ? HostLabelUtil.fromSiteHost(host) : null;
         return site != null && site.application().equals(applicationKey) ? site : null;
+    }
+
+    // <site>.<organizationId>.<sitesDomain>, and nothing else
+    private boolean isSiteHost(String host) {
+        String sitesDomain = domainProperties.getDomain().getSiteDomain().getDomain();
+        boolean ret = false;
+        if (StringUtils.isNotBlank(sitesDomain)) {
+            String suffix = "." + sitesDomain.toLowerCase(Locale.ROOT);
+            String lower = host.toLowerCase(Locale.ROOT);
+            ret = lower.endsWith(suffix) && lower.substring(0, lower.length() - suffix.length()).split("\\.", -1).length == 2;
+        }
+        return ret;
     }
 
     /**

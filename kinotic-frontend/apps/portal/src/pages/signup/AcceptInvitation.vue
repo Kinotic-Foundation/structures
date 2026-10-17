@@ -264,6 +264,7 @@ function errorCodeToMessage(code: string): string {
     case 'invite_invalid':     return 'This invitation is invalid, expired, or already used. Ask for a new invitation.'
     case 'email_mismatch':     return "That account's email doesn't match the invited address. Sign in with the matching account, or use your password instead."
     case 'account_exists':     return 'A Kinotic account already exists for the invited email. Enter its password to join.'
+    case 'account_disabled':   return 'This account cannot sign in to the organization. Ask an administrator to enable it.'
     case 'email_not_verified': return 'Your identity provider has not verified your email address.'
     case 'state_mismatch':     return 'The sign-in attempt expired or was tampered with. Please try again.'
     case 'access_denied':      return 'You declined to authorize the sign-in. Please try again to continue.'

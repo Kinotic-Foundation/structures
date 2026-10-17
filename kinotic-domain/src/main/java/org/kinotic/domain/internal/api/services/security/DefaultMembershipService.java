@@ -94,21 +94,15 @@ public class DefaultMembershipService implements MembershipService {
         if (searchText == null || searchText.isBlank()) {
             ret = findMembers(organizationId, pageable);
         } else {
-            // the text matches accounts, so a page of matching accounts is narrowed to the scope's members;
-            // the total counts matching accounts, members or not, which the list treats as an estimate
-            ret = identityRepository.searchUsersByScope(searchText, null, null, pageable)
-                                    .compose(accounts -> membershipRepository.findAllById(accounts.getContent().stream()
-                                                                                                  .map(account -> Membership.idOf(account.getId(), organizationId))
-                                                                                                  .toList())
-                                                                             .map(memberships -> {
-                                                                                 Map<String, Membership> byIdentity = memberships.stream()
-                                                                                         .collect(Collectors.toMap(Membership::getIdentityId, Function.identity()));
-                                                                                 List<Member> members = accounts.getContent().stream()
-                                                                                         .filter(account -> byIdentity.containsKey(account.getId()))
-                                                                                         .map(account -> member(account, byIdentity.get(account.getId())))
-                                                                                         .toList();
-                                                                                 return new Page<>(members, accounts.getTotalElements());
-                                                                             }));
+            // the text matches accounts, so the search is held to the organization's members by their ids and
+            // every page, and the total, counts members only
+            ret = membershipRepository.findAllByOrganization(organizationId)
+                                      .compose(memberships -> {
+                                          Map<String, Membership> byIdentity = memberships.stream()
+                                                  .collect(Collectors.toMap(Membership::getIdentityId, Function.identity()));
+                                          return identityRepository.searchUsersById(searchText, byIdentity.keySet(), pageable)
+                                                                   .map(accounts -> accounts.map(account -> member(account, byIdentity.get(account.getId()))));
+                                      });
         }
         return ret;
     }

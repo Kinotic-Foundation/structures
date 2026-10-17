@@ -161,18 +161,19 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
         if (tenantId != null) {
             Validate.notBlank(applicationId, "applicationId is required when tenantId is supplied");
         }
-        Future<List<OwnedOidcConfiguration>> own = oidcRepository.findEnabledOwnedByScope(organizationId, applicationId, tenantId);
-        Future<List<? extends OidcConfiguration>> rest;
+        Future<List<? extends OidcConfiguration>> own = oidcRepository.findEnabledOwnedByScope(organizationId, applicationId, tenantId)
+                                                                       .map(owned -> owned);
+        Future<List<OidcConfiguration>> ret;
         if (applicationId == null) {
-            rest = oidcRepository.findEnabledOrgSignup().map(signup -> signup);
-            return concat(rest, own.map(owned -> owned));
+            // an organization's login offers the platform's org sign-up registrations before its own
+            ret = concat(oidcRepository.findEnabledOrgSignup().map(signup -> signup), own);
         } else if (tenantId == null) {
-            rest = findEnabledSocial(organizationId, applicationId).map(social -> social);
+            ret = concat(own, findEnabledSocial(organizationId, applicationId).map(social -> social));
         } else {
             // a tenant's login offers the tenant's own providers before everything the application's offers
-            rest = findEnabledForScope(organizationId, applicationId, null).map(offered -> offered);
+            ret = concat(own, findEnabledForScope(organizationId, applicationId, null).map(offered -> offered));
         }
-        return concat(own.map(owned -> owned), rest);
+        return ret;
     }
 
     private static Future<List<OidcConfiguration>> concat(Future<List<? extends OidcConfiguration>> first,
@@ -217,7 +218,8 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
                                              applicationRepository.findById(applicationId, organizationId)
                                                                   .map(application -> application != null
                                                                                       && application.getSocialProviders().contains(social.getProvider()));
-                                     // an org sign-up registration is started by its provider kind, never named by id
+                                     // every organization's own login offers the platform's org sign-up registrations
+                                     case OrgSignupOidcConfiguration signup -> Future.succeededFuture(applicationId == null);
                                      case null, default -> Future.succeededFuture(false);
                                  };
                                  return offered.map(yes -> yes && configuration.isEnabled() ? configuration : null);

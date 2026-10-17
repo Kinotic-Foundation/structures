@@ -11,6 +11,7 @@ import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 import org.kinotic.domain.api.model.security.PendingInvite;
 import org.kinotic.domain.api.services.OrganizationService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
+import org.kinotic.domain.api.exceptions.AccountDisabledException;
 import org.kinotic.domain.api.exceptions.ExistingAccountException;
 import org.kinotic.domain.api.exceptions.InviteEmailMismatchException;
 import org.kinotic.domain.api.services.security.LocalAuthenticationService;
@@ -23,6 +24,7 @@ import org.kinotic.domain.api.utils.DomainUtil;
 import org.springframework.stereotype.Component;
 
 import java.util.Date;
+import java.util.Objects;
 import java.util.UUID;
 
 @Slf4j
@@ -77,9 +79,9 @@ public class DefaultInviteService implements InviteService {
      * member of any number of organizations and applications.
      */
     private Future<Void> checkEmailAvailable(PendingInvite invite) {
-        return identityService.findByEmail(invite.getEmail(), invite.getOrganizationId(), invite.getApplicationId())
-                .compose(user -> {
-                    if (user != null) {
+        return isMemberAlready(invite)
+                .compose(member -> {
+                    if (member) {
                         return Future.<PendingInvite>failedFuture(new IllegalArgumentException(
                                 invite.getApplicationId() == null
                                         ? "A member with this email already exists in this organization."
@@ -168,6 +170,23 @@ public class DefaultInviteService implements InviteService {
                 });
     }
 
+    // an application invitee is a user of the application; an organization invitee is an account holding a
+    // membership of the organization, whatever the membership's enabled flag
+    private Future<Boolean> isMemberAlready(PendingInvite invite) {
+        Future<Boolean> ret;
+        if (invite.getApplicationId() != null) {
+            ret = identityService.findByEmail(invite.getEmail(), invite.getOrganizationId(), invite.getApplicationId())
+                                 .map(Objects::nonNull);
+        } else {
+            ret = identityService.findByEmail(invite.getEmail(), null, null)
+                                 .compose(account -> account == null
+                                         ? Future.succeededFuture(false)
+                                         : membershipService.findMembership(account.getId(), invite.getOrganizationId())
+                                                            .map(Objects::nonNull));
+        }
+        return ret;
+    }
+
     /**
      * The unsaved user an invitation creates: an application's user in the invitation's application, or an
      * account for an invitation into an organization. Id, dates, the enabled flag and the sign-in method are
@@ -187,10 +206,16 @@ public class DefaultInviteService implements InviteService {
         return user;
     }
 
-    // the account becomes a member of the invitation's organization and signs in there
+    // the account becomes a member of the invitation's organization and signs in there; a membership that
+    // already exists is reused, so one disabled before the acceptance refuses the sign-in as a login would
     private Future<Participant> join(UserParticipantIdentity account, PendingInvite invite) {
         return membershipService.addMember(account.getId(), invite.getOrganizationId())
-                                .map(membership -> DomainUtil.createParticipant(account, membership));
+                                .map(membership -> {
+                                    if (!account.isEnabled() || !membership.isEnabled()) {
+                                        throw new AccountDisabledException("This account cannot sign in to the organization.");
+                                    }
+                                    return DomainUtil.createParticipant(account, membership);
+                                });
     }
 
     // an existing account is joined only by someone who knows its password

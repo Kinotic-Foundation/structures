@@ -206,7 +206,7 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes {
         String configId = ctx.pathParam("configId");
         String origin = SessionBinding.origin(ctx) != null ? SessionBinding.origin(ctx) : portalOrigin();
 
-        offeredConfiguration(orgId, configId)
+        oidcConfigurationService.findOffered(configId, orgId, null)
               .onSuccess(config -> {
                   if (config == null) {
                       authEndpointSupport.respondError(ctx, 400, "The organization's login does not offer " + configId);
@@ -220,21 +220,6 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes {
                   log.warn("Login start failed for {}/{}: {}", orgId, configId, err.getMessage());
                   authEndpointSupport.respondError(ctx, 500, "Failed to start sign-in");
               });
-    }
-
-    // the enabled configuration the organization's login offers under the id, or null: every organization's
-    // login offers the platform's org sign-up registrations, which findOffered never answers by id
-    private Future<OidcConfiguration> offeredConfiguration(String orgId, String configId) {
-        return oidcConfigurationService.findOrgSignupById(configId)
-                                       .compose(signup -> {
-                                           Future<OidcConfiguration> ret;
-                                           if (signup != null) {
-                                               ret = Future.succeededFuture(signup.isEnabled() ? signup : null);
-                                           } else {
-                                               ret = oidcConfigurationService.findOffered(configId, orgId, null);
-                                           }
-                                           return ret;
-                                       });
     }
 
     /**
