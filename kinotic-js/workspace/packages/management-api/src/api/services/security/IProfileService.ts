@@ -1,5 +1,6 @@
 import { MANAGEMENT_API_ZONE } from '@/api/PlatformZones'
 import type { IKinotic, IServiceProxy } from '@kinotic-ai/core'
+import type { LoginProviderSummary } from '@/api/model/security/LoginProviderSummary'
 import type { Organization } from '@/api/model/Organization'
 import type { SignInMethod } from '@/api/model/security/SignInMethod'
 import type { UserParticipantIdentity } from '@/api/model/security/UserParticipantIdentity'
@@ -17,6 +18,13 @@ export interface IProfileService {
 
     /** The ways the account signs in: its password, when it has one, and every provider identity bound to it. */
     findMySignInMethods(): Promise<SignInMethod[]>
+
+    /**
+     * The configurations the account may connect as further sign-in methods and has not yet: the platform's
+     * registrations and the own configurations of the organizations the account may sign in to. Connecting one
+     * is a form POST to `/api/auth/account/methods/start/<configurationId>`.
+     */
+    findConnectableProviders(): Promise<LoginProviderSummary[]>
 
     /**
      * Sets the account's password. An account that has one gives its current password; one that signs in by
@@ -50,6 +58,10 @@ export class ProfileService implements IProfileService {
 
     public findMySignInMethods(): Promise<SignInMethod[]> {
         return this.serviceProxy.invoke('findMySignInMethods', [])
+    }
+
+    public findConnectableProviders(): Promise<LoginProviderSummary[]> {
+        return this.serviceProxy.invoke('findConnectableProviders', [])
     }
 
     public setPassword(currentPassword: string | null, newPassword: string): Promise<void> {

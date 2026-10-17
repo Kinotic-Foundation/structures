@@ -9,7 +9,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.kinotic.domain.api.model.Organization;
 import org.kinotic.domain.api.rest.support.*;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
-import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
+import org.kinotic.domain.api.model.security.OidcConfiguration;
+import org.kinotic.domain.api.model.security.OidcProviderKind;
 import org.kinotic.domain.api.exceptions.ExistingAccountException;
 import org.kinotic.domain.api.model.security.PendingSignUp;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
@@ -31,7 +32,7 @@ import java.util.Map;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class OrganizationSignupHandler implements SuppliesGatewayRoutes {
+public class OrganizationSignupHandler implements SuppliesGatewayRoutes, OidcFlowCompleter {
 
     private final ParticipantIdentityService identityService;
     private final OidcConfigurationService oidcConfigurationService;
@@ -45,9 +46,8 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes {
         // Email/password: form submit, then completion after the user clicks the email link.
         router.post("/api/auth/org/signup").handler(this::handleLocalSignUp);
         router.post("/api/auth/org/signup/complete").handler(this::handleLocalComplete);
-        // Social (OIDC): start → IdP → callback → org-naming form → complete.
+        // Social (OIDC): start → IdP → the registration's callback → org-naming form → complete.
         router.post("/api/auth/org/signup/social/start/:provider").handler(this::handleSocialStart);
-        router.get("/api/auth/org/signup/social/callback/:configId").handler(this::handleSocialCallback);
         router.post("/api/auth/org/signup/social/complete").handler(this::handleSocialCompleteOrg);
     }
 
@@ -117,35 +117,52 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes {
 
     /**
      * {@code POST /api/auth/org/signup/social/start/:provider} — start social (OIDC) sign-up by redirecting the
-     * browser to the chosen Kinotic-curated social IdP.
+     * browser to the chosen Kinotic-curated social IdP, which returns to the registration's callback;
+     * {@code 400} for an unknown or disabled provider.
      */
     private void handleSocialStart(RoutingContext ctx) {
-        authEndpointSupport.handleSocialStart(ctx, this::callbackUrl);
+        String provider = ctx.pathParam("provider");
+        OidcProviderKind providerKind;
+        try {
+            providerKind = OidcProviderKind.fromKey(provider);
+        } catch (IllegalArgumentException ex) {
+            authEndpointSupport.respondError(ctx, 400, "Unknown platform provider: " + provider);
+            return;
+        }
+        oidcConfigurationService.findEnabledOrgSignupByProvider(providerKind)
+              .compose(config -> config == null
+                      ? Future.<String>failedFuture(new IllegalArgumentException("Unknown or disabled platform provider: " + provider))
+                      : oidcFlowOrchestrator.startSignUp(ctx, config, OrganizationOidcCallbacks.socialCallbackUrl(properties.getApiBaseUrl(), config.getId())))
+              .onSuccess(url -> ctx.response().setStatusCode(302).putHeader("Location", url).end())
+              .onFailure(err -> {
+                  if (err instanceof IllegalArgumentException) {
+                      authEndpointSupport.respondError(ctx, 400, err.getMessage());
+                  } else {
+                      log.error("Social sign-up failed to start for provider {}", provider, err);
+                      authEndpointSupport.respondError(ctx, 500, "Provider initialization failed");
+                  }
+              });
     }
 
-    /**
-     * {@code GET /api/auth/org/signup/social/callback/:configId} — the social IdP returns here. Validates the
-     * callback (state, code exchange, issuer) via {@code OidcFlowOrchestrator}, then hands the
-     * verified claims to {@link #createPendingSignUp}.
-     */
-    private void handleSocialCallback(RoutingContext ctx) {
-        String pathConfigId = ctx.pathParam("configId");
+    @Override
+    public OidcFlowPurpose purpose() {
+        return OidcFlowPurpose.SIGN_UP;
+    }
 
-        oidcFlowOrchestrator.handleCallback(
-                ctx, pathConfigId, callbackUrl(pathConfigId),
-                (_, _, _) -> oidcConfigurationService.findOrgSignupById(pathConfigId))
-                .onSuccess(result -> createPendingSignUp(ctx, result))
-                .onFailure(ex -> authEndpointSupport.redirectCallbackFailure(ctx, ex));
+    @Override
+    public void fail(RoutingContext ctx, PendingFlow flow, Throwable failure) {
+        authEndpointSupport.redirectCallbackFailure(ctx, flow.origin(), failure);
     }
 
     /**
      * Turns a verified social identity into a pending sign-up: refuses if an {@link UserParticipantIdentity}
-     * already exists for this identity (they should log in, not sign up), otherwise stores a
-     * {@link PendingSignUp} carrying the verified identity and redirects the browser to the
+     * already exists for this identity or its verified email (they should log in, not sign up), otherwise
+     * stores a {@link PendingSignUp} carrying the verified identity and redirects the browser to the
      * org-naming page that posts back to {@link #handleSocialCompleteOrg}.
      */
-    private void createPendingSignUp(RoutingContext ctx, CallbackResult<OrgSignupOidcConfiguration> result) {
-        OrgSignupOidcConfiguration config = result.config();
+    @Override
+    public void complete(RoutingContext ctx, CallbackResult<OidcConfiguration> result) {
+        OidcConfiguration config = result.config();
         Map<String, Object> claims = result.claims();
 
         String sub = OAuth2Util.stringClaim(claims, "sub");
@@ -209,10 +226,6 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes {
         signUpService.completeOidcWithNewOrg(token, orgName, orgDescription)
               .onSuccess(user -> authEndpointSupport.respondSuccess(ctx, user))
               .onFailure(ex -> authEndpointSupport.respondError(ctx, 400, ex.getMessage()));
-    }
-
-    private String callbackUrl(String configId) {
-        return properties.getApiBaseUrl() + "/api/auth/org/signup/social/callback/" + configId;
     }
 
     /** Sends the browser to the org-naming page with the pending sign-up token. */

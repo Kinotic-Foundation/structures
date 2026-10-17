@@ -13,9 +13,11 @@ import java.util.Map;
 public record CallbackResult<C extends OidcConfiguration>(
         C config,
         Map<String, Object> claims,
+        OidcFlowPurpose purpose,
         String orgId,
         String applicationId,
         String tenantId,
         String inviteToken,
+        String accountId,
         String origin) {
 }

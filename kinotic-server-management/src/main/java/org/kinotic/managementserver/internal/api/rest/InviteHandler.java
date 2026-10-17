@@ -22,6 +22,8 @@ import org.kinotic.domain.api.rest.support.OAuth2Util;
 import org.kinotic.domain.api.rest.support.OidcCallbackException;
 import org.kinotic.domain.api.rest.support.OidcErrorCodes;
 import org.kinotic.domain.api.rest.support.OidcFlowOrchestrator;
+import org.kinotic.domain.api.rest.support.OidcFlowPurpose;
+import org.kinotic.domain.api.rest.support.PendingFlow;
 import org.kinotic.domain.api.rest.SuppliesGatewayRoutes;
 import org.kinotic.managementserver.api.config.ManagementServerProperties;
 import org.springframework.stereotype.Component;
@@ -32,15 +34,16 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Unauthenticated invitation-accept routes — the complete invite flow, self-contained. The
- * invitee arrives from the emailed accept link and accepts with a password or any OIDC
- * provider configured for the target scope; OIDC flows return to this handler's own
- * callback.
+ * Unauthenticated invitation-accept routes. The invitee arrives from the emailed accept link and accepts with
+ * a password or, for an invitation into an organization, through any provider the organization's login
+ * offers; that flow returns to the configuration's own callback at {@link OrganizationOidcCallbackHandler},
+ * which hands it back here to complete. An invitation into an application is accepted with a password: its
+ * providers return to the app server, which holds no invitation.
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class InviteHandler implements SuppliesGatewayRoutes {
+public class InviteHandler implements SuppliesGatewayRoutes, OidcFlowCompleter {
 
     /** Frontend path of the unauthenticated invitation-accept page. */
     private static final String INVITE_ACCEPT_PATH = "/invite/accept";
@@ -58,7 +61,6 @@ public class InviteHandler implements SuppliesGatewayRoutes {
         router.get("/api/auth/invite/details").handler(this::handleDetails);
         router.post("/api/auth/invite/accept").handler(this::handleLocalAccept);
         router.post("/api/auth/invite/oidc/start/:configId").handler(this::handleOidcStart);
-        router.get("/api/auth/invite/oidc/callback/:configId").handler(this::handleOidcCallback);
     }
 
     /**
@@ -76,9 +78,11 @@ public class InviteHandler implements SuppliesGatewayRoutes {
               .compose(invite -> {
                   Future<String> orgName = organizationService.findById(invite.getOrganizationId())
                           .map(org -> org == null ? null : org.getName());
-                  Future<List<OidcConfiguration>> providers =
-                          oidcConfigurationService.findEnabledForScope(invite.getOrganizationId(),
-                                                                          invite.getApplicationId());
+                  // an application's providers return to the app server, which holds no invitation, so an
+                  // application invitee accepts with a password
+                  Future<List<OidcConfiguration>> providers = invite.getApplicationId() != null
+                          ? Future.succeededFuture(List.of())
+                          : oidcConfigurationService.findEnabledForScope(invite.getOrganizationId(), null);
                   // the holder of the invitation owns the invited email, so telling them an account exists for it
                   // tells a stranger nothing; the page then asks for that account's password instead of a new one
                   Future<Boolean> accountExists = invite.getApplicationId() != null
@@ -167,29 +171,22 @@ public class InviteHandler implements SuppliesGatewayRoutes {
               });
     }
 
-    /**
-     * {@code GET /api/auth/invite/oidc/callback/:configId} — the IdP returns here for every invite
-     * acceptance; the accept token was stashed on the flow session at start.
-     */
-    private void handleOidcCallback(RoutingContext ctx) {
-        String pathConfigId = ctx.pathParam("configId");
+    @Override
+    public OidcFlowPurpose purpose() {
+        return OidcFlowPurpose.INVITATION;
+    }
 
-        oidcFlowOrchestrator.<OidcConfiguration>handleCallback(
-                ctx, pathConfigId, inviteCallbackUrl(pathConfigId),
-                (orgId, applicationId, _) -> resolveCallbackConfig(pathConfigId, orgId, applicationId))
-                .onSuccess(result -> completeOidcAccept(ctx, result))
-                .onFailure(ex -> {
-                    String code = ex instanceof OidcCallbackException oce
-                            ? oce.getErrorCode() : OidcErrorCodes.EXCHANGE_FAILED;
-                    redirectInviteError(ctx, code, null);
-                });
+    /** A callback that failed validation keeps the invitation, so the invitee can try another method. */
+    @Override
+    public void fail(RoutingContext ctx, PendingFlow flow, Throwable failure) {
+        redirectInviteError(ctx, authEndpointSupport.callbackErrorCode(failure), flow.inviteToken());
     }
 
     /**
      * Finishes an OIDC invitation acceptance after the browser returns from the identity
      * provider. How we got here: the invitee clicked a provider button on the accept page,
      * {@link #handleOidcStart} checked their invite token and redirected them to the IdP to
-     * sign in, and the IdP sent them back to {@link #handleOidcCallback}, which verified
+     * sign in, and the IdP sent them back to the configuration's callback, which verified
      * the OIDC exchange and recovered the invite token from the flow session.
      *
      * <p>Three steps remain. First, confirm the IdP gave us a usable identity — a subject
@@ -200,15 +197,11 @@ public class InviteHandler implements SuppliesGatewayRoutes {
      * lands in the web app; an application member is sent to the accept page's confirmation
      * state and signs in at the application's own UI.
      */
-    private void completeOidcAccept(RoutingContext ctx, CallbackResult<OidcConfiguration> result) {
+    @Override
+    public void complete(RoutingContext ctx, CallbackResult<OidcConfiguration> result) {
         String token = result.inviteToken();
         Map<String, Object> claims = result.claims();
 
-        if (token == null) {
-            // Only the start route above targets this callback, and it always stashes a token.
-            redirectInviteError(ctx, OidcErrorCodes.INVITE_INVALID, null);
-            return;
-        }
         String sub = OAuth2Util.stringClaim(claims, "sub");
         String email = OAuth2Util.stringClaim(claims, "email");
         if (sub == null || email == null) {
@@ -250,13 +243,16 @@ public class InviteHandler implements SuppliesGatewayRoutes {
 
     /**
      * Builds the IdP authorization redirect for the provider the invitee chose. The chosen
-     * configId must be one the invite's target scope offers, which is the same list
-     * {@link #handleDetails} rendered; anything else fails with config_not_found. The flow
-     * carries the accept token on the session and returns to {@link #handleOidcCallback}.
+     * configId must be one the organization's login offers, which is the same list
+     * {@link #handleDetails} rendered; anything else, and any application invitation, fails with
+     * config_not_found. The flow carries the accept token on the session and returns to the
+     * configuration's callback.
      */
     private Future<String> startFlowForInvite(RoutingContext ctx, PendingInvite invite, String configId, String token) {
-        return oidcConfigurationService.findEnabledForScope(invite.getOrganizationId(),
-                                                                invite.getApplicationId())
+        if (invite.getApplicationId() != null) {
+            return Future.failedFuture(new OidcCallbackException(OidcErrorCodes.CONFIG_NOT_FOUND));
+        }
+        return oidcConfigurationService.findEnabledForScope(invite.getOrganizationId(), null)
                      .compose(offered -> {
                          OidcConfiguration chosen = offered.stream()
                                                               .filter(c -> configId.equals(c.getId()))
@@ -266,31 +262,12 @@ public class InviteHandler implements SuppliesGatewayRoutes {
                          if (chosen == null) {
                              ret = Future.failedFuture(new OidcCallbackException(OidcErrorCodes.CONFIG_NOT_FOUND));
                          } else {
-                             ret = oidcFlowOrchestrator.startFlow(ctx, chosen, inviteCallbackUrl(configId),
-                                                                  invite.getOrganizationId(), invite.getApplicationId(), token);
+                             ret = oidcFlowOrchestrator.startInvitation(ctx, chosen,
+                                                                        OrganizationOidcCallbacks.callbackUrl(properties.getApiBaseUrl(), chosen),
+                                                                        invite.getOrganizationId(), token);
                          }
                          return ret;
                      });
-    }
-
-    /**
-     * Resolves the callback's config: one the invitation's scope offers, resolved by the scope the flow
-     * session stashed at start, which is the same list {@link #handleDetails} rendered.
-     */
-    private Future<OidcConfiguration> resolveCallbackConfig(String configId, String orgId, String applicationId) {
-        Future<OidcConfiguration> ret;
-        if (orgId == null) {
-            // Invite flows always stash an orgId; this guard only turns a corrupted
-            // session into config_not_found instead of a failed lookup.
-            ret = Future.succeededFuture(null);
-        } else {
-            ret = oidcConfigurationService.findOffered(configId, orgId, applicationId);
-        }
-        return ret;
-    }
-
-    private String inviteCallbackUrl(String configId) {
-        return properties.getApiBaseUrl() + "/api/auth/invite/oidc/callback/" + configId;
     }
 
     /**

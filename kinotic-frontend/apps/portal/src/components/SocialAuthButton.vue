@@ -46,6 +46,8 @@ const props = defineProps<{
   provider: string
   action: string
   intent: Intent
+  /** The configuration's own name, shown for a provider without branded artwork, such as an organization's Okta. */
+  name?: string
 }>()
 
 const isDarkMode = isDark
@@ -83,7 +85,7 @@ const providerDisplayName = computed<string>(() => {
   }
 })
 
-const genericLabel = computed<string>(() => `${verb.value} ${providerDisplayName.value}`)
+const genericLabel = computed<string>(() => `${verb.value} ${props.name ?? providerDisplayName.value}`)
 
 const ariaLabel = genericLabel
 </script>

@@ -4,6 +4,7 @@ import io.vertx.core.Future;
 import org.kinotic.core.api.annotations.Publish;
 import org.kinotic.core.api.security.Participant;
 import org.kinotic.domain.api.model.Organization;
+import org.kinotic.domain.api.model.security.LoginProviderSummary;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 import org.kinotic.management.api.model.SignInMethod;
 
@@ -33,6 +34,13 @@ public interface ProfileService {
      * bound to it, in the order they were added.
      */
     Future<List<SignInMethod>> findMySignInMethods(Participant participant);
+
+    /**
+     * The configurations the account may connect as further sign-in methods and has not yet: the platform's
+     * org sign-up registrations, and the own configurations of every organization the account may sign in
+     * to. Connecting one starts at {@code POST /api/auth/account/methods/start/<configurationId>}.
+     */
+    Future<List<LoginProviderSummary>> findConnectableProviders(Participant participant);
 
     /**
      * Sets the calling account's password. An account that has one proves it is the caller's by giving the

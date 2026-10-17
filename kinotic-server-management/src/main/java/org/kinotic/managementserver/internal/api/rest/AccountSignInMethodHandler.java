@@ -3,15 +3,19 @@ package org.kinotic.managementserver.internal.api.rest;
 import io.vertx.core.Future;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.HttpException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.kinotic.core.api.security.Participant;
-import org.kinotic.domain.api.model.security.OidcProviderKind;
+import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
+import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
 import org.kinotic.domain.api.rest.SuppliesGatewayRoutes;
 import org.kinotic.domain.api.rest.support.AuthEndpointSupport;
 import org.kinotic.domain.api.rest.support.CallbackResult;
 import org.kinotic.domain.api.rest.support.OidcFlowOrchestrator;
+import org.kinotic.domain.api.rest.support.OidcFlowPurpose;
+import org.kinotic.domain.api.rest.support.PendingFlow;
 import org.kinotic.domain.api.services.security.OidcConfigurationService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.managementserver.api.config.ManagementServerProperties;
@@ -21,24 +25,22 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
 /**
- * Connects a provider identity to the signed-in account as a further sign-in method. The person is already
+ * Connects a provider identity to the signed-in account as a further sign-in method: one of the platform's
+ * registrations, or an organization's own configuration where the account is a member. The person is already
  * signed in, which is what proves the account is theirs: the provider round-trip then asserts the identity,
- * and the callback binds it to the session's account. Nothing here signs anyone in; a sign-in through the
- * new binding runs through {@link OrganizationLoginHandler} like any other.
+ * and the configuration's callback at {@link OrganizationOidcCallbackHandler} hands the result back here to
+ * bind. Nothing here signs anyone in; a sign-in through the new binding runs through
+ * {@link OrganizationLoginHandler} like any other.
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class AccountSignInMethodHandler implements SuppliesGatewayRoutes {
+public class AccountSignInMethodHandler implements SuppliesGatewayRoutes, OidcFlowCompleter {
 
     private static final String PROFILE_PATH = "/account/profile";
-    private static final String CALLBACK_PATH = "/api/auth/account/methods/callback/";
 
     /** The identity is bound to another account already. */
     private static final String IDENTITY_IN_USE = "identity_in_use";
-    // the provider returns the browser by a navigation that names no page, so the account connecting a method is
-    // recorded on the session at the start and read back at the callback
-    private static final String CONNECTING_ACCOUNT_KEY = AccountSignInMethodHandler.class.getName() + ".account";
 
     private final AuthEndpointSupport authEndpointSupport;
     private final OidcConfigurationService oidcConfigurationService;
@@ -48,80 +50,79 @@ public class AccountSignInMethodHandler implements SuppliesGatewayRoutes {
 
     @Override
     public void mountRoutes(Router router) {
-        router.post("/api/auth/account/methods/start/:provider").handler(this::handleStart);
-        router.get(CALLBACK_PATH + ":configId").handler(this::handleCallback);
+        router.post("/api/auth/account/methods/start/:configurationId").handler(this::handleStart);
     }
 
     /**
-     * {@code POST /api/auth/account/methods/start/:provider} — begins the round-trip to one of the platform's
-     * registrations for the signed-in account, redirecting the browser to the provider; {@code 400} for an
-     * unknown or disabled provider, {@code 401} without a signed-in user.
+     * {@code POST /api/auth/account/methods/start/:configurationId} — begins the round-trip to a configuration
+     * for the signed-in account, redirecting the browser to the provider: one of the platform's org sign-up
+     * registrations, or an organization's own configuration when the account may sign in to that organization.
+     * {@code 400} for any other configuration, {@code 403} for an organization's the account may not sign in
+     * to, {@code 401} without a signed-in user.
      */
     private void handleStart(RoutingContext ctx) {
         Participant account = authEndpointSupport.requireSessionUser(ctx);
-        String provider = ctx.pathParam("provider");
-        OidcProviderKind providerKind;
-        try {
-            providerKind = OidcProviderKind.fromKey(provider);
-        } catch (IllegalArgumentException ex) {
-            authEndpointSupport.respondError(ctx, 400, "Unknown platform provider: " + provider);
-            return;
-        }
-        ctx.session().put(CONNECTING_ACCOUNT_KEY, account.getId());
-        oidcConfigurationService.findEnabledOrgSignupByProvider(providerKind)
-              .compose(config -> config == null
-                      ? Future.<String>failedFuture(new IllegalArgumentException("Unknown or disabled platform provider: " + provider))
-                      : oidcFlowOrchestrator.startFlow(ctx, config, callbackUrl(config.getId()), null))
+        String configurationId = ctx.pathParam("configurationId");
+        oidcConfigurationService.findById(configurationId)
+              .compose(config -> {
+                  Future<String> ret;
+                  if (config instanceof OrgSignupOidcConfiguration signup && signup.isEnabled()) {
+                      ret = oidcFlowOrchestrator.startConnect(ctx, signup,
+                                                              OrganizationOidcCallbacks.socialCallbackUrl(properties.getApiBaseUrl(), signup.getId()),
+                                                              null, account.getId());
+                  } else if (config instanceof OrganizationOidcConfiguration owned && owned.isEnabled()) {
+                      // an organization's configuration binds only for an account that may sign in there
+                      ret = identityService.resolveParticipant(account.getId(), owned.getOrganizationId(), null)
+                                           .compose(member -> member == null
+                                                   ? Future.failedFuture(new HttpException(403))
+                                                   : oidcFlowOrchestrator.startConnect(ctx, owned,
+                                                                                       OrganizationOidcCallbacks.ssoCallbackUrl(properties.getApiBaseUrl(), owned.getId()),
+                                                                                       owned.getOrganizationId(), account.getId()));
+                  } else {
+                      ret = Future.failedFuture(new IllegalArgumentException("Unknown or disabled configuration: " + configurationId));
+                  }
+                  return ret;
+              })
               .onSuccess(url -> ctx.response().setStatusCode(302).putHeader("Location", url).end())
               .onFailure(err -> {
-                  if (err instanceof IllegalArgumentException) {
+                  if (err instanceof HttpException http && http.getStatusCode() == 403) {
+                      authEndpointSupport.respondError(ctx, 403, "You are not a member of that organization");
+                  } else if (err instanceof IllegalArgumentException) {
                       authEndpointSupport.respondError(ctx, 400, err.getMessage());
                   } else {
-                      log.error("Connecting provider {} failed to start", provider, err);
+                      log.error("Connecting configuration {} failed to start", configurationId, err);
                       authEndpointSupport.respondError(ctx, 500, "Provider initialization failed");
                   }
               });
     }
 
-    /**
-     * {@code GET /api/auth/account/methods/callback/:configId} — the provider returns here; validates the
-     * callback and binds the asserted identity to the account that started the flow, then sends the browser
-     * back to the profile page with {@code connected=<provider>}, or with {@code error=identity_in_use} when
-     * the identity already signs in another account, or {@code error=exchange_failed} when no flow this
-     * session started is in progress.
-     */
-    private void handleCallback(RoutingContext ctx) {
-        String pathConfigId = ctx.pathParam("configId");
-        String accountId = ctx.session().remove(CONNECTING_ACCOUNT_KEY);
-        if (accountId == null) {
-            authEndpointSupport.redirectToUi(ctx, PROFILE_PATH + "?error=exchange_failed");
-            return;
-        }
-
-        oidcFlowOrchestrator.handleCallback(ctx, pathConfigId, callbackUrl(pathConfigId),
-                                            (_, _, _) -> oidcConfigurationService.findOrgSignupById(pathConfigId))
-                            .onSuccess(result -> connect(ctx, accountId, result))
-                            .onFailure(ex -> {
-                                log.warn("Connecting a sign-in method failed for config {}: {}", pathConfigId, ex.getMessage());
-                                authEndpointSupport.redirectToUi(ctx, PROFILE_PATH + "?error=exchange_failed");
-                            });
+    @Override
+    public OidcFlowPurpose purpose() {
+        return OidcFlowPurpose.CONNECT;
     }
 
-    private void connect(RoutingContext ctx, String accountId, CallbackResult<OrgSignupOidcConfiguration> result) {
+    /**
+     * Binds the asserted identity to the account that started the flow, then sends the browser back to the
+     * profile page with {@code connected=<provider>}, or with {@code error=identity_in_use} when the identity
+     * already signs in another account.
+     */
+    @Override
+    public void complete(RoutingContext ctx, CallbackResult<OidcConfiguration> result) {
         String sub = authEndpointSupport.verifiedSubject(ctx, result);
         if (sub != null) {
-            identityService.bindOidcIdentity(accountId, result.config().getId(), sub)
+            identityService.bindOidcIdentity(result.accountId(), result.config().getId(), sub)
                            .onSuccess(binding -> authEndpointSupport.redirectToUi(ctx, PROFILE_PATH + "?connected="
-                                   + URLEncoder.encode(result.config().getProvider().key(), StandardCharsets.UTF_8)))
+                                   + URLEncoder.encode(result.config().getName(), StandardCharsets.UTF_8)))
                            .onFailure(err -> {
                                String code = err instanceof IllegalArgumentException ? IDENTITY_IN_USE : "exchange_failed";
-                               log.warn("Could not connect a sign-in method to account {}: {}", accountId, err.getMessage());
+                               log.warn("Could not connect a sign-in method to account {}: {}", result.accountId(), err.getMessage());
                                authEndpointSupport.redirectToUi(ctx, PROFILE_PATH + "?error=" + code);
                            });
         }
     }
 
-    private String callbackUrl(String configId) {
-        return properties.getApiBaseUrl() + CALLBACK_PATH + configId;
+    @Override
+    public void fail(RoutingContext ctx, PendingFlow flow, Throwable failure) {
+        authEndpointSupport.redirectToUi(ctx, PROFILE_PATH + "?error=" + authEndpointSupport.callbackErrorCode(failure));
     }
 }

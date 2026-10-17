@@ -179,13 +179,25 @@ public abstract class AuthEndpointSupport {
      * {@link OidcErrorCodes#EXCHANGE_FAILED}.
      */
     public void redirectCallbackFailure(RoutingContext ctx, Throwable ex) {
-        // a callback that failed produced no flow result, so no starting page is known
+        // a callback that failed with no flow behind it names no starting page
+        redirectCallbackFailure(ctx, null, ex);
+    }
+
+    /** {@link #redirectCallbackFailure(RoutingContext, Throwable)} to the login page of the page at {@code origin}. */
+    public void redirectCallbackFailure(RoutingContext ctx, String origin, Throwable ex) {
+        redirectError(ctx, origin, callbackErrorCode(ex));
+    }
+
+    /** The error code a failed callback surfaces: the typed code of an {@link OidcCallbackException}, else {@link OidcErrorCodes#EXCHANGE_FAILED}. */
+    public String callbackErrorCode(Throwable ex) {
+        String ret;
         if (ex instanceof OidcCallbackException oce) {
-            redirectError(ctx, null, oce.getErrorCode());
+            ret = oce.getErrorCode();
         } else {
             log.warn("OIDC callback failed: {}", ex.getMessage());
-            redirectError(ctx, null, OidcErrorCodes.EXCHANGE_FAILED);
+            ret = OidcErrorCodes.EXCHANGE_FAILED;
         }
+        return ret;
     }
 
     // ── JSON responses ────────────────────────────────────────────────────────

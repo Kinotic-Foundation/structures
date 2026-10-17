@@ -21,6 +21,7 @@ import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.kinotic.core.api.secret.SecretReferenceResolver;
+import org.apache.commons.lang3.Validate;
 import org.kinotic.core.api.security.SessionBinding;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.OwnedOidcConfiguration;
@@ -131,9 +132,10 @@ public class OidcFlowOrchestrator {
                          return getOAuth2Auth(config)
                                  .compose(oauth2 -> exchangeCode(oauth2, code, callbackUrl, flowSession.pkceVerifier()))
                                  .compose(user -> verifiedClaims(config, user, flowSession))
-                                 .map(claims -> new CallbackResult<>(config, claims, flowSession.orgId(),
+                                 .map(claims -> new CallbackResult<>(config, claims, flowSession.purpose(), flowSession.orgId(),
                                                                    flowSession.applicationId(), flowSession.tenantId(),
-                                                                   flowSession.inviteToken(), flowSession.origin()));
+                                                                   flowSession.inviteToken(), flowSession.accountId(),
+                                                                   flowSession.origin()));
                      });
     }
 
@@ -173,9 +175,18 @@ public class OidcFlowOrchestrator {
     }
 
     /**
-     * Generates state/nonce/PKCE, stores them on the session along with the origin of the page
-     * starting the flow, builds the IdP authorization URL using the supplied callback URL, and
-     * returns the URL.
+     * The flow the session holds for the callback about to be handled, or {@code null} when it holds none, for
+     * a handler to route a failed callback by; {@link #handleCallback} consumes the flow itself.
+     */
+    public PendingFlow pendingFlow(RoutingContext ctx) {
+        OidcFlowSession flowSession = ctx.session().get(OIDC_FLOW_SESSION_KEY);
+        return flowSession == null ? null : new PendingFlow(flowSession.purpose(), flowSession.origin(), flowSession.inviteToken());
+    }
+
+    /**
+     * Begins a {@link OidcFlowPurpose#LOGIN} flow: generates state/nonce/PKCE, stores them on the session
+     * along with the origin of the page starting the flow, builds the IdP authorization URL using the
+     * supplied callback URL, and returns the URL.
      *
      * @param orgId the organization id to stash on the session for the callback to scope its
      *              config lookup by, or {@code null} for non-org-scoped flows.
@@ -184,22 +195,7 @@ public class OidcFlowOrchestrator {
                                     OidcConfiguration config,
                                     String callbackUrl,
                                     String orgId) {
-        return startFlow(ctx, config, callbackUrl, orgId, null, null, null, SessionBinding.origin(ctx));
-    }
-
-    /**
-     * {@link #startFlow(RoutingContext, OidcConfiguration, String, String)} for an
-     * invitation-accept flow: stashes the invitation's scope, the organization and the application
-     * when the invitation is to one, for the callback to resolve its configuration by, and the
-     * invite's accept token so the callback can complete the acceptance.
-     */
-    public Future<String> startFlow(RoutingContext ctx,
-                                    OidcConfiguration config,
-                                    String callbackUrl,
-                                    String orgId,
-                                    String applicationId,
-                                    String inviteToken) {
-        return startFlow(ctx, config, callbackUrl, orgId, applicationId, null, inviteToken, SessionBinding.origin(ctx));
+        return startFlow(ctx, config, callbackUrl, OidcFlowPurpose.LOGIN, orgId, null, null, null, null, SessionBinding.origin(ctx));
     }
 
     /**
@@ -212,7 +208,7 @@ public class OidcFlowOrchestrator {
                                     String callbackUrl,
                                     String orgId,
                                     String origin) {
-        return startFlow(ctx, config, callbackUrl, orgId, null, null, null, origin);
+        return startFlow(ctx, config, callbackUrl, OidcFlowPurpose.LOGIN, orgId, null, null, null, null, origin);
     }
 
     /**
@@ -227,16 +223,44 @@ public class OidcFlowOrchestrator {
                                     ApplicationKey application,
                                     String tenantId,
                                     String origin) {
-        return startFlow(ctx, config, callbackUrl, application.organizationId(), application.applicationId(), tenantId, null, origin);
+        return startFlow(ctx, config, callbackUrl, OidcFlowPurpose.LOGIN, application.organizationId(), application.applicationId(),
+                         tenantId, null, null, origin);
+    }
+
+    /** Begins a {@link OidcFlowPurpose#SIGN_UP} flow through one of the platform's org sign-up registrations. */
+    public Future<String> startSignUp(RoutingContext ctx, OidcConfiguration config, String callbackUrl) {
+        return startFlow(ctx, config, callbackUrl, OidcFlowPurpose.SIGN_UP, null, null, null, null, null, SessionBinding.origin(ctx));
+    }
+
+    /**
+     * Begins an {@link OidcFlowPurpose#INVITATION} flow accepting the invitation {@code inviteToken} into
+     * organization {@code orgId}, stashed for the callback to resolve its configuration by and to complete the
+     * acceptance with.
+     */
+    public Future<String> startInvitation(RoutingContext ctx, OidcConfiguration config, String callbackUrl, String orgId, String inviteToken) {
+        Validate.notBlank(inviteToken, "inviteToken cannot be blank");
+        return startFlow(ctx, config, callbackUrl, OidcFlowPurpose.INVITATION, orgId, null, null, inviteToken, null, SessionBinding.origin(ctx));
+    }
+
+    /**
+     * Begins a {@link OidcFlowPurpose#CONNECT} flow binding the identity the provider asserts to account
+     * {@code accountId}; {@code orgId} is the organization whose configuration the flow runs through, or
+     * {@code null} for one of the platform's registrations.
+     */
+    public Future<String> startConnect(RoutingContext ctx, OidcConfiguration config, String callbackUrl, String orgId, String accountId) {
+        Validate.notBlank(accountId, "accountId cannot be blank");
+        return startFlow(ctx, config, callbackUrl, OidcFlowPurpose.CONNECT, orgId, null, null, null, accountId, SessionBinding.origin(ctx));
     }
 
     private Future<String> startFlow(RoutingContext ctx,
                                      OidcConfiguration config,
                                      String callbackUrl,
+                                     OidcFlowPurpose purpose,
                                      String orgId,
                                      String applicationId,
                                      String tenantId,
                                      String inviteToken,
+                                     String accountId,
                                      String origin) {
         String state = DomainUtil.generateUrlSafeToken(32);
         String nonce = DomainUtil.generateUrlSafeToken(32);
@@ -245,8 +269,8 @@ public class OidcFlowOrchestrator {
 
         Session session = ctx.session();
         session.regenerateId();
-        session.put(OIDC_FLOW_SESSION_KEY, new OidcFlowSession(state, nonce, pkceVerifier, config.getId(), orgId,
-                                                               applicationId, tenantId, inviteToken, origin));
+        session.put(OIDC_FLOW_SESSION_KEY, new OidcFlowSession(state, nonce, pkceVerifier, config.getId(), purpose, orgId,
+                                                               applicationId, tenantId, inviteToken, accountId, origin));
 
         // Scopes ride as RFC 6749's space-delimited string; a managed registration may name its own, every
         // other configuration gets the standard OIDC triple.

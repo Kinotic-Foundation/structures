@@ -5,7 +5,9 @@ import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.core.api.security.Participant;
 import org.kinotic.domain.api.model.Organization;
+import org.kinotic.domain.api.model.security.LoginProviderSummary;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
+import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
 import org.kinotic.domain.api.model.security.identity.Membership;
 import org.kinotic.domain.api.model.security.identity.OidcBinding;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
@@ -21,8 +23,10 @@ import org.kinotic.management.api.services.security.ProfileService;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -78,6 +82,35 @@ public class DefaultProfileService implements ProfileService {
                                                    configuration.getProvider(), binding.getCreated());
                        })
                        .toList();
+    }
+
+    @Override
+    public Future<List<LoginProviderSummary>> findConnectableProviders(Participant participant) {
+        DomainUtil.requireUserParticipant(participant);
+        Future<Set<String>> bound = identityService.findOidcBindings(participant.getId())
+                                                   .map(bindings -> bindings.stream().map(OidcBinding::getOidcConfigId).collect(Collectors.toSet()));
+        Future<List<OidcConfiguration>> offered = membershipService.findMemberships(participant.getId())
+                .compose(memberships -> Future.all(memberships.stream()
+                                                              .filter(m -> m.getOrganizationId() != null && m.isEnabled())
+                                                              .map(m -> oidcConfigurationService.findEnabledForScope(m.getOrganizationId(), null))
+                                                              .toList()))
+                .map(cf -> {
+                    // every organization's login lists the platform's registrations, so each appears once
+                    Map<String, OidcConfiguration> byId = new LinkedHashMap<>();
+                    for (List<OidcConfiguration> configurations : cf.<List<OidcConfiguration>>list()) {
+                        configurations.forEach(configuration -> byId.putIfAbsent(configuration.getId(), configuration));
+                    }
+                    return List.copyOf(byId.values());
+                })
+                // an account of no organization still connects the platform's registrations
+                .compose(configurations -> configurations.isEmpty()
+                        ? oidcConfigurationService.findEnabledOrgSignupProviders().map(signup -> List.<OidcConfiguration>copyOf(signup))
+                        : Future.succeededFuture(configurations));
+        return Future.all(bound, offered).map(cf -> offered.result().stream()
+                                                           .filter(configuration -> !bound.result().contains(configuration.getId()))
+                                                           .filter(configuration -> !(configuration instanceof OrganizationOidcConfiguration owned) || owned.isEnabled())
+                                                           .map(LoginProviderSummary::of)
+                                                           .toList());
     }
 
     @Override

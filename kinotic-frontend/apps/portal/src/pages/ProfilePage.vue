@@ -113,8 +113,9 @@
 
         <div v-if="connectableProviders.length > 0" class="flex flex-wrap items-center gap-3 px-6 py-4">
           <span class="text-xs text-muted-color">Connect another way to sign in:</span>
-          <SocialAuthButton v-for="provider in connectableProviders" :key="provider" :provider="provider"
-                            :action="apiUrl('/api/auth/account/methods/start/' + provider)" intent="connect" />
+          <SocialAuthButton v-for="provider in connectableProviders" :key="provider.configurationId" :provider="provider.provider"
+                            :name="provider.type === OidcConfigurationType.ORG_SIGNUP ? undefined : provider.name"
+                            :action="apiUrl('/api/auth/account/methods/start/' + encodeURIComponent(provider.configurationId))" intent="connect" />
         </div>
       </section>
 
@@ -179,8 +180,8 @@ import Tag from 'primevue/tag'
 import { useToast } from 'primevue/usetoast'
 import { Building2, KeyRound, ShieldCheck } from '@lucide/vue'
 import { Kinotic } from '@kinotic-ai/core'
-import { type Organization, PASSWORD_SIGN_IN_METHOD_ID, type SignInMethod, SignInMethodKind } from '@kinotic-ai/management-api'
-import { FormDialog, apiUrl, createDebug } from '@kinotic-ai/frontend-common'
+import { type LoginProviderSummary, OidcConfigurationType, type Organization, PASSWORD_SIGN_IN_METHOD_ID, type SignInMethod, SignInMethodKind } from '@kinotic-ai/management-api'
+import { FormDialog, apiUrl } from '@kinotic-ai/frontend-common'
 import SocialAuthButton from '@/components/SocialAuthButton.vue'
 import { USER_STATE } from '@/states/IUserState'
 
@@ -200,15 +201,13 @@ interface ProfileDetail {
 const COPIED_FEEDBACK_MILLIS = 2000
 
 /** The platform registrations an account may connect as a sign-in method; any other provider offered is omitted. */
-const CONNECTABLE_PROVIDERS = ['github']
 
-const debug = createDebug('profile')
 const toast = useToast()
 const route = useRoute()
 const router = useRouter()
 
 const methods = ref<SignInMethod[]>([])
-const platformProviders = ref<string[]>([])
+const connectableProviders = ref<LoginProviderSummary[]>([])
 const organizations = ref<Organization[]>([])
 const switchingTo = ref<string | null>(null)
 
@@ -219,7 +218,6 @@ const confirmPassword = ref('')
 const savingPassword = ref(false)
 
 const hasPassword = computed(() => methods.value.some(method => method.id === PASSWORD_SIGN_IN_METHOD_ID))
-const connectableProviders = computed(() => platformProviders.value.filter(provider => CONNECTABLE_PROVIDERS.includes(provider)))
 const currentOrganizationId = computed(() => USER_STATE.getOrganizationId())
 const canSavePassword = computed(() => newPassword.value.length > 0 && newPassword.value === confirmPassword.value
     && (!hasPassword.value || currentPassword.value.length > 0))
@@ -272,20 +270,14 @@ function consumeConnectResult() {
 
 async function loadSignIn() {
   try {
-    const [found, orgs] = await Promise.all([Kinotic.profile.findMySignInMethods(), Kinotic.profile.findMyOrganizations()])
+    const [found, connectable, orgs] = await Promise.all([
+      Kinotic.profile.findMySignInMethods(), Kinotic.profile.findConnectableProviders(), Kinotic.profile.findMyOrganizations()
+    ])
     methods.value = found
+    connectableProviders.value = connectable
     organizations.value = orgs
   } catch (err) {
     showErrorToast(toast, 'Failed to load your sign-in methods', err, { life: 8000 })
-  }
-  try {
-    const res = await fetch(apiUrl('/api/auth/org/login/providers'), { credentials: 'same-origin' })
-    if (res.ok) {
-      const data = await res.json()
-      if (Array.isArray(data)) platformProviders.value = data
-    }
-  } catch (err) {
-    debug('Failed to load providers: %O', err)
   }
 }
 
