@@ -67,7 +67,7 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
     private final OidcConfigurationService oidcConfigurationService;
     private final OidcFlowOrchestrator oidcFlowOrchestrator;
 
-    private static final String ORGANIZATION_CHOICES_SESSION_KEY = "organizationChoices";
+    private static final String ORGANIZATION_CHOICES_SESSION_KEY_PREFIX = "organizationChoices:";
 
     @Override
     public void mountRoutes(Router router) {
@@ -118,16 +118,24 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
     }
 
     /**
-     * {@code GET /api/auth/org/login/choices} — the ids of the organizations the session's last landing-page
-     * sign-in found the identity a member of, {@code ["acme", "globex"]}, for the page to offer after
-     * {@link OidcErrorCodes#MULTIPLE_ORGANIZATIONS}; read once, so a later call answers {@code []}, as does a
-     * session with no such sign-in.
+     * {@code GET /api/auth/org/login/choices} — the ids of the organizations the last landing-page sign-in the
+     * requesting page started found the identity a member of, {@code ["acme", "globex"]}, for the page to offer
+     * after {@link OidcErrorCodes#MULTIPLE_ORGANIZATIONS}; read once, so a later call answers {@code []}, as does
+     * a page whose session holds no such sign-in.
      */
     private void handleChoices(RoutingContext ctx) {
-        JsonArray choices = ctx.session().remove(ORGANIZATION_CHOICES_SESSION_KEY);
+        // a request without the session cookie reads nothing, so answering it creates no session
+        JsonArray choices = SessionBinding.sessionPresented(ctx)
+                ? ctx.session().remove(choicesKey(SessionBinding.origin(ctx)))
+                : null;
         ctx.response()
            .putHeader("Content-Type", "application/json")
            .end((choices != null ? choices : new JsonArray()).encode());
+    }
+
+    // the choices are held for the page that started the sign-in, as SessionBinding holds each page's login
+    private static String choicesKey(String origin) {
+        return ORGANIZATION_CHOICES_SESSION_KEY_PREFIX + (origin != null ? origin : "");
     }
 
     /**
@@ -300,13 +308,12 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
     }
 
     // an account that is a member of several organizations has proven who it is, so the landing page may
-    // offer those organizations for the person to choose from, where a stranger learns nothing; the browser
-    // that holds the session reads them from handleChoices, so the redirect itself carries no ids
+    // offer those organizations for the person to choose from, where a stranger learns nothing; the page
+    // that started the sign-in reads them from handleChoices, so the redirect itself carries no ids
     private void signInOrOffer(RoutingContext ctx, String origin, UserParticipantIdentity account, List<Membership> memberships) {
         if (memberships.size() > 1) {
-            ctx.session().put(ORGANIZATION_CHOICES_SESSION_KEY,
-                              new JsonArray(memberships.stream().map(Membership::getOrganizationId).toList()));
-            authEndpointSupport.redirectError(ctx, origin, OidcErrorCodes.MULTIPLE_ORGANIZATIONS);
+            ctx.session().put(choicesKey(origin), new JsonArray(memberships.stream().map(Membership::getOrganizationId).toList()));
+            authEndpointSupport.redirectToContinue(ctx, origin, OidcErrorCodes.MULTIPLE_ORGANIZATIONS);
         } else {
             authEndpointSupport.completeLogin(ctx, origin, memberships.isEmpty()
                     ? Future.succeededFuture()

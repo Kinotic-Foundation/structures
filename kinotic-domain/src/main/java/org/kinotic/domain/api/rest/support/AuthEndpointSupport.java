@@ -151,7 +151,24 @@ public abstract class AuthEndpointSupport {
         // the flow that stored a return path ends here, so it must not outlive it and send an
         // unrelated later login somewhere the user never asked for
         ctx.session().remove(RETURN_PATH_SESSION_KEY);
-        redirectToPage(ctx, origin, "/login?error=" + URLEncoder.encode(errorCode, StandardCharsets.UTF_8));
+        redirectToLogin(ctx, origin, errorCode, null);
+    }
+
+    /**
+     * {@link #redirectError} for an outcome the login page continues from rather than ends at: the SPA path
+     * the flow was to land on travels as the page's {@code referer} query parameter, so the login the page
+     * starts next lands there.
+     */
+    public void redirectToContinue(RoutingContext ctx, String origin, String errorCode) {
+        redirectToLogin(ctx, origin, errorCode, ctx.session().remove(RETURN_PATH_SESSION_KEY));
+    }
+
+    private void redirectToLogin(RoutingContext ctx, String origin, String errorCode, String returnPath) {
+        String path = "/login?error=" + URLEncoder.encode(errorCode, StandardCharsets.UTF_8);
+        if (returnPath != null) {
+            path += "&referer=" + URLEncoder.encode(returnPath, StandardCharsets.UTF_8);
+        }
+        redirectToPage(ctx, origin, path);
     }
 
     // the path on the page that started the flow, or on this server's UI when the flow named no page

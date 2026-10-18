@@ -117,7 +117,7 @@ const route = useRoute()
 const router = useRouter()
 
 onMounted(() => {
-  consumeUrlError()
+  void consumeUrlError()
   // the organization the browser last signed in to, so a returning member only confirms it
   organization.value = localStorage.getItem(LAST_ORGANIZATION_KEY) ?? ''
   nextTick(() => focus(organizationInput))
@@ -150,27 +150,35 @@ async function consumeUrlError() {
   const error = (route.query.error as string | undefined) ?? search.get('error')
   if (!error) return
 
-  // Clean the query string so a refresh doesn't replay the error.
+  // Clean the query string so a refresh doesn't replay the error; the referer stays, for the login
+  // the person starts next from here.
   const newQuery = { ...route.query }
   delete newQuery.error
   router.replace({ query: newQuery })
 
-  if (error === 'multiple_organizations') {
-    memberships.value = await loadChoices()
-  }
-  if (memberships.value.length === 0) {
+  if (error !== 'multiple_organizations') {
     displayError(errorCodeToMessage(error))
+  } else {
+    const choices = await loadChoices()
+    if (choices === null) {
+      displayError(errorCodeToMessage('lookup_failed'))
+    } else if (choices.length === 0) {
+      displayError(errorCodeToMessage(error))
+    } else {
+      memberships.value = choices
+    }
   }
 }
 
-// The organizations the session's sign-in found; the server hands them out once, so a refresh starts over.
-async function loadChoices(): Promise<string[]> {
-  let ret: string[] = []
+// The organizations the sign-in found; the server hands them out once, so a refresh starts over.
+// null when the request itself failed, which is not the same as the choices having been read.
+async function loadChoices(): Promise<string[] | null> {
+  let ret: string[] | null = null
   try {
     const res = await fetch(apiUrl('/api/auth/org/login/choices'), { credentials: 'include' })
     if (res.ok) {
       const data = await res.json()
-      if (Array.isArray(data)) ret = data.filter((id): id is string => typeof id === 'string' && id.length > 0)
+      ret = Array.isArray(data) ? data.filter((id): id is string => typeof id === 'string' && id.length > 0) : []
     } else {
       debug('Organization choices returned %d', res.status)
     }
