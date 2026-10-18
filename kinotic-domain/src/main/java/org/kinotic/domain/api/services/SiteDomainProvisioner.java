@@ -19,12 +19,4 @@ public interface SiteDomainProvisioner {
      * @return completes once the subdomain resolves at the edge, or fails when the edge refused
      */
     Future<Void> ensure(String organizationId);
-
-    /**
-     * Removes the organization's subdomain from the edge. Removing one that was never provisioned
-     * succeeds.
-     *
-     * @param organizationId the organization's id
-     */
-    Future<Void> remove(String organizationId);
 }

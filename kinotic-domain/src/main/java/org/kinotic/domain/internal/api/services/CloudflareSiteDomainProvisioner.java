@@ -71,17 +71,6 @@ public class CloudflareSiteDomainProvisioner implements SiteDomainProvisioner {
                         .compose(existing -> existing != null ? Future.succeededFuture() : createRecord(name, organizationId)));
     }
 
-    @Override
-    public Future<Void> remove(String organizationId) {
-        Validate.notBlank(organizationId, "organizationId cannot be blank");
-        return recordName(organizationId)
-                .compose(this::findRecord)
-                .compose(existing -> existing == null
-                        ? Future.succeededFuture()
-                        : request(webClient.deleteAbs(zoneUrl("/dns_records/" + existing.getString("id"))))
-                                .<Void>mapEmpty());
-    }
-
     // the record's full name, *.<org> followed by the sites domain's labels within the zone
     private Future<String> recordName(String organizationId) {
         return zoneName().map(zone -> {

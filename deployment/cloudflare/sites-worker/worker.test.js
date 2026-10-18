@@ -29,7 +29,9 @@ describe('resolveHost', () => {
 
     test('a host that is not a site is refused', () => {
         expect(resolveHost('kinotic.io', ZONE)).toBeNull()
-        expect(resolveHost('apps-api.kinotic.io', ZONE)).toEqual({ organizationId: 'apps-api', site: null, tenantId: null })
+        expect(resolveHost('apps-api.kinotic.io', ZONE)).toBeNull()
+        expect(resolveHost('acme--orders.apps-api.kinotic.io', ZONE)).toBeNull()
+        expect(resolveHost('www.kinotic.io', ZONE)).toBeNull()
         expect(resolveHost('orders.acme.kinotic.io', ZONE)).toBeNull()
         expect(resolveHost('a--b--c--d.acme.kinotic.io', ZONE)).toBeNull()
         expect(resolveHost('--web.acme.kinotic.io', ZONE)).toBeNull()

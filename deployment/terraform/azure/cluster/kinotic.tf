@@ -62,11 +62,15 @@ resource "helm_release" "kinotic" {
     # publishes them into
     { name = "servers.kinotic-server-system.extraEnv.KINOTIC_SYSTEMAPI_UIDEPLOYMENT_SITESDOMAIN", value = local.cloudflare_sites_domain },
     { name = "servers.kinotic-server-system.extraEnv.KINOTIC_SYSTEMAPI_UIDEPLOYMENT_SITESSTORAGEENDPOINT", value = module.sites.storage_blob_endpoint },
-    # Each organization's sites subdomain: the management server creates its record at sign-up and
-    # the system server before its first publish, with the DNS token the global root stores
+    # Each organization's sites subdomain: every server knows the domain, whose pages an application's
+    # login admits; the management server creates an organization's record at sign-up and the system
+    # server before its first publish, with the DNS token the global root stores, so the Cloudflare
+    # provisioner runs on those two alone
     { name = "extraEnv.KINOTIC_DOMAIN_SITEDOMAIN_DOMAIN", value = local.cloudflare_sites_domain },
-    { name = "extraEnv.KINOTIC_DOMAIN_SITEDOMAIN_CLOUDFLARE_ENABLED", value = "true" },
-    { name = "extraEnv.KINOTIC_DOMAIN_SITEDOMAIN_CLOUDFLARE_ZONEID", value = var.cloudflare_zone_id },
+    { name = "servers.kinotic-server-management.extraEnv.KINOTIC_DOMAIN_SITEDOMAIN_CLOUDFLARE_ENABLED", value = "true" },
+    { name = "servers.kinotic-server-management.extraEnv.KINOTIC_DOMAIN_SITEDOMAIN_CLOUDFLARE_ZONEID", value = var.cloudflare_zone_id },
+    { name = "servers.kinotic-server-system.extraEnv.KINOTIC_DOMAIN_SITEDOMAIN_CLOUDFLARE_ENABLED", value = "true" },
+    { name = "servers.kinotic-server-system.extraEnv.KINOTIC_DOMAIN_SITEDOMAIN_CLOUDFLARE_ZONEID", value = var.cloudflare_zone_id },
     # Email (Azure Communication Services) — shared service from global terraform, as the
     # servers' workload identity
     { name = "kinotic.domain.email.enabled", value = "true" },

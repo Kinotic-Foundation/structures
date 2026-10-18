@@ -74,11 +74,13 @@ public class DomainUtil {
     // organization wherever it is its own tenant — the owner of VM workloads the OS runs for
     // the OS, for instance
     private static final String RESERVED_ID_PREFIX = "kinotic";
-    // the labels the platform itself holds under its domains, which an organization's subdomain must never shadow,
-    // and "system", the organization slot of a platform membership's id (Membership.idOf)
+    // the labels the platform itself holds under its domains, which an organization's subdomain must never shadow;
+    // the path segments the organization login's own routes claim under /api/auth/org/login/, which an
+    // organization's id would be mistaken for; and the organization slot of a platform membership's id
     private static final Set<String> RESERVED_ORGANIZATION_IDS = Set.of("www", "api", "apps-api", "system-api", "portal",
                                                                          "console", "mail", "admin", "login", "status", "docs",
-                                                                         "system");
+                                                                         "find", "social", "sso", "providers",
+                                                                         Membership.PLATFORM);
 
     // Project ids may start with a digit because they embed application ids, which may
     // themselves start with a digit

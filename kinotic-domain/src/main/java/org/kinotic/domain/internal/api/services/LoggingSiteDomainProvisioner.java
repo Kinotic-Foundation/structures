@@ -27,9 +27,4 @@ public class LoggingSiteDomainProvisioner implements SiteDomainProvisioner {
                  organizationId, organizationId, properties.getDomain().getSiteDomain().getDomain());
         return Future.succeededFuture();
     }
-
-    @Override
-    public Future<Void> remove(String organizationId) {
-        return Future.succeededFuture();
-    }
 }

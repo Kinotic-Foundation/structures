@@ -40,12 +40,17 @@
           :action="startUrl(provider.id)"
           intent="sign-up"
         />
-        <div class="login-divider"><span>{{ details.accountExists ? 'or use your password' : 'or set a password' }}</span></div>
+        <div v-if="!details.accountExists || details.accountHasPassword" class="login-divider"><span>{{ details.accountExists ? 'or use your password' : 'or set a password' }}</span></div>
       </div>
 
       <!-- An invited address that already has a Kinotic account joins as that account: the person proves it
-           is theirs with its password, and keeps the one account across every organization. -->
-      <div class="login-form__step">
+           is theirs with its password, or with a provider it signs in through when it has no password, and keeps
+           the one account across every organization. -->
+      <p v-if="details.accountExists && !details.accountHasPassword" class="login-form__subtitle">
+        You already have a Kinotic account for <strong>{{ details.email }}</strong> that signs in with a provider.
+        Continue with the provider your account uses to join.
+      </p>
+      <div v-else class="login-form__step">
         <p v-if="details.accountExists" class="login-form__subtitle">
           You already have a Kinotic account for <strong>{{ details.email }}</strong>. Enter its password to join.
         </p>
@@ -117,8 +122,10 @@ interface InviteDetails {
   organizationName: string | null
   applicationId: string | null
   invitedByName: string
-  /** Whether a Kinotic account already exists for the invited email, which then joins with its own password. */
+  /** Whether a Kinotic account already exists for the invited email, which then joins as itself. */
   accountExists: boolean
+  /** Whether that account has a password to prove itself with; without one it joins through a provider it is bound to. */
+  accountHasPassword: boolean
   providers: InviteProvider[]
 }
 
@@ -132,7 +139,7 @@ type Phase = 'loading' | 'ready' | 'appAccepted' | 'invalid'
  * not their UI) or `?error=<code>` on failure.
  */
 const phase = ref<Phase>('loading')
-const details = ref<InviteDetails>({ email: '', displayName: null, organizationName: null, applicationId: null, invitedByName: '', accountExists: false, providers: [] })
+const details = ref<InviteDetails>({ email: '', displayName: null, organizationName: null, applicationId: null, invitedByName: '', accountExists: false, accountHasPassword: false, providers: [] })
 const displayName = ref('')
 const password = ref('')
 const confirmPassword = ref('')
@@ -197,6 +204,7 @@ async function loadDetails() {
       applicationId: data.applicationId ?? null,
       invitedByName: data.invitedByName,
       accountExists: data.accountExists === true,
+      accountHasPassword: data.accountHasPassword === true,
       providers: Array.isArray(data.providers) ? data.providers : []
     }
     displayName.value = details.value.displayName ?? ''

@@ -7,7 +7,6 @@ import org.kinotic.core.api.security.Participant;
 import org.kinotic.domain.api.model.Organization;
 import org.kinotic.domain.api.model.security.LoginProviderSummary;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
-import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
 import org.kinotic.domain.api.model.security.identity.Membership;
 import org.kinotic.domain.api.model.security.identity.OidcBinding;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
@@ -108,7 +107,6 @@ public class DefaultProfileService implements ProfileService {
                         : Future.succeededFuture(configurations));
         return Future.all(bound, offered).map(cf -> offered.result().stream()
                                                            .filter(configuration -> !bound.result().contains(configuration.getId()))
-                                                           .filter(configuration -> !(configuration instanceof OrganizationOidcConfiguration owned) || owned.isEnabled())
                                                            .map(LoginProviderSummary::of)
                                                            .toList());
     }

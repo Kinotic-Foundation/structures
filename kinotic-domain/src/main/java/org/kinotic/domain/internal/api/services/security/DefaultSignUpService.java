@@ -145,6 +145,10 @@ public class DefaultSignUpService implements SignUpService {
                     return created
                             .compose(founder -> membershipService.addMember(founder.getId(), savedOrg.getId())
                                                                  .map(membership -> DomainUtil.createParticipant(founder, membership)))
+                            // a founder that cannot be created, as when a sign-up of the same identity completed first,
+                            // takes the organization with it, so its name is not held by an organization no one is in
+                            .recover(err -> organizationService.deleteById(savedOrg.getId())
+                                                               .transform(v -> Future.failedFuture(err)))
                             .compose(founder -> {
                                 savedOrg.setCreatedBy(founder.getId());
                                 return organizationService.save(savedOrg).map(founder);

@@ -86,7 +86,7 @@ public class OidcConfigurationRepository extends AbstractRepository<OidcConfigur
             ret = Future.succeededFuture(List.of());
         } else {
             List<FieldValue> keys = providers.stream().map(kind -> FieldValue.of(kind.key())).toList();
-            ret = findAll(Pageable.ofSize(providers.size()), b -> b.query(composeFilter(
+            ret = findAll(Pageable.ofSize(100), b -> b.query(composeFilter(
                     termFilter(TYPE_FIELD, OidcConfigurationType.APP_SOCIAL.name()),
                     termFilter(ENABLED_FIELD, true),
                     Query.of(q -> q.terms(t -> t.field(PROVIDER_FIELD).terms(v -> v.value(keys)))))))

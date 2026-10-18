@@ -25,8 +25,8 @@ import java.util.Date;
 @NoArgsConstructor
 public class Membership implements Identifiable<String> {
 
-    /** The id of the platform itself as a membership's organization, since an {@link Organization}'s id is a slug. */
-    private static final String SYSTEM = "system";
+    /** The id of the platform itself as a membership's organization, since an {@link Organization}'s id is a slug; no organization may take it. */
+    public static final String PLATFORM = "system";
 
     private String id;
 
@@ -48,6 +48,6 @@ public class Membership implements Identifiable<String> {
 
     /** The id of the membership of account {@code identityId} in organization {@code organizationId}, {@code null} for the platform. */
     public static String idOf(String identityId, String organizationId) {
-        return identityId + ":" + (organizationId != null ? organizationId : SYSTEM);
+        return identityId + ":" + (organizationId != null ? organizationId : PLATFORM);
     }
 }

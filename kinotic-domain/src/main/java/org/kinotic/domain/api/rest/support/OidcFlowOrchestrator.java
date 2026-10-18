@@ -184,24 +184,11 @@ public class OidcFlowOrchestrator {
     }
 
     /**
-     * Begins a {@link OidcFlowPurpose#LOGIN} flow: generates state/nonce/PKCE, stores them on the session
-     * along with the origin of the page starting the flow, builds the IdP authorization URL using the
-     * supplied callback URL, and returns the URL.
-     *
-     * @param orgId the organization id to stash on the session for the callback to scope its
-     *              config lookup by, or {@code null} for non-org-scoped flows.
-     */
-    public Future<String> startFlow(RoutingContext ctx,
-                                    OidcConfiguration config,
-                                    String callbackUrl,
-                                    String orgId) {
-        return startFlow(ctx, config, callbackUrl, OidcFlowPurpose.LOGIN, orgId, null, null, null, null, SessionBinding.origin(ctx));
-    }
-
-    /**
-     * {@link #startFlow(RoutingContext, OidcConfiguration, String, String)} for a sign-in to the
-     * organization {@code orgId} that binds the flow to the page at {@code origin}, named by the caller
-     * because a start reached by a link carries no {@code Origin} of its own.
+     * Begins a {@link OidcFlowPurpose#LOGIN} flow signing in to the organization {@code orgId}, or to none when
+     * it is {@code null}: generates state/nonce/PKCE, stores them on the session along with the page at
+     * {@code origin} the completed login is bound to, builds the IdP authorization URL using the supplied
+     * callback URL, and returns the URL. The caller names the origin because a start reached by a link
+     * carries no {@code Origin} of its own.
      */
     public Future<String> startFlow(RoutingContext ctx,
                                     OidcConfiguration config,
@@ -212,10 +199,9 @@ public class OidcFlowOrchestrator {
     }
 
     /**
-     * {@link #startFlow(RoutingContext, OidcConfiguration, String, String)} for a sign-in to
+     * {@link #startFlow(RoutingContext, OidcConfiguration, String, String, String)} for a sign-in to
      * {@code application}, or to its tenant {@code tenantId} when one is named: stashes the ids of the scope
-     * for the callback to resolve its configuration by, and binds the flow to the page at {@code origin},
-     * named by the caller because a start reached by redirect carries no {@code Origin} of its own.
+     * for the callback to resolve its configuration by.
      */
     public Future<String> startFlow(RoutingContext ctx,
                                     OidcConfiguration config,

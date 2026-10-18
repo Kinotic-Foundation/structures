@@ -85,10 +85,15 @@ public class InviteHandler implements SuppliesGatewayRoutes, OidcFlowCompleter {
                           : oidcConfigurationService.findEnabledForScope(invite.getOrganizationId(), null);
                   // the holder of the invitation owns the invited email, so telling them an account exists for it
                   // tells a stranger nothing; the page then asks for that account's password instead of a new one
+                  // an existing account proves itself with its password, or, when it has none, through a provider it
+                  // is bound to, so the page learns which it has
                   Future<Boolean> accountExists = invite.getApplicationId() != null
                           ? Future.succeededFuture(false)
                           : identityService.findByEmail(invite.getEmail(), null, null).map(account -> account != null);
-                  return Future.all(orgName, providers, accountExists)
+                  Future<Boolean> accountHasPassword = accountExists.compose(exists -> exists
+                          ? identityService.findByEmail(invite.getEmail(), null, null).compose(account -> identityService.hasPassword(account.getId()))
+                          : Future.succeededFuture(false));
+                  return Future.all(orgName, providers, accountHasPassword)
                                .map(v -> new JsonObject()
                                        .put("email", invite.getEmail())
                                        .put("displayName", invite.getDisplayName())
@@ -98,6 +103,7 @@ public class InviteHandler implements SuppliesGatewayRoutes, OidcFlowCompleter {
                                        .put("expiresAt", invite.getExpiresAt().toInstant())
                                        .put("localEnabled", true)
                                        .put("accountExists", accountExists.result())
+                                       .put("accountHasPassword", accountHasPassword.result())
                                        .put("providers", authEndpointSupport.providersJson(providers.result())));
               })
               .onSuccess(json -> ctx.response().putHeader("Content-Type", "application/json").end(json.encode()))
