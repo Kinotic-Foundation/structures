@@ -142,31 +142,48 @@ function socialStartUrl(provider: string): string {
 
 /**
  * Every auth flow (login, signup, invite) redirects here with ?error=<code> on failure. A social sign-in
- * that found the identity a member of several organizations names them in ?organizations=, and the page
+ * that found the identity a member of several organizations left their ids in the session, and the page
  * offers them instead of an error.
  */
-function consumeUrlError() {
+async function consumeUrlError() {
   const search = new URLSearchParams(window.location.search)
   const error = (route.query.error as string | undefined) ?? search.get('error')
   if (!error) return
 
-  const organizations = (route.query.organizations as string | undefined) ?? search.get('organizations')
-  if (error === 'multiple_organizations' && organizations) {
-    memberships.value = organizations.split(',').filter(id => id.length > 0)
-  } else {
-    displayError(errorCodeToMessage(error))
-  }
-
   // Clean the query string so a refresh doesn't replay the error.
   const newQuery = { ...route.query }
   delete newQuery.error
-  delete newQuery.organizations
   router.replace({ query: newQuery })
+
+  if (error === 'multiple_organizations') {
+    memberships.value = await loadChoices()
+  }
+  if (memberships.value.length === 0) {
+    displayError(errorCodeToMessage(error))
+  }
+}
+
+// The organizations the session's sign-in found; the server hands them out once, so a refresh starts over.
+async function loadChoices(): Promise<string[]> {
+  let ret: string[] = []
+  try {
+    const res = await fetch(apiUrl('/api/auth/org/login/choices'), { credentials: 'include' })
+    if (res.ok) {
+      const data = await res.json()
+      if (Array.isArray(data)) ret = data.filter((id): id is string => typeof id === 'string' && id.length > 0)
+    } else {
+      debug('Organization choices returned %d', res.status)
+    }
+  } catch (err) {
+    debug('Failed to load the organization choices: %O', err)
+  }
+  return ret
 }
 
 function errorCodeToMessage(code: string): string {
   switch (code) {
     case 'no_account':             return 'No account is linked to that identity. Please sign up first.'
+    case 'multiple_organizations': return 'Your account belongs to several organizations, but the choice has expired. Please sign in again.'
     case 'account_exists':         return 'An account already exists for this email. Sign in the way you usually do, then connect this provider under Sign-in methods on your profile.'
     case 'account_disabled':       return 'This account cannot sign in to the organization. Ask an administrator to enable it.'
     case 'email_not_verified':     return 'Your identity provider has not verified your email address.'

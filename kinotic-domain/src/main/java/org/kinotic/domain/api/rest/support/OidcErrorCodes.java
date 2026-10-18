@@ -32,8 +32,8 @@ public final class OidcErrorCodes {
 
     /**
      * A sign-in through a platform social registration that named no organization found the identity a
-     * member of several, so the person chooses one and signs in at its own login; the redirect carries
-     * their ids as {@code organizations}, comma separated.
+     * member of several, so the person chooses one and signs in at its own login; the session that completed
+     * the sign-in holds their ids, which the login page reads from {@code GET /api/auth/org/login/choices}.
      */
     public static final String MULTIPLE_ORGANIZATIONS = "multiple_organizations";
 

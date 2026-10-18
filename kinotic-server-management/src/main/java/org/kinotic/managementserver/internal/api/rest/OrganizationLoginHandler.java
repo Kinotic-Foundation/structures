@@ -35,9 +35,7 @@ import org.springframework.stereotype.Component;
 import java.net.URI;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * Login routes for an organization's members. A login is addressed to the organization by its id, the
@@ -69,10 +67,13 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
     private final OidcConfigurationService oidcConfigurationService;
     private final OidcFlowOrchestrator oidcFlowOrchestrator;
 
+    private static final String ORGANIZATION_CHOICES_SESSION_KEY = "organizationChoices";
+
     @Override
     public void mountRoutes(Router router) {
         // the landing page, addressed to no organization
         router.get("/api/auth/org/login/providers").handler(this::handleProviders);
+        router.get("/api/auth/org/login/choices").handler(this::handleChoices);
         router.post("/api/auth/org/login/find").handler(this::handleFind);
         router.post("/api/auth/org/login/social/start/:provider").handler(this::handleSocialStart);
         // one organization's login
@@ -114,6 +115,19 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
                                authEndpointSupport.respondError(ctx, 500, "Failed to switch organization");
                            }
                        });
+    }
+
+    /**
+     * {@code GET /api/auth/org/login/choices} — the ids of the organizations the session's last landing-page
+     * sign-in found the identity a member of, {@code ["acme", "globex"]}, for the page to offer after
+     * {@link OidcErrorCodes#MULTIPLE_ORGANIZATIONS}; read once, so a later call answers {@code []}, as does a
+     * session with no such sign-in.
+     */
+    private void handleChoices(RoutingContext ctx) {
+        JsonArray choices = ctx.session().remove(ORGANIZATION_CHOICES_SESSION_KEY);
+        ctx.response()
+           .putHeader("Content-Type", "application/json")
+           .end((choices != null ? choices : new JsonArray()).encode());
     }
 
     /**
@@ -286,11 +300,13 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
     }
 
     // an account that is a member of several organizations has proven who it is, so the landing page may
-    // offer those organizations for the person to choose from, where a stranger learns nothing
+    // offer those organizations for the person to choose from, where a stranger learns nothing; the browser
+    // that holds the session reads them from handleChoices, so the redirect itself carries no ids
     private void signInOrOffer(RoutingContext ctx, String origin, UserParticipantIdentity account, List<Membership> memberships) {
         if (memberships.size() > 1) {
-            String organizations = memberships.stream().map(Membership::getOrganizationId).collect(Collectors.joining(","));
-            authEndpointSupport.redirectError(ctx, origin, OidcErrorCodes.MULTIPLE_ORGANIZATIONS, Map.of("organizations", organizations));
+            ctx.session().put(ORGANIZATION_CHOICES_SESSION_KEY,
+                              new JsonArray(memberships.stream().map(Membership::getOrganizationId).toList()));
+            authEndpointSupport.redirectError(ctx, origin, OidcErrorCodes.MULTIPLE_ORGANIZATIONS);
         } else {
             authEndpointSupport.completeLogin(ctx, origin, memberships.isEmpty()
                     ? Future.succeededFuture()
