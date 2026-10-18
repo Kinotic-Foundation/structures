@@ -56,10 +56,11 @@ resource "terraform_data" "link_email_domain" {
 
 # ── DNS Records (all automated from verification_records output) ──────────────
 
-# Domain-ownership verification + SPF share the apex TXT record set. Azure DNS
-# stores multiple TXT values under one record set; each ACS verification query
-# pulls the value it needs. Splitting these into two `azurerm_dns_txt_record`
-# resources causes them to overwrite each other (same Azure resource ID).
+# ACS domain verification, SPF and Google site verification share the apex TXT
+# record set. Azure DNS stores multiple TXT values under one record set; each
+# verification query pulls the value it needs. Splitting these into separate
+# `azurerm_dns_txt_record` resources causes them to overwrite each other (same
+# Azure resource ID).
 #
 # ACS' verification_records returns `name = "kinotic.ai"` for the apex, but
 # `azurerm_dns_txt_record` needs `"@"` for the apex — passing the literal zone
@@ -73,7 +74,7 @@ locals {
   )
 }
 
-resource "azurerm_dns_txt_record" "email_apex" {
+resource "azurerm_dns_txt_record" "apex" {
   name                = local.email_domain_record_name
   zone_name           = azurerm_dns_zone.main.name
   resource_group_name = azurerm_resource_group.global.name
@@ -85,11 +86,19 @@ resource "azurerm_dns_txt_record" "email_apex" {
   record {
     value = azurerm_email_communication_service_domain.kinotic.verification_records[0].spf[0].value
   }
+  record {
+    value = "google-site-verification=BC6-VIXGtc4Bvqkplz3FEulgnS25f31hfwVcD4aQG5U"
+  }
 }
 
 moved {
   from = azurerm_dns_txt_record.email_domain
   to   = azurerm_dns_txt_record.email_apex
+}
+
+moved {
+  from = azurerm_dns_txt_record.email_apex
+  to   = azurerm_dns_txt_record.apex
 }
 
 # DKIM record (CNAME)
@@ -146,7 +155,7 @@ resource "terraform_data" "verify_email_domain" {
   }
 
   depends_on = [
-    azurerm_dns_txt_record.email_apex,
+    azurerm_dns_txt_record.apex,
     azurerm_dns_cname_record.email_dkim,
     azurerm_dns_cname_record.email_dkim2,
   ]
