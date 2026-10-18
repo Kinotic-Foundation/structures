@@ -26,8 +26,7 @@ import java.nio.charset.StandardCharsets;
 
 /**
  * Connects a provider identity to the signed-in account as a further sign-in method: one of the platform's
- * registrations, or an organization's own configuration where the account is a member or which admits whoever it
- * verifies. The person is already
+ * registrations, or an organization's own configuration where the account is a member. The person is already
  * signed in, which is what proves the account is theirs: the provider round-trip then asserts the identity,
  * and the configuration's callback at {@link OrganizationOidcCallbackHandler} hands the result back here to
  * bind. Nothing here signs anyone in; a sign-in through the new binding runs through
@@ -39,14 +38,6 @@ import java.nio.charset.StandardCharsets;
 public class AccountSignInMethodHandler implements SuppliesGatewayRoutes, OidcFlowCompleter {
 
     private static final String PROFILE_PATH = "/account/profile";
-
-    /**
-     * The profile page's path that connects {@code configurationId} to the signed-in account as soon as it opens,
-     * for a login that refused an identity whose email the account holds.
-     */
-    static String connectPath(String configurationId) {
-        return PROFILE_PATH + "?connect=" + URLEncoder.encode(configurationId, StandardCharsets.UTF_8);
-    }
 
     /** The identity is bound to another account already. */
     private static final String IDENTITY_IN_USE = "identity_in_use";
@@ -65,10 +56,9 @@ public class AccountSignInMethodHandler implements SuppliesGatewayRoutes, OidcFl
     /**
      * {@code POST /api/auth/account/methods/start/:configurationId} — begins the round-trip to a configuration
      * for the signed-in account, redirecting the browser to the provider: one of the platform's org sign-up
-     * registrations, or an organization's own configuration when the account may sign in to that organization or
-     * the configuration admits whoever it verifies. {@code 400} for any other configuration, {@code 403} for an
-     * organization's that admits neither the account nor whoever it verifies, {@code 401} without a signed-in
-     * user.
+     * registrations, or an organization's own configuration when the account may sign in to that organization.
+     * {@code 400} for any other configuration, {@code 403} for an organization's the account may not sign in
+     * to, {@code 401} without a signed-in user.
      */
     private void handleStart(RoutingContext ctx) {
         Participant account = authEndpointSupport.requireSessionUser(ctx);
@@ -81,12 +71,10 @@ public class AccountSignInMethodHandler implements SuppliesGatewayRoutes, OidcFl
                                                               OrganizationOidcCallbacks.socialCallbackUrl(properties.getApiBaseUrl(), signup.getId()),
                                                               null, account.getId());
                   } else if (config instanceof OrganizationOidcConfiguration owned && owned.isEnabled()) {
-                      // an organization's configuration binds for an account that may sign in there, and for any account
-                      // when the configuration admits whoever it verifies, since the account then joins through the binding
-                      Future<Participant> admitted = owned.isCreateUserOnSignIn()
-                              ? Future.succeededFuture(account)
-                              : identityService.resolveParticipant(account.getId(), owned.getOrganizationId(), null);
-                      ret = admitted.compose(member -> member == null
+                      // an organization's configuration binds only for an account that may sign in there: the organization
+                      // admitted the account, so its directory may vouch for it; a link can start this for no other account
+                      ret = identityService.resolveParticipant(account.getId(), owned.getOrganizationId(), null)
+                                           .compose(member -> member == null
                                                    ? Future.failedFuture(new HttpException(403))
                                                    : oidcFlowOrchestrator.startConnect(ctx, owned,
                                                                                        OrganizationOidcCallbacks.ssoCallbackUrl(properties.getApiBaseUrl(), owned.getId()),

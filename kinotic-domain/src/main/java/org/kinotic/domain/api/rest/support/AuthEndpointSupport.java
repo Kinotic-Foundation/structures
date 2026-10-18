@@ -164,15 +164,6 @@ public abstract class AuthEndpointSupport {
         redirectToLogin(ctx, origin, errorCode, ctx.session().remove(RETURN_PATH_SESSION_KEY));
     }
 
-    /**
-     * {@link #redirectToContinue(RoutingContext, String, String)} for an outcome whose next step is a page of its
-     * own: the login the page starts next lands on {@code returnPath} in place of the path the flow stored.
-     */
-    public void redirectToContinue(RoutingContext ctx, String origin, String errorCode, String returnPath) {
-        ctx.session().remove(RETURN_PATH_SESSION_KEY);
-        redirectToLogin(ctx, origin, errorCode, returnPath);
-    }
-
     private void redirectToLogin(RoutingContext ctx, String origin, String errorCode, String returnPath) {
         String path = "/login?error=" + URLEncoder.encode(errorCode, StandardCharsets.UTF_8);
         if (returnPath != null) {

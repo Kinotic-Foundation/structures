@@ -280,7 +280,7 @@ function errorCodeToMessage(code: string): string {
   switch (code) {
     case 'no_account':             return 'No account is linked to that identity. Please sign up first.'
     case 'multiple_organizations': return 'Your account belongs to several organizations, but the choice has expired. Please sign in again.'
-    case 'account_exists':         return 'An account already exists for this email. Sign in the way you usually do, and you will be asked to connect this provider to your account.'
+    case 'account_exists':         return 'An account already exists for this email. Ask the organization to add you as a member, then sign in the way you usually do and connect this provider under Sign-in methods on your profile.'
     case 'account_disabled':       return 'This account cannot sign in to the organization. Ask an administrator to enable it.'
     case 'email_not_verified':     return 'Your identity provider has not verified your email address.'
     case 'state_mismatch':         return 'Login session expired or was tampered with. Please try again.'

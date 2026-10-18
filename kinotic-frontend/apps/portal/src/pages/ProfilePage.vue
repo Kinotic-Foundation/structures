@@ -244,28 +244,10 @@ const details = computed<ProfileDetail[]>(() => [
 ])
 
 onMounted(() => {
-  if (!startRequestedConnect()) {
-    consumeConnectResult()
-    load()
-    void loadSignIn()
-  }
+  consumeConnectResult()
+  load()
+  void loadSignIn()
 })
-
-/**
- * A sign-in through an organization's provider that found this account's email already taken sends its holder
- * here with ?connect=<configurationId> once signed in; the connect round-trip starts at once, as the provider's
- * Connect button would, and returns with ?connected or ?error like any other.
- */
-function startRequestedConnect(): boolean {
-  const connect = route.query.connect as string | undefined
-  if (!connect) return false
-  const form = document.createElement('form')
-  form.method = 'post'
-  form.action = apiUrl('/api/auth/account/methods/start/' + encodeURIComponent(connect))
-  document.body.appendChild(form)
-  form.submit()
-  return true
-}
 
 /** The connect round-trip returns here with ?connected=<provider> or ?error=<code>. */
 function consumeConnectResult() {

@@ -4,6 +4,8 @@ import {E2E_FIXTURE_PASSWORD, E2E_ORG_USER_EMAIL, E2E_ORGANIZATION_ID, managemen
 
 /** The second organization the V3 fixtures make the e2e organization user a member of. */
 const SECOND_ORGANIZATION_ID = 'e2e-second'
+/** The Okta configuration the V3 fixtures give an organization the e2e organization user does not belong to. */
+const OTHER_ORGANIZATION_CONFIGURATION_ID = 'e2e-other-okta'
 
 /**
  * The organization login's REST surface on the management server: a login addressed to an organization by its
@@ -91,6 +93,22 @@ describe('Organization login routes', () => {
         const signedIn = await get('/api/auth/org/login/choices', sessionCookie(await login(E2E_ORGANIZATION_ID)))
         expect(signedIn.status).toBe(200)
         expect(await signedIn.json()).toEqual([])
+    })
+
+    it('connects a sign-in method for the platform\'s registrations and the configurations of organizations the account belongs to only', async () => {
+        expect((await post('/api/auth/account/methods/start/github-platform', {})).status).toBe(401)
+        const cookie = sessionCookie(await login(E2E_ORGANIZATION_ID))
+
+        // another organization's configuration is refused whatever it admits on sign-in, so a link cannot bind its
+        // directory's identities to an account that organization never admitted
+        expect((await post(`/api/auth/account/methods/start/${OTHER_ORGANIZATION_CONFIGURATION_ID}`, {}, cookie)).status).toBe(403)
+        expect((await post('/api/auth/account/methods/start/no-such-configuration', {}, cookie)).status).toBe(400)
+
+        // the platform's registration starts the round-trip to its provider
+        const started = await fetch(`${baseUrl}/api/auth/account/methods/start/github-platform`,
+                                    {method: 'POST', headers: {Cookie: cookie}, redirect: 'manual'})
+        expect(started.status).toBe(302)
+        expect(started.headers.get('location')).toContain('github.com/login/oauth/authorize')
     })
 
     it('switches a signed-in member to another organization it belongs to and refuses the rest', async () => {

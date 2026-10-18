@@ -45,3 +45,9 @@ INSERT INTO kinotic_tenant (id, organizationId, applicationId, name, description
 -- A second organization the e2e organization user is a member of, so a signed-in member can switch to it
 INSERT INTO kinotic_organization (id, name, description) VALUES ('e2e-second', 'e2e-second', 'Second organization of the e2e organization user, for switching') WITH REFRESH;
 INSERT INTO kinotic_membership (id, identityId, organizationId, enabled, created, updated) VALUES ('00000000-0000-0000-0000-000000000002:e2e-second', '00000000-0000-0000-0000-000000000002', 'e2e-second', true, '2026-01-01', '2026-01-01') WITH REFRESH;
+
+-- An organization the e2e organization user is not a member of, with an Okta configuration that admits whoever it
+-- verifies on sign-in: connecting it to the user's account must still be refused, since only an organization that
+-- admitted the account may have its directory vouch for it
+INSERT INTO kinotic_organization (id, name, description) VALUES ('e2e-other', 'e2e-other', 'Organization the e2e organization user does not belong to') WITH REFRESH;
+INSERT INTO kinotic_oidc_configuration (id, type, organizationId, providerAccount, confidentialClient, createUserOnSignIn, name, provider, clientId, authority, enabled, created, updated) VALUES ('e2e-other-okta', 'ORGANIZATION', 'e2e-other', 'other.okta.com', false, true, 'Other Okta', 'okta', 'other-client', 'https://other.okta.com', true, '2026-01-01', '2026-01-01') WITH REFRESH;
