@@ -83,9 +83,9 @@ output "dev_server_env" {
     DEV_SERVER_CONSOLE_HOSTNAME                         = module.environment.ui_hostnames.console
     KINOTIC_SYSTEMAPI_UIDEPLOYMENT_SITESDOMAIN          = module.environment.sites_domain
     KINOTIC_SYSTEMAPI_UIDEPLOYMENT_SITESSTORAGEENDPOINT = module.environment.sites_storage_blob_endpoint
-    KINOTIC_DOMAIN_SITEDOMAIN_DOMAIN                    = module.environment.sites_domain
-    KINOTIC_DOMAIN_SITEDOMAIN_CLOUDFLARE_ENABLED        = "true"
-    KINOTIC_DOMAIN_SITEDOMAIN_CLOUDFLARE_ZONEID         = var.cloudflare_zone_id
+    KINOTIC_DOMAIN_PUBLISHEDSITES_DOMAIN                = module.environment.sites_domain
+    KINOTIC_DOMAIN_PUBLISHEDSITES_CLOUDFLARE_ENABLED    = "true"
+    KINOTIC_DOMAIN_PUBLISHEDSITES_CLOUDFLARE_ZONEID     = var.cloudflare_zone_id
     KINOTIC_DOMAIN_SECRETSTORAGE_AZURE_VAULTURL         = azurerm_key_vault.server.vault_uri
     KINOTIC_DOMAIN_EMAIL_ENDPOINT                       = local.global.email_service_endpoint
     KINOTIC_DOMAIN_EMAIL_SENDERADDRESS                  = "DoNotReply@${local.global.email_sender_domain}"
@@ -98,7 +98,7 @@ output "dev_server_env" {
 # root), which every server's environment merges; it never goes through that root or its state.
 output "secrets_env" {
   description = "The Azure and Cloudflare half of the servers' secrets, as env-file lines"
-  value       = "AZURE_CLIENT_SECRET=${module.environment.server_client_secret}\nKINOTIC_DOMAIN_SITEDOMAIN_CLOUDFLARE_APITOKEN=${var.cloudflare_dns_api_token}\n"
+  value       = "AZURE_CLIENT_SECRET=${module.environment.server_client_secret}\nKINOTIC_DOMAIN_PUBLISHEDSITES_CLOUDFLARE_APITOKEN=${var.cloudflare_dns_api_token}\n"
   sensitive   = true
 }
 

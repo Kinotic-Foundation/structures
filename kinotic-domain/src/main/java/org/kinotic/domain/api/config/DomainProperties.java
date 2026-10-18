@@ -42,7 +42,7 @@ public class DomainProperties {
      * The domain organizations' published sites are served under and the edge that serves them.
      */
     @Valid
-    private SiteDomainProperties siteDomain = new SiteDomainProperties();
+    private PublishedSitesProperties publishedSites = new PublishedSitesProperties();
 
     @NotNull
     private Duration elasticConnectionTimeout = Duration.ofSeconds(5);

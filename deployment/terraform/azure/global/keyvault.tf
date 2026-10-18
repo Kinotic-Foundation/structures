@@ -190,7 +190,7 @@ resource "azurerm_key_vault_secret" "github_webhook_secret" {
 }
 
 # The Cloudflare DNS token the management and system servers import as
-# kinotic.domain.siteDomain.cloudflare.apiToken, with which each organization's sites record
+# kinotic.domain.publishedSites.cloudflare.apiToken, with which each organization's sites record
 # is created. Supplied via TF_VAR_cloudflare_dns_api_token on first apply; rotations happen
 # out-of-band via `az keyvault secret set ...` and lifecycle.ignore_changes keeps them.
 resource "azurerm_key_vault_secret" "cloudflare_dns_api_token" {

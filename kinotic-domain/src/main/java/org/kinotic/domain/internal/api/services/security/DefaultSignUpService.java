@@ -9,7 +9,7 @@ import org.kinotic.domain.api.model.security.AuthType;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 import org.kinotic.domain.api.model.security.PendingSignUp;
 import org.kinotic.domain.api.services.OrganizationService;
-import org.kinotic.domain.api.services.SiteDomainProvisioner;
+import org.kinotic.domain.api.services.OrganizationDnsRecordProvisioner;
 import org.kinotic.domain.api.services.security.MembershipService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.utils.DomainUtil;
@@ -35,7 +35,7 @@ public class DefaultSignUpService implements SignUpService {
     private final MembershipService membershipService;
     private final OrganizationService organizationService;
     private final EmailService emailService;
-    private final SiteDomainProvisioner siteDomainProvisioner;
+    private final OrganizationDnsRecordProvisioner dnsRecordProvisioner;
 
     @Override
     public Future<Void> initiateLocalSignUp(String email, String displayName) {
@@ -162,7 +162,7 @@ public class DefaultSignUpService implements SignUpService {
                                                                .transform(v -> Future.failedFuture(err)))
                             // the edge is provisioned again before the organization's first site is published, so a
                             // refusal here costs the sign-up nothing
-                            .compose(founder -> siteDomainProvisioner.ensure(savedOrg.getId())
+                            .compose(founder -> dnsRecordProvisioner.ensure(savedOrg.getId())
                                                                      .recover(err -> {
                                                                          log.warn("Could not provision the sites subdomain of organization {}: {}",
                                                                                   savedOrg.getId(), err.getMessage());

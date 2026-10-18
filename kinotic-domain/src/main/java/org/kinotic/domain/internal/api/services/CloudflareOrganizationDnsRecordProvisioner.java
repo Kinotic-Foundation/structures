@@ -13,17 +13,17 @@ import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.Validate;
-import org.kinotic.domain.api.config.CloudflareSiteDomainProperties;
+import org.kinotic.domain.api.config.CloudflareDnsProperties;
 import org.kinotic.domain.api.config.KinoticDomainProperties;
-import org.kinotic.domain.api.services.SiteDomainProvisioner;
+import org.kinotic.domain.api.services.OrganizationDnsRecordProvisioner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.util.Locale;
 
 /**
- * Provisions each organization's sites subdomain as one proxied wildcard DNS record, {@code *.<org>} under the
- * sites domain, in the Cloudflare zone {@code kinotic.domain.siteDomain.cloudflare.zoneId}. The record points
+ * Creates each organization's record as one proxied wildcard DNS record, {@code *.<org>} under the published
+ * sites domain, in the Cloudflare zone {@code kinotic.domain.publishedSites.cloudflare.zoneId}. The record points
  * at a placeholder address because the zone's sites Worker answers every request to it; its existence is what
  * the zone's Total TLS issues the organization's wildcard certificate from. A record is looked up by its name
  * before it is created, so ensuring an organization twice creates one record.
@@ -31,8 +31,8 @@ import java.util.Locale;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@ConditionalOnProperty(value = "kinotic.domain.siteDomain.cloudflare.enabled", havingValue = "true")
-public class CloudflareSiteDomainProvisioner implements SiteDomainProvisioner {
+@ConditionalOnProperty(value = "kinotic.domain.publishedSites.cloudflare.enabled", havingValue = "true")
+public class CloudflareOrganizationDnsRecordProvisioner implements OrganizationDnsRecordProvisioner {
 
     private static final String API_BASE_URL = "https://api.cloudflare.com/client/v4";
     /**
@@ -49,10 +49,10 @@ public class CloudflareSiteDomainProvisioner implements SiteDomainProvisioner {
 
     @PostConstruct
     public void start() {
-        CloudflareSiteDomainProperties cloudflare = cloudflare();
-        Validate.notBlank(cloudflare.getApiToken(), "kinotic.domain.siteDomain.cloudflare.apiToken is required");
-        Validate.notBlank(cloudflare.getZoneId(), "kinotic.domain.siteDomain.cloudflare.zoneId is required");
-        Validate.notBlank(sitesDomain(), "kinotic.domain.siteDomain.domain is required");
+        CloudflareDnsProperties cloudflare = cloudflare();
+        Validate.notBlank(cloudflare.getApiToken(), "kinotic.domain.publishedSites.cloudflare.apiToken is required");
+        Validate.notBlank(cloudflare.getZoneId(), "kinotic.domain.publishedSites.cloudflare.zoneId is required");
+        Validate.notBlank(sitesDomain(), "kinotic.domain.publishedSites.domain is required");
         webClient = WebClient.create(vertx, new WebClientOptions().setFollowRedirects(false));
     }
 
@@ -115,11 +115,11 @@ public class CloudflareSiteDomainProvisioner implements SiteDomainProvisioner {
     }
 
     private Future<JsonObject> request(HttpRequest<io.vertx.core.buffer.Buffer> request) {
-        return authorized(request).send().compose(CloudflareSiteDomainProvisioner::result);
+        return authorized(request).send().compose(CloudflareOrganizationDnsRecordProvisioner::result);
     }
 
     private Future<JsonObject> request(HttpRequest<io.vertx.core.buffer.Buffer> request, JsonObject body) {
-        return authorized(request).sendJsonObject(body).compose(CloudflareSiteDomainProvisioner::result);
+        return authorized(request).sendJsonObject(body).compose(CloudflareOrganizationDnsRecordProvisioner::result);
     }
 
     private HttpRequest<io.vertx.core.buffer.Buffer> authorized(HttpRequest<io.vertx.core.buffer.Buffer> request) {
@@ -149,10 +149,10 @@ public class CloudflareSiteDomainProvisioner implements SiteDomainProvisioner {
     }
 
     private String sitesDomain() {
-        return properties.getDomain().getSiteDomain().getDomain();
+        return properties.getDomain().getPublishedSites().getDomain();
     }
 
-    private CloudflareSiteDomainProperties cloudflare() {
-        return properties.getDomain().getSiteDomain().getCloudflare();
+    private CloudflareDnsProperties cloudflare() {
+        return properties.getDomain().getPublishedSites().getCloudflare();
     }
 }

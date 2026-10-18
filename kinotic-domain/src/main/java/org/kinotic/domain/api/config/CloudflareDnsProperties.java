@@ -6,17 +6,17 @@ import lombok.Setter;
 import lombok.experimental.Accessors;
 
 /**
- * The Cloudflare zone an organization's sites subdomain is provisioned in, bound under
- * {@code kinotic.domain.siteDomain.cloudflare.*}. With {@link #enabled} the platform creates the proxied
- * wildcard record {@code *.<org>} under the sites domain in the zone when an organization is created,
+ * The Cloudflare DNS zone of the published sites domain and the token that edits it, bound under
+ * {@code kinotic.domain.publishedSites.cloudflare.*}. With {@link #enabled} the platform creates each
+ * organization's proxied wildcard record {@code *.<org>} in the zone when the organization is created,
  * which is what the zone's Total TLS issues the organization's certificate for and the sites Worker
- * answers; without it the record is logged instead, for an environment with no edge.
+ * answers; without it the record is logged instead, for an environment with no zone.
  */
 @Getter
 @Setter
 @Accessors(chain = true)
 @NoArgsConstructor
-public class CloudflareSiteDomainProperties {
+public class CloudflareDnsProperties {
 
     /**
      * Whether organizations' records are created in Cloudflare.

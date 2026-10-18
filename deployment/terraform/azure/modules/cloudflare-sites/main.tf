@@ -3,7 +3,7 @@
 # <app>--<ui>.<org>.<sites domain>, by one Worker bound to the site hosts, which reads each site
 # from sites/<hostname>/ in the sites storage account. Nothing here is created per organization,
 # application, UI or tenant: the platform creates one proxied wildcard record *.<org> per
-# organization when the organization is created (CloudflareSiteDomainProvisioner), and the zone's
+# organization when the organization is created (CloudflareOrganizationDnsRecordProvisioner), and the zone's
 # Total TLS issues that organization's certificate from the record. The application API hosts,
 # <org>--<app>.<apps_api_label>.<sites domain>, are proxied records to the app server that no
 # Worker is bound to, so API calls and WebSockets reach the server directly; they share the

@@ -222,7 +222,7 @@ locals {
       env = {
         KINOTIC_APPSERVER_APIBASEURL = "https://${local.azure.apps_api_domain}"
         # the app server provisions no organization's record, and holds no DNS token to do it with
-        KINOTIC_DOMAIN_SITEDOMAIN_CLOUDFLARE_ENABLED = "false"
+        KINOTIC_DOMAIN_PUBLISHEDSITES_CLOUDFLARE_ENABLED = "false"
       }
     }
   }

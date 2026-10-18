@@ -8,7 +8,7 @@ import org.kinotic.core.api.utils.ZoneUtil;
 import org.kinotic.domain.api.utils.HostLabelUtil;
 import org.kinotic.domain.api.model.WatchedParent;
 import org.kinotic.domain.api.model.WatchedType;
-import org.kinotic.domain.api.services.SiteDomainProvisioner;
+import org.kinotic.domain.api.services.OrganizationDnsRecordProvisioner;
 import org.kinotic.management.api.model.Project;
 import org.kinotic.management.api.model.deployment.UiArtifact;
 import org.kinotic.management.api.model.deployment.UiDeployment;
@@ -43,7 +43,7 @@ public class UiSitePublisher {
     private final SiteStorageService siteStorageService;
     private final SiteWorkloadFactory siteWorkloadFactory;
     private final WorkloadOrchestrationService workloadOrchestrationService;
-    private final SiteDomainProvisioner siteDomainProvisioner;
+    private final OrganizationDnsRecordProvisioner dnsRecordProvisioner;
     private final KinoticSystemApiProperties properties;
 
     /**
@@ -53,7 +53,7 @@ public class UiSitePublisher {
      */
     public Future<UiDeployment> deploymentFor(Project project, UiArtifact ui, UiDeployment existing) {
         return existing == null
-                ? siteDomainProvisioner.ensure(project.getOrganizationId()).compose(v -> mintDeployment(project, ui))
+                ? dnsRecordProvisioner.ensure(project.getOrganizationId()).compose(v -> mintDeployment(project, ui))
                 : Future.succeededFuture(existing);
     }
 

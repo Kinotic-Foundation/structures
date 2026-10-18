@@ -108,7 +108,7 @@ public class ApplicationAuthEndpointSupport extends AuthEndpointSupport {
 
     // <site>.<organizationId>.<sitesDomain>, and nothing else
     private boolean isSiteHost(String host) {
-        String sitesDomain = domainProperties.getDomain().getSiteDomain().getDomain();
+        String sitesDomain = domainProperties.getDomain().getPublishedSites().getDomain();
         boolean ret = false;
         if (StringUtils.isNotBlank(sitesDomain)) {
             String suffix = "." + sitesDomain.toLowerCase(Locale.ROOT);

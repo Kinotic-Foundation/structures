@@ -140,10 +140,10 @@ locals {
     touch "$f"
     awk '
       /^# kinotic-server Azure identity/ { skip = 1 }
-      skip && /^KINOTIC_DOMAIN_SITEDOMAIN_CLOUDFLARE_APITOKEN=/ { skip = 0; next }
+      skip && /^KINOTIC_DOMAIN_PUBLISHEDSITES_CLOUDFLARE_APITOKEN=/ { skip = 0; next }
       skip { next }
       /^AZURE_(CLIENT_ID|CLIENT_SECRET|TENANT_ID)=/ { next }
-      /^KINOTIC_DOMAIN_SITEDOMAIN_CLOUDFLARE_APITOKEN=/ { next }
+      /^KINOTIC_DOMAIN_PUBLISHEDSITES_CLOUDFLARE_APITOKEN=/ { next }
       { lines[++n] = $0; if ($0 !~ /^[[:space:]]*$/) last = n }
       END { for (i = 1; i <= last; i++) print lines[i] }
     ' "$f" > "$f.tmp"
@@ -157,7 +157,7 @@ locals {
     AZURE_CLIENT_ID=$AZURE_CLIENT_ID
     AZURE_CLIENT_SECRET=$AZURE_CLIENT_SECRET
     AZURE_TENANT_ID=$AZURE_TENANT_ID
-    KINOTIC_DOMAIN_SITEDOMAIN_CLOUDFLARE_APITOKEN=$CLOUDFLARE_DNS_API_TOKEN
+    KINOTIC_DOMAIN_PUBLISHEDSITES_CLOUDFLARE_APITOKEN=$CLOUDFLARE_DNS_API_TOKEN
     EOF
     mv "$f.tmp" "$f"
   EOT
@@ -242,7 +242,7 @@ output "app_server_application_local_yml" {
   value       = <<-EOT
     kinotic:
       domain:
-        siteDomain:
+        publishedSites:
           domain: ${module.environment.sites_domain}
   EOT
 }
@@ -252,7 +252,7 @@ output "application_local_yml" {
   value       = <<-EOT
     kinotic:
       domain:
-        siteDomain:
+        publishedSites:
           domain: ${module.environment.sites_domain}
           cloudflare:
             enabled: true
