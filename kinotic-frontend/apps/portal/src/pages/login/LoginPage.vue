@@ -168,6 +168,7 @@ function errorCodeToMessage(code: string): string {
   switch (code) {
     case 'no_account':             return 'No account is linked to that identity. Please sign up first.'
     case 'account_exists':         return 'An account already exists for this email. Sign in the way you usually do, then connect this provider under Sign-in methods on your profile.'
+    case 'account_disabled':       return 'This account cannot sign in to the organization. Ask an administrator to enable it.'
     case 'email_not_verified':     return 'Your identity provider has not verified your email address.'
     case 'state_mismatch':         return 'Login session expired or was tampered with. Please try again.'
     case 'access_denied':          return 'You declined to authorize Kinotic. Please try again to continue.'

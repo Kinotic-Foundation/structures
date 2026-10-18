@@ -153,6 +153,8 @@ public class DefaultSignUpService implements SignUpService {
                                                                  // completed goes too: left behind, it could neither sign in
                                                                  // anywhere nor sign up again
                                                                  .recover(err -> identityService.deleteById(founder.getId())
+                                                                                                .onFailure(deleteErr -> log.warn("Could not delete the founder account {} of organization {}: {}",
+                                                                                                                                 founder.getId(), savedOrg.getId(), deleteErr.getMessage()))
                                                                                                 .transform(v -> Future.failedFuture(err))))
                             // and so does the organization, as when a sign-up of the same identity completed first, so
                             // its name is not held by an organization no one is in

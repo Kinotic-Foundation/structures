@@ -123,12 +123,11 @@ public class DefaultInviteService implements InviteService {
                             if (account == null) {
                                 joined = identityService.createUser(newMember(invite, displayName), password)
                                                         .compose(created -> join(created, invite));
-                            } else if (!account.isEnabled()) {
-                                // the invitation's holder owns the email, so the account's standing is theirs to learn; a
-                                // password check would answer as for a wrong password
-                                joined = Future.failedFuture(new AccountDisabledException("This account cannot sign in to the organization."));
                             } else {
-                                joined = requireAccountPassword(account, password).compose(v -> join(account, invite));
+                                // the invitation's holder owns the email, so a disabled account is refused before the
+                                // password check, which would answer as for a wrong password
+                                joined = requireEnabled(account).compose(v -> requireAccountPassword(account, password))
+                                                                .compose(v -> join(account, invite));
                             }
                             return joined;
                         });
@@ -220,14 +219,15 @@ public class DefaultInviteService implements InviteService {
     // joins nothing, and a membership that already exists is reused, so one disabled before the acceptance
     // refuses the sign-in as a login would
     private Future<Participant> join(UserParticipantIdentity account, PendingInvite invite) {
-        Future<Participant> ret;
-        if (!account.isEnabled()) {
-            ret = Future.failedFuture(new AccountDisabledException("This account cannot sign in to the organization."));
-        } else {
-            ret = membershipService.addMember(account.getId(), invite.getOrganizationId())
-                                   .compose(membership -> membershipService.resolveMember(account, invite.getOrganizationId()));
-        }
-        return ret;
+        return requireEnabled(account)
+                .compose(v -> membershipService.addMember(account.getId(), invite.getOrganizationId()))
+                .compose(membership -> membershipService.resolveMember(account, invite.getOrganizationId()));
+    }
+
+    private static Future<Void> requireEnabled(UserParticipantIdentity account) {
+        return account.isEnabled()
+                ? Future.succeededFuture()
+                : Future.failedFuture(new AccountDisabledException("This account cannot sign in to the organization."));
     }
 
     // an existing account is joined only by someone who knows its password

@@ -57,9 +57,8 @@ variable "domain_name" {
 }
 
 variable "apps_api_domain" {
-  description = "The host every application's API is a label under, the cluster root's apps_api_domain; the app server answers the platform's social registrations' callbacks at it"
+  description = "The cluster root's apps_api_domain output, apps-api.<cloudflare zone>: the app server answers the platform's social registrations' callbacks at it, so an Entra sign-in fails with a redirect URI mismatch when the two differ"
   type        = string
-  default     = "apps-api.kinotic.io"
 }
 
 variable "disable_grafana_entra" {

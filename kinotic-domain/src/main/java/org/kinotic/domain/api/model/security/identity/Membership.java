@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import org.apache.commons.lang3.Validate;
 import org.kinotic.core.api.crud.Identifiable;
 import org.kinotic.domain.api.model.Organization;
 
@@ -48,6 +49,9 @@ public class Membership implements Identifiable<String> {
 
     /** The id of the membership of account {@code identityId} in organization {@code organizationId}, {@code null} for the platform. */
     public static String idOf(String identityId, String organizationId) {
+        // the platform slot is addressed by a null organization only, so an organization id a client supplies
+        // never reaches the platform membership
+        Validate.isTrue(!PLATFORM.equals(organizationId), "'%s' is not an organization", organizationId);
         return identityId + ":" + (organizationId != null ? organizationId : PLATFORM);
     }
 }
