@@ -115,10 +115,4 @@ public final class HostLabelUtil {
         }
         return ret;
     }
-
-    /** Whether the site at {@code host} is one of the application's UIs', addressed to a tenant or not. */
-    public static boolean isSiteOf(ApplicationKey applicationKey, String host) {
-        SiteAddress site = fromSiteHost(host);
-        return site != null && site.application().equals(applicationKey);
-    }
 }

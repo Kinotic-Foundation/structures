@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.PendingInvite;
+import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 import org.kinotic.domain.api.services.OrganizationService;
 import org.kinotic.domain.api.exceptions.AccountDisabledException;
 import org.kinotic.domain.api.exceptions.ExistingAccountException;
@@ -84,15 +85,14 @@ public class InviteHandler implements SuppliesGatewayRoutes, OidcFlowCompleter {
                           ? Future.succeededFuture(List.of())
                           : oidcConfigurationService.findEnabledForScope(invite.getOrganizationId(), null);
                   // the holder of the invitation owns the invited email, so telling them an account exists for it
-                  // tells a stranger nothing; the page then asks for that account's password instead of a new one
-                  // an existing account proves itself with its password, or, when it has none, through a provider it
-                  // is bound to, so the page learns which it has
-                  Future<Boolean> accountExists = invite.getApplicationId() != null
+                  // tells a stranger nothing; the page then asks for that account's password, or, when it has none,
+                  // for the provider it is bound to, instead of a new password
+                  Future<UserParticipantIdentity> account = invite.getApplicationId() != null
+                          ? Future.succeededFuture()
+                          : identityService.findByEmail(invite.getEmail(), null, null);
+                  Future<Boolean> accountHasPassword = account.compose(found -> found == null
                           ? Future.succeededFuture(false)
-                          : identityService.findByEmail(invite.getEmail(), null, null).map(account -> account != null);
-                  Future<Boolean> accountHasPassword = accountExists.compose(exists -> exists
-                          ? identityService.findByEmail(invite.getEmail(), null, null).compose(account -> identityService.hasPassword(account.getId()))
-                          : Future.succeededFuture(false));
+                          : identityService.hasPassword(found.getId()));
                   return Future.all(orgName, providers, accountHasPassword)
                                .map(v -> new JsonObject()
                                        .put("email", invite.getEmail())
@@ -102,7 +102,7 @@ public class InviteHandler implements SuppliesGatewayRoutes, OidcFlowCompleter {
                                        .put("invitedByName", invite.getInvitedByName())
                                        .put("expiresAt", invite.getExpiresAt().toInstant())
                                        .put("localEnabled", true)
-                                       .put("accountExists", accountExists.result())
+                                       .put("accountExists", account.result() != null)
                                        .put("accountHasPassword", accountHasPassword.result())
                                        .put("providers", authEndpointSupport.providersJson(providers.result())));
               })

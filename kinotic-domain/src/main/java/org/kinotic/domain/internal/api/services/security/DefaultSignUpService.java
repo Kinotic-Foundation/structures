@@ -144,15 +144,20 @@ public class DefaultSignUpService implements SignUpService {
                             : identityService.createUser(account, password);
                     return created
                             .compose(founder -> membershipService.addMember(founder.getId(), savedOrg.getId())
-                                                                 .map(membership -> DomainUtil.createParticipant(founder, membership)))
-                            // a founder that cannot be created, as when a sign-up of the same identity completed first,
-                            // takes the organization with it, so its name is not held by an organization no one is in
+                                                                 .compose(membership -> {
+                                                                     savedOrg.setCreatedBy(founder.getId());
+                                                                     return organizationService.save(savedOrg)
+                                                                                               .map(DomainUtil.createParticipant(founder, membership));
+                                                                 })
+                                                                 // an account whose membership or organization could not be
+                                                                 // completed goes too: left behind, it could neither sign in
+                                                                 // anywhere nor sign up again
+                                                                 .recover(err -> identityService.deleteById(founder.getId())
+                                                                                                .transform(v -> Future.failedFuture(err))))
+                            // and so does the organization, as when a sign-up of the same identity completed first, so
+                            // its name is not held by an organization no one is in
                             .recover(err -> organizationService.deleteById(savedOrg.getId())
                                                                .transform(v -> Future.failedFuture(err)))
-                            .compose(founder -> {
-                                savedOrg.setCreatedBy(founder.getId());
-                                return organizationService.save(savedOrg).map(founder);
-                            })
                             // the edge is provisioned again before the organization's first site is published, so a
                             // refusal here costs the sign-up nothing
                             .compose(founder -> siteDomainProvisioner.ensure(savedOrg.getId())

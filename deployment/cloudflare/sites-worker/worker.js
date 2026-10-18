@@ -22,7 +22,8 @@ const LABEL_SEPARATOR = '--'
  * The labels the platform holds under its domains, which no organization may take (DomainUtil.RESERVED_ORGANIZATION_IDS):
  * a host of one of them is never a site, so the Worker refuses it even when a route sends it here.
  */
-const RESERVED_LABELS = new Set(['www', 'api', 'apps-api', 'system-api', 'portal', 'console', 'mail', 'admin', 'login', 'status', 'docs'])
+const RESERVED_LABELS = new Set(['www', 'api', 'apps-api', 'system-api', 'portal', 'console', 'mail', 'admin', 'login', 'status', 'docs',
+                                 'find', 'social', 'sso', 'providers', 'system', 'xn'])
 const SITES_CONTAINER = 'sites'
 const INDEX = 'index.html'
 /** Hashed assets are published under this directory and never change, so the edge keeps them. */

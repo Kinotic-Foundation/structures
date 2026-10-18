@@ -554,14 +554,13 @@ CREATE DATA STREAM kinotic_watch_event (type KEYWORD, id KEYWORD, scope KEYWORD,
 -- flow, userInfoUri for identity, userEmailsUri for a GitHub-style verified-email lookup,
 -- and scopes as the space-delimited OAuth scope string.
 --
--- Each IdP application registration must list its redirect URIs, per environment origin.
+-- Each IdP application registration must list its redirect URI, per environment origin: one per
+-- registration, which every flow through it (a login, a sign-up, an invitation, connecting a sign-in
+-- method) returns to, the flow's purpose riding on the session.
 -- An ORG_SIGNUP registration:
 --   <managementApiBaseUrl>/api/auth/org/login/social/callback/<id>
---   <managementApiBaseUrl>/api/auth/org/signup/social/callback/<id>
---   <managementApiBaseUrl>/api/auth/invite/oidc/callback/<id>
 -- An APP_SOCIAL registration (the app server's apex host answers the callback for every application):
 --   <appServerApiBaseUrl>/api/auth/app/login/social/callback/<id>
---   <managementApiBaseUrl>/api/auth/invite/oidc/callback/<id>
 
 INSERT INTO kinotic_oidc_configuration (id, type, name, provider, clientId, secretNameRef, authority, enabled, created, updated) VALUES ('entra-platform', 'APP_SOCIAL', 'Microsoft', 'azure-ad', 'f24706cc-55ff-4d17-b72c-11ddfa87966a', 'entra-platform', 'https://login.microsoftonline.com/common/v2.0', true, '2026-05-05', '2026-05-05') WITH REFRESH;
 
@@ -572,7 +571,7 @@ INSERT INTO kinotic_oidc_configuration (id, type, name, provider, clientId, secr
 -- doc). Required App settings: a client secret (AKV name = secretNameRef); "Request
 -- user authorization (OAuth) during installation" checked; callback URLs under
 -- "Identifying and authorizing users" = <portalBaseUrl>/github/install/callback FIRST
--- (install redirects go to the first callback URL) plus the ORG_SIGNUP URLs above; the
+-- (install redirects go to the first callback URL) plus the ORG_SIGNUP URL above; the
 -- "Email addresses: read-only" account permission. Scopes are inert for GitHub Apps.
 
 INSERT INTO kinotic_oidc_configuration (id, type, name, provider, clientId, secretNameRef, authority, authorizationUri, tokenUri, userInfoUri, userEmailsUri, scopes, enabled, created, updated) VALUES ('github-platform', 'ORG_SIGNUP', 'GitHub', 'github', 'Iv23liN1suytxICfhtOz', 'github-platform', 'https://github.com/login', 'https://github.com/login/oauth/authorize', 'https://github.com/login/oauth/access_token', 'https://api.github.com/user', 'https://api.github.com/user/emails', 'read:user user:email', true, '2026-08-01', '2026-08-01') WITH REFRESH;

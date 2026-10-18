@@ -65,7 +65,10 @@ public interface MembershipService {
 
     /**
      * Removes account {@code identityId}'s membership of the scope, and the delegates the account
-     * authorized in it. The account itself and its other memberships remain.
+     * authorized in it. The account itself and its other memberships remain. Under an organization's own
+     * configuration with {@code createUserOnSignIn}, the provider decides who is a member: an account it
+     * still verifies joins again on its next sign-in, so to keep someone out, disable the membership
+     * instead, or remove them at the provider.
      *
      * @return fails with {@link IllegalArgumentException} when the account is not a member
      */

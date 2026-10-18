@@ -118,10 +118,20 @@ public class DefaultInviteService implements InviteService {
                         ret = identityService.createUser(newMember(invite, displayName), password)
                                              .map(DomainUtil::createParticipant);
                     } else {
-                        ret = identityService.findByEmail(invite.getEmail(), null, null).compose(account -> account == null
-                                ? identityService.createUser(newMember(invite, displayName), password)
-                                                 .compose(created -> join(created, invite))
-                                : requireAccountPassword(account, password).compose(v -> join(account, invite)));
+                        ret = identityService.findByEmail(invite.getEmail(), null, null).compose(account -> {
+                            Future<Participant> joined;
+                            if (account == null) {
+                                joined = identityService.createUser(newMember(invite, displayName), password)
+                                                        .compose(created -> join(created, invite));
+                            } else if (!account.isEnabled()) {
+                                // the invitation's holder owns the email, so the account's standing is theirs to learn; a
+                                // password check would answer as for a wrong password
+                                joined = Future.failedFuture(new AccountDisabledException("This account cannot sign in to the organization."));
+                            } else {
+                                joined = requireAccountPassword(account, password).compose(v -> join(account, invite));
+                            }
+                            return joined;
+                        });
                     }
                     return ret.compose(member -> pendingInviteRepository.deleteById(invite.getId()).map(member));
                 });

@@ -69,14 +69,6 @@ public class OidcConfigurationRepository extends AbstractRepository<OidcConfigur
     }
 
     /**
-     * The social registration {@code id}, enabled or not, or {@code null} when no
-     * {@link ApplicationSocialOidcConfiguration} has that id.
-     */
-    public Future<ApplicationSocialOidcConfiguration> findSocialById(String id) {
-        return findById(id).map(config -> config instanceof ApplicationSocialOidcConfiguration social ? social : null);
-    }
-
-    /**
      * The enabled social registrations of the given provider kinds, in the order of {@code providers}. A kind
      * the platform holds no enabled registration for is left out.
      */

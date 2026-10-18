@@ -268,11 +268,15 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
         }
     }
 
-    // the enabled memberships of organizations the account may sign in to; a disabled account has none
+    // the enabled memberships of organizations the account may sign in to; an account that is disabled, or whose
+    // every organization membership is, has none and is told so, as the organization's own login would tell it
     private static List<Membership> organizationMemberships(UserParticipantIdentity account, List<Membership> memberships) {
-        return account.isEnabled()
-                ? memberships.stream().filter(m -> m.getOrganizationId() != null && m.isEnabled()).toList()
-                : List.of();
+        List<Membership> organizations = memberships.stream().filter(m -> m.getOrganizationId() != null).toList();
+        List<Membership> enabled = account.isEnabled() ? organizations.stream().filter(Membership::isEnabled).toList() : List.of();
+        if (enabled.isEmpty() && !organizations.isEmpty()) {
+            throw new OidcCallbackException(OidcErrorCodes.ACCOUNT_DISABLED);
+        }
+        return enabled;
     }
 
     // an account that is a member of several organizations has proven who it is, so the landing page may

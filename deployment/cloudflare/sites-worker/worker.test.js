@@ -32,6 +32,7 @@ describe('resolveHost', () => {
         expect(resolveHost('apps-api.kinotic.io', ZONE)).toBeNull()
         expect(resolveHost('acme--orders.apps-api.kinotic.io', ZONE)).toBeNull()
         expect(resolveHost('www.kinotic.io', ZONE)).toBeNull()
+        expect(resolveHost('system.kinotic.io', ZONE)).toBeNull()
         expect(resolveHost('orders.acme.kinotic.io', ZONE)).toBeNull()
         expect(resolveHost('a--b--c--d.acme.kinotic.io', ZONE)).toBeNull()
         expect(resolveHost('--web.acme.kinotic.io', ZONE)).toBeNull()

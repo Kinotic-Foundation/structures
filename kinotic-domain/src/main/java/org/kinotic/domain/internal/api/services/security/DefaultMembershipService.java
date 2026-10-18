@@ -114,16 +114,24 @@ public class DefaultMembershipService implements MembershipService {
     public Future<Participant> resolveMember(UserParticipantIdentity account, String organizationId) {
         Validate.notNull(account, "account cannot be null");
         Validate.isTrue(account.isAccount(), "%s is not an account", account.getId());
-        return membershipRepository.findById(Membership.idOf(account.getId(), organizationId)).map(membership -> {
-            Participant ret = null;
-            if (membership != null) {
-                if (!account.isEnabled() || !membership.isEnabled()) {
-                    throw new AccountDisabledException("This account cannot sign in to the organization.");
+        Future<Participant> ret;
+        if (Membership.PLATFORM.equals(organizationId)) {
+            // the platform membership's id slot is no organization's: a login addressed to it holds no membership,
+            // so an operator's password at an organization login never yields the platform's participant
+            ret = Future.succeededFuture();
+        } else {
+            ret = membershipRepository.findById(Membership.idOf(account.getId(), organizationId)).map(membership -> {
+                Participant participant = null;
+                if (membership != null) {
+                    if (!account.isEnabled() || !membership.isEnabled()) {
+                        throw new AccountDisabledException("This account cannot sign in to the organization.");
+                    }
+                    participant = DomainUtil.createParticipant(account, membership);
                 }
-                ret = DomainUtil.createParticipant(account, membership);
-            }
-            return ret;
-        });
+                return participant;
+            });
+        }
+        return ret;
     }
 
     @Override

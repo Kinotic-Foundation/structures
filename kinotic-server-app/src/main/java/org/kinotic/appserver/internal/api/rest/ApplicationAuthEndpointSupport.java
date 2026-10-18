@@ -82,21 +82,6 @@ public class ApplicationAuthEndpointSupport extends AuthEndpointSupport {
     }
 
     /**
-     * The application the request was addressed to. Fails the request with {@code 403} when the
-     * page that sent it is not one of the application's UIs.
-     */
-    public ApplicationKey requireApplicationUi(RoutingContext ctx) {
-        ApplicationKey applicationKey = applicationKey(ctx);
-        String origin = SessionBinding.origin(ctx);
-        // a login authenticates the page that made it, so a login made from another application's UI would
-        // hand that UI this application's user; a request naming no page comes from a client outside a browser
-        if (origin != null && !isApplicationUi(applicationKey, origin)) {
-            throw new AuthorizationException("The page is not a UI of this application");
-        }
-        return applicationKey;
-    }
-
-    /**
      * Whether the page at {@code origin} is one of the application's UIs: one of its published sites, or a
      * local origin {@code kinotic.appServer.localUiOriginPattern} admits.
      */
