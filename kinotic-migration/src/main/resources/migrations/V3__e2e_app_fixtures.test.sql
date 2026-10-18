@@ -39,5 +39,5 @@ INSERT INTO kinotic_participant_identity (id, type, machineKind, displayName, au
 INSERT INTO kinotic_identity_credential (id, secretHash) VALUES ('00000000-0000-0000-0000-000000000013', '$2b$12$ztUtxd/6nRYTACObjRNnMOisx3QlNuP2GmabcBdrv4Vcd6Vs46GaG') WITH REFRESH;
 
 -- The tenants the app users above belong to, so a sign-in addressed to the tenant finds them
-INSERT INTO kinotic_tenant (id, organizationId, applicationId, name, description) VALUES ('kinotic', 'kinotic-test', 'e2e-mcp', 'kinotic', 'Tenant of the e2e Mcp application') WITH REFRESH;
-INSERT INTO kinotic_tenant (id, organizationId, applicationId, name, description) VALUES ('tenant01', 'kinotic-test', 'e2e-admin-named-query', 'tenant01', 'Tenant of the e2e AdminNamedQuery application') WITH REFRESH;
+INSERT INTO kinotic_tenant (id, organizationId, applicationId, name, description) VALUES ('kinotic', 'kinotic-test', 'e2e-mcp', 'kinotic', 'Tenant of the e2e Mcp application') WITH REFRESH, ROUTING 'kinotic-test', DOCUMENT_ID 'kinotic-test--kinotic';
+INSERT INTO kinotic_tenant (id, organizationId, applicationId, name, description) VALUES ('tenant01', 'kinotic-test', 'e2e-admin-named-query', 'tenant01', 'Tenant of the e2e AdminNamedQuery application') WITH REFRESH, ROUTING 'kinotic-test', DOCUMENT_ID 'kinotic-test--tenant01';
