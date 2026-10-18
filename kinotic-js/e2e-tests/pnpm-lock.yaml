@@ -34,8 +34,8 @@ importers:
         specifier: ^5.0.0-beta.1
         version: 5.0.0-beta.1
       '@kinotic-ai/kinotic-cli':
-        specifier: ^5.2.0-beta.19
-        version: 5.2.0-beta.19(@types/node@25.9.5)(magicast@0.5.4)
+        specifier: ^5.2.0-beta.27
+        version: 5.2.0-beta.27(@types/node@25.9.5)(magicast@0.5.4)
       '@modelcontextprotocol/sdk':
         specifier: ^1.30.0
         version: 1.30.0(zod@4.4.3)
@@ -451,17 +451,14 @@ packages:
   '@js-sdsl/ordered-map@4.4.2':
     resolution: {integrity: sha512-iUKgm52T8HOE/makSxjqoWhe95ZJA1/G1sYsGev2JDKUSS14KAgg1LHb+Ba+IPow0xflbnSkOsZcO08C7w1gYw==}
 
-  '@kinotic-ai/core@5.0.0-beta.17':
-    resolution: {integrity: sha512-mF5EfKE8WUpUAPRE/SWrKO11WfQQcrDFYhtvl0mmAw+sYKqJ/E6zj5LV+sbLTFXtwtkS9Sf63fHQrI+jOOOuhQ==}
-
   '@kinotic-ai/core@5.0.0-beta.24':
     resolution: {integrity: sha512-OTgPEtIpH1nqwgoFVuZnqRlY11ZiqSguDMLo5rFN7vNioOLHCSZFZ72YLORJpYmRIPJiMYxCAoNbaWX0ojjojQ==}
 
   '@kinotic-ai/idl@5.0.0-beta.1':
     resolution: {integrity: sha512-zM4NGbHQ5JMKYMh+SU/+Q4GL3UPZsJ5oQWbPAlzRvD9SiLzbnD9mVJpukRVbWnu7zxuk3Z6o3WNQ/7YAokEbDg==}
 
-  '@kinotic-ai/kinotic-cli@5.2.0-beta.19':
-    resolution: {integrity: sha512-ws7f5RhTa0hYQK0psTutNeA+cLl2JcM0rhNMyWocqLSbzfJrtLMyGCJ5+ju5F0sKUG8T/GrgCdvnyxD3y99lZA==}
+  '@kinotic-ai/kinotic-cli@5.2.0-beta.27':
+    resolution: {integrity: sha512-PLmSkUUlDEaVYSzmVhBPa9O51iyENyp7JjB8swaqh5Op5PnqYRhJcwnnDbI14eVuIq86q2y1aYf+7oCD5Fy6Vw==}
     engines: {node: '>=18.0.0'}
     hasBin: true
 
@@ -2534,23 +2531,6 @@ snapshots:
 
   '@js-sdsl/ordered-map@4.4.2': {}
 
-  '@kinotic-ai/core@5.0.0-beta.17':
-    dependencies:
-      '@opentelemetry/api': 1.9.1
-      '@opentelemetry/semantic-conventions': 1.43.0
-      '@stomp/rx-stomp': 2.4.0(@stomp/stompjs@7.3.0)(rxjs@7.8.2)(uuid@13.0.2)
-      '@stomp/stompjs': 7.3.0
-      debug: 4.4.3(supports-color@8.1.1)
-      p-tap: 4.0.0
-      rxjs: 7.8.2
-      typescript-optional: 3.0.0-alpha.3
-      uuid: 13.0.2
-      ws: 8.21.2
-    transitivePeerDependencies:
-      - bufferutil
-      - supports-color
-      - utf-8-validate
-
   '@kinotic-ai/core@5.0.0-beta.24':
     dependencies:
       '@opentelemetry/api': 1.9.1
@@ -2570,13 +2550,13 @@ snapshots:
 
   '@kinotic-ai/idl@5.0.0-beta.1': {}
 
-  '@kinotic-ai/kinotic-cli@5.2.0-beta.19(@types/node@25.9.5)(magicast@0.5.4)':
+  '@kinotic-ai/kinotic-cli@5.2.0-beta.27(@types/node@25.9.5)(magicast@0.5.4)':
     dependencies:
       '@inquirer/prompts': 8.5.2(@types/node@25.9.5)
-      '@kinotic-ai/core': 5.0.0-beta.17
+      '@kinotic-ai/core': 5.0.0-beta.24
       '@kinotic-ai/idl': 5.0.0-beta.1
-      '@kinotic-ai/management-api': 5.0.0-beta.42(@kinotic-ai/core@5.0.0-beta.17)
-      '@kinotic-ai/persistence': 5.0.0-beta.12(@kinotic-ai/core@5.0.0-beta.17)
+      '@kinotic-ai/management-api': 5.0.0-beta.42(@kinotic-ai/core@5.0.0-beta.24)
+      '@kinotic-ai/persistence': 5.0.0-beta.12(@kinotic-ai/core@5.0.0-beta.24)
       '@kinotic-ai/spawn': 5.0.0-beta.1
       '@oclif/core': 4.13.3
       c12: 3.3.4(magicast@0.5.4)
@@ -2594,24 +2574,11 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@kinotic-ai/management-api@5.0.0-beta.42(@kinotic-ai/core@5.0.0-beta.17)':
-    dependencies:
-      '@kinotic-ai/core': 5.0.0-beta.17
-      '@kinotic-ai/idl': 5.0.0-beta.1
-      '@kinotic-ai/persistence': 5.0.0-beta.12(@kinotic-ai/core@5.0.0-beta.17)
-      rxjs: 7.8.2
-
   '@kinotic-ai/management-api@5.0.0-beta.42(@kinotic-ai/core@5.0.0-beta.24)':
     dependencies:
       '@kinotic-ai/core': 5.0.0-beta.24
       '@kinotic-ai/idl': 5.0.0-beta.1
       '@kinotic-ai/persistence': 5.0.0-beta.12(@kinotic-ai/core@5.0.0-beta.24)
-      rxjs: 7.8.2
-
-  '@kinotic-ai/persistence@5.0.0-beta.12(@kinotic-ai/core@5.0.0-beta.17)':
-    dependencies:
-      '@kinotic-ai/core': 5.0.0-beta.17
-      '@kinotic-ai/idl': 5.0.0-beta.1
       rxjs: 7.8.2
 
   '@kinotic-ai/persistence@5.0.0-beta.12(@kinotic-ai/core@5.0.0-beta.24)':
