@@ -161,7 +161,7 @@ async function consumeUrlError() {
   } else {
     const choices = await loadChoices()
     if (choices === null) {
-      displayError(errorCodeToMessage('lookup_failed'))
+      displayError('Could not load your organizations. Please sign in again.')
     } else if (choices.length === 0) {
       displayError(errorCodeToMessage(error))
     } else {
@@ -170,8 +170,8 @@ async function consumeUrlError() {
   }
 }
 
-// The organizations the sign-in found; the server hands them out once, so a refresh starts over.
-// null when the request itself failed, which is not the same as the choices having been read.
+// The organizations the sign-in found, offered for a short while after it; null when the request
+// itself failed, where an empty list is the server's answer.
 async function loadChoices(): Promise<string[] | null> {
   let ret: string[] | null = null
   try {

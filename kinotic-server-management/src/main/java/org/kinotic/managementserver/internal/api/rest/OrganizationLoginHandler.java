@@ -33,6 +33,7 @@ import org.kinotic.managementserver.api.config.ManagementServerProperties;
 import org.springframework.stereotype.Component;
 
 import java.net.URI;
+import java.time.Duration;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -67,7 +68,10 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
     private final OidcConfigurationService oidcConfigurationService;
     private final OidcFlowOrchestrator oidcFlowOrchestrator;
 
-    private static final String ORGANIZATION_CHOICES_SESSION_KEY_PREFIX = "organizationChoices:";
+    private static final String ORGANIZATION_CHOICES = "organizationChoices";
+    // long enough for the page the sign-in returns to to load and ask, short enough that the ids are gone
+    // from a browser left on the landing page
+    private static final Duration ORGANIZATION_CHOICES_VALIDITY = Duration.ofMinutes(2);
 
     @Override
     public void mountRoutes(Router router) {
@@ -120,22 +124,32 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
     /**
      * {@code GET /api/auth/org/login/choices} — the ids of the organizations the last landing-page sign-in the
      * requesting page started found the identity a member of, {@code ["acme", "globex"]}, for the page to offer
-     * after {@link OidcErrorCodes#MULTIPLE_ORGANIZATIONS}; read once, so a later call answers {@code []}, as does
-     * a page whose session holds no such sign-in.
+     * after {@link OidcErrorCodes#MULTIPLE_ORGANIZATIONS}. The ids are answered for two minutes after that
+     * sign-in and until the page starts a login at an organization; {@code []} otherwise.
      */
     private void handleChoices(RoutingContext ctx) {
-        // a request without the session cookie reads nothing, so answering it creates no session
-        JsonArray choices = SessionBinding.sessionPresented(ctx)
-                ? ctx.session().remove(choicesKey(SessionBinding.origin(ctx)))
-                : null;
+        JsonArray choices = new JsonArray();
+        // only a request presenting the cookie consults the session, since reading a lazy session creates one
+        if (SessionBinding.sessionPresented(ctx)) {
+            JsonObject offer = ctx.session().get(choicesKey(SessionBinding.origin(ctx)));
+            if (offer != null && System.currentTimeMillis() - offer.getLong("at") < ORGANIZATION_CHOICES_VALIDITY.toMillis()) {
+                choices = offer.getJsonArray("organizations");
+            }
+        }
         ctx.response()
            .putHeader("Content-Type", "application/json")
-           .end((choices != null ? choices : new JsonArray()).encode());
+           .end(choices.encode());
     }
 
-    // the choices are held for the page that started the sign-in, as SessionBinding holds each page's login
     private static String choicesKey(String origin) {
-        return ORGANIZATION_CHOICES_SESSION_KEY_PREFIX + (origin != null ? origin : "");
+        return SessionBinding.pageKey(ORGANIZATION_CHOICES, origin);
+    }
+
+    // the page chose an organization and is signing in there, so the offer it was made is over
+    private static void endOffer(RoutingContext ctx) {
+        if (SessionBinding.sessionPresented(ctx)) {
+            ctx.session().remove(choicesKey(SessionBinding.origin(ctx)));
+        }
     }
 
     /**
@@ -215,6 +229,7 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
      */
     private void handleLogin(RoutingContext ctx) {
         String orgId = ctx.pathParam("orgId");
+        endOffer(ctx);
         authEndpointSupport.handlePasswordLogin(ctx,
                 (email, password) -> localAuthenticationService.authenticateLocal(email, password, null, null)
                                                                .compose(account -> account == null
@@ -233,6 +248,7 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
         String orgId = ctx.pathParam("orgId");
         String configId = ctx.pathParam("configId");
         String origin = SessionBinding.origin(ctx) != null ? SessionBinding.origin(ctx) : portalOrigin();
+        endOffer(ctx);
 
         oidcConfigurationService.findOffered(configId, orgId, null)
               .onSuccess(config -> {
@@ -312,7 +328,12 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
     // that started the sign-in reads them from handleChoices, so the redirect itself carries no ids
     private void signInOrOffer(RoutingContext ctx, String origin, UserParticipantIdentity account, List<Membership> memberships) {
         if (memberships.size() > 1) {
-            ctx.session().put(choicesKey(origin), new JsonArray(memberships.stream().map(Membership::getOrganizationId).toList()));
+            // read without being removed, since a concurrent request on the session would make the removal
+            // unreliable: the offer expires by its timestamp and ends when the page starts an organization's login
+            JsonObject offer = new JsonObject()
+                    .put("organizations", new JsonArray(memberships.stream().map(Membership::getOrganizationId).toList()))
+                    .put("at", System.currentTimeMillis());
+            ctx.session().put(choicesKey(origin), offer);
             authEndpointSupport.redirectToContinue(ctx, origin, OidcErrorCodes.MULTIPLE_ORGANIZATIONS);
         } else {
             authEndpointSupport.completeLogin(ctx, origin, memberships.isEmpty()

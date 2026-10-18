@@ -24,7 +24,7 @@ const LABEL_SEPARATOR = '--'
  * xn--. A host of one of them is never a site, so the Worker refuses it even when a route sends it here.
  */
 const RESERVED_LABELS = new Set(['www', 'api', 'apps-api', 'system-api', 'portal', 'console', 'mail', 'admin', 'login', 'status', 'docs',
-                                 'find', 'social', 'sso', 'providers', 'system', 'xn'])
+                                 'find', 'social', 'sso', 'providers', 'choices', 'system', 'xn'])
 const SITES_CONTAINER = 'sites'
 const INDEX = 'index.html'
 /** Hashed assets are published under this directory and never change, so the edge keeps them. */

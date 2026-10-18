@@ -52,8 +52,9 @@ public abstract class AuthEndpointSupport {
 
     /**
      * Session key holding the SPA path a completed social login returns to, placed by
-     * {@link #handleSocialStart} and consumed by {@link #redirectSuccess}. Carried on the session
-     * because IdP redirect URIs are registered exactly, so it cannot ride in the callback URL.
+     * {@link #redirectToIdp} and consumed by {@link #redirectSuccess}, {@link #redirectError} and
+     * {@link #redirectToContinue}. Carried on the session because IdP redirect URIs are registered
+     * exactly, so it cannot ride in the callback URL.
      */
     private static final String RETURN_PATH_SESSION_KEY = "loginReturnPath";
 

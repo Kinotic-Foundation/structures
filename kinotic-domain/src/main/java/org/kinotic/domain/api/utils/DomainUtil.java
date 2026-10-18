@@ -79,7 +79,7 @@ public class DomainUtil {
     // organization's id would be mistaken for; and the organization slot of a platform membership's id
     private static final Set<String> RESERVED_ORGANIZATION_IDS = Set.of("www", "api", "apps-api", "system-api", "portal",
                                                                          "console", "mail", "admin", "login", "status", "docs",
-                                                                         "find", "social", "sso", "providers",
+                                                                         "find", "social", "sso", "providers", "choices",
                                                                          Membership.PLATFORM);
 
     // Project ids may start with a digit because they embed application ids, which may

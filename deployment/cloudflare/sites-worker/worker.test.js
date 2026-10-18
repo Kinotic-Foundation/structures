@@ -32,7 +32,7 @@ describe('resolveHost', () => {
         expect(resolveHost('apps-api.kinotic.io', ZONE)).toBeNull()
         expect(resolveHost('acme--orders.apps-api.kinotic.io', ZONE)).toBeNull()
         for (const label of ['www', 'api', 'apps-api', 'system-api', 'portal', 'console', 'mail', 'admin', 'login', 'status',
-                             'docs', 'find', 'social', 'sso', 'providers', 'system', 'xn']) {
+                             'docs', 'find', 'social', 'sso', 'providers', 'choices', 'system', 'xn']) {
             expect(resolveHost(`${label}.kinotic.io`, ZONE)).toBeNull()
         }
         expect(resolveHost('orders.acme.kinotic.io', ZONE)).toBeNull()
