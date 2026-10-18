@@ -10,6 +10,9 @@ overrides:
   brace-expansion@2: '^2.1.2'
   brace-expansion@5: '^5.0.7'
   protobufjs@7: '^7.5.5'
+  # @kinotic-ai/kinotic-cli 5.2.0-beta.27 pins an older management-api; one copy keeps the
+  # CLI's and the suites' types identical. Drop once a CLI pinning ^5.0.0-beta.55 is published.
+  '@kinotic-ai/management-api': '^5.0.0-beta.55'
 minimumReleaseAge: 1440 # minutes; third-party releases younger than 24h are rejected
 # First-party packages are trusted at any version, so a freshly published release
 # never blocks the build.
