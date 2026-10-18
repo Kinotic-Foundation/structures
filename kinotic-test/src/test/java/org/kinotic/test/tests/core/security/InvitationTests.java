@@ -1,14 +1,17 @@
 package org.kinotic.test.tests.core.security;
 
 import io.vertx.core.Future;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.domain.api.exceptions.AccountDisabledException;
 import org.kinotic.domain.api.exceptions.ExistingAccountException;
+import org.kinotic.domain.api.model.Organization;
 import org.kinotic.domain.api.model.security.Member;
 import org.kinotic.domain.api.model.security.PendingInvite;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
+import org.kinotic.domain.api.services.OrganizationService;
 import org.kinotic.domain.api.services.security.InviteService;
 import org.kinotic.domain.api.services.security.MembershipService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
@@ -48,11 +51,23 @@ public class InvitationTests extends KinoticTestBase {
     @Autowired
     private MembershipService memberships;
 
+    @Autowired
+    private OrganizationService organizations;
+
+    // an invitation names an organization that exists, so each test invites into one of its own
+    private Organization organization;
+
+    @BeforeEach
+    public void createOrganization() throws Exception {
+        organization = await(organizations.create(new Organization().setName("Invitation tests " + suffix())
+                                                                    .setDescription("Organization of one invitation test")));
+    }
+
     @Test
     public void anInvitationIsRefusedForAnEmailAlreadyAMemberOfTheOrganization() throws Exception {
         String email = "member-" + suffix() + "@example.test";
         UserParticipantIdentity account = await(identities.createUser(account(email, "Existing member"), PASSWORD));
-        await(memberships.addMember(account.getId(), TEST_ORG_ID));
+        await(memberships.addMember(account.getId(), organization.getId()));
 
         Throwable refusal = failure(() -> invites.createInvite(invite(email)));
         assertInstanceOf(IllegalArgumentException.class, refusal);
@@ -65,8 +80,8 @@ public class InvitationTests extends KinoticTestBase {
         PendingInvite invite = await(invites.createInvite(invite(email)));
         // the account joins and is disabled in the organization while the invitation is still out
         UserParticipantIdentity account = await(identities.createUser(account(email, "Disabled member"), PASSWORD));
-        await(memberships.addMember(account.getId(), TEST_ORG_ID));
-        await(memberships.setMemberEnabled(account.getId(), TEST_ORG_ID, false));
+        await(memberships.addMember(account.getId(), organization.getId()));
+        await(memberships.setMemberEnabled(account.getId(), organization.getId(), false));
 
         String token = invite.getVerificationToken();
         assertInstanceOf(ExistingAccountException.class, failure(() -> invites.acceptLocalInvite(token, "not-the-password", null)));
@@ -90,11 +105,11 @@ public class InvitationTests extends KinoticTestBase {
         assertEquals(1, found.getTotalElements());
     }
 
-    private static PendingInvite invite(String email) {
+    private PendingInvite invite(String email) {
         PendingInvite invite = new PendingInvite();
         invite.setEmail(email);
         invite.setDisplayName("Invitee");
-        invite.setOrganizationId(TEST_ORG_ID);
+        invite.setOrganizationId(organization.getId());
         invite.setInvitedByName("Invitation tests");
         return invite;
     }
