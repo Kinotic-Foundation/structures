@@ -13,6 +13,7 @@ import org.kinotic.core.api.security.ConnectedInfo;
 import org.kinotic.core.api.security.Participant;
 import org.kinotic.core.api.security.SessionBinding;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
+import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
 import org.kinotic.domain.api.model.security.OwnedOidcConfiguration;
 import org.kinotic.domain.api.model.security.DelegateKind;
 import org.kinotic.domain.api.model.security.identity.ParticipantIdentity;
@@ -339,15 +340,15 @@ public abstract class AuthEndpointSupport {
 
     /**
      * Standard social start endpoint: resolves the {@code :provider} path parameter to the enabled
-     * Kinotic-curated configuration for that provider kind and redirects the browser to its IdP,
-     * writing a {@code 400} for an unknown or disabled provider. The caller supplies the callback
-     * URL the IdP returns to, which is what distinguishes a signup start from a login start. The
-     * flow names no organization: its callback resolves the identity across every organization.
+     * Kinotic-curated configuration for that provider kind, begins the flow {@code start} returns the
+     * authorization URL of, and redirects the browser to it, writing a {@code 400} for an unknown or
+     * disabled provider. The flow {@code start} begins is what distinguishes a sign-up start from a
+     * login start; neither names an organization.
      * <p>
      * A {@code referer} query parameter naming a path within the SPA is where the browser lands
      * once the flow completes.
      */
-    public void handleSocialStart(RoutingContext ctx, Function<String, String> callbackUrl) {
+    public void handleSocialStart(RoutingContext ctx, Function<OrgSignupOidcConfiguration, Future<String>> start) {
         String provider = ctx.pathParam("provider");
         OidcProviderKind providerKind;
         try {
@@ -362,7 +363,7 @@ public abstract class AuthEndpointSupport {
                   if (config == null) {
                       respondError(ctx, 400, "Unknown or disabled platform provider: " + provider);
                   } else {
-                      redirectToIdp(ctx, config, callbackUrl.apply(config.getId()), null, SessionBinding.origin(ctx));
+                      redirectToIdp(ctx, config, start.apply(config));
                   }
               })
               .onFailure(ex -> {
@@ -378,8 +379,14 @@ public abstract class AuthEndpointSupport {
      * query parameter naming a path within the SPA is where the browser lands once the flow completes.
      */
     public void redirectToIdp(RoutingContext ctx, OidcConfiguration config, String callbackUrl, String orgId, String origin) {
+        redirectToIdp(ctx, config, oidcFlowOrchestrator.startFlow(ctx, config, callbackUrl, orgId, origin));
+    }
+
+    // the browser goes to the authorization URL the flow {@code started} yields, to land on the request's
+    // referer path once the flow completes
+    private void redirectToIdp(RoutingContext ctx, OidcConfiguration config, Future<String> started) {
         String returnPath = safeReturnPath(ctx.request().getParam("referer"));
-        oidcFlowOrchestrator.startFlow(ctx, config, callbackUrl, orgId, origin)
+        started
               .onSuccess(url -> {
                   // written after startFlow, which regenerates the session id. each start
                   // defines where its own flow lands, so a path a previous one abandoned at
@@ -507,19 +514,31 @@ public abstract class AuthEndpointSupport {
      * error page of the page that started the flow and returns {@code null}.
      */
     public String verifiedSubject(RoutingContext ctx, CallbackResult<? extends OidcConfiguration> result) {
-        Map<String, Object> claims = result.claims();
-        String sub = OAuth2Util.stringClaim(claims, "sub");
         String ret;
-        if (sub == null) {
-            redirectError(ctx, result.origin(), OidcErrorCodes.INVALID_TOKEN);
+        try {
+            ret = requireVerifiedSubject(result);
+        } catch (OidcCallbackException ex) {
+            redirectError(ctx, result.origin(), ex.getErrorCode());
             ret = null;
-        } else if (!OAuth2Util.isEmailVerified(claims, result.config().getProvider())) {
-            redirectError(ctx, result.origin(), OidcErrorCodes.EMAIL_NOT_VERIFIED);
-            ret = null;
-        } else {
-            ret = sub;
         }
         return ret;
+    }
+
+    /**
+     * The {@code sub} claim of an identity the IdP returned that may sign in, as {@link #verifiedSubject}; an
+     * identity that may not fails with an {@link OidcCallbackException} carrying {@link OidcErrorCodes#INVALID_TOKEN}
+     * or {@link OidcErrorCodes#EMAIL_NOT_VERIFIED}, for a completer whose error page is not the login page.
+     */
+    public String requireVerifiedSubject(CallbackResult<? extends OidcConfiguration> result) {
+        Map<String, Object> claims = result.claims();
+        String sub = OAuth2Util.stringClaim(claims, "sub");
+        if (sub == null) {
+            throw new OidcCallbackException(OidcErrorCodes.INVALID_TOKEN);
+        }
+        if (!OAuth2Util.isEmailVerified(claims, result.config().getProvider())) {
+            throw new OidcCallbackException(OidcErrorCodes.EMAIL_NOT_VERIFIED);
+        }
+        return sub;
     }
 
     /**

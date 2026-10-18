@@ -10,11 +10,9 @@ import org.kinotic.domain.api.model.Organization;
 import org.kinotic.domain.api.rest.support.*;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
-import org.kinotic.domain.api.model.security.OidcProviderKind;
 import org.kinotic.domain.api.exceptions.ExistingAccountException;
 import org.kinotic.domain.api.model.security.PendingSignUp;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
-import org.kinotic.domain.api.services.security.OidcConfigurationService;
 import org.kinotic.domain.api.services.security.SignUpService;
 import org.kinotic.domain.api.rest.SuppliesGatewayRoutes;
 import org.kinotic.managementserver.api.config.ManagementServerProperties;
@@ -35,7 +33,6 @@ import java.util.Map;
 public class OrganizationSignupHandler implements SuppliesGatewayRoutes, OidcFlowCompleter {
 
     private final ParticipantIdentityService identityService;
-    private final OidcConfigurationService oidcConfigurationService;
     private final SignUpService signUpService;
     private final OidcFlowOrchestrator oidcFlowOrchestrator;
     private final AuthEndpointSupport authEndpointSupport;
@@ -121,27 +118,8 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes, OidcFlo
      * {@code 400} for an unknown or disabled provider.
      */
     private void handleSocialStart(RoutingContext ctx) {
-        String provider = ctx.pathParam("provider");
-        OidcProviderKind providerKind;
-        try {
-            providerKind = OidcProviderKind.fromKey(provider);
-        } catch (IllegalArgumentException ex) {
-            authEndpointSupport.respondError(ctx, 400, "Unknown platform provider: " + provider);
-            return;
-        }
-        oidcConfigurationService.findEnabledOrgSignupByProvider(providerKind)
-              .compose(config -> config == null
-                      ? Future.<String>failedFuture(new IllegalArgumentException("Unknown or disabled platform provider: " + provider))
-                      : oidcFlowOrchestrator.startSignUp(ctx, config, OrganizationOidcCallbacks.socialCallbackUrl(properties.getApiBaseUrl(), config.getId())))
-              .onSuccess(url -> ctx.response().setStatusCode(302).putHeader("Location", url).end())
-              .onFailure(err -> {
-                  if (err instanceof IllegalArgumentException) {
-                      authEndpointSupport.respondError(ctx, 400, err.getMessage());
-                  } else {
-                      log.error("Social sign-up failed to start for provider {}", provider, err);
-                      authEndpointSupport.respondError(ctx, 500, "Provider initialization failed");
-                  }
-              });
+        authEndpointSupport.handleSocialStart(ctx, config -> oidcFlowOrchestrator.startSignUp(
+                ctx, config, OrganizationOidcCallbacks.socialCallbackUrl(properties.getApiBaseUrl(), config.getId())));
     }
 
     @Override

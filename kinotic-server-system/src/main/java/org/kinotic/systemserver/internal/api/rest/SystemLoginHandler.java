@@ -38,6 +38,6 @@ public class SystemLoginHandler implements SuppliesGatewayRoutes {
                 (email, password) -> localAuthenticationService.authenticateLocal(email, password, null, null)
                                                                .compose(account -> account == null
                                                                        ? Future.succeededFuture()
-                                                                       : identityService.resolveParticipant(account.getId(), null, null)));
+                                                                       : identityService.resolveParticipant(account, null, null)));
     }
 }

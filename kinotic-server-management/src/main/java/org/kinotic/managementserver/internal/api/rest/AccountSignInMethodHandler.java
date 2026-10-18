@@ -108,17 +108,16 @@ public class AccountSignInMethodHandler implements SuppliesGatewayRoutes, OidcFl
      */
     @Override
     public void complete(RoutingContext ctx, CallbackResult<OidcConfiguration> result) {
-        String sub = authEndpointSupport.verifiedSubject(ctx, result);
-        if (sub != null) {
-            identityService.bindOidcIdentity(result.accountId(), result.config().getId(), sub)
-                           .onSuccess(binding -> authEndpointSupport.redirectToUi(ctx, PROFILE_PATH + "?connected="
-                                   + URLEncoder.encode(result.config().getName(), StandardCharsets.UTF_8)))
-                           .onFailure(err -> {
-                               String code = err instanceof IllegalArgumentException ? IDENTITY_IN_USE : "exchange_failed";
-                               log.warn("Could not connect a sign-in method to account {}: {}", result.accountId(), err.getMessage());
-                               authEndpointSupport.redirectToUi(ctx, PROFILE_PATH + "?error=" + code);
-                           });
-        }
+        Future.succeededFuture(result)
+              .map(authEndpointSupport::requireVerifiedSubject)
+              .compose(sub -> identityService.bindOidcIdentity(result.accountId(), result.config().getId(), sub))
+              .onSuccess(binding -> authEndpointSupport.redirectToUi(ctx, PROFILE_PATH + "?connected="
+                      + URLEncoder.encode(result.config().getName(), StandardCharsets.UTF_8)))
+              .onFailure(err -> {
+                  String code = err instanceof IllegalArgumentException ? IDENTITY_IN_USE : authEndpointSupport.callbackErrorCode(err);
+                  log.warn("Could not connect a sign-in method to account {}: {}", result.accountId(), err.getMessage());
+                  authEndpointSupport.redirectToUi(ctx, PROFILE_PATH + "?error=" + code);
+              });
     }
 
     @Override

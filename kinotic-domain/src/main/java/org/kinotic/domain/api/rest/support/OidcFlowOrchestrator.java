@@ -105,6 +105,10 @@ public class OidcFlowOrchestrator {
         String state = ctx.request().getParam("state");
         String idpError = ctx.request().getParam("error");
 
+        // consumed first, so a flow the IdP refused or a malformed return cannot be completed by a later callback
+        Session session = ctx.session();
+        OidcFlowSession flowSession = session.remove(OIDC_FLOW_SESSION_KEY);
+
         if (idpError != null) {
             log.info("OIDC callback error from config {}: {}", pathConfigId, idpError);
             return Future.failedFuture(new OidcCallbackException(idpError));
@@ -112,9 +116,6 @@ public class OidcFlowOrchestrator {
         if (code == null || state == null) {
             return Future.failedFuture(new OidcCallbackException(OidcErrorCodes.INVALID_CALLBACK));
         }
-
-        Session session = ctx.session();
-        OidcFlowSession flowSession = session.remove(OIDC_FLOW_SESSION_KEY);
 
         if (flowSession == null || !flowSession.state().equals(state)
                 || !flowSession.configId().equals(pathConfigId)) {

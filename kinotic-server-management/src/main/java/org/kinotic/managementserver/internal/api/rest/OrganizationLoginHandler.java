@@ -88,7 +88,8 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
     /**
      * {@code POST /api/auth/org/switch {organizationId}} — signs the page's signed-in account in to another
      * organization it is a member of, replacing the page's login; {@code 204} once switched, {@code 403} for an
-     * organization the account may not sign in to, {@code 401} without a signed-in user.
+     * organization the account may not sign in to, {@code 400} for an id no organization can have, {@code 401}
+     * without a signed-in user.
      */
     private void handleSwitch(RoutingContext ctx) {
         Participant current = authEndpointSupport.requireSessionUser(ctx);
@@ -106,8 +107,12 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
                            }
                        })
                        .onFailure(err -> {
-                           log.warn("Switching {} to organization {} failed: {}", current.getId(), organizationId, err.getMessage());
-                           authEndpointSupport.respondError(ctx, 500, "Failed to switch organization");
+                           if (err instanceof IllegalArgumentException) {
+                               authEndpointSupport.respondError(ctx, 400, err.getMessage());
+                           } else {
+                               log.warn("Switching {} to organization {} failed: {}", current.getId(), organizationId, err.getMessage());
+                               authEndpointSupport.respondError(ctx, 500, "Failed to switch organization");
+                           }
                        });
     }
 
@@ -192,7 +197,7 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
                 (email, password) -> localAuthenticationService.authenticateLocal(email, password, null, null)
                                                                .compose(account -> account == null
                                                                        ? Future.succeededFuture()
-                                                                       : identityService.resolveParticipant(account.getId(), orgId, null)));
+                                                                       : identityService.resolveParticipant(account, orgId, null)));
     }
 
     /**
@@ -227,7 +232,8 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
      * organization, so its callback finds the one the identity is a member of.
      */
     private void handleSocialStart(RoutingContext ctx) {
-        authEndpointSupport.handleSocialStart(ctx, configId -> OrganizationOidcCallbacks.socialCallbackUrl(properties.getApiBaseUrl(), configId));
+        authEndpointSupport.handleSocialStart(ctx, config -> oidcFlowOrchestrator.startFlow(
+                ctx, config, OrganizationOidcCallbacks.socialCallbackUrl(properties.getApiBaseUrl(), config.getId()), null, SessionBinding.origin(ctx)));
     }
 
     @Override
@@ -315,11 +321,20 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
                         }
                         return ret;
                     })
-                    .compose(account -> account == null
-                            ? Future.succeededFuture()
-                            : joinsOnSignIn
-                                    ? membershipService.addMember(account.getId(), result.orgId()).compose(m -> memberOf(account, result.orgId()))
-                                    : memberOf(account, result.orgId()));
+                    .compose(account -> {
+                        Future<Participant> ret;
+                        if (account == null) {
+                            ret = Future.succeededFuture();
+                        } else if (!account.isEnabled()) {
+                            // refused before joining, so a disabled account is not made a member by its own sign-in
+                            ret = Future.failedFuture(new OidcCallbackException(OidcErrorCodes.ACCOUNT_DISABLED));
+                        } else if (joinsOnSignIn) {
+                            ret = membershipService.addMember(account.getId(), result.orgId()).compose(m -> memberOf(account, result.orgId()));
+                        } else {
+                            ret = memberOf(account, result.orgId());
+                        }
+                        return ret;
+                    });
             authEndpointSupport.completeLogin(ctx, result.origin(), participant);
         }
     }

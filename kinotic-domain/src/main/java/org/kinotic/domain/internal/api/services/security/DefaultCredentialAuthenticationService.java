@@ -135,7 +135,7 @@ public class DefaultCredentialAuthenticationService implements CredentialAuthent
         return localAuthenticationService.authenticateLocal(email, password, userOrganizationId, applicationId)
                      .compose(user -> user == null
                              ? Future.succeededFuture()
-                             : identityService.resolveParticipant(user.getId(), organizationId, applicationId)
+                             : identityService.resolveParticipant(user, organizationId, applicationId)
                                               .map(participant -> participant == null ? null : new AuthenticatedIdentity(user, participant)))
                      .compose(authenticated -> authenticated == null
                              ? Future.failedFuture(new AuthenticationException("Invalid credentials"))

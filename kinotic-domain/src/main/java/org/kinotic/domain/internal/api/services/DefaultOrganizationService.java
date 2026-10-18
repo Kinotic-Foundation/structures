@@ -68,7 +68,8 @@ public class DefaultOrganizationService extends AbstractCrudService<Organization
     public Future<Void> sendMembershipsEmail(String email) {
         Validate.notBlank(email, "email cannot be blank");
         return identityRepository.findByEmail(email, null, null)
-                                 .compose(account -> account == null
+                                 // a disabled account signs in nowhere, so it is told of no organizations, as the landing page tells it
+                                 .compose(account -> account == null || !account.isEnabled()
                                          ? Future.succeededFuture(List.<Membership>of())
                                          : membershipRepository.findByIdentity(account.getId()))
                                  .compose(memberships -> findAllById(memberships.stream()
