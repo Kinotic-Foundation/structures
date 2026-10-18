@@ -41,3 +41,7 @@ INSERT INTO kinotic_identity_credential (id, secretHash) VALUES ('00000000-0000-
 -- The tenants the app users above belong to, so a sign-in addressed to the tenant finds them
 INSERT INTO kinotic_tenant (id, organizationId, applicationId, name, description) VALUES ('kinotic', 'kinotic-test', 'e2e-mcp', 'kinotic', 'Tenant of the e2e Mcp application') WITH REFRESH, ROUTING 'kinotic-test', DOCUMENT_ID 'kinotic-test--kinotic';
 INSERT INTO kinotic_tenant (id, organizationId, applicationId, name, description) VALUES ('tenant01', 'kinotic-test', 'e2e-admin-named-query', 'tenant01', 'Tenant of the e2e AdminNamedQuery application') WITH REFRESH, ROUTING 'kinotic-test', DOCUMENT_ID 'kinotic-test--tenant01';
+
+-- A second organization the e2e organization user is a member of, so a signed-in member can switch to it
+INSERT INTO kinotic_organization (id, name, description) VALUES ('e2e-second', 'e2e-second', 'Second organization of the e2e organization user, for switching') WITH REFRESH;
+INSERT INTO kinotic_membership (id, identityId, organizationId, enabled, created, updated) VALUES ('00000000-0000-0000-0000-000000000002:e2e-second', '00000000-0000-0000-0000-000000000002', 'e2e-second', true, '2026-01-01', '2026-01-01') WITH REFRESH;
