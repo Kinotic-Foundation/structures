@@ -111,6 +111,13 @@ variable "cloudflare_dns_api_token" {
   default     = ""
 }
 
+variable "turnstile_secret_key" {
+  description = "The secret key of the Cloudflare Turnstile site the portal's find-my-organizations form presents, which the management server verifies each request's token with; the cluster root passes the site key as turnstile_site_key"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 variable "github_webhook_secret" {
   description = "Webhook secret of the kinotic-ai GitHub App, which the management server verifies webhook deliveries with"
   type        = string

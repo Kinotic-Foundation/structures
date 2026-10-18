@@ -208,6 +208,25 @@ resource "azurerm_key_vault_secret" "cloudflare_dns_api_token" {
   depends_on = [terraform_data.wait_for_kv_rbac]
 }
 
+# The Turnstile site's secret key the management server imports as
+# kinotic.managementServer.turnstile.secretKey, with which it verifies the token the portal's
+# find-my-organizations form earns. Supplied via TF_VAR_turnstile_secret_key on first apply;
+# rotations happen out-of-band via `az keyvault secret set ...` and lifecycle.ignore_changes keeps them.
+resource "azurerm_key_vault_secret" "turnstile_secret_key" {
+  name         = "kinotic-turnstile-secret-key"
+  key_vault_id = azurerm_key_vault.platform.id
+  content_type = "Cloudflare Turnstile site secret key"
+  value        = var.turnstile_secret_key
+
+  tags = local.common_tags
+
+  lifecycle {
+    ignore_changes = [value]
+  }
+
+  depends_on = [terraform_data.wait_for_kv_rbac]
+}
+
 # ── OIDC client secrets ───────────────────────────────────────────────────────
 # Stored at name = configId. SecretReferenceResolver in the servers fetches by name
 # at OAuth2-build time (no pod-side mount); the secretNameRef on the

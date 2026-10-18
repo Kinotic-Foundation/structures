@@ -149,3 +149,8 @@ variable "cloudflare_dns_api_token" {
   type        = string
   sensitive   = true
 }
+
+variable "turnstile_site_key" {
+  description = "The site key of the Cloudflare Turnstile site the portal's find-my-organizations form presents; public, and the pair of the secret the global root stores as kinotic-turnstile-secret-key"
+  type        = string
+}

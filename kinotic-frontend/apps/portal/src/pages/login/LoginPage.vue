@@ -63,11 +63,14 @@
               @keyup.enter="findOrganizations"
             />
           </IconField>
+          <!-- The Cloudflare Turnstile challenge the server requires with the request, when it names a site -->
+          <div v-if="turnstileSiteKey" ref="turnstileEl" class="login-find__challenge"></div>
           <Button
             label="Email me my organizations"
             class="login-submit"
             severity="secondary"
             :loading="sending"
+            :disabled="turnstileSiteKey !== null && !turnstileToken"
             @click="findOrganizations"
           />
         </template>
@@ -105,6 +108,29 @@ const organization = ref<string>('')
 const email = ref<string>('')
 const finding = ref<boolean>(false)
 const sending = ref<boolean>(false)
+const turnstileSiteKey = ref<string | null>(null)
+const turnstileToken = ref<string>('')
+const turnstileEl = ref<HTMLElement | null>(null)
+let turnstileWidget: string | null = null
+
+/** The Cloudflare Turnstile API its challenge script defines on the page. */
+interface Turnstile {
+  render(container: HTMLElement, options: {
+    sitekey: string
+    callback: (token: string) => void
+    'expired-callback'?: () => void
+    'error-callback'?: () => void
+  }): string
+  reset(widgetId: string): void
+  remove(widgetId: string): void
+}
+
+declare global {
+  interface Window { turnstile?: Turnstile }
+}
+
+const TURNSTILE_SCRIPT = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit'
+let turnstileLoading: Promise<Turnstile> | null = null
 const providers = ref<string[]>([])
 const memberships = ref<string[]>([])
 
@@ -126,8 +152,70 @@ onMounted(() => {
 })
 
 watch(finding, open => {
-  if (open) nextTick(() => focus(emailInput))
+  if (open) {
+    nextTick(() => focus(emailInput))
+    void presentChallenge()
+  } else {
+    dismissChallenge()
+  }
 })
+
+// The find route is open to anyone, so the server may require a Turnstile token with the request: GET names
+// the site whose challenge the page presents, or nothing when the deployment requires none
+async function presentChallenge() {
+  try {
+    const res = await fetch(apiUrl('/api/auth/org/login/find'), { credentials: 'same-origin' })
+    const data = res.ok ? await res.json() : {}
+    turnstileSiteKey.value = typeof data?.turnstileSiteKey === 'string' ? data.turnstileSiteKey : null
+  } catch (err) {
+    debug('Failed to load the find challenge: %O', err)
+    turnstileSiteKey.value = null
+  }
+  if (!turnstileSiteKey.value) return
+  try {
+    const turnstile = await loadTurnstile()
+    await nextTick()
+    if (turnstileEl.value && finding.value) {
+      turnstileWidget = turnstile.render(turnstileEl.value, {
+        sitekey: turnstileSiteKey.value,
+        callback: token => { turnstileToken.value = token },
+        'expired-callback': () => { turnstileToken.value = '' },
+        'error-callback': () => { turnstileToken.value = '' },
+      })
+    }
+  } catch (err) {
+    debug('Failed to present the challenge: %O', err)
+    displayError('Could not load the verification. Please try again later.')
+  }
+}
+
+function dismissChallenge() {
+  if (turnstileWidget) {
+    window.turnstile?.remove(turnstileWidget)
+    turnstileWidget = null
+  }
+  turnstileToken.value = ''
+  turnstileSiteKey.value = null
+}
+
+// Loaded once, the first time a challenge is presented; the script defines window.turnstile
+function loadTurnstile(): Promise<Turnstile> {
+  if (!turnstileLoading) {
+    turnstileLoading = new Promise((resolve, reject) => {
+      if (window.turnstile) {
+        resolve(window.turnstile)
+        return
+      }
+      const script = document.createElement('script')
+      script.src = TURNSTILE_SCRIPT
+      script.async = true
+      script.onload = () => window.turnstile ? resolve(window.turnstile) : reject(new Error('Turnstile did not load'))
+      script.onerror = () => reject(new Error('Turnstile did not load'))
+      document.head.appendChild(script)
+    })
+  }
+  return turnstileLoading
+}
 
 /**
  * The gateway endpoint that starts a social login, carrying the router guard's `referer` so the
@@ -244,7 +332,7 @@ async function findOrganizations() {
     const res = await fetch(apiUrl('/api/auth/org/login/find'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email.value })
+      body: JSON.stringify({ email: email.value, turnstileToken: turnstileToken.value || undefined })
     })
     if (!res.ok) {
       throw new Error(await readAuthError(res, 'Could not send the email'))
@@ -255,6 +343,11 @@ async function findOrganizations() {
     displayError(err instanceof Error ? err.message : 'Could not send the email')
   } finally {
     sending.value = false
+    // a token verifies once, so the next attempt needs a new one
+    if (turnstileWidget) {
+      window.turnstile?.reset(turnstileWidget)
+      turnstileToken.value = ''
+    }
   }
 }
 
@@ -335,6 +428,13 @@ function displayError(text: string) {
 .login-find__hint {
   margin: 0 0 1rem;
   color: var(--lp-text);
+}
+
+.login-find__challenge {
+  display: flex;
+  justify-content: center;
+  min-height: 65px;
+  margin: 0 0 1rem;
 }
 
 .login-signup-link {

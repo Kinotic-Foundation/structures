@@ -36,6 +36,7 @@ cloudflare_zone_id       = ""  # set in local.auto.tfvars
 cloudflare_account_id    = ""  # set in local.auto.tfvars
 cloudflare_api_token     = ""  # set in local.auto.tfvars
 cloudflare_dns_api_token = ""  # set in local.auto.tfvars
+turnstile_site_key       = ""  # set in local.auto.tfvars
 
 # ── Tags ──────────────────────────────────────────────────────────────────────
 tags = {

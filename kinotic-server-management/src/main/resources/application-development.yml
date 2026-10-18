@@ -19,6 +19,11 @@ kinotic:
     # surface all share the tunnel's one origin.
     apiBaseUrl: http://localhost:5173
     portalBaseUrl: http://localhost:5173
+    turnstile:
+      # Cloudflare's always-passing test site: the find-my-organizations form renders the widget and every
+      # token verifies, so the form works with no Turnstile site of one's own
+      siteKey: 1x00000000000000000000AA
+      secretKey: 1x0000000000000000000000000000000AA
   domain:
     email:
       # The portal serves the pages the emailed verification and invite links open

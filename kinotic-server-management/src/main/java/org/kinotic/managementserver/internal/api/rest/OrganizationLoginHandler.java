@@ -30,6 +30,8 @@ import org.kinotic.domain.api.services.security.LocalAuthenticationService;
 import org.kinotic.domain.api.services.security.OidcConfigurationService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.managementserver.api.config.ManagementServerProperties;
+import org.kinotic.managementserver.api.config.TurnstileProperties;
+import org.kinotic.managementserver.internal.api.services.TurnstileVerifier;
 import org.springframework.stereotype.Component;
 
 import java.net.URI;
@@ -67,6 +69,7 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
     private final LocalAuthenticationService localAuthenticationService;
     private final OidcConfigurationService oidcConfigurationService;
     private final OidcFlowOrchestrator oidcFlowOrchestrator;
+    private final TurnstileVerifier turnstileVerifier;
 
     private static final String ORGANIZATION_CHOICES = "organizationChoices";
     // long enough for the page the sign-in returns to to load and ask, short enough that the ids are gone
@@ -78,6 +81,7 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
         // the landing page, addressed to no organization
         router.get("/api/auth/org/login/providers").handler(this::handleProviders);
         router.get("/api/auth/org/login/choices").handler(this::handleChoices);
+        router.get("/api/auth/org/login/find").handler(this::handleFindChallenge);
         router.post("/api/auth/org/login/find").handler(this::handleFind);
         router.post("/api/auth/org/login/social/start/:provider").handler(this::handleSocialStart);
         // one organization's login
@@ -176,9 +180,24 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
     }
 
     /**
-     * {@code POST /api/auth/org/login/find {email}} — emails the address the organizations it is a member
-     * of, each with a link to that organization's login. Always {@code 204}: the email says when the
-     * address belongs to no organization, so the response reveals nothing about it.
+     * {@code GET /api/auth/org/login/find} — what the page must present to have an address's organizations
+     * emailed: {@code {turnstileSiteKey}}, the Cloudflare Turnstile site whose token the {@code POST} requires, or
+     * {@code {}} when the deployment requires none.
+     */
+    private void handleFindChallenge(RoutingContext ctx) {
+        TurnstileProperties turnstile = properties.getTurnstile();
+        JsonObject challenge = new JsonObject();
+        if (turnstile.isEnabled()) {
+            challenge.put("turnstileSiteKey", turnstile.getSiteKey());
+        }
+        ctx.response().putHeader("Content-Type", "application/json").end(challenge.encode());
+    }
+
+    /**
+     * {@code POST /api/auth/org/login/find {email, turnstileToken}} — emails the address the organizations it may
+     * sign in to, each with a link to its login. Always {@code 204} once the token verifies, whether or not the
+     * address belongs to any organization, so the response reveals nothing about it; {@code 400} for a token that
+     * is missing or refused, since the route is open to anyone and would otherwise send mail on demand.
      */
     private void handleFind(RoutingContext ctx) {
         JsonObject body = authEndpointSupport.readJsonBody(ctx);
@@ -187,12 +206,19 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
             authEndpointSupport.respondError(ctx, 400, "email is required");
             return;
         }
-        organizationService.sendMembershipsEmail(email)
-                           .onSuccess(v -> ctx.response().setStatusCode(204).end())
-                           .onFailure(err -> {
-                               log.warn("Could not email the organizations of {}: {}", email, err.getMessage());
-                               authEndpointSupport.respondError(ctx, 500, "Could not send the email");
-                           });
+        turnstileVerifier.verify(body.getString("turnstileToken"))
+                         .compose(human -> human
+                                 ? organizationService.sendMembershipsEmail(email)
+                                 : Future.failedFuture(new HttpException(400, "Complete the verification and try again")))
+                         .onSuccess(v -> ctx.response().setStatusCode(204).end())
+                         .onFailure(err -> {
+                             if (err instanceof HttpException http && http.getStatusCode() == 400) {
+                                 authEndpointSupport.respondError(ctx, 400, http.getPayload());
+                             } else {
+                                 log.warn("Could not email the organizations of {}: {}", email, err.getMessage());
+                                 authEndpointSupport.respondError(ctx, 500, "Could not send the email");
+                             }
+                         });
     }
 
     /**

@@ -11,6 +11,12 @@ spring:
     # the host by sync-secrets.sh and mounted read-only
     import: optional:file:/etc/kinotic/secrets.yml
 kinotic:
+  managementServer:
+    turnstile:
+      # Cloudflare's always-passing test site, as in development: the development server has no Turnstile
+      # site of its own, so the find-my-organizations form renders the widget and every token verifies
+      siteKey: 1x00000000000000000000AA
+      secretKey: 1x0000000000000000000000000000000AA
   managementApi:
     entityDefinition:
       # Three master-eligible data nodes, one physical disk each: one replica survives a disk,

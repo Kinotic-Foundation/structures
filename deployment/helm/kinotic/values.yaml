@@ -30,6 +30,10 @@ servers:
       # the portal, where browser flows return and where the emailed verification and invite
       # links open
       portalBaseUrl: "http://localhost:9090"
+      # kinotic.managementServer.turnstile.siteKey: the Cloudflare Turnstile site the portal's
+      # find-my-organizations form presents; its secret is mounted with turnstile set below
+      turnstile:
+        siteKey: ""
     # The Secret holding this server's certificate when tls.enabled
     tlsSecretName: kinotic-server-management-tls
     # Mounts the platform GitHub App's private key and webhook secret, which a server loading
@@ -38,6 +42,9 @@ servers:
     # Mounts the Cloudflare DNS token, with which this server creates an organization's sites
     # record when an organization signs up
     cloudflareDns: true
+    # Mounts the Turnstile site's secret key, with which this server verifies the token each
+    # find-my-organizations request carries
+    turnstile: true
     service:
       type: ClusterIP
       nodePorts:
@@ -69,6 +76,7 @@ servers:
     deployment:
       appApiBaseUrl: "http://localhost:58505"
     tlsSecretName: kinotic-server-system-tls
+    turnstile: false
     githubApp: true
     # the system server creates an organization's sites record before its first site is published
     cloudflareDns: true
@@ -93,6 +101,7 @@ servers:
     appServer:
       apiBaseUrl: "http://localhost:58505"
     tlsSecretName: kinotic-server-app-tls
+    turnstile: false
     githubApp: false
     cloudflareDns: false
     service:
@@ -201,6 +210,9 @@ platformSecrets:
     # kinotic.domain.publishedSites.cloudflare.apiToken, on a server with cloudflareDns set: the management
     # server creates an organization's sites record at sign-up, the system server before its first publish
     cloudflareDnsApiToken: kinotic-cloudflare-dns-api-token
+    # kinotic.managementServer.turnstile.secretKey, on a server with turnstile set: the management server
+    # verifies the token the portal's find-my-organizations form earns from the Turnstile site
+    turnstileSecretKey: kinotic-turnstile-secret-key
 
 # OIDC client secrets are now resolved at runtime by SecretReferenceResolver — Azure Key
 # Vault in production (kinotic.domain.secretStorage.azure.vaultUrl) or KINOTIC_AKV_<sanitizedName>
