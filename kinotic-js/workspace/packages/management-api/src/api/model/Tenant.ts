@@ -11,7 +11,8 @@ import type { Identifiable } from '@kinotic-ai/core'
 export class Tenant implements Identifiable<string> {
     /**
      * The tenant's id, the slugified {@link name} minted at creation: lowercase letters, digits and single
-     * interior dashes, since it is the first name of the tenant's site labels.
+     * interior dashes, at most 24 characters, since it is the first name of the tenant's site labels, and unique
+     * within the organization.
      */
     public id: string | null = null
 

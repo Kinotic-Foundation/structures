@@ -27,6 +27,18 @@ public final class HostLabelUtil {
     /** The longest label DNS allows, which bounds every host label the platform mints. */
     public static final int MAX_HOST_LABEL_LENGTH = 63;
 
+    /**
+     * The longest tenant id. A tenant's site labels, {@code <tenantId>--<applicationId>--<uiName>}, fit the DNS
+     * limit whenever the application's own, held to {@link #MAX_SITE_LABEL_LENGTH}, do.
+     */
+    public static final int MAX_TENANT_ID_LENGTH = 24;
+
+    /**
+     * The longest site label of an application's UI, {@code <applicationId>--<uiName>}: the DNS limit less the
+     * room a tenant's name and the separator take in front of it.
+     */
+    public static final int MAX_SITE_LABEL_LENGTH = MAX_HOST_LABEL_LENGTH - HOST_LABEL_SEPARATOR.length() - MAX_TENANT_ID_LENGTH;
+
     private HostLabelUtil() {
     }
 

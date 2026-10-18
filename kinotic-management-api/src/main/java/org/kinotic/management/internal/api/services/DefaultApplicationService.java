@@ -110,10 +110,10 @@ public class DefaultApplicationService extends AbstractOrganizationScopedService
         DomainUtil.validateApplicationId(entity.getId());
         ApplicationKey applicationKey = new ApplicationKey(requireOrganizationId(), entity.getId());
         // the id never changes after creation, so an application too long for a site label could never publish a UI
-        Validate.isTrue(entity.getId().length() + HostLabelUtil.HOST_LABEL_SEPARATOR.length() + MIN_UI_NAME_LENGTH <= HostLabelUtil.MAX_HOST_LABEL_LENGTH,
-                        "The application id '%s' leaves no room for a UI name in its sites' labels, which DNS limits"
-                                + " to %d characters; shorten the application name",
-                        entity.getId(), HostLabelUtil.MAX_HOST_LABEL_LENGTH);
+        Validate.isTrue(entity.getId().length() + HostLabelUtil.HOST_LABEL_SEPARATOR.length() + MIN_UI_NAME_LENGTH <= HostLabelUtil.MAX_SITE_LABEL_LENGTH,
+                        "The application id '%s' leaves no room for a UI name in its sites' labels, which are held to"
+                                + " %d characters so a tenant's name fits in front; shorten the application name",
+                        entity.getId(), HostLabelUtil.MAX_SITE_LABEL_LENGTH);
         if (entity.getSocialProviders() == null) {
             entity.setSocialProviders(new ArrayList<>());
         }

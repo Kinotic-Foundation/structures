@@ -134,9 +134,9 @@ type Phase = 'loading' | 'ready' | 'appAccepted' | 'invalid'
 /**
  * The unauthenticated invitation-accept page, reached from the emailed accept link
  * (`/invite/accept?token=…`). Shows who invited the visitor and into what, then lets them
- * accept with a password or any provider the target scope offers. The OIDC route returns
- * here with `?accepted=app` (application members see a confirmation since this web app is
- * not their UI) or `?error=<code>` on failure.
+ * accept with a password or, into an organization, any provider the organization's login
+ * offers; an application invitee sets a password and sees a confirmation, since this web app
+ * is not their UI. The OIDC route returns here with `?error=<code>` on failure.
  */
 const phase = ref<Phase>('loading')
 const details = ref<InviteDetails>({ email: '', displayName: null, organizationName: null, applicationId: null, invitedByName: '', accountExists: false, accountHasPassword: false, providers: [] })
@@ -164,12 +164,6 @@ const canSubmit = computed<boolean>(() => {
 
 onMounted(async () => {
   const query = route.query
-
-  if (query.accepted === 'app') {
-    acceptedApplicationId.value = (query.application as string) || 'the application'
-    phase.value = 'appAccepted'
-    return
-  }
 
   token.value = (query.token as string) || ''
   const error = query.error as string | undefined

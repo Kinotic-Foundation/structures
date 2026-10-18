@@ -13,6 +13,7 @@ import { MemberService, type IMemberService } from '@/api/services/security/IMem
 import { InviteEmailTemplateService, type IInviteEmailTemplateService } from '@/api/services/IInviteEmailTemplateService'
 import { DelegateService, type IDelegateService } from '@/api/services/security/IDelegateService'
 import { ProfileService, type IProfileService } from '@/api/services/security/IProfileService'
+import { OwnedOidcConfigurationService, type IOwnedOidcConfigurationService } from '@/api/services/security/IOwnedOidcConfigurationService'
 import { MachineService, type IMachineService } from '@/api/services/security/IMachineService'
 import { GitHubAppInstallationService, type IGitHubAppInstallationService } from '@/api/services/IGitHubAppInstallationService'
 import { JobMonitoringService, type IJobMonitoringService } from '@/api/services/IJobMonitoringService'
@@ -33,6 +34,7 @@ export interface IManagementApiExtension {
     inviteEmailTemplates: IInviteEmailTemplateService
     delegates: IDelegateService
     profile: IProfileService
+    ownedOidcConfigurations: IOwnedOidcConfigurationService
     machines: IMachineService
     githubAppInstallations: IGitHubAppInstallationService
 }
@@ -55,6 +57,7 @@ export const ManagementApiPlugin: KinoticPlugin<IManagementApiExtension> = {
             inviteEmailTemplates: new InviteEmailTemplateService(kinotic),
             delegates: new DelegateService(kinotic),
             profile: new ProfileService(kinotic),
+            ownedOidcConfigurations: new OwnedOidcConfigurationService(kinotic),
             machines: new MachineService(kinotic),
             githubAppInstallations: new GitHubAppInstallationService(kinotic),
         }

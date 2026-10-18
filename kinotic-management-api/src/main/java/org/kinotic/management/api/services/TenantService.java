@@ -8,8 +8,9 @@ import org.kinotic.idl.api.annotations.McpTool;
 
 /**
  * Manages the {@link Tenant}s of the caller's organization's applications. A tenant's id is derived from its
- * slugified name at creation: lowercase letters, digits, and interior dashes, short enough to lead the
- * tenant's site labels.
+ * slugified name at creation: lowercase letters, digits, and interior dashes, at most
+ * {@link org.kinotic.domain.api.utils.HostLabelUtil#MAX_TENANT_ID_LENGTH} characters so it leads the tenant's
+ * site labels, and unique within the organization.
  */
 @Publish
 @McpTool
@@ -23,7 +24,8 @@ public interface TenantService extends ApplicationScopedCrudService<Tenant, Stri
      * @param name          the name of the tenant to create
      * @param description   the description of the tenant to create
      * @return {@link Future} emitting the created tenant, or the application's existing tenant whose id
-     *         matches the slugified name
+     *         matches the slugified name; fails when that id is a tenant of another of the organization's
+     *         applications, since a tenant id is unique within the organization
      */
     Future<Tenant> createTenantIfNotExist(String applicationId, String name, String description);
 

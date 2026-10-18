@@ -7,6 +7,8 @@ import org.kinotic.core.api.security.Participant;
 import org.kinotic.domain.api.model.Organization;
 import org.kinotic.domain.api.model.security.LoginProviderSummary;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
+import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
+import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
 import org.kinotic.domain.api.model.security.identity.Membership;
 import org.kinotic.domain.api.model.security.identity.OidcBinding;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
@@ -137,11 +139,39 @@ public class DefaultProfileService implements ProfileService {
     public Future<Void> removeSignInMethod(String methodId, Participant participant) {
         Validate.notBlank(methodId, "methodId is required");
         Validate.isTrue(!SignInMethod.PASSWORD_ID.equals(methodId), "A password is changed, not removed.");
-        return findMySignInMethods(participant).compose(methods -> {
-            Validate.isTrue(methods.stream().anyMatch(method -> method.id().equals(methodId)), "Sign-in method not found.");
-            Validate.isTrue(methods.size() > 1, "The last sign-in method cannot be removed.");
-            return identityService.removeOidcBinding(participant.getId(), methodId);
+        DomainUtil.requireUserParticipant(participant);
+        Future<Boolean> hasPassword = identityService.hasPassword(participant.getId());
+        Future<List<OidcBinding>> bindings = identityService.findOidcBindings(participant.getId());
+        Future<List<Membership>> memberships = membershipService.findMemberships(participant.getId());
+        return Future.all(hasPassword, bindings, memberships).compose(cf -> {
+            Validate.isTrue(bindings.result().stream().anyMatch(binding -> binding.getId().equals(methodId)), "Sign-in method not found.");
+            List<String> remaining = bindings.result().stream()
+                                             .filter(binding -> !binding.getId().equals(methodId))
+                                             .map(OidcBinding::getOidcConfigId)
+                                             .toList();
+            return oidcConfigurationService.findAllById(remaining).compose(configurations -> {
+                boolean signsIn = hasPassword.result()
+                                  || configurations.stream().anyMatch(configuration -> signsIn(configuration, memberships.result()));
+                Validate.isTrue(signsIn, "The last sign-in method that still signs you in cannot be removed.");
+                return identityService.removeOidcBinding(participant.getId(), methodId);
+            });
         });
+    }
+
+    // a binding signs the account in where its configuration is offered: at every organization's login for one of
+    // the platform's registrations, and at its organization's for one of the organization's own while the account
+    // is a member there or the configuration admits whoever it verifies
+    private static boolean signsIn(OidcConfiguration configuration, List<Membership> memberships) {
+        boolean ret;
+        if (!configuration.isEnabled()) {
+            ret = false;
+        } else if (configuration instanceof OrganizationOidcConfiguration owned) {
+            ret = owned.isCreateUserOnSignIn()
+                  || memberships.stream().anyMatch(m -> m.isEnabled() && owned.getOrganizationId().equals(m.getOrganizationId()));
+        } else {
+            ret = configuration instanceof OrgSignupOidcConfiguration;
+        }
+        return ret;
     }
 
     @Override

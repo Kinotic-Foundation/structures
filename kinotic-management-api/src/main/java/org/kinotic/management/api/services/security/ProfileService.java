@@ -53,8 +53,10 @@ public interface ProfileService {
     Future<Void> setPassword(String currentPassword, String newPassword, Participant participant);
 
     /**
-     * Removes a provider identity from the calling account's sign-in methods. The last remaining method,
-     * password or provider, cannot be removed, so the account always keeps a way to sign in.
+     * Removes a provider identity from the calling account's sign-in methods. The last method that still signs
+     * the account in cannot be removed, so the account always keeps a way to sign in: its password, a binding to
+     * one of the platform's registrations, or a binding to an organization's own configuration while the account
+     * is a member there or the configuration admits whoever it verifies.
      *
      * @param methodId the method's id, as {@link SignInMethod#id()} names it
      */

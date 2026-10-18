@@ -3,6 +3,8 @@ package org.kinotic.domain.internal.api.services.security;
 import io.vertx.core.Future;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
+import org.kinotic.core.api.crud.Page;
+import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.core.api.exceptions.AuthorizationException;
 import org.kinotic.core.api.security.SecurityContext;
 import org.kinotic.domain.api.model.Application;
@@ -62,7 +64,14 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
             // the organization names its account at the provider, never a URL: the kind's template
             // decides the issuer, so the server only ever connects to the provider's own hosts
             owned.setAuthority(owned.getProvider().authority(owned.getProviderAccount()));
-            if (owned instanceof ApplicationOidcConfiguration forApplication) {
+            if (owned instanceof OrganizationOidcConfiguration forOrganization) {
+                // the organization's login admits its members, so only a provider whose issuer verifies the
+                // organization's own users may make whoever it verifies a member
+                Validate.isTrue(!forOrganization.isCreateUserOnSignIn() || owned.getProvider().verifiesOneOrganization(),
+                                "createUserOnSignIn requires a provider that verifies the organization's users alone; a %s provider"
+                                        + " verifies every account at the provider, so its identities join by invitation",
+                                owned.getProvider().key());
+            } else if (owned instanceof ApplicationOidcConfiguration forApplication) {
                 ret = requireApplication(forApplication.getOrganizationId(), forApplication.getApplicationId()).mapEmpty();
             } else if (owned instanceof TenantOidcConfiguration forTenant) {
                 ret = requireTenant(forTenant.getOrganizationId(), forTenant.getApplicationId(), forTenant.getTenantId());
@@ -71,6 +80,14 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
         if (entity.getId() == null) {
             entity.setId(UUID.randomUUID().toString());
             entity.setCreated(new Date());
+        } else {
+            // the index holds every owner's rows under raw ids, so the row the id names must be the caller's too
+            ret = ret.compose(v -> oidcRepository.findById(entity.getId()).map(existing -> {
+                if (existing != null) {
+                    requireOwner(existing);
+                }
+                return null;
+            }));
         }
         entity.setUpdated(new Date());
         return ret;
@@ -233,6 +250,12 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
     }
 
     @Override
+    public Future<Page<OwnedOidcConfiguration>> findOwnedByOrganization(String organizationId, Pageable pageable) {
+        Validate.notBlank(organizationId, "organizationId cannot be blank");
+        return oidcRepository.findOwnedByOrganization(organizationId, pageable);
+    }
+
+    @Override
     public <C extends OwnedOidcConfiguration> Future<C> save(C configuration, String clientSecret) {
         boolean confidential = StringUtils.isNotBlank(clientSecret);
         // saved first: a new configuration is given the id its secret is keyed by in beforeSave
@@ -244,6 +267,9 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
                     : secretStorageService.deleteSecret(owned.getOrganizationId(), owned.getId());
             // a secret the vault refused is not held, so the row says so rather than claiming one at sign-in
             return stored.recover(err -> save(owned.setConfidentialClient(false)).compose(v -> Future.failedFuture(err)))
+                         // saved again once the secret is held: the OAuth client cache is keyed by the row's updated, so a
+                         // client built between the two saves with the former secret is not reused
+                         .compose(v -> save(owned))
                          .map(owned);
         });
     }

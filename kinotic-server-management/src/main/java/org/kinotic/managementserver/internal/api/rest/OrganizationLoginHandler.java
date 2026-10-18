@@ -29,6 +29,7 @@ import org.kinotic.domain.api.services.OrganizationService;
 import org.kinotic.domain.api.services.security.LocalAuthenticationService;
 import org.kinotic.domain.api.services.security.OidcConfigurationService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
+import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.managementserver.api.config.ManagementServerProperties;
 import org.kinotic.managementserver.api.config.TurnstileProperties;
 import org.kinotic.managementserver.internal.api.services.TurnstileVerifier;
@@ -107,7 +108,12 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
             authEndpointSupport.respondError(ctx, 400, "organizationId is required");
             return;
         }
-        identityService.resolveParticipant(current.getId(), organizationId, null)
+        // an id that names no organization is refused with its reason, before any membership is read
+        Future.<Void>succeededFuture()
+              .compose(v -> {
+                  DomainUtil.validateOrganizationId(organizationId);
+                  return identityService.resolveParticipant(current.getId(), organizationId, null);
+              })
                        .onSuccess(participant -> {
                            if (participant == null) {
                                authEndpointSupport.respondError(ctx, 403, "You are not a member of that organization");
@@ -372,8 +378,9 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
      * Logs the account bound to the identity into the organization the flow names. When the configuration
      * creates users on sign-in, an identity bound to no account becomes a new account, and an account that is
      * not yet a member joins the organization; an identity whose verified email already has an account is
-     * refused with {@link OidcErrorCodes#ACCOUNT_EXISTS}, since only that account's holder may connect the
-     * identity to it, from the Profile page.
+     * refused with {@link OidcErrorCodes#ACCOUNT_EXISTS} and sent to connect the identity to that account once
+     * signed in as its holder, since only the holder may; the account then joins through the identity on its
+     * next sign-in.
      */
     private void completeOrganizationLogin(RoutingContext ctx, CallbackResult<OidcConfiguration> result) {
         String sub = authEndpointSupport.verifiedSubject(ctx, result);
@@ -405,7 +412,17 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
                         }
                         return ret;
                     });
-            authEndpointSupport.completeLogin(ctx, result.origin(), participant);
+            participant.onComplete(ar -> {
+                if (joinsOnSignIn && ar.failed() && ar.cause() instanceof OidcCallbackException oce
+                        && OidcErrorCodes.ACCOUNT_EXISTS.equals(oce.getErrorCode())) {
+                    // the holder signs in as usual and lands on the profile page, which connects this configuration to
+                    // the account at once; the account joins through it on its next sign-in
+                    authEndpointSupport.redirectToContinue(ctx, result.origin(), OidcErrorCodes.ACCOUNT_EXISTS,
+                                                           AccountSignInMethodHandler.connectPath(result.config().getId()));
+                } else {
+                    authEndpointSupport.completeLogin(ctx, result.origin(), participant);
+                }
+            });
         }
     }
 

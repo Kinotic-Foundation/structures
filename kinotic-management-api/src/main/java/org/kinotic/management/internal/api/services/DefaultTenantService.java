@@ -7,7 +7,6 @@ import org.kinotic.domain.api.model.Tenant;
 import org.kinotic.domain.api.repositories.ApplicationRepository;
 import org.kinotic.domain.api.repositories.TenantRepository;
 import org.kinotic.domain.api.utils.DomainUtil;
-import org.kinotic.domain.api.utils.HostLabelUtil;
 import org.kinotic.domain.internal.api.services.AbstractApplicationScopedService;
 import org.kinotic.management.api.services.TenantService;
 import org.springframework.stereotype.Component;
@@ -16,9 +15,6 @@ import java.util.Date;
 
 @Component
 public class DefaultTenantService extends AbstractApplicationScopedService<Tenant> implements TenantService {
-
-    // every tenant site label, <tenant>--<app>--<ui>, must leave room for at least this long a UI name
-    private static final int MIN_UI_NAME_LENGTH = 1;
 
     private final TenantRepository tenantRepository;
     private final ApplicationRepository applicationRepository;
@@ -36,17 +32,24 @@ public class DefaultTenantService extends AbstractApplicationScopedService<Tenan
         Validate.notBlank(applicationId, "applicationId cannot be blank");
         Validate.notBlank(name, "name cannot be blank");
         String organizationId = requireOrganizationId();
-        return tenantRepository.findById(DomainUtil.slugifyId(name), applicationId, organizationId)
+        String tenantId = DomainUtil.slugifyId(name);
+        return tenantRepository.findById(tenantId, organizationId)
                                .compose(tenant -> {
                                    Future<Tenant> ret;
-                                   if (tenant != null) {
-                                       ret = Future.succeededFuture(tenant);
-                                   } else {
+                                   if (tenant == null) {
                                        Tenant newTenant = new Tenant().setOrganizationId(organizationId)
                                                                       .setApplicationId(applicationId)
                                                                       .setName(name)
                                                                       .setDescription(description);
-                                       ret = save(newTenant);
+                                       // create, so a tenant made under the id meanwhile is refused rather than written over
+                                       ret = create(newTenant);
+                                   } else if (applicationId.equals(tenant.getApplicationId())) {
+                                       ret = Future.succeededFuture(tenant);
+                                   } else {
+                                       // stored under the organization, so an id names one tenant of one of its applications
+                                       ret = Future.failedFuture(new IllegalArgumentException("The tenant id '" + tenantId
+                                               + "' belongs to a tenant of application " + tenant.getApplicationId()
+                                               + "; a tenant id is unique within the organization, so choose another name"));
                                    }
                                    return ret;
                                });
@@ -62,16 +65,7 @@ public class DefaultTenantService extends AbstractApplicationScopedService<Tenan
         }
         // Validate only; re-minting an update's id would silently write a new document
         DomainUtil.validateTenantId(entity.getId());
-        String organizationId = requireOrganizationId();
-        // the id never changes after creation, so a tenant too long for a site label could never have a site
-        int siteLabelLength = entity.getId().length() + HostLabelUtil.HOST_LABEL_SEPARATOR.length()
-                              + entity.getApplicationId().length() + HostLabelUtil.HOST_LABEL_SEPARATOR.length()
-                              + MIN_UI_NAME_LENGTH;
-        Validate.isTrue(siteLabelLength <= HostLabelUtil.MAX_HOST_LABEL_LENGTH,
-                        "The tenant id '%s' leaves no room for a UI name in its sites' labels, which DNS limits"
-                                + " to %d characters; shorten the tenant name",
-                        entity.getId(), HostLabelUtil.MAX_HOST_LABEL_LENGTH);
         entity.setUpdated(new Date());
-        return applicationRepository.requireById(entity.getApplicationId(), organizationId).mapEmpty();
+        return applicationRepository.requireById(entity.getApplicationId(), requireOrganizationId()).mapEmpty();
     }
 }

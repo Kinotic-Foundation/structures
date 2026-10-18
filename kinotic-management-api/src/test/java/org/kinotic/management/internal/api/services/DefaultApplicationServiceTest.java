@@ -3,6 +3,7 @@ package org.kinotic.management.internal.api.services;
 import org.junit.jupiter.api.Test;
 import org.kinotic.core.api.security.SecurityContext;
 import org.kinotic.domain.api.model.Application;
+import org.kinotic.domain.api.utils.HostLabelUtil;
 import org.kinotic.domain.api.model.security.participant.OrganizationParticipant;
 
 import java.util.List;
@@ -95,13 +96,14 @@ class DefaultApplicationServiceTest {
 
     @Test
     void rejectsIdsWhoseSiteLabelsLeaveNoRoomForAUiName() {
-        // a site label "<app>--<ui>" with a one-character UI name leaves 60 of the 63 characters a label may hold
+        // a site label "<app>--<ui>" with a one-character UI name leaves the application the budget less the separator and one
+        int longest = HostLabelUtil.MAX_SITE_LABEL_LENGTH - HostLabelUtil.HOST_LABEL_SEPARATOR.length() - 1;
         Application fits = new Application("Orders App", "desc");
-        fits.setId("a".repeat(60));
+        fits.setId("a".repeat(longest));
         assertDoesNotThrow(() -> service.beforeSave(fits));
 
         Application tooLong = new Application("Orders App", "desc");
-        tooLong.setId("a".repeat(61));
+        tooLong.setId("a".repeat(longest + 1));
         assertThrows(IllegalArgumentException.class, () -> service.beforeSave(tooLong));
     }
 

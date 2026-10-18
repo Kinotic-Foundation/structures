@@ -146,16 +146,19 @@ public class DomainUtil {
 
     /**
      * Validates that the given tenant id contains only lowercase letters, digits, and interior dashes,
-     * never {@code --}, since it is the first name of the tenant's site labels.
+     * never {@code --}, and is at most {@link HostLabelUtil#MAX_TENANT_ID_LENGTH} characters, since it is the
+     * first name of the tenant's site labels.
      *
      * @param tenantId to validate
-     * @throws IllegalArgumentException if the tenant id is null or invalid
+     * @throws IllegalArgumentException if the tenant id is null, invalid, or too long
      */
     public static void validateTenantId(String tenantId) {
         if (tenantId == null) {
             throw new IllegalArgumentException("Tenant Id must not be null");
         }
         validateHostLabelPart(tenantId);
+        Validate.isTrue(tenantId.length() <= HostLabelUtil.MAX_TENANT_ID_LENGTH,
+                        "Tenant Id '%s' is longer than %d characters; shorten the tenant name", tenantId, HostLabelUtil.MAX_TENANT_ID_LENGTH);
     }
 
     private static void validateZoneLabelId(String id) {

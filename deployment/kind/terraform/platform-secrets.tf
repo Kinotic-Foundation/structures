@@ -1,6 +1,6 @@
 # ── Platform secrets (KinD) ───────────────────────────────
-# Generates each server's JWT signing keys, the secret-storage master key and the GitHub App's
-# secrets as a K8s Secret the servers mount as a volume, each only its own key set. Holds the
+# Generates each server's JWT signing keys, the secret-storage master key, the GitHub App's
+# secrets and the Turnstile test site's secret as a K8s Secret the servers mount as a volume, each only its own key set. Holds the
 # objects the Azure Key Vault holds, under the same names, so the helm chart's pod spec is
 # identical across environments — only the source of the files differs.
 
@@ -71,6 +71,9 @@ resource "kubernetes_secret" "platform_secrets" {
       # and system servers boot with; a real App's values go here to exercise GitHub
       "kinotic-github-app-private-key" = "-"
       "kinotic-github-webhook-secret"  = "-"
+      # The secret key of Cloudflare's always-passing Turnstile test site, which KinD's values name as the
+      # management server's site; the portal's find-my-organizations form passes its challenge every time
+      "kinotic-turnstile-secret-key" = "1x0000000000000000000000000000000AA"
     },
   )
 }

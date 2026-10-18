@@ -198,10 +198,8 @@ public class InviteHandler implements SuppliesGatewayRoutes, OidcFlowCompleter {
      * <p>Three steps remain. First, confirm the IdP gave us a usable identity — a subject
      * id and a verified email (the same checks a normal OIDC login performs). Second, ask
      * {@link InviteService#acceptOidcInvite} to create the member; it also rejects the
-     * acceptance when the IdP-verified email is not the email that was invited. Third, send the
-     * browser onward: an organization member gets the browser session, same as logging in, and
-     * lands in the web app; an application member is sent to the accept page's confirmation
-     * state and signs in at the application's own UI.
+     * acceptance when the IdP-verified email is not the email that was invited. Third, sign the
+     * new member in: the browser gets the session, same as logging in, and lands in the web app.
      */
     @Override
     public void complete(RoutingContext ctx, CallbackResult<OidcConfiguration> result) {
@@ -220,16 +218,7 @@ public class InviteHandler implements SuppliesGatewayRoutes, OidcFlowCompleter {
         }
 
         inviteService.acceptOidcInvite(token, sub, result.config().getId(), email)
-              .onSuccess(member -> {
-                  if (member instanceof ApplicationParticipant user) {
-                      // the management server holds organization logins only, so an application member
-                      // signs in at the application
-                      authEndpointSupport.redirectToUi(ctx, INVITE_ACCEPT_PATH + "?accepted=app&application="
-                              + URLEncoder.encode(user.getApplicationId(), StandardCharsets.UTF_8));
-                  } else {
-                      authEndpointSupport.redirectSuccess(ctx, result.origin(), member);
-                  }
-              })
+              .onSuccess(member -> authEndpointSupport.redirectSuccess(ctx, result.origin(), member))
               .onFailure(err -> {
                   if (err instanceof InviteEmailMismatchException) {
                       // The invite is NOT consumed on mismatch — keep the token so the

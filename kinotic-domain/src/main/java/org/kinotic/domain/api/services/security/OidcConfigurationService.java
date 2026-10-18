@@ -1,6 +1,8 @@
 package org.kinotic.domain.api.services.security;
 
 import io.vertx.core.Future;
+import org.kinotic.core.api.crud.Page;
+import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.core.api.crud.IdentifiableCrudService;
 import org.kinotic.domain.api.model.security.ApplicationOidcConfiguration;
 import org.kinotic.domain.api.model.security.ApplicationSocialOidcConfiguration;
@@ -100,6 +102,14 @@ public interface OidcConfigurationService extends IdentifiableCrudService<OidcCo
      * @param organizationId the organization that owns the configuration
      */
     Future<OwnedOidcConfiguration> findOwnedById(String id, String organizationId);
+
+    /**
+     * The configurations organization {@code organizationId} owns, of every owned kind, enabled or not, oldest
+     * first, a page at a time. Checks no participant.
+     *
+     * @param organizationId the organization that owns the configurations
+     */
+    Future<Page<OwnedOidcConfiguration>> findOwnedByOrganization(String organizationId, Pageable pageable);
 
     /**
      * Saves the configuration as {@link #save(Object)} does and makes {@code clientSecret} the secret it

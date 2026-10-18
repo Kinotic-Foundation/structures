@@ -32,7 +32,11 @@ export interface IProfileService {
      */
     setPassword(currentPassword: string | null, newPassword: string): Promise<void>
 
-    /** Removes a provider identity from the account's sign-in methods; the last method cannot be removed. */
+    /**
+     * Removes a provider identity from the account's sign-in methods; the last method that still signs the account in
+     * (its password, a platform registration, or an organization's configuration while the account is a member there
+     * or the configuration admits whoever it verifies) cannot be removed.
+     */
     removeSignInMethod(methodId: string): Promise<void>
 
     /** The organizations the account is a member of and may sign in to, for switching between them. */

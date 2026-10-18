@@ -26,7 +26,8 @@ import java.util.Locale;
  * sites domain, in the Cloudflare zone {@code kinotic.domain.publishedSites.cloudflare.zoneId}. The record points
  * at a placeholder address because the zone's sites Worker answers every request to it; its existence is what
  * the zone's Total TLS issues the organization's wildcard certificate from. A record is looked up by its name
- * before it is created, so ensuring an organization twice creates one record.
+ * before it is created, and a create the zone refuses as a duplicate finds the record it refused for, so
+ * ensuring an organization any number of times, at once or in turn, leaves one record.
  */
 @Slf4j
 @Component
@@ -99,7 +100,12 @@ public class CloudflareOrganizationDnsRecordProvisioner implements OrganizationD
                 .put("comment", "Sites of organization " + organizationId);
         return request(webClient.postAbs(zoneUrl("/dns_records")), record)
                 .onSuccess(v -> log.info("Created the sites record {} for organization {}", name, organizationId))
-                .mapEmpty();
+                .<Void>mapEmpty()
+                // a concurrent ensure may have created the record between the lookup and this create, which
+                // Cloudflare refuses as a duplicate; the record it refused for is the one wanted
+                .recover(err -> findRecord(name).compose(existing -> existing != null
+                        ? Future.succeededFuture()
+                        : Future.failedFuture(err)));
     }
 
     private Future<String> zoneName() {

@@ -106,6 +106,17 @@ public class OidcConfigurationRepository extends AbstractRepository<OidcConfigur
     }
 
     /**
+     * The configurations organization {@code orgId} owns, of every owned kind, enabled or not, oldest first.
+     */
+    public Future<Page<OwnedOidcConfiguration>> findOwnedByOrganization(String orgId, Pageable pageable) {
+        Validate.notBlank(orgId, "orgId cannot be blank");
+        // only an owned configuration carries an organizationId, so the term alone selects the organization's rows
+        return findAll(pageable, b -> b.query(termFilter(ORGANIZATION_ID_FIELD, orgId))
+                                       .sort(s -> s.field(f -> f.field("created"))))
+                .map(page -> page.map(OwnedOidcConfiguration.class::cast));
+    }
+
+    /**
      * The enabled configurations organization {@code orgId} made for one of its sign-in scopes, oldest first: its
      * {@link org.kinotic.domain.api.model.security.OrganizationOidcConfiguration}s when {@code applicationId} is
      * null, the {@link org.kinotic.domain.api.model.security.ApplicationOidcConfiguration}s of that application

@@ -148,34 +148,31 @@ public class DefaultInviteService implements InviteService {
 
         return pendingInviteRepository.findValidByToken(token)
                 .compose(invite -> {
+                    Validate.isTrue(invite.getApplicationId() == null,
+                                    "An invitation into an application is accepted with a password.");
                     if (!invite.getEmail().equals(DomainUtil.normalizeEmail(verifiedEmail))) {
                         return Future.failedFuture(new InviteEmailMismatchException(
                                 "This invitation was sent to a different email address."));
                     }
-                    Future<Participant> ret;
-                    if (invite.getApplicationId() != null) {
-                        ret = identityService.createOidcUser(newMember(invite, null), oidcConfigId, oidcSubject)
-                                             .map(DomainUtil::createParticipant);
-                    } else {
-                        ret = identityService.findByOidcIdentity(oidcConfigId, oidcSubject, null, null).compose(bound -> {
-                            Future<Participant> joined;
-                            if (bound != null) {
-                                // the identity proves the acceptor owns the account, which must be the invited one
-                                joined = invite.getEmail().equals(bound.getEmail())
-                                        ? join(bound, invite)
-                                        : Future.failedFuture(new InviteEmailMismatchException(
-                                                "This invitation was sent to a different email address."));
-                            } else {
-                                joined = identityService.findByEmail(invite.getEmail(), null, null).compose(account -> account == null
-                                        ? identityService.createOidcUser(newMember(invite, null), oidcConfigId, oidcSubject)
-                                                         .compose(created -> join(created, invite))
-                                        : Future.failedFuture(new ExistingAccountException(
-                                                "An account already exists for this email. Sign in with its password to accept.")));
-                            }
-                            return joined;
-                        });
-                    }
-                    return ret.compose(member -> pendingInviteRepository.deleteById(invite.getId()).map(member));
+                    return identityService.findByOidcIdentity(oidcConfigId, oidcSubject, null, null)
+                            .compose(bound -> {
+                                Future<Participant> joined;
+                                if (bound != null) {
+                                    // the identity proves the acceptor owns the account, which must be the invited one
+                                    joined = invite.getEmail().equals(bound.getEmail())
+                                            ? join(bound, invite)
+                                            : Future.failedFuture(new InviteEmailMismatchException(
+                                                    "This invitation was sent to a different email address."));
+                                } else {
+                                    joined = identityService.findByEmail(invite.getEmail(), null, null).compose(account -> account == null
+                                            ? identityService.createOidcUser(newMember(invite, null), oidcConfigId, oidcSubject)
+                                                             .compose(created -> join(created, invite))
+                                            : Future.failedFuture(new ExistingAccountException(
+                                                    "An account already exists for this email. Sign in with its password to accept.")));
+                                }
+                                return joined;
+                            })
+                            .compose(member -> pendingInviteRepository.deleteById(invite.getId()).map(member));
                 });
     }
 

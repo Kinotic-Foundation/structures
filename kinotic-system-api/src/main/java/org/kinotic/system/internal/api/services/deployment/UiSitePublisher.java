@@ -91,10 +91,11 @@ public class UiSitePublisher {
         ZoneUtil.validateLabel(label);
         ZoneUtil.validateLabel(project.getOrganizationId());
         Future<UiDeployment> ret;
-        if (label.length() > HostLabelUtil.MAX_HOST_LABEL_LENGTH) {
+        if (label.length() > HostLabelUtil.MAX_SITE_LABEL_LENGTH) {
             ret = Future.failedFuture(new IllegalStateException("The hostname label " + label + " for UI " + ui.name()
                     + " of application " + project.getApplicationId() + " of organization " + project.getOrganizationId()
-                    + " is longer than " + HostLabelUtil.MAX_HOST_LABEL_LENGTH + " characters; shorten the application or UI name"));
+                    + " is longer than " + HostLabelUtil.MAX_SITE_LABEL_LENGTH
+                    + " characters, the most a site label may take so a tenant's name fits in front of it; shorten the application or UI name"));
         } else {
             String siteId = HostLabelUtil.siteId(project.applicationKey(), ui.name());
             UiDeployment deployment = new UiDeployment()

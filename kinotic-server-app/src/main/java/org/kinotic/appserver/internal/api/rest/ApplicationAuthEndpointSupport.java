@@ -45,6 +45,13 @@ public class ApplicationAuthEndpointSupport extends AuthEndpointSupport {
      */
     public static final String SOCIAL_AUTHORIZE_PATH = "/api/auth/app/login/social/authorize";
 
+    /**
+     * Session key of the value that binds a social sign-in in transit to the browser that started it: the
+     * application's API host mints it into the starting browser's session and the shared host holds it for the
+     * flow it runs, so the completion at the application's host is answered only to the browser that presents it.
+     */
+    public static final String SOCIAL_LOGIN_BINDING_SESSION_KEY = "socialLoginBinding";
+
     private final AppServerProperties properties;
     private final KinoticDomainProperties domainProperties;
     private final ApplicationRepository applicationRepository;
@@ -170,15 +177,17 @@ public class ApplicationAuthEndpointSupport extends AuthEndpointSupport {
 
     /**
      * The URL on the shared host that begins a sign-in to {@code scope} through the platform social
-     * registration {@code configId}, for the page at {@code origin}.
+     * registration {@code configId}, for the page at {@code origin}, in the browser whose session at this host
+     * holds {@code binding} under {@link #SOCIAL_LOGIN_BINDING_SESSION_KEY}.
      */
-    public String socialAuthorizeUrl(LoginScope scope, String configId, String origin) {
+    public String socialAuthorizeUrl(LoginScope scope, String configId, String origin, String binding) {
         ApplicationKey applicationKey = scope.application();
         String ret = properties.getApiBaseUrl() + SOCIAL_AUTHORIZE_PATH
                 + "?organizationId=" + URLEncoder.encode(applicationKey.organizationId(), StandardCharsets.UTF_8)
                 + "&applicationId=" + URLEncoder.encode(applicationKey.applicationId(), StandardCharsets.UTF_8)
                 + "&configurationId=" + URLEncoder.encode(configId, StandardCharsets.UTF_8)
-                + "&origin=" + URLEncoder.encode(origin, StandardCharsets.UTF_8);
+                + "&origin=" + URLEncoder.encode(origin, StandardCharsets.UTF_8)
+                + "&binding=" + URLEncoder.encode(binding, StandardCharsets.UTF_8);
         if (scope.tenantId() != null) {
             ret += "&tenantId=" + URLEncoder.encode(scope.tenantId(), StandardCharsets.UTF_8);
         }

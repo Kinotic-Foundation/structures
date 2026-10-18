@@ -111,10 +111,12 @@ public class DefaultSignUpService implements SignUpService {
     /**
      * Fails when the identity of {@code pending}, or its verified email, already has an account: a person
      * founds one organization at most, by signing up once, and joins others by invitation. Checked here, at
-     * completion, as well as when the sign-up starts, so two sign-ups of one identity in flight at once cannot
-     * both found an organization, and so the organization is never created for an account that cannot be.
+     * completion, as well as when the sign-up starts, so the organization is never created for an account
+     * that cannot be.
      */
     private Future<Void> requireNoAccount(PendingSignUp pending) {
+        // both finders are searches, which see an account only once the index has refreshed, so two
+        // completions for one email within that window both pass
         Future<UserParticipantIdentity> bound = pending.getAuthType() == AuthType.OIDC
                 ? identityService.findByOidcIdentity(pending.getOidcConfigId(), pending.getOidcSubject(), null, null)
                 : Future.succeededFuture();

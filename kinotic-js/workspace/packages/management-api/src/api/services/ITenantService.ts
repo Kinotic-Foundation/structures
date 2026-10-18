@@ -5,8 +5,8 @@ import { Tenant } from '@/api/model/Tenant'
 
 /**
  * Manages the {@link Tenant}s of the caller's organization's applications. A tenant's id is derived from its
- * slugified name at creation: lowercase letters, digits, and interior dashes, short enough to lead the
- * tenant's site labels.
+ * slugified name at creation: lowercase letters, digits, and interior dashes, at most 24 characters so it leads
+ * the tenant's site labels, and unique within the organization.
  */
 export interface ITenantService extends ICrudServiceProxy<Tenant> {
 
@@ -16,7 +16,9 @@ export interface ITenantService extends ICrudServiceProxy<Tenant> {
      * @param applicationId the application the tenant belongs to, one of the caller's organization's
      * @param name the name of the tenant to create
      * @param description the description of the tenant to create
-     * @return the created tenant, or the application's existing tenant whose id matches the slugified name
+     * @return the created tenant, or the application's existing tenant whose id matches the slugified name; rejects
+     *         when that id is a tenant of another of the organization's applications, since a tenant id is unique
+     *         within the organization
      */
     createTenantIfNotExist(applicationId: string, name: string, description: string | null): Promise<Tenant>
 

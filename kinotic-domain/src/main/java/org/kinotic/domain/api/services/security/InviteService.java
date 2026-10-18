@@ -49,13 +49,14 @@ public interface InviteService {
     Future<Participant> acceptLocalInvite(String token, String password, String displayName);
 
     /**
-     * Accepts an invitation with a verified OIDC identity and consumes it. The provider-verified email must
-     * match the invited email (case-insensitive) or the accept fails with
-     * {@link InviteEmailMismatchException}. An invitation into an organization makes the account the
-     * identity is bound to a member, when its email is the invited one; with no bound account, the account
-     * with the invited email must not exist either, else the accept fails with
-     * {@link ExistingAccountException}, and a new account bound to the identity is created. An invitation
-     * into an application creates the application's user bound to the identity.
+     * Accepts an invitation into an organization with a verified OIDC identity and consumes it. The
+     * provider-verified email must match the invited email (case-insensitive) or the accept fails with
+     * {@link InviteEmailMismatchException}. The account the identity is bound to becomes a member, when its
+     * email is the invited one; with no bound account, the account with the invited email must not exist
+     * either, else the accept fails with {@link ExistingAccountException}, and a new account bound to the
+     * identity is created. An invitation into an application is accepted with
+     * {@link #acceptLocalInvite}: the application's providers return to the app server, which holds no
+     * invitation.
      *
      * @param token         the accept token recovered from the OIDC flow session
      * @param oidcSubject   the {@code sub} claim from the IdP

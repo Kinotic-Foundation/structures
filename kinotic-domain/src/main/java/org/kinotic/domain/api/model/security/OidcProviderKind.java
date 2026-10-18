@@ -78,6 +78,15 @@ public enum OidcProviderKind {
     }
 
     /**
+     * Whether the issuer an organization's account names verifies that organization's own users alone, as the
+     * organization's directory does, so a configuration of this kind may admit whoever it verifies. A kind with
+     * one issuer for everyone, such as Google's, verifies every account at the provider.
+     */
+    public boolean verifiesOneOrganization() {
+        return providerAccountPattern != null;
+    }
+
+    /**
      * What the organization is asked for as its account at this provider, such as {@code "Okta domain"},
      * or {@code null} when the kind has one issuer for everyone or is not offered to organizations.
      */

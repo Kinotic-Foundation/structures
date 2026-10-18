@@ -36,4 +36,10 @@ public class SocialLoginHandoff implements Serializable {
 
     /** Origin of the page that started the sign-in, which the completed login is bound to. */
     private String origin;
+
+    /**
+     * The value the application's API host put in the starting browser's session; the completion is answered only
+     * to a browser whose session holds it, so the code signs no other browser in.
+     */
+    private String binding;
 }

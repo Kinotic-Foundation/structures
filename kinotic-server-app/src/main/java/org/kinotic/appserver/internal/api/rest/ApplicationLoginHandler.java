@@ -20,6 +20,7 @@ import org.kinotic.domain.api.rest.support.CallbackResult;
 import org.kinotic.domain.api.rest.support.OidcCallbackException;
 import org.kinotic.domain.api.rest.support.OidcErrorCodes;
 import org.kinotic.domain.api.rest.support.OidcFlowOrchestrator;
+import org.kinotic.domain.api.rest.support.PendingFlow;
 import org.kinotic.domain.api.services.security.LocalAuthenticationService;
 import org.kinotic.domain.api.services.security.OidcConfigurationService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
@@ -100,8 +101,13 @@ public class ApplicationLoginHandler implements SuppliesGatewayRoutes {
                   switch (config) {
                       case null -> ret = Future.failedFuture(new OidcCallbackException(OidcErrorCodes.CONFIG_NOT_FOUND));
                       // the registration is shared, so its provider returns to the shared host, not to this one
-                      case ApplicationSocialOidcConfiguration _ ->
-                              ret = Future.succeededFuture(authEndpointSupport.socialAuthorizeUrl(scope, configId, origin));
+                      case ApplicationSocialOidcConfiguration _ -> {
+                          // the completion at this host is answered only to the browser whose session holds this value,
+                          // so the single-use code the shared host hands back signs in no other browser
+                          String binding = DomainUtil.generateUrlSafeToken(32);
+                          ctx.session().put(ApplicationAuthEndpointSupport.SOCIAL_LOGIN_BINDING_SESSION_KEY, binding);
+                          ret = Future.succeededFuture(authEndpointSupport.socialAuthorizeUrl(scope, configId, origin, binding));
+                      }
                       default -> ret = oidcFlowOrchestrator.startFlow(ctx, config, callbackUrl(scope.application(), configId),
                                                                       scope.application(), scope.tenantId(), origin);
                   }
@@ -136,7 +142,9 @@ public class ApplicationLoginHandler implements SuppliesGatewayRoutes {
 
     /**
      * {@code GET /api/auth/app/login/oidc/callback/:configId} — the IdP returns here; validates the callback and
-     * logs the user into the scope the flow started for. An identity no user is bound to becomes a user on its
+     * logs the user into the scope the flow started for, or returns the browser to the login page of the page
+     * that started the flow with the error, to the application's primary UI's when no flow session names one.
+     * An identity no user is bound to becomes a user on its
      * first sign-in when the configuration creates users on sign-in: a user of the tenant through the tenant's
      * own configuration, or a user of the application, with a tenant of its own, through the application's
      * configuration while the platform manages the application's tenants, since under tenant administrators a
@@ -145,13 +153,15 @@ public class ApplicationLoginHandler implements SuppliesGatewayRoutes {
     private void handleCallback(RoutingContext ctx) {
         ApplicationKey applicationKey = authEndpointSupport.applicationKey(ctx);
         String pathConfigId = ctx.pathParam("configId");
+        // read before the callback consumes the flow: a failed callback still returns to the page that started it
+        PendingFlow flow = oidcFlowOrchestrator.pendingFlow(ctx);
 
         oidcFlowOrchestrator.<OidcConfiguration>handleCallback(
                 ctx, pathConfigId, callbackUrl(applicationKey, pathConfigId),
                 (_, _, tenantId) -> oidcConfigurationService.findOffered(pathConfigId, applicationKey.organizationId(),
                                                                          applicationKey.applicationId(), tenantId))
                 .onSuccess(result -> completeAppLogin(ctx, result, new LoginScope(applicationKey, result.tenantId())))
-                .onFailure(ex -> authEndpointSupport.redirectCallbackFailure(ctx, ex));
+                .onFailure(ex -> authEndpointSupport.redirectCallbackFailure(ctx, flow != null ? flow.origin() : null, ex));
     }
 
     private void completeAppLogin(RoutingContext ctx,
