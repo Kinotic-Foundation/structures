@@ -33,11 +33,11 @@ import java.util.function.Supplier;
 public abstract class KinoticTestBase {
 
     /**
-     * Default organization id used by test fixtures. Scoped CRUD services derive
-     * Elasticsearch routing keys and ID prefixes from this value, so all test entities
-     * are co-located under one org.
+     * The organization the test fixtures belong to: the one the test stack's migrations seed, so a service that
+     * requires the organization to exist finds it. Scoped CRUD services derive Elasticsearch routing keys and id
+     * prefixes from this value, so all test entities are co-located under one organization.
      */
-    public static final String TEST_ORG_ID = "kinotic";
+    public static final String TEST_ORG_ID = "test-org";
 
     /**
      * Default application id used by test fixtures. Matches the Application that the sample
