@@ -1,7 +1,7 @@
 # The development server's management server: kinotic-server-management as a container on one Proxmox host
 # beside three Elasticsearch nodes and the observability stack (deployment/terraform/proxmox),
-# with Front Door, the sites storage account, email, and a Key Vault in Azure
-# (deployment/terraform/azure/dev-server). Activated as `production,dev-server`. Holds what is
+# with the sites storage account, email, and a Key Vault in Azure and the sites Worker on
+# Cloudflare (deployment/terraform/azure/dev-server). Activated as `production,dev-server`. Holds what is
 # fixed for this shape of deployment; everything that differs per server — hostnames,
 # endpoints, addresses — arrives through the environment the terraform root composes, and
 # the credentials through the file imported below.
@@ -25,10 +25,14 @@ kinotic:
       numberOfShards: 1
       numberOfReplicas: 1
   apiGateway:
-    # The portal is served by Front Door from the sites account, so the server exposes the API
-    # port alone
+    # The portal is served by the sites Worker from the sites account, so the server exposes the
+    # API port alone
     webServer:
       enabled: false
+    # The portal is on the sites domain, portal.dev.kinotic.io, and this server on the platform zone,
+    # so the session cookie crosses sites; the login is bound to the portal's origin, the only one
+    # the CORS pattern admits
+    sessionCookieSameSite: NONE
     ssl:
       # certbot's certificate for the management server's hostname, mounted from the host; Vert.x
       # terminates TLS, and the edge passes each connection through unopened

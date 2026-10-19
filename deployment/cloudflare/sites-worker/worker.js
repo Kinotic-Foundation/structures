@@ -1,12 +1,16 @@
 /**
- * Serves every organization's published sites under the sites domain from the sites storage account, and
- * sends an organization's own host to the portal's login for that organization.
+ * Serves every organization's published sites under the sites domain from the sites storage account, the
+ * platform's own UIs where an environment hosts them there, and sends an organization's own host to the
+ * portal's login for that organization.
  *
  * A site is <app>--<ui>.<org>.<SITES_DOMAIN>, and a site addressed to one tenant of the application is
  * <tenant>--<app>--<ui>.<org>.<SITES_DOMAIN>; both are served from the application's site directory,
  * sites/<app>--<ui>.<org>.<SITES_DOMAIN>/ in the account, which the publish workload writes. A request that
  * names a file is served as that file; any other path is a route of the single-page application and is
- * served its index. The organization's own host, <org>.<SITES_DOMAIN>, redirects to <PORTAL_BASE_URL>/login/<org>.
+ * served its index. The portal and the system console, portal.<SITES_DOMAIN> and console.<SITES_DOMAIN>,
+ * are served from sites/<host>/ the same way where the environment gives them records; the development
+ * server does, the cluster hosts them elsewhere. The organization's own host, <org>.<SITES_DOMAIN>,
+ * redirects to <PORTAL_BASE_URL>/login/<org>.
  *
  * The Worker is bound to the site hosts only: the application API hosts, <org>--<app>.apps-api.<zone>, go to
  * the app server directly, so no API call or WebSocket passes through here.
@@ -26,6 +30,8 @@ const LABEL_SEPARATOR = '--'
  */
 const RESERVED_LABELS = new Set(['www', 'api', 'apps-api', 'system-api', 'portal', 'console', 'mail', 'admin', 'login', 'status', 'docs',
                                  'find', 'social', 'sso', 'providers', 'choices', 'system', 'xn'])
+/** The reserved labels that name a platform UI served from the account under its own host. */
+const UI_LABELS = new Set(['portal', 'console'])
 const SITES_CONTAINER = 'sites'
 const INDEX = 'index.html'
 /** Hashed assets are published under this directory and never change, so the edge keeps them. */
@@ -35,13 +41,13 @@ const IMMUTABLE_TTL_SECONDS = 31536000
 const MUTABLE_TTL_SECONDS = 60
 
 /**
- * What a host under the sites domain names, or null when it is not a site or an organization host.
+ * What a host under the sites domain names, or null when it is not a site, a platform UI or an organization host.
  *
  * @param {string} host the request's hostname, lowercase
  * @param {string} sitesDomain the sites domain, lowercase
- * @returns {{ organizationId: string, site: string | null, tenantId: string | null } | null} the organization,
- *          the site's hostname under the sites domain (null for the organization's own host), and the tenant
- *          the request is addressed to
+ * @returns {{ organizationId: string | null, site: string | null, tenantId: string | null } | null} the
+ *          organization (null for a platform UI), the site's hostname under the sites domain (null for the
+ *          organization's own host), and the tenant the request is addressed to
  */
 export function resolveHost(host, sitesDomain) {
     const suffix = '.' + sitesDomain
@@ -49,6 +55,9 @@ export function resolveHost(host, sitesDomain) {
         return null
     }
     const labels = host.slice(0, -suffix.length).split('.')
+    if (labels.length === 1 && UI_LABELS.has(labels[0])) {
+        return { organizationId: null, site: host, tenantId: null }
+    }
     if (labels.some(label => label.length === 0) || RESERVED_LABELS.has(labels[labels.length - 1])) {
         return null
     }

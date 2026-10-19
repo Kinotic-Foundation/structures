@@ -45,8 +45,8 @@ output "server_client_secret_key_id" {
 }
 
 output "ui_hostnames" {
-  description = "The platform UIs' hostnames served from the sites account, by key"
-  value       = module.sites.hostnames
+  description = "The hostnames the sites Worker serves the platform's own UIs at, by label"
+  value       = module.cloudflare_sites.ui_hostnames
 }
 
 output "sites_storage_account_id" {
@@ -54,12 +54,3 @@ output "sites_storage_account_id" {
   value       = module.sites.storage_account_id
 }
 
-output "sites_frontdoor_profile_name" {
-  description = "The Front Door profile serving the named hostnames, or null without any"
-  value       = module.sites.frontdoor_profile_name
-}
-
-output "sites_frontdoor_endpoint_name" {
-  description = "Its endpoint"
-  value       = module.sites.frontdoor_endpoint_name
-}

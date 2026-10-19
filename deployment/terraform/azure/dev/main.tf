@@ -20,11 +20,6 @@ terraform {
       source  = "hashicorp/azuread"
       version = "~> 3.0"
     }
-    # The sites module: origin authentication at an API version azurerm lacks
-    azapi = {
-      source  = "Azure/azapi"
-      version = "~> 2.0"
-    }
     cloudflare = {
       source  = "cloudflare/cloudflare"
       version = "~> 5.0"
@@ -35,16 +30,13 @@ terraform {
 provider "azurerm" {
   features {
     resource_group {
-      # The group fills with the storage accounts and Front Door resources the server
-      # creates at runtime; destroy removes them along with it
+      # destroy removes the sites account's contents along with the group
       prevent_deletion_if_contains_resources = false
     }
   }
 }
 
 provider "azuread" {}
-
-provider "azapi" {}
 
 provider "cloudflare" {
   api_token = var.cloudflare_api_token
@@ -83,9 +75,6 @@ module "environment" {
   location    = var.location
   tags        = local.common_tags
 
-  dns_zone_name                  = local.global.dns_zone_name
-  dns_zone_id                    = local.global.dns_zone_id
-  dns_zone_resource_group_name   = local.global.resource_group_name
   email_communication_service_id = local.global.email_communication_service_id
 
   cloudflare_zone_name  = var.cloudflare_zone_name

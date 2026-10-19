@@ -14,13 +14,13 @@ output "apps_api_domain" {
 }
 
 output "portal_hostname" {
-  description = "The portal's hostname, served by Front Door from sites/<hostname>/ in the sites account"
-  value       = module.environment.ui_hostnames.portal
+  description = "The portal's hostname, served by the sites Worker from sites/<hostname>/ in the sites account"
+  value       = module.environment.ui_hostnames["portal"]
 }
 
 output "console_hostname" {
-  description = "The system console's hostname, served by Front Door from sites/<hostname>/ in the sites account"
-  value       = module.environment.ui_hostnames.console
+  description = "The system console's hostname, served by the sites Worker from sites/<hostname>/ in the sites account"
+  value       = module.environment.ui_hostnames["console"]
 }
 
 output "sites_domain" {
@@ -79,8 +79,8 @@ output "tenant_id" {
 output "dev_server_env" {
   description = "The non-secret half of the servers' environment"
   value = {
-    DEV_SERVER_PORTAL_HOSTNAME                          = module.environment.ui_hostnames.portal
-    DEV_SERVER_CONSOLE_HOSTNAME                         = module.environment.ui_hostnames.console
+    DEV_SERVER_PORTAL_HOSTNAME                          = module.environment.ui_hostnames["portal"]
+    DEV_SERVER_CONSOLE_HOSTNAME                         = module.environment.ui_hostnames["console"]
     KINOTIC_SYSTEMAPI_UIDEPLOYMENT_SITESDOMAIN          = module.environment.sites_domain
     KINOTIC_SYSTEMAPI_UIDEPLOYMENT_SITESSTORAGEENDPOINT = module.environment.sites_storage_blob_endpoint
     KINOTIC_DOMAIN_PUBLISHEDSITES_DOMAIN                = module.environment.sites_domain
@@ -100,19 +100,4 @@ output "secrets_env" {
   description = "The Azure and Cloudflare half of the servers' secrets, as env-file lines"
   value       = "AZURE_CLIENT_SECRET=${module.environment.server_client_secret}\nKINOTIC_DOMAIN_PUBLISHEDSITES_CLOUDFLARE_APITOKEN=${var.cloudflare_dns_api_token}\n"
   sensitive   = true
-}
-
-output "resource_group_name" {
-  description = "The resource group, for deploy-ui.sh"
-  value       = module.environment.resource_group_name
-}
-
-output "sites_frontdoor_profile" {
-  description = "The Front Door profile serving the sites account, for deploy-ui.sh's purge"
-  value       = module.environment.sites_frontdoor_profile_name
-}
-
-output "sites_frontdoor_endpoint" {
-  description = "Its endpoint, for deploy-ui.sh's purge"
-  value       = module.environment.sites_frontdoor_endpoint_name
 }

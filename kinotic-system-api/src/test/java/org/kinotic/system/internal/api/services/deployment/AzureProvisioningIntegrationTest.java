@@ -71,7 +71,7 @@ class AzureProvisioningIntegrationTest {
     private static final String INDEX_HTML = "<!doctype html><title>azure-it</title>";
     /** Longer than any upload or delete takes; a step past this is stuck. */
     private static final long STEP_TIMEOUT_MINUTES = 15;
-    /** A site serves once its configuration reaches Front Door's edges, which Microsoft bounds at 15 minutes per change and longer when changes queue. */
+    /** Longer than the edge takes to serve a site's first request once its files are up. */
     private static final long SITE_TIMEOUT_MINUTES = 45;
     private static final long SITE_POLL_MS = 30_000;
 

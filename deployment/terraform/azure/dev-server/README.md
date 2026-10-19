@@ -1,22 +1,22 @@
 # The development server's Azure side
 
-Everything the shared development server needs from Azure, applied once from an operator's
-machine. It reuses `modules/dev-environment`, the same module a developer's `dev/` root uses,
-and adds what a server peers depend on needs: a key vault for the servers' secret storage, a
-storage account for Elasticsearch snapshots, the portal and the system console on the same
-Front Door as the published sites, and a hostname for each server's API with the rights to
-issue its certificate.
+Everything the shared development server needs from Azure and Cloudflare, applied once from an
+operator's machine. It reuses `modules/dev-environment`, the same module a developer's `dev/`
+root uses, and adds what a server peers depend on needs: a key vault for the servers' secret
+storage, a storage account for Elasticsearch snapshots, the portal and the system console on
+the same sites Worker as the published sites, and a hostname for each server's API with the
+rights to issue its certificate.
 
 | Resource | Name | Purpose |
 |---|---|---|
 | Resource group | `rg-kinotic-dev` | Holds everything below but the service principal |
-| Front Door Standard profile + endpoint | `afd-kinotic-dev-sites` | Serves every published UI at `<label>.apps-dev.kinotic.ai` (`modules/sites`) |
-| Sites storage account | `stkinoticdevsites` | Every site's files under `sites/<hostname>/` |
-| Key vault | `kv-kinotic-dev-sites` | The Let's Encrypt wildcard certificate Front Door reads |
+| Sites storage account | `stkinoticdevsites` | Every site's files under `sites/<hostname>/`, private; the Worker reads with the SAS this root mints (`modules/sites`) |
+| Cloudflare sites Worker and routes | `kinotic-dev-sites` | Serves every published UI at `<app>--<ui>.<org>.dev.kinotic.io` from the account, with the zone's settings and Total TLS (`modules/cloudflare-sites`) |
+| Cloudflare records | `portal.dev.kinotic.io`, `console.dev.kinotic.io` | The portal and the system console, served by the Worker from `sites/<hostname>/` in the sites account |
+| Cloudflare records | `apps-api.dev.kinotic.io`, `*.apps-api.dev.kinotic.io` | The app server and every application's API host `<organizationId>--<applicationId>.apps-api.dev.kinotic.io`, proxied to the router's public address |
 | Key vault | `kv-kinotic-dev` | The servers' secret storage (`kinotic.domain.secretStorage.backend: AZURE`) |
 | Storage account + container | `stkinoticdevsnapshots` / `elasticsearch-snapshots` | The nightly Elasticsearch snapshot repository, and the migration vehicle |
-| Front Door domains + CNAMEs | `dev-portal.kinotic.ai`, `dev-console.kinotic.ai` | The portal and the system console, served from `sites/<hostname>/` in the sites account on managed certificates |
-| DNS A records | `dev-api.kinotic.ai`, `dev-system-api.kinotic.ai`, `dev-apps-api.kinotic.ai`, `*.dev-apps-api.kinotic.ai` | The router's public address, for the management server, the system server, and the app server with every application's API host `<organizationId>--<applicationId>.dev-apps-api.kinotic.ai`; `kinotic-dyndns.timer` on the host keeps them current |
+| DNS A records | `dev-api.kinotic.ai`, `dev-system-api.kinotic.ai` | The router's public address, for the management server and the system server; `kinotic-dyndns.timer` on the host keeps them current |
 | Service principal | `kinotic-dev-server` | The identity the servers run as: Storage Blob Data Contributor on the sites account, Contributor on the email service, Key Vault Secrets Officer on `kv-kinotic-dev`, DNS Zone Contributor on the zone for certbot and the address updater |
 | Role assignment | the operator | Storage Blob Data Contributor on the sites account, for `deploy-ui.sh`; Key Vault Secrets Officer on `kv-kinotic-dev`, to place the social sign-in client secrets |
 
@@ -36,12 +36,11 @@ lets_encrypt_email = "you@example.com"
 
 ```bash
 terraform init
-terraform apply -target=module.environment.module.sites.azurerm_cdn_frontdoor_profile.sites   # the profile first: its identity's principal id is unknown until it exists
 terraform apply
 ```
 
-Then the two UIs, built for this server and uploaded into the sites account, where Front
-Door serves each from `sites/<hostname>/` exactly as it serves a published site. Again
+Then the two UIs, built for this server and uploaded into the sites account, where the sites
+Worker serves each from `sites/<hostname>/` exactly as it serves a published site. Again
 whenever `kinotic-frontend` changes:
 
 ```bash

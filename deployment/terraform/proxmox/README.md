@@ -4,9 +4,9 @@ One Proxmox host runs the platform's services: a container per service — the o
 app servers, the one-shot migration, three Elasticsearch nodes on a physical disk each, Loki,
 Tempo, Mimir, Grafana — created from the same images the compose stack pulls, and the edge, an
 HAProxy container that passes each TLS connection on the router's forwarded 443 to the server
-its SNI names. The portal and the system console are served by Front Door from the Azure root's
-sites account (`deployment/terraform/azure/dev-server/deploy-ui.sh`), so the host exposes the
-edge alone. The workload nodes are separate machines, or VMs on this host (`workers`),
+its SNI names. The portal and the system console are served by the sites Worker from the Azure
+root's sites account (`deployment/terraform/azure/dev-server/deploy-ui.sh`), so the host exposes
+the edge alone. The workload nodes are separate machines, or VMs on this host (`workers`),
 provisioned with `deployment/vm-node` and configured from this root's `vm_manager_env` output. The design and the reasons are on the
 [Development Server](https://kinotic.ai/platform/development-server) page; this is the
 runbook.
@@ -95,7 +95,7 @@ host under it:
 ssh root@<host>
 # pyOpenSSL 26 drops X509Req, which the josepy 1.x certbot pins still imports; azure-mgmt-dns 9
 # changes the client constructor certbot-dns-azure calls
-python3 -m venv /opt/certbot && /opt/certbot/bin/pip install certbot certbot-dns-azure "pyOpenSSL>=25,<26" "azure-mgmt-dns<9"
+python3 -m venv /opt/certbot && /opt/certbot/bin/pip install certbot certbot-dns-azure certbot-dns-cloudflare "pyOpenSSL>=25,<26" "azure-mgmt-dns<9"
 install -m 0600 /dev/stdin /etc/kinotic/certbot-azure.ini <<EOT
 dns_azure_sp_client_id = <AZURE_CLIENT_ID>
 dns_azure_sp_client_secret = <AZURE_CLIENT_SECRET>
@@ -103,17 +103,21 @@ dns_azure_tenant_id = <AZURE_TENANT_ID>
 dns_azure_environment = AzurePublicCloud
 dns_azure_zone1 = kinotic.ai:/subscriptions/<subscription>/resourceGroups/<global rg>
 EOT
-issue() {   # <server> <vmid> <name>...
-  local server=$1 vmid=$2 name domains=(); shift 2
+install -m 0600 /dev/stdin /etc/kinotic/certbot-cloudflare.ini <<EOT
+dns_cloudflare_api_token = <KINOTIC_DOMAIN_PUBLISHEDSITES_CLOUDFLARE_APITOKEN>
+EOT
+azure=(--authenticator dns-azure --dns-azure-config /etc/kinotic/certbot-azure.ini)
+cloudflare=(--authenticator dns-cloudflare --dns-cloudflare-credentials /etc/kinotic/certbot-cloudflare.ini)
+issue() {   # <server> <vmid> <plugin> <name>...
+  local server=$1 vmid=$2 name domains=(); local -n plugin=$3; shift 3
   for name in "$@"; do domains+=(-d "$name"); done
-  /opt/certbot/bin/certbot certonly --non-interactive --agree-tos --email <you> --cert-name "$server" \
-    --authenticator dns-azure --dns-azure-config /etc/kinotic/certbot-azure.ini \
+  /opt/certbot/bin/certbot certonly --non-interactive --agree-tos --email <you> --cert-name "$server" "${plugin[@]}" \
     --deploy-hook "install -m 0640 -o 101002 -g 101001 \"\$RENEWED_LINEAGE\"/fullchain.pem \"\$RENEWED_LINEAGE\"/privkey.pem /etc/kinotic/secrets/$server/certs/ && pct reboot $vmid 2>/dev/null || true" \
     "${domains[@]}"
 }
-issue kinotic-server-management 121 dev-api.kinotic.ai
-issue kinotic-server-system 122 dev-system-api.kinotic.ai
-issue kinotic-server-app 123 dev-apps-api.kinotic.ai '*.dev-apps-api.kinotic.ai'
+issue kinotic-server-management 121 azure dev-api.kinotic.ai
+issue kinotic-server-system 122 azure dev-system-api.kinotic.ai
+issue kinotic-server-app 123 cloudflare apps-api.dev.kinotic.io '*.apps-api.dev.kinotic.io'
 echo '0 3 * * * root /opt/certbot/bin/certbot renew -q' > /etc/cron.d/certbot
 ```
 
@@ -151,8 +155,8 @@ the cluster to be healthy, runs to completion, and is verified against the
 private addresses, then the edge.
 
 The servers are on `https://dev-api.kinotic.ai` (org), `https://dev-system-api.kinotic.ai`
-(system) and `https://dev-apps-api.kinotic.ai` with every application's
-`https://<organizationId>--<applicationId>.dev-apps-api.kinotic.ai` (app) once the router
+(system) and `https://apps-api.dev.kinotic.io` with every application's
+`https://<organizationId>--<applicationId>.apps-api.dev.kinotic.io` (app) once the router
 forwards 443 to the edge. The edge listens on 443 itself, because a consumer router forwards a
 port only to the same port: an autodev hook the applier installs lowers the container's
 unprivileged port floor, so HAProxy's own user binds it. It reads the SNI of each connection
@@ -161,8 +165,8 @@ server terminates TLS with its own certificate; a connection naming no server's 
 closed. The router picks the target by device and reserves an address for it when the forward
 is saved, so the edge's LAN interface takes its address by DHCP under a fixed MAC
 (`edge_mac`), and `edge_ip` is the address the router reserved, which the nodes dial for every
-server; the portal and the system console are on Front Door as soon as `deploy-ui.sh` in the
-Azure root has uploaded them.
+server; the portal and the system console are on the sites Worker as soon as `deploy-ui.sh` in
+the Azure root has uploaded them.
 
 ## After the first apply
 

@@ -1,5 +1,5 @@
 variable "environment" {
-  description = "Names everything this root creates and the apps-<environment> sites domain; must differ from every developer's dev/ environment"
+  description = "Names everything this root creates and the <environment>.<cloudflare zone> sites domain; must differ from every developer's dev/ environment"
   type        = string
   default     = "dev"
 }
@@ -26,18 +26,6 @@ variable "system_api_label" {
   description = "The system server's label in the platform zone: dev-system-api for dev-system-api.kinotic.ai, the system console's API"
   type        = string
   default     = "dev-system-api"
-}
-
-variable "portal_label" {
-  description = "The portal's label in the platform zone, served by Front Door from the sites account"
-  type        = string
-  default     = "dev-portal"
-}
-
-variable "console_label" {
-  description = "The system console's label in the platform zone, served by Front Door from the sites account"
-  type        = string
-  default     = "dev-console"
 }
 
 variable "public_ip" {

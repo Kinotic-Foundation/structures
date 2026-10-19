@@ -26,11 +26,6 @@ terraform {
       source  = "hashicorp/local"
       version = "~> 2.0"
     }
-    # The sites module: origin authentication at an API version azurerm lacks
-    azapi = {
-      source  = "Azure/azapi"
-      version = "~> 2.0"
-    }
     # The customer domain: the sites Worker, the organizations' records and the app server's hosts
     cloudflare = {
       source  = "cloudflare/cloudflare"
@@ -45,8 +40,6 @@ terraform {
     key                  = "cluster/terraform.tfstate"
   }
 }
-
-provider "azapi" {}
 
 # The operator's token: Workers, DNS and zone settings on the zone and the account
 provider "cloudflare" {

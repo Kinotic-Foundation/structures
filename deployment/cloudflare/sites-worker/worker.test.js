@@ -20,6 +20,15 @@ describe('resolveHost', () => {
         expect(resolveHost('acme.kinotic.io', ZONE)).toEqual({ organizationId: 'acme', site: null, tenantId: null })
     })
 
+    test('the platform\'s own UIs are served from the account under their own hosts', () => {
+        expect(resolveHost('portal.dev.kinotic.io', 'dev.kinotic.io')).toEqual({
+            organizationId: null, site: 'portal.dev.kinotic.io', tenantId: null,
+        })
+        expect(resolveHost('console.kinotic.io', ZONE)).toEqual({ organizationId: null, site: 'console.kinotic.io', tenantId: null })
+        expect(resolveHost('orders--web.portal.kinotic.io', ZONE)).toBeNull()
+        expect(resolveHost('x.portal.kinotic.io', ZONE)).toBeNull()
+    })
+
     test('the sites domain may be a subdomain of the zone', () => {
         expect(resolveHost('orders--web.acme.dev-nm.kinotic.io', 'dev-nm.kinotic.io')).toEqual({
             organizationId: 'acme', site: 'orders--web.acme.dev-nm.kinotic.io', tenantId: null,
@@ -31,7 +40,7 @@ describe('resolveHost', () => {
         expect(resolveHost('kinotic.io', ZONE)).toBeNull()
         expect(resolveHost('apps-api.kinotic.io', ZONE)).toBeNull()
         expect(resolveHost('acme--orders.apps-api.kinotic.io', ZONE)).toBeNull()
-        for (const label of ['www', 'api', 'apps-api', 'system-api', 'portal', 'console', 'mail', 'admin', 'login', 'status',
+        for (const label of ['www', 'api', 'apps-api', 'system-api', 'mail', 'admin', 'login', 'status',
                              'docs', 'find', 'social', 'sso', 'providers', 'choices', 'system', 'xn']) {
             expect(resolveHost(`${label}.kinotic.io`, ZONE)).toBeNull()
         }

@@ -2,11 +2,10 @@
 # What the shared development server (a Proxmox host, deployment/terraform/proxmox) needs from
 # Azure and Cloudflare: the dev-environment module — a resource group, the sites storage
 # account, the sites Worker and domain <environment>.<cloudflare zone> with the app server's
-# hosts under it, a service principal with the roles the servers need — plus three things a
-# developer's machine does without: a key vault the servers store secrets in, a storage account
-# Elasticsearch snapshots go to, the portal and the system console served by Front Door from
-# the sites account, and the DNS records and rights that put the management and system servers'
-# APIs on a hostname with a certificate.
+# hosts and the portal and the system console under it, a service principal with the roles the
+# servers need — plus three things a developer's machine does without: a key vault the servers
+# store secrets in, a storage account Elasticsearch snapshots go to, and the DNS records and
+# rights that put the management and system servers' APIs on a hostname with a certificate.
 #
 # State is local, like dev/: one server, applied from one machine. The proxmox root reads
 # this root's outputs from that state file.
@@ -23,11 +22,6 @@ terraform {
       source  = "hashicorp/azuread"
       version = "~> 3.0"
     }
-    # The sites module: origin authentication at an API version azurerm lacks
-    azapi = {
-      source  = "Azure/azapi"
-      version = "~> 2.0"
-    }
     cloudflare = {
       source  = "cloudflare/cloudflare"
       version = "~> 5.0"
@@ -38,8 +32,7 @@ terraform {
 provider "azurerm" {
   features {
     resource_group {
-      # The group fills with the storage accounts and Front Door resources the system server
-      # creates at runtime; destroy removes them along with it
+      # destroy removes the sites account's and the snapshot account's contents along with the group
       prevent_deletion_if_contains_resources = false
     }
     key_vault {
@@ -50,8 +43,6 @@ provider "azurerm" {
 }
 
 provider "azuread" {}
-
-provider "azapi" {}
 
 provider "cloudflare" {
   api_token = var.cloudflare_api_token
@@ -77,6 +68,9 @@ locals {
   api_hostname        = "${var.api_label}.${local.global.dns_zone_name}"
   system_api_hostname = "${var.system_api_label}.${local.global.dns_zone_name}"
   apps_api_domain     = module.environment.apps_api_domain
+  # The sites domain the dev-environment module names after the environment, written out here
+  # because the module takes the portal's URL under it as an input
+  sites_domain = "${var.environment}.${var.cloudflare_zone_name}"
 
   common_tags = {
     environment = var.environment
@@ -95,19 +89,16 @@ module "environment" {
   location    = var.location
   tags        = local.common_tags
 
-  dns_zone_name                  = local.global.dns_zone_name
-  dns_zone_id                    = local.global.dns_zone_id
-  dns_zone_resource_group_name   = local.global.resource_group_name
   email_communication_service_id = local.global.email_communication_service_id
-
-  ui_hostnames = { portal = var.portal_label, console = var.console_label }
 
   cloudflare_zone_name  = var.cloudflare_zone_name
   cloudflare_zone_id    = var.cloudflare_zone_id
   cloudflare_account_id = var.cloudflare_account_id
   # the app server's hosts, proxied to the router; the host's certificate must cover them
   app_server_address = var.public_ip
-  portal_base_url    = "https://${var.portal_label}.${local.global.dns_zone_name}"
+  # the portal and the system console, served by the sites Worker from the sites account
+  ui_labels       = ["portal", "console"]
+  portal_base_url = "https://portal.${local.sites_domain}"
 }
 
 # The operator uploads the two UIs into the sites account (deploy-ui.sh)
