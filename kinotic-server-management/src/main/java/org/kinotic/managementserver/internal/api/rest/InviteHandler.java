@@ -93,7 +93,12 @@ public class InviteHandler implements SuppliesGatewayRoutes, OidcFlowCompleter {
                   Future<Boolean> accountHasPassword = account.compose(found -> found == null
                           ? Future.succeededFuture(false)
                           : identityService.hasPassword(found.getId()));
-                  return Future.all(orgName, providers, accountHasPassword)
+                  // an account an administrator added that nobody signs in to yet is the invitee's to claim, so the
+                  // page treats it as new: an account exists for the page once a method signs it in
+                  Future<Boolean> accountClaimed = account.compose(found -> found == null
+                          ? Future.succeededFuture(false)
+                          : identityService.hasSignInMethod(found.getId()));
+                  return Future.all(orgName, providers, accountHasPassword, accountClaimed)
                                .map(v -> new JsonObject()
                                        .put("email", invite.getEmail())
                                        .put("displayName", invite.getDisplayName())
@@ -102,7 +107,7 @@ public class InviteHandler implements SuppliesGatewayRoutes, OidcFlowCompleter {
                                        .put("invitedByName", invite.getInvitedByName())
                                        .put("expiresAt", invite.getExpiresAt().toInstant())
                                        .put("localEnabled", true)
-                                       .put("accountExists", account.result() != null)
+                                       .put("accountExists", accountClaimed.result())
                                        .put("accountHasPassword", accountHasPassword.result())
                                        .put("providers", authEndpointSupport.providersJson(providers.result())));
               })

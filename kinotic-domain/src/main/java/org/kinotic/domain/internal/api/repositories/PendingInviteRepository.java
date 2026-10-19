@@ -16,12 +16,14 @@ public class PendingInviteRepository extends AbstractTokenVerificationRepository
         super("kinotic_pending_invite", PendingInvite.class, crudServiceTemplate);
     }
 
+    /** The live (unexpired) invitation of {@code email} into the scope, or {@code null} when none is pending. */
     public Future<PendingInvite> findByEmailAndScope(String email,
                                                      String organizationId,
                                                      String applicationId) {
         return findFirst(b -> b.query(composeFilter(
                 termFilter("email", DomainUtil.normalizeEmail(email)),
-                scopeFilter(organizationId, applicationId))));
+                scopeFilter(organizationId, applicationId),
+                notExpiredFilter())));
     }
 
     /**

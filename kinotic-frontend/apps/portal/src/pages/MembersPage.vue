@@ -7,14 +7,14 @@
       :headers="headers"
       :data-source="dataSource"
       :search="tableSearch"
-      :create-new-button-text="inviteLabel"
+      :create-new-button-text="addLabel"
       empty-state-text="No members yet"
       :row-actions="rowActions"
       :selected-id="highlightedMember?.id"
       @update:search="tableSearch = $event"
       @row-hover="row => hoverMember(row as MemberRow)"
       @on-row-click="row => openMember(row as MemberRow)"
-      @add-item="openInviteDialog"
+      @add-item="openMemberDialog"
     >
       <template #item.displayName="{ item }">
         {{ item.displayName || '—' }}
@@ -38,30 +38,45 @@
       <MemberDetail v-if="selectedMember" :member="selectedMember" :tint="memberTint" :index="position - 1" />
     </SteppingDrawer>
 
-    <FormDialog v-model:visible="inviteDialogVisible" :icon="UserPlus" :title="inviteLabel" :description="inviteDescription"
-                @submit="sendInvite">
+    <FormDialog v-model:visible="memberDialogVisible" :icon="UserPlus" :title="addLabel" :description="addDescription"
+                @submit="submitMember">
         <div class="flex flex-col gap-5">
           <div>
-            <label for="invite-email" class="mb-2 block text-sm font-medium">Email</label>
+            <label for="member-email" class="mb-2 block text-sm font-medium">Email</label>
             <IconField>
               <InputIcon><Mail :size="16" :stroke-width="1.75" aria-hidden="true" /></InputIcon>
-              <InputText id="invite-email" v-model="inviteEmail" type="email" placeholder="person@example.com" autocomplete="off" autofocus class="w-full" />
+              <InputText id="member-email" v-model="memberEmail" type="email" placeholder="person@example.com" autocomplete="off" autofocus class="w-full" />
             </IconField>
             <p class="mt-1.5 text-[0.8125rem] text-muted-color">Use the address they'll sign in with.</p>
           </div>
           <div>
-            <label for="invite-name" class="mb-2 flex items-center justify-between text-sm font-medium">
+            <label for="member-name" class="mb-2 flex items-center justify-between text-sm font-medium">
               Display name
               <span class="text-xs font-normal text-muted-color">Optional</span>
             </label>
             <IconField>
               <InputIcon><UserRound :size="16" :stroke-width="1.75" aria-hidden="true" /></InputIcon>
-              <InputText id="invite-name" v-model="inviteDisplayName" placeholder="Their name" autocomplete="off" class="w-full" />
+              <InputText id="member-name" v-model="memberDisplayName" placeholder="Their name" autocomplete="off" class="w-full" />
             </IconField>
+          </div>
+          <!-- An organization's member is added outright; the email only decides how they first sign in -->
+          <div v-if="props.applicationId === null"
+               class="flex items-start gap-3 rounded-xl border border-surface-200 bg-surface-0 px-4 py-3.5 dark:border-surface-700 dark:bg-surface-900">
+            <ToggleSwitch inputId="member-send-invitation" v-model="sendInvitation" class="mt-0.5 shrink-0" />
+            <div class="flex flex-col gap-1">
+              <label for="member-send-invitation" class="text-sm font-medium text-surface-950 dark:text-surface-0">Send an invitation email</label>
+              <p class="text-[0.8125rem] text-muted-color">
+                {{ sendInvitation
+                    ? 'They accept it to claim their account, with a password or one of the sign-in methods below.'
+                    : 'They sign in through one of your organization\'s own sign-in providers, which admits them the first time.' }}
+                People who already have a Kinotic account always receive an invitation, since joining needs their acceptance.
+              </p>
+            </div>
           </div>
         </div>
 
-        <div class="rounded-xl border border-surface-200 bg-surface-0 px-4 pt-3.5 pb-1 dark:border-surface-700 dark:bg-surface-900">
+        <div v-if="props.applicationId !== null || sendInvitation"
+             class="rounded-xl border border-surface-200 bg-surface-0 px-4 pt-3.5 pb-1 dark:border-surface-700 dark:bg-surface-900">
           <p class="mb-2.5 text-sm font-semibold text-surface-950 dark:text-surface-0">They can accept by</p>
           <ul>
             <li v-for="method in signInMethods" :key="method.name"
@@ -75,8 +90,9 @@
         </div>
 
         <template #footer>
-          <Button type="button" label="Cancel" severity="secondary" outlined @click="inviteDialogVisible = false" />
-          <Button type="submit" label="Send invitation" icon="pi pi-send" :loading="inviting" :disabled="inviteEmail.trim() === ''" />
+          <Button type="button" label="Cancel" severity="secondary" outlined @click="memberDialogVisible = false" />
+          <Button type="submit" :label="props.applicationId !== null ? 'Send invitation' : 'Add member'"
+                  :icon="props.applicationId !== null ? 'pi pi-send' : 'pi pi-user-plus'" :loading="saving" :disabled="memberEmail.trim() === ''" />
         </template>
     </FormDialog>
   </div>
@@ -89,6 +105,7 @@ import IconField from 'primevue/iconfield'
 import InputIcon from 'primevue/inputicon'
 import InputText from 'primevue/inputtext'
 import Tag from 'primevue/tag'
+import ToggleSwitch from 'primevue/toggleswitch'
 import type { MenuItem } from 'primevue/menuitem'
 import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
@@ -119,15 +136,19 @@ import { createDebug } from '@kinotic-ai/frontend-common'
 
 const debug = createDebug('members')
 
-/** One table row — a member or, when {@link invite} is true, a pending invitation. */
+/**
+ * One table row — a member, pending while nobody has signed in as them yet, or, when {@link invite} is true, a
+ * pending invitation to someone who already had an account.
+ */
 interface MemberRow extends MemberSummary {
   enabled?: boolean
+  pending?: boolean
 }
 
 /**
  * Members of the organization (applicationId null) or of one application. Pending
- * invitations render inline ahead of the members with an Invited badge; searching
- * matches members on the server and pending invitations client-side.
+ * invitations render inline ahead of the members, as Pending like members who have not
+ * signed in yet; searching matches members on the server and pending invitations client-side.
  */
 const props = withDefaults(defineProps<{
   applicationId?: string | null
@@ -155,10 +176,11 @@ const PROVIDER_BRANDS: Record<string, { name: string, logo: string }> = {
   github: { name: 'GitHub', logo: githubLogo }
 }
 
-const inviteDialogVisible = ref(false)
-const inviteEmail = ref('')
-const inviteDisplayName = ref('')
-const inviting = ref(false)
+const memberDialogVisible = ref(false)
+const memberEmail = ref('')
+const memberDisplayName = ref('')
+const sendInvitation = ref(true)
+const saving = ref(false)
 const socialProviderKeys = ref<string[]>([])
 
 const toast = useToast()
@@ -177,18 +199,18 @@ const formatDate = DatetimeUtil.formatLocaleDate
 
 // An application's members are its users, which tells them apart from the organization's members
 const title = computed<string>(() => props.applicationId !== null ? 'Users' : 'Members')
-const inviteLabel = computed<string>(() => props.applicationId !== null ? 'Invite user' : 'Invite member')
+const addLabel = computed<string>(() => props.applicationId !== null ? 'Invite user' : 'Add member')
 
 const membersDescription = computed<string>(() => {
   return props.applicationId !== null
       ? 'Everyone who signs in to this application, including pending invitations.'
-      : 'Everyone in your organization, including pending invitations.'
+      : 'Everyone in your organization, including people who have not signed in yet.'
 })
 
-const inviteDescription = computed<string>(() => {
+const addDescription = computed<string>(() => {
   return props.applicationId !== null
       ? 'Send an invitation to sign in to this application.'
-      : 'Send an invitation to join your organization.'
+      : 'Add a person to your organization. They are pending until they first sign in.'
 })
 
 // The ways an invitee can accept, one row each in the invite dialog
@@ -254,7 +276,7 @@ function toInviteRow(invite: PendingInviteSummary): MemberRow {
     id: invite.id ?? '',
     email: invite.email,
     displayName: invite.displayName,
-    status: 'Invited',
+    status: 'Pending',
     created: invite.created,
     invite: true
   }
@@ -265,9 +287,10 @@ function toMemberRow(member: Member): MemberRow {
     id: member.id ?? '',
     email: member.email,
     displayName: member.displayName,
-    status: member.enabled ? 'Active' : 'Disabled',
+    status: member.pending ? 'Pending' : member.enabled ? 'Active' : 'Disabled',
     created: member.joined,
-    enabled: member.enabled
+    enabled: member.enabled,
+    pending: member.pending
   }
 }
 
@@ -283,24 +306,37 @@ function providerMethod(key: string): SignInMethod {
       : { name: `Signing in with ${key.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ')}`, icon: markRaw(Globe) }
 }
 
-function openInviteDialog() {
-  inviteEmail.value = ''
-  inviteDisplayName.value = ''
-  inviteDialogVisible.value = true
+function openMemberDialog() {
+  memberEmail.value = ''
+  memberDisplayName.value = ''
+  sendInvitation.value = true
+  memberDialogVisible.value = true
 }
 
-async function sendInvite() {
-  const email = inviteEmail.value.trim()
+async function submitMember() {
+  const email = memberEmail.value.trim()
   if (!email || !email.includes('@')) {
     toast.add({ severity: 'error', summary: 'Error', detail: 'Please enter a valid email address', life: 5000 })
     return
   }
-  inviting.value = true
+  saving.value = true
   try {
-    await Kinotic.members.inviteMember(email, inviteDisplayName.value.trim() || null, props.applicationId)
-    inviteDialogVisible.value = false
-    toast.add({ severity: 'success', summary: 'Invitation sent', detail: `Invited ${email}`, life: 5000 })
-    // A leftover filter would hide the new Invited row; clearing it reloads the
+    const displayName = memberDisplayName.value.trim() || null
+    if (props.applicationId !== null) {
+      await Kinotic.members.inviteMember(email, displayName, props.applicationId)
+      toast.add({ severity: 'success', summary: 'Invitation sent', detail: `Invited ${email}`, life: 5000 })
+    } else {
+      const added = await Kinotic.members.addMember(email, displayName, sendInvitation.value)
+      // an address that already had an account is invited to accept, whatever the switch said
+      const detail = added.id === null
+          ? `${email} already has a Kinotic account, so an invitation was emailed for them to accept`
+          : sendInvitation.value
+              ? `Added ${email} and emailed an invitation`
+              : `Added ${email}; they sign in through your organization's provider`
+      toast.add({ severity: 'success', summary: 'Member added', detail, life: 6000 })
+    }
+    memberDialogVisible.value = false
+    // A leftover filter would hide the new Pending row; clearing it reloads the
     // table through CrudTable's search-prop watch, so refresh only when empty.
     if (tableSearch.value) {
       tableSearch.value = ''
@@ -308,20 +344,34 @@ async function sendInvite() {
       refreshTable()
     }
   } catch (err) {
-    showErrorToast(toast, 'Failed to send invitation', err, { life: 8000 })
+    showErrorToast(toast, props.applicationId !== null ? 'Failed to send invitation' : 'Failed to add member', err, { life: 8000 })
   } finally {
-    inviting.value = false
+    saving.value = false
   }
+}
+
+function sendInvitationTo(item: MemberRow) {
+  run(() => Kinotic.members.sendInvitation(item.email), 'Invitation sent', 'Failed to send invitation')
 }
 
 function rowActions(item: MemberRow): MenuItem[] {
   if (item.invite) {
+    // an application's invitations are sent once; an organization's pending members may be sent theirs again
     return [
-      { label: 'Cancel invitation', icon: 'pi pi-times', command: () => confirmCancelInvite(item) }
+      ...(props.applicationId === null
+          ? [{ label: 'Send invitation again', icon: 'pi pi-send', command: () => sendInvitationTo(item) }]
+          : []),
+      { label: 'Remove', icon: 'pi pi-times', command: () => confirmCancelInvite(item) }
     ]
   }
   if (isSelf(item)) {
     return []
+  }
+  if (item.pending) {
+    return [
+      { label: 'Send invitation', icon: 'pi pi-send', command: () => sendInvitationTo(item) },
+      { label: 'Remove member', icon: 'pi pi-trash', command: () => confirmRemove(item) }
+    ]
   }
   return [
     {
@@ -335,10 +385,10 @@ function rowActions(item: MemberRow): MenuItem[] {
 
 function confirmCancelInvite(item: MemberRow) {
   confirm.require({
-    header: 'Cancel invitation',
-    message: `Cancel the invitation for ${item.email}? Their accept link stops working.`,
+    header: 'Remove',
+    message: `Remove ${item.email}? Their invitation's accept link stops working.`,
     icon: 'pi pi-exclamation-triangle',
-    acceptProps: { label: 'Cancel invitation', severity: 'danger' },
+    acceptProps: { label: 'Remove', severity: 'danger' },
     rejectProps: { label: 'Keep', severity: 'secondary', outlined: true },
     accept: () => run(async () => {
       await Kinotic.members.cancelInvite(item.id)
@@ -365,9 +415,14 @@ function confirmToggleEnabled(item: MemberRow) {
 }
 
 function confirmRemove(item: MemberRow) {
+  const message = props.applicationId !== null
+      ? `Permanently remove ${item.email}? Their sign-in and stored credential are deleted.`
+      : item.pending
+          ? `Remove ${item.email} from your organization? The account nobody has signed in to goes with it.`
+          : `Remove ${item.email} from your organization? Their account and other organizations stay as they are.`
   confirm.require({
     header: 'Remove member',
-    message: `Permanently remove ${item.email}? Their sign-in and stored credential are deleted.`,
+    message,
     icon: 'pi pi-exclamation-triangle',
     acceptProps: { label: 'Remove', severity: 'danger' },
     rejectProps: { label: 'Cancel', severity: 'secondary', outlined: true },

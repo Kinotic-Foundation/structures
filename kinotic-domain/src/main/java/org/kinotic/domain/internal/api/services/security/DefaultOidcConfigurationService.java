@@ -64,13 +64,11 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
             // the organization names its account at the provider, never a URL: the kind's template
             // decides the issuer, so the server only ever connects to the provider's own hosts
             owned.setAuthority(owned.getProvider().authority(owned.getProviderAccount()));
-            if (owned instanceof OrganizationOidcConfiguration forOrganization) {
-                // the organization's login admits its members, so only a provider whose issuer verifies the
-                // organization's own users may make whoever it verifies a member
-                Validate.isTrue(!forOrganization.isCreateUserOnSignIn() || owned.getProvider().verifiesOneOrganization(),
-                                "createUserOnSignIn requires a provider that verifies the organization's users alone; a %s provider"
-                                        + " verifies every account at the provider, so its identities join by invitation",
-                                owned.getProvider().key());
+            if (owned instanceof OrganizationOidcConfiguration) {
+                // an organization's members are added by its administrators, whom its provider then signs in
+                Validate.isTrue(!owned.isCreateUserOnSignIn(),
+                                "An organization's own login admits the members its administrators added; createUserOnSignIn"
+                                        + " applies to an application's or a tenant's configuration");
             } else if (owned instanceof ApplicationOidcConfiguration forApplication) {
                 ret = requireApplication(forApplication.getOrganizationId(), forApplication.getApplicationId()).mapEmpty();
             } else if (owned instanceof TenantOidcConfiguration forTenant) {

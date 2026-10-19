@@ -46,8 +46,12 @@ INSERT INTO kinotic_tenant (id, organizationId, applicationId, name, description
 INSERT INTO kinotic_organization (id, name, description) VALUES ('e2e-second', 'e2e-second', 'Second organization of the e2e organization user, for switching') WITH REFRESH;
 INSERT INTO kinotic_membership (id, identityId, organizationId, enabled, created, updated) VALUES ('00000000-0000-0000-0000-000000000002:e2e-second', '00000000-0000-0000-0000-000000000002', 'e2e-second', true, '2026-01-01', '2026-01-01') WITH REFRESH;
 
--- An organization the e2e organization user is not a member of, with an Okta configuration that admits whoever it
--- verifies on sign-in: connecting it to the user's account must still be refused, since only an organization that
--- admitted the account may have its directory vouch for it
+-- The e2e organization's own Okta configuration, so a member may be added without an invitation: such a member signs in
+-- through it, and nothing in the stack ever reaches the host it names
+INSERT INTO kinotic_oidc_configuration (id, type, organizationId, providerAccount, confidentialClient, createUserOnSignIn, name, provider, clientId, authority, enabled, created, updated) VALUES ('e2e-okta', 'ORGANIZATION', 'kinotic-test', 'e2e.okta.com', false, false, 'e2e Okta', 'okta', 'e2e-client', 'https://e2e.okta.com', true, '2026-01-01', '2026-01-01') WITH REFRESH;
+
+-- An organization the e2e organization user is not a member of, with an Okta configuration of its own: connecting it to
+-- the user's account must be refused, since only an organization that admitted the account may have its directory
+-- vouch for it
 INSERT INTO kinotic_organization (id, name, description) VALUES ('e2e-other', 'e2e-other', 'Organization the e2e organization user does not belong to') WITH REFRESH;
-INSERT INTO kinotic_oidc_configuration (id, type, organizationId, providerAccount, confidentialClient, createUserOnSignIn, name, provider, clientId, authority, enabled, created, updated) VALUES ('e2e-other-okta', 'ORGANIZATION', 'e2e-other', 'other.okta.com', false, true, 'Other Okta', 'okta', 'other-client', 'https://other.okta.com', true, '2026-01-01', '2026-01-01') WITH REFRESH;
+INSERT INTO kinotic_oidc_configuration (id, type, organizationId, providerAccount, confidentialClient, createUserOnSignIn, name, provider, clientId, authority, enabled, created, updated) VALUES ('e2e-other-okta', 'ORGANIZATION', 'e2e-other', 'other.okta.com', false, false, 'Other Okta', 'okta', 'other-client', 'https://other.okta.com', true, '2026-01-01', '2026-01-01') WITH REFRESH;

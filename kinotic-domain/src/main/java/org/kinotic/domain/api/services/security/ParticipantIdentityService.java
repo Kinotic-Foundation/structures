@@ -5,6 +5,7 @@ import org.kinotic.core.api.crud.IdentifiableCrudService;
 import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.core.api.security.Participant;
+import org.kinotic.domain.api.exceptions.AccountDisabledException;
 import org.kinotic.domain.api.model.security.DelegateKind;
 import org.kinotic.domain.api.model.security.identity.DelegatingParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.MachineKind;
@@ -60,6 +61,29 @@ public interface ParticipantIdentityService extends IdentifiableCrudService<Part
 
     /** The OIDC identities bound to user {@code identityId}, oldest first. */
     Future<List<OidcBinding>> findOidcBindings(String identityId);
+
+    /**
+     * Whether a sign-in method signs user {@code identityId} in: a password, or a provider identity bound to it.
+     * An account an administrator added as a member that nobody has signed in as yet has none.
+     */
+    Future<Boolean> hasSignInMethod(String identityId);
+
+    /**
+     * Signs the identity {@code (oidcConfigId, subject)}, verified by one of organization {@code organizationId}'s
+     * own providers, in as the member the organization added under {@code verifiedEmail}: an account that holds a
+     * membership of the organization and that no sign-in method signs in yet, which the identity is bound to as
+     * its first. {@code null} when the organization has no such member: no account under the email, no membership
+     * of the organization, or an account someone already signs in to, which only its holder may bind the identity
+     * to.
+     *
+     * @param oidcConfigId   the organization's own configuration that verified the identity
+     * @param subject        the provider's {@code sub} claim for the identity
+     * @param verifiedEmail  the email the provider verified for the identity
+     * @param organizationId the organization whose login the identity signs in at
+     * @return the member's participant, or {@code null}; fails with {@link AccountDisabledException} when the
+     *         account or its membership is disabled
+     */
+    Future<Participant> claimProvisionedAccount(String oidcConfigId, String subject, String verifiedEmail, String organizationId);
 
     /**
      * Removes binding {@code bindingId} from user {@code identityId}'s sign-in methods.

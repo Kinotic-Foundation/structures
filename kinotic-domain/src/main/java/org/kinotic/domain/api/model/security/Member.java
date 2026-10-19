@@ -14,11 +14,14 @@ import java.util.Date;
  * @param displayName the person's display name, or {@code null}
  * @param enabled     whether the person may sign in to this scope
  * @param joined      when the person became a member of this scope
+ * @param pending     whether the person has yet to sign in for the first time: an administrator added them and no
+ *                    sign-in method claims the account yet, so the invitation they were sent, or the organization's
+ *                    own provider, is what admits them
  */
-public record Member(String id, String email, String displayName, boolean enabled, Date joined) {
+public record Member(String id, String email, String displayName, boolean enabled, Date joined, boolean pending) {
 
     /** An application's user as a member of its application, whose standing is the user's own. */
     public static Member of(UserParticipantIdentity user) {
-        return new Member(user.getId(), user.getEmail(), user.getDisplayName(), user.isEnabled(), user.getCreated());
+        return new Member(user.getId(), user.getEmail(), user.getDisplayName(), user.isEnabled(), user.getCreated(), false);
     }
 }

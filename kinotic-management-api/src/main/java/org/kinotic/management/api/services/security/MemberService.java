@@ -30,13 +30,40 @@ public interface MemberService {
     Future<Page<Member>> searchMembers(String searchText, String applicationId, Pageable pageable);
 
     /**
-     * Invites someone into the scope by email. Sends the invitation email and returns the
-     * pending invitation. Fails if the email already has an account in the scope or an
-     * invitation is already pending for it.
+     * Adds a person to the caller's organization by email. An address with no account yet gets one, with no
+     * sign-in method, and its membership at once, so the person appears among the members as pending. With
+     * {@code sendInvitation} an invitation is emailed, whose acceptance claims the account with a password or
+     * through one of the organization's providers; without one the person signs in through one of the
+     * organization's own providers, which claims the account on the first sign-in, so the organization must have
+     * one. An address that already has an account is emailed an invitation whatever {@code sendInvitation} says,
+     * since joining an account to an organization needs its holder's acceptance, and joins once accepted. Fails for
+     * an address that is already a member, one an invitation is already pending for, or an address with no account
+     * when no invitation is sent and the organization has no provider of its own.
      *
-     * @param email       where to send the invitation
-     * @param displayName optional display name for the invitee
-     * @param applicationId the application to invite into, or null for an org-member invite
+     * @param email          the address the person signs in with
+     * @param displayName    optional display name
+     * @param sendInvitation whether to email an invitation
+     * @return the member as listed, pending until they first sign in; for an address that already has an account,
+     *         a pending member with no id yet, which the list shows once the invitation is accepted
+     */
+    Future<Member> addMember(String email, String displayName, boolean sendInvitation);
+
+    /**
+     * Emails an invitation to a pending member of the caller's organization: the one they have, again, or a new
+     * one for a member added without. Fails for an address that is not a pending member's.
+     *
+     * @param email the pending member's address
+     */
+    Future<Void> sendInvitation(String email);
+
+    /**
+     * Invites someone into one of the caller's organization's applications by email. Sends the invitation email
+     * and returns the pending invitation, whose acceptance creates the application's user. Fails if the email
+     * already has a user in the application or an invitation is already pending for it.
+     *
+     * @param email         where to send the invitation
+     * @param displayName   optional display name for the invitee
+     * @param applicationId the application to invite into, one of the caller's organization's
      */
     Future<PendingInviteSummary> inviteMember(String email, String displayName, String applicationId);
 
@@ -51,14 +78,18 @@ public interface MemberService {
 
     /**
      * Removes a member: an account's membership of the caller's organization, leaving the account and its other
-     * memberships as they are, or an application user, with its stored credential. Callers cannot remove
-     * themselves.
+     * memberships as they are, unless no sign-in method signs the account in and no other membership remains,
+     * when the account goes too, along with the invitation it never accepted; or an application user, with its
+     * stored credential. Callers cannot remove themselves.
      *
      * @param identityId the member's id, as {@link Member#id()} names it
      */
     Future<Void> removeMember(String identityId);
 
-    /** Lists the scope's live (unexpired) pending invitations. */
+    /**
+     * Lists the scope's live (unexpired) pending invitations: for the organization, those of people who already
+     * had an account and of pending members sent one; for an application, those of its invited users.
+     */
     Future<Page<PendingInviteSummary>> findPendingInvites(String applicationId, Pageable pageable);
 
     /** Cancels a pending invitation belonging to the caller's organization. */

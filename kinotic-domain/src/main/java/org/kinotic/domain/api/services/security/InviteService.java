@@ -85,4 +85,13 @@ public interface InviteService {
      * @param organizationId the organization the caller is acting for
      */
     Future<Void> cancelInvite(String inviteId, String organizationId);
+
+    /** The live invitation of {@code email} into organization {@code organizationId}, or {@code null} when none is pending. */
+    Future<PendingInvite> findPendingInvite(String email, String organizationId);
+
+    /**
+     * Emails the invitation {@code inviteId} of organization {@code organizationId} again, to the same address
+     * with the same accept link. Fails when the organization has no such invitation.
+     */
+    Future<Void> resendInvite(String inviteId, String organizationId);
 }

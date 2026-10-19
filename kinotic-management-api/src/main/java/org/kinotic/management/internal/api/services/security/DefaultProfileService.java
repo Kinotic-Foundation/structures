@@ -160,14 +160,13 @@ public class DefaultProfileService implements ProfileService {
 
     // a binding signs the account in where its configuration is offered: at every organization's login for one of
     // the platform's registrations, and at its organization's for one of the organization's own while the account
-    // is a member there or the configuration admits whoever it verifies
+    // is a member there
     private static boolean signsIn(OidcConfiguration configuration, List<Membership> memberships) {
         boolean ret;
         if (!configuration.isEnabled()) {
             ret = false;
         } else if (configuration instanceof OrganizationOidcConfiguration owned) {
-            ret = owned.isCreateUserOnSignIn()
-                  || memberships.stream().anyMatch(m -> m.isEnabled() && owned.getOrganizationId().equals(m.getOrganizationId()));
+            ret = memberships.stream().anyMatch(m -> m.isEnabled() && owned.getOrganizationId().equals(m.getOrganizationId()));
         } else {
             ret = configuration instanceof OrgSignupOidcConfiguration;
         }

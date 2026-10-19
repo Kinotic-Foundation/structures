@@ -231,6 +231,39 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
     }
 
     @Override
+    public Future<Boolean> hasSignInMethod(String identityId) {
+        Validate.notBlank(identityId, "identityId cannot be blank");
+        return hasPassword(identityId).compose(has -> has
+                ? Future.succeededFuture(true)
+                : bindingRepository.findByIdentity(identityId).map(bindings -> !bindings.isEmpty()));
+    }
+
+    @Override
+    public Future<Participant> claimProvisionedAccount(String oidcConfigId, String subject, String verifiedEmail, String organizationId) {
+        Validate.notBlank(oidcConfigId, "oidcConfigId cannot be blank");
+        Validate.notBlank(subject, "subject cannot be blank");
+        Validate.notBlank(verifiedEmail, "verifiedEmail cannot be blank");
+        Validate.notBlank(organizationId, "organizationId cannot be blank");
+        return findByEmail(verifiedEmail, null, null).compose(account -> {
+            Future<Participant> ret;
+            if (account == null) {
+                ret = Future.succeededFuture();
+            } else {
+                ret = membershipService.findMembership(account.getId(), organizationId)
+                                       .compose(membership -> membership == null
+                                               ? Future.succeededFuture(false)
+                                               : hasSignInMethod(account.getId()).map(claimed -> !claimed))
+                                       .compose(claimable -> claimable
+                                               // the organization created the account and nobody else can sign in to it, so its
+                                               // own directory's word on the email is what claims it
+                                               ? bind(account, oidcConfigId, subject).compose(binding -> membershipService.resolveMember(account, organizationId))
+                                               : Future.succeededFuture());
+            }
+            return ret;
+        });
+    }
+
+    @Override
     public Future<Void> removeOidcBinding(String identityId, String bindingId) {
         Validate.notBlank(identityId, "identityId cannot be blank");
         Validate.notBlank(bindingId, "bindingId cannot be blank");

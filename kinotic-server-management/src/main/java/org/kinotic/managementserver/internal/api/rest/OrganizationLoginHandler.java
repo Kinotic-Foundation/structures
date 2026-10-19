@@ -14,6 +14,7 @@ import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
 import org.kinotic.domain.api.model.security.OwnedOidcConfiguration;
 import org.kinotic.domain.api.model.security.identity.Membership;
+import org.kinotic.domain.api.rest.support.OAuth2Util;
 import org.kinotic.domain.api.rest.support.OidcCallbackException;
 import org.kinotic.domain.api.services.security.MembershipService;
 import org.kinotic.core.api.security.Participant;
@@ -375,41 +376,29 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
     }
 
     /**
-     * Logs the account bound to the identity into the organization the flow names. When the configuration
-     * creates users on sign-in, an identity bound to no account becomes a new account, and an account that is
-     * not yet a member joins the organization; an identity whose verified email already has an account is
-     * refused with {@link OidcErrorCodes#ACCOUNT_EXISTS}: only that account's holder, once the organization has
-     * admitted them, may connect the identity to it from the Profile page.
+     * Logs the account bound to the identity into the organization the flow names. An identity bound to no account
+     * signs in, through one of the organization's own configurations, the member the organization added under the
+     * identity's verified email that nobody has signed in as yet, and is bound to that account as its first sign-in
+     * method; through a platform registration, or for an email that is no such member's, there is no account to
+     * sign in.
      */
     private void completeOrganizationLogin(RoutingContext ctx, CallbackResult<OidcConfiguration> result) {
         String sub = authEndpointSupport.verifiedSubject(ctx, result);
         if (sub != null) {
-            boolean joinsOnSignIn = result.config() instanceof OwnedOidcConfiguration owned && owned.isCreateUserOnSignIn();
+            String email = OAuth2Util.stringClaim(result.claims(), "email");
             Future<Participant> participant = identityService.findByOidcIdentity(result.config().getId(), sub, null, null)
                     .compose(account -> {
-                        Future<UserParticipantIdentity> ret;
-                        if (account != null || !joinsOnSignIn) {
-                            ret = Future.succeededFuture(account);
-                        } else {
-                            // the organization's own provider verified the person, so a new account is created for them;
-                            // an email with an account already is refused, since only that account's holder may connect it
-                            ret = authEndpointSupport.createUserFromClaims(new UserParticipantIdentity(), sub, result);
-                        }
-                        return ret;
-                    })
-                    .compose(account -> {
                         Future<Participant> ret;
-                        if (account == null) {
-                            ret = Future.succeededFuture();
-                        } else if (!account.isEnabled()) {
-                            // refused before joining, so a disabled account is not made a member by its own sign-in
-                            ret = Future.failedFuture(new OidcCallbackException(OidcErrorCodes.ACCOUNT_DISABLED));
-                        } else if (joinsOnSignIn) {
-                            ret = membershipService.addMember(account.getId(), result.orgId()).compose(m -> memberOf(account, result.orgId()));
+                        if (account != null) {
+                            ret = membershipService.resolveMember(account, result.orgId());
+                        } else if (result.config() instanceof OwnedOidcConfiguration && email != null) {
+                            // only the organization's own directory may claim the member the organization provisioned
+                            ret = identityService.claimProvisionedAccount(result.config().getId(), sub, email, result.orgId());
                         } else {
-                            ret = memberOf(account, result.orgId());
+                            ret = Future.succeededFuture();
                         }
-                        return ret;
+                        return ret.recover(err -> Future.failedFuture(err instanceof AccountDisabledException
+                                ? new OidcCallbackException(OidcErrorCodes.ACCOUNT_DISABLED) : err));
                     });
             authEndpointSupport.completeLogin(ctx, result.origin(), participant);
         }

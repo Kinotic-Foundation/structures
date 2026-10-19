@@ -18,4 +18,11 @@ export class Member implements Identifiable<string> {
 
     /** When the person became a member of this scope. */
     public joined: string | null = null
+
+    /**
+     * Whether the person has yet to sign in for the first time: an administrator added them and no sign-in method
+     * claims the account yet, so the invitation they were sent, or the organization's own provider, is what admits
+     * them.
+     */
+    public pending: boolean = false
 }

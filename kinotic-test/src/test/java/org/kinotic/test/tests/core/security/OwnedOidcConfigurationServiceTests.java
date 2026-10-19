@@ -33,8 +33,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Verifies the published service an organization manages its own OIDC configurations through: a saved
  * configuration is the caller's organization's whatever organization it named, is found and listed, holds its
  * secret, is copied into an application's scope and deleted; another owner's row is neither written over nor
- * deleted by its id; and the organization's own login takes {@code createUserOnSignIn} for a provider that verifies
- * the organization's users alone, while an application's takes it for any.
+ * deleted by its id; and the organization's own login never takes {@code createUserOnSignIn}, since its members are
+ * added by its administrators, while an application's takes it.
  */
 @SpringBootTest
 public class OwnedOidcConfigurationServiceTests extends KinoticTestBase {
@@ -92,21 +92,17 @@ public class OwnedOidcConfigurationServiceTests extends KinoticTestBase {
     }
 
     @Test
-    public void theOrganizationsLoginAdmitsOnSignInThroughItsOwnDirectoryOnly() throws Exception {
+    public void theOrganizationsLoginNeverAdmitsOnSignIn() throws Exception {
         String appId = "owned-oidc-app-" + suffix();
         await(runAsOrganization(() -> applicationService.createApplicationIfNotExist(appId, "Google application", null)));
 
-        OrganizationOidcConfiguration portalGoogle = google(new OrganizationOidcConfiguration(), "Acme Google");
-        portalGoogle.setCreateUserOnSignIn(true);
-        assertInstanceOf(IllegalArgumentException.class, failure(() -> ownedConfigurations.save(portalGoogle, null)));
-        portalGoogle.setCreateUserOnSignIn(false);
-        assertNotNull(await(runAsOrganization(() -> ownedConfigurations.save(portalGoogle, null))).getId());
-
         OrganizationOidcConfiguration portalOkta = okta(new OrganizationOidcConfiguration(), "Acme Okta");
         portalOkta.setCreateUserOnSignIn(true);
-        assertTrue(await(runAsOrganization(() -> ownedConfigurations.save(portalOkta, null))).isCreateUserOnSignIn());
+        assertInstanceOf(IllegalArgumentException.class, failure(() -> ownedConfigurations.save(portalOkta, null)));
+        portalOkta.setCreateUserOnSignIn(false);
+        assertNotNull(await(runAsOrganization(() -> ownedConfigurations.save(portalOkta, null))).getId());
 
-        // an application's login takes it for any kind: sign-up with Google for the application
+        // an application's login takes it, for any kind: with Google, sign-up with Google for the application
         ApplicationOidcConfiguration appGoogle = google(new ApplicationOidcConfiguration(), "Orders Google");
         appGoogle.setApplicationId(appId);
         appGoogle.setCreateUserOnSignIn(true);

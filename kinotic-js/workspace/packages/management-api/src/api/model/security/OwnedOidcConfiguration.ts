@@ -34,8 +34,8 @@ export interface OwnedOidcConfiguration {
     confidentialClient: boolean
     /**
      * Whether an identity the provider verifies that no user of the scope is bound to becomes a user of the scope
-     * on its first sign-in. An organization's own login takes it only for a provider whose issuer verifies the
-     * organization's users alone (Entra, Okta).
+     * on its first sign-in. Taken by an application's or a tenant's configuration: an organization's members are
+     * added by its administrators, whom its provider then signs in.
      */
     createUserOnSignIn: boolean
     created: string | null

@@ -1,6 +1,9 @@
 package org.kinotic.domain.internal.api.services.security;
 
 import io.vertx.core.Future;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.core.api.crud.Page;
@@ -10,11 +13,15 @@ import org.kinotic.domain.api.exceptions.AccountDisabledException;
 import org.kinotic.domain.api.model.security.Member;
 import org.kinotic.domain.api.model.security.identity.DelegatingParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.Membership;
+import org.kinotic.domain.api.model.security.identity.OidcBinding;
 import org.kinotic.domain.api.model.security.identity.ParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 import org.kinotic.domain.api.services.security.MembershipService;
 import org.kinotic.domain.api.utils.DomainUtil;
+import org.kinotic.domain.internal.api.model.IdentityCredential;
+import org.kinotic.domain.internal.api.repositories.IdentityCredentialRepository;
 import org.kinotic.domain.internal.api.repositories.MembershipRepository;
+import org.kinotic.domain.internal.api.repositories.OidcBindingRepository;
 import org.kinotic.domain.internal.api.repositories.ParticipantIdentityRepository;
 import org.springframework.stereotype.Component;
 
@@ -33,6 +40,8 @@ public class DefaultMembershipService implements MembershipService {
 
     private final MembershipRepository membershipRepository;
     private final ParticipantIdentityRepository identityRepository;
+    private final IdentityCredentialRepository credentialRepository;
+    private final OidcBindingRepository bindingRepository;
 
     @Override
     public Future<Membership> addMember(String identityId, String organizationId) {
@@ -70,25 +79,38 @@ public class DefaultMembershipService implements MembershipService {
     @Override
     public Future<Page<Member>> findMembers(String organizationId, Pageable pageable) {
         return membershipRepository.findByOrganization(organizationId, pageable)
-                                   .compose(page -> identityRepository.findAllById(page.getContent().stream().map(Membership::getIdentityId).toList())
-                                                                      .map(accounts -> members(page, accounts)));
+                                   .compose(page -> {
+                                       List<String> ids = page.getContent().stream().map(Membership::getIdentityId).toList();
+                                       return Future.all(identityRepository.findAllById(ids), claimed(ids))
+                                                    .map(cf -> members(page, cf.resultAt(0), cf.resultAt(1)));
+                                   });
     }
 
     // the page's memberships joined with their accounts, in the page's order; a membership whose account is gone is left out
-    private static Page<Member> members(Page<Membership> page, List<ParticipantIdentity> accounts) {
+    private static Page<Member> members(Page<Membership> page, List<ParticipantIdentity> accounts, Set<String> claimed) {
         Map<String, UserParticipantIdentity> byId = accounts.stream()
                                                             .filter(UserParticipantIdentity.class::isInstance)
                                                             .map(UserParticipantIdentity.class::cast)
                                                             .collect(Collectors.toMap(ParticipantIdentity::getId, Function.identity()));
         List<Member> members = page.getContent().stream()
                                    .filter(membership -> byId.containsKey(membership.getIdentityId()))
-                                   .map(membership -> member(byId.get(membership.getIdentityId()), membership))
+                                   .map(membership -> member(byId.get(membership.getIdentityId()), membership, claimed.contains(membership.getIdentityId())))
                                    .toList();
         return new Page<>(members, page.getTotalElements());
     }
 
-    private static Member member(UserParticipantIdentity account, Membership membership) {
-        return new Member(account.getId(), account.getEmail(), account.getDisplayName(), membership.isEnabled(), membership.getCreated());
+    private static Member member(UserParticipantIdentity account, Membership membership, boolean claimed) {
+        return new Member(account.getId(), account.getEmail(), account.getDisplayName(), membership.isEnabled(), membership.getCreated(), !claimed);
+    }
+
+    // the accounts among ids that a sign-in method signs in: a password, or a provider identity bound to them
+    private Future<Set<String>> claimed(Collection<String> ids) {
+        return Future.all(credentialRepository.findAllById(ids), bindingRepository.findByIdentities(ids)).map(cf -> {
+            Set<String> ret = new HashSet<>();
+            cf.<List<IdentityCredential>>resultAt(0).forEach(credential -> ret.add(credential.getId()));
+            cf.<List<OidcBinding>>resultAt(1).forEach(binding -> ret.add(binding.getIdentityId()));
+            return ret;
+        });
     }
 
     @Override
@@ -104,7 +126,9 @@ public class DefaultMembershipService implements MembershipService {
                                           Map<String, Membership> byIdentity = memberships.stream()
                                                   .collect(Collectors.toMap(Membership::getIdentityId, Function.identity()));
                                           return identityRepository.searchUsersById(searchText, byIdentity.keySet(), pageable)
-                                                                   .map(accounts -> accounts.map(account -> member(account, byIdentity.get(account.getId()))));
+                                                                   .compose(accounts -> claimed(accounts.getContent().stream().map(ParticipantIdentity::getId).toList())
+                                                                           .map(claimed -> accounts.map(account -> member(account, byIdentity.get(account.getId()),
+                                                                                                                          claimed.contains(account.getId())))));
                                       });
         }
         return ret;

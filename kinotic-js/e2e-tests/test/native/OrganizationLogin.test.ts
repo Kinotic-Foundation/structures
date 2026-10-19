@@ -99,8 +99,8 @@ describe('Organization login routes', () => {
         expect((await post('/api/auth/account/methods/start/github-platform', {})).status).toBe(401)
         const cookie = sessionCookie(await login(E2E_ORGANIZATION_ID))
 
-        // another organization's configuration is refused whatever it admits on sign-in, so a link cannot bind its
-        // directory's identities to an account that organization never admitted
+        // another organization's configuration is refused, so a link cannot bind its directory's identities to an
+        // account that organization never admitted
         expect((await post(`/api/auth/account/methods/start/${OTHER_ORGANIZATION_CONFIGURATION_ID}`, {}, cookie)).status).toBe(403)
         expect((await post('/api/auth/account/methods/start/no-such-configuration', {}, cookie)).status).toBe(400)
 

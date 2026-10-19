@@ -61,7 +61,8 @@ public abstract sealed class OwnedOidcConfiguration extends OidcConfiguration im
      * of the scope on its first sign-in, created from the provider's verified email and name and
      * bound to the identity. Off, such an identity is refused and a user must be invited or created
      * first. An identity whose email the scope already holds under another method is refused either
-     * way.
+     * way. Taken by an application's or a tenant's configuration: an organization's members are added
+     * by its administrators, whom its provider then signs in.
      */
     private boolean createUserOnSignIn;
 }
