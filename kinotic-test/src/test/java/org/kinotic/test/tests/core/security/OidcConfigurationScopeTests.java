@@ -22,7 +22,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -223,13 +222,5 @@ public class OidcConfigurationScopeTests extends KinoticTestBase {
 
     private Throwable failure(Supplier<Future<?>> call) {
         return assertThrows(ExecutionException.class, () -> await(runAsOrganization(call::get))).getCause();
-    }
-
-    private static String suffix() {
-        return UUID.randomUUID().toString().replace("-", "").substring(0, 8);
-    }
-
-    private static <T> T await(Future<T> future) throws Exception {
-        return future.toCompletionStage().toCompletableFuture().get(30, TimeUnit.SECONDS);
     }
 }

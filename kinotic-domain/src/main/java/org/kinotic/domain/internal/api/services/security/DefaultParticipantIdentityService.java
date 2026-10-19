@@ -126,13 +126,26 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
         return findByEmail(entity.getEmail(), entity.getOrganizationId(), entity.getApplicationId())
                 .compose(existing -> {
                     if (existing != null && !existing.getId().equals(entity.getId())) {
-                        throw new IllegalArgumentException(
-                                "ParticipantIdentity with email " + entity.getEmail()
-                                        + " already exists in scope "
-                                        + DomainUtil.describeScope(entity.getOrganizationId(), entity.getApplicationId()));
+                        throw emailTaken(entity);
                     }
                     return Future.succeededFuture();
                 });
+    }
+
+    private static IllegalArgumentException emailTaken(UserParticipantIdentity user) {
+        return new IllegalArgumentException("ParticipantIdentity with email " + user.getEmail() + " already exists in scope "
+                                            + DomainUtil.describeScope(user.getOrganizationId(), user.getApplicationId()));
+    }
+
+    // beforeSave's lookup is a search, which misses a user written within the index's refresh window, so two
+    // creations under one email at once both pass it; after its own write each refreshes the index and looks
+    // again, and one that sees another withdraws, so an email is held by one user at most
+    private Future<UserParticipantIdentity> requireSoleHolderOfEmail(UserParticipantIdentity user) {
+        return identityRepository.syncIndex()
+                                 .compose(v -> identityRepository.countByEmail(user.getEmail(), user.getOrganizationId(), user.getApplicationId()))
+                                 .compose(count -> count > 1
+                                         ? identityRepository.deleteById(user.getId()).transform(v -> Future.failedFuture(emailTaken(user)))
+                                         : Future.succeededFuture(user));
     }
 
     /**
@@ -318,6 +331,7 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
         return applyTenantPolicy(user)
                 .compose(this::save)
                 .map(UserParticipantIdentity.class::cast)
+                .compose(this::requireSoleHolderOfEmail)
                 .compose(savedUser -> {
                     if (password != null) {
                         return saveCredential(savedUser.getId(), password).map(savedUser);

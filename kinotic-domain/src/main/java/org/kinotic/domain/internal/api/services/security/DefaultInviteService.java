@@ -154,6 +154,7 @@ public class DefaultInviteService implements InviteService {
 
         return pendingInviteRepository.findValidByToken(token)
                 .compose(invite -> {
+                    // the application's providers return to the app server, which holds no invitation
                     Validate.isTrue(invite.getApplicationId() == null,
                                     "An invitation into an application is accepted with a password.");
                     if (!invite.getEmail().equals(DomainUtil.normalizeEmail(verifiedEmail))) {

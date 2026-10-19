@@ -120,9 +120,13 @@ describe('Organization login routes', () => {
         // the switch re-establishes the session, so the page continues with the cookie it set
         cookie = sessionCookie(switched)
         expect((await get('/api/auth/me', cookie)).status).toBe(204)
+        // and back: the platform's own organizations carry ids the sign-up reserves, which a switch never minds
+        const back = await post('/api/auth/org/switch', {organizationId: E2E_ORGANIZATION_ID}, cookie)
+        expect(back.status).toBe(204)
+        cookie = sessionCookie(back)
 
         expect((await post('/api/auth/org/switch', {organizationId: 'nobody'}, cookie)).status).toBe(403)
-        expect((await post('/api/auth/org/switch', {organizationId: 'system'}, cookie)).status).toBe(400)
+        expect((await post('/api/auth/org/switch', {organizationId: 'system'}, cookie)).status).toBe(403)
         expect((await post('/api/auth/org/switch', {}, cookie)).status).toBe(400)
     })
 })

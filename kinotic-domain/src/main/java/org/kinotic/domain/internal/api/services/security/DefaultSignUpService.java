@@ -115,8 +115,6 @@ public class DefaultSignUpService implements SignUpService {
      * that cannot be.
      */
     private Future<Void> requireNoAccount(PendingSignUp pending) {
-        // both finders are searches, which see an account only once the index has refreshed, so two
-        // completions for one email within that window both pass
         Future<UserParticipantIdentity> bound = pending.getAuthType() == AuthType.OIDC
                 ? identityService.findByOidcIdentity(pending.getOidcConfigId(), pending.getOidcSubject(), null, null)
                 : Future.succeededFuture();

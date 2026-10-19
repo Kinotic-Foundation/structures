@@ -30,7 +30,6 @@ import org.kinotic.domain.api.services.OrganizationService;
 import org.kinotic.domain.api.services.security.LocalAuthenticationService;
 import org.kinotic.domain.api.services.security.OidcConfigurationService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
-import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.managementserver.api.config.ManagementServerProperties;
 import org.kinotic.managementserver.api.config.TurnstileProperties;
 import org.kinotic.managementserver.internal.api.services.TurnstileVerifier;
@@ -99,8 +98,7 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
     /**
      * {@code POST /api/auth/org/switch {organizationId}} — signs the page's signed-in account in to another
      * organization it is a member of, replacing the page's login; {@code 204} once switched, {@code 403} for an
-     * organization the account may not sign in to, {@code 400} for an id no organization can have, {@code 401}
-     * without a signed-in user.
+     * organization the account may not sign in to, {@code 400} without one, {@code 401} without a signed-in user.
      */
     private void handleSwitch(RoutingContext ctx) {
         Participant current = authEndpointSupport.requireSessionUser(ctx);
@@ -109,12 +107,7 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
             authEndpointSupport.respondError(ctx, 400, "organizationId is required");
             return;
         }
-        // an id that names no organization is refused with its reason, before any membership is read
-        Future.<Void>succeededFuture()
-              .compose(v -> {
-                  DomainUtil.validateOrganizationId(organizationId);
-                  return identityService.resolveParticipant(current.getId(), organizationId, null);
-              })
+        identityService.resolveParticipant(current.getId(), organizationId, null)
                        .onSuccess(participant -> {
                            if (participant == null) {
                                authEndpointSupport.respondError(ctx, 403, "You are not a member of that organization");
@@ -123,12 +116,8 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
                            }
                        })
                        .onFailure(err -> {
-                           if (err instanceof IllegalArgumentException) {
-                               authEndpointSupport.respondError(ctx, 400, err.getMessage());
-                           } else {
-                               log.warn("Switching {} to organization {} failed: {}", current.getId(), organizationId, err.getMessage());
-                               authEndpointSupport.respondError(ctx, 500, "Failed to switch organization");
-                           }
+                           log.warn("Switching {} to organization {} failed: {}", current.getId(), organizationId, err.getMessage());
+                           authEndpointSupport.respondError(ctx, 500, "Failed to switch organization");
                        });
     }
 

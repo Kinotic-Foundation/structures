@@ -26,11 +26,11 @@ class DefaultApplicationServiceTest {
 
     private static final String CALLER_ORG = "acme";
 
-    private final DefaultApplicationService service = new DefaultApplicationService(null, null, null, null, callerContext());
+    private final DefaultApplicationService service = new DefaultApplicationService(null, null, null, null, callerContext(CALLER_ORG));
 
-    private static SecurityContext callerContext() {
+    private static SecurityContext callerContext(String organizationId) {
         OrganizationParticipant participant = mock(OrganizationParticipant.class);
-        when(participant.getOrganizationId()).thenReturn(CALLER_ORG);
+        when(participant.getOrganizationId()).thenReturn(organizationId);
         SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.requireParticipant(OrganizationParticipant.class)).thenReturn(participant);
         return securityContext;
@@ -105,6 +105,21 @@ class DefaultApplicationServiceTest {
         Application tooLong = new Application("Orders App", "desc");
         tooLong.setId("a".repeat(longest + 1));
         assertThrows(IllegalArgumentException.class, () -> service.beforeSave(tooLong));
+    }
+
+    @Test
+    void rejectsIdsWhoseApiHostLabelExceedsTheDnsLimit() {
+        // the API host label "<org>--<app>" leaves the application the DNS limit less the organization and the separator
+        String organizationId = "northwind-traders-international-holdings";
+        DefaultApplicationService longOrgService = new DefaultApplicationService(null, null, null, null, callerContext(organizationId));
+        int longest = HostLabelUtil.MAX_HOST_LABEL_LENGTH - organizationId.length() - HostLabelUtil.HOST_LABEL_SEPARATOR.length();
+        Application fits = new Application("Orders App", "desc");
+        fits.setId("a".repeat(longest));
+        assertDoesNotThrow(() -> longOrgService.beforeSave(fits));
+
+        Application tooLong = new Application("Orders App", "desc");
+        tooLong.setId("a".repeat(longest + 1));
+        assertThrows(IllegalArgumentException.class, () -> longOrgService.beforeSave(tooLong));
     }
 
     @Test

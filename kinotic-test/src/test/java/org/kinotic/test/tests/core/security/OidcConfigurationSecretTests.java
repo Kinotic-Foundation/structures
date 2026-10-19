@@ -13,7 +13,6 @@ import tools.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -124,9 +123,5 @@ public class OidcConfigurationSecretTests extends KinoticTestBase {
            .setClientId("acme-client")
            .setEnabled(true);
         return ret;
-    }
-
-    private static <T> T await(Future<T> future) throws Exception {
-        return future.toCompletionStage().toCompletableFuture().get(30, TimeUnit.SECONDS);
     }
 }

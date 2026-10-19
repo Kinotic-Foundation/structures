@@ -106,8 +106,4 @@ public class DeploymentHistoryTests extends KinoticTestBase {
                                                          ParticipantConstants.PARTICIPANT_TYPE_USER),
                                                   List.of("ADMIN"));
     }
-
-    private static <T> T await(Future<T> future) throws Exception {
-        return future.toCompletionStage().toCompletableFuture().get(30, TimeUnit.SECONDS);
-    }
 }

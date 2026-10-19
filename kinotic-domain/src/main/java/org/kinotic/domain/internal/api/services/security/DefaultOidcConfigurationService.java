@@ -256,20 +256,20 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
     @Override
     public <C extends OwnedOidcConfiguration> Future<C> save(C configuration, String clientSecret) {
         boolean confidential = StringUtils.isNotBlank(clientSecret);
-        // saved first: a new configuration is given the id its secret is keyed by in beforeSave
-        return save(configuration.setConfidentialClient(confidential)).compose(saved -> {
-            @SuppressWarnings("unchecked")
-            C owned = (C) saved;
-            Future<Void> stored = confidential
-                    ? secretStorageService.setSecret(owned.getOrganizationId(), owned.getId(), clientSecret)
-                    : secretStorageService.deleteSecret(owned.getOrganizationId(), owned.getId());
-            // a secret the vault refused is not held, so the row says so rather than claiming one at sign-in
-            return stored.recover(err -> save(owned.setConfidentialClient(false)).compose(v -> Future.failedFuture(err)))
-                         // saved again once the secret is held: the OAuth client cache is keyed by the row's updated, so a
-                         // client built between the two saves with the former secret is not reused
-                         .compose(v -> save(owned))
-                         .map(owned);
-        });
+        configuration.setConfidentialClient(confidential);
+        // beforeSave first, since it checks the caller owns the row and gives a new configuration the id its secret
+        // is keyed by; the row is written once the vault holds the secret, so it never claims one the vault refused,
+        // and its updated, which keys the OAuth client cache, changes with the secret
+        return beforeSave(configuration)
+                .compose(v -> confidential
+                        ? secretStorageService.setSecret(configuration.getOrganizationId(), configuration.getId(), clientSecret)
+                        : secretStorageService.deleteSecret(configuration.getOrganizationId(), configuration.getId()))
+                .compose(v -> oidcRepository.save(configuration))
+                .map(saved -> {
+                    @SuppressWarnings("unchecked")
+                    C ret = (C) saved;
+                    return ret;
+                });
     }
 
     @Override

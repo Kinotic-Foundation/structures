@@ -158,8 +158,4 @@ public class WatchEventLedgerTests extends KinoticTestBase {
     private interface Check {
         boolean holds() throws Exception;
     }
-
-    private static <T> T await(Future<T> future) throws Exception {
-        return future.toCompletionStage().toCompletableFuture().get(30, TimeUnit.SECONDS);
-    }
 }

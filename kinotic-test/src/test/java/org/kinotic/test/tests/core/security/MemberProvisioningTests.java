@@ -1,5 +1,6 @@
 package org.kinotic.test.tests.core.security;
 
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,9 +29,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -46,7 +45,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * no account becomes a pending member at once, with or without an invitation; the organization's own provider claims
  * the pending member it verifies under that address, once, and no one else; an invitation claims a pending member
  * with a password or a provider identity; an address that already has an account is invited to accept instead;
- * and removing a pending member removes the account nobody signed in to.
+ * removing a pending member removes the account nobody signed in to; and an address added twice at once is one
+ * member.
  */
 @SpringBootTest
 public class MemberProvisioningTests extends KinoticTestBase {
@@ -131,6 +131,28 @@ public class MemberProvisioningTests extends KinoticTestBase {
     }
 
     @Test
+    public void anAddressAddedTwiceAtOnceIsOneMember() throws Exception {
+        String email = "twice-" + suffix() + "@example.test";
+        // both calls look the address up before either account is written, so the index tells neither of the other
+        CompositeFuture both = await(asAdministrator(() -> {
+            CompositeFuture joined = Future.join(members.addMember(email, "Pat Twice", false), members.addMember(email, "Pat Twice", false));
+            return joined.transform(v -> Future.succeededFuture(joined));
+        }));
+        int added = 0;
+        for (int i = 0; i < both.size(); i++) {
+            if (both.succeeded(i)) {
+                added++;
+            } else {
+                assertInstanceOf(IllegalArgumentException.class, both.cause(i));
+            }
+        }
+        assertTrue(added <= 1, "both additions succeeded");
+        await(identities.syncIndex());
+        Page<Member> page = await(asAdministrator(() -> members.findMembers(null, Pageable.ofSize(1000))));
+        assertEquals(added, page.getContent().stream().filter(member -> email.equals(member.email())).count());
+    }
+
+    @Test
     public void aMemberIsClaimedOnlyWhereTheOrganizationAddedThem() throws Exception {
         // an account nobody signs in to that holds no membership of the organization is no one's to claim here
         String email = "elsewhere-" + suffix() + "@example.test";
@@ -212,13 +234,5 @@ public class MemberProvisioningTests extends KinoticTestBase {
 
     private Throwable failure(Supplier<Future<?>> call) {
         return assertThrows(ExecutionException.class, () -> await(asAdministrator(call::get))).getCause();
-    }
-
-    private static String suffix() {
-        return UUID.randomUUID().toString().replace("-", "").substring(0, 8);
-    }
-
-    private static <T> T await(Future<T> future) throws Exception {
-        return future.toCompletionStage().toCompletableFuture().get(30, TimeUnit.SECONDS);
     }
 }

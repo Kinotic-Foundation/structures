@@ -54,9 +54,7 @@ public interface InviteService {
      * {@link InviteEmailMismatchException}. The account the identity is bound to becomes a member, when its
      * email is the invited one; with no bound account, the account with the invited email must not exist
      * either, else the accept fails with {@link ExistingAccountException}, and a new account bound to the
-     * identity is created. An invitation into an application is accepted with
-     * {@link #acceptLocalInvite}: the application's providers return to the app server, which holds no
-     * invitation.
+     * identity is created. An invitation into an application is accepted with {@link #acceptLocalInvite}.
      *
      * @param token         the accept token recovered from the OIDC flow session
      * @param oidcSubject   the {@code sub} claim from the IdP

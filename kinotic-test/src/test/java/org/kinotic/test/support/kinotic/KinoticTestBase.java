@@ -18,6 +18,8 @@ import org.springframework.test.context.ContextConfiguration;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 /**
@@ -114,5 +116,15 @@ public abstract class KinoticTestBase {
             }
         });
         return promise.future();
+    }
+
+    /** The result of {@code future}, waited for as long as a test's call to a service may take. */
+    protected static <T> T await(Future<T> future) throws Exception {
+        return future.toCompletionStage().toCompletableFuture().get(30, TimeUnit.SECONDS);
+    }
+
+    /** Eight random hex characters, which make a fixture's name or id a test's own. */
+    protected static String suffix() {
+        return UUID.randomUUID().toString().replace("-", "").substring(0, 8);
     }
 }

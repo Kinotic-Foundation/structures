@@ -1,15 +1,21 @@
 package org.kinotic.test.tests.core.security;
 
 import io.vertx.core.Future;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.core.api.exceptions.AuthorizationException;
+import org.kinotic.core.api.security.ParticipantConstants;
+import org.kinotic.domain.api.model.Organization;
 import org.kinotic.domain.api.model.security.ApplicationOidcConfiguration;
 import org.kinotic.domain.api.model.security.OidcProviderKind;
 import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
 import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
 import org.kinotic.domain.api.model.security.OwnedOidcConfiguration;
+import org.kinotic.domain.api.model.security.participant.DefaultOrganizationParticipant;
+import org.kinotic.domain.api.model.security.participant.OrganizationParticipant;
+import org.kinotic.domain.api.services.OrganizationService;
 import org.kinotic.domain.api.services.security.OidcConfigurationService;
 import org.kinotic.management.api.services.ApplicationService;
 import org.kinotic.management.api.services.security.OwnedOidcConfigurationService;
@@ -17,9 +23,9 @@ import org.kinotic.test.support.kinotic.KinoticTestBase;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
-import java.util.UUID;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -48,34 +54,55 @@ public class OwnedOidcConfigurationServiceTests extends KinoticTestBase {
     @Autowired
     private ApplicationService applicationService;
 
+    @Autowired
+    private OrganizationService organizations;
+
+    // the configurations a test saves stay enabled, so each test configures an organization of its own, as its administrator
+    private Organization organization;
+    private OrganizationParticipant administrator;
+
+    @BeforeEach
+    public void createOrganization() throws Exception {
+        organization = await(organizations.create(new Organization().setName("Owned configurations " + suffix())
+                                                                    .setDescription("Organization of one owned configuration test")));
+        administrator = new DefaultOrganizationParticipant("owned-admin-" + suffix(), organization.getId(),
+                                                           Map.of(ParticipantConstants.PARTICIPANT_TYPE_METADATA_KEY, ParticipantConstants.PARTICIPANT_TYPE_USER,
+                                                                  "displayName", "Owned Admin"),
+                                                           List.of("ADMIN"));
+    }
+
+    private <T> Future<T> asAdministrator(Supplier<Future<T>> call) {
+        return runAs(administrator, call);
+    }
+
     @Test
     public void aConfigurationIsTheCallersOrganizationsAndRoundTrips() throws Exception {
         String appId = "owned-oidc-app-" + suffix();
-        await(runAsOrganization(() -> applicationService.createApplicationIfNotExist(appId, "Owned application", null)));
+        await(asAdministrator(() -> applicationService.createApplicationIfNotExist(appId, "Owned application", null)));
         OrganizationOidcConfiguration portalOkta = okta(new OrganizationOidcConfiguration(), "Acme Okta");
         portalOkta.setOrganizationId("globex");
 
-        OwnedOidcConfiguration saved = await(runAsOrganization(() -> ownedConfigurations.save(portalOkta, "acme-secret")));
+        OwnedOidcConfiguration saved = await(asAdministrator(() -> ownedConfigurations.save(portalOkta, "acme-secret")));
         assertNotNull(saved.getId());
-        assertEquals(TEST_ORG_ID, saved.getOrganizationId());
+        assertEquals(organization.getId(), saved.getOrganizationId());
         assertEquals("https://acme.okta.com", saved.getAuthority());
         assertTrue(saved.isConfidentialClient());
         assertEquals("acme-secret", await(oidcConfigurations.findClientSecret(saved)));
-        assertEquals(saved.getId(), await(runAsOrganization(() -> ownedConfigurations.findById(saved.getId()))).getId());
+        assertEquals(saved.getId(), await(asAdministrator(() -> ownedConfigurations.findById(saved.getId()))).getId());
 
         // the listing is a search, which sees a write only once the index has refreshed
         await(oidcConfigurations.syncIndex());
-        Page<OwnedOidcConfiguration> page = await(runAsOrganization(() -> ownedConfigurations.findAll(Pageable.ofSize(100))));
+        Page<OwnedOidcConfiguration> page = await(asAdministrator(() -> ownedConfigurations.findAll(Pageable.ofSize(100))));
         assertTrue(page.getContent().stream().anyMatch(configuration -> saved.getId().equals(configuration.getId())));
-        assertTrue(page.getContent().stream().allMatch(configuration -> TEST_ORG_ID.equals(configuration.getOrganizationId())));
+        assertTrue(page.getContent().stream().allMatch(configuration -> organization.getId().equals(configuration.getOrganizationId())));
 
-        OwnedOidcConfiguration copy = await(runAsOrganization(() -> ownedConfigurations.copy(saved.getId(), appId)));
+        OwnedOidcConfiguration copy = await(asAdministrator(() -> ownedConfigurations.copy(saved.getId(), appId)));
         assertEquals(appId, assertInstanceOf(ApplicationOidcConfiguration.class, copy).getApplicationId());
         assertEquals("acme-secret", await(oidcConfigurations.findClientSecret(copy)));
 
-        await(runAsOrganization(() -> ownedConfigurations.deleteById(saved.getId())));
-        assertNull(await(runAsOrganization(() -> ownedConfigurations.findById(saved.getId()))));
-        assertNotNull(await(runAsOrganization(() -> ownedConfigurations.findById(copy.getId()))));
+        await(asAdministrator(() -> ownedConfigurations.deleteById(saved.getId())));
+        assertNull(await(asAdministrator(() -> ownedConfigurations.findById(saved.getId()))));
+        assertNotNull(await(asAdministrator(() -> ownedConfigurations.findById(copy.getId()))));
     }
 
     @Test
@@ -87,30 +114,30 @@ public class OwnedOidcConfigurationServiceTests extends KinoticTestBase {
         assertInstanceOf(AuthorizationException.class, failure(() -> ownedConfigurations.save(squatter, null)));
         assertInstanceOf(OrgSignupOidcConfiguration.class, await(oidcConfigurations.findById(github.getId())));
 
-        await(runAsOrganization(() -> ownedConfigurations.deleteById(github.getId())));
+        await(asAdministrator(() -> ownedConfigurations.deleteById(github.getId())));
         assertInstanceOf(OrgSignupOidcConfiguration.class, await(oidcConfigurations.findById(github.getId())));
     }
 
     @Test
     public void theOrganizationsLoginNeverAdmitsOnSignIn() throws Exception {
         String appId = "owned-oidc-app-" + suffix();
-        await(runAsOrganization(() -> applicationService.createApplicationIfNotExist(appId, "Google application", null)));
+        await(asAdministrator(() -> applicationService.createApplicationIfNotExist(appId, "Google application", null)));
 
         OrganizationOidcConfiguration portalOkta = okta(new OrganizationOidcConfiguration(), "Acme Okta");
         portalOkta.setCreateUserOnSignIn(true);
         assertInstanceOf(IllegalArgumentException.class, failure(() -> ownedConfigurations.save(portalOkta, null)));
         portalOkta.setCreateUserOnSignIn(false);
-        assertNotNull(await(runAsOrganization(() -> ownedConfigurations.save(portalOkta, null))).getId());
+        assertNotNull(await(asAdministrator(() -> ownedConfigurations.save(portalOkta, null))).getId());
 
         // an application's login takes it, for any kind: with Google, sign-up with Google for the application
         ApplicationOidcConfiguration appGoogle = google(new ApplicationOidcConfiguration(), "Orders Google");
         appGoogle.setApplicationId(appId);
         appGoogle.setCreateUserOnSignIn(true);
-        assertTrue(await(runAsOrganization(() -> ownedConfigurations.save(appGoogle, null))).isCreateUserOnSignIn());
+        assertTrue(await(asAdministrator(() -> ownedConfigurations.save(appGoogle, null))).isCreateUserOnSignIn());
     }
 
-    private static <C extends OwnedOidcConfiguration> C okta(C configuration, String name) {
-        configuration.setOrganizationId(TEST_ORG_ID)
+    private <C extends OwnedOidcConfiguration> C okta(C configuration, String name) {
+        configuration.setOrganizationId(organization.getId())
                      .setProviderAccount("acme.okta.com");
         configuration.setName(name)
                      .setProvider(OidcProviderKind.OKTA)
@@ -119,8 +146,8 @@ public class OwnedOidcConfigurationServiceTests extends KinoticTestBase {
         return configuration;
     }
 
-    private static <C extends OwnedOidcConfiguration> C google(C configuration, String name) {
-        configuration.setOrganizationId(TEST_ORG_ID);
+    private <C extends OwnedOidcConfiguration> C google(C configuration, String name) {
+        configuration.setOrganizationId(organization.getId());
         configuration.setName(name)
                      .setProvider(OidcProviderKind.GOOGLE)
                      .setClientId("acme-client")
@@ -129,14 +156,6 @@ public class OwnedOidcConfigurationServiceTests extends KinoticTestBase {
     }
 
     private Throwable failure(Supplier<Future<?>> call) {
-        return assertThrows(ExecutionException.class, () -> await(runAsOrganization(call::get))).getCause();
-    }
-
-    private static String suffix() {
-        return UUID.randomUUID().toString().replace("-", "").substring(0, 8);
-    }
-
-    private static <T> T await(Future<T> future) throws Exception {
-        return future.toCompletionStage().toCompletableFuture().get(30, TimeUnit.SECONDS);
+        return assertThrows(ExecutionException.class, () -> await(asAdministrator(call::get))).getCause();
     }
 }

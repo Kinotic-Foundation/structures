@@ -25,9 +25,10 @@ import java.util.Locale;
  * Creates each organization's record as one proxied wildcard DNS record, {@code *.<org>} under the published
  * sites domain, in the Cloudflare zone {@code kinotic.domain.publishedSites.cloudflare.zoneId}. The record points
  * at a placeholder address because the zone's sites Worker answers every request to it; its existence is what
- * the zone's Total TLS issues the organization's wildcard certificate from. A record is looked up by its name
- * before it is created, and a create the zone refuses as a duplicate finds the record it refused for, so
- * ensuring an organization any number of times, at once or in turn, leaves one record.
+ * the zone's Total TLS issues the organization's wildcard certificate from. The name is looked up before the record
+ * is created, and a create the zone refuses as a duplicate finds the record it refused for, so ensuring an
+ * organization any number of times, at once or in turn, leaves one record, and a record of any type already held
+ * under the name, as an operator may make, is left as it is.
  */
 @Slf4j
 @Component
@@ -82,8 +83,9 @@ public class CloudflareOrganizationDnsRecordProvisioner implements OrganizationD
         });
     }
 
+    // of any type: a record an operator made under the name is the name's record, and the one a create conflicts with
     private Future<JsonObject> findRecord(String name) {
-        return request(webClient.getAbs(zoneUrl("/dns_records")).addQueryParam("name", name).addQueryParam("type", "A"))
+        return request(webClient.getAbs(zoneUrl("/dns_records")).addQueryParam("name", name))
                 .map(result -> {
                     JsonArray records = result.getJsonArray("result", new JsonArray());
                     return records.isEmpty() ? null : records.getJsonObject(0);
