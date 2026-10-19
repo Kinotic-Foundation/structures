@@ -132,7 +132,7 @@ public interface ParticipantIdentityService extends IdentifiableCrudService<Part
      *
      * @param user     the unsaved user carrying email, scope, and optional display name
      * @param password the password for a user that signs in with one, or null
-     * @return a future emitting the created user
+     * @return a future emitting the created user, which {@link #findByEmail} finds from then on
      */
     Future<UserParticipantIdentity> createUser(UserParticipantIdentity user, String password);
 

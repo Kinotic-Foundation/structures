@@ -322,7 +322,9 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
         user.setEnabled(true);
 
         return applyTenantPolicy(user)
-                .compose(this::create)
+                // sync: the caller's next step finds the user by email, a search that misses a user written within the
+                // index's refresh window (MemberService.sendInvitation right after addMember, an invitation's acceptance)
+                .compose(this::createSync)
                 // beforeSave's lookup is a search, which misses a user written within the index's refresh window; the
                 // create refuses an id already held, which the index guarantees whatever its shards, so of two creations
                 // under one email at once exactly one succeeds
