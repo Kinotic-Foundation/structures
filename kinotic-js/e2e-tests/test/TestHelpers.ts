@@ -42,7 +42,7 @@ type SchemaCreationResult ={
 let schemas: Map<string, SchemaCreationResult> = new Map<string, SchemaCreationResult>()
 
 /** Organization that owns every e2e fixture user (V3 test users + V5 app fixtures). */
-export const E2E_ORGANIZATION_ID = 'kinotic-test'
+export const E2E_ORGANIZATION_ID = 'test-org'
 
 /** Password of every user the e2e migrations seed. */
 export const E2E_FIXTURE_PASSWORD = 'kinotic'

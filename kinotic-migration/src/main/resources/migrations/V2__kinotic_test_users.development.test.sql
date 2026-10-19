@@ -6,13 +6,13 @@ INSERT INTO kinotic_identity_credential (id, secretHash) VALUES ('00000000-0000-
 INSERT INTO kinotic_membership (id, identityId, enabled, created, updated) VALUES ('00000000-0000-0000-0000-000000000001:system', '00000000-0000-0000-0000-000000000001', true, '2026-01-01', '2026-01-01') WITH REFRESH;
 
 
--- Seed the kinotic-test organization used by end-to-end and core package tests
-INSERT INTO kinotic_organization (id, name, description) VALUES ('kinotic-test', 'kinotic-test', 'Organization used by kinotic end-to-end and core package tests') WITH REFRESH;
+-- Seed the test-org organization used by end-to-end and core package tests
+INSERT INTO kinotic_organization (id, name, description) VALUES ('test-org', 'test-org', 'Organization used by kinotic end-to-end and core package tests') WITH REFRESH;
 
--- Seed the kinotic-test organization's member (password: kinotic): an account and its membership
+-- Seed the test-org organization's member (password: kinotic): an account and its membership
 INSERT INTO kinotic_participant_identity (id, type, email, displayName, enabled) VALUES ('00000000-0000-0000-0000-000000000002', 'USER', 'kinotic@kinotic.local', 'Kinotic Test', true) WITH REFRESH;
 INSERT INTO kinotic_identity_credential (id, secretHash) VALUES ('00000000-0000-0000-0000-000000000002', '$2b$12$ztUtxd/6nRYTACObjRNnMOisx3QlNuP2GmabcBdrv4Vcd6Vs46GaG') WITH REFRESH;
-INSERT INTO kinotic_membership (id, identityId, organizationId, enabled, created, updated) VALUES ('00000000-0000-0000-0000-000000000002:kinotic-test', '00000000-0000-0000-0000-000000000002', 'kinotic-test', true, '2026-01-01', '2026-01-01') WITH REFRESH;
+INSERT INTO kinotic_membership (id, identityId, organizationId, enabled, created, updated) VALUES ('00000000-0000-0000-0000-000000000002:test-org', '00000000-0000-0000-0000-000000000002', 'test-org', true, '2026-01-01', '2026-01-01') WITH REFRESH;
 
 
 -- The vm-manager's machine identity: SYSTEM scope = no organizationId/applicationId, which is

@@ -70,9 +70,8 @@ public class DomainUtil {
      */
     public static final String INDEX_PREFIX = "kinotic_";
 
-    // Organization ids beginning with this prefix belong to the platform, which needs an
-    // organization wherever it is its own tenant — the owner of VM workloads the OS runs for
-    // the OS, for instance
+    // no organization carries the platform's name: an id beginning with it would put that name on a customer's
+    // hosts, <org>--<app> under the apps-api domain and *.<org> under the sites domain
     private static final String RESERVED_ID_PREFIX = "kinotic";
     // the labels the platform itself holds under its domains, which an organization's subdomain must never shadow;
     // the path segments the organization login's own routes claim under /api/auth/org/login/, which an
@@ -122,8 +121,6 @@ public class DomainUtil {
         // an organization id of "xn" would start its applications' host labels with "xn--", which
         // DNS reserves for internationalized labels
         Validate.isTrue(!"xn".equals(organizationId), "Organization Id '%s' is reserved", organizationId);
-        // The platform's own organizations are seeded by db migrations, which do not come
-        // through here, so the prefix needs no escape hatch
         Validate.isTrue(!organizationId.startsWith(RESERVED_ID_PREFIX),
                         "Organization Id '%s' is reserved by the platform", organizationId);
         Validate.isTrue(!RESERVED_ORGANIZATION_IDS.contains(organizationId),

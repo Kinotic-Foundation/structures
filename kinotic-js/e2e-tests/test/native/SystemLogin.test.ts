@@ -1,6 +1,6 @@
 import * as allure from 'allure-js-commons'
 import {beforeAll, describe, expect, it} from 'vitest'
-import {managementServer, restBase, systemServer} from '../TestHelpers.js'
+import {E2E_ORGANIZATION_ID, managementServer, restBase, systemServer} from '../TestHelpers.js'
 
 /**
  * Exercises the browser login REST surface: POST /api/auth/system/login must admit only
@@ -53,12 +53,12 @@ describe('System login route', () => {
     })
 
     it('leaves the org login route working for the org user', async () => {
-        const res = await login('/api/auth/org/login/kinotic-test', 'kinotic@kinotic.local', 'kinotic', restBase(managementServer()))
+        const res = await login(`/api/auth/org/login/${E2E_ORGANIZATION_ID}`, 'kinotic@kinotic.local', 'kinotic', restBase(managementServer()))
         expect(res.status).toBe(204)
     })
 
     it('refuses the system admin at the management server\'s login', async () => {
-        const res = await login('/api/auth/org/login/kinotic-test', 'admin@kinotic.local', 'kinotic', restBase(managementServer()))
+        const res = await login(`/api/auth/org/login/${E2E_ORGANIZATION_ID}`, 'admin@kinotic.local', 'kinotic', restBase(managementServer()))
         expect(res.status).toBe(401)
     })
 

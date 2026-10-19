@@ -4,7 +4,7 @@
 // "Local development environment".
 //
 //   bun dev-tools/github-app/dev-github-app.ts create --domain <you>.ngrok-free.dev [--name <app-name>] [--org <github-org>] [--force]
-//   bun dev-tools/github-app/dev-github-app.ts sync-es [--organization-id kinotic-test] [--es http://localhost:9200]
+//   bun dev-tools/github-app/dev-github-app.ts sync-es [--organization-id test-org] [--es http://localhost:9200]
 //
 // create runs GitHub's App manifest flow: a browser page posts the manifest below to GitHub,
 // the developer confirms, GitHub redirects back here with a code, and the code is exchanged
@@ -37,7 +37,7 @@ const APP_JSON = join(ENVIRONMENT_DIR, 'github-app.json')
 // The OrgSignupOidcConfiguration row id and secretNameRef seeded in V1__init.sql
 const SIGN_IN_CONFIG_ID = 'github-platform'
 // Organization the development migration seeds and its kinotic@kinotic.local user belongs to
-const DEFAULT_ORGANIZATION_ID = 'kinotic-test'
+const DEFAULT_ORGANIZATION_ID = 'test-org'
 
 interface CreatedApp {
     id: number
@@ -71,7 +71,7 @@ switch (positionals[0]) {
         break
     default:
         fail('usage: dev-github-app.ts create --domain <you>.ngrok-free.dev [--name <app-name>] [--org <github-org>] [--force]\n'
-             + '       dev-github-app.ts sync-es [--organization-id kinotic-test] [--es http://localhost:9200]')
+             + '       dev-github-app.ts sync-es [--organization-id test-org] [--es http://localhost:9200]')
 }
 
 async function create() {

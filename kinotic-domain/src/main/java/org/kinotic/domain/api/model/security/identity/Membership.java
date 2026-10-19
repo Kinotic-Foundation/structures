@@ -15,7 +15,10 @@ import java.util.Date;
  * {@link UserParticipantIdentity} holding no scope of its own, and each membership is one scope the person
  * may sign in to. A person has one account and any number of memberships, so one email, one password and
  * one GitHub binding reach every organization the person belongs to. A membership can be disabled or
- * removed by the organization without touching the account or the person's other memberships.
+ * removed by the organization without touching the account or the person's other memberships. An account's
+ * memberships are all of one kind: a platform operator's account holds the platform membership and signs in to the
+ * system console, an organization member's holds organizations' and signs in to their portals, and
+ * {@link org.kinotic.domain.api.services.security.MembershipService#addMember} refuses the other kind.
  *
  * <p>The id is derived from the identity and the organization ({@link #idOf}), so a membership is read by a
  * get and exists at most once per account and scope.

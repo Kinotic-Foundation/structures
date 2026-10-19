@@ -45,8 +45,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * no account becomes a pending member at once, with or without an invitation; the organization's own provider claims
  * the pending member it verifies under that address, once, and no one else; an invitation claims a pending member
  * with a password or a provider identity; an address that already has an account is invited to accept instead;
- * removing a pending member removes the account nobody signed in to; and an address added twice at once is one
- * member.
+ * removing a pending member removes the account nobody signed in to; an address added twice at once is one
+ * member; and an account is a platform operator's or an organization member's, never both.
  */
 @SpringBootTest
 public class MemberProvisioningTests extends KinoticTestBase {
@@ -150,6 +150,27 @@ public class MemberProvisioningTests extends KinoticTestBase {
         await(identities.syncIndex());
         Page<Member> page = await(asAdministrator(() -> members.findMembers(null, Pageable.ofSize(1000))));
         assertEquals(added, page.getContent().stream().filter(member -> email.equals(member.email())).count());
+    }
+
+    @Test
+    public void anAccountIsAnOperatorsOrAMembersNeverBoth() throws Exception {
+        String operatorEmail = "operator-" + suffix() + "@example.test";
+        UserParticipantIdentity operator = await(identities.createUser(account(operatorEmail, "Olive Operator"), PASSWORD));
+        assertNull(await(memberships.addMember(operator.getId(), null)).getOrganizationId());
+
+        // an administrator may add the operator's address, but the acceptance that would make the membership is refused
+        assertInstanceOf(IllegalArgumentException.class, failure(() -> memberships.addMember(operator.getId(), organization.getId())));
+        await(asAdministrator(() -> members.addMember(operatorEmail, "Olive Operator", true)));
+        await(identities.syncIndex());
+        PendingInvite invite = await(invites.findPendingInvite(operatorEmail, organization.getId()));
+        assertInstanceOf(IllegalArgumentException.class,
+                         assertThrows(ExecutionException.class, () -> await(invites.acceptLocalInvite(invite.getVerificationToken(), PASSWORD, null))).getCause());
+        assertNull(await(memberships.findMembership(operator.getId(), organization.getId())));
+
+        // and a member's account never takes the platform membership
+        Member member = await(asAdministrator(() -> members.addMember("member-" + suffix() + "@example.test", "Max Member", false)));
+        assertInstanceOf(IllegalArgumentException.class, failure(() -> memberships.addMember(member.id(), null)));
+        assertNull(await(memberships.findMembership(member.id(), null)));
     }
 
     @Test

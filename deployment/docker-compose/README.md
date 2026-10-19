@@ -76,7 +76,7 @@ docker compose down -v && docker compose up -d
 
 ## Sample data
 
-The full stack seeds the `kinotic-test` organization for evaluators: `compose.yml` runs the
+The full stack seeds the `test-org` organization for evaluators: `compose.yml` runs the
 migration with the `fixtures` profile (set in `evaluation.env`), and `kinotic-gen-schemas`
 adds the `ecommerce` and `healthcare` applications with entity data. Sign in at
 <http://localhost:9090> as `kinotic@kinotic.local` / `kinotic` to see it. The other stacks

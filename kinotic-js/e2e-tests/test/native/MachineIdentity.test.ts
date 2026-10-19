@@ -15,7 +15,7 @@ import {E2E_ORGANIZATION_ID,
 // the APPLICATION-scope machine identity V3__e2e_app_fixtures seeds for these tests (clientSecret: kinotic)
 const MACHINE_CLIENT_ID = '00000000-0000-0000-0000-000000000010'
 const MACHINE_CLIENT_SECRET = 'kinotic'
-// a kinotic-test org USER — a valid identity + password that must nevertheless be refused
+// a test-org org USER — a valid identity + password that must nevertheless be refused
 // as machine credentials
 const ORG_USER_ID = '00000000-0000-0000-0000-000000000002'
 // an ORGANIZATION-scope machine, the shape a project's deployment provisions for its workloads
@@ -50,7 +50,7 @@ describe('Kinotic JS', () => {
     beforeAll(async () => {
         await allure.suite('e2e-tests/native')
         await allure.subSuite('MachineIdentity')
-        // the org user (kinotic@kinotic.local / kinotic-test) that manages machines
+        // the org user (kinotic@kinotic.local / test-org) that manages machines
         await initKinoticClient()
     }, 120000)
 

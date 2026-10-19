@@ -51,17 +51,31 @@ public class DefaultMembershipService implements MembershipService {
             if (existing != null) {
                 ret = Future.succeededFuture(existing);
             } else {
-                Date now = new Date();
-                Membership membership = new Membership().setId(Membership.idOf(identityId, organizationId))
-                                                        .setIdentityId(identityId)
-                                                        .setOrganizationId(organizationId)
-                                                        .setEnabled(true)
-                                                        .setCreated(now)
-                                                        .setUpdated(now);
-                // sync so the member list a console re-queries at once shows the new member
-                ret = membershipRepository.saveSync(membership);
+                ret = requireMembershipsOfOneKind(identityId, organizationId).compose(v -> {
+                    Date now = new Date();
+                    Membership membership = new Membership().setId(Membership.idOf(identityId, organizationId))
+                                                            .setIdentityId(identityId)
+                                                            .setOrganizationId(organizationId)
+                                                            .setEnabled(true)
+                                                            .setCreated(now)
+                                                            .setUpdated(now);
+                    // sync so the member list a console re-queries at once shows the new member
+                    return membershipRepository.saveSync(membership);
+                });
             }
             return ret;
+        });
+    }
+
+    // an account is a platform operator's or an organization member's, never both, so an operator signs in to
+    // the system console alone and a member to their organizations alone
+    private Future<Void> requireMembershipsOfOneKind(String identityId, String organizationId) {
+        boolean platform = organizationId == null;
+        return findMemberships(identityId).map(memberships -> {
+            Validate.isTrue(memberships.stream().allMatch(membership -> (membership.getOrganizationId() == null) == platform),
+                            platform ? "An organization's member cannot become a platform operator"
+                                     : "A platform operator cannot become an organization's member");
+            return null;
         });
     }
 

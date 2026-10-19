@@ -50,7 +50,7 @@ const ALLOWED_SERVER_HOST = process.env.KINOTIC_E2E_ALLOWED_HOST ?? SERVER_FROM_
 // fixtures profile), and the organization's APP_RUNTIME machine, the identity a microservice's
 // runtime workload holds (its test profile). The application record is what makes its zone
 // routable.
-const ORGANIZATION_ID = process.env.KINOTIC_E2E_ORGANIZATION_ID ?? 'kinotic-test'
+const ORGANIZATION_ID = process.env.KINOTIC_E2E_ORGANIZATION_ID ?? 'test-org'
 const APPLICATION_ID = process.env.KINOTIC_E2E_APPLICATION_ID ?? 'atlas-crm'
 const RUNTIME_CLIENT_ID = process.env.KINOTIC_E2E_RUNTIME_CLIENT_ID ?? '00000000-0000-0000-0000-000000000013'
 const RUNTIME_CLIENT_SECRET = process.env.KINOTIC_E2E_RUNTIME_CLIENT_SECRET ?? 'kinotic'
