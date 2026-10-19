@@ -19,7 +19,7 @@ export interface AuthHeaders {
 const DEFAULT_AUTH_HEADERS: AuthHeaders = {
     clientId: 'kinotic@kinotic.local',
     clientSecret: 'kinotic',
-    organizationId: 'kinotic-test'
+    organizationId: 'test-org'
 }
 
 /**
@@ -66,7 +66,7 @@ export function validateConnectedInfo(connectedInfo: ConnectedInfo, roles?: stri
 
 /**
  * A {@link CredentialsResolver} producing the given auth headers merged over the default
- * kinotic-test credentials. The supplier form is consulted on every (re)connect.
+ * test-org credentials. The supplier form is consulted on every (re)connect.
  */
 export function testCredentials(authHeaders?: Partial<AuthHeaders> | (() => Promise<Partial<AuthHeaders>>)): CredentialsResolver {
     return {

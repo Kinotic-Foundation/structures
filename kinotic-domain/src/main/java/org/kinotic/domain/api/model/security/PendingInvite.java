@@ -13,9 +13,9 @@ import java.util.Date;
  * Organization, or an Application within one. Created by an org member, consumed when the
  * invitee accepts (creating the new {@link ParticipantIdentity} in the stored scope), then deleted.
  * <p>
- * Unlike {@link PendingSignUp} there is no {@code authType}: the invitee chooses how to
- * accept — set a password or sign in with an OIDC provider configured for the scope — and
- * the created user's auth type follows from that choice.
+ * Unlike {@link PendingSignUp} there is no sign-in method: the invitee chooses how to accept, by
+ * setting a password or signing in with an OIDC provider configured for the scope, and the created
+ * user's method follows from that choice.
  */
 @Getter
 @Setter

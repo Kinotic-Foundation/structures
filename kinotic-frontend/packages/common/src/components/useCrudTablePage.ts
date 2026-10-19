@@ -94,7 +94,7 @@ export function statusSeverity(status: string): string {
   let ret: string
   if (status === 'Active') {
     ret = 'success'
-  } else if (status === 'Invited') {
+  } else if (status === 'Invited' || status === 'Pending') {
     ret = 'info'
   } else {
     ret = 'danger'

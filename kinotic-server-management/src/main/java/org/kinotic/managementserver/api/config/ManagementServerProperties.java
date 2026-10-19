@@ -1,10 +1,14 @@
 package org.kinotic.managementserver.api.config;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.Setter;
 
-/** The URLs the management server is reached at, {@code kinotic.managementServer.*}, set per deployment. */
+/**
+ * The URLs the management server is reached at and the Turnstile site its open routes are guarded by,
+ * {@code kinotic.managementServer.*}, set per deployment.
+ */
 @Getter
 @Setter
 public class ManagementServerProperties {
@@ -23,6 +27,10 @@ public class ManagementServerProperties {
     /** Base URL of the portal, where the management server's browser flows send the user. */
     @NotBlank
     private String portalBaseUrl;
+
+    /** The Cloudflare Turnstile site the portal's find-my-organizations form presents and this server verifies. */
+    @Valid
+    private TurnstileProperties turnstile = new TurnstileProperties();
 
     /** The OAuth issuer: {@link #issuerBaseUrl} where set, otherwise {@link #apiBaseUrl}. */
     public String resolveIssuerBaseUrl() {

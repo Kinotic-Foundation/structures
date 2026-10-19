@@ -41,7 +41,8 @@ Takes (dict "image" <repository and sha> "root" $).
 The files a server's platform-secrets volume holds, as a YAML list of the Key Vault secret or
 Secret key each comes from and the file name it is mounted as: the server's own JWT key set, and
 the properties Spring imports from the directory as a config tree, each file named after the
-property it sets. The GitHub App's secrets go only to a server with githubApp set.
+property it sets. The GitHub App's secrets go only to a server with githubApp set, the Turnstile
+site's secret only to one with turnstile set.
 Takes (dict "name" <server key> "server" <server values> "root" $).
 */}}
 {{- define "kinotic.platformSecretFiles" -}}
@@ -55,6 +56,14 @@ Takes (dict "name" <server key> "server" <server values> "root" $).
   path: kinotic.managementApi.github.appPrivateKey
 - object: {{ $objects.githubWebhookSecret }}
   path: kinotic.managementApi.github.webhookSecret
+{{- end }}
+{{- if .server.cloudflareDns }}
+- object: {{ $objects.cloudflareDnsApiToken }}
+  path: kinotic.domain.publishedSites.cloudflare.apiToken
+{{- end }}
+{{- if .server.turnstile }}
+- object: {{ $objects.turnstileSecretKey }}
+  path: kinotic.managementServer.turnstile.secretKey
 {{- end }}
 {{- end -}}
 
@@ -86,6 +95,9 @@ KINOTIC_APIGATEWAY_WEBSERVER_PORT: "{{ $server.webServer.port }}"
 KINOTIC_MANAGEMENTSERVER_APIBASEURL: "{{ .apiBaseUrl }}"
 KINOTIC_MANAGEMENTSERVER_PORTALBASEURL: "{{ .portalBaseUrl }}"
 KINOTIC_DOMAIN_EMAIL_LINKBASEURL: "{{ .portalBaseUrl }}"
+{{- with .turnstile }}
+KINOTIC_MANAGEMENTSERVER_TURNSTILE_SITEKEY: "{{ .siteKey }}"
+{{- end }}
 {{- end }}
 {{- with $server.systemServer }}
 KINOTIC_SYSTEMSERVER_APIBASEURL: "{{ .apiBaseUrl }}"

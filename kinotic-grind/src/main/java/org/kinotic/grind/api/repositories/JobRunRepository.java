@@ -7,7 +7,7 @@ import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.domain.api.model.StatusCondition;
 import org.kinotic.domain.api.model.StatusConditionType;
-import org.kinotic.domain.api.model.WatchEventKind;
+import org.kinotic.domain.api.model.WatchEventType;
 import org.kinotic.domain.api.model.WatchedType;
 import org.kinotic.domain.internal.api.repositories.AbstractWatchedRepository;
 import org.kinotic.domain.internal.api.repositories.WatchEventRepository;
@@ -119,7 +119,7 @@ public class JobRunRepository extends AbstractWatchedRepository<JobRun> {
         params.put("finished", finished.toInstant().toString());
         params.put("nodeLeft", StatusConditionType.SERVER_NODE_LEFT.name());
         return watchedStateRepository.write(document(jobRunId), RECORD_OUTCOME, params,
-                                            new WatchedChange(WatchEventKind.STATUS_CHANGED, source, "Run " + status, status))
+                                            new WatchedChange(WatchEventType.STATUS_CHANGED, source, "Run " + status, status))
                                      .mapEmpty();
     }
 

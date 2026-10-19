@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -206,9 +205,5 @@ public class ProjectSbomTests extends KinoticTestBase {
                                                   Map.of(ParticipantConstants.PARTICIPANT_TYPE_METADATA_KEY,
                                                          ParticipantConstants.PARTICIPANT_TYPE_MACHINE),
                                                   List.of());
-    }
-
-    private static <T> T await(Future<T> future) throws Exception {
-        return future.toCompletionStage().toCompletableFuture().get(30, TimeUnit.SECONDS);
     }
 }

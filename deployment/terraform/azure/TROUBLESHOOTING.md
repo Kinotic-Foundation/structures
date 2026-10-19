@@ -169,12 +169,12 @@ az network nsg rule create --resource-group rg-kinotic-production \
 **Cause:** Some container runtimes block binding to ports below 1024 even inside containers. Vert.x fails silently — logs show "listening on 443" but the port isn't actually open.
 **Fix:** Never bind a privileged port in the pod — remap at the Service instead. The LoadBalancer services in `helm/kinotic/templates/server-service.yaml` already do this: `port: 443` → `targetPort:` the server's `gatewayPort` (58503, 58504, 58505).
 
-### DNS A record `already exists`
+### DNS record `already exists`
 
-**Cause:** DNS A record was created on a previous apply but terraform lost the state reference.
-**Fix:** Import it:
+**Cause:** A record was created on a previous apply but terraform lost the state reference.
+**Fix:** Import it, by the zone's id and the record's id from the Cloudflare dashboard or API:
 ```bash
-terraform import 'azurerm_dns_a_record.server["api"]' /subscriptions/<sub-id>/resourceGroups/rg-kinotic-global/providers/Microsoft.Network/dnsZones/kinotic.ai/A/api
+terraform import 'cloudflare_dns_record.server["api"]' <zone id>/<record id>
 ```
 
 ### Azure eventual consistency — 404 on freshly created resources

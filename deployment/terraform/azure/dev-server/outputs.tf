@@ -9,22 +9,22 @@ output "system_api_hostname" {
 }
 
 output "apps_api_domain" {
-  description = "The app server's hostname, on the router's public address, which runtime workloads dial; every application's API host is a label under it"
+  description = "The app server's hostname in the Cloudflare zone, proxied to the router's public address, which runtime workloads dial; every application's API host is a label under it"
   value       = local.apps_api_domain
 }
 
 output "portal_hostname" {
-  description = "The portal's hostname, served by Front Door from sites/<hostname>/ in the sites account"
-  value       = module.environment.ui_hostnames.portal
+  description = "The portal's hostname in the platform zone, served by the sites Worker from sites/<hostname>/ in the sites account; deploy-ui.sh uploads it"
+  value       = local.portal_hostname
 }
 
 output "console_hostname" {
-  description = "The system console's hostname, served by Front Door from sites/<hostname>/ in the sites account"
-  value       = module.environment.ui_hostnames.console
+  description = "The system console's hostname, served the same way"
+  value       = local.console_hostname
 }
 
 output "sites_domain" {
-  description = "The domain every published UI is a label under"
+  description = "The domain every organization's sites are under: <app>--<ui>.<org>.<sites domain>"
   value       = module.environment.sites_domain
 }
 
@@ -79,10 +79,13 @@ output "tenant_id" {
 output "dev_server_env" {
   description = "The non-secret half of the servers' environment"
   value = {
-    DEV_SERVER_PORTAL_HOSTNAME                          = module.environment.ui_hostnames.portal
-    DEV_SERVER_CONSOLE_HOSTNAME                         = module.environment.ui_hostnames.console
+    DEV_SERVER_PORTAL_HOSTNAME                          = local.portal_hostname
+    DEV_SERVER_CONSOLE_HOSTNAME                         = local.console_hostname
     KINOTIC_SYSTEMAPI_UIDEPLOYMENT_SITESDOMAIN          = module.environment.sites_domain
     KINOTIC_SYSTEMAPI_UIDEPLOYMENT_SITESSTORAGEENDPOINT = module.environment.sites_storage_blob_endpoint
+    KINOTIC_DOMAIN_PUBLISHEDSITES_DOMAIN                = module.environment.sites_domain
+    KINOTIC_DOMAIN_PUBLISHEDSITES_CLOUDFLARE_ENABLED    = "true"
+    KINOTIC_DOMAIN_PUBLISHEDSITES_CLOUDFLARE_ZONEID     = var.cloudflare_zone_id
     KINOTIC_DOMAIN_SECRETSTORAGE_AZURE_VAULTURL         = azurerm_key_vault.server.vault_uri
     KINOTIC_DOMAIN_EMAIL_ENDPOINT                       = local.global.email_service_endpoint
     KINOTIC_DOMAIN_EMAIL_SENDERADDRESS                  = "DoNotReply@${local.global.email_sender_domain}"
@@ -94,22 +97,7 @@ output "dev_server_env" {
 # The operator places this on the host as kinotic-servers.env (sync-secrets.sh in the proxmox
 # root), which every server's environment merges; it never goes through that root or its state.
 output "secrets_env" {
-  description = "The Azure half of the servers' secrets, as an env-file line"
-  value       = "AZURE_CLIENT_SECRET=${module.environment.server_client_secret}\n"
+  description = "The Azure and Cloudflare half of the servers' secrets, as env-file lines"
+  value       = "AZURE_CLIENT_SECRET=${module.environment.server_client_secret}\nKINOTIC_DOMAIN_PUBLISHEDSITES_CLOUDFLARE_APITOKEN=${var.cloudflare_dns_api_token}\n"
   sensitive   = true
-}
-
-output "resource_group_name" {
-  description = "The resource group, for deploy-ui.sh"
-  value       = module.environment.resource_group_name
-}
-
-output "sites_frontdoor_profile" {
-  description = "The Front Door profile serving the sites account, for deploy-ui.sh's purge"
-  value       = module.environment.sites_frontdoor_profile_name
-}
-
-output "sites_frontdoor_endpoint" {
-  description = "Its endpoint, for deploy-ui.sh's purge"
-  value       = module.environment.sites_frontdoor_endpoint_name
 }

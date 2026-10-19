@@ -71,14 +71,14 @@ class AzureProvisioningIntegrationTest {
     private static final String INDEX_HTML = "<!doctype html><title>azure-it</title>";
     /** Longer than any upload or delete takes; a step past this is stuck. */
     private static final long STEP_TIMEOUT_MINUTES = 15;
-    /** A site serves once its configuration reaches Front Door's edges, which Microsoft bounds at 15 minutes per change and longer when changes queue. */
+    /** Longer than the edge takes to serve a site's first request once its files are up. */
     private static final long SITE_TIMEOUT_MINUTES = 45;
     private static final long SITE_POLL_MS = 30_000;
 
     private Vertx vertx;
     private KinoticSystemApiProperties properties;
     private TokenCredential credential;
-    private FrontDoorUiDeploymentProvisioner siteProvisioner;
+    private HttpUiDeploymentProvisioner siteProvisioner;
     private AzureSiteStorageService siteStorage;
     private final HttpClient http = HttpClient.newHttpClient();
 
@@ -92,7 +92,7 @@ class AzureProvisioningIntegrationTest {
 
         vertx = Vertx.vertx();
         credential = new DefaultAzureCredentialBuilder().build();
-        siteProvisioner = new FrontDoorUiDeploymentProvisioner(vertx, properties);
+        siteProvisioner = new HttpUiDeploymentProvisioner(vertx, properties);
         siteStorage = new AzureSiteStorageService(vertx, properties);
     }
 

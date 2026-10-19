@@ -1,4 +1,4 @@
-import type { WatchEventKind } from './WatchEventKind'
+import type { WatchEventType } from './WatchEventType'
 import type { WatchedParent } from './WatchedParent'
 import type { WatchedType } from './WatchedType'
 
@@ -21,7 +21,7 @@ export interface WatchEvent {
     /** What the record belongs to, null for a record the platform made on its own. */
     parent: WatchedParent | null
     /** What happened. */
-    kind: WatchEventKind
+    eventType: WatchEventType
     /** What caused it: the node that reported, the operator, the orchestrator's inference. */
     source: string
     /** The server node that wrote it. */

@@ -17,6 +17,8 @@ kinotic:
   maxNumberOfCoresToUse: 4
   domain:
     email:
+      # no Azure Communication Services here: an invitation or verification send logs its link instead
+      enabled: false
       # the UI the emailed links open; the test node presents the management server's development UI
       linkBaseUrl: http://localhost:9090
     oauth:

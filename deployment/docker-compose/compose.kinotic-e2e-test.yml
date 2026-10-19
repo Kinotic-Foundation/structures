@@ -53,6 +53,8 @@ services:
   kinotic-server-management:
     environment:
       <<: [*kinotic-server-e2e-environment, *kinotic-management-api-e2e-environment]
+      # No Turnstile site: the find-my-organizations route accepts every request without a token
+      KINOTIC_MANAGEMENTSERVER_TURNSTILE_ENABLED: "false"
     # Replaces compose.kinotic-servers.yml's mount of the developer's tunnel and GitHub App,
     # which would otherwise configure the e2e server on a developer machine
     volumes: !override

@@ -6,7 +6,7 @@
 #     tag, so a plain apply never notices), the migration runs again, and the applier restores
 #     the settings the provider drops
 #   - the portal and the system console, when kinotic-frontend differs from what the sites
-#     account serves (deploy-ui.sh records the tree it built in each site's version.json)
+#     Worker serves (deploy-ui.sh records the tree it built in each app's version.json)
 #   - the vm-manager on each node in vm_nodes, when the version vm_manager_version resolves
 #     to on npm is not the one installed; the node kit is synced first so the installer is current
 #
@@ -75,22 +75,16 @@ frontend_tree="$(git -C "$REPO" rev-parse HEAD:kinotic-frontend)"
 if [[ -n "$(git -C "$REPO" status --porcelain -- kinotic-frontend)" ]]; then
   frontend_tree="$frontend_tree-dirty"
 fi
-account="$(terraform -chdir="$AZURE" output -raw sites_storage_blob_endpoint | sed -E 's#https://([^.]+)\..*#\1#')"
 portal_hostname="$(terraform -chdir="$AZURE" output -raw portal_hostname)"
-version_file="$(mktemp)"
-deployed_tree=""
-if az storage blob download --auth-mode login --account-name "$account" --container-name sites \
-     --name "$portal_hostname/version.json" --file "$version_file" --only-show-errors >/dev/null 2>&1; then
-  deployed_tree="$(python3 -c 'import sys, json; print(json.load(open(sys.argv[1])).get("commitSha", ""))' "$version_file")"
-fi
-rm -f "$version_file"
+deployed_tree="$(curl -fsS --max-time 10 "https://$portal_hostname/version.json" 2>/dev/null \
+  | python3 -c 'import sys, json; print(json.load(sys.stdin).get("commitSha", ""))' 2>/dev/null || true)"
 if [[ "$frontend_tree" == "$deployed_tree" && "$frontend_tree" != *-dirty ]]; then
-  echo "==> UIs: the sites account serves kinotic-frontend $frontend_tree"
+  echo "==> UIs: the portal serves kinotic-frontend $frontend_tree"
 elif $DRY_RUN; then
-  echo "==> UIs: kinotic-frontend is $frontend_tree, the sites account serves ${deployed_tree:-nothing}; would build and upload"
+  echo "==> UIs: kinotic-frontend is $frontend_tree, the portal serves ${deployed_tree:-nothing}; would build and deploy"
 else
-  echo "==> UIs: kinotic-frontend is $frontend_tree, the sites account serves ${deployed_tree:-nothing}"
-  "$AZURE/deploy-ui.sh"
+  echo "==> UIs: kinotic-frontend is $frontend_tree, the portal serves ${deployed_tree:-nothing}"
+  "$AZURE/../deploy-ui.sh" dev-server dev-server
 fi
 
 # ---- the vm-manager on each node ----------------------------------------------------------

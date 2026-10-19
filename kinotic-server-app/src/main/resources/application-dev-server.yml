@@ -1,6 +1,6 @@
 # The development server's app server: kinotic-server-app as a container on one Proxmox host
 # beside three Elasticsearch nodes and the observability stack (deployment/terraform/proxmox), with
-# Front Door, the sites storage account, email, and a Key Vault in Azure
+# the sites storage account, email, and a Key Vault in Azure and the sites Worker on Cloudflare
 # (deployment/terraform/azure/dev-server). Activated as `production,dev-server`. Holds what is
 # fixed for this shape of deployment; everything that differs per server — hostnames,
 # endpoints, addresses — arrives through the environment the terraform root composes, and
@@ -20,7 +20,7 @@ kinotic:
       keyPath: /etc/kinotic/certs/privkey.pem
     cors:
       # The UIs published under the sites domain
-      allowedOriginPattern: "https:\\/\\/[a-z0-9-]+\\.${KINOTIC_SYSTEMAPI_UIDEPLOYMENT_SITESDOMAIN}"
+      allowedOriginPattern: "https:\\/\\/[a-z0-9-]+\\.[a-z0-9-]+\\.${KINOTIC_SYSTEMAPI_UIDEPLOYMENT_SITESDOMAIN}"
       allowCredentials: true
   platformSecrets:
     # Generated once when the server is built (generate-secrets.sh in deployment/terraform/proxmox),

@@ -30,6 +30,13 @@ public final class OidcErrorCodes {
     /** Verified IdP identity has no ParticipantIdentity in the target scope — login refuses to auto-create. */
     public static final String NO_ACCOUNT = "no_account";
 
+    /**
+     * A sign-in through a platform social registration that named no organization found the identity a
+     * member of several, so the person chooses one and signs in at its own login; the session that completed
+     * the sign-in holds their ids, which the login page reads from {@code GET /api/auth/org/login/choices}.
+     */
+    public static final String MULTIPLE_ORGANIZATIONS = "multiple_organizations";
+
     /** Found ParticipantIdentity but {@code enabled=false}. */
     public static final String ACCOUNT_DISABLED = "account_disabled";
 
@@ -47,4 +54,7 @@ public final class OidcErrorCodes {
 
     /** Invitation token is unknown, expired, or already consumed. */
     public static final String INVITE_INVALID = "invite_invalid";
+
+    /** The code handing a completed social sign-in to the application's API host is unknown, expired, already consumed, or for another application. */
+    public static final String HANDOFF_INVALID = "handoff_invalid";
 }

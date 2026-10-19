@@ -38,6 +38,12 @@ public class DomainProperties {
      */
     private SecretStorageProperties secretStorage;
 
+    /**
+     * The domain organizations' published sites are served under and the edge that serves them.
+     */
+    @Valid
+    private PublishedSitesProperties publishedSites = new PublishedSitesProperties();
+
     @NotNull
     private Duration elasticConnectionTimeout = Duration.ofSeconds(5);
 

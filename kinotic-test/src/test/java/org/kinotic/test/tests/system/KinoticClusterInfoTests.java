@@ -11,7 +11,6 @@ import org.kinotic.test.support.kinotic.KinoticTestBase;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
-import java.util.concurrent.TimeUnit;
 
 /**
  * Exercises the cluster view against a real Ignite node: what a node reports about itself travels as the node
@@ -49,9 +48,5 @@ public class KinoticClusterInfoTests extends KinoticTestBase {
                           .filter(node -> node.getNodeId().equals(localNodeId))
                           .findFirst()
                           .orElseThrow();
-    }
-
-    private static <T> T await(Future<T> future) throws Exception {
-        return future.toCompletionStage().toCompletableFuture().get(30, TimeUnit.SECONDS);
     }
 }

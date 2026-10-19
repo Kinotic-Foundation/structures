@@ -4,7 +4,7 @@ variable "project" {
 }
 
 variable "environment" {
-  description = "Names everything this module creates and the apps-<environment> sites domain; unique across every developer and server, since a site hostname is bound to one Front Door profile in all of Azure"
+  description = "Names everything this module creates and the <environment>.<cloudflare zone> sites domain; unique across every developer and server, since each takes that label of the zone and names its Worker after it"
   type        = string
 }
 
@@ -19,29 +19,15 @@ variable "tags" {
   default     = {}
 }
 
-variable "lets_encrypt_email" {
-  description = "Account email for the Let's Encrypt registration that issues the sites wildcard certificate"
+variable "platform_zone_id" {
+  description = "The platform zone on Cloudflare (global/ output dns_zone_id), where the platform's own UIs are served"
   type        = string
 }
 
-variable "dns_zone_name" {
-  description = "The platform zone the sites domain is a label of, e.g. kinotic.ai (global/ output dns_zone_name)"
-  type        = string
-}
-
-variable "dns_zone_id" {
-  description = "Resource id of the platform zone (global/ output dns_zone_id)"
-  type        = string
-}
-
-variable "dns_zone_resource_group_name" {
-  description = "Resource group of the platform zone (global/ output resource_group_name)"
-  type        = string
-}
-
-variable "dns_zone_subscription_id" {
-  description = "Subscription of the platform zone (global/ output subscription_id)"
-  type        = string
+variable "ui_hostnames" {
+  description = "The platform's own UIs the sites Worker serves from the sites account, by hostname in the platform zone: dev-portal.<zone> and dev-console.<zone> on the development server, none on a developer's machine"
+  type        = set(string)
+  default     = []
 }
 
 variable "email_communication_service_id" {
@@ -49,8 +35,27 @@ variable "email_communication_service_id" {
   type        = string
 }
 
-variable "ui_hostnames" {
-  description = "Hostnames in the zone served from the sites account on Front Door, for the platform's own UIs: the label within the zone by key, e.g. { portal = \"dev-portal\" }"
-  type        = map(string)
-  default     = {}
+variable "cloudflare_zone_name" {
+  description = "The Cloudflare zone the environment's sites domain is a label under, e.g. kinotic.io"
+  type        = string
+}
+
+variable "cloudflare_zone_id" {
+  type = string
+}
+
+variable "cloudflare_account_id" {
+  description = "The Cloudflare account the sites Worker is deployed in"
+  type        = string
+}
+
+variable "app_server_address" {
+  description = "The public IPv4 address the environment's app server is reached at, for the apps-api records, or null on a developer machine with no reachable app server"
+  type        = string
+  default     = null
+}
+
+variable "portal_base_url" {
+  description = "Where an organization's own host sends the browser"
+  type        = string
 }

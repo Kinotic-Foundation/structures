@@ -63,6 +63,7 @@ done
 cat > "$OUT/kinotic-servers.env" <<ENV
 # terraform output -raw secrets_env, in deployment/terraform/azure/dev-server
 AZURE_CLIENT_SECRET=
+KINOTIC_DOMAIN_PUBLISHEDSITES_CLOUDFLARE_APITOKEN=
 ENV
 
 cat > "$OUT/grafana.env" <<ENV
@@ -70,5 +71,5 @@ GF_SECURITY_ADMIN_PASSWORD=$(password)
 ENV
 
 chmod -R go-rwx "$OUT"
-echo "Written to $OUT. Fill in AZURE_CLIENT_SECRET, and the GitHub App values in both"
+echo "Written to $OUT. Fill in kinotic-servers.env from the dev-server root's secrets_env output, and the GitHub App values in both"
 echo "kinotic-server-management/secrets.yml and kinotic-server-system/secrets.yml, then: ./sync-secrets.sh $OUT"

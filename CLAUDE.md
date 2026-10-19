@@ -49,7 +49,7 @@ Always use Lombok where possible: `@Getter`, `@Setter`, `@Accessors(chain = true
 
 Prefer a single `return` per method. Guard clauses that short-circuit errors or degenerate cases at the top of a method are fine (throwing, or bailing before the real work), but branching LOGIC paths use if/else assigning a result variable that is returned once at the end (the `String ret; if (...) { ret = ...; } else { ret = ...; } return ret;` idiom used throughout the codebase) — never a `return` inside each branch.
 
-Use `enum` for any field whose value is constrained to a known set — never `String` with magic-string constants. Spring and Vert.x both auto-coerce JSON strings to enum values when deserializing into typed POJOs (Jackson's `@JsonCreator` / case-insensitive matching is built-in), so the wire contract stays string-friendly while the in-process type catches typos at compile time. Examples: `AuthType`, `OidcProviderKind`.
+Use `enum` for any field whose value is constrained to a known set — never `String` with magic-string constants. Spring and Vert.x both auto-coerce JSON strings to enum values when deserializing into typed POJOs (Jackson's `@JsonCreator` / case-insensitive matching is built-in), so the wire contract stays string-friendly while the in-process type catches typos at compile time. Examples: `DelegateType`, `OidcProviderType`.
 
 When bridging a `CompletableFuture` into Vert.x, always pass the context: `Future.fromCompletionStage(stage, vertx.getOrCreateContext())`, never the single-argument overload. The stage may complete on a foreign thread (Azure SDK, Caffeine loader, JDK executor), and without the context argument everything composed after it leaves the request's Vert.x context — breaking anything downstream that reads a context-local, such as `SecurityContext`'s participant. For delays, use `vertx.timer(...)` instead of a JDK scheduled executor for the same reason.
 
@@ -150,6 +150,15 @@ column; the grammar reference explains what each nested element costs.
 ## Keep docs in sync with code
 
 When a change alters something the docs describe — a wire contract, public API signature, REST route, auth mechanism, configuration option, or user-facing behavior — update the affected docs in the same change. `website/content/**` must always reflect the correct and current shape of the system; stale docs are a defect, not a follow-up. Before finishing, grep `website/content` for the symbols, routes, and field names you changed and reconcile every hit. If a change is genuinely too large to document in the same pass, say so explicitly rather than leaving the docs silently wrong.
+
+## Docs follow features, never the other way round
+
+`website/content/**` describes what the code does; it never decides what the code should do. A
+request from the user drives a feature, and the docs are updated afterwards to match what was
+built. Never treat a sentence in the docs as the specification of a behaviour the code lacks, and
+never build, keep or refuse something because the docs say so. When a request contradicts the
+docs, or the docs claim a behaviour the code does not have, say so and ask which way to go; do not
+pick the docs' side on your own. The only authority a doc has is over the docs.
 
 ## Avoid these code smells
 

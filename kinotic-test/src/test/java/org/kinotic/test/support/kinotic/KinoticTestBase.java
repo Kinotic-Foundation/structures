@@ -18,6 +18,8 @@ import org.springframework.test.context.ContextConfiguration;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 /**
@@ -31,11 +33,11 @@ import java.util.function.Supplier;
 public abstract class KinoticTestBase {
 
     /**
-     * Default organization id used by test fixtures. Scoped CRUD services derive
-     * Elasticsearch routing keys and ID prefixes from this value, so all test entities
-     * are co-located under one org.
+     * The organization the test fixtures belong to: the one the test stack's migrations seed, so a service that
+     * requires the organization to exist finds it. Scoped CRUD services derive Elasticsearch routing keys and id
+     * prefixes from this value, so all test entities are co-located under one organization.
      */
-    public static final String TEST_ORG_ID = "kinotic";
+    public static final String TEST_ORG_ID = "test-org";
 
     /**
      * Default application id used by test fixtures. Matches the Application that the sample
@@ -114,5 +116,15 @@ public abstract class KinoticTestBase {
             }
         });
         return promise.future();
+    }
+
+    /** The result of {@code future}, waited for as long as a test's call to a service may take. */
+    protected static <T> T await(Future<T> future) throws Exception {
+        return future.toCompletionStage().toCompletableFuture().get(30, TimeUnit.SECONDS);
+    }
+
+    /** Eight random hex characters, which make a fixture's name or id a test's own. */
+    protected static String suffix() {
+        return UUID.randomUUID().toString().replace("-", "").substring(0, 8);
     }
 }
