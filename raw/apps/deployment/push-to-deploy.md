@@ -95,7 +95,7 @@ dependencies installed for them.
 ## Machine identities
 
 Every VM connects to Kinotic as a machine identity the deployment provisions for the project,
-one for the build VM (`machineKind` `PROJECT_SYNC`), which the SBOM VM that runs after it shares,
+one for the build VM (`machineType` `PROJECT_SYNC`), which the SBOM VM that runs after it shares,
 and one per microservice (`APP_RUNTIME`),
 recorded with the deployment. They are organization-scope: synchronizing entity definitions and publishing services into your
 application's zone are things your organization does on its own behalf, so an identity scoped
@@ -195,8 +195,8 @@ is mainly how an orphaned microservice, one a commit dropped, is finally retired
 
 ## UIs
 
-Each UI is served from its own site under the platform's sites domain, at the hostname
-`<organizationId>--<applicationId>--<uiName>` its first publish mints. A UI name belongs to
+Each UI is served from its own site under the organization's subdomain of the platform's sites
+domain, at the hostname `<applicationId>--<uiName>.<organizationId>.kinotic.io` its first publish mints. A UI name belongs to
 one project of the application, so a second project publishing a UI of the same name fails
 its deployment until the first project's UI deployment is removed. The site serves the
 UI as of the commit recorded on its deployment, and a publish switches it atomically: the

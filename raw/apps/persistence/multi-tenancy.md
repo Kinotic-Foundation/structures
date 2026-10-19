@@ -28,14 +28,14 @@ The `@TenantId` field is populated automatically based on the authenticated user
 
 ## Where a user's tenant comes from
 
-Declaring the entity is only half of it. A user's tenant is assigned when the user is created, and only when the owning application has `tenantPerUser` enabled — the setting that decides whether each user of the application is isolated or everyone shares one set of data.
+Declaring the entity is only half of it. A user's tenant is assigned when the user is created, and who assigns it is the application's `tenantManagement` setting: `PLATFORM` gives every user a tenant of their own at creation, `TENANT_ADMINISTRATORS` leaves tenants to the people who create them — a customer signing up, or the organization in the portal — whose administrators decide who joins.
 
 <table>
 <thead>
   <tr>
     <th>
       Application <code>
-        tenantPerUser
+        tenantManagement
       </code>
     </th>
     
@@ -53,7 +53,7 @@ Declaring the entity is only half of it. A user's tenant is assigned when the us
   <tr>
     <td>
       <code>
-        false
+        TENANT_ADMINISTRATORS
       </code>
     </td>
     
@@ -71,7 +71,7 @@ Declaring the entity is only half of it. A user's tenant is assigned when the us
   <tr>
     <td>
       <code>
-        true
+        PLATFORM
       </code>
     </td>
     
@@ -89,7 +89,7 @@ Declaring the entity is only half of it. A user's tenant is assigned when the us
   <tr>
     <td>
       <code>
-        false
+        TENANT_ADMINISTRATORS
       </code>
     </td>
     
@@ -104,7 +104,7 @@ Declaring the entity is only half of it. A user's tenant is assigned when the us
     </td>
     
     <td>
-      Users have no tenant, and writes fail with <code>
+      A user created into no tenant has none, and its writes fail with <code>
         tenantId cannot be null or blank for shared multi tenancy
       </code>
     </td>
@@ -113,7 +113,7 @@ Declaring the entity is only half of it. A user's tenant is assigned when the us
   <tr>
     <td>
       <code>
-        true
+        PLATFORM
       </code>
     </td>
     
@@ -134,9 +134,15 @@ Declaring the entity is only half of it. A user's tenant is assigned when the us
 </tbody>
 </table>
 
-Choose it when the application is created — `createApplicationIfNotExist` takes it as an argument — and change it afterwards only from the portal, under **Application → Settings → Tenant per user**.
+Choose it when the application is created — `createApplicationIfNotExist` takes it as an argument, defaulting to `TENANT_ADMINISTRATORS` — and change it afterwards only from the portal, under **Application → Settings → Tenants**.
 
-It applies to users created while it is enabled. Existing users are never backfilled, so enabling it on an application that already has users leaves those users without a tenant, and every write they make to a `SHARED` entity fails. Settle it before the application has users.
+`PLATFORM` applies to users created while it is in force. Existing users are never backfilled, so choosing it for an application that already has users leaves those users without a tenant, and every write they make to a `SHARED` entity fails. Settle it before the application has users.
+
+## Tenants and their sites
+
+Under `TENANT_ADMINISTRATORS` a tenant is a `Tenant` of the application, created by your organization in the portal or through `TenantService` (`createTenantIfNotExist(applicationId, name, description)`), whose id is its slugified name: lowercase letters, digits and single dashes, at most 24 characters so it leads a hostname label, and unique within your organization, so a name whose slug a tenant of another of your applications already holds is refused. The tenant's users carry that id as their `tenantId`. Each of the application's published UIs is also served for the tenant at `<tenantId>--<applicationId>--<uiName>` under your organization's subdomain of the sites domain, and a sign-in from that site is to the tenant: it admits the tenant's users only, and offers the tenant's own identity providers (`TenantOidcConfiguration`) before the application's — see [Authentication](/apps/security/authentication#signing-in-to-a-tenant). A tenant whose users were created with a `tenantId` no `Tenant` row names has no login of its own until the row is created.
+
+Under `PLATFORM` tenants are minted per user and have no rows or sites; the user signs in at the application's own sites.
 
 ## Tenants and services
 

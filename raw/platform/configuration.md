@@ -1030,7 +1030,7 @@ configures both under `kinotic.appServer.*`; the system server is handed the sam
       </code>
       
       . Unset, an application's login is made only from its published sites, <code>
-        <organizationId>--<applicationId>--<uiName>
+        <applicationId>--<uiName>.<organizationId>
       </code>
       
        under the sites domain
@@ -1058,8 +1058,9 @@ configures both under `kinotic.appServer.*`; the system server is handed the sam
 ## UI sites
 
 A deployment of a commit that contains a UI publishes it into the platform's sites storage
-account, one per environment, and it is served at its own hostname under a platform domain
-fronted by Azure Front Door. Both are configured under `kinotic.systemApi.uiDeployment.*`:
+account, one per environment, and it is served at its own hostname under the organization's
+subdomain of the sites domain by the Cloudflare sites Worker. Both are configured under
+`kinotic.systemApi.uiDeployment.*`:
 
 <table>
 <thead>
@@ -1091,8 +1092,12 @@ fronted by Azure Front Door. Both are configured under `kinotic.systemApi.uiDepl
     </td>
     
     <td>
-      The domain every site is a label under, e.g. <code>
-        apps.kinotic.ai
+      The domain every organization's sites are under, e.g. <code>
+        kinotic.io
+      </code>
+      
+      : a site is <code>
+        <applicationId>--<uiName>.<organizationId>.<sitesDomain>
       </code>
       
       . Required
@@ -1123,15 +1128,211 @@ fronted by Azure Front Door. Both are configured under `kinotic.systemApi.uiDepl
 
 The required settings are validated at boot, like the GitHub App settings, so an environment
 [without Azure storage](#without-azure-storage) still sets them, to placeholders. In the Azure
-deployment terraform creates the account, the Front Door profile and the wildcard domain and
-passes the account and domain to the server (see the
-[deployment guide](/platform/deployment-guide)); the `local` profile of the
-[contributing guide](/platform/contributing#publishing-uis-against-azure) names a developer's
-own. The server never reads or writes the account itself: it holds Storage Blob Data
-Contributor on it only to sign the URLs, scoped to one site's directory, that the publish and
-removal workloads act through. Front Door reads the account as the profile's managed
-identity, which holds Storage Blob Data Reader on it; the account's public network is open to
-both, with anonymous access off.
+deployment terraform creates the account and the Cloudflare side and passes the account and
+domain to the server (see the [deployment guide](/platform/deployment-guide)); the `local`
+profile of the [contributing guide](/platform/contributing#publishing-uis-against-azure) names
+a developer's own. The server never reads or writes the account itself: it holds Storage Blob
+Data Contributor on it only to sign the URLs, scoped to one site's directory, that the publish
+and removal workloads act through. The sites Worker reads the account over its blob endpoint
+with a read-only SAS on the container, which terraform mints and binds to the Worker as a
+secret; the container is private, so a site's files are reachable only through the Worker.
+
+Each organization's subdomain of the sites domain needs a DNS record at the edge, which the
+platform creates when the organization is created and again before its first site is
+published. Every server that does so is configured under `kinotic.domain.publishedSites.*`:
+
+<table>
+<thead>
+  <tr>
+    <th>
+      Property
+    </th>
+    
+    <th>
+      Default
+    </th>
+    
+    <th>
+      Meaning
+    </th>
+  </tr>
+</thead>
+
+<tbody>
+  <tr>
+    <td>
+      <code>
+        domain
+      </code>
+    </td>
+    
+    <td>
+      —
+    </td>
+    
+    <td>
+      The sites domain, the same value as <code>
+        uiDeployment.sitesDomain
+      </code>
+      
+      , e.g. <code>
+        kinotic.io
+      </code>
+      
+       or <code>
+        dev.kinotic.io
+      </code>
+    </td>
+  </tr>
+  
+  <tr>
+    <td>
+      <code>
+        cloudflare.enabled
+      </code>
+    </td>
+    
+    <td>
+      <code>
+        false
+      </code>
+    </td>
+    
+    <td>
+      Whether the record is created in Cloudflare; <code>
+        false
+      </code>
+      
+       logs the subdomain and creates nothing, for an environment with no edge
+    </td>
+  </tr>
+  
+  <tr>
+    <td>
+      <code>
+        cloudflare.zoneId
+      </code>
+    </td>
+    
+    <td>
+      —
+    </td>
+    
+    <td>
+      The Cloudflare zone the sites domain is in
+    </td>
+  </tr>
+  
+  <tr>
+    <td>
+      <code>
+        cloudflare.apiToken
+      </code>
+    </td>
+    
+    <td>
+      —
+    </td>
+    
+    <td>
+      A token holding DNS edit on the zone and nothing else, imported as a platform secret (<code>
+        kinotic-cloudflare-dns-api-token
+      </code>
+      
+      ), never written in a configuration file
+    </td>
+  </tr>
+</tbody>
+</table>
+
+## Find-my-organizations challenge
+
+The landing page's "Email me my organizations" form posts to a route open to anyone that sends an
+email on every call, so the management server requires a Cloudflare Turnstile token with each
+request and verifies it with the site's secret, under `kinotic.managementServer.turnstile.*`:
+
+<table>
+<thead>
+  <tr>
+    <th>
+      Property
+    </th>
+    
+    <th>
+      Default
+    </th>
+    
+    <th>
+      Meaning
+    </th>
+  </tr>
+</thead>
+
+<tbody>
+  <tr>
+    <td>
+      <code>
+        enabled
+      </code>
+    </td>
+    
+    <td>
+      <code>
+        true
+      </code>
+    </td>
+    
+    <td>
+      Whether a token is required; <code>
+        false
+      </code>
+      
+       accepts every request, for an environment with no Turnstile site such as the e2e stack
+    </td>
+  </tr>
+  
+  <tr>
+    <td>
+      <code>
+        siteKey
+      </code>
+    </td>
+    
+    <td>
+      —
+    </td>
+    
+    <td>
+      The site key the portal renders the challenge with; public, passed by the cluster root as <code>
+        turnstile_site_key
+      </code>
+    </td>
+  </tr>
+  
+  <tr>
+    <td>
+      <code>
+        secretKey
+      </code>
+    </td>
+    
+    <td>
+      —
+    </td>
+    
+    <td>
+      The site's secret key, imported as a platform secret (<code>
+        kinotic-turnstile-secret-key
+      </code>
+      
+      ), never written in a configuration file
+    </td>
+  </tr>
+</tbody>
+</table>
+
+The `development` and `dev-server` profiles use Cloudflare's always-passing test site, so the form
+works with no site of one's own.
 
 ## Without Azure storage
 

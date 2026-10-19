@@ -8,11 +8,12 @@ This page is the design record and setup plan for the development server: a deve
 environment on one physical host — a Ryzen 9 with 96 GB of RAM and four SSDs — plus two Intel
 NUCs that run the peers' workloads, where a few peers build Kinotic applications against the
 real platform: organization sign-up,
-push-to-deploy into micro VMs, published UIs served through Front Door, email, logs and traces
+push-to-deploy into micro VMs, published UIs served through the Cloudflare sites Worker, email, logs and traces
 in the portal. Every service runs on the host. Azure keeps what a single host cannot provide
-(Front Door, the sites storage account, Communication Services email, the DNS zone), what the
-migration path needs (a Key Vault, a snapshot container), and the portal and the system
-console, static files served by the same Front Door as the published sites.
+(the sites storage account, Communication Services email) and what the migration path needs (a
+Key Vault, a snapshot container); Cloudflare keeps both zones, the customers' with the sites
+domain, where the sites Worker serves every published UI, and the platform's, where the same
+Worker serves the portal and the system console from the same account.
 
 When Kinotic Cloud opens, the peers' organizations, applications, and data move there and keep
 working. The migration is a designed step of this environment rather than an afterthought, and
@@ -135,15 +136,15 @@ denied by default, host-side stdout capture, and no mount limit (see
 shape, so the node is provisioned with the kit under `deployment/vm-node` exactly as any other
 node is.
 
-### Azure keeps Front Door, the sites account, email, DNS, and a server Key Vault
+### Azure keeps the sites account, email, DNS, and a server Key Vault; Cloudflare the sites
 
 The developer root `deployment/terraform/azure/dev` already builds everything a server off Azure
-needs to publish UIs and send email: a resource group, the sites module under
-`apps-<environment>.<zone>`, a Key Vault holding the wildcard certificate Front Door reads, and
-a service principal whose `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, and `AZURE_TENANT_ID``DefaultAzureCredential` takes before anything else. A `dev-server` root is that root plus
-four things: a Key Vault for the servers, the portal and the system console on the sites
-module's Front Door, the servers' hostnames with DNS rights for certificate issuance, and a
-container for Elasticsearch snapshots.
+needs to publish UIs and send email: a resource group, the sites storage account, the sites
+Worker and domain `<environment>.kinotic.io`, and a service principal whose `AZURE_CLIENT_ID`,
+`AZURE_CLIENT_SECRET`, and `AZURE_TENANT_ID` `DefaultAzureCredential` takes before anything
+else. A `dev-server` root is that root plus four things: a Key Vault for the servers, the
+portal and the system console on the sites Worker at hostnames of the platform zone, the
+servers' hostnames, and a container for Elasticsearch snapshots.
 
 The servers' Key Vault is kept deliberately. Without it the secret storage backend is in-memory
 (`SecretStorageConfiguration`): nothing stored survives a restart and nothing can be carried to
@@ -810,11 +811,11 @@ What differs between the three:
     
     <td>
       <code>
-        dev-apps-api.kinotic.ai
+        apps-api.dev.kinotic.io
       </code>
       
       , <code>
-        *.dev-apps-api.kinotic.ai
+        *.apps-api.dev.kinotic.io
       </code>
     </td>
   </tr>
@@ -834,7 +835,7 @@ What differs between the three:
     
     <td>
       every application at <code>
-        <organizationId>--<applicationId>.dev-apps-api.kinotic.ai
+        <organizationId>--<applicationId>.apps-api.dev.kinotic.io
       </code>
       
       , for its UIs and its runtime workloads
@@ -958,7 +959,7 @@ What differs between the three:
     
     <td>
       <code>
-        https://dev-apps-api.kinotic.ai
+        https://apps-api.dev.kinotic.io
       </code>
       
       : each application's host is its own issuer
@@ -978,7 +979,7 @@ What differs between the three:
     
     <td>
       <code>
-        https://dev-apps-api.kinotic.ai
+        https://apps-api.dev.kinotic.io
       </code>
       
       , for the URL a UI build is handed
@@ -1042,6 +1043,30 @@ What differs between the three:
   <tr>
     <td>
       <code>
+        kinotic.managementServer.turnstile.*
+      </code>
+    </td>
+    
+    <td>
+      Cloudflare's always-passing Turnstile test site, from the <code>
+        dev-server
+      </code>
+      
+       profile: the find-my-organizations form renders the widget and every token verifies
+    </td>
+    
+    <td>
+      —
+    </td>
+    
+    <td>
+      —
+    </td>
+  </tr>
+  
+  <tr>
+    <td>
+      <code>
         kinotic.managementApi.github.appPrivateKey
       </code>
       
@@ -1084,6 +1109,10 @@ What differs between the three:
        / <code>
         sitesStorageEndpoint
       </code>
+      
+      , <code>
+        kinotic.domain.publishedSites.*
+      </code>
     </td>
     
     <td>
@@ -1095,11 +1124,11 @@ What differs between the three:
         false
       </code>
       
-      , so Front Door serves the published UIs; <code>
-        apps-dev.kinotic.ai
+      , so the sites Worker serves the published UIs; <code>
+        dev.kinotic.io
       </code>
       
-      , the development server's sites account
+      , the development server's sites account; the Cloudflare zone each organization's record is created in
     </td>
     
     <td>
@@ -1140,7 +1169,7 @@ What differs between the three:
       </code>
       
        and <code>
-        dev-apps-api.kinotic.ai
+        apps-api.dev.kinotic.io
       </code>
       
       , <code>
@@ -1539,13 +1568,14 @@ newer image keeps it.
 
 ### TLS
 
-certbot on the host with the `dns-azure` plugin, authenticating as the same service principal,
-which the `dev-server` root grants DNS Zone Contributor on `kinotic.ai`. A certificate per
-server, for its hostnames: `dev-api.kinotic.ai`, `dev-system-api.kinotic.ai`, and
-`dev-apps-api.kinotic.ai` with `*.dev-apps-api.kinotic.ai`. Each certificate's deploy hook
+certbot on the host with the `dns-cloudflare` plugin and the DNS token the servers hold, which
+holds DNS edit on both zones. A certificate per server, for its hostnames: `dev-api.kinotic.ai`,
+`dev-system-api.kinotic.ai`, and `apps-api.dev.kinotic.io` with `*.apps-api.dev.kinotic.io`.
+Each certificate's deploy hook
 installs the PEMs into the secrets directory that server's container mounts and reboots the
 container, which is the whole of what Reloader does in the cluster. The edge holds none of
-them. The portal's and the console's certificates are Front Door's own, managed.
+them. The portal's and the console's certificates are the platform zone's universal certificate
+on Cloudflare.
 
 ## Nodes
 
@@ -1783,28 +1813,34 @@ vault, and the service principal — and adds what a server peers depend on need
       <code>
         modules/sites
       </code>
-      
-       under <code>
-        apps-dev.<zone>
-      </code>
     </td>
     
     <td>
-      Front Door profile, endpoint, wildcard domain and certificate, the sites storage account
+      The sites storage account, private, and the read-only SAS the Worker reads it with
     </td>
   </tr>
   
   <tr>
     <td>
-      Key Vault <code>
-        kv-kinotic-dev-sites
+      <code>
+        modules/cloudflare-sites
+      </code>
+      
+       under <code>
+        dev.kinotic.io
       </code>
     </td>
     
     <td>
-      The wildcard certificate Front Door reads, as in <code>
-        dev/
+      The sites Worker, the zone's settings and Total TLS, and the app server's proxied hosts <code>
+        apps-api.dev.kinotic.io
       </code>
+      
+       and <code>
+        *.apps-api.dev.kinotic.io
+      </code>
+      
+       on the router's address
     </td>
   </tr>
   
@@ -1838,13 +1874,15 @@ vault, and the service principal — and adds what a server peers depend on need
   
   <tr>
     <td>
-      Front Door domains <code>
+      Records and Worker routes <code>
         dev-portal.<zone>
       </code>
       
       , <code>
         dev-console.<zone>
       </code>
+      
+       in the platform zone
     </td>
     
     <td>
@@ -1852,8 +1890,16 @@ vault, and the service principal — and adds what a server peers depend on need
         sites/<hostname>/
       </code>
       
-       in the sites account by the route and rule set every published site uses, on managed certificates; <code>
-        deploy-ui.sh
+       in the sites account by the Worker exactly as it serves every published site, on the platform zone and never the customers', as the cluster's <code>
+        portal
+      </code>
+      
+       and <code>
+        console
+      </code>
+      
+       are; <code>
+        deploy-ui.sh dev-server dev-server
       </code>
       
        builds both with <code>
@@ -1866,35 +1912,23 @@ vault, and the service principal — and adds what a server peers depend on need
   
   <tr>
     <td>
-      DNS A records <code>
+      Records <code>
         dev-api
       </code>
       
-      , <code>
+       and <code>
         dev-system-api
       </code>
       
-      , <code>
-        dev-apps-api
-      </code>
-      
-       and <code>
-        *.dev-apps-api
-      </code>
-      
-       under the zone
+       in the platform zone
     </td>
     
     <td>
-      The host's public address, for the management server, the system server, and the app server with every application's API host, <code>
-        <organizationId>--<applicationId>.dev-apps-api.<zone>
-      </code>
-      
-      ; <code>
+      The host's public address, unproxied, for the management server and the system server; <code>
         kinotic-dyndns.timer
       </code>
       
-       on the host rewrites them when the ISP changes the address
+       on the host rewrites them when the ISP changes the address, with the DNS token
     </td>
   </tr>
   
@@ -1906,7 +1940,7 @@ vault, and the service principal — and adds what a server peers depend on need
     </td>
     
     <td>
-      Storage Blob Data Contributor on the sites account, Contributor on the email service, Key Vault Secrets Officer on the servers' vault, DNS Zone Contributor on the zone for certbot and the address updater
+      Storage Blob Data Contributor on the sites account, Contributor on the email service, Key Vault Secrets Officer on the servers' vault
     </td>
   </tr>
 </tbody>
@@ -1914,23 +1948,26 @@ vault, and the service principal — and adds what a server peers depend on need
 
 Its `dev_server_env` output is the non-secret half of the servers' environment, which the
 proxmox root merges into each server container's; its `secrets_env` output is the principal's
-secret, which the operator places on the host in `kinotic-servers.env` by hand.
+secret and the DNS token, which the operator places on the host in `kinotic-servers.env` by
+hand.
 
 ## Network and access
 
 The router forwards one port to the edge container, 443, on which HAProxy listens and hands
 each TLS connection to the server its SNI names: `https://dev-api.kinotic.ai` is the org
 server (REST, STOMP, MCP, the GitHub webhook), `https://dev-system-api.kinotic.ai` the system
-server, and `https://dev-apps-api.kinotic.ai` with every application's
-`https://<organizationId>--<applicationId>.dev-apps-api.kinotic.ai` the app server, none with a
+server, and `https://apps-api.dev.kinotic.io` with every application's
+`https://<organizationId>--<applicationId>.apps-api.dev.kinotic.io` the app server, none with a
 port in the URL. The ISP's router forwards a port to the same port only and names its targets
 by device, so the edge's MAC carries a name in the router's device list. The portal at
 `https://dev-portal.kinotic.ai` and the system console at `https://dev-console.kinotic.ai` are
-static files in the sites account that Front Door serves the way it serves every published
-site, so the host runs nothing for them and the router forwards nothing to them. This is the
-cloud's layout, hosted SPAs against API hosts, each server terminating its own TLS; the edge
-stands in for the cloud's per-server load balancers. The router's address is dynamic: a timer
-on the host rewrites the servers' A records whenever it changes, as the servers' principal.
+static files in the sites account that the sites Worker serves the way it serves every
+published site, at hostnames of the platform zone apart from the customers' sites, so the host
+runs nothing for them and the router forwards nothing to them, and no published site is
+same-site with them or with the servers. This is the cloud's layout, hosted SPAs
+against API hosts, each server terminating its own TLS; the edge stands in for the cloud's
+per-server load balancers. The router's address is dynamic: a timer on the host rewrites the
+servers' A records whenever it changes, as the servers' principal.
 
 Peers use `https://dev-portal.kinotic.ai`: organization sign-up with email verification
 through ACS, social login through the platform OIDC providers registered with
@@ -2167,13 +2204,13 @@ Everything a peer has lives in one of these places, and moves as follows:
     
     <td>
       The development server's sites account under <code>
-        sites/<label>.apps-dev.kinotic.ai/
+        sites/<app>--<ui>.<org>.dev.kinotic.io/
       </code>
     </td>
     
     <td>
       Each project is redeployed after cutover; the URL changes to <code>
-        <label>.apps.kinotic.ai
+        <app>--<ui>.<org>.kinotic.io
       </code>
     </td>
   </tr>
@@ -2230,7 +2267,7 @@ next deployment. A re-home operation is the durable version of this step.
 drop them a day later.
 5. Point the GitHub App's webhook URL at the cloud gateway.
 6. Re-run the deployment of every project, which places it on a cloud node and republishes its
-UIs under `apps.kinotic.ai`.
+UIs under `kinotic.io`.
 7. Change `dev-api.kinotic.ai` to a CNAME of the cloud management server so the peers' CLI logins and
 project configuration keep resolving, and stop the address updater; they sign in again on
 `portal.kinotic.ai`, since sessions are `__Host-` cookies and the social-login redirect
@@ -2243,7 +2280,7 @@ read-only for a week, then tear it down.
 The same pieces serve a developer's machine, without the Proxmox host: the compose stack
 from `deployment/docker-compose` with the `BOXLITE` vm-manager beside it, as the
 [contributing guide](/platform/contributing#running-workloads-on-your-machine) describes, and
-the `dev/` root for Front Door, the sites account, and email. Every
+the `dev/` root for the sites account, the Cloudflare side, and email. Every
 development environment shares one GitHub App. An App has one webhook URL, and it points at
 the development server, so a developer's own server sees no push events: deployments there
 start from the re-run path, and a developer who needs the webhook registers an App of their
@@ -2267,7 +2304,7 @@ first system user and each node's SYSTEM machine, installing the machine's crede
 the node's `vm-manager.secrets.env`; confirm each node is `ONLINE` with no health message.
 6. **End to end.** Deploy the template project from a peer's organization: the sync VM fetches
 through the allowlist, the runtime VM registers its microservice, the UI appears at
-`<label>.apps-dev.kinotic.ai`, and the run's log and the microservice's traces show in the
+`<app>--<ui>.<org>.dev.kinotic.io`, and the run's log and the microservice's traces show in the
 portal.
 7. **Restore drill.** Restore the previous night's snapshot into a scratch cluster and open the
 portal against it. Repeat before cutover.
