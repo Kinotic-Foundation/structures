@@ -4,7 +4,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.kinotic.domain.api.model.security.OidcProviderKind;
+import org.kinotic.domain.api.model.security.OidcProviderType;
 import org.kinotic.domain.api.model.security.identity.ParticipantIdentity;
 
 import java.util.ArrayList;
@@ -54,7 +54,7 @@ public class Application implements OrganizationScoped<String> {
      * the provider, so the application registers nothing of its own; the organization's own providers
      * for the application are its {@code ApplicationOidcConfiguration}s. Empty offers none.
      */
-    private List<OidcProviderKind> socialProviders = new ArrayList<>();
+    private List<OidcProviderType> socialProviders = new ArrayList<>();
 
     private Date updated = null;
 

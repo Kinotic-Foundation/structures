@@ -8,7 +8,7 @@ import org.apache.commons.lang3.Validate;
 import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.domain.api.model.StatusCondition;
-import org.kinotic.domain.api.model.WatchEventKind;
+import org.kinotic.domain.api.model.WatchEventType;
 import org.kinotic.domain.api.model.WatchedParent;
 import org.kinotic.domain.api.model.WatchedType;
 import org.kinotic.domain.internal.api.repositories.AbstractWatchedRepository;
@@ -239,7 +239,7 @@ public class WorkloadRepository extends AbstractWatchedRepository<Workload> {
         run.put("status", status);
         run.put("exitCode", exitCode);
         return watchedStateRepository.write(document(workloadId), script, params,
-                                            new WatchedChange(WatchEventKind.STATUS_CHANGED, source,
+                                            new WatchedChange(WatchEventType.STATUS_CHANGED, source,
                                                               exitCode != null ? "Run " + status + " with exit code " + exitCode : "Run " + status,
                                                               run))
                                      .map(written -> written != null);

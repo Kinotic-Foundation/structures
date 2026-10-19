@@ -10,7 +10,7 @@ import org.kinotic.core.api.security.Participant;
 import org.kinotic.core.api.security.ParticipantConstants;
 import org.kinotic.domain.api.model.Organization;
 import org.kinotic.domain.api.model.security.Member;
-import org.kinotic.domain.api.model.security.OidcProviderKind;
+import org.kinotic.domain.api.model.security.OidcProviderType;
 import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
 import org.kinotic.domain.api.model.security.PendingInvite;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
@@ -92,7 +92,7 @@ public class MemberProvisioningTests extends KinoticTestBase {
         OrganizationOidcConfiguration configuration = new OrganizationOidcConfiguration();
         configuration.setProviderAccount("acme.okta.com");
         configuration.setName("Acme Okta " + suffix())
-                     .setProvider(OidcProviderKind.OKTA)
+                     .setProvider(OidcProviderType.OKTA)
                      .setClientId("acme-client")
                      .setEnabled(true);
         okta = (OrganizationOidcConfiguration) await(asAdministrator(() -> ownedConfigurations.save(configuration, null)));

@@ -1,6 +1,6 @@
 import type { Identifiable } from '@kinotic-ai/core'
 import { TenantManagement } from '@/api/model/TenantManagement'
-import { OidcProviderKind } from '@/api/model/security/OidcProviderKind'
+import { OidcProviderType } from '@/api/model/security/OidcProviderType'
 
 export class Application implements Identifiable<string> {
 
@@ -44,7 +44,7 @@ export class Application implements Identifiable<string> {
      * order to present them: 'google', 'azure-ad'. The application's users sign in with Kinotic's
      * registration at the provider, so the application registers nothing of its own. Empty offers none.
      */
-    public socialProviders: OidcProviderKind[] = []
+    public socialProviders: OidcProviderType[] = []
 
     public updated: string | null = null
 

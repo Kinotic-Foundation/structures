@@ -1,5 +1,5 @@
 /** What kind of thing needs an operator; the attention list groups its items by it. */
-export enum AttentionKind {
+export enum AttentionType {
     FAILED_RUN = 'failed-run',
     FAILED_WORKLOAD = 'failed-workload',
     WORKLOAD_ON_SILENT_NODE = 'workload-on-silent-node',

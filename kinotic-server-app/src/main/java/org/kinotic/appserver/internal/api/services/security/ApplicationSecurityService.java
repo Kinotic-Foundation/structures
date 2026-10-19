@@ -9,7 +9,7 @@ import org.kinotic.core.api.security.Participant;
 import org.kinotic.core.api.security.SecurityService;
 import org.kinotic.domain.api.model.ApplicationKey;
 import org.kinotic.domain.api.utils.HostLabelUtil;
-import org.kinotic.domain.api.model.security.identity.MachineKind;
+import org.kinotic.domain.api.model.security.identity.MachineType;
 import org.kinotic.domain.api.model.security.identity.MachineParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.ParticipantIdentity;
 import org.kinotic.domain.api.model.security.participant.ApplicationParticipant;
@@ -46,7 +46,7 @@ public class ApplicationSecurityService implements SecurityService {
         } else if (participant instanceof OrganizationParticipant runtime) {
             // an organization's identity reaches the app server only as the runtime of one of its applications
             ret = identity instanceof MachineParticipantIdentity machine
-                    && machine.getMachineKind() == MachineKind.APP_RUNTIME
+                    && machine.getMachineType() == MachineType.APP_RUNTIME
                     && (applicationKey == null || applicationKey.organizationId().equals(runtime.getOrganizationId()));
         } else {
             ret = false;

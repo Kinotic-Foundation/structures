@@ -4,7 +4,7 @@ import io.vertx.core.Future;
 import lombok.RequiredArgsConstructor;
 import org.kinotic.core.api.security.Participant;
 import org.kinotic.core.api.security.SecurityService;
-import org.kinotic.domain.api.model.security.identity.MachineKind;
+import org.kinotic.domain.api.model.security.identity.MachineType;
 import org.kinotic.domain.api.model.security.identity.MachineParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.ParticipantIdentity;
 import org.kinotic.domain.api.model.security.participant.OrganizationParticipant;
@@ -33,6 +33,6 @@ public class OrganizationSecurityService implements SecurityService {
         return participant instanceof OrganizationParticipant
                 // a runtime publishes into its application's zone, which only the app server hosts
                 && !(identity instanceof MachineParticipantIdentity machine
-                        && machine.getMachineKind() == MachineKind.APP_RUNTIME);
+                        && machine.getMachineType() == MachineType.APP_RUNTIME);
     }
 }

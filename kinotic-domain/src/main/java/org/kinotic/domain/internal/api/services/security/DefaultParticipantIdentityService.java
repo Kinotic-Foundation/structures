@@ -7,9 +7,8 @@ import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.core.api.crud.Sort;
 import org.kinotic.core.api.security.Participant;
 import org.kinotic.domain.api.model.TenantManagement;
-import org.kinotic.domain.api.model.security.AuthType;
 import org.kinotic.domain.api.model.security.identity.ParticipantIdentity;
-import org.kinotic.domain.api.model.security.DelegateKind;
+import org.kinotic.domain.api.model.security.DelegateType;
 import org.kinotic.domain.api.model.security.identity.DelegatingParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.MachineParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.MachineProvisionResult;
@@ -78,22 +77,17 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
             case DelegatingParticipantIdentity delegate -> {
                 Validate.notBlank(delegate.getOwnerId(), "DELEGATE ownerId is required");
                 Validate.notBlank(delegate.getClientKey(), "DELEGATE clientKey is required");
-                Validate.notNull(delegate.getDelegateKind(), "DELEGATE delegateKind is required");
-                Validate.isTrue(delegate.getAuthType() == AuthType.DELEGATED,
-                                "DELEGATE authType must be DELEGATED");
+                Validate.notNull(delegate.getDelegateType(), "DELEGATE delegateType is required");
                 yield enforceUniqueClientKeyForOwner(delegate);
             }
             case UserParticipantIdentity user -> {
                 Validate.notNull(user.getEmail(), "UserParticipantIdentity email cannot be null");
-                Validate.isTrue(user.getAuthType() == null, "A user has no authType; its sign-in methods are its credential and bindings");
                 // Canonical form at the single write chokepoint; lookups normalize in the repository.
                 user.setEmail(DomainUtil.normalizeEmail(user.getEmail()));
                 yield enforceUniqueEmailInScope(user);
             }
             case MachineParticipantIdentity machine -> {
                 Validate.notBlank(machine.getDisplayName(), "MACHINE displayName is required");
-                Validate.isTrue(machine.getAuthType() == AuthType.CLIENT_CREDENTIALS,
-                                "MACHINE authType must be CLIENT_CREDENTIALS");
                 // the machine's id is its client_id, so uniqueness is the id's own
                 yield Future.succeededFuture();
             }
@@ -445,7 +439,7 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
 
     @Override
     public Future<DelegatingParticipantIdentity> findOrCreateDelegate(Participant owner,
-                                                                      DelegateKind kind,
+                                                                      DelegateType kind,
                                                                       String clientKey,
                                                                       String displayName) {
         Validate.notNull(owner, "owner is required");
@@ -464,8 +458,7 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
                         delegate = new DelegatingParticipantIdentity();
                         delegate.setOwnerId(owner.getId())
                                 .setClientKey(clientKey)
-                                .setDelegateKind(kind)
-                                .setAuthType(AuthType.DELEGATED)
+                                .setDelegateType(kind)
                                 // the delegate wields the owner's authority, so it lives at the exact
                                 // scope the owner is signed in to, tenant included
                                 .setOrganizationId(scope.organizationId())
@@ -490,12 +483,11 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
     @Override
     public Future<MachineProvisionResult> createMachine(MachineParticipantIdentity machine) {
         Validate.notNull(machine, "machine is required");
-        Validate.notNull(machine.getMachineKind(), "machine.machineKind is required");
+        Validate.notNull(machine.getMachineType(), "machine.machineType is required");
 
         Date now = new Date();
         machine.setCreated(now);
         machine.setEnabled(true);
-        machine.setAuthType(AuthType.CLIENT_CREDENTIALS);
 
         // the secret's plaintext exists only here — the caller sees it once, storage keeps a hash
         String clientSecret = DomainUtil.generateUrlSafeToken(MACHINE_SECRET_BYTES);

@@ -10,7 +10,7 @@ package org.kinotic.domain.api.model.security;
  * @param provider        the provider kind, for branding
  * @param type            whose registration it is: one the organization made for the scope, or one Kinotic manages
  */
-public record LoginProviderSummary(String configurationId, String name, OidcProviderKind provider, OidcConfigurationType type) {
+public record LoginProviderSummary(String configurationId, String name, OidcProviderType provider, OidcConfigurationType type) {
 
     /** The summary of {@code configuration}. */
     public static LoginProviderSummary of(OidcConfiguration configuration) {

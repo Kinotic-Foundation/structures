@@ -1,27 +1,12 @@
 package org.kinotic.domain.api.model.security;
 
-import org.kinotic.domain.api.model.security.identity.ParticipantIdentity;
-
 /**
- * Authentication method for an {@link ParticipantIdentity}.
+ * How an account signs in: what a sign-up chose to establish its email with, and what each method the
+ * profile lists authenticates with.
  */
 public enum AuthType {
-
-    /** Email/password with bcrypt-hashed credentials, as a pending sign-up chooses it. */
-    LOCAL,
-
-    /** Federated identity via an external OIDC provider, as a pending sign-up chooses it. */
-    OIDC,
-
-    /**
-     * Only Kinotic-issued tokens minted when a USER authorizes the delegate; a DELEGATED
-     * identity has no login credential of its own.
-     */
-    DELEGATED,
-
-    /**
-     * A provisioned client id and secret presented as connection credentials; the
-     * authentication method of every MACHINE identity.
-     */
-    CLIENT_CREDENTIALS
+    /** The account's password. */
+    PASSWORD,
+    /** An identity a provider asserts, bound to the account. */
+    OIDC
 }

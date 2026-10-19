@@ -60,7 +60,7 @@ import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 
 import { Kinotic } from '@kinotic-ai/core'
-import { DelegateKind } from '@kinotic-ai/management-api'
+import { DelegateType } from '@kinotic-ai/management-api'
 import type { DelegateSession, DelegatingParticipantIdentity } from '@kinotic-ai/management-api'
 
 import CrudTable from './CrudTable.vue'
@@ -114,17 +114,17 @@ function toRow(delegate: DelegatingParticipantIdentity): DelegateRow {
   return {
     id: delegate.id ?? '',
     displayName: delegate.displayName,
-    kind: kindLabel(delegate.delegateKind),
+    kind: kindLabel(delegate.delegateType),
     status: delegate.enabled ? 'Active' : 'Revoked',
     created: delegate.created,
     enabled: delegate.enabled
   }
 }
 
-function kindLabel(kind: DelegateKind | null): string {
+function kindLabel(kind: DelegateType | null): string {
   switch (kind) {
-    case DelegateKind.CLI:        return 'Kinotic CLI'
-    case DelegateKind.MCP_CLIENT: return 'MCP client'
+    case DelegateType.CLI:        return 'Kinotic CLI'
+    case DelegateType.MCP_CLIENT: return 'MCP client'
     default:                      return '—'
   }
 }

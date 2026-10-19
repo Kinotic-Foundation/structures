@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.core.api.security.Participant;
 import org.kinotic.domain.api.model.Organization;
+import org.kinotic.domain.api.model.security.AuthType;
 import org.kinotic.domain.api.model.security.LoginProviderSummary;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
@@ -19,7 +20,6 @@ import org.kinotic.domain.api.services.security.OidcConfigurationService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.management.api.model.SignInMethod;
-import org.kinotic.management.api.model.SignInMethodKind;
 import org.kinotic.management.api.services.security.ProfileService;
 import org.springframework.stereotype.Component;
 
@@ -64,7 +64,7 @@ public class DefaultProfileService implements ProfileService {
         return Future.all(hasPassword, bindings).map(cf -> {
             List<SignInMethod> methods = new ArrayList<>();
             if (hasPassword.result()) {
-                methods.add(new SignInMethod(SignInMethod.PASSWORD_ID, SignInMethodKind.PASSWORD, "Password", null, null));
+                methods.add(new SignInMethod(SignInMethod.PASSWORD_ID, AuthType.PASSWORD, "Password", null, null));
             }
             methods.addAll(bindings.result());
             return methods;
@@ -79,7 +79,7 @@ public class DefaultProfileService implements ProfileService {
                        .filter(binding -> byId.containsKey(binding.getOidcConfigId()))
                        .map(binding -> {
                            OidcConfiguration configuration = byId.get(binding.getOidcConfigId());
-                           return new SignInMethod(binding.getId(), SignInMethodKind.OIDC, configuration.getName(),
+                           return new SignInMethod(binding.getId(), AuthType.OIDC, configuration.getName(),
                                                    configuration.getProvider(), binding.getCreated());
                        })
                        .toList();

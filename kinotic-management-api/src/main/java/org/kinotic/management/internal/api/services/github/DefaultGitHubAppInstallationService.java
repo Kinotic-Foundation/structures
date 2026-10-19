@@ -6,7 +6,7 @@ import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.core.api.exceptions.AuthorizationException;
 import org.kinotic.core.api.secret.SecretReferenceResolver;
 import org.kinotic.core.api.security.SecurityContext;
-import org.kinotic.domain.api.model.security.OidcProviderKind;
+import org.kinotic.domain.api.model.security.OidcProviderType;
 import org.kinotic.domain.api.services.security.OidcConfigurationService;
 import org.kinotic.domain.internal.api.services.AbstractOrganizationScopedService;
 import org.kinotic.management.api.config.GithubProperties;
@@ -110,7 +110,7 @@ public class DefaultGitHubAppInstallationService
     private Future<String> userAccessToken(String code) {
         // Must exchange with the App's own OAuth credential (the github-platform sign-in
         // row): /user/installations only reports installations of the app that minted the token.
-        return oidcConfigurationService.findEnabledOrgSignupByProvider(OidcProviderKind.GITHUB)
+        return oidcConfigurationService.findEnabledOrgSignupByProvider(OidcProviderType.GITHUB)
                 .compose(config -> {
                     if (config == null) {
                         return Future.failedFuture(new IllegalStateException(

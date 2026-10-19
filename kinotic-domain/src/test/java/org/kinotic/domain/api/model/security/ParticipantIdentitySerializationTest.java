@@ -44,9 +44,8 @@ class ParticipantIdentitySerializationTest {
         DelegatingParticipantIdentity delegate = new DelegatingParticipantIdentity();
         delegate.setOwnerId("user-1")
                 .setClientKey("https://claude.ai/oauth/claude-code-client-metadata")
-                .setDelegateKind(DelegateKind.MCP_CLIENT)
+                .setDelegateType(DelegateType.MCP_CLIENT)
                 .setDisplayName("Claude Code")
-                .setAuthType(AuthType.DELEGATED)
                 .setOrganizationId("acme")
                 .setId("delegate-1");
 
@@ -56,6 +55,6 @@ class ParticipantIdentitySerializationTest {
         ParticipantIdentity read = jsonMapper.readValue(json, ParticipantIdentity.class);
         DelegatingParticipantIdentity readDelegate = assertInstanceOf(DelegatingParticipantIdentity.class, read);
         assertEquals("user-1", readDelegate.getOwnerId());
-        assertEquals(DelegateKind.MCP_CLIENT, readDelegate.getDelegateKind());
+        assertEquals(DelegateType.MCP_CLIENT, readDelegate.getDelegateType());
     }
 }

@@ -23,19 +23,19 @@ INSERT INTO kinotic_identity_credential (id, secretHash) VALUES ('00000000-0000-
 
 -- APPLICATION-scope machine identity for the machine connection e2e tests
 -- (clientId: the identity id below, clientSecret: kinotic)
-INSERT INTO kinotic_participant_identity (id, type, machineKind, displayName, authType, organizationId, applicationId, enabled) VALUES ('00000000-0000-0000-0000-000000000010', 'MACHINE', 'CLIENT', 'e2e Test Machine', 'CLIENT_CREDENTIALS', 'test-org', 'e2e-mcp', true) WITH REFRESH;
+INSERT INTO kinotic_participant_identity (id, type, machineType, displayName, organizationId, applicationId, enabled) VALUES ('00000000-0000-0000-0000-000000000010', 'MACHINE', 'CLIENT', 'e2e Test Machine', 'test-org', 'e2e-mcp', true) WITH REFRESH;
 INSERT INTO kinotic_identity_credential (id, secretHash) VALUES ('00000000-0000-0000-0000-000000000010', '$2b$12$ztUtxd/6nRYTACObjRNnMOisx3QlNuP2GmabcBdrv4Vcd6Vs46GaG') WITH REFRESH;
 
 -- ORGANIZATION-scope machine identity, the shape a project's deployment provisions for its
 -- sync workload: it names an organization but no application, so it acts for the whole
 -- organization rather than as an end-user of one application. (clientSecret: kinotic)
-INSERT INTO kinotic_participant_identity (id, type, machineKind, displayName, authType, organizationId, enabled) VALUES ('00000000-0000-0000-0000-000000000012', 'MACHINE', 'PROJECT_SYNC', 'e2e Org Machine', 'CLIENT_CREDENTIALS', 'test-org', true) WITH REFRESH;
+INSERT INTO kinotic_participant_identity (id, type, machineType, displayName, organizationId, enabled) VALUES ('00000000-0000-0000-0000-000000000012', 'MACHINE', 'PROJECT_SYNC', 'e2e Org Machine', 'test-org', true) WITH REFRESH;
 INSERT INTO kinotic_identity_credential (id, secretHash) VALUES ('00000000-0000-0000-0000-000000000012', '$2b$12$ztUtxd/6nRYTACObjRNnMOisx3QlNuP2GmabcBdrv4Vcd6Vs46GaG') WITH REFRESH;
 
 -- ORGANIZATION-scope machine identity, the shape a project's deployment provisions for a
 -- microservice's runtime workload: it connects to the app server and hosts and calls services in
 -- the organization's application zones, as the node-failure suite's probe does. (clientSecret: kinotic)
-INSERT INTO kinotic_participant_identity (id, type, machineKind, displayName, authType, organizationId, enabled) VALUES ('00000000-0000-0000-0000-000000000013', 'MACHINE', 'APP_RUNTIME', 'e2e Runtime Machine', 'CLIENT_CREDENTIALS', 'test-org', true) WITH REFRESH;
+INSERT INTO kinotic_participant_identity (id, type, machineType, displayName, organizationId, enabled) VALUES ('00000000-0000-0000-0000-000000000013', 'MACHINE', 'APP_RUNTIME', 'e2e Runtime Machine', 'test-org', true) WITH REFRESH;
 INSERT INTO kinotic_identity_credential (id, secretHash) VALUES ('00000000-0000-0000-0000-000000000013', '$2b$12$ztUtxd/6nRYTACObjRNnMOisx3QlNuP2GmabcBdrv4Vcd6Vs46GaG') WITH REFRESH;
 
 -- The tenants the app users above belong to, so a sign-in addressed to the tenant finds them

@@ -5,7 +5,7 @@ import org.kinotic.core.api.annotations.Publish;
 import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.domain.api.model.WatchEvent;
-import org.kinotic.domain.api.model.WatchEventKind;
+import org.kinotic.domain.api.model.WatchEventType;
 import org.kinotic.domain.api.services.ApplicationScopedCrudService;
 import org.kinotic.management.api.model.Project;
 import org.kinotic.management.api.model.deployment.ProjectDependencies;
@@ -72,7 +72,7 @@ public interface ProjectService extends ApplicationScopedCrudService<Project, St
      * @param pageable the page to return
      * @return a {@link Future} emitting a page of ledger entries
      */
-    Future<Page<WatchEvent>> findAllDeploymentHistory(List<WatchEventKind> kinds, Pageable pageable);
+    Future<Page<WatchEvent>> findAllDeploymentHistory(List<WatchEventType> kinds, Pageable pageable);
 
     /**
      * Finds the SBOM of the given project in the current participant's organization: every

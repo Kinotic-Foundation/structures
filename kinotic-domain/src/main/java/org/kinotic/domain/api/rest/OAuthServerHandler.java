@@ -9,7 +9,7 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.kinotic.core.api.security.Participant;
-import org.kinotic.domain.api.model.security.DelegateKind;
+import org.kinotic.domain.api.model.security.DelegateType;
 import org.kinotic.domain.api.model.security.KinoticAudience;
 import org.kinotic.domain.api.services.security.OAuthAuthorizationService;
 import org.kinotic.domain.api.services.security.RefreshTokenService;
@@ -189,7 +189,7 @@ public abstract class OAuthServerHandler implements SuppliesGatewayRoutes {
         String codeVerifier = ctx.request().getFormAttribute("code_verifier");
         oauthAuthorizationService.exchangeCode(issuer(ctx), code, clientId, redirectUri, codeVerifier)
               .compose(exchange -> authEndpointSupport.issueDelegateTokens(ctx, exchange.approver(),
-                                                                           DelegateKind.MCP_CLIENT,
+                                                                           DelegateType.MCP_CLIENT,
                                                                            exchange.clientId(),
                                                                            exchange.clientName(), null))
               .onFailure(err -> {

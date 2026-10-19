@@ -1,5 +1,5 @@
 import type { OidcConfigurationType } from '@/api/model/security/OidcConfigurationType'
-import type { OidcProviderKind } from '@/api/model/security/OidcProviderKind'
+import type { OidcProviderType } from '@/api/model/security/OidcProviderType'
 
 /**
  * One of an organization's own OIDC provider configurations, offered at the one sign-in scope its `type` names:
@@ -22,7 +22,7 @@ export interface OwnedOidcConfiguration {
     /** The name the login page shows on the provider's button. */
     name: string
     /** A kind offered to organizations: `azure-ad`, `okta` or `google`. */
-    provider: OidcProviderKind
+    provider: OidcProviderType
     /** The organization's account at the provider in the form the kind asks for: the directory (tenant) id for Entra, the Okta domain for Okta, nothing for Google. */
     providerAccount: string | null
     clientId: string

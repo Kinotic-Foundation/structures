@@ -1,7 +1,7 @@
 /**
  * What a MachineParticipantIdentity is for: the role of the process that holds its credential.
  */
-export enum MachineKind {
+export enum MachineType {
     /**
      * A caller someone provisioned by hand: a SYSTEM-scope platform daemon such as the
      * vm-manager, or an APPLICATION-scope API client of one application.

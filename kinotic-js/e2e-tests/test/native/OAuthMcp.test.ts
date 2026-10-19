@@ -1,5 +1,5 @@
 import {Kinotic, Pageable} from '@kinotic-ai/core'
-import {DelegateKind, DelegateService} from '@kinotic-ai/management-api'
+import {DelegateType, DelegateService} from '@kinotic-ai/management-api'
 import type {DelegatingParticipantIdentity} from '@kinotic-ai/management-api'
 import * as allure from 'allure-js-commons'
 import {randomBytes, createHash} from 'node:crypto'
@@ -163,7 +163,7 @@ describe('Kinotic JS', () => {
         const delegateService = new DelegateService(Kinotic)
         const delegates = await delegateService.findMyDelegates(Pageable.create(0, 25))
         const cliDelegate: DelegatingParticipantIdentity | undefined =
-            delegates.content?.find(d => d.delegateKind === DelegateKind.CLI)
+            delegates.content?.find(d => d.delegateType === DelegateType.CLI)
         expect(cliDelegate).toBeDefined()
         expect(cliDelegate!.enabled).toBe(true)
         const sessions = await delegateService.findSessions(cliDelegate!.id!)

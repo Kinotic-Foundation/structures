@@ -16,11 +16,11 @@ import org.kinotic.domain.api.exceptions.ExistingAccountException;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
 import org.kinotic.domain.api.model.security.OwnedOidcConfiguration;
-import org.kinotic.domain.api.model.security.DelegateKind;
+import org.kinotic.domain.api.model.security.DelegateType;
 import org.kinotic.domain.api.model.security.identity.ParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 import org.kinotic.domain.api.model.security.KinoticAudience;
-import org.kinotic.domain.api.model.security.OidcProviderKind;
+import org.kinotic.domain.api.model.security.OidcProviderType;
 import org.kinotic.domain.api.services.security.OidcConfigurationService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.services.security.RefreshTokenService;
@@ -314,16 +314,16 @@ public abstract class AuthEndpointSupport {
      */
     public Future<Void> issueDelegateTokens(RoutingContext ctx,
                                             Participant approver,
-                                            DelegateKind kind,
+                                            DelegateType kind,
                                             String clientKey,
                                             String clientName,
                                             String sessionLabel) {
         return identityService.findOrCreateDelegate(approver, kind, clientKey, clientName)
                 .compose(delegate -> refreshTokenService.issue(delegate.getId(),
-                                                               delegate.getDelegateKind().getAudience(),
+                                                               delegate.getDelegateType().getAudience(),
                                                                sessionLabel)
                         .onSuccess(refreshToken -> respondTokenPair(
-                                ctx, delegate, refreshToken, delegate.getDelegateKind().getAudience())))
+                                ctx, delegate, refreshToken, delegate.getDelegateType().getAudience())))
                 .mapEmpty();
     }
 
@@ -358,9 +358,9 @@ public abstract class AuthEndpointSupport {
      */
     public void handleSocialStart(RoutingContext ctx, Function<OrgSignupOidcConfiguration, Future<String>> start) {
         String provider = ctx.pathParam("provider");
-        OidcProviderKind providerKind;
+        OidcProviderType providerKind;
         try {
-            providerKind = OidcProviderKind.fromKey(provider);
+            providerKind = OidcProviderType.fromKey(provider);
         } catch (IllegalArgumentException ex) {
             respondError(ctx, 400, "Unknown platform provider: " + provider);
             return;

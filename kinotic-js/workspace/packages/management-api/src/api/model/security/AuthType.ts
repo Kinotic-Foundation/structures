@@ -1,19 +1,10 @@
 /**
- * Authentication method for an {@link ParticipantIdentity}.
+ * How an account signs in: what a sign-up chose to establish its email with, and what each method the
+ * profile lists authenticates with.
  */
 export enum AuthType {
-    /** Email/password with bcrypt-hashed credentials. */
-    LOCAL = 'LOCAL',
-    /** Federated identity via an external OIDC provider (Google, Microsoft, etc.). */
-    OIDC = 'OIDC',
-    /**
-     * Only Kinotic-issued tokens minted when a USER authorizes the delegate; a DELEGATED
-     * identity has no login credential of its own.
-     */
-    DELEGATED = 'DELEGATED',
-    /**
-     * A provisioned client id and secret presented as connection credentials; the
-     * authentication method of every MACHINE identity.
-     */
-    CLIENT_CREDENTIALS = 'CLIENT_CREDENTIALS'
+    /** The account's password. */
+    PASSWORD = 'PASSWORD',
+    /** An identity a provider asserts, bound to the account. */
+    OIDC = 'OIDC'
 }

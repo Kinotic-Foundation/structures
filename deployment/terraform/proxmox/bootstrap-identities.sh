@@ -63,7 +63,7 @@ else
   admin_hash="$(bcrypt "$admin_password")"
 fi
 rows "$admin_id" "$admin_hash" \
-  "{\"id\":\"$admin_id\",\"type\":\"USER\",\"email\":\"$ADMIN_EMAIL\",\"displayName\":\"$ADMIN_EMAIL\",\"authType\":\"LOCAL\",\"enabled\":true,\"created\":\"$NOW\",\"updated\":\"$NOW\"}" \
+  "{\"id\":\"$admin_id\",\"type\":\"USER\",\"email\":\"$ADMIN_EMAIL\",\"displayName\":\"$ADMIN_EMAIL\",\"enabled\":true,\"created\":\"$NOW\",\"updated\":\"$NOW\"}" \
   | bulk
 if [[ -n "${ADMIN_SECRET_HASH:-}" ]]; then
   echo "==> System user $ADMIN_EMAIL, with the password it already had"
@@ -79,7 +79,7 @@ for arg in "$@"; do
   machine_id="$(uuidgen | tr '[:upper:]' '[:lower:]')"
   machine_secret="$(secret 40)"
   rows "$machine_id" "$(bcrypt "$machine_secret")" \
-    "{\"id\":\"$machine_id\",\"type\":\"MACHINE\",\"machineKind\":\"CLIENT\",\"displayName\":\"$node vm-manager\",\"authType\":\"CLIENT_CREDENTIALS\",\"enabled\":true,\"created\":\"$NOW\",\"updated\":\"$NOW\"}" \
+    "{\"id\":\"$machine_id\",\"type\":\"MACHINE\",\"machineType\":\"CLIENT\",\"displayName\":\"$node vm-manager\",\"enabled\":true,\"created\":\"$NOW\",\"updated\":\"$NOW\"}" \
     | bulk
   printf 'KINOTIC_CLIENT_ID=%s\nKINOTIC_CLIENT_SECRET=%s\n' "$machine_id" "$machine_secret" \
     | ssh "$target" 'sudo tee /etc/kinotic/vm-manager.secrets.env >/dev/null && sudo chmod 0600 /etc/kinotic/vm-manager.secrets.env && sudo systemctl restart kinotic-vm-manager'

@@ -12,7 +12,7 @@ import org.kinotic.domain.api.model.security.ApplicationOidcConfiguration;
 import org.kinotic.domain.api.model.security.ApplicationSocialOidcConfiguration;
 import org.kinotic.domain.api.model.security.ManagedOidcConfiguration;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
-import org.kinotic.domain.api.model.security.OidcProviderKind;
+import org.kinotic.domain.api.model.security.OidcProviderType;
 import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
 import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
 import org.kinotic.domain.api.model.security.OwnedOidcConfiguration;
@@ -162,7 +162,7 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
     }
 
     @Override
-    public Future<OrgSignupOidcConfiguration> findEnabledOrgSignupByProvider(OidcProviderKind provider) {
+    public Future<OrgSignupOidcConfiguration> findEnabledOrgSignupByProvider(OidcProviderType provider) {
         Validate.notNull(provider, "provider cannot be null");
         return oidcRepository.findEnabledOrgSignupByProvider(provider);
     }

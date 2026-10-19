@@ -2,7 +2,7 @@
  * What a {@link WatchEvent} records happened to a watched record. Each value arrives with the write
  * that produces it.
  */
-export enum WatchEventKind {
+export enum WatchEventType {
     /** A condition was set beside the authority's fields. */
     CONDITION_SET = 'CONDITION_SET',
     /** A condition was cleared. */

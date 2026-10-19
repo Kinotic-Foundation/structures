@@ -60,7 +60,7 @@ import { computed, markRaw, ref, type Component } from 'vue'
 import { Bell, Box, ChevronDown, ChevronRight, CircleAlert, CircleCheck, RefreshCw, Server, TriangleAlert } from '@lucide/vue'
 import { DashboardSection, TINTS } from '@kinotic-ai/frontend-common'
 import type { AttentionItem } from '@/util/attention'
-import { AttentionKind } from '@/util/AttentionKind'
+import { AttentionType } from '@/util/AttentionType'
 
 /**
  * The list of what an operator has to look at, grouped by kind with failures first, each row
@@ -71,13 +71,13 @@ const props = defineProps<{
 }>()
 
 /** Each kind's heading, icon, and whether it is a failure rather than a warning; in display order. */
-const GROUPS: Record<AttentionKind, { label: string, icon: Component, critical: boolean }> = {
-  [AttentionKind.FAILED_RUN]: { label: 'Failed runs', icon: markRaw(CircleAlert), critical: true },
-  [AttentionKind.FAILED_WORKLOAD]: { label: 'Failed workloads', icon: markRaw(Box), critical: true },
-  [AttentionKind.WORKLOAD_ON_SILENT_NODE]: { label: 'Workloads on unresponsive nodes', icon: markRaw(TriangleAlert), critical: false },
-  [AttentionKind.UNREACHABLE_NODE]: { label: 'Unreachable nodes', icon: markRaw(Server), critical: false },
-  [AttentionKind.DRAINING_NODE]: { label: 'Draining nodes', icon: markRaw(Server), critical: false },
-  [AttentionKind.VERSION_SKEW]: { label: 'Version mismatch', icon: markRaw(RefreshCw), critical: false }
+const GROUPS: Record<AttentionType, { label: string, icon: Component, critical: boolean }> = {
+  [AttentionType.FAILED_RUN]: { label: 'Failed runs', icon: markRaw(CircleAlert), critical: true },
+  [AttentionType.FAILED_WORKLOAD]: { label: 'Failed workloads', icon: markRaw(Box), critical: true },
+  [AttentionType.WORKLOAD_ON_SILENT_NODE]: { label: 'Workloads on unresponsive nodes', icon: markRaw(TriangleAlert), critical: false },
+  [AttentionType.UNREACHABLE_NODE]: { label: 'Unreachable nodes', icon: markRaw(Server), critical: false },
+  [AttentionType.DRAINING_NODE]: { label: 'Draining nodes', icon: markRaw(Server), critical: false },
+  [AttentionType.VERSION_SKEW]: { label: 'Version mismatch', icon: markRaw(RefreshCw), critical: false }
 }
 
 // A full uuid in a reason is noise at a glance; its first block identifies it, and the tooltip keeps it whole
@@ -105,23 +105,23 @@ const TONES: Record<Tone, { row: string, tile: string, count: string, dot: strin
   }
 }
 
-function tone(kind: AttentionKind): Tone {
+function tone(kind: AttentionType): Tone {
   return GROUPS[kind].critical ? 'critical' : 'warning'
 }
 
 const groups = computed(() =>
-    (Object.keys(GROUPS) as AttentionKind[])
+    (Object.keys(GROUPS) as AttentionType[])
         .map(kind => ({ kind, items: props.items.filter(item => item.kind === kind) }))
         .filter(group => group.items.length > 0))
 
 // Groups open on demand, so the list starts as one line per kind with its count
-const openKinds = ref(new Set<AttentionKind>())
+const openKinds = ref(new Set<AttentionType>())
 
-function isOpen(kind: AttentionKind): boolean {
+function isOpen(kind: AttentionType): boolean {
   return openKinds.value.has(kind)
 }
 
-function toggle(kind: AttentionKind): void {
+function toggle(kind: AttentionType): void {
   const next = new Set(openKinds.value)
   if (next.has(kind)) {
     next.delete(kind)

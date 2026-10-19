@@ -61,7 +61,7 @@ public class DefaultSignUpService implements SignUpService {
                             .setId(UUID.randomUUID().toString())
                             .setEmail(email)
                             .setDisplayName(displayName)
-                            .setAuthType(AuthType.LOCAL)
+                            .setAuthType(AuthType.PASSWORD)
                             .setVerificationToken(token)
                             .setCreated(now)
                             .setExpiresAt(new Date(now.getTime() + LOCAL_TTL_MS));

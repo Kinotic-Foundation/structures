@@ -1,8 +1,8 @@
 /**
- * The provider kinds an OIDC configuration may name, as the platform writes them on the wire: the
- * key of each kind, such as 'azure-ad', never its Java constant name.
+ * The provider types an OIDC configuration may name, as the platform writes them on the wire: the
+ * key of each type, such as 'azure-ad', never its Java constant name.
  */
-export enum OidcProviderKind {
+export enum OidcProviderType {
     GOOGLE = 'google',
     AZURE_AD = 'azure-ad',
     OKTA = 'okta',

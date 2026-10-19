@@ -26,7 +26,7 @@ class OidcConfigurationSerializationTest {
         social.setSecretNameRef("github-platform")
               .setTokenUri("https://github.com/login/oauth/access_token")
               .setName("GitHub")
-                .setProvider(OidcProviderKind.GITHUB)
+                .setProvider(OidcProviderType.GITHUB)
                 .setClientId("client")
                 .setId("github-platform");
 
@@ -37,7 +37,7 @@ class OidcConfigurationSerializationTest {
         OrgSignupOidcConfiguration readSocial = assertInstanceOf(OrgSignupOidcConfiguration.class, read);
         assertEquals("github-platform", readSocial.getSecretNameRef());
         assertEquals("https://github.com/login/oauth/access_token", readSocial.getTokenUri());
-        assertEquals(OidcProviderKind.GITHUB, readSocial.getProvider());
+        assertEquals(OidcProviderType.GITHUB, readSocial.getProvider());
     }
 
     @Test
@@ -45,7 +45,7 @@ class OidcConfigurationSerializationTest {
         ApplicationSocialOidcConfiguration social = new ApplicationSocialOidcConfiguration();
         social.setSecretNameRef("google-platform")
               .setName("Google")
-              .setProvider(OidcProviderKind.GOOGLE)
+              .setProvider(OidcProviderType.GOOGLE)
               .setClientId("client")
               .setAuthority("https://accounts.google.com")
               .setId("google-platform");
@@ -56,7 +56,7 @@ class OidcConfigurationSerializationTest {
         OidcConfiguration read = jsonMapper.readValue(json, OidcConfiguration.class);
         ApplicationSocialOidcConfiguration readSocial = assertInstanceOf(ApplicationSocialOidcConfiguration.class, read);
         assertEquals("google-platform", readSocial.getSecretNameRef());
-        assertEquals(OidcProviderKind.GOOGLE, readSocial.getProvider());
+        assertEquals(OidcProviderType.GOOGLE, readSocial.getProvider());
     }
 
     @Test
@@ -65,7 +65,7 @@ class OidcConfigurationSerializationTest {
         owned.setOrganizationId("acme");
         owned.setProviderAccount("acme.okta.com");
         owned.setName("Acme Okta")
-             .setProvider(OidcProviderKind.OKTA)
+             .setProvider(OidcProviderType.OKTA)
              .setClientId("client")
              .setId("config-1");
 
@@ -87,7 +87,7 @@ class OidcConfigurationSerializationTest {
              .setProviderAccount("9f1a4c2e-3b7d-4e8f-a1b2-c3d4e5f60718")
              .setCreateUserOnSignIn(true);
         owned.setName("Acme Entra")
-             .setProvider(OidcProviderKind.AZURE_AD)
+             .setProvider(OidcProviderType.AZURE_AD)
              .setClientId("client")
              .setId("config-2");
 
@@ -110,7 +110,7 @@ class OidcConfigurationSerializationTest {
         owned.setOrganizationId("acme")
              .setProviderAccount("globex.okta.com");
         owned.setName("Globex Okta")
-             .setProvider(OidcProviderKind.OKTA)
+             .setProvider(OidcProviderType.OKTA)
              .setClientId("client")
              .setId("config-3");
 

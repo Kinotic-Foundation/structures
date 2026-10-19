@@ -6,7 +6,7 @@ import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.domain.api.repositories.ReconcilableRepository;
 import org.kinotic.domain.api.model.WatchEvent;
-import org.kinotic.domain.api.model.WatchEventKind;
+import org.kinotic.domain.api.model.WatchEventType;
 import org.kinotic.domain.api.model.WatchedType;
 import org.kinotic.management.api.model.deployment.DeploymentState;
 import org.kinotic.domain.internal.api.repositories.AbstractApplicationScopedRepository;
@@ -71,7 +71,7 @@ public class ProjectDeploymentRepository extends AbstractApplicationScopedReposi
      * @param pageable the page to return
      * @return a future emitting a page of ledger entries
      */
-    public Future<Page<WatchEvent>> findAllHistory(String orgId, List<WatchEventKind> kinds, Pageable pageable) {
+    public Future<Page<WatchEvent>> findAllHistory(String orgId, List<WatchEventType> kinds, Pageable pageable) {
         Validate.notBlank(orgId, "orgId cannot be blank");
         return watchEventRepository.findHistoryOfAll(WATCHED.type(), orgId, kinds, pageable);
     }

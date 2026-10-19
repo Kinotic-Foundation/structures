@@ -17,8 +17,8 @@ import org.kinotic.domain.api.model.OrganizationScoped;
  * configuration into that scope, and each copy is registered with the provider under its own
  * callback URL.
  *
- * <p>The organization names no URL. It chooses a {@link OidcProviderKind} that
- * {@link OidcProviderKind#offeredToOrganizations() is offered to organizations} and gives its
+ * <p>The organization names no URL. It chooses a {@link OidcProviderType} that
+ * {@link OidcProviderType#offeredToOrganizations() is offered to organizations} and gives its
  * {@link #providerAccount} at that provider; the authority is derived from the kind's template when the
  * configuration is saved, replacing any value sent, so the server connects to the provider's own hosts
  * only.
@@ -43,7 +43,7 @@ public abstract sealed class OwnedOidcConfiguration extends OidcConfiguration im
 
     /**
      * The organization's account at the provider, in the form
-     * {@link OidcProviderKind#providerAccountLabel()} asks for: an Entra directory's tenant id, an Okta
+     * {@link OidcProviderType#providerAccountLabel()} asks for: an Entra directory's tenant id, an Okta
      * domain. {@code null} for a kind with one issuer for everyone, such as Google.
      */
     private String providerAccount;

@@ -7,7 +7,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.kinotic.core.api.crud.Identifiable;
-import org.kinotic.domain.api.model.security.AuthType;
 
 import java.util.Date;
 
@@ -43,14 +42,6 @@ public abstract sealed class ParticipantIdentity implements Identifiable<String>
     private String id;
 
     private String displayName;
-
-    /**
-     * Authentication method: always {@link AuthType#DELEGATED} for {@link DelegatingParticipantIdentity},
-     * always {@link AuthType#CLIENT_CREDENTIALS} for {@link MachineParticipantIdentity}, and {@code null}
-     * for a {@link UserParticipantIdentity}, whose sign-in methods are its credential and its
-     * {@link OidcBinding}s.
-     */
-    private AuthType authType;
 
     /**
      * The Organization this identity belongs to. {@code null} for SYSTEM identities; set for

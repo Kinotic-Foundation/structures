@@ -10,7 +10,7 @@ import org.kinotic.domain.api.model.Tenant;
 import org.kinotic.domain.api.model.security.ApplicationOidcConfiguration;
 import org.kinotic.domain.api.model.security.ApplicationSocialOidcConfiguration;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
-import org.kinotic.domain.api.model.security.OidcProviderKind;
+import org.kinotic.domain.api.model.security.OidcProviderType;
 import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
 import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
 import org.kinotic.domain.api.model.security.OwnedOidcConfiguration;
@@ -172,7 +172,7 @@ public class OidcConfigurationScopeTests extends KinoticTestBase {
         assertNull(await(oidcConfigurations.findOffered("google-platform", organization.getId(), appId)));
         assertNull(await(oidcConfigurations.findOffered("google-platform", organization.getId(), null)));
 
-        application.getSocialProviders().add(OidcProviderKind.GOOGLE);
+        application.getSocialProviders().add(OidcProviderType.GOOGLE);
         await(asAdministrator(() -> applicationService.saveSync(application)));
         OidcConfiguration google = await(oidcConfigurations.findOffered("google-platform", organization.getId(), appId));
         assertInstanceOf(ApplicationSocialOidcConfiguration.class, google);
@@ -181,7 +181,7 @@ public class OidcConfigurationScopeTests extends KinoticTestBase {
         assertNull(await(oidcConfigurations.findOffered("google-platform", organization.getId(), null)));
         assertNull(await(oidcConfigurations.findOffered("entra-platform", organization.getId(), appId)));
 
-        application.getSocialProviders().add(OidcProviderKind.GOOGLE);
+        application.getSocialProviders().add(OidcProviderType.GOOGLE);
         assertInstanceOf(IllegalArgumentException.class, failure(() -> applicationService.saveSync(application)));
     }
 
@@ -239,7 +239,7 @@ public class OidcConfigurationScopeTests extends KinoticTestBase {
         configuration.setOrganizationId(organization.getId())
                      .setProviderAccount("acme.okta.com");
         configuration.setName(name)
-                     .setProvider(OidcProviderKind.OKTA)
+                     .setProvider(OidcProviderType.OKTA)
                      .setClientId("acme-client")
                      .setEnabled(true);
     }

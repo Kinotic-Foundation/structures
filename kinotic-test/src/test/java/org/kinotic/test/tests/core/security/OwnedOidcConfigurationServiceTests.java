@@ -9,7 +9,7 @@ import org.kinotic.core.api.exceptions.AuthorizationException;
 import org.kinotic.core.api.security.ParticipantConstants;
 import org.kinotic.domain.api.model.Organization;
 import org.kinotic.domain.api.model.security.ApplicationOidcConfiguration;
-import org.kinotic.domain.api.model.security.OidcProviderKind;
+import org.kinotic.domain.api.model.security.OidcProviderType;
 import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
 import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
 import org.kinotic.domain.api.model.security.OwnedOidcConfiguration;
@@ -140,7 +140,7 @@ public class OwnedOidcConfigurationServiceTests extends KinoticTestBase {
         configuration.setOrganizationId(organization.getId())
                      .setProviderAccount("acme.okta.com");
         configuration.setName(name)
-                     .setProvider(OidcProviderKind.OKTA)
+                     .setProvider(OidcProviderType.OKTA)
                      .setClientId("acme-client")
                      .setEnabled(true);
         return configuration;
@@ -149,7 +149,7 @@ public class OwnedOidcConfigurationServiceTests extends KinoticTestBase {
     private <C extends OwnedOidcConfiguration> C google(C configuration, String name) {
         configuration.setOrganizationId(organization.getId());
         configuration.setName(name)
-                     .setProvider(OidcProviderKind.GOOGLE)
+                     .setProvider(OidcProviderType.GOOGLE)
                      .setClientId("acme-client")
                      .setEnabled(true);
         return configuration;

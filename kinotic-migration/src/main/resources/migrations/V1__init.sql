@@ -214,8 +214,9 @@ CREATE TABLE IF NOT EXISTS kinotic_service_directory (
 -- which of organizationId / applicationId is set: organizationId only = ORGANIZATION, both set =
 -- APPLICATION, both null = SYSTEM for a machine or delegate and, for a USER, an account: a person's
 -- single identity on the platform, which acts in the scopes its kinotic_membership rows name. A
--- user's sign-in methods are its kinotic_identity_credential and its kinotic_oidc_binding rows, so
--- a USER row carries no authType.
+-- user's sign-in methods are its kinotic_identity_credential and its kinotic_oidc_binding rows; a
+-- delegate authenticates with the tokens its owner's authorization minted and a machine with its
+-- credential, so how a row authenticates follows from its type.
 -- Uniqueness rules (enforced in service layer): one USER per (email, organizationId,
 -- applicationId), so one account per email; one DELEGATE per (ownerId, clientKey, organizationId,
 -- applicationId).
@@ -224,11 +225,10 @@ CREATE TABLE IF NOT EXISTS kinotic_participant_identity (
     type KEYWORD,
     email KEYWORD,
     displayName KEYWORD,
-    authType KEYWORD,
     ownerId KEYWORD,
     clientKey KEYWORD,
-    delegateKind KEYWORD,
-    machineKind KEYWORD,
+    delegateType KEYWORD,
+    machineType KEYWORD,
     organizationId KEYWORD,
     applicationId KEYWORD,
     tenantId KEYWORD,
@@ -326,7 +326,8 @@ CREATE TABLE IF NOT EXISTS kinotic_organization (
 );
 
 -- Pending sign-ups (email-verification or OIDC) awaiting completion (PendingSignUp): the identity
--- to create plus authType. The organization name is collected at completion, not stored here.
+-- to create plus authType, the sign-in method it chose. The organization name is collected at
+-- completion, not stored here.
 CREATE TABLE IF NOT EXISTS kinotic_pending_signup (
     id KEYWORD,
     verificationToken KEYWORD,
@@ -341,8 +342,8 @@ CREATE TABLE IF NOT EXISTS kinotic_pending_signup (
 
 -- Pending member invitations (PendingInvite) awaiting acceptance: the invitee's identity, the
 -- scope they join (organizationId always set; applicationId only for app-member invites), and
--- inviter attribution for the email/accept page. No authType — the invitee chooses password or
--- OIDC at accept. Single-use: consumed and deleted when accepted, cancelled, or found expired.
+-- inviter attribution for the email/accept page. No sign-in method: the invitee chooses password
+-- or OIDC at accept. Single-use: consumed and deleted when accepted, cancelled, or found expired.
 CREATE TABLE IF NOT EXISTS kinotic_pending_invite (
     id KEYWORD,
     verificationToken KEYWORD,

@@ -14,7 +14,7 @@ import org.kinotic.domain.api.model.StatusConditionType;
 import org.kinotic.domain.api.model.Watched;
 import org.kinotic.domain.api.model.WatchedState;
 import org.kinotic.domain.api.model.WatchEvent;
-import org.kinotic.domain.api.model.WatchEventKind;
+import org.kinotic.domain.api.model.WatchEventType;
 import org.kinotic.domain.internal.api.services.CrudServiceTemplate;
 import org.springframework.stereotype.Component;
 import tools.jackson.core.type.TypeReference;
@@ -234,7 +234,7 @@ public class WatchedStateRepository {
         params.put("message", condition.message());
         params.put("since", condition.since().toInstant().toString());
         return write(document, script, params,
-                     new WatchedChange(WatchEventKind.CONDITION_SET, source, condition.message(), condition))
+                     new WatchedChange(WatchEventType.CONDITION_SET, source, condition.message(), condition))
                 .map(written -> written != null);
     }
 
@@ -252,7 +252,7 @@ public class WatchedStateRepository {
         Validate.notNull(type, "type cannot be null");
         Validate.notBlank(source, "source cannot be blank");
         return write(document, CLEAR_CONDITION, Map.of("type", type.name()),
-                     new WatchedChange(WatchEventKind.CONDITION_CLEARED, source, type + " cleared", Map.of("type", type)))
+                     new WatchedChange(WatchEventType.CONDITION_CLEARED, source, type + " cleared", Map.of("type", type)))
                 .map(written -> written != null);
     }
 

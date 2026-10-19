@@ -14,7 +14,7 @@
           <div class="min-w-0 flex-1 pt-0.5">
             <p class="text-[0.8125rem] text-surface-900 dark:text-surface-50" v-tooltip.top="entry.message">
               <template v-if="phaseOf(entry)">
-                {{ entry.kind === WatchEventKind.OBSERVED_REPORTED ? 'Reported' : 'Asked for' }}
+                {{ entry.kind === WatchEventType.OBSERVED_REPORTED ? 'Reported' : 'Asked for' }}
                 <span :class="['rounded px-1 font-medium', TONES[toneOf(entry)].text]">{{ phaseOf(entry) }}</span>
                 <template v-if="commitOf(entry)">
                   at <span class="font-mono text-[0.8125rem]">{{ shortSha(commitOf(entry)!) }}</span>
@@ -51,7 +51,7 @@
 <script setup lang="ts">
 import { computed, markRaw, ref, type Component } from 'vue'
 import { Activity, Check, ChevronsDown, Circle, Eye, RefreshCw, Target, Trash2, TriangleAlert } from '@lucide/vue'
-import { WatchEventKind, type WatchEvent, type WatchedType } from '@kinotic-ai/management-api'
+import { WatchEventType, type WatchEvent, type WatchedType } from '@kinotic-ai/management-api'
 import DatetimeUtil from '../util/DatetimeUtil'
 import { shortSha } from '../util/helpers'
 import { TINTS } from '../util/tints'
@@ -90,13 +90,13 @@ const TONES: Record<Tone, { marker: string, text: string }> = {
 }
 
 const ICONS: Record<string, Component> = {
-  [WatchEventKind.CONDITION_SET]: markRaw(TriangleAlert),
-  [WatchEventKind.CONDITION_CLEARED]: markRaw(Check),
-  [WatchEventKind.STATUS_CHANGED]: markRaw(Activity),
-  [WatchEventKind.DESIRED_UPDATED]: markRaw(Target),
-  [WatchEventKind.DESIRED_RENEWED]: markRaw(RefreshCw),
-  [WatchEventKind.OBSERVED_REPORTED]: markRaw(Eye),
-  [WatchEventKind.DELETION_REQUESTED]: markRaw(Trash2)
+  [WatchEventType.CONDITION_SET]: markRaw(TriangleAlert),
+  [WatchEventType.CONDITION_CLEARED]: markRaw(Check),
+  [WatchEventType.STATUS_CHANGED]: markRaw(Activity),
+  [WatchEventType.DESIRED_UPDATED]: markRaw(Target),
+  [WatchEventType.DESIRED_RENEWED]: markRaw(RefreshCw),
+  [WatchEventType.OBSERVED_REPORTED]: markRaw(Eye),
+  [WatchEventType.DELETION_REQUESTED]: markRaw(Trash2)
 }
 
 // The words of a phase or run status, by the outcome they mean
@@ -134,8 +134,8 @@ const days = computed(() => {
 /** The phase a desired or observed state names, null for an entry that writes none. */
 function phaseOf(entry: WatchEvent): string | null {
   const phase = (entry.value as { phase?: unknown } | null)?.phase
-  return (entry.kind === WatchEventKind.OBSERVED_REPORTED || entry.kind === WatchEventKind.DESIRED_UPDATED
-      || entry.kind === WatchEventKind.DESIRED_RENEWED) && typeof phase === 'string' ? phase : null
+  return (entry.kind === WatchEventType.OBSERVED_REPORTED || entry.kind === WatchEventType.DESIRED_UPDATED
+      || entry.kind === WatchEventType.DESIRED_RENEWED) && typeof phase === 'string' ? phase : null
 }
 
 function commitOf(entry: WatchEvent): string | null {
@@ -145,11 +145,11 @@ function commitOf(entry: WatchEvent): string | null {
 
 function toneOf(entry: WatchEvent): Tone {
   let ret: Tone
-  if (entry.kind === WatchEventKind.DELETION_REQUESTED) {
+  if (entry.kind === WatchEventType.DELETION_REQUESTED) {
     ret = 'danger'
-  } else if (entry.kind === WatchEventKind.CONDITION_SET) {
+  } else if (entry.kind === WatchEventType.CONDITION_SET) {
     ret = 'warn'
-  } else if (entry.kind === WatchEventKind.CONDITION_CLEARED) {
+  } else if (entry.kind === WatchEventType.CONDITION_CLEARED) {
     ret = 'success'
   } else {
     const word = phaseOf(entry) ?? entry.message.match(STATUS_WORD)?.[1] ?? ''
@@ -167,7 +167,7 @@ function toneOf(entry: WatchEvent): Tone {
 }
 
 /** The kind as words: CONDITION_SET reads "condition set". */
-function kindLabel(kind: WatchEventKind): string {
+function kindLabel(kind: WatchEventType): string {
   return kind.toLowerCase().replace(/_/g, ' ')
 }
 

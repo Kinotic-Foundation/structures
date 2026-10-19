@@ -6,7 +6,7 @@ import io.vertx.ext.web.RoutingContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.kinotic.core.api.security.Participant;
-import org.kinotic.domain.api.model.security.DelegateKind;
+import org.kinotic.domain.api.model.security.DelegateType;
 import org.kinotic.domain.api.rest.OAuthExtensionGrant;
 import org.kinotic.domain.api.rest.SuppliesGatewayRoutes;
 import org.kinotic.domain.api.services.security.DeviceCodeGrantService;
@@ -87,7 +87,7 @@ public class DeviceAuthorizationHandler implements SuppliesGatewayRoutes, OAuthE
                       case SLOW_DOWN -> authEndpointSupport.respondError(ctx, 400, "slow_down");
                       case EXPIRED -> authEndpointSupport.respondError(ctx, 400, "expired_token");
                       case INVALID -> authEndpointSupport.respondError(ctx, 400, "invalid_grant");
-                      case APPROVED -> authEndpointSupport.issueDelegateTokens(ctx, result.approver(), DelegateKind.CLI,
+                      case APPROVED -> authEndpointSupport.issueDelegateTokens(ctx, result.approver(), DelegateType.CLI,
                                                                               CLI_CLIENT_ID, CLI_DISPLAY_NAME,
                                                                               result.deviceName())
                               .onFailure(err -> {

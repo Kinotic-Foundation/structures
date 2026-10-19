@@ -1,6 +1,6 @@
 package org.kinotic.domain.internal.api.repositories;
 
-import org.kinotic.domain.api.model.WatchEventKind;
+import org.kinotic.domain.api.model.WatchEventType;
 
 /**
  * What a write to a watched record was, for the ledger: the caller's half of a
@@ -11,5 +11,5 @@ import org.kinotic.domain.api.model.WatchEventKind;
  * @param message why, for an operator
  * @param value   what was written, as an object
  */
-public record WatchedChange(WatchEventKind kind, String source, String message, Object value) {
+public record WatchedChange(WatchEventType kind, String source, String message, Object value) {
 }

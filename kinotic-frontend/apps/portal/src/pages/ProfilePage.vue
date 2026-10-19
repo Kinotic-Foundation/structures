@@ -92,13 +92,13 @@
         <ul class="mt-4 border-t border-surface-200 dark:border-surface-700">
           <li v-for="method in methods" :key="method.id"
               class="flex flex-wrap items-center gap-3 border-b border-surface-100 px-6 py-3.5 dark:border-surface-800">
-            <component :is="method.kind === SignInMethodKind.PASSWORD ? KeyRound : ShieldCheck" :size="18" :stroke-width="1.75"
+            <component :is="method.type === AuthType.PASSWORD ? KeyRound : ShieldCheck" :size="18" :stroke-width="1.75"
                        class="shrink-0 text-surface-600 dark:text-surface-300" aria-hidden="true" />
             <div class="flex min-w-0 flex-1 flex-col">
               <span class="truncate text-sm text-surface-950 dark:text-surface-0">{{ method.name }}</span>
               <span v-if="method.created" class="text-xs text-muted-color">Connected {{ DatetimeUtil.formatMonthDayYear(method.created) }}</span>
             </div>
-            <Button v-if="method.kind === SignInMethodKind.PASSWORD" label="Change password" size="small" severity="secondary" outlined
+            <Button v-if="method.type === AuthType.PASSWORD" label="Change password" size="small" severity="secondary" outlined
                     @click="openPasswordDialog" />
             <Button v-else label="Remove" size="small" severity="secondary" text :disabled="methods.length < 2"
                     v-tooltip.top="methods.length < 2 ? 'Add another sign-in method first' : undefined"
@@ -180,7 +180,7 @@ import Tag from 'primevue/tag'
 import { useToast } from 'primevue/usetoast'
 import { Building2, KeyRound, ShieldCheck } from '@lucide/vue'
 import { Kinotic } from '@kinotic-ai/core'
-import { type LoginProviderSummary, OidcConfigurationType, type Organization, PASSWORD_SIGN_IN_METHOD_ID, type SignInMethod, SignInMethodKind } from '@kinotic-ai/management-api'
+import { type LoginProviderSummary, OidcConfigurationType, type Organization, PASSWORD_SIGN_IN_METHOD_ID, type SignInMethod, AuthType } from '@kinotic-ai/management-api'
 import { FormDialog, apiUrl } from '@kinotic-ai/frontend-common'
 import SocialAuthButton from '@/components/SocialAuthButton.vue'
 import { USER_STATE } from '@/states/IUserState'

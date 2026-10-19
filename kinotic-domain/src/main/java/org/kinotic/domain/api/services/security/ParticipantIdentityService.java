@@ -6,9 +6,9 @@ import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.core.api.security.Participant;
 import org.kinotic.domain.api.exceptions.AccountDisabledException;
-import org.kinotic.domain.api.model.security.DelegateKind;
+import org.kinotic.domain.api.model.security.DelegateType;
 import org.kinotic.domain.api.model.security.identity.DelegatingParticipantIdentity;
-import org.kinotic.domain.api.model.security.identity.MachineKind;
+import org.kinotic.domain.api.model.security.identity.MachineType;
 import org.kinotic.domain.api.model.security.identity.MachineParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.MachineProvisionResult;
 import org.kinotic.domain.api.model.security.identity.OidcBinding;
@@ -175,7 +175,7 @@ public interface ParticipantIdentityService extends IdentifiableCrudService<Part
      * @return a future emitting the enabled delegate
      */
     Future<DelegatingParticipantIdentity> findOrCreateDelegate(Participant owner,
-                                                               DelegateKind kind,
+                                                               DelegateType kind,
                                                                String clientKey,
                                                                String displayName);
 
@@ -190,7 +190,7 @@ public interface ParticipantIdentityService extends IdentifiableCrudService<Part
      * client secret it connects with. The identity's id is its {@code clientId}; the secret is
      * returned in plaintext exactly once and stored only as a hash.
      *
-     * @param machine the unsaved machine carrying display name, scope and {@link MachineKind}
+     * @param machine the unsaved machine carrying display name, scope and {@link MachineType}
      * @return a future emitting the saved machine together with its one-time secret
      */
     Future<MachineProvisionResult> createMachine(MachineParticipantIdentity machine);

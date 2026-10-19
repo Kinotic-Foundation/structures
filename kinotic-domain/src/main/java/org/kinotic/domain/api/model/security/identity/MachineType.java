@@ -3,7 +3,7 @@ package org.kinotic.domain.api.model.security.identity;
 /**
  * What a {@link MachineParticipantIdentity} is for: the role of the process that holds its credential.
  */
-public enum MachineKind {
+public enum MachineType {
 
     /**
      * A caller someone provisioned by hand: a SYSTEM-scope platform daemon such as the vm-manager, or an

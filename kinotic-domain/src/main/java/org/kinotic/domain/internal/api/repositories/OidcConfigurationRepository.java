@@ -9,7 +9,7 @@ import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.domain.api.model.security.ApplicationSocialOidcConfiguration;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.OidcConfigurationType;
-import org.kinotic.domain.api.model.security.OidcProviderKind;
+import org.kinotic.domain.api.model.security.OidcProviderType;
 import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
 import org.kinotic.domain.api.model.security.OwnedOidcConfiguration;
 import org.kinotic.domain.internal.api.services.CrudServiceTemplate;
@@ -52,7 +52,7 @@ public class OidcConfigurationRepository extends AbstractRepository<OidcConfigur
     /**
      * The enabled org sign-up registration of the given provider kind, or {@code null} when there is none.
      */
-    public Future<OrgSignupOidcConfiguration> findEnabledOrgSignupByProvider(OidcProviderKind provider) {
+    public Future<OrgSignupOidcConfiguration> findEnabledOrgSignupByProvider(OidcProviderType provider) {
         return findFirst(b -> b.query(composeFilter(
                 termFilter(TYPE_FIELD, OidcConfigurationType.ORG_SIGNUP.name()),
                 termFilter(PROVIDER_FIELD, provider.key()),
@@ -72,7 +72,7 @@ public class OidcConfigurationRepository extends AbstractRepository<OidcConfigur
      * The enabled social registrations of the given provider kinds, in the order of {@code providers}. A kind
      * the platform holds no enabled registration for is left out.
      */
-    public Future<List<ApplicationSocialOidcConfiguration>> findEnabledSocialByProviders(Collection<OidcProviderKind> providers) {
+    public Future<List<ApplicationSocialOidcConfiguration>> findEnabledSocialByProviders(Collection<OidcProviderType> providers) {
         Future<List<ApplicationSocialOidcConfiguration>> ret;
         if (providers.isEmpty()) {
             ret = Future.succeededFuture(List.of());

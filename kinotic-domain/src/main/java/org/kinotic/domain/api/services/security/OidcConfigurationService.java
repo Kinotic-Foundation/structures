@@ -8,7 +8,7 @@ import org.kinotic.domain.api.model.security.ApplicationOidcConfiguration;
 import org.kinotic.domain.api.model.security.ApplicationSocialOidcConfiguration;
 import org.kinotic.domain.api.model.security.ManagedOidcConfiguration;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
-import org.kinotic.domain.api.model.security.OidcProviderKind;
+import org.kinotic.domain.api.model.security.OidcProviderType;
 import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
 import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
 import org.kinotic.domain.api.model.security.OwnedOidcConfiguration;
@@ -23,7 +23,7 @@ import java.util.Collection;
  * {@link ManagedOidcConfiguration} is saved or deleted by a system participant only, an
  * {@link OwnedOidcConfiguration} by an organization participant of the organization it names, and an
  * {@link ApplicationOidcConfiguration} must name an application of that organization. An organization's
- * configuration must name a provider kind {@link OidcProviderKind#offeredToOrganizations() offered to
+ * configuration must name a provider kind {@link OidcProviderType#offeredToOrganizations() offered to
  * organizations} and its account there in the form the kind expects; its authority is derived from the
  * two on every save. The finders that serve the sign-in flows, which run before a participant is bound,
  * check no participant and say so.
@@ -44,7 +44,7 @@ public interface OidcConfigurationService extends IdentifiableCrudService<OidcCo
      * is configured, for the social-button start endpoints resolving the {@code :provider} path param.
      * Checks no participant.
      */
-    Future<OrgSignupOidcConfiguration> findEnabledOrgSignupByProvider(OidcProviderKind provider);
+    Future<OrgSignupOidcConfiguration> findEnabledOrgSignupByProvider(OidcProviderType provider);
 
     /**
      * The org sign-up registration {@code id}, enabled or not, or {@code null} when no

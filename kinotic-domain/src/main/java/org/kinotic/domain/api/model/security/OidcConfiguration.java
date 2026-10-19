@@ -47,7 +47,7 @@ public abstract sealed class OidcConfiguration implements Identifiable<String>
     /**
      * Provider kind selector — drives the Vert.x provider factory chosen at runtime.
      */
-    private OidcProviderKind provider;
+    private OidcProviderType provider;
 
     /**
      * The OAuth 2.0 client identifier issued by the provider when Kinotic was registered

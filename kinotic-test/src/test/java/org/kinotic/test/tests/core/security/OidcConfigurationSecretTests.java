@@ -3,7 +3,7 @@ package org.kinotic.test.tests.core.security;
 import io.vertx.core.Future;
 import org.junit.jupiter.api.Test;
 import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
-import org.kinotic.domain.api.model.security.OidcProviderKind;
+import org.kinotic.domain.api.model.security.OidcProviderType;
 import org.kinotic.domain.api.services.security.OidcConfigurationService;
 import org.kinotic.test.support.kinotic.KinoticTestBase;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -85,7 +85,7 @@ public class OidcConfigurationSecretTests extends KinoticTestBase {
                 () -> oidcConfigurations.save(provider("Acme Okta", config -> config.setAuthority("https://evil.example")), null)));
         assertEquals("https://acme.okta.com", okta.getAuthority());
         OrganizationOidcConfiguration entra = await(runAsOrganization(() -> oidcConfigurations.save(provider("Acme Entra", config -> {
-            config.setProvider(OidcProviderKind.AZURE_AD);
+            config.setProvider(OidcProviderType.AZURE_AD);
             config.setProviderAccount("9f1a4c2e-3b7d-4e8f-a1b2-c3d4e5f60718");
         }), null)));
         assertEquals("https://login.microsoftonline.com/9f1a4c2e-3b7d-4e8f-a1b2-c3d4e5f60718/v2.0", entra.getAuthority());
@@ -99,9 +99,9 @@ public class OidcConfigurationSecretTests extends KinoticTestBase {
         assertInstanceOf(IllegalArgumentException.class,
                          failure(() -> oidcConfigurations.save(provider("Acme Okta", config -> config.setProviderAccount(null)))));
         assertInstanceOf(IllegalArgumentException.class,
-                         failure(() -> oidcConfigurations.save(provider("Acme Keycloak", config -> config.setProvider(OidcProviderKind.KEYCLOAK)))));
+                         failure(() -> oidcConfigurations.save(provider("Acme Keycloak", config -> config.setProvider(OidcProviderType.KEYCLOAK)))));
         assertInstanceOf(IllegalArgumentException.class,
-                         failure(() -> oidcConfigurations.save(provider("Anything", config -> config.setProvider(OidcProviderKind.OIDC)))));
+                         failure(() -> oidcConfigurations.save(provider("Anything", config -> config.setProvider(OidcProviderType.OIDC)))));
     }
 
     private Throwable failure(Supplier<Future<?>> call) {
@@ -119,7 +119,7 @@ public class OidcConfigurationSecretTests extends KinoticTestBase {
         ret.setOrganizationId(TEST_ORG_ID);
         ret.setProviderAccount("acme.okta.com");
         ret.setName(name)
-           .setProvider(OidcProviderKind.OKTA)
+           .setProvider(OidcProviderType.OKTA)
            .setClientId("acme-client")
            .setEnabled(true);
         return ret;

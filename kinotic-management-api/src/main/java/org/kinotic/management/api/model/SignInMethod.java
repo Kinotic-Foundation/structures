@@ -1,6 +1,7 @@
 package org.kinotic.management.api.model;
 
-import org.kinotic.domain.api.model.security.OidcProviderKind;
+import org.kinotic.domain.api.model.security.AuthType;
+import org.kinotic.domain.api.model.security.OidcProviderType;
 
 import java.util.Date;
 
@@ -10,12 +11,12 @@ import java.util.Date;
  *
  * @param id       what names the method to {@code ProfileService.removeSignInMethod}: the binding's id for a
  *                 provider identity, {@code "password"} for the password
- * @param kind     password or provider identity
+ * @param type     password or provider identity
  * @param name     the name to show: the configuration the identity was asserted under, or "Password"
- * @param provider the provider kind, for branding, or {@code null} for the password
+ * @param provider the provider type, for branding, or {@code null} for the password
  * @param created  when the method was added, or {@code null} for the password
  */
-public record SignInMethod(String id, SignInMethodKind kind, String name, OidcProviderKind provider, Date created) {
+public record SignInMethod(String id, AuthType type, String name, OidcProviderType provider, Date created) {
 
     /** The id of the account's password as a sign-in method. */
     public static final String PASSWORD_ID = "password";

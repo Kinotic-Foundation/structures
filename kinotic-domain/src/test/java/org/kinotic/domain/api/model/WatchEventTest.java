@@ -16,7 +16,7 @@ public class WatchEventTest {
         JsonMapper mapper = JsonMapper.builder().build();
         WatchEvent event = new WatchEvent(new Date(), WatchedType.WORKLOAD, "w1", "org-1",
                                           new WatchedParent(WatchedType.MICROSERVICE_DEPLOYMENT, "org-1", "svc-a"),
-                                          WatchEventKind.STATUS_CHANGED, "node n1", "server-1", null,
+                                          WatchEventType.STATUS_CHANGED, "node n1", "server-1", null,
                                           "Run STOPPED", mapper.valueToTree(Map.of("status", "STOPPED")));
 
         String json = mapper.writeValueAsString(event);

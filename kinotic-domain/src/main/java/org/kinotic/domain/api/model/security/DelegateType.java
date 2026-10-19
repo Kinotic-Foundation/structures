@@ -5,13 +5,13 @@ import lombok.RequiredArgsConstructor;
 import org.kinotic.domain.api.model.security.identity.DelegatingParticipantIdentity;
 
 /**
- * The kind of client a {@link DelegatingParticipantIdentity} represents, matching the OAuth
- * grant that authorizes it. Each kind fixes the {@link KinoticAudience} its tokens are minted
+ * The type of client a {@link DelegatingParticipantIdentity} represents, matching the OAuth
+ * grant that authorizes it. Each type fixes the {@link KinoticAudience} its tokens are minted
  * for, so a delegate's lineage can never carry a surface its grant did not serve.
  */
 @Getter
 @RequiredArgsConstructor
-public enum DelegateKind {
+public enum DelegateType {
 
     /**
      * The Kinotic CLI, authorized through the RFC 8628 device-code grant. One delegate per
@@ -26,6 +26,6 @@ public enum DelegateKind {
      */
     MCP_CLIENT(KinoticAudience.MCP_TOOLS);
 
-    /** The surface access tokens minted for this kind of delegate are valid for. */
+    /** The surface access tokens minted for this type of delegate are valid for. */
     private final KinoticAudience audience;
 }

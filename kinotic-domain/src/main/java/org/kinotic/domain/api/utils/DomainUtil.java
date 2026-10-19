@@ -489,9 +489,6 @@ public class DomainUtil {
     private static Map<String, String> participantMetadata(ParticipantIdentity identity) {
         Map<String, String> metadata = new HashMap<>();
         metadata.put(ParticipantConstants.PARTICIPANT_TYPE_METADATA_KEY, participantTypeFor(identity.getType()));
-        if (identity.getAuthType() != null) {
-            metadata.put("authType", identity.getAuthType().name());
-        }
         switch (identity) {
             case UserParticipantIdentity user -> {
                 metadata.put("email", user.getEmail());

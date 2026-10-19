@@ -11,7 +11,7 @@ import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.exceptions.AlreadyExistsException;
 import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.domain.api.model.WatchEvent;
-import org.kinotic.domain.api.model.WatchEventKind;
+import org.kinotic.domain.api.model.WatchEventType;
 import org.kinotic.domain.api.model.WatchedParent;
 import org.kinotic.domain.api.model.WatchedType;
 import org.kinotic.domain.internal.api.services.CrudServiceTemplate;
@@ -103,7 +103,7 @@ public class WatchEventRepository {
      */
     public Future<Page<WatchEvent>> findHistoryOfAll(WatchedType type,
                                                      String scope,
-                                                     List<WatchEventKind> kinds,
+                                                     List<WatchEventType> kinds,
                                                      Pageable pageable) {
         Validate.notNull(type, "type cannot be null");
         Validate.notBlank(scope, "scope cannot be blank");

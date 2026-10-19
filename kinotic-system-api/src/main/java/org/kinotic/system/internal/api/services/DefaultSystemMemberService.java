@@ -5,7 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
-import org.kinotic.domain.api.model.security.identity.MachineKind;
+import org.kinotic.domain.api.model.security.identity.MachineType;
 import org.kinotic.domain.api.model.security.identity.MachineParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.MachineProvisionResult;
 import org.kinotic.domain.api.model.security.Member;
@@ -42,7 +42,7 @@ public class DefaultSystemMemberService implements SystemMemberService {
         Validate.notBlank(displayName, "displayName is required");
         // leaving organizationId and applicationId unset is what makes the identity SYSTEM scope
         MachineParticipantIdentity machine = new MachineParticipantIdentity();
-        machine.setMachineKind(MachineKind.CLIENT)
+        machine.setMachineType(MachineType.CLIENT)
                .setDisplayName(displayName);
         return identityService.createMachine(machine);
     }
