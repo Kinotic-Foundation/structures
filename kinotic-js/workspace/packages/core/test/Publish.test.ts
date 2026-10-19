@@ -11,7 +11,7 @@ import { v4 as uuidv4 } from "uuid"
 // runtime's identity) and registers them in an app zone under its org; the org id is
 // DEFAULT_AUTH_HEADERS.organizationId.
 const APP_ID = 'test-app'
-const ZONE = `app.kinotic-test.${APP_ID}`
+const ZONE = `app.test-org.${APP_ID}`
 
 describe('Kinotic JS', () => {
   describe('packages/core', () => {
