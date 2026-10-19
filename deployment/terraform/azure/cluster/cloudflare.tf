@@ -22,6 +22,7 @@ module "cloudflare_sites" {
   worker_name                 = "${local.name_prefix}-sites"
   app_server_address          = data.kubernetes_service.server["kinotic-server-app"].status[0].load_balancer[0].ingress[0].ip
   sites_storage_blob_endpoint = module.sites.storage_blob_endpoint
+  sites_storage_sas           = module.sites.sites_read_sas
   portal_base_url             = "https://portal.${local.global.dns_zone_name}"
 }
 

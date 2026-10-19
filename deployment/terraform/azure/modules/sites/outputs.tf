@@ -22,3 +22,9 @@ output "frontdoor_endpoint_name" {
   description = "Its endpoint, for a cache purge; null without hostnames"
   value       = local.front_door == 1 ? azurerm_cdn_frontdoor_endpoint.sites[0].name : null
 }
+
+output "sites_read_sas" {
+  description = "The query string of the read-only SAS on the sites container, for the edge's reads; bound to the sites Worker as a secret"
+  value       = trimprefix(data.azurerm_storage_account_blob_container_sas.worker_read.sas, "?")
+  sensitive   = true
+}

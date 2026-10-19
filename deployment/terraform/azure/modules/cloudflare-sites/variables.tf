@@ -45,3 +45,9 @@ variable "portal_base_url" {
   description = "Where an organization's own host sends the browser, e.g. https://portal.kinotic.ai"
   type        = string
 }
+
+variable "sites_storage_sas" {
+  description = "The query string of the read-only SAS on the sites container, which the Worker appends to every read"
+  type        = string
+  sensitive   = true
+}

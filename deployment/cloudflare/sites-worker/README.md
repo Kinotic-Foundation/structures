@@ -11,4 +11,4 @@ which reach the app server directly.
 - `<org>.<sites domain>` redirects to the portal's login for the organization.
 
 `worker.js` is deployed as it is by `deployment/terraform/azure/modules/cloudflare-sites`, which also
-sets its bindings. Run its tests with `bun test` here; CI runs them with the JS workspace tests.
+sets its bindings, among them the read-only SAS on the private sites container that signs every read. Run its tests with `bun test` here; CI runs them with the JS workspace tests.

@@ -14,6 +14,7 @@
  * Bindings (environment variables set by terraform):
  *   SITES_DOMAIN        the domain every organization's sites are under, e.g. kinotic.io or dev-nm.kinotic.io
  *   SITES_STORAGE_URL   the blob endpoint of the sites account, e.g. https://stkinoticsites.blob.core.windows.net
+ *   SITES_STORAGE_SAS   the query string of the read-only SAS on the sites container, a secret, which signs every read
  *   PORTAL_BASE_URL     where an organization's host sends the browser, e.g. https://portal.kinotic.ai
  */
 
@@ -106,7 +107,8 @@ export default {
         }
         const file = resolveFile(url.pathname)
         const ttl = cacheTtl(file)
-        const origin = env.SITES_STORAGE_URL + '/' + SITES_CONTAINER + '/' + resolved.site + file
+        // the container is private, so the read carries the SAS; the response alone reaches the browser
+        const origin = env.SITES_STORAGE_URL + '/' + SITES_CONTAINER + '/' + resolved.site + file + '?' + env.SITES_STORAGE_SAS
         const answer = await fetch(origin, {
             method: request.method,
             cf: { cacheEverything: true, cacheTtlByStatus: { '200-299': ttl, '404': 10, '500-599': 0 } },

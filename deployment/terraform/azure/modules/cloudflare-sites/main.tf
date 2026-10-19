@@ -96,6 +96,7 @@ resource "cloudflare_workers_script" "sites" {
   bindings = [
     { name = "SITES_DOMAIN", type = "plain_text", text = local.sites_domain },
     { name = "SITES_STORAGE_URL", type = "plain_text", text = trimsuffix(var.sites_storage_blob_endpoint, "/") },
+    { name = "SITES_STORAGE_SAS", type = "secret_text", text = var.sites_storage_sas },
     { name = "PORTAL_BASE_URL", type = "plain_text", text = var.portal_base_url },
   ]
 }
