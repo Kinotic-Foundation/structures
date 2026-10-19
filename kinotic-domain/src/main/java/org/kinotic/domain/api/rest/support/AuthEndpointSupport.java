@@ -12,6 +12,7 @@ import org.kinotic.core.api.exceptions.AuthenticationException;
 import org.kinotic.core.api.security.ConnectedInfo;
 import org.kinotic.core.api.security.Participant;
 import org.kinotic.core.api.security.SessionBinding;
+import org.kinotic.domain.api.exceptions.ExistingAccountException;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
 import org.kinotic.domain.api.model.security.OwnedOidcConfiguration;
@@ -509,7 +510,7 @@ public abstract class AuthEndpointSupport {
             template.setEmail(email)
                     .setDisplayName(OAuth2Util.firstPresent(claims, "name", "preferred_username", "email"));
             ret = identityService.createOidcUser(template, result.config().getId(), sub)
-                                 .recover(err -> Future.failedFuture(err instanceof IllegalArgumentException
+                                 .recover(err -> Future.failedFuture(err instanceof ExistingAccountException
                                          ? new OidcCallbackException(OidcErrorCodes.ACCOUNT_EXISTS) : err));
         }
         return ret;

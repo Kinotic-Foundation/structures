@@ -36,14 +36,6 @@ public class ParticipantIdentityRepository extends AbstractRepository<Participan
                 .map(UserParticipantIdentity.class::cast);
     }
 
-    /** How many users hold {@code email} in the scope, as the index currently sees them. */
-    public Future<Long> countByEmail(String email, String organizationId, String applicationId) {
-        Validate.notBlank(email, "email cannot be blank");
-        return count(b -> b.query(composeFilter(
-                termFilter("email", DomainUtil.normalizeEmail(email)),
-                scopeFilter(organizationId, applicationId))));
-    }
-
     /** Users only — delegates share their owner's scope and must not appear in member listings. */
     public Future<Page<UserParticipantIdentity>> findUsersByScope(String organizationId, String applicationId, Pageable pageable) {
         return findAll(pageable, b -> b.query(composeFilter(

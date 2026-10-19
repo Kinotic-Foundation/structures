@@ -110,7 +110,7 @@ public class DefaultMembershipService implements MembershipService {
                                    .filter(membership -> byId.containsKey(membership.getIdentityId()))
                                    .map(membership -> member(byId.get(membership.getIdentityId()), membership, claimed.contains(membership.getIdentityId())))
                                    .toList();
-        return new Page<>(members, page.getTotalElements());
+        return new Page<>(members, page.getTotalElements() - (page.getContent().size() - members.size()));
     }
 
     private static Member member(UserParticipantIdentity account, Membership membership, boolean claimed) {

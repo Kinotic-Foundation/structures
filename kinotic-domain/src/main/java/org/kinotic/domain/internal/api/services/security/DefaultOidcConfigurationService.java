@@ -83,6 +83,9 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
             ret = ret.compose(v -> oidcRepository.findById(entity.getId()).map(existing -> {
                 if (existing != null) {
                     requireOwner(existing);
+                    // the kind is the scope the configuration is offered at and keys its bindings, so a row never changes it
+                    Validate.isTrue(existing.getClass() == entity.getClass(), "Configuration %s is a %s, which a %s cannot replace",
+                                    entity.getId(), existing.getClass().getSimpleName(), entity.getClass().getSimpleName());
                 }
                 return null;
             }));

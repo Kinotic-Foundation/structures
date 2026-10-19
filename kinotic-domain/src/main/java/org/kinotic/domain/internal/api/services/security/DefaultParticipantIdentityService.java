@@ -17,7 +17,9 @@ import org.kinotic.domain.api.model.security.identity.Membership;
 import org.kinotic.domain.api.model.security.identity.OidcBinding;
 import org.kinotic.domain.api.model.security.participant.ParticipantScope;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
+import org.kinotic.core.api.exceptions.AlreadyExistsException;
 import org.kinotic.domain.api.exceptions.AccountDisabledException;
+import org.kinotic.domain.api.exceptions.ExistingAccountException;
 import org.kinotic.domain.api.services.security.MembershipService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.internal.api.model.IdentityCredential;
@@ -33,6 +35,7 @@ import org.springframework.stereotype.Component;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 @Component
@@ -132,20 +135,16 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
                 });
     }
 
-    private static IllegalArgumentException emailTaken(UserParticipantIdentity user) {
-        return new IllegalArgumentException("ParticipantIdentity with email " + user.getEmail() + " already exists in scope "
+    private static ExistingAccountException emailTaken(UserParticipantIdentity user) {
+        return new ExistingAccountException("ParticipantIdentity with email " + user.getEmail() + " already exists in scope "
                                             + DomainUtil.describeScope(user.getOrganizationId(), user.getApplicationId()));
     }
 
-    // beforeSave's lookup is a search, which misses a user written within the index's refresh window, so two
-    // creations under one email at once both pass it; after its own write each refreshes the index and looks
-    // again, and one that sees another withdraws, so an email is held by one user at most
-    private Future<UserParticipantIdentity> requireSoleHolderOfEmail(UserParticipantIdentity user) {
-        return identityRepository.syncIndex()
-                                 .compose(v -> identityRepository.countByEmail(user.getEmail(), user.getOrganizationId(), user.getApplicationId()))
-                                 .compose(count -> count > 1
-                                         ? identityRepository.deleteById(user.getId()).transform(v -> Future.failedFuture(emailTaken(user)))
-                                         : Future.succeededFuture(user));
+    // a name-based UUID of the scope and the email, so the users of one email in one scope contend for one id
+    private static String accountId(UserParticipantIdentity user) {
+        String key = Objects.toString(user.getOrganizationId(), "") + "/" + Objects.toString(user.getApplicationId(), "")
+                + "/" + DomainUtil.normalizeEmail(user.getEmail());
+        return UUID.nameUUIDFromBytes(key.getBytes(StandardCharsets.UTF_8)).toString();
     }
 
     /**
@@ -262,15 +261,15 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
             if (account == null) {
                 ret = Future.succeededFuture();
             } else {
-                ret = membershipService.findMembership(account.getId(), organizationId)
-                                       .compose(membership -> membership == null
-                                               ? Future.succeededFuture(false)
-                                               : hasSignInMethod(account.getId()).map(claimed -> !claimed))
-                                       .compose(claimable -> claimable
-                                               // the organization created the account and nobody else can sign in to it, so its
-                                               // own directory's word on the email is what claims it
-                                               ? bind(account, oidcConfigId, subject).compose(binding -> membershipService.resolveMember(account, organizationId))
-                                               : Future.succeededFuture());
+                // the membership is resolved first, so a sign-in the membership refuses claims nothing
+                ret = membershipService.resolveMember(account, organizationId)
+                                       .compose(member -> member == null
+                                               ? Future.succeededFuture()
+                                               : hasSignInMethod(account.getId()).compose(claimed -> claimed
+                                                       ? Future.succeededFuture()
+                                                       // the organization created the account and nobody else can sign in to it, so
+                                                       // its own directory's word on the email is what claims it
+                                                       : bind(account, oidcConfigId, subject).map(member)));
             }
             return ret;
         });
@@ -320,7 +319,7 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
         validateScopeFields(user);
 
         if (user.getId() == null) {
-            user.setId(UUID.randomUUID().toString());
+            user.setId(accountId(user));
         }
 
         Date now = new Date();
@@ -329,9 +328,12 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
         user.setEnabled(true);
 
         return applyTenantPolicy(user)
-                .compose(this::save)
+                .compose(this::create)
+                // beforeSave's lookup is a search, which misses a user written within the index's refresh window; the
+                // create refuses an id already held, which the index guarantees whatever its shards, so of two creations
+                // under one email at once exactly one succeeds
+                .recover(err -> err instanceof AlreadyExistsException ? Future.failedFuture(emailTaken(user)) : Future.failedFuture(err))
                 .map(UserParticipantIdentity.class::cast)
-                .compose(this::requireSoleHolderOfEmail)
                 .compose(savedUser -> {
                     if (password != null) {
                         return saveCredential(savedUser.getId(), password).map(savedUser);
@@ -347,7 +349,9 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
         // checked before the user exists, so a bound identity leaves no user behind that no method signs in
         return bindingRepository.findById(OidcBinding.idOf(oidcConfigId, subject, user.getOrganizationId(), user.getApplicationId()))
                                 .compose(existing -> {
-                                    Validate.isTrue(existing == null, "This identity already signs in another user");
+                                    if (existing != null) {
+                                        throw new ExistingAccountException("This identity already signs in another user");
+                                    }
                                     return createUser(user, null);
                                 })
                                 .compose(created -> bind(created, oidcConfigId, subject).map(created));

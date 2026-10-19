@@ -4,6 +4,8 @@ import io.vertx.core.Future;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import lombok.extern.slf4j.Slf4j;
+import org.kinotic.domain.api.rest.support.OidcCallbackException;
+import org.kinotic.domain.api.rest.support.OidcErrorCodes;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.rest.SuppliesGatewayRoutes;
 import org.kinotic.domain.api.rest.support.AuthEndpointSupport;
@@ -82,7 +84,15 @@ public class OrganizationOidcCallbackHandler implements SuppliesGatewayRoutes {
         // read before the callback is handled, which consumes the flow whether or not it validates
         PendingFlow flow = oidcFlowOrchestrator.pendingFlow(ctx);
         oidcFlowOrchestrator.handleCallback(ctx, configId, callbackUrl, resolver)
-                            .onSuccess(result -> completers.get(result.purpose()).complete(ctx, result))
+                            .onSuccess(result -> {
+                                OidcFlowCompleter completer = completers.get(result.purpose());
+                                if (completer == null) {
+                                    // a flow recorded with no purpose, as one started before purposes were recorded, has no page to return to
+                                    authEndpointSupport.redirectCallbackFailure(ctx, new OidcCallbackException(OidcErrorCodes.INVALID_CALLBACK));
+                                } else {
+                                    completer.complete(ctx, result);
+                                }
+                            })
                             .onFailure(failure -> {
                                 log.warn("OIDC callback failed for config {}: {}", configId, failure.getMessage());
                                 if (flow == null || flow.purpose() == null) {

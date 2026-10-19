@@ -124,9 +124,11 @@ public interface ParticipantIdentityService extends IdentifiableCrudService<Part
      * Creates a user, assigning id and dates and enabling it: an account when the user carries no scope,
      * an application's user when it carries one. A password given becomes the user's credential;
      * {@code null} creates a user that signs in by an OIDC binding, added with
-     * {@link #bindOidcIdentity} or by {@link #createOidcUser}. Enforces one user per email within the
-     * scope. For APPLICATION-scope users whose application's tenants are {@code TenantManagement.PLATFORM}
-     * managed, a unique {@code tenantId} is auto-generated unless one was supplied.
+     * {@link #bindOidcIdentity} or by {@link #createOidcUser}. One user holds an email within a scope: the id
+     * minted for the user is derived from its scope and email, and a creation under an email the scope already
+     * holds fails with {@link org.kinotic.domain.api.exceptions.ExistingAccountException}, two at once included.
+     * For APPLICATION-scope users whose application's tenants are {@code TenantManagement.PLATFORM} managed, a
+     * unique {@code tenantId} is auto-generated unless one was supplied.
      *
      * @param user     the unsaved user carrying email, scope, and optional display name
      * @param password the password for a user that signs in with one, or null

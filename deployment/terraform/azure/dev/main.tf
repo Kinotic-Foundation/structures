@@ -140,7 +140,7 @@ locals {
     touch "$f"
     awk '
       /^# kinotic-server Azure identity/ { skip = 1 }
-      skip && /^KINOTIC_DOMAIN_PUBLISHEDSITES_CLOUDFLARE_APITOKEN=/ { skip = 0; next }
+      skip && /^AZURE_TENANT_ID=/ { skip = 0; next }
       skip { next }
       /^AZURE_(CLIENT_ID|CLIENT_SECRET|TENANT_ID)=/ { next }
       /^KINOTIC_DOMAIN_PUBLISHEDSITES_CLOUDFLARE_APITOKEN=/ { next }

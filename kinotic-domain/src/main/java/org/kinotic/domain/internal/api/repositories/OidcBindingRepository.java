@@ -3,6 +3,7 @@ package org.kinotic.domain.internal.api.repositories;
 import co.elastic.clients.elasticsearch._types.FieldValue;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import io.vertx.core.Future;
+import java.util.ArrayList;
 import java.util.Collection;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.core.api.crud.Page;
@@ -18,6 +19,8 @@ public class OidcBindingRepository extends AbstractRepository<OidcBinding> {
 
     // the most provider identities one user signs in with
     private static final int MAX_BINDINGS = 50;
+    // MAX_BINDINGS bindings each keeps a read under Elasticsearch's default result window of 10,000 hits
+    private static final int IDENTITIES_PER_READ = 100;
 
     public OidcBindingRepository(CrudServiceTemplate crudServiceTemplate) {
         super("kinotic_oidc_binding", OidcBinding.class, crudServiceTemplate);
@@ -31,17 +34,17 @@ public class OidcBindingRepository extends AbstractRepository<OidcBinding> {
                 .map(Page::getContent);
     }
 
-    /** The bindings of the users {@code identityIds}, in one read. */
+    /** The bindings of the users {@code identityIds}. */
     public Future<List<OidcBinding>> findByIdentities(Collection<String> identityIds) {
-        Future<List<OidcBinding>> ret;
-        if (identityIds.isEmpty()) {
-            ret = Future.succeededFuture(List.of());
-        } else {
-            List<FieldValue> ids = identityIds.stream().map(FieldValue::of).toList();
-            ret = findAll(Pageable.ofSize(MAX_BINDINGS * identityIds.size()),
-                          b -> b.query(Query.of(q -> q.terms(t -> t.field("identityId").terms(v -> v.value(ids))))))
-                    .map(Page::getContent);
+        // a read of every binding of a chunk of users stays within the index's result window
+        List<String> all = List.copyOf(identityIds);
+        List<Future<List<OidcBinding>>> chunks = new ArrayList<>();
+        for (int from = 0; from < all.size(); from += IDENTITIES_PER_READ) {
+            List<FieldValue> ids = all.subList(from, Math.min(from + IDENTITIES_PER_READ, all.size())).stream().map(FieldValue::of).toList();
+            chunks.add(findAll(Pageable.ofSize(MAX_BINDINGS * ids.size()),
+                               b -> b.query(Query.of(q -> q.terms(t -> t.field("identityId").terms(v -> v.value(ids))))))
+                               .map(Page::getContent));
         }
-        return ret;
+        return Future.all(chunks).map(cf -> cf.<List<OidcBinding>>list().stream().flatMap(List::stream).toList());
     }
 }

@@ -133,7 +133,8 @@ public class MemberProvisioningTests extends KinoticTestBase {
     @Test
     public void anAddressAddedTwiceAtOnceIsOneMember() throws Exception {
         String email = "twice-" + suffix() + "@example.test";
-        // both calls look the address up before either account is written, so the index tells neither of the other
+        // both calls look the address up before either account is written, so the index tells neither of the other;
+        // the account's id is derived from the address, so the create of one of them is refused
         CompositeFuture both = await(asAdministrator(() -> {
             CompositeFuture joined = Future.join(members.addMember(email, "Pat Twice", false), members.addMember(email, "Pat Twice", false));
             return joined.transform(v -> Future.succeededFuture(joined));
@@ -146,7 +147,7 @@ public class MemberProvisioningTests extends KinoticTestBase {
                 assertInstanceOf(IllegalArgumentException.class, both.cause(i));
             }
         }
-        assertTrue(added <= 1, "both additions succeeded");
+        assertEquals(1, added, "exactly one addition succeeds");
         await(identities.syncIndex());
         Page<Member> page = await(asAdministrator(() -> members.findMembers(null, Pageable.ofSize(1000))));
         assertEquals(added, page.getContent().stream().filter(member -> email.equals(member.email())).count());
@@ -234,6 +235,13 @@ public class MemberProvisioningTests extends KinoticTestBase {
         await(asAdministrator(() -> members.removeMember(added.id())));
         assertNull(await(identities.findById(added.id())));
         assertNull(await(invites.findPendingInvite(email, organization.getId())));
+
+        // the address can be added again: the account takes the id the address derives, and nothing of the old one is left
+        Member again = await(asAdministrator(() -> members.addMember(email, "Pat Again", false)));
+        assertEquals(added.id(), again.id());
+        assertTrue(again.pending());
+        assertFalse(await(identities.hasSignInMethod(again.id())));
+        assertNotNull(await(memberships.findMembership(again.id(), organization.getId())));
     }
 
     @Test

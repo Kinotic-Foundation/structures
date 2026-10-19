@@ -379,15 +379,14 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
                     .compose(account -> {
                         Future<Participant> ret;
                         if (account != null) {
-                            ret = membershipService.resolveMember(account, result.orgId());
+                            ret = memberOf(account, result.orgId());
                         } else if (result.config() instanceof OwnedOidcConfiguration && email != null) {
                             // only the organization's own directory may claim the member the organization provisioned
-                            ret = identityService.claimProvisionedAccount(result.config().getId(), sub, email, result.orgId());
+                            ret = refusingDisabled(identityService.claimProvisionedAccount(result.config().getId(), sub, email, result.orgId()));
                         } else {
                             ret = Future.succeededFuture();
                         }
-                        return ret.recover(err -> Future.failedFuture(err instanceof AccountDisabledException
-                                ? new OidcCallbackException(OidcErrorCodes.ACCOUNT_DISABLED) : err));
+                        return ret;
                     });
             authEndpointSupport.completeLogin(ctx, result.origin(), participant);
         }
@@ -398,11 +397,13 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
      * member; a disabled account or membership fails the sign-in with {@link OidcErrorCodes#ACCOUNT_DISABLED}.
      */
     private Future<Participant> memberOf(UserParticipantIdentity account, String orgId) {
-        return account == null
-                ? Future.succeededFuture()
-                : membershipService.resolveMember(account, orgId)
-                                   .recover(err -> Future.failedFuture(err instanceof AccountDisabledException
-                                           ? new OidcCallbackException(OidcErrorCodes.ACCOUNT_DISABLED) : err));
+        return account == null ? Future.succeededFuture() : refusingDisabled(membershipService.resolveMember(account, orgId));
+    }
+
+    // a refused account fails the sign-in with the error code the login page names
+    private static Future<Participant> refusingDisabled(Future<Participant> participant) {
+        return participant.recover(err -> Future.failedFuture(err instanceof AccountDisabledException
+                ? new OidcCallbackException(OidcErrorCodes.ACCOUNT_DISABLED) : err));
     }
 
     // the origin of the portal's pages, which a start reached by a link belongs to

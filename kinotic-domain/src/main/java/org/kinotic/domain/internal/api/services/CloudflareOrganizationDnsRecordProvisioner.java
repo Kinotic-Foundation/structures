@@ -19,16 +19,17 @@ import org.kinotic.domain.api.services.OrganizationDnsRecordProvisioner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Locale;
 
 /**
- * Creates each organization's record as one proxied wildcard DNS record, {@code *.<org>} under the published
- * sites domain, in the Cloudflare zone {@code kinotic.domain.publishedSites.cloudflare.zoneId}. The record points
- * at a placeholder address because the zone's sites Worker answers every request to it; its existence is what
- * the zone's Total TLS issues the organization's wildcard certificate from. The name is looked up before the record
- * is created, and a create the zone refuses as a duplicate finds the record it refused for, so ensuring an
- * organization any number of times, at once or in turn, leaves one record, and a record of any type already held
- * under the name, as an operator may make, is left as it is.
+ * Creates each organization's records as proxied DNS records under the published sites domain, in the Cloudflare
+ * zone {@code kinotic.domain.publishedSites.cloudflare.zoneId}: the wildcard {@code *.<org>} for its sites and
+ * {@code <org>} for its own host. Each points at a placeholder address because the zone's sites Worker answers
+ * every request to it; their existence is what the zone's Total TLS issues the organization's certificates from.
+ * A name is looked up before its record is created, and a create the zone refuses as a duplicate finds the record
+ * it refused for, so ensuring an organization any number of times, at once or in turn, leaves one record per name,
+ * and a record of any type already held under a name, as an operator may make, is left as it is.
  */
 @Slf4j
 @Component
@@ -68,18 +69,23 @@ public class CloudflareOrganizationDnsRecordProvisioner implements OrganizationD
     @Override
     public Future<Void> ensure(String organizationId) {
         Validate.notBlank(organizationId, "organizationId cannot be blank");
-        return recordName(organizationId)
-                .compose(name -> findRecord(name)
-                        .compose(existing -> existing != null ? Future.succeededFuture() : createRecord(name, organizationId)));
+        return recordNames(organizationId)
+                .compose(names -> Future.all(names.stream().map(name -> ensureRecord(name, organizationId)).toList()))
+                .mapEmpty();
     }
 
-    // the record's full name, *.<org> followed by the sites domain's labels within the zone
-    private Future<String> recordName(String organizationId) {
+    private Future<Void> ensureRecord(String name, String organizationId) {
+        return findRecord(name).compose(existing -> existing != null ? Future.succeededFuture() : createRecord(name, organizationId));
+    }
+
+    // the records' full names, *.<org> for the organization's sites and <org> for its own host, each followed by the
+    // sites domain's labels within the zone; a wildcard never matches its own label, so the host needs a record of its own
+    private Future<List<String>> recordNames(String organizationId) {
         return zoneName().map(zone -> {
             String domain = sitesDomain().toLowerCase(Locale.ROOT);
             Validate.isTrue(domain.equals(zone) || domain.endsWith("." + zone),
                             "The sites domain %s is not in the Cloudflare zone %s", domain, zone);
-            return "*." + organizationId + "." + domain;
+            return List.of("*." + organizationId + "." + domain, organizationId + "." + domain);
         });
     }
 
