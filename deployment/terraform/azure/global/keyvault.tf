@@ -47,49 +47,22 @@ resource "terraform_data" "wait_for_kv_rbac" {
 }
 
 # ── Initial key material ──────────────────────────────────────────────────────
-# 32 random bytes each, base64-standard encoded. Consumed by the Java side as raw bytes
-# (Base64.getDecoder().decode(...)). `b64_std` attribute produces padded base64 which our
-# VersionedKeySet parser accepts.
+# 32 random bytes each, as padded standard base64, which the Java side decodes with
+# Base64.getDecoder(). random_bytes marks the value sensitive, so plan, apply and state show
+# never print it.
 
 locals {
   # Each server signs its tokens with a key set of its own
   servers = ["kinotic-server-management", "kinotic-server-system", "kinotic-server-app"]
 }
 
-resource "random_id" "jwt_signing_key_v1" {
-  for_each    = toset(local.servers)
-  byte_length = 32
+resource "random_bytes" "jwt_signing_key_v1" {
+  for_each = toset(local.servers)
+  length   = 32
 }
 
-# The management server keeps the key set the single server signed with
-moved {
-  from = random_id.jwt_signing_key_v1
-  to   = random_id.jwt_signing_key_v1["kinotic-org-server"]
-}
-
-# The servers' modules were renamed; each key set follows its server's new name
-moved {
-  from = random_id.jwt_signing_key_v1["kinotic-org-server"]
-  to   = random_id.jwt_signing_key_v1["kinotic-server-management"]
-}
-
-moved {
-  from = random_id.jwt_signing_key_v1["kinotic-system-server"]
-  to   = random_id.jwt_signing_key_v1["kinotic-server-system"]
-}
-
-moved {
-  from = random_id.jwt_signing_key_v1["kinotic-app-server"]
-  to   = random_id.jwt_signing_key_v1["kinotic-server-app"]
-}
-
-resource "random_id" "secret_storage_master_key" {
-  byte_length = 32
-}
-
-moved {
-  from = random_id.secret_storage_master_key_v1
-  to   = random_id.secret_storage_master_key
+resource "random_bytes" "secret_storage_master_key" {
+  length = 32
 }
 
 # ── Secrets ───────────────────────────────────────────────────────────────────
@@ -106,7 +79,7 @@ resource "azurerm_key_vault_secret" "jwt_signing_keys" {
   value = jsonencode({
     activeKeyId = "v1"
     keys = [
-      { id = "v1", key = random_id.jwt_signing_key_v1[each.key].b64_std },
+      { id = "v1", key = random_bytes.jwt_signing_key_v1[each.key].base64 },
     ]
   })
 
@@ -120,7 +93,7 @@ resource "azurerm_key_vault_secret" "jwt_signing_keys" {
 }
 
 # The secrets follow their servers' new names too. A Key Vault secret's name forces replacement,
-# so each is recreated under the new name with the same key material, which the random_id above keeps
+# so each is recreated under the new name
 moved {
   from = azurerm_key_vault_secret.jwt_signing_keys["kinotic-org-server"]
   to   = azurerm_key_vault_secret.jwt_signing_keys["kinotic-server-management"]
@@ -142,7 +115,7 @@ moved {
 resource "azurerm_key_vault_secret" "secret_storage_master_key" {
   name         = "kinotic-secret-storage-master-key"
   key_vault_id = azurerm_key_vault.platform.id
-  value        = random_id.secret_storage_master_key.b64_std
+  value        = random_bytes.secret_storage_master_key.base64
 
   tags = local.common_tags
 
