@@ -115,7 +115,7 @@ public class WatchEventRepository {
                 PrefixQuery.of(p -> p.field("parent").value(WatchedParent.valuePrefix(type, scope)))._toQuery());
         List<FieldValue> kindValues = kinds.stream().map(kind -> FieldValue.of(kind.name())).toList();
         return crudServiceTemplate.search(DATA_STREAM, pageable, WatchEvent.class,
-                                          b -> b.query(q -> q.bool(bq -> bq.filter(f -> f.terms(t -> t.field("kind")
+                                          b -> b.query(q -> q.bool(bq -> bq.filter(f -> f.terms(t -> t.field("eventType")
                                                                                                        .terms(v -> v.value(kindValues))))
                                                                            .should(about)
                                                                            .minimumShouldMatch("1")))

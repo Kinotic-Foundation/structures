@@ -298,7 +298,7 @@ public class WatchedStateRepository {
         stamped.put("eventId", UUID.randomUUID().toString());
         // the script stamps the entry's time, scope, parent and generation as the write leaves the record
         stamped.put("event", new WatchEvent(null, document.index().type(), document.id(), null, null,
-                                            change.kind(), change.source(), kinotic.serverInfo().getNodeId(), null,
+                                            change.eventType(), change.source(), kinotic.serverInfo().getNodeId(), null,
                                             change.message(), crudServiceTemplate.getObjectMapper().valueToTree(change.value())));
         return crudServiceTemplate.scriptedUpdateReturningSourceSync(document.index().name(), document.documentId(), script, stamped,
                                                                      request(document, upsert))

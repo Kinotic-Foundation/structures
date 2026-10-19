@@ -16,7 +16,7 @@ import java.util.Date;
  * @param scope        the scope the record is addressed under, as its repository's {@code scopeOf} gives
  *                     it: its organization for a record an organization owns, null for a node
  * @param parent       what the record belongs to, null for a record the platform made on its own
- * @param kind         what happened
+ * @param eventType    what happened
  * @param source       what caused it: the node that reported, the operator, the orchestrator's inference
  * @param serverNodeId the server node that wrote it
  * @param generation   the record's generation when written, null for a record that carries none
@@ -28,7 +28,7 @@ public record WatchEvent(@JsonProperty("@timestamp") Date timestamp,
                          String id,
                          String scope,
                          WatchedParent parent,
-                         WatchEventType kind,
+                         WatchEventType eventType,
                          String source,
                          String serverNodeId,
                          Long generation,

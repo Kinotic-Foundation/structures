@@ -25,7 +25,7 @@ public class WatchEventTest {
         assertTrue(json.contains("\"@timestamp\""), json);
         assertEquals(event.timestamp(), read.timestamp());
         assertEquals(event.parent(), read.parent());
-        assertEquals(event.kind(), read.kind());
+        assertEquals(event.eventType(), read.eventType());
         assertEquals(mapper.valueToTree(Map.of("status", "STOPPED")), read.value());
     }
 }

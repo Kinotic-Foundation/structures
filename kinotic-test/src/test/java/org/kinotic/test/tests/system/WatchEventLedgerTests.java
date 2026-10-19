@@ -80,8 +80,8 @@ public class WatchEventLedgerTests extends KinoticTestBase {
 
         assertTrue(awaitUntil(() -> history().size() == 4), "the writes never reached the ledger");
         List<WatchEvent> history = history();
-        assertEquals(WatchEventType.CONDITION_CLEARED, history.get(0).kind(), history.toString());
-        assertEquals(WatchEventType.CONDITION_SET, history.get(1).kind(), history.toString());
+        assertEquals(WatchEventType.CONDITION_CLEARED, history.get(0).eventType(), history.toString());
+        assertEquals(WatchEventType.CONDITION_SET, history.get(1).eventType(), history.toString());
         for (int i = 1; i < history.size(); i++) {
             Date newer = history.get(i - 1).timestamp();
             Date older = history.get(i).timestamp();
@@ -102,7 +102,7 @@ public class WatchEventLedgerTests extends KinoticTestBase {
         assertTrue(awaitUntil(this::conditionSetEntered), "the master never entered the held entry");
         assertTrue(awaitUntil(() -> await(nodes.findById(nodeId)).getState().getUnrecorded().isEmpty()),
                    "the record still holds the entry once it is entered");
-        assertEquals(1, history().stream().filter(event -> event.kind() == WatchEventType.CONDITION_SET).count(),
+        assertEquals(1, history().stream().filter(event -> event.eventType() == WatchEventType.CONDITION_SET).count(),
                      "the entry was entered once");
     }
 
@@ -122,7 +122,7 @@ public class WatchEventLedgerTests extends KinoticTestBase {
         assertNull(await(nodes.findById(nodeId)));
         assertTrue(awaitUntil(() -> await(watchEvents.findHistory(WatchedType.VM_NODE, null, nodeId, Pageable.create(0, 50, null)))
                                            .getContent().stream()
-                                           .anyMatch(event -> event.kind() == WatchEventType.CONDITION_SET && SOURCE.equals(event.source()))),
+                                           .anyMatch(event -> event.eventType() == WatchEventType.CONDITION_SET && SOURCE.equals(event.source()))),
                    "the held entry was not entered before the record was deleted");
     }
 
@@ -131,7 +131,7 @@ public class WatchEventLedgerTests extends KinoticTestBase {
     }
 
     private boolean conditionSetEntered() throws Exception {
-        return history().stream().anyMatch(event -> event.kind() == WatchEventType.CONDITION_SET && SOURCE.equals(event.source()));
+        return history().stream().anyMatch(event -> event.eventType() == WatchEventType.CONDITION_SET && SOURCE.equals(event.source()));
     }
 
     private List<WatchEvent> history() throws Exception {

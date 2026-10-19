@@ -81,9 +81,9 @@ public class DeploymentHistoryTests extends KinoticTestBase {
                      describe(history(member(ACME_CORP))));
     }
 
-    private void enter(String id, WatchedType type, String scope, WatchedParent parent, WatchEventType kind, long at) throws Exception {
-        WatchEvent event = new WatchEvent(new Date(at), type, id, scope, parent, kind, "history test", "test-node",
-                                          null, kind + " " + id, null);
+    private void enter(String id, WatchedType type, String scope, WatchedParent parent, WatchEventType eventType, long at) throws Exception {
+        WatchEvent event = new WatchEvent(new Date(at), type, id, scope, parent, eventType, "history test", "test-node",
+                                          null, eventType + " " + id, null);
         await(watchEvents.record(UUID.randomUUID().toString(), event));
     }
 
@@ -96,7 +96,7 @@ public class DeploymentHistoryTests extends KinoticTestBase {
     }
 
     private static List<String> describe(List<WatchEvent> events) {
-        return events.stream().map(event -> event.id() + " " + event.kind()).toList();
+        return events.stream().map(event -> event.id() + " " + event.eventType()).toList();
     }
 
     private static OrganizationParticipant member(String organizationId) {

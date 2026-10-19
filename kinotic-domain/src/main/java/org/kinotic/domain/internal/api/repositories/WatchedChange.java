@@ -6,10 +6,10 @@ import org.kinotic.domain.api.model.WatchEventType;
  * What a write to a watched record was, for the ledger: the caller's half of a
  * {@link org.kinotic.domain.api.model.WatchEvent}, the rest being read from the record and the server.
  *
- * @param kind    what happened
- * @param source  what caused it
- * @param message why, for an operator
- * @param value   what was written, as an object
+ * @param eventType what happened
+ * @param source    what caused it
+ * @param message   why, for an operator
+ * @param value     what was written, as an object
  */
-public record WatchedChange(WatchEventType kind, String source, String message, Object value) {
+public record WatchedChange(WatchEventType eventType, String source, String message, Object value) {
 }

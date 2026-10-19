@@ -529,7 +529,7 @@ CREATE TABLE IF NOT EXISTS kinotic_task_record (
 
 -- The ledger: one entry per write to a watched record, saying what happened, from where and why.
 -- The record says what it is now; its entries say how it got there. @timestamp is the write's time.
-CREATE DATA STREAM kinotic_watch_event (type KEYWORD, id KEYWORD, scope KEYWORD, parent KEYWORD, kind KEYWORD, source KEYWORD, serverNodeId KEYWORD, generation LONG, message TEXT, value JSON NOT INDEXED) WITH (DATA_RETENTION = '30d') ;
+CREATE DATA STREAM kinotic_watch_event (type KEYWORD, id KEYWORD, scope KEYWORD, parent KEYWORD, eventType KEYWORD, source KEYWORD, serverNodeId KEYWORD, generation LONG, message TEXT, value JSON NOT INDEXED) WITH (DATA_RETENTION = '30d') ;
 
 -- The platform's managed IdP registrations: github-platform (ORG_SIGNUP) powers the "Continue with
 -- GitHub" button on org signup and login; google-platform and entra-platform (APP_SOCIAL) are the
