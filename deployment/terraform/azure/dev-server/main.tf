@@ -2,10 +2,11 @@
 # What the shared development server (a Proxmox host, deployment/terraform/proxmox) needs from
 # Azure and Cloudflare: the dev-environment module — a resource group, the sites storage
 # account, the sites Worker and domain <environment>.<cloudflare zone> with the app server's
-# hosts and the portal and the system console under it, a service principal with the roles the
-# servers need — plus three things a developer's machine does without: a key vault the servers
-# store secrets in, a storage account Elasticsearch snapshots go to, and the DNS records and
-# rights that put the management and system servers' APIs on a hostname with a certificate.
+# hosts under it, a service principal with the roles the servers need — plus four things a
+# developer's machine does without: a key vault the servers store secrets in, a storage account
+# Elasticsearch snapshots go to, the portal and the system console as Static Web Apps on the
+# platform zone, and the DNS records and rights that put the management and system servers'
+# APIs on a hostname with a certificate.
 #
 # State is local, like dev/: one server, applied from one machine. The proxmox root reads
 # this root's outputs from that state file.
@@ -68,9 +69,6 @@ locals {
   api_hostname        = "${var.api_label}.${local.global.dns_zone_name}"
   system_api_hostname = "${var.system_api_label}.${local.global.dns_zone_name}"
   apps_api_domain     = module.environment.apps_api_domain
-  # The sites domain the dev-environment module names after the environment, written out here
-  # because the module takes the portal's URL under it as an input
-  sites_domain = "${var.environment}.${var.cloudflare_zone_name}"
 
   common_tags = {
     environment = var.environment
@@ -96,16 +94,37 @@ module "environment" {
   cloudflare_account_id = var.cloudflare_account_id
   # the app server's hosts, proxied to the router; the host's certificate must cover them
   app_server_address = var.public_ip
-  # the portal and the system console, served by the sites Worker from the sites account
-  ui_labels       = ["portal", "console"]
-  portal_base_url = "https://portal.${local.sites_domain}"
+  portal_base_url    = "https://${var.portal_label}.${local.global.dns_zone_name}"
 }
 
-# The operator uploads the two UIs into the sites account (deploy-ui.sh)
-resource "azurerm_role_assignment" "operator_writes_sites" {
-  scope                = module.environment.sites_storage_account_id
-  role_definition_name = "Storage Blob Data Contributor"
-  principal_id         = data.azurerm_client_config.current.object_id
+# ── The portal and the system console ─────────────────────────────────────────
+# The platform's own UIs, on the platform zone as the cluster's portal is (the frontend root)
+# and apart from the customers' sites on the Cloudflare zone, so no published site is ever
+# same-site with them or with the servers. Each is a Static Web App at its label, which
+# deploy-ui.sh deploys with the token this root outputs.
+
+module "portal" {
+  source = "../modules/static-web-app"
+
+  name                         = "${local.name_prefix}-portal"
+  resource_group_name          = module.environment.resource_group_name
+  location                     = var.location
+  tags                         = local.common_tags
+  label                        = var.portal_label
+  dns_zone_name                = local.global.dns_zone_name
+  dns_zone_resource_group_name = local.global.resource_group_name
+}
+
+module "console" {
+  source = "../modules/static-web-app"
+
+  name                         = "${local.name_prefix}-console"
+  resource_group_name          = module.environment.resource_group_name
+  location                     = var.location
+  tags                         = local.common_tags
+  label                        = var.console_label
+  dns_zone_name                = local.global.dns_zone_name
+  dns_zone_resource_group_name = local.global.resource_group_name
 }
 
 # ── Key Vault for the servers' secret storage ─────────────────────────────────

@@ -51,14 +51,3 @@ variable "sites_storage_sas" {
   type        = string
   sensitive   = true
 }
-
-variable "ui_labels" {
-  description = "The platform's own UIs served by the Worker from the sites account the way a published site is, by the label under the sites domain the Worker reserves for each: portal and console on the development server, which uploads sites/portal.<sites domain>/ and sites/console.<sites domain>/; none in the cluster, whose UIs are hosted outside the zone"
-  type        = set(string)
-  default     = []
-
-  validation {
-    condition     = alltrue([for label in var.ui_labels : contains(["portal", "console"], label)])
-    error_message = "The Worker serves the platform's UIs at portal and console alone."
-  }
-}

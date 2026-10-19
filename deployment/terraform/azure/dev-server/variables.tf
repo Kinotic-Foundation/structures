@@ -28,6 +28,18 @@ variable "system_api_label" {
   default     = "dev-system-api"
 }
 
+variable "portal_label" {
+  description = "The portal's label in the platform zone, a Static Web App: dev-portal for dev-portal.kinotic.ai"
+  type        = string
+  default     = "dev-portal"
+}
+
+variable "console_label" {
+  description = "The system console's label in the platform zone, a Static Web App: dev-console for dev-console.kinotic.ai"
+  type        = string
+  default     = "dev-console"
+}
+
 variable "public_ip" {
   description = "The public IPv4 address the router forwards 443 from, as the first value of every server's record; kinotic-dyndns.timer on the host keeps the records current afterwards"
   type        = string

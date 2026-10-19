@@ -44,13 +44,3 @@ output "server_client_secret_key_id" {
   value       = azuread_application_password.server.key_id
 }
 
-output "ui_hostnames" {
-  description = "The hostnames the sites Worker serves the platform's own UIs at, by label"
-  value       = module.cloudflare_sites.ui_hostnames
-}
-
-output "sites_storage_account_id" {
-  description = "The sites storage account, for roles a root adds"
-  value       = module.sites.storage_account_id
-}
-

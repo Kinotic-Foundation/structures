@@ -7,10 +7,9 @@
 # Total TLS issues that organization's certificate from the record. The application API hosts,
 # <org>--<app>.<apps_api_label>.<sites domain>, are proxied records to the app server that no
 # Worker is bound to, so API calls and WebSockets reach the server directly; they share the
-# sites domain so a site and its API are same-site and the session cookie flows. An environment
-# that hosts the platform's own UIs in the account, the development server, gets a record per UI
-# at a label the Worker reserves, portal.<sites domain> and console.<sites domain>, served from
-# sites/<hostname>/ exactly as a published site is.
+# sites domain so a site and its API are same-site and the session cookie flows. The platform's
+# own UIs are never here: the portal and the console live on the platform zone, so no site is
+# same-site with them.
 #
 # The resource schemas target the cloudflare provider's 5.x series; a renamed attribute shows up
 # on the first plan, not at apply.
@@ -54,8 +53,8 @@ resource "cloudflare_zone_setting" "min_tls_version" {
 }
 
 # Total TLS (Advanced Certificate Manager) issues a certificate for every proxied hostname the
-# universal certificate does not cover: each organization's *.<org> record, the apps-api names
-# and the platform UIs' hosts below the zone's first label
+# universal certificate does not cover: each organization's *.<org> record, and the apps-api
+# names below the zone's first label
 resource "cloudflare_total_tls" "sites" {
   zone_id               = var.zone_id
   enabled               = true
@@ -88,22 +87,6 @@ resource "cloudflare_dns_record" "app_api_hosts" {
   comment = "Every application's API host, <org>--<app>"
 }
 
-# ── The platform's own UIs ────────────────────────────────────────────────────
-# A record the Worker answers in full, so it points at TEST-NET-1 (RFC 5737), never routed, as
-# the organizations' records do
-
-resource "cloudflare_dns_record" "ui_hosts" {
-  for_each = var.ui_labels
-
-  zone_id = var.zone_id
-  name    = "${each.value}.${local.sites_domain}"
-  type    = "A"
-  content = "192.0.2.1"
-  proxied = true
-  ttl     = 1
-  comment = "The platform's ${each.value}, served by the sites Worker from the sites account"
-}
-
 # ── The sites Worker ──────────────────────────────────────────────────────────
 
 resource "cloudflare_workers_script" "sites" {
@@ -120,8 +103,8 @@ resource "cloudflare_workers_script" "sites" {
   ]
 }
 
-# Every host under the sites domain is the Worker's: a site, a tenant's site, an
-# organization's own host, or one of the platform's UIs
+# Every host under the sites domain is the Worker's: a site, a tenant's site, or an
+# organization's own host
 resource "cloudflare_workers_route" "sites" {
   zone_id = var.zone_id
   pattern = "*.${local.sites_domain}/*"

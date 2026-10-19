@@ -29,10 +29,6 @@ kinotic:
       # The system console alone
       allowedOriginPattern: "https:\\/\\/${DEV_SERVER_CONSOLE_HOSTNAME}"
       allowCredentials: true
-    # The console is on the sites domain, console.dev.kinotic.io, and this server on the platform
-    # zone, so the session cookie crosses sites; the login is bound to the console's origin, the
-    # only one the CORS pattern admits
-    sessionCookieSameSite: NONE
   platformSecrets:
     # Generated once when the server is built (generate-secrets.sh in deployment/terraform/proxmox),
     # in the shape deployment/kind/terraform/platform-secrets.tf produces: an activeKeyId and a

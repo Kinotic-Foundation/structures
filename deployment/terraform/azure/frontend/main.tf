@@ -36,14 +36,18 @@ locals {
   global = data.terraform_remote_state.global.outputs
 }
 
-# ── Static Web App ────────────────────────────────────────────────────────────
+# ── The portal ────────────────────────────────────────────────────────────────
+# A Static Web App at portal.<zone> with its CNAME and managed certificate, deployed by deploy.sh
 
-resource "azurerm_static_web_app" "portal" {
-  name                = "kinotic-portal-${var.environment}"
-  resource_group_name = local.global.resource_group_name
-  location            = var.location
-  sku_tier            = "Free"
-  sku_size            = "Free"
+module "portal" {
+  source = "../modules/static-web-app"
+
+  name                         = "kinotic-portal-${var.environment}"
+  resource_group_name          = local.global.resource_group_name
+  location                     = var.location
+  label                        = var.subdomain
+  dns_zone_name                = local.global.dns_zone_name
+  dns_zone_resource_group_name = local.global.resource_group_name
 
   tags = {
     project     = "kinotic"
@@ -52,23 +56,19 @@ resource "azurerm_static_web_app" "portal" {
   }
 }
 
-# ── Custom Domain ─────────────────────────────────────────────────────────────
-# Static Web Apps provides free SSL for custom domains automatically.
-
-resource "azurerm_dns_cname_record" "portal" {
-  name                = var.subdomain
-  zone_name           = local.global.dns_zone_name
-  resource_group_name = local.global.resource_group_name
-  ttl                 = 300
-  record              = azurerm_static_web_app.portal.default_host_name
+moved {
+  from = azurerm_static_web_app.portal
+  to   = module.portal.azurerm_static_web_app.ui
 }
 
-resource "azurerm_static_web_app_custom_domain" "portal" {
-  static_web_app_id = azurerm_static_web_app.portal.id
-  domain_name       = "${var.subdomain}.${local.global.dns_zone_name}"
-  validation_type   = "cname-delegation"
+moved {
+  from = azurerm_dns_cname_record.portal
+  to   = module.portal.azurerm_dns_cname_record.ui
+}
 
-  depends_on = [azurerm_dns_cname_record.portal]
+moved {
+  from = azurerm_static_web_app_custom_domain.portal
+  to   = module.portal.azurerm_static_web_app_custom_domain.ui
 }
 
 # ── Variables ─────────────────────────────────────────────────────────────────
@@ -100,15 +100,15 @@ variable "frontend_path" {
 # ── Outputs ───────────────────────────────────────────────────────────────────
 
 output "portal_url" {
-  value = "https://${var.subdomain}.${local.global.dns_zone_name}"
+  value = "https://${module.portal.hostname}"
 }
 
 output "default_hostname" {
-  value = azurerm_static_web_app.portal.default_host_name
+  value = module.portal.default_host_name
 }
 
 output "deployment_token" {
-  description = "Use this token to deploy the SPA: az staticwebapp deploy --deployment-token <token>"
-  value       = azurerm_static_web_app.portal.api_key
+  description = "The token deploy.sh deploys the build with, through the Static Web Apps CLI"
+  value       = module.portal.deployment_token
   sensitive   = true
 }

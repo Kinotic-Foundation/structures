@@ -4,9 +4,9 @@ One Proxmox host runs the platform's services: a container per service — the o
 app servers, the one-shot migration, three Elasticsearch nodes on a physical disk each, Loki,
 Tempo, Mimir, Grafana — created from the same images the compose stack pulls, and the edge, an
 HAProxy container that passes each TLS connection on the router's forwarded 443 to the server
-its SNI names. The portal and the system console are served by the sites Worker from the Azure
-root's sites account (`deployment/terraform/azure/dev-server/deploy-ui.sh`), so the host exposes
-the edge alone. The workload nodes are separate machines, or VMs on this host (`workers`),
+its SNI names. The portal and the system console are Static Web Apps the Azure root creates and
+`deployment/terraform/azure/dev-server/deploy-ui.sh` deploys, so the host exposes the edge
+alone. The workload nodes are separate machines, or VMs on this host (`workers`),
 provisioned with `deployment/vm-node` and configured from this root's `vm_manager_env` output. The design and the reasons are on the
 [Development Server](https://kinotic.ai/platform/development-server) page; this is the
 runbook.
@@ -165,8 +165,8 @@ server terminates TLS with its own certificate; a connection naming no server's 
 closed. The router picks the target by device and reserves an address for it when the forward
 is saved, so the edge's LAN interface takes its address by DHCP under a fixed MAC
 (`edge_mac`), and `edge_ip` is the address the router reserved, which the nodes dial for every
-server; the portal and the system console are on the sites Worker as soon as `deploy-ui.sh` in
-the Azure root has uploaded them.
+server; the portal and the system console are on their Static Web Apps as soon as `deploy-ui.sh`
+in the Azure root has deployed them.
 
 ## After the first apply
 

@@ -24,12 +24,6 @@ variable "email_communication_service_id" {
   type        = string
 }
 
-variable "ui_labels" {
-  description = "The platform's own UIs the sites Worker serves from the sites account, by the label under the sites domain the Worker reserves for each: [\"portal\", \"console\"] on the development server, none on a developer's machine"
-  type        = set(string)
-  default     = []
-}
-
 variable "cloudflare_zone_name" {
   description = "The Cloudflare zone the environment's sites domain is a label under, e.g. kinotic.io"
   type        = string

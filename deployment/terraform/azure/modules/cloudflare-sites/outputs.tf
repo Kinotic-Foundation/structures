@@ -12,8 +12,3 @@ output "organization_hosts_served" {
   description = "Whether <org>.<sites domain> is served, which the universal certificate covers only when the sites domain is the zone"
   value       = local.organization_hosts_served
 }
-
-output "ui_hostnames" {
-  description = "The hostnames the platform's own UIs are served at, by label: portal.<sites domain> and console.<sites domain> where asked for"
-  value       = { for label in var.ui_labels : label => "${label}.${local.sites_domain}" }
-}
