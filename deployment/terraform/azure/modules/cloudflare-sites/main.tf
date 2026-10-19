@@ -8,8 +8,8 @@
 # <org>--<app>.<apps_api_label>.<sites domain>, are proxied records to the app server that no
 # Worker is bound to, so API calls and WebSockets reach the server directly; they share the
 # sites domain so a site and its API are same-site and the session cookie flows. The platform's
-# own UIs are never here: the portal and the console live on the platform zone, so no site is
-# same-site with them.
+# own UIs, the portal and the console, are never on this zone: the Worker serves them from the
+# same account at hostnames of the platform zone, so no site is same-site with them.
 #
 # The resource schemas target the cloudflare provider's 5.x series; a renamed attribute shows up
 # on the first plan, not at apply.
@@ -87,6 +87,23 @@ resource "cloudflare_dns_record" "app_api_hosts" {
   comment = "Every application's API host, <org>--<app>"
 }
 
+# ── The platform's own UIs ────────────────────────────────────────────────────
+# A record per UI in the platform zone, which the Worker answers in full, so it points at
+# TEST-NET-1 (RFC 5737), never routed, as the organizations' records do; the zone's universal
+# certificate covers each, a label of the zone
+
+resource "cloudflare_dns_record" "ui_hosts" {
+  for_each = var.ui_hostnames
+
+  zone_id = var.platform_zone_id
+  name    = each.value
+  type    = "A"
+  content = "192.0.2.1"
+  proxied = true
+  ttl     = 1
+  comment = "A platform UI, served by the sites Worker from the sites account"
+}
+
 # ── The sites Worker ──────────────────────────────────────────────────────────
 
 resource "cloudflare_workers_script" "sites" {
@@ -100,7 +117,17 @@ resource "cloudflare_workers_script" "sites" {
     { name = "SITES_STORAGE_URL", type = "plain_text", text = trimsuffix(var.sites_storage_blob_endpoint, "/") },
     { name = "SITES_STORAGE_SAS", type = "secret_text", text = var.sites_storage_sas },
     { name = "PORTAL_BASE_URL", type = "plain_text", text = var.portal_base_url },
+    { name = "UI_HOSTS", type = "plain_text", text = join(",", var.ui_hostnames) },
   ]
+}
+
+# Each platform UI's host is the Worker's, by name, in the platform zone
+resource "cloudflare_workers_route" "ui_hosts" {
+  for_each = var.ui_hostnames
+
+  zone_id = var.platform_zone_id
+  pattern = "${each.value}/*"
+  script  = cloudflare_workers_script.sites.script_name
 }
 
 # Every host under the sites domain is the Worker's: a site, a tenant's site, or an

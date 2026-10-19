@@ -85,7 +85,7 @@ kubectl describe certificate kinotic-tls -n kinotic
 
 ## Rebuild Without Touching DNS
 
-The DNS zone lives in the `global/` root (`azurerm_dns_zone.main` in `global/main.tf`), and
+The platform zone lives in the `global/` root (`cloudflare_zone.main` in `global/main.tf`), and
 `cluster/` only reads it through `terraform_remote_state`. Destroying the cluster therefore
 cannot touch the zone — no state surgery, no re-import:
 
@@ -117,6 +117,6 @@ kubectl logs -l app.kubernetes.io/name=cert-manager -n cert-manager --tail=20
 | Pod crash | Kubernetes auto-restarts. Check `kubectl describe pod` |
 | Node failure | AKS auto-repairs. ES PDB protects quorum |
 | AKS cluster loss | Rebuild the `cluster/` root (README.md, "Teardown and Rebuild"). ES data on PVCs persists if PVs are Retain policy |
-| DNS zone deletion | Recreate zone, re-point NS at registrar. Same zone name = same NS records |
+| Platform zone deletion | Re-apply `global/`, which recreates the zone and its records, then point the registrar at the nameservers the new zone is assigned, which can differ |
 | Cert expired | Delete certificate + challenges, re-apply via terraform |
 | State corruption | Re-import resources from Azure |

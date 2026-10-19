@@ -76,6 +76,7 @@ module "environment" {
   tags        = local.common_tags
 
   email_communication_service_id = local.global.email_communication_service_id
+  platform_zone_id               = local.global.dns_zone_id
 
   cloudflare_zone_name  = var.cloudflare_zone_name
   cloudflare_zone_id    = var.cloudflare_zone_id
@@ -203,13 +204,13 @@ variable "cloudflare_account_id" {
 }
 
 variable "cloudflare_api_token" {
-  description = "The token this root applies the zone with: Workers Scripts edit on the account, DNS and zone settings edit on the zone; set it in local.auto.tfvars"
+  description = "The token this root applies the zones with: Workers Scripts edit on the account, DNS, Workers routes and zone settings edit on the customers' zone and the platform zone; set it in local.auto.tfvars"
   type        = string
   sensitive   = true
 }
 
 variable "cloudflare_dns_api_token" {
-  description = "A token holding DNS edit on the zone and nothing else, written to .env.local for the servers to create organizations' sites records with; set it in local.auto.tfvars"
+  description = "A token holding DNS edit on the customers' zone and nothing else, written to .env.local for the servers to create organizations' sites records with; set it in local.auto.tfvars"
   type        = string
   sensitive   = true
 }

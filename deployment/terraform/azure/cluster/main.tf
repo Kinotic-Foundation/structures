@@ -26,7 +26,8 @@ terraform {
       source  = "hashicorp/local"
       version = "~> 2.0"
     }
-    # The customer domain: the sites Worker, the organizations' records and the app server's hosts
+    # The customers' zone (the sites Worker, the organizations' records, the app server's hosts) and the
+    # platform zone (the servers' records, the portal's and the console's routes)
     cloudflare = {
       source  = "cloudflare/cloudflare"
       version = "~> 5.0"

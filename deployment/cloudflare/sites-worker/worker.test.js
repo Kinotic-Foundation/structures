@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { cacheTtl, resolveFile, resolveHost } from './worker.js'
+import { cacheTtl, platformUis, resolveFile, resolveHost } from './worker.js'
 
 const ZONE = 'kinotic.io'
 
@@ -41,6 +41,14 @@ describe('resolveHost', () => {
         expect(resolveHost('orders--web..kinotic.io', ZONE)).toBeNull()
         expect(resolveHost('x.orders--web.acme.kinotic.io', ZONE)).toBeNull()
         expect(resolveHost('orders--web.acme.example.com', ZONE)).toBeNull()
+    })
+})
+
+describe('platformUis', () => {
+    test('the binding names the hosts, or none', () => {
+        expect(platformUis('portal.kinotic.ai,console.kinotic.ai')).toEqual(new Set(['portal.kinotic.ai', 'console.kinotic.ai']))
+        expect(platformUis(' Dev-Portal.kinotic.ai , dev-console.kinotic.ai ')).toEqual(new Set(['dev-portal.kinotic.ai', 'dev-console.kinotic.ai']))
+        expect(platformUis('')).toEqual(new Set())
     })
 })
 

@@ -14,25 +14,13 @@ output "apps_api_domain" {
 }
 
 output "portal_hostname" {
-  description = "The portal's hostname, a Static Web App in the platform zone"
-  value       = module.portal.hostname
+  description = "The portal's hostname in the platform zone, served by the sites Worker from sites/<hostname>/ in the sites account; deploy-ui.sh uploads it"
+  value       = local.portal_hostname
 }
 
 output "console_hostname" {
-  description = "The system console's hostname, a Static Web App in the platform zone"
-  value       = module.console.hostname
-}
-
-output "portal_deployment_token" {
-  description = "The token deploy-ui.sh deploys the portal with, through the Static Web Apps CLI"
-  value       = module.portal.deployment_token
-  sensitive   = true
-}
-
-output "console_deployment_token" {
-  description = "The token deploy-ui.sh deploys the system console with"
-  value       = module.console.deployment_token
-  sensitive   = true
+  description = "The system console's hostname, served the same way"
+  value       = local.console_hostname
 }
 
 output "sites_domain" {
@@ -91,8 +79,8 @@ output "tenant_id" {
 output "dev_server_env" {
   description = "The non-secret half of the servers' environment"
   value = {
-    DEV_SERVER_PORTAL_HOSTNAME                          = module.portal.hostname
-    DEV_SERVER_CONSOLE_HOSTNAME                         = module.console.hostname
+    DEV_SERVER_PORTAL_HOSTNAME                          = local.portal_hostname
+    DEV_SERVER_CONSOLE_HOSTNAME                         = local.console_hostname
     KINOTIC_SYSTEMAPI_UIDEPLOYMENT_SITESDOMAIN          = module.environment.sites_domain
     KINOTIC_SYSTEMAPI_UIDEPLOYMENT_SITESSTORAGEENDPOINT = module.environment.sites_storage_blob_endpoint
     KINOTIC_DOMAIN_PUBLISHEDSITES_DOMAIN                = module.environment.sites_domain

@@ -1,7 +1,7 @@
 <template>
   <DiagramFrame>
   <div class="dev-server-diagram-wrap">
-    <svg class="dev-server-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1172 900" role="img" aria-label="Development server topology: GitHub, peers and application users reach one forwarded port, 443, on the edge, an HAProxy container that passes each TLS connection unopened to the server its SNI names; the org, system and app servers live on a private NAT-only network with three Elasticsearch nodes and the one-shot migration, and form one Ignite cluster; Loki, Tempo, Mimir and Grafana are containers on the LAN; Azure keeps the sites storage account, which the Cloudflare sites Worker serves the published UIs from, the portal and the console as Static Web Apps, email, DNS, a Key Vault and a snapshot container; each Elasticsearch node has a ZFS pool on its own drive and Proxmox a drive of its own; two Intel NUCs beside the host run the vm-manager with Cloud Hypervisor micro VMs, which reach their servers through the edge by name.">
+    <svg class="dev-server-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1172 900" role="img" aria-label="Development server topology: GitHub, peers and application users reach one forwarded port, 443, on the edge, an HAProxy container that passes each TLS connection unopened to the server its SNI names; the org, system and app servers live on a private NAT-only network with three Elasticsearch nodes and the one-shot migration, and form one Ignite cluster; Loki, Tempo, Mimir and Grafana are containers on the LAN; Azure keeps the sites storage account, email, a Key Vault and a snapshot container, and Cloudflare both zones, where the sites Worker serves the published UIs, the portal and the console from the account; each Elasticsearch node has a ZFS pool on its own drive and Proxmox a drive of its own; two Intel NUCs beside the host run the vm-manager with Cloud Hypervisor micro VMs, which reach their servers through the edge by name.">
 
       <defs>
         <marker id="ds-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -50,12 +50,13 @@
       <text class="t-sub"  x="736" y="99" text-anchor="middle">email</text>
 
       <rect class="chip" x="812" y="64" width="140" height="46" rx="8"></rect>
-      <text class="t-chip" x="882" y="83" text-anchor="middle">Static Web Apps</text>
-      <text class="t-sub"  x="882" y="99" text-anchor="middle">dev-portal · dev-console</text>
+      <text class="t-chip" x="882" y="83" text-anchor="middle">Sites Worker</text>
+      <text class="t-sub"  x="882" y="99" text-anchor="middle">*.dev.kinotic.io · dev-portal · dev-console</text>
 
       <rect class="chip" x="978" y="64" width="154" height="46" rx="8"></rect>
       <text class="t-chip" x="1055" y="83" text-anchor="middle">Sites storage account</text>
-      <text class="t-sub"  x="1055" y="99" text-anchor="middle">sites Worker · *.dev.kinotic.io</text>
+      <text class="t-sub"  x="1055" y="99" text-anchor="middle">sites/&lt;hostname&gt;/</text>
+      <line class="flow-ind" x1="952" y1="87" x2="978" y2="87" marker-end="url(#ds-ind)"></line>
 
       <rect class="chip" x="676" y="148" width="136" height="46" rx="8"></rect>
       <text class="t-chip" x="744" y="167" text-anchor="middle">Key Vault</text>
@@ -66,8 +67,8 @@
       <text class="t-sub"  x="898" y="183" text-anchor="middle">ES snapshots · daily</text>
 
       <rect class="chip" x="984" y="148" width="148" height="46" rx="8"></rect>
-      <text class="t-chip" x="1058" y="167" text-anchor="middle">DNS zone</text>
-      <text class="t-sub"  x="1058" y="183" text-anchor="middle">A records · DNS-01 certs</text>
+      <text class="t-chip" x="1058" y="167" text-anchor="middle">Cloudflare DNS</text>
+      <text class="t-sub"  x="1058" y="183" text-anchor="middle">kinotic.ai · kinotic.io</text>
 
       <!-- ═════════ the host ═════════ -->
       <rect class="wall" x="24" y="262" width="696" height="620" rx="12"></rect>

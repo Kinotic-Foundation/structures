@@ -77,7 +77,7 @@ No ingress controller or reverse proxy in either environment. Vert.x handles TLS
 | Environment | Certificate Source | Rotation |
 |---|---|---|
 | KinD | mkcert (browser-trusted local CA) | N/A (dev) |
-| Azure | cert-manager + Let's Encrypt (DNS-01 via Azure DNS) | Automatic (Reloader restarts pods) |
+| Azure | cert-manager + Let's Encrypt (DNS-01 via Cloudflare DNS) | Automatic (Reloader restarts pods) |
 
 Keycloak and Grafana also read from the same TLS secret.
 

@@ -1,31 +1,6 @@
-# ── Managed Identity for cert-manager DNS-01 challenges ───────────────────────
-# cert-manager uses this identity to create TXT records in Azure DNS
-# for Let's Encrypt domain validation.
-
-resource "azurerm_user_assigned_identity" "cert_manager" {
-  name                = "id-${local.name_prefix}-cert-manager"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.main.name
-  tags                = local.common_tags
-}
-
-resource "azurerm_role_assignment" "cert_manager_dns_contributor" {
-  scope                = local.global.dns_zone_id
-  role_definition_name = "DNS Zone Contributor"
-  principal_id         = azurerm_user_assigned_identity.cert_manager.principal_id
-}
-
-# Federated credential so the cert-manager pod (via its ServiceAccount) can
-# authenticate as this managed identity without any secrets.
-resource "azurerm_federated_identity_credential" "cert_manager" {
-  name      = "cert-manager-federated"
-  user_assigned_identity_id = azurerm_user_assigned_identity.cert_manager.id
-  audience            = ["api://AzureADTokenExchange"]
-  issuer              = data.azurerm_kubernetes_cluster.main.oidc_issuer_url
-  subject             = "system:serviceaccount:cert-manager:cert-manager"
-}
-
 # ── cert-manager ──────────────────────────────────────────────────────────────
+# Answers Let's Encrypt's DNS-01 challenges for the servers' names in both zones, the platform
+# zone and the customers' zone, through the Cloudflare DNS token (cloudflare.tf).
 
 resource "kubernetes_namespace" "cert_manager" {
   metadata {
@@ -42,12 +17,8 @@ resource "helm_release" "cert_manager" {
   version    = "v1.16.3"
   namespace  = kubernetes_namespace.cert_manager.metadata[0].name
 
-  # Enable workload identity on the cert-manager pod
   set = [
     { name = "installCRDs", value = "true" },
-    { name = "serviceAccount.labels.azure\\.workload\\.identity/use", value = "true", type = "string" },
-    { name = "serviceAccount.annotations.azure\\.workload\\.identity/client-id", value = azurerm_user_assigned_identity.cert_manager.client_id },
-    { name = "podLabels.azure\\.workload\\.identity/use", value = "true", type = "string" },
   ]
 
   wait    = true
@@ -65,7 +36,7 @@ resource "helm_release" "cert_manager" {
 
 locals {
   # The names the servers' certificate covers: the platform zone and the hosts under it, and in the
-  # Cloudflare zone the app server's shared host and every application's API host under it, which
+  # customers' zone the app server's shared host and every application's API host under it, which
   # Cloudflare's Full (strict) mode validates when it proxies them
   tls_dns_names = [
     local.global.dns_zone_name,
@@ -116,22 +87,11 @@ resource "terraform_data" "cert_manager_issuer_and_cert" {
           privateKeySecretRef:
             name: letsencrypt-prod-account-key
           solvers:
-            - selector:
-                dnsZones:
-                  - ${var.cloudflare_zone_name}
-              dns01:
+            - dns01:
                 cloudflare:
                   apiTokenSecretRef:
                     name: ${kubernetes_secret.cloudflare_dns_api_token.metadata[0].name}
                     key: api-token
-            - dns01:
-                azureDNS:
-                  subscriptionID: ${local.global.subscription_id}
-                  resourceGroupName: ${local.global.resource_group_name}
-                  hostedZoneName: ${local.global.dns_zone_name}
-                  environment: AzurePublicCloud
-                  managedIdentity:
-                    clientID: ${azurerm_user_assigned_identity.cert_manager.client_id}
       YAML
 
       echo "Creating TLS Certificate..."
@@ -162,16 +122,16 @@ resource "terraform_data" "cert_manager_issuer_and_cert" {
 
 # ── Wait for TLS cert to be issued ───────────────────────────────────────────
 # cert-manager issues the cert asynchronously after the Certificate resource
-# is created. On first deploy, this requires DNS propagation (NS records
-# pointing to Azure DNS). This resource blocks until the TLS secret exists
-# with data, ensuring the servers only start after TLS is ready.
+# is created. On first deploy, this requires DNS propagation (the registrar's
+# NS records pointing at Cloudflare). This resource blocks until the TLS secret
+# exists with data, ensuring the servers only start after TLS is ready.
 
 resource "terraform_data" "tls_cert_ready" {
   provisioner "local-exec" {
     command = <<-EOT
       set -e
       echo "Waiting for TLS certificate to be issued..."
-      echo "If this is the first deploy, ensure NS records for ${local.global.dns_zone_name} point to Azure DNS."
+      echo "If this is the first deploy, ensure NS records for ${local.global.dns_zone_name} point to Cloudflare."
       echo "Check: terraform output dns_nameservers"
       for i in $(seq 1 120); do
         DATA=$(kubectl get secret ${var.tls_secret_name} -n kinotic \

@@ -12,16 +12,14 @@ Estimated monthly costs for `centralus` (the `location` in `cluster/terraform.tf
 | Resource Group | Azure Resource Manager | Free |
 | VNet + Subnets | Virtual Network | Free |
 | Network Security Groups (x2) | NSG | Free |
-| Managed Identities (x3) | Managed Identity (control plane, kubelet, cert-manager) | Free |
+| Managed Identities (x2) | Managed Identity (control plane, kubelet) | Free |
 | Role Assignments (x5) | Azure RBAC | Free |
 | Federated Identity Credential | Workload Identity | Free |
 | AKS Cluster | Azure Kubernetes Service (Free in beta, Standard in prod) | Free / $73 |
 | System Node Pool (3x VMs) | Virtual Machines | **Paid** |
 | System OS Disks | Managed Disks | **Paid** |
-| Azure DNS Zone | Azure DNS (kinotic.ai) | **~$0.50/mo** |
-| DNS A Records (api, system-api, apps-api, *.apps-api) | Azure DNS | Included in zone |
-| DNS CNAME (portal.kinotic.ai) | Azure DNS | Included in zone |
-| DNS Queries | Azure DNS | **~$0.40/mo per 1M queries** |
+| Platform zone (kinotic.ai) and customers' zone (kinotic.io) | Cloudflare DNS | Free plan |
+| Sites Worker (published sites, portal, console) | Cloudflare Workers | Free tier, then $5/mo |
 | Load Balancer (STOMP only) | Standard LB + Public IP | **~$22/mo** |
 | Elasticsearch PVC(s) | Managed Disk (Premium ZRS) | **Paid** |
 | Loki PVC | Managed Disk | **~$2/mo** |
@@ -79,7 +77,6 @@ Includes observability stack (Loki + Tempo + Mimir + Alloy + Grafana) and Entra 
 | ES Master PVC | Premium ZRS, 16 GB | 1 | $10 | $10 |
 | ES Data PVCs | Premium ZRS, 64 GB | 3 | $19 | $57 |
 | LB + Public IP (STOMP only) | Standard | 1 | $22 | $22 |
-| Static Web App (SPA) | Free tier | 1 | $0 | $0 |
 | Loki PVC | managed-csi-premium, 10 GB | 1 | $2 | $2 |
 | Tempo PVC | default StorageClass, 10 GB | 1 | $2 | $2 |
 | Mimir PVC | default StorageClass, 10 GB | 1 | $2 | $2 |
@@ -140,7 +137,6 @@ AKS Standard tier with uptime SLA.
 | ES Data PVCs | Premium ZRS, 256 GB | 3 | $74 | $222 |
 | AKS Standard Tier | Uptime SLA (99.95%) | 1 | $73 | $73 |
 | LB + Public IP (STOMP only) | Standard | 1 | $22 | $22 |
-| Static Web App (SPA) | Free tier | 1 | $0 | $0 |
 | Key Vault | Standard | 1 | ~$0.03/10K ops | $1 |
 | Azure Communication Services | Email | 1 | $0.00025/email | $0 |
 | Loki PVC | managed-csi-premium, 10 GB | 1 | $2 | $2 |

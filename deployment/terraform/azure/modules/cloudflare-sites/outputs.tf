@@ -8,6 +8,11 @@ output "apps_api_domain" {
   value       = local.apps_api_domain
 }
 
+output "ui_hostnames" {
+  description = "The hostnames the platform's own UIs are served at"
+  value       = var.ui_hostnames
+}
+
 output "organization_hosts_served" {
   description = "Whether <org>.<sites domain> is served, which the universal certificate covers only when the sites domain is the zone"
   value       = local.organization_hosts_served

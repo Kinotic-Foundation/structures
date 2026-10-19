@@ -14,6 +14,11 @@ terraform {
       source  = "hashicorp/random"
       version = "~> 3.0"
     }
+    # The platform zone and its records
+    cloudflare = {
+      source  = "cloudflare/cloudflare"
+      version = "~> 5.0"
+    }
   }
 
   backend "azurerm" {
@@ -36,6 +41,10 @@ provider "azurerm" {
   }
 }
 
+provider "cloudflare" {
+  api_token = var.cloudflare_api_token
+}
+
 # ── Variables ─────────────────────────────────────────────────────────────────
 
 variable "project" {
@@ -51,9 +60,20 @@ variable "location" {
 }
 
 variable "domain_name" {
-  description = "Domain name for the DNS zone"
+  description = "The platform zone, where the servers' API hosts and the platform's own UIs live and the customers' sites never do"
   type        = string
   default     = "kinotic.ai"
+}
+
+variable "cloudflare_account_id" {
+  description = "The Cloudflare account the platform zone is created in; set it in local.auto.tfvars"
+  type        = string
+}
+
+variable "cloudflare_api_token" {
+  description = "The token this root creates the platform zone with: Zone edit on the account, DNS and zone settings edit on the zone. Set it in local.auto.tfvars or TF_VAR_cloudflare_api_token"
+  type        = string
+  sensitive   = true
 }
 
 variable "apps_api_domain" {
@@ -105,7 +125,7 @@ variable "github_app_private_key" {
 }
 
 variable "cloudflare_dns_api_token" {
-  description = "A Cloudflare API token holding DNS edit on the customer zone (kinotic.io) and nothing else, which the management and system servers create each organization's sites record with; the cluster root gives cert-manager the same token"
+  description = "A Cloudflare API token holding DNS edit on the platform zone and the customer zone (kinotic.io) and nothing else, which the management and system servers create each organization's sites record with; the cluster root gives cert-manager the same token for its DNS-01 challenges"
   type        = string
   sensitive   = true
   default     = ""
@@ -143,12 +163,32 @@ resource "azurerm_resource_group" "global" {
   tags     = local.common_tags
 }
 
-# ── DNS Zone ──────────────────────────────────────────────────────────────────
+# ── The platform zone ─────────────────────────────────────────────────────────
+# kinotic.ai on Cloudflare DNS, which the registrar's nameservers point at (dns_nameservers): the
+# servers' API hosts (the cluster and dev-server roots), the platform's own UIs, which the sites
+# Worker serves from the sites accounts at portal and console (the cluster root) and dev-portal
+# and dev-console (the dev-server root), and the email records below. The customers' sites are on
+# their own zone, kinotic.io, so no site is ever same-site with the platform.
 
-resource "azurerm_dns_zone" "main" {
-  name                = var.domain_name
-  resource_group_name = azurerm_resource_group.global.name
-  tags                = local.common_tags
+resource "cloudflare_zone" "main" {
+  account = {
+    id = var.cloudflare_account_id
+  }
+  name = var.domain_name
+  type = "full"
+}
+
+# The proxied hosts of the zone, the platform's UIs, are served by the Worker over HTTPS alone
+resource "cloudflare_zone_setting" "always_use_https" {
+  zone_id    = cloudflare_zone.main.id
+  setting_id = "always_use_https"
+  value      = "on"
+}
+
+resource "cloudflare_zone_setting" "min_tls_version" {
+  zone_id    = cloudflare_zone.main.id
+  setting_id = "min_tls_version"
+  value      = "1.2"
 }
 
 # ── Kinotic Platform OIDC App Registration ────────────────────────────────────
@@ -310,15 +350,18 @@ output "resource_group_name" {
 }
 
 output "dns_zone_name" {
-  value = azurerm_dns_zone.main.name
+  description = "The platform zone"
+  value       = cloudflare_zone.main.name
 }
 
 output "dns_zone_id" {
-  value = azurerm_dns_zone.main.id
+  description = "The platform zone's id on Cloudflare, which the cluster and dev-server roots write their records and Worker routes into"
+  value       = cloudflare_zone.main.id
 }
 
 output "dns_nameservers" {
-  value = azurerm_dns_zone.main.name_servers
+  description = "Cloudflare's nameservers for the platform zone, which the registrar points the domain at"
+  value       = cloudflare_zone.main.name_servers
 }
 
 output "tenant_id" {

@@ -19,6 +19,17 @@ variable "tags" {
   default     = {}
 }
 
+variable "platform_zone_id" {
+  description = "The platform zone on Cloudflare (global/ output dns_zone_id), where the platform's own UIs are served"
+  type        = string
+}
+
+variable "ui_hostnames" {
+  description = "The platform's own UIs the sites Worker serves from the sites account, by hostname in the platform zone: dev-portal.<zone> and dev-console.<zone> on the development server, none on a developer's machine"
+  type        = set(string)
+  default     = []
+}
+
 variable "email_communication_service_id" {
   description = "Resource id of the shared email communication service the server sends through (global/ output email_communication_service_id)"
   type        = string

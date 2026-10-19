@@ -1,8 +1,8 @@
 # ── UI sites ─────────────────────────────────────────────────────────────────
 # Every published UI is served at <app>--<ui>.<org>.<cloudflare zone> by the sites Worker from
-# the sites storage account (cloudflare.tf). The sites module owns the account and nothing
-# changes in storage when a UI is published; the platform's own UIs are hosted outside the
-# cluster (the frontend root), so the Worker serves none here.
+# the sites storage account (cloudflare.tf), and the platform's own UIs at portal and console
+# of the platform zone are served from the same account the same way. The sites module owns
+# the account and nothing changes in storage when a UI is published.
 
 module "sites" {
   source = "../modules/sites"

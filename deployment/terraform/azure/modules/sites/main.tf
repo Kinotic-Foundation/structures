@@ -3,8 +3,8 @@
 # system server's publish workloads write through upload URLs it signs and the Cloudflare sites
 # Worker (deployment/terraform/azure/modules/cloudflare-sites) reads over the blob endpoint with
 # a read-only SAS on the container minted here and bound to the Worker as a secret, so the
-# container stays private and nothing reads it but the edge. The platform's own UIs, where an
-# environment serves them from this account, are written the same way under their hostnames.
+# container stays private and nothing reads it but the edge. The platform's own UIs, the portal
+# and the console, are uploaded the same way under their hostnames by deploy-ui.sh.
 
 terraform {
   required_providers {

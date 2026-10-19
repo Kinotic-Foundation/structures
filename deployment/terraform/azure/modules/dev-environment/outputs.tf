@@ -3,6 +3,11 @@ output "resource_group_name" {
   value       = azurerm_resource_group.main.name
 }
 
+output "sites_storage_account_id" {
+  description = "The sites storage account, for the role the operator uploads the platform's UIs with"
+  value       = module.sites.storage_account_id
+}
+
 output "sites_domain" {
   description = "The domain every organization's sites are under: <app>--<ui>.<org>.<sites domain>"
   value       = module.cloudflare_sites.sites_domain

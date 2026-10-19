@@ -1,12 +1,12 @@
 # Azure Deployment
 
-Three separate terraform roots — **global** (persistent), **cluster** (disposable), **frontend** (independent) — plus **dev**, a developer's own UI publishing resources.
+Two terraform roots for the cloud — **global** (persistent) and **cluster** (disposable) — plus **dev**, a developer's own UI publishing resources, and **dev-server**, the shared development server's Azure side.
 
 ## Directory Structure
 
 ```
 deployment/terraform/azure/
-├── global/                    # DNS, Entra ID, Key Vault, email — apply once, never destroy
+├── global/                    # The platform zone on Cloudflare, Entra ID, Key Vault, email — apply once, never destroy
 │   ├── main.tf
 │   ├── email.tf
 │   ├── keyvault.tf
@@ -28,10 +28,6 @@ deployment/terraform/azure/
 │   ├── terraform.tfvars
 │   ├── config/
 │   └── helm/
-├── frontend/                  # Static Web App for SPA — deploy independently
-│   ├── main.tf
-│   ├── deploy.sh
-│   └── terraform.tfvars
 ├── dev/                       # A developer's own environment: the dev-environment module, and .env.local on their machine
 │   ├── README.md              # Getting started on your machine
 │   ├── main.tf
@@ -41,7 +37,8 @@ deployment/terraform/azure/
 │   ├── main.tf
 │   ├── outputs.tf
 │   └── variables.tf
-├── modules/                   # Shared modules (aks, dev-environment, firecracker, identity, micro-vm-node, networking, sites)
+├── modules/                   # Shared modules (aks, cloudflare-sites, dev-environment, firecracker, identity, micro-vm-node, networking, sites)
+├── deploy-ui.sh               # Builds the portal and the system console and uploads them into a root's sites account
 ├── bootstrap-state.sh         # One-time state storage setup
 ├── OPS.md                     # Day-2 operations
 ├── TROUBLESHOOTING.md         # Common errors and fixes
@@ -91,14 +88,15 @@ az ad group member add --group kinotic-terraform-operators \
 ```bash
 cd global
 terraform init
-TF_VAR_google_client_secret=... TF_VAR_github_client_secret=... \
+# cloudflare_account_id and cloudflare_api_token in local.auto.tfvars (gitignored)
+TF_VAR_google_client_secret=... TF_VAR_github_client_secret=... TF_VAR_cloudflare_dns_api_token=... \
   TF_VAR_github_app_private_key="$(cat <the App's private-key .pem>)" TF_VAR_github_webhook_secret=... \
   terraform apply
 ```
 
-This creates the DNS zone, the Entra ID app registrations, and the platform Key Vault
-holding the secrets the servers mount. Copy the nameservers
-to your domain registrar:
+This creates the platform zone on Cloudflare with the email records, the Entra ID app
+registrations, and the platform Key Vault holding the secrets the servers mount. Point the
+domain at Cloudflare's nameservers at your registrar:
 
 ```bash
 terraform output dns_nameservers
@@ -145,16 +143,18 @@ terraform destroy
 terraform apply
 ```
 
-Global resources (DNS zone, Entra ID apps) are untouched. The cluster reads
+Global resources (the platform zone, Entra ID apps) are untouched. The cluster reads
 from global state via `terraform_remote_state`. No imports, no state surgery.
 
-## Deploy Frontend (SPA)
+## Deploy the portal and the system console
+
+The cluster's own UIs are served by the sites Worker from the cluster's sites account at
+`portal.kinotic.ai` and `console.kinotic.ai`, the way every published site is served, from
+`sites/<hostname>/`; the cluster root creates their records and routes and grants the operator
+the upload role.
 
 ```bash
-cd frontend
-terraform init
-terraform apply     # creates Static Web App + DNS CNAME (first time only)
-./deploy.sh         # build + deploy SPA (run after every frontend change)
+./deploy-ui.sh cluster azure     # pnpm build --mode azure for apps/portal and apps/system, then upload; after every frontend change
 ```
 
 ## Developer UI Publishing
@@ -202,7 +202,7 @@ terraform apply -var="beta_mode=false"
 
 | Resource | Terraform | Lifecycle |
 |---|---|---|
-| DNS zone (kinotic.ai) | `global/` | Permanent |
+| The platform zone (kinotic.ai) on Cloudflare, with the email records | `global/` | Permanent |
 | Entra ID App Registrations | `global/` | Permanent |
 | Azure Communication Services (email) | `global/` | Permanent |
 | Key Vault (platform secrets) | `global/` | Permanent |
@@ -213,8 +213,7 @@ terraform apply -var="beta_mode=false"
 | The Kinotic servers (org, system, app) | `cluster/` | Disposable |
 | Observability (Loki, Tempo, Mimir, Alloy, Grafana) | `cluster/` | Disposable |
 | Firecracker VMs | `cluster/` | Disposable |
-| Static Web App (SPA) | `frontend/` | Independent |
-| portal.kinotic.ai CNAME | `frontend/` | Independent |
+| Sites account, Cloudflare sites Worker (kinotic.io), portal.kinotic.ai and console.kinotic.ai | `cluster/` | Disposable; `deploy-ui.sh cluster azure` uploads the UIs again |
 | Developer sites account + Cloudflare sites Worker (<environment>.kinotic.io) | `dev/` | Per developer, local state |
 | Development server: sites account, Cloudflare sites Worker (dev.kinotic.io), server key vault, snapshot storage | `dev-server/` | One per zone, local state |
 

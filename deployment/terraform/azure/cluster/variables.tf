@@ -124,7 +124,7 @@ variable "tags" {
 # ── Cloudflare ────────────────────────────────────────────────────────────────
 
 variable "cloudflare_zone_name" {
-  description = "The Cloudflare zone organizations' sites and the application API hosts live on, e.g. kinotic.io"
+  description = "The customers' zone, where organizations' sites and the application API hosts live, e.g. kinotic.io; the platform zone comes from the global root"
   type        = string
 }
 
@@ -139,13 +139,13 @@ variable "cloudflare_account_id" {
 }
 
 variable "cloudflare_api_token" {
-  description = "The token terraform applies the zone with: Workers Scripts edit on the account, and DNS, zone settings and SSL and certificates edit on the zone. Set it in local.auto.tfvars or TF_VAR_cloudflare_api_token"
+  description = "The token terraform applies the zones with: Workers Scripts edit on the account, and DNS, Workers routes, zone settings and SSL and certificates edit on the customers' zone and the platform zone. Set it in local.auto.tfvars or TF_VAR_cloudflare_api_token"
   type        = string
   sensitive   = true
 }
 
 variable "cloudflare_dns_api_token" {
-  description = "A second token holding DNS edit on the zone and nothing else, which cert-manager answers the DNS-01 challenges for the apps-api names with; the same token the global root stores for the servers as kinotic-cloudflare-dns-api-token"
+  description = "A second token holding DNS edit on the platform zone and the customers' zone and nothing else, which cert-manager answers the DNS-01 challenges for the servers' names with; the same token the global root stores for the servers as kinotic-cloudflare-dns-api-token"
   type        = string
   sensitive   = true
 }

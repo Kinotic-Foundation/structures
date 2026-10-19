@@ -51,3 +51,14 @@ variable "sites_storage_sas" {
   type        = string
   sensitive   = true
 }
+
+variable "platform_zone_id" {
+  description = "The platform zone on Cloudflare (global/ output dns_zone_id), where the platform's own UIs are served"
+  type        = string
+}
+
+variable "ui_hostnames" {
+  description = "The platform's own UIs served by the Worker from the sites account the way a published site is, by hostname in the platform zone: portal.<zone> and console.<zone> in the cluster, dev-portal.<zone> and dev-console.<zone> on the development server, none on a developer's machine. deploy-ui.sh uploads each under sites/<hostname>/"
+  type        = set(string)
+  default     = []
+}

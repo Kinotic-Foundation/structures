@@ -4,9 +4,9 @@ One Proxmox host runs the platform's services: a container per service — the o
 app servers, the one-shot migration, three Elasticsearch nodes on a physical disk each, Loki,
 Tempo, Mimir, Grafana — created from the same images the compose stack pulls, and the edge, an
 HAProxy container that passes each TLS connection on the router's forwarded 443 to the server
-its SNI names. The portal and the system console are Static Web Apps the Azure root creates and
-`deployment/terraform/azure/dev-server/deploy-ui.sh` deploys, so the host exposes the edge
-alone. The workload nodes are separate machines, or VMs on this host (`workers`),
+its SNI names. The portal and the system console are served by the sites Worker from the Azure
+root's sites account (`deployment/terraform/azure/deploy-ui.sh dev-server dev-server` uploads
+them), so the host exposes the edge alone. The workload nodes are separate machines, or VMs on this host (`workers`),
 provisioned with `deployment/vm-node` and configured from this root's `vm_manager_env` output. The design and the reasons are on the
 [Development Server](https://kinotic.ai/platform/development-server) page; this is the
 runbook.
@@ -82,48 +82,39 @@ directory is the only copy of the JWT signing keys and the master key. Keep it s
 out of the repository; they are carried to the cloud at migration. The two
 roots' state files hold the principal's secret and the storage keys, so keep them at mode 0600.
 
-The app server's names, `apps-api.dev.kinotic.io` and every application's host under it, are in
-the Cloudflare zone (the `dev-server` root), so its certificate needs the `certbot-dns-cloudflare`
-plugin with the DNS token that root takes, beside the Azure plugin the other two servers use.
-Each server's certificate is issued on the host by certbot with the DNS-01 plugin, as the
-servers' principal (the `dev-server` root granted it DNS Zone Contributor), and installed into
-the directory that server's container mounts — `cnb`, uid 1002 and gid 1001 in the container,
-is 101002:101001 on the host. The app server's carries its own name and every application's
-host under it:
+Each server's certificate is issued on the host by certbot with the `dns-cloudflare` plugin and
+the DNS token the `dev-server` root takes, which holds DNS edit on both zones: the platform zone
+carries the management and system servers' names, the customers' zone the app server's,
+`apps-api.dev.kinotic.io` and every application's host under it. Each certificate is installed
+into the directory that server's container mounts — `cnb`, uid 1002 and gid 1001 in the
+container, is 101002:101001 on the host:
 
 ```bash
 ssh root@<host>
-# pyOpenSSL 26 drops X509Req, which the josepy 1.x certbot pins still imports; azure-mgmt-dns 9
-# changes the client constructor certbot-dns-azure calls
-python3 -m venv /opt/certbot && /opt/certbot/bin/pip install certbot certbot-dns-azure certbot-dns-cloudflare "pyOpenSSL>=25,<26" "azure-mgmt-dns<9"
-install -m 0600 /dev/stdin /etc/kinotic/certbot-azure.ini <<EOT
-dns_azure_sp_client_id = <AZURE_CLIENT_ID>
-dns_azure_sp_client_secret = <AZURE_CLIENT_SECRET>
-dns_azure_tenant_id = <AZURE_TENANT_ID>
-dns_azure_environment = AzurePublicCloud
-dns_azure_zone1 = kinotic.ai:/subscriptions/<subscription>/resourceGroups/<global rg>
-EOT
+# pyOpenSSL 26 drops X509Req, which the josepy 1.x certbot pins still imports
+python3 -m venv /opt/certbot && /opt/certbot/bin/pip install certbot certbot-dns-cloudflare "pyOpenSSL>=25,<26"
 install -m 0600 /dev/stdin /etc/kinotic/certbot-cloudflare.ini <<EOT
 dns_cloudflare_api_token = <KINOTIC_DOMAIN_PUBLISHEDSITES_CLOUDFLARE_APITOKEN>
 EOT
-azure=(--authenticator dns-azure --dns-azure-config /etc/kinotic/certbot-azure.ini)
-cloudflare=(--authenticator dns-cloudflare --dns-cloudflare-credentials /etc/kinotic/certbot-cloudflare.ini)
-issue() {   # <server> <vmid> <plugin> <name>...
-  local server=$1 vmid=$2 name domains=(); local -n plugin=$3; shift 3
+issue() {   # <server> <vmid> <name>...
+  local server=$1 vmid=$2 name domains=(); shift 2
   for name in "$@"; do domains+=(-d "$name"); done
-  /opt/certbot/bin/certbot certonly --non-interactive --agree-tos --email <you> --cert-name "$server" "${plugin[@]}" \
+  /opt/certbot/bin/certbot certonly --non-interactive --agree-tos --email <you> --cert-name "$server" \
+    --authenticator dns-cloudflare --dns-cloudflare-credentials /etc/kinotic/certbot-cloudflare.ini \
     --deploy-hook "install -m 0640 -o 101002 -g 101001 \"\$RENEWED_LINEAGE\"/fullchain.pem \"\$RENEWED_LINEAGE\"/privkey.pem /etc/kinotic/secrets/$server/certs/ && pct reboot $vmid 2>/dev/null || true" \
     "${domains[@]}"
 }
-issue kinotic-server-management 121 azure dev-api.kinotic.ai
-issue kinotic-server-system 122 azure dev-system-api.kinotic.ai
-issue kinotic-server-app 123 cloudflare apps-api.dev.kinotic.io '*.apps-api.dev.kinotic.io'
+issue kinotic-server-management 121 dev-api.kinotic.ai
+issue kinotic-server-system 122 dev-system-api.kinotic.ai
+issue kinotic-server-app 123 apps-api.dev.kinotic.io '*.apps-api.dev.kinotic.io'
 echo '0 3 * * * root /opt/certbot/bin/certbot renew -q' > /etc/cron.d/certbot
 ```
 
 The deploy hook runs on every renewal too, which is all the certificate rotation there is.
-`kinotic-dyndns.timer` reads the names to keep current from these certificates and its Azure
-credentials from the same ini, so it starts working with the first issuance.
+`kinotic-dyndns.timer` reads the names to keep current from these certificates and the token
+from the same ini, so it starts working with the first issuance; it rewrites the records of the
+platform zone's names, the two API hosts, and leaves the app server's proxied records to the
+`dev-server` root.
 
 ## Applying
 
@@ -165,8 +156,8 @@ server terminates TLS with its own certificate; a connection naming no server's 
 closed. The router picks the target by device and reserves an address for it when the forward
 is saved, so the edge's LAN interface takes its address by DHCP under a fixed MAC
 (`edge_mac`), and `edge_ip` is the address the router reserved, which the nodes dial for every
-server; the portal and the system console are on their Static Web Apps as soon as `deploy-ui.sh`
-in the Azure root has deployed them.
+server; the portal and the system console are on the sites Worker as soon as `deploy-ui.sh` has
+uploaded them.
 
 ## After the first apply
 

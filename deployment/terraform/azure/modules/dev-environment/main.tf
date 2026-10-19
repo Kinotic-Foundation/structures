@@ -44,7 +44,9 @@ resource "azurerm_resource_group" "main" {
 # ── UI sites ─────────────────────────────────────────────────────────────────
 # The sites module owns the storage account every published UI is written to; the
 # cloudflare-sites module owns the sites domain itself, where the sites Worker serves every
-# published UI from the account and the app server's hosts live.
+# published UI from the account and the app server's hosts live, and serves the platform's own
+# UIs a root asks for (the development server's portal and console, which deploy-ui.sh uploads
+# into the account) at their hostnames in the platform zone.
 
 module "sites" {
   source = "../sites"
@@ -69,6 +71,8 @@ module "cloudflare_sites" {
   sites_storage_blob_endpoint = module.sites.storage_blob_endpoint
   sites_storage_sas           = module.sites.sites_read_sas
   portal_base_url             = var.portal_base_url
+  platform_zone_id            = var.platform_zone_id
+  ui_hostnames                = var.ui_hostnames
 }
 
 # ── Service principal for the Kinotic servers ─────────────────────────────────

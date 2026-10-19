@@ -29,13 +29,13 @@ variable "system_api_label" {
 }
 
 variable "portal_label" {
-  description = "The portal's label in the platform zone, a Static Web App: dev-portal for dev-portal.kinotic.ai"
+  description = "The portal's label in the platform zone, served by the sites Worker from the sites account: dev-portal for dev-portal.kinotic.ai"
   type        = string
   default     = "dev-portal"
 }
 
 variable "console_label" {
-  description = "The system console's label in the platform zone, a Static Web App: dev-console for dev-console.kinotic.ai"
+  description = "The system console's label in the platform zone, served the same way: dev-console for dev-console.kinotic.ai"
   type        = string
   default     = "dev-console"
 }
@@ -62,13 +62,13 @@ variable "cloudflare_account_id" {
 }
 
 variable "cloudflare_api_token" {
-  description = "The token this root applies the zone with: Workers Scripts edit on the account, DNS and zone settings edit on the zone; set it in local.auto.tfvars"
+  description = "The token this root applies the zones with: Workers Scripts edit on the account, DNS, Workers routes and zone settings edit on the customers' zone and the platform zone; set it in local.auto.tfvars"
   type        = string
   sensitive   = true
 }
 
 variable "cloudflare_dns_api_token" {
-  description = "A token holding DNS edit on the zone and nothing else, placed on the host for the servers to create organizations' sites records with; set it in local.auto.tfvars"
+  description = "A token holding DNS edit on the platform zone and the customers' zone and nothing else, placed on the host for the servers to create organizations' sites records with, for certbot's DNS-01 challenges and for kinotic-dyndns; set it in local.auto.tfvars"
   type        = string
   sensitive   = true
 }

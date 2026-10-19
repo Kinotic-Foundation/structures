@@ -196,7 +196,7 @@ resource "azurerm_key_vault_secret" "github_webhook_secret" {
 resource "azurerm_key_vault_secret" "cloudflare_dns_api_token" {
   name         = "kinotic-cloudflare-dns-api-token"
   key_vault_id = azurerm_key_vault.platform.id
-  content_type = "Cloudflare API token with DNS edit on the customer zone"
+  content_type = "Cloudflare API token with DNS edit on the platform zone and the customer zone"
   value        = var.cloudflare_dns_api_token
 
   tags = local.common_tags

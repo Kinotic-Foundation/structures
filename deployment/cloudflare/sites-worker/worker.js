@@ -1,13 +1,15 @@
 /**
- * Serves every organization's published sites under the sites domain from the sites storage account, and
- * sends an organization's own host to the portal's login for that organization.
+ * Serves every organization's published sites under the sites domain from the sites storage account, the
+ * platform's own UIs from the same account at their hostnames in the platform zone, and sends an
+ * organization's own host to the portal's login for that organization.
  *
  * A site is <app>--<ui>.<org>.<SITES_DOMAIN>, and a site addressed to one tenant of the application is
  * <tenant>--<app>--<ui>.<org>.<SITES_DOMAIN>; both are served from the application's site directory,
  * sites/<app>--<ui>.<org>.<SITES_DOMAIN>/ in the account, which the publish workload writes. A request that
  * names a file is served as that file; any other path is a route of the single-page application and is
  * served its index. The organization's own host, <org>.<SITES_DOMAIN>, redirects to <PORTAL_BASE_URL>/login/<org>.
- * The platform's own UIs are never served here: the portal and the console live on the platform zone.
+ * The platform's own UIs, the portal and the console, are the hosts UI_HOSTS names, each served from sites/<host>/
+ * the same way; they are in the platform zone, never under the sites domain, so no site is same-site with them.
  *
  * The Worker is bound to the site hosts only: the application API hosts, <org>--<app>.apps-api.<zone>, go to
  * the app server directly, so no API call or WebSocket passes through here.
@@ -17,6 +19,7 @@
  *   SITES_STORAGE_URL   the blob endpoint of the sites account, e.g. https://stkinoticsites.blob.core.windows.net
  *   SITES_STORAGE_SAS   the query string of the read-only SAS on the sites container, a secret, which signs every read
  *   PORTAL_BASE_URL     where an organization's host sends the browser, e.g. https://portal.kinotic.ai
+ *   UI_HOSTS            the platform's own UIs' hostnames, comma-separated, e.g. portal.kinotic.ai,console.kinotic.ai
  */
 
 const LABEL_SEPARATOR = '--'
@@ -84,6 +87,16 @@ export function resolveFile(pathname) {
 }
 
 /**
+ * The platform's own UIs' hostnames, from the UI_HOSTS binding.
+ *
+ * @param {string} binding the comma-separated hostnames, possibly empty
+ * @returns {Set<string>} the hostnames, lowercase
+ */
+export function platformUis(binding) {
+    return new Set(binding.split(',').map(host => host.trim().toLowerCase()).filter(host => host.length > 0))
+}
+
+/**
  * How long the edge may keep a file: hashed assets forever, everything else briefly.
  *
  * @param {string} file the file's path within the site
@@ -96,12 +109,19 @@ export function cacheTtl(file) {
 export default {
     async fetch(request, env) {
         const url = new URL(request.url)
-        const resolved = resolveHost(url.hostname.toLowerCase(), env.SITES_DOMAIN.toLowerCase())
-        if (resolved === null) {
-            return new Response('Not found', { status: 404 })
-        }
-        if (resolved.site === null) {
-            return Response.redirect(env.PORTAL_BASE_URL + '/login/' + encodeURIComponent(resolved.organizationId), 302)
+        const host = url.hostname.toLowerCase()
+        let site
+        if (platformUis(env.UI_HOSTS).has(host)) {
+            site = host
+        } else {
+            const resolved = resolveHost(host, env.SITES_DOMAIN.toLowerCase())
+            if (resolved === null) {
+                return new Response('Not found', { status: 404 })
+            }
+            if (resolved.site === null) {
+                return Response.redirect(env.PORTAL_BASE_URL + '/login/' + encodeURIComponent(resolved.organizationId), 302)
+            }
+            site = resolved.site
         }
         if (request.method !== 'GET' && request.method !== 'HEAD') {
             return new Response('Method not allowed', { status: 405, headers: { Allow: 'GET, HEAD' } })
@@ -109,7 +129,7 @@ export default {
         const file = resolveFile(url.pathname)
         const ttl = cacheTtl(file)
         // the container is private, so the read carries the SAS; the response alone reaches the browser
-        const origin = env.SITES_STORAGE_URL + '/' + SITES_CONTAINER + '/' + resolved.site + file + '?' + env.SITES_STORAGE_SAS
+        const origin = env.SITES_STORAGE_URL + '/' + SITES_CONTAINER + '/' + site + file + '?' + env.SITES_STORAGE_SAS
         const answer = await fetch(origin, {
             method: request.method,
             cf: { cacheEverything: true, cacheTtlByStatus: { '200-299': ttl, '404': 10, '500-599': 0 } },

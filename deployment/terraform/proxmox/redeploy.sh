@@ -5,8 +5,8 @@
 #     new digest on Docker Hub: their containers are replaced (a republished SNAPSHOT keeps its
 #     tag, so a plain apply never notices), the migration runs again, and the applier restores
 #     the settings the provider drops
-#   - the portal and the system console, when kinotic-frontend differs from what the portal's
-#     Static Web App serves (deploy-ui.sh records the tree it built in each app's version.json)
+#   - the portal and the system console, when kinotic-frontend differs from what the sites
+#     Worker serves (deploy-ui.sh records the tree it built in each app's version.json)
 #   - the vm-manager on each node in vm_nodes, when the version vm_manager_version resolves
 #     to on npm is not the one installed; the node kit is synced first so the installer is current
 #
@@ -84,7 +84,7 @@ elif $DRY_RUN; then
   echo "==> UIs: kinotic-frontend is $frontend_tree, the portal serves ${deployed_tree:-nothing}; would build and deploy"
 else
   echo "==> UIs: kinotic-frontend is $frontend_tree, the portal serves ${deployed_tree:-nothing}"
-  "$AZURE/deploy-ui.sh"
+  "$AZURE/../deploy-ui.sh" dev-server dev-server
 fi
 
 # ---- the vm-manager on each node ----------------------------------------------------------
