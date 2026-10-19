@@ -69,11 +69,15 @@ Placed on the host before the first apply, so the servers start with everything 
 
 ```bash
 ./generate-secrets.sh ./dev-server-secrets
-(cd ../azure/dev-server && terraform output -raw secrets_env)   # → dev-server-secrets/kinotic-servers.env
+(cd ../azure/dev-server && terraform output -raw secrets_env) > ./dev-server-secrets/kinotic-servers.env   # the principal's secret and the Cloudflare DNS token
 # The shared GitHub App's private key and webhook secret → dev-server-secrets/kinotic-server-management/secrets.yml
 # and dev-server-secrets/kinotic-server-system/secrets.yml, the servers that load the GitHub module
 ./sync-secrets.sh ./dev-server-secrets <host>
 ```
+
+`sync-secrets.sh` also writes the Cloudflare DNS token from `kinotic-servers.env` into
+`/etc/kinotic/certbot-cloudflare.ini` on the host, which certbot and `kinotic-dyndns` read, so
+rotating the token is one `secrets_env` output and one sync.
 
 Each server has a directory of its own, mounted at `/etc/kinotic` in its container: its
 `secrets.yml`, its own JWT key set, and its certificate. The master key in the three
@@ -93,9 +97,7 @@ container, is 101002:101001 on the host:
 ssh root@<host>
 # pyOpenSSL 26 drops X509Req, which the josepy 1.x certbot pins still imports
 python3 -m venv /opt/certbot && /opt/certbot/bin/pip install certbot certbot-dns-cloudflare "pyOpenSSL>=25,<26"
-install -m 0600 /dev/stdin /etc/kinotic/certbot-cloudflare.ini <<EOT
-dns_cloudflare_api_token = <KINOTIC_DOMAIN_PUBLISHEDSITES_CLOUDFLARE_APITOKEN>
-EOT
+# /etc/kinotic/certbot-cloudflare.ini holds the DNS token; sync-secrets.sh wrote it from kinotic-servers.env
 issue() {   # <server> <vmid> <name>...
   local server=$1 vmid=$2 name domains=(); shift 2
   for name in "$@"; do domains+=(-d "$name"); done

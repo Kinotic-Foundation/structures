@@ -48,9 +48,9 @@ locals {
 
 resource "terraform_data" "cert_manager_issuer_and_cert" {
   # A create-time provisioner runs again only when the resource is replaced, so a change to the
-  # names re-applies the Certificate; cert-manager then reissues it, and Reloader restarts the
-  # servers onto the new secret
-  triggers_replace = local.tls_dns_names
+  # names or to how the challenges are answered re-applies the ClusterIssuer and the Certificate;
+  # cert-manager then reissues it, and Reloader restarts the servers onto the new secret
+  triggers_replace = concat(local.tls_dns_names, ["dns01 cloudflare ${kubernetes_secret.cloudflare_dns_api_token.metadata[0].name}"])
 
   provisioner "local-exec" {
     command = <<-EOT

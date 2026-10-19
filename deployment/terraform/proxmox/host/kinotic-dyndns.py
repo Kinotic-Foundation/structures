@@ -2,8 +2,8 @@
 """Keeps the host's public hostnames on the router's current public address. The ISP hands
 out the address by DHCP, so kinotic-dyndns.timer runs this every few minutes: it asks an echo
 service for the address and writes it into the A record of every name the host's certificates
-carry in the platform zone, through the Cloudflare API with the DNS token certbot's dns-cloudflare
-configuration names.
+carry in the platform zone, through the Cloudflare API with the DNS token in certbot's dns-cloudflare
+credentials file, which sync-secrets.sh writes from kinotic-servers.env.
 
 A record already at the address is left alone. The app server's names are in the customers'
 zone, proxied records the dev-server terraform root owns, so they are not touched.

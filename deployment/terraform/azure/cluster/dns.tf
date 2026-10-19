@@ -25,6 +25,16 @@ data "kubernetes_service" "server" {
   depends_on = [helm_release.kinotic]
 }
 
+# The records in the Azure zone are forgotten, not destroyed: the zone keeps answering while the
+# registrar's change to Cloudflare propagates, and is deleted by hand with them afterwards
+removed {
+  from = azurerm_dns_a_record.server
+
+  lifecycle {
+    destroy = false
+  }
+}
+
 resource "cloudflare_dns_record" "server" {
   for_each = local.server_records
 

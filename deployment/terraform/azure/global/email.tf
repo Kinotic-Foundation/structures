@@ -67,6 +67,31 @@ locals {
   )
 }
 
+# The Azure zone's records stay with it until it is deleted by hand
+removed {
+  from = azurerm_dns_txt_record.apex
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = azurerm_dns_cname_record.email_dkim
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = azurerm_dns_cname_record.email_dkim2
+
+  lifecycle {
+    destroy = false
+  }
+}
+
 resource "cloudflare_dns_record" "email_domain" {
   zone_id = cloudflare_zone.main.id
   name    = local.email_domain_record_name

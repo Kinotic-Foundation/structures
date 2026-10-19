@@ -176,6 +176,16 @@ locals {
   }
 }
 
+# The records in the Azure zone are forgotten, not destroyed: the zone keeps answering while the
+# registrar's change to Cloudflare propagates, and is deleted by hand with them afterwards
+removed {
+  from = azurerm_dns_a_record.public
+
+  lifecycle {
+    destroy = false
+  }
+}
+
 resource "cloudflare_dns_record" "public" {
   for_each = local.public_hostnames
 

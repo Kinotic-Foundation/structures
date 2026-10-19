@@ -178,6 +178,17 @@ resource "cloudflare_zone" "main" {
   type = "full"
 }
 
+# The Azure DNS zone the domain was served from is forgotten, not destroyed: it keeps answering
+# while the registrar's change to Cloudflare's nameservers propagates, and is deleted by hand
+# afterwards (README.md)
+removed {
+  from = azurerm_dns_zone.main
+
+  lifecycle {
+    destroy = false
+  }
+}
+
 # The proxied hosts of the zone, the platform's UIs, are served by the Worker over HTTPS alone
 resource "cloudflare_zone_setting" "always_use_https" {
   zone_id    = cloudflare_zone.main.id

@@ -103,6 +103,14 @@ terraform output dns_nameservers
 dig NS kinotic.ai  # verify propagation
 ```
 
+A domain moving from Azure DNS keeps its Azure zone answering meanwhile: the roots forget
+their Azure records and the zone rather than destroying them (`removed` blocks), so the two
+zones answer alike until the change has propagated. Then delete the Azure zone by hand:
+
+```bash
+az network dns zone delete --name kinotic.ai --resource-group rg-kinotic-global
+```
+
 ### 5. Deploy cluster
 
 ```bash
