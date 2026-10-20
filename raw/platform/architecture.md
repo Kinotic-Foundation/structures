@@ -65,16 +65,6 @@ The three servers are Spring Boot applications that form one Ignite cluster, in 
   
   <tr>
     <td>
-      Database
-    </td>
-    
-    <td>
-      Postgres (Hibernate Reactive)
-    </td>
-  </tr>
-  
-  <tr>
-    <td>
       Search/Persistence
     </td>
     
