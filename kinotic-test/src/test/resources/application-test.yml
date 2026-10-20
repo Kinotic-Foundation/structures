@@ -10,6 +10,9 @@ kinotic:
       appPrivateKey: "-"
       webhookSecret: "-"
       repoTemplate: "-"
+    # the bases of the callback URLs OwnedOidcConfigurationService gives; no test signs in through one
+    managementServerApiBaseUrl: http://localhost:9090
+    appApiBaseUrl: http://localhost:58505
   maxNumberOfCoresToUse: 4
   systemApi:
     # no sites account in tests: the site provisioner is the mock

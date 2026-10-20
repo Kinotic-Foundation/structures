@@ -16,6 +16,7 @@ import org.kinotic.domain.api.model.security.OwnedOidcConfiguration;
 import org.kinotic.domain.api.model.security.identity.Membership;
 import org.kinotic.domain.api.rest.support.OAuth2Util;
 import org.kinotic.domain.api.rest.support.OidcCallbackException;
+import org.kinotic.domain.api.rest.support.OidcCallbacks;
 import org.kinotic.domain.api.services.security.MembershipService;
 import org.kinotic.core.api.security.Participant;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
@@ -277,7 +278,7 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
                   if (config == null) {
                       authEndpointSupport.respondError(ctx, 400, "The organization's login does not offer " + configId);
                   } else {
-                      authEndpointSupport.redirectToIdp(ctx, config, OrganizationOidcCallbacks.callbackUrl(properties.getApiBaseUrl(), config), orgId, origin);
+                      authEndpointSupport.redirectToIdp(ctx, config, OidcCallbacks.organizationCallbackUrl(properties.getApiBaseUrl(), config), orgId, origin);
                   }
               })
               .onFailure(err -> {
@@ -293,7 +294,7 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
      */
     private void handleSocialStart(RoutingContext ctx) {
         authEndpointSupport.handleSocialStart(ctx, config -> oidcFlowOrchestrator.startFlow(
-                ctx, config, OrganizationOidcCallbacks.socialCallbackUrl(properties.getApiBaseUrl(), config.getId()), null, SessionBinding.origin(ctx)));
+                ctx, config, OidcCallbacks.socialCallbackUrl(properties.getApiBaseUrl(), config.getId()), null, SessionBinding.origin(ctx)));
     }
 
     @Override

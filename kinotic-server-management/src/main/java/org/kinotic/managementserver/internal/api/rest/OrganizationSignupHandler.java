@@ -12,6 +12,7 @@ import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.exceptions.ExistingAccountException;
 import org.kinotic.domain.api.model.security.PendingSignUp;
+import org.kinotic.domain.api.rest.support.OidcCallbacks;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.services.security.SignUpService;
 import org.kinotic.domain.api.rest.SuppliesGatewayRoutes;
@@ -119,7 +120,7 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes, OidcFlo
      */
     private void handleSocialStart(RoutingContext ctx) {
         authEndpointSupport.handleSocialStart(ctx, config -> oidcFlowOrchestrator.startSignUp(
-                ctx, config, OrganizationOidcCallbacks.socialCallbackUrl(properties.getApiBaseUrl(), config.getId())));
+                ctx, config, OidcCallbacks.socialCallbackUrl(properties.getApiBaseUrl(), config.getId())));
     }
 
     @Override

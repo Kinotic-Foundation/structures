@@ -11,6 +11,8 @@ kinotic:
     github:
       webhookSecret: "-"
       appPrivateKey: "-"
+    # The app server as `pnpm dev` runs it: the host of an application's or a tenant's OIDC callback
+    appApiBaseUrl: http://localhost:58505
   managementServer:
     # Plain localhost dev (pnpm dev, no tunnel): vite serves the portal and proxies /api (REST and the STOMP WebSocket at /api/v1)
     # (WebSocket), /.well-known, and /mcp to 58503, so the API base is the portal's. A developer's

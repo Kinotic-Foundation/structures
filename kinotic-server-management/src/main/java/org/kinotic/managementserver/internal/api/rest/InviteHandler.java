@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.PendingInvite;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
+import org.kinotic.domain.api.rest.support.OidcCallbacks;
 import org.kinotic.domain.api.services.OrganizationService;
 import org.kinotic.domain.api.exceptions.AccountDisabledException;
 import org.kinotic.domain.api.exceptions.ExistingAccountException;
@@ -263,7 +264,7 @@ public class InviteHandler implements SuppliesGatewayRoutes, OidcFlowCompleter {
                              ret = Future.failedFuture(new OidcCallbackException(OidcErrorCodes.CONFIG_NOT_FOUND));
                          } else {
                              ret = oidcFlowOrchestrator.startInvitation(ctx, chosen,
-                                                                        OrganizationOidcCallbacks.callbackUrl(properties.getApiBaseUrl(), chosen),
+                                                                        OidcCallbacks.organizationCallbackUrl(properties.getApiBaseUrl(), chosen),
                                                                         invite.getOrganizationId(), token);
                          }
                          return ret;

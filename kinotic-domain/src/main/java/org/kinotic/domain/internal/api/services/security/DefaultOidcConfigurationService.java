@@ -258,21 +258,42 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
 
     @Override
     public <C extends OwnedOidcConfiguration> Future<C> save(C configuration, String clientSecret) {
-        boolean confidential = StringUtils.isNotBlank(clientSecret);
-        configuration.setConfidentialClient(confidential);
         // beforeSave first, since it checks the caller owns the row and gives a new configuration the id its secret
         // is keyed by; the row is written once the vault holds the secret, so it never claims one the vault refused,
         // and its updated, which keys the OAuth client cache, changes with the secret
         return beforeSave(configuration)
-                .compose(v -> confidential
+                .compose(v -> StringUtils.isNotBlank(clientSecret)
                         ? secretStorageService.setSecret(configuration.getOrganizationId(), configuration.getId(), clientSecret)
-                        : secretStorageService.deleteSecret(configuration.getOrganizationId(), configuration.getId()))
-                .compose(v -> oidcRepository.save(configuration))
+                                              .map(true)
+                        : isSecretHeld(configuration))
+                .compose(confidential -> {
+                    configuration.setConfidentialClient(confidential);
+                    return oidcRepository.save(configuration);
+                })
                 .map(saved -> {
                     @SuppressWarnings("unchecked")
                     C ret = (C) saved;
                     return ret;
                 });
+    }
+
+    // read from the persisted row: only a save given a secret, and deleteClientSecret, change whether one is held
+    private Future<Boolean> isSecretHeld(OwnedOidcConfiguration configuration) {
+        return oidcRepository.findOwnedById(configuration.getId(), configuration.getOrganizationId())
+                             .map(existing -> existing != null && existing.isConfidentialClient());
+    }
+
+    @Override
+    public Future<OwnedOidcConfiguration> deleteClientSecret(String id) {
+        Validate.notBlank(id, "id cannot be blank");
+        String orgId = requireOrganizationId();
+        return oidcRepository.findOwnedById(id, orgId)
+                             .compose(existing -> existing == null
+                                     ? Future.succeededFuture()
+                                     // the row is written once the vault no longer holds the secret, as in save
+                                     : beforeSave(existing).compose(v -> secretStorageService.deleteSecret(orgId, id))
+                                                           .compose(v -> oidcRepository.save(existing.setConfidentialClient(false)))
+                                                           .map(OwnedOidcConfiguration.class::cast));
     }
 
     @Override

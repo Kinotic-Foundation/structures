@@ -97,7 +97,9 @@ servers:
     webServer:
       enabled: false
     # kinotic.appServer.apiBaseUrl: the base every application's API host is a label under
-    # (https://<organizationId>--<applicationId>.<domain>); each host is its own OAuth issuer
+    # (https://<organizationId>--<applicationId>.<domain>); each host is its own OAuth issuer. The
+    # management server is handed it as kinotic.managementApi.appApiBaseUrl, the base of the callback
+    # URL of an application's and a tenant's OIDC configurations
     appServer:
       apiBaseUrl: "http://localhost:58505"
     tlsSecretName: kinotic-server-app-tls

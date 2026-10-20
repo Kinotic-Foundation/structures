@@ -112,19 +112,28 @@ public interface OidcConfigurationService extends IdentifiableCrudService<OidcCo
     Future<Page<OwnedOidcConfiguration>> findOwnedByOrganization(String organizationId, Pageable pageable);
 
     /**
-     * Saves the configuration as {@link #save(Object)} does and makes {@code clientSecret} the secret it
-     * sends its provider, replacing the one it had. The secret is held in the owning organization's scope
-     * of the secret storage, keyed by the configuration's id, so it is never a field of the configuration
-     * and no other organization's configuration can read it; the configuration's
-     * {@code confidentialClient} records whether one is held. A sign-in through the configuration picks
-     * the new secret up on its next flow.
+     * Saves the configuration as {@link #save(Object)} does and, when {@code clientSecret} is given, makes it
+     * the secret the configuration sends its provider, replacing the one it had. The secret is held in the
+     * owning organization's scope of the secret storage, keyed by the configuration's id, so it is never a
+     * field of the configuration and no other organization's configuration can read it; the configuration's
+     * {@code confidentialClient} records whether one is held, whatever the configuration carried. A sign-in
+     * through the configuration picks a new secret up on its next flow.
      *
      * @param configuration the configuration, owned by the caller's organization
-     * @param clientSecret  the client secret's value, or {@code null} or blank for a public client, whose
-     *                      stored secret is deleted
+     * @param clientSecret  the client secret's value, or {@code null} or blank to keep the secret held for the
+     *                      configuration, if any; a new configuration saved without one is a public client
      * @return the configuration as saved
      */
     <C extends OwnedOidcConfiguration> Future<C> save(C configuration, String clientSecret);
+
+    /**
+     * Deletes the client secret held for the caller's organization's configuration {@code id} and saves the
+     * configuration as a public client, which sends its provider no secret on the code exchange.
+     *
+     * @param id the configuration, owned by the caller's organization
+     * @return the configuration as saved, or {@code null} when the organization owns no configuration by that id
+     */
+    Future<OwnedOidcConfiguration> deleteClientSecret(String id);
 
     /**
      * Creates a copy of the caller's organization's configuration {@code sourceId} for another of its

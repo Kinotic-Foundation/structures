@@ -50,9 +50,9 @@ public abstract sealed class OwnedOidcConfiguration extends OidcConfiguration im
 
     /**
      * Whether a client secret is held for this configuration and sent on the code exchange, which
-     * OAuth 2.0 calls a confidential client; {@code false} for a public client. Set by
-     * {@code OidcConfigurationService.save(configuration, clientSecret)} from whether a secret was
-     * given, and kept as it is by a save of the configuration alone.
+     * OAuth 2.0 calls a confidential client; {@code false} for a public client. Set to {@code true} by
+     * {@code OidcConfigurationService.save(configuration, clientSecret)} given a secret, kept by one given
+     * none, and set to {@code false} by {@code OidcConfigurationService.deleteClientSecret(id)}.
      */
     private boolean confidentialClient;
 

@@ -95,6 +95,10 @@ KINOTIC_APIGATEWAY_WEBSERVER_PORT: "{{ $server.webServer.port }}"
 KINOTIC_MANAGEMENTSERVER_APIBASEURL: "{{ .apiBaseUrl }}"
 KINOTIC_MANAGEMENTSERVER_PORTALBASEURL: "{{ .portalBaseUrl }}"
 KINOTIC_DOMAIN_EMAIL_LINKBASEURL: "{{ .portalBaseUrl }}"
+{{- with (index $root.Values.servers "kinotic-server-app").appServer }}
+# an application's and a tenant's OIDC configurations return to the application's API host
+KINOTIC_MANAGEMENTAPI_APPAPIBASEURL: "{{ .apiBaseUrl }}"
+{{- end }}
 {{- with .turnstile }}
 KINOTIC_MANAGEMENTSERVER_TURNSTILE_SITEKEY: "{{ .siteKey }}"
 {{- end }}

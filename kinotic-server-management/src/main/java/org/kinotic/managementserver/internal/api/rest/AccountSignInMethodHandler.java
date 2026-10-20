@@ -13,6 +13,7 @@ import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
 import org.kinotic.domain.api.rest.SuppliesGatewayRoutes;
 import org.kinotic.domain.api.rest.support.AuthEndpointSupport;
 import org.kinotic.domain.api.rest.support.CallbackResult;
+import org.kinotic.domain.api.rest.support.OidcCallbacks;
 import org.kinotic.domain.api.rest.support.OidcFlowOrchestrator;
 import org.kinotic.domain.api.rest.support.OidcFlowPurpose;
 import org.kinotic.domain.api.rest.support.PendingFlow;
@@ -68,7 +69,7 @@ public class AccountSignInMethodHandler implements SuppliesGatewayRoutes, OidcFl
                   Future<String> ret;
                   if (config instanceof OrgSignupOidcConfiguration signup && signup.isEnabled()) {
                       ret = oidcFlowOrchestrator.startConnect(ctx, signup,
-                                                              OrganizationOidcCallbacks.socialCallbackUrl(properties.getApiBaseUrl(), signup.getId()),
+                                                              OidcCallbacks.socialCallbackUrl(properties.getApiBaseUrl(), signup.getId()),
                                                               null, account.getId());
                   } else if (config instanceof OrganizationOidcConfiguration owned && owned.isEnabled()) {
                       // an organization's configuration binds only for an account that may sign in there: the organization
@@ -77,7 +78,7 @@ public class AccountSignInMethodHandler implements SuppliesGatewayRoutes, OidcFl
                                            .compose(member -> member == null
                                                    ? Future.failedFuture(new HttpException(403))
                                                    : oidcFlowOrchestrator.startConnect(ctx, owned,
-                                                                                       OrganizationOidcCallbacks.ssoCallbackUrl(properties.getApiBaseUrl(), owned.getId()),
+                                                                                       OidcCallbacks.ssoCallbackUrl(properties.getApiBaseUrl(), owned.getId()),
                                                                                        owned.getOrganizationId(), account.getId()));
                   } else {
                       ret = Future.failedFuture(new IllegalArgumentException("Unknown or disabled configuration: " + configurationId));

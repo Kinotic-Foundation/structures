@@ -18,6 +18,7 @@ import org.kinotic.domain.api.repositories.ApplicationRepository;
 import org.kinotic.domain.api.rest.SuppliesGatewayRoutes;
 import org.kinotic.domain.api.rest.support.CallbackResult;
 import org.kinotic.domain.api.rest.support.OidcCallbackException;
+import org.kinotic.domain.api.rest.support.OidcCallbacks;
 import org.kinotic.domain.api.rest.support.OidcErrorCodes;
 import org.kinotic.domain.api.rest.support.OidcFlowOrchestrator;
 import org.kinotic.domain.api.rest.support.PendingFlow;
@@ -25,7 +26,6 @@ import org.kinotic.domain.api.services.security.LocalAuthenticationService;
 import org.kinotic.domain.api.services.security.OidcConfigurationService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.utils.DomainUtil;
-import org.kinotic.domain.api.utils.HostLabelUtil;
 import org.springframework.stereotype.Component;
 
 /**
@@ -61,7 +61,7 @@ public class ApplicationLoginHandler implements SuppliesGatewayRoutes {
         router.get("/api/auth/app/login/providers").handler(this::handleProviders);
         router.post("/api/auth/app/login/oidc/start/:configId").handler(this::handleStart);
         router.post("/api/auth/app/login").handler(this::handleLogin);
-        router.get("/api/auth/app/login/oidc/callback/:configId").handler(this::handleCallback);
+        router.get(OidcCallbacks.APPLICATION_CALLBACK_PATH + ":configId").handler(this::handleCallback);
     }
 
     /**
@@ -209,6 +209,6 @@ public class ApplicationLoginHandler implements SuppliesGatewayRoutes {
 
     // the application's API host is the callback's base, so the IdP returns the browser to the host it left
     private String callbackUrl(ApplicationKey applicationKey, String configId) {
-        return HostLabelUtil.apiUrl(applicationKey, properties.getApiBaseUrl()) + "/api/auth/app/login/oidc/callback/" + configId;
+        return OidcCallbacks.applicationCallbackUrl(applicationKey, properties.getApiBaseUrl(), configId);
     }
 }

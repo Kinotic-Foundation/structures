@@ -183,6 +183,8 @@ locals {
         KINOTIC_MANAGEMENTSERVER_PORTALBASEURL  = "https://${local.azure.portal_hostname}"
         # the emailed verification and invite links open in the portal
         KINOTIC_DOMAIN_EMAIL_LINKBASEURL = "https://${local.azure.portal_hostname}"
+        # an application's and a tenant's OIDC configurations return to the application's API host
+        KINOTIC_MANAGEMENTAPI_APPAPIBASEURL = "https://${local.azure.apps_api_domain}"
         KINOTIC_MANAGEMENTAPI_LOKIURL    = local.service_urls["http://loki:3100"]
         KINOTIC_MANAGEMENTAPI_TEMPOURL   = local.service_urls["http://tempo:3200"]
         KINOTIC_MANAGEMENTAPI_MIMIRURL   = local.service_urls["http://mimir:9009"]

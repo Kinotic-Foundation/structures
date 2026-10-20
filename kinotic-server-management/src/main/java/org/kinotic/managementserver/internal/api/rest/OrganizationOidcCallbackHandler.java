@@ -5,6 +5,7 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import lombok.extern.slf4j.Slf4j;
 import org.kinotic.domain.api.rest.support.OidcCallbackException;
+import org.kinotic.domain.api.rest.support.OidcCallbacks;
 import org.kinotic.domain.api.rest.support.OidcErrorCodes;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.rest.SuppliesGatewayRoutes;
@@ -53,8 +54,8 @@ public class OrganizationOidcCallbackHandler implements SuppliesGatewayRoutes {
 
     @Override
     public void mountRoutes(Router router) {
-        router.get(OrganizationOidcCallbacks.SOCIAL_CALLBACK_PATH + ":configId").handler(this::handleSocialCallback);
-        router.get(OrganizationOidcCallbacks.SSO_CALLBACK_PATH + ":configId").handler(this::handleSsoCallback);
+        router.get(OidcCallbacks.SOCIAL_CALLBACK_PATH + ":configId").handler(this::handleSocialCallback);
+        router.get(OidcCallbacks.SSO_CALLBACK_PATH + ":configId").handler(this::handleSsoCallback);
     }
 
     /**
@@ -63,7 +64,7 @@ public class OrganizationOidcCallbackHandler implements SuppliesGatewayRoutes {
      */
     private void handleSocialCallback(RoutingContext ctx) {
         String configId = ctx.pathParam("configId");
-        handle(ctx, configId, OrganizationOidcCallbacks.socialCallbackUrl(properties.getApiBaseUrl(), configId),
+        handle(ctx, configId, OidcCallbacks.socialCallbackUrl(properties.getApiBaseUrl(), configId),
                (_, _, _) -> oidcConfigurationService.findOrgSignupById(configId).map(signup -> signup));
     }
 
@@ -74,7 +75,7 @@ public class OrganizationOidcCallbackHandler implements SuppliesGatewayRoutes {
      */
     private void handleSsoCallback(RoutingContext ctx) {
         String configId = ctx.pathParam("configId");
-        handle(ctx, configId, OrganizationOidcCallbacks.ssoCallbackUrl(properties.getApiBaseUrl(), configId),
+        handle(ctx, configId, OidcCallbacks.ssoCallbackUrl(properties.getApiBaseUrl(), configId),
                (orgId, _, _) -> orgId == null
                        ? Future.succeededFuture()
                        : oidcConfigurationService.findOffered(configId, orgId, null));
