@@ -16,6 +16,8 @@ import { DelegateService, type IDelegateService } from '@/api/services/security/
 import { ProfileService, type IProfileService } from '@/api/services/security/IProfileService'
 import { OwnedOidcConfigurationService, type IOwnedOidcConfigurationService } from '@/api/services/security/IOwnedOidcConfigurationService'
 import { MachineService, type IMachineService } from '@/api/services/security/IMachineService'
+import { PermissionService, type IPermissionService } from '@/api/services/security/IPermissionService'
+import { ApplicationAccessService, type IApplicationAccessService } from '@/api/services/security/IApplicationAccessService'
 import { GitHubAppInstallationService, type IGitHubAppInstallationService } from '@/api/services/IGitHubAppInstallationService'
 import { JobMonitoringService, type IJobMonitoringService } from '@/api/services/IJobMonitoringService'
 
@@ -38,6 +40,8 @@ export interface IManagementApiExtension {
     profile: IProfileService
     ownedOidcConfigurations: IOwnedOidcConfigurationService
     machines: IMachineService
+    permissions: IPermissionService
+    applicationAccess: IApplicationAccessService
     githubAppInstallations: IGitHubAppInstallationService
 }
 
@@ -62,6 +66,8 @@ export const ManagementApiPlugin: KinoticPlugin<IManagementApiExtension> = {
             profile: new ProfileService(kinotic),
             ownedOidcConfigurations: new OwnedOidcConfigurationService(kinotic),
             machines: new MachineService(kinotic),
+            permissions: new PermissionService(kinotic),
+            applicationAccess: new ApplicationAccessService(kinotic),
             githubAppInstallations: new GitHubAppInstallationService(kinotic),
         }
     }
