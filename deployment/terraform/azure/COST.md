@@ -85,13 +85,12 @@ Includes observability stack (Loki + Tempo + Mimir + Alloy + Grafana) and Entra 
 | Observability storage private endpoint | Private Endpoint (blob) | 1 | $7.30 | $7 |
 | Key Vault | Standard | 1 | ~$0.03/10K ops | $1 |
 | Azure Communication Services | Email | 1 | $0.00025/email | $0 |
-| DNS Zone | kinotic.ai | 1 | $0.50 | $1 |
 | State Storage | Blob (LRS) | 1 | $1 | $1 |
 | Cloudflare (UI sites) | Pro, certificates, Workers | 1 | $40 | $40 |
 | Private DNS Zone (blob) | privatelink.blob.core.windows.net | 1 | $0.50 | $1 |
 | Organization storage | Storage account + private endpoint | per org | ~$7.50 | +$7.50 per org |
 
-### Beta Total: ~$625/mo, plus ~$7.50 per organization
+### Beta Total: ~$624/mo, plus ~$7.50 per organization
 
 ### Beta Resource Utilization (48 GB across 3 nodes)
 
@@ -145,13 +144,12 @@ AKS Standard tier with uptime SLA.
 | Observability Blob Storage (Loki, Tempo, Mimir) | Azure Blob (hot tier) | — | ~$0.02/GB | $10 |
 | Observability storage private endpoint | Private Endpoint (blob) | 1 | $7.30 | $7 |
 | Grafana PVC | managed-csi-premium, 1 GB | 1 | $1 | $1 |
-| DNS Zone | kinotic.ai | 1 | $0.50 | $1 |
 | State Storage | Blob (LRS) | 1 | $1 | $1 |
 | Cloudflare (UI sites) | Pro, certificates, Workers | 1 | $40 | $40 |
 | Private DNS Zone (blob) | privatelink.blob.core.windows.net | 1 | $0.50 | $1 |
 | Organization storage | Storage account + private endpoint | per org | ~$7.50 | +$7.50 per org |
 
-### Production Total: ~$2,077/mo, plus ~$7.50 per organization
+### Production Total: ~$2,076/mo, plus ~$7.50 per organization
 
 The per-organization line is the private endpoint; the account itself is cents. At a
 thousand organizations that is ~$7,300/mo, which is where service endpoints or a shared
@@ -170,7 +168,7 @@ private endpoints, no cluster.
 | Cloudflare (UI sites) | Pro, certificates, Workers | 1 | $40 | $40 |
 | Organization storage accounts | Blob (LRS, hot), a few MB each | per org | cents | ~$0 |
 | Service principal, role assignments, resource group | | | $0 | $0 |
-| DNS records under `apps-<environment>` | In the shared `kinotic.ai` zone | | included | $0 |
+| DNS records under `<environment>` | In the shared `kinotic.io` zone | | included | $0 |
 
 ### Developer Total: ~$35/mo while it exists
 

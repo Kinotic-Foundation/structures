@@ -70,7 +70,7 @@
 
       <rect class="gw gw-app" x="52" y="250" width="268" height="140" rx="8"></rect>
       <text class="t-name" x="186" y="273" text-anchor="middle">kinotic-server-app</text>
-      <text class="t-sub"  x="186" y="289" text-anchor="middle">apps-api.kinotic.ai and *.apps-api</text>
+      <text class="t-sub"  x="186" y="289" text-anchor="middle">apps-api.kinotic.io and *.apps-api</text>
       <line class="sep" x1="70" y1="298" x2="302" y2="298"></line>
       <text class="t-mono" x="186" y="315" text-anchor="middle">ApplicationSecurityService</text>
       <text class="t-mono" x="186" y="330" text-anchor="middle">app users · clients · machines</text>
