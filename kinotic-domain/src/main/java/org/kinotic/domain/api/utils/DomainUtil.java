@@ -60,12 +60,6 @@ public class DomainUtil {
     public static final String SYSTEM_API_ZONE = "system-api";
 
     /**
-     * The zone of the Summit 42 app builder's services, which organizations' users call through the management
-     * server
-     */
-    public static final String SUMMIT_42_ZONE = "summit-42";
-
-    /**
      * The leading label of application zones, which follow the form app.&lt;organizationId&gt;.&lt;applicationId&gt;
      */
     public static final String APP_ZONE_PREFIX = "app";

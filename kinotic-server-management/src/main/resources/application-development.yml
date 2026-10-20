@@ -46,10 +46,9 @@ kinotic:
   apiGateway:
     cors:
       # The portal, however dev runs it: the vite dev server (pnpm dev, 5173), this server's own
-      # webroot (9090), and an ngrok tunnel (pnpm dev:tunnel); and the Summit 42 UI's vite dev server
-      # (5175). The tunnel is same-origin but still CORS-checked, because the social login forms POST
-      # and browsers send Origin on a POST navigation.
-      allowedOriginPattern: "http:\\/\\/localhost:(5173|5175|9090)|https:\\/\\/[a-zA-Z0-9-]+\\.ngrok(-free)?\\.(app|dev|io)"
+      # webroot (9090), and an ngrok tunnel (pnpm dev:tunnel). The tunnel is same-origin but still
+      # CORS-checked, because the social login forms POST and browsers send Origin on a POST navigation.
+      allowedOriginPattern: "http:\\/\\/localhost:(5173|9090)|https:\\/\\/[a-zA-Z0-9-]+\\.ngrok(-free)?\\.(app|dev|io)"
       allowCredentials: true
   maxNumberOfCoresToUse: 4
   ignite:

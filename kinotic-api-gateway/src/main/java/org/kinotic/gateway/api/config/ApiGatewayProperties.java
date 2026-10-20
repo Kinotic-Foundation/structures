@@ -6,6 +6,8 @@ import io.vertx.core.http.CookieSameSite;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.Set;
+
 /**
  * Created by Navid Mitchell on 7/19/17.
  */
@@ -32,6 +34,13 @@ public class ApiGatewayProperties {
      * Port the STOMP server listens on.
      */
     private int stompPort = DEFAULT_STOMP_PORT;
+
+    /**
+     * Zones of services, beyond Kinotic's own, that the organizations' users connected to this gateway may call,
+     * such as those of an application that joins the cluster to serve the platform's users. Each zone covers its
+     * sub-zones. The management server reaches these zones, so its connections can call them.
+     */
+    private Set<String> organizationServiceZones = Set.of();
 
     /**
      * Static-file web server configuration. Disabled in KinD/Azure where the SPA

@@ -5,7 +5,7 @@
     <div class="flex flex-col gap-5">
       <div>
         <label for="llm-name" class="mb-2 block text-sm font-medium">Name</label>
-        <InputText id="llm-name" v-model="name" placeholder="summit-42" autocomplete="off" class="w-full font-mono" />
+        <InputText id="llm-name" v-model="name" placeholder="app-builder" autocomplete="off" class="w-full font-mono" />
         <p class="mt-1.5 text-[0.8125rem] text-muted-color">The name a service selects this configuration by, unique on the platform.</p>
       </div>
 

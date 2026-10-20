@@ -6,7 +6,7 @@ import org.kinotic.management.api.model.ProjectRepoToken;
 
 /**
  * Short-lived credentials for writing a project's backing repository, for a platform service that commits code
- * into it on the project's organization's behalf, such as Summit 42. Published in the system zone. Callers are
+ * into it on the project's organization's behalf. Published in the system zone. Callers are
  * trusted: the caller authorizes the organization it names, and this service checks only that the project belongs
  * to that organization.
  */

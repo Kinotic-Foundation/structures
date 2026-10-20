@@ -13,6 +13,7 @@ import org.kinotic.domain.api.model.security.participant.ScopedParticipant;
 import org.kinotic.domain.api.model.security.participant.SystemParticipant;
 import org.kinotic.domain.api.utils.DomainUtil;
 
+import java.util.HashSet;
 import java.util.Set;
 
 /**
@@ -40,16 +41,28 @@ public class ZoneRules {
     /**
      * Derives the zone rules for the given participant. Application participants send to the {@code app-api}
      * data plane and their own {@code app.<organizationId>.<applicationId>} zone and subscribe in no zone at
-     * all. Organization participants send to the {@code management-api} management surface, {@code app-api},
-     * the {@code summit-42} app builder and their own {@code app.<organizationId>} zones, and subscribe within
-     * those same app zones — an application's runtime authenticates as an organization participant to host and
-     * call its services.
+     * all. Organization participants send to the {@code management-api} management surface, {@code app-api}
+     * and their own {@code app.<organizationId>} zones, and subscribe within those same app zones — an
+     * application's runtime authenticates as an organization participant to host and call its services.
      * System participants send everywhere and subscribe in the {@code system-api} zone.
      * @param participant the authenticated participant
      * @return the participant's zone rules
      */
     public static ZoneRules from(Participant participant) {
+        return from(participant, Set.of());
+    }
+
+    /**
+     * Derives the zone rules for the given participant as {@link #from(Participant)} does, with organization
+     * participants also sending to the given zones.
+     * @param participant               the authenticated participant
+     * @param organizationServiceZones  further zones organization participants may send to, each covering its
+     *                                  sub-zones
+     * @return the participant's zone rules
+     */
+    public static ZoneRules from(Participant participant, Set<String> organizationServiceZones) {
         Validate.notNull(participant, "participant must not be null");
+        Validate.notNull(organizationServiceZones, "organizationServiceZones must not be null");
         if (!(participant instanceof ScopedParticipant scopedParticipant)) {
             throw new IllegalArgumentException("Unknown participant type " + participant.getClass().getName()
                                                        + ", no zone routing rules exist for it");
@@ -74,8 +87,10 @@ public class ZoneRules {
                 // the organization id becomes a zone label, so it is validated the same way
                 ZoneUtil.validateLabel(organizationParticipant.getOrganizationId());
                 String orgAppsZone = DomainUtil.APP_ZONE_PREFIX + "." + organizationParticipant.getOrganizationId();
+                Set<String> sendZones = new HashSet<>(organizationServiceZones);
+                sendZones.addAll(Set.of(DomainUtil.MANAGEMENT_API_ZONE, DomainUtil.APP_API_ZONE, orgAppsZone));
                 yield new ZoneRules(false,
-                                    Set.of(DomainUtil.MANAGEMENT_API_ZONE, DomainUtil.APP_API_ZONE, DomainUtil.SUMMIT_42_ZONE, orgAppsZone),
+                                    Set.copyOf(sendZones),
                                     Set.of(orgAppsZone),
                                     EVERY_ZONE);
             }

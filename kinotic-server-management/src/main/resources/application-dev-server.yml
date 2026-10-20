@@ -35,8 +35,8 @@ kinotic:
       certPath: /etc/kinotic/certs/fullchain.pem
       keyPath: /etc/kinotic/certs/privkey.pem
     cors:
-      # The portal and the Summit 42 UI, which sign in and open their STOMP connections here
-      allowedOriginPattern: "https:\\/\\/(${DEV_SERVER_PORTAL_HOSTNAME}|dev-summit42\\.kinotic\\.ai)"
+      # The portal alone
+      allowedOriginPattern: "https:\\/\\/${DEV_SERVER_PORTAL_HOSTNAME}"
       allowCredentials: true
   platformSecrets:
     # Generated once when the server is built (generate-secrets.sh in deployment/terraform/proxmox),
