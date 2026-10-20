@@ -173,8 +173,11 @@ public abstract class AuthEndpointSupport {
         redirectToPage(ctx, origin, path);
     }
 
-    // the path on the page that started the flow, or on this server's UI when the flow named no page
-    private void redirectToPage(RoutingContext ctx, String origin, String path) {
+    /**
+     * {@code 302 Location: <origin><path>}, the path on the page at {@code origin} that started the flow, or on
+     * this server's UI when {@code origin} is null.
+     */
+    public void redirectToPage(RoutingContext ctx, String origin, String path) {
         if (origin != null) {
             ctx.response().setStatusCode(302).putHeader("Location", origin + path).end();
         } else {

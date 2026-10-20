@@ -6,6 +6,7 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.kinotic.core.api.security.SessionBinding;
 import org.kinotic.management.api.config.KinoticManagementApiProperties;
 import org.kinotic.domain.api.model.Organization;
 import org.kinotic.domain.api.rest.support.*;
@@ -51,8 +52,8 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes, OidcFlo
 
     /**
      * {@code POST /api/auth/org/signup} — start email/password sign-up. Validates the request, stores a
-     * pending sign-up, and emails a verification link. The org name and password are collected
-     * later, at {@link #handleLocalComplete}.
+     * pending sign-up, and emails a verification link to the verification page of the UI that sent the request.
+     * The org name and password are collected later, at {@link #handleLocalComplete}.
      */
     private void handleLocalSignUp(RoutingContext ctx) {
         try {
@@ -60,7 +61,9 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes, OidcFlo
             String email = body.getString("email");
             String displayName = body.getString("displayName");
 
-            signUpService.initiateLocalSignUp(email, displayName)
+            // the CORS handler in front of every gateway route refuses an Origin outside
+            // kinotic.apiGateway.cors.allowedOriginPattern, so the origin is always a UI this server allows
+            signUpService.initiateLocalSignUp(email, displayName, SessionBinding.origin(ctx))
                     .onSuccess(v -> ctx.response()
                             .setStatusCode(200)
                             .putHeader("Content-Type", "application/json")
@@ -137,7 +140,7 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes, OidcFlo
      * Turns a verified social identity into a pending sign-up: refuses if an {@link UserParticipantIdentity}
      * already exists for this identity or its verified email (they should log in, not sign up), otherwise
      * stores a {@link PendingSignUp} carrying the verified identity and redirects the browser to the
-     * org-naming page that posts back to {@link #handleSocialCompleteOrg}.
+     * org-naming page of the UI the sign-up started from, which posts back to {@link #handleSocialCompleteOrg}.
      */
     @Override
     public void complete(RoutingContext ctx, CallbackResult<OidcConfiguration> result) {
@@ -171,7 +174,7 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes, OidcFlo
                   pending.setDisplayName(displayName);
                   return signUpService.createOidcPending(pending);
               })
-              .onSuccess(pending -> redirectToCompleteOrg(ctx, pending.getVerificationToken()))
+              .onSuccess(pending -> redirectToCompleteOrg(ctx, result.origin(), pending.getVerificationToken()))
               .onFailure(ex -> {
                   if (ex instanceof ExistingAccountException) {
                       authEndpointSupport.redirectError(ctx, result.origin(), OidcErrorCodes.ACCOUNT_EXISTS);
@@ -207,9 +210,9 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes, OidcFlo
               .onFailure(ex -> authEndpointSupport.respondError(ctx, 400, ex.getMessage()));
     }
 
-    /** Sends the browser to the org-naming page with the pending sign-up token. */
-    private void redirectToCompleteOrg(RoutingContext ctx, String token) {
-        authEndpointSupport.redirectToUi(ctx, "/register?token=" + URLEncoder.encode(token, StandardCharsets.UTF_8));
+    /** Sends the browser to the org-naming page of the UI at {@code origin} with the pending sign-up token. */
+    private void redirectToCompleteOrg(RoutingContext ctx, String origin, String token) {
+        authEndpointSupport.redirectToPage(ctx, origin, "/register?token=" + URLEncoder.encode(token, StandardCharsets.UTF_8));
     }
 
 }

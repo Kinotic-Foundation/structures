@@ -16,14 +16,15 @@ import java.util.Set;
 public class ManagementServerConfiguration {
 
 	/**
-	 * Hosts the management-api services, and reaches the system-api services deployments run through and the
-	 * app-api services the portal's entity browser calls.
+	 * Hosts the management-api services, and reaches the system-api services deployments run through, the
+	 * app-api services the portal's entity browser calls, and the summit-42 services the Summit 42 UI calls.
 	 */
 	@Bean
 	public ZonePartitioningService zonePartitioningService() {
 		return ZonePartitioningService.of("management",
 								          Set.of(DomainUtil.MANAGEMENT_API_ZONE),
-								          Set.of(DomainUtil.MANAGEMENT_API_ZONE, DomainUtil.SYSTEM_API_ZONE, DomainUtil.APP_API_ZONE));
+								          Set.of(DomainUtil.MANAGEMENT_API_ZONE, DomainUtil.SYSTEM_API_ZONE, DomainUtil.APP_API_ZONE,
+										         DomainUtil.SUMMIT_42_ZONE));
 	}
 
 	/**

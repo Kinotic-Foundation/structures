@@ -14,6 +14,8 @@ import org.kinotic.management.internal.api.repositories.GitHubAppInstallationRep
 import org.kinotic.management.internal.api.services.github.client.GitHubApiClient;
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -25,10 +27,19 @@ public class DefaultGitHubProjectRepoService implements GitHubProjectRepoService
 
     @Override
     public Future<ProjectRepoToken> issueRepoToken(String organizationId, String projectId) {
+        return issueToken(organizationId, projectId, GitHubApiClient.READ_CONTENTS);
+    }
+
+    @Override
+    public Future<ProjectRepoToken> issueRepoWriteToken(String organizationId, String projectId) {
+        return issueToken(organizationId, projectId, GitHubApiClient.WRITE_CONTENTS);
+    }
+
+    private Future<ProjectRepoToken> issueToken(String organizationId, String projectId, Map<String, String> permissions) {
         return resolve(organizationId, projectId).compose(ctx ->
                 apiClient.getToken(ctx.install().getGithubInstallationId(),
                                    ctx.project().getRepoId(),
-                                   GitHubApiClient.READ_CONTENTS)
+                                   permissions)
                          .map(base -> new ProjectRepoToken(
                                  base.getToken(),
                                  base.getExpiresAt(),

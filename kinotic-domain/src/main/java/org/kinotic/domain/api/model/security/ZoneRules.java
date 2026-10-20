@@ -41,8 +41,9 @@ public class ZoneRules {
      * Derives the zone rules for the given participant. Application participants send to the {@code app-api}
      * data plane and their own {@code app.<organizationId>.<applicationId>} zone and subscribe in no zone at
      * all. Organization participants send to the {@code management-api} management surface, {@code app-api},
-     * and their own {@code app.<organizationId>} zones, and subscribe within those same app zones — an
-     * application's runtime authenticates as an organization participant to host and call its services.
+     * the {@code summit-42} app builder and their own {@code app.<organizationId>} zones, and subscribe within
+     * those same app zones — an application's runtime authenticates as an organization participant to host and
+     * call its services.
      * System participants send everywhere and subscribe in the {@code system-api} zone.
      * @param participant the authenticated participant
      * @return the participant's zone rules
@@ -74,7 +75,7 @@ public class ZoneRules {
                 ZoneUtil.validateLabel(organizationParticipant.getOrganizationId());
                 String orgAppsZone = DomainUtil.APP_ZONE_PREFIX + "." + organizationParticipant.getOrganizationId();
                 yield new ZoneRules(false,
-                                    Set.of(DomainUtil.MANAGEMENT_API_ZONE, DomainUtil.APP_API_ZONE, orgAppsZone),
+                                    Set.of(DomainUtil.MANAGEMENT_API_ZONE, DomainUtil.APP_API_ZONE, DomainUtil.SUMMIT_42_ZONE, orgAppsZone),
                                     Set.of(orgAppsZone),
                                     EVERY_ZONE);
             }

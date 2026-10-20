@@ -38,7 +38,7 @@ public class DefaultSignUpService implements SignUpService {
     private final OrganizationDnsRecordProvisioner dnsRecordProvisioner;
 
     @Override
-    public Future<Void> initiateLocalSignUp(String email, String displayName) {
+    public Future<Void> initiateLocalSignUp(String email, String displayName, String origin) {
         Validate.notBlank(email, "Email is required");
         Validate.notBlank(displayName, "Display name is required");
 
@@ -66,7 +66,7 @@ public class DefaultSignUpService implements SignUpService {
                             .setCreated(now)
                             .setExpiresAt(new Date(now.getTime() + LOCAL_TTL_MS));
                     return pendingSignUpRepository.save(pending)
-                            .compose(saved -> emailService.sendVerificationEmail(email, displayName, token));
+                            .compose(saved -> emailService.sendVerificationEmail(email, displayName, token, origin));
                 });
     }
 

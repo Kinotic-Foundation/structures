@@ -9,6 +9,8 @@ export * from '@/api/model/workload/VmNodeStatusType'
 export * from '@/api/model/workload/VmProviderType'
 export * from '@/api/model/workload/VmNodeRegistration'
 export * from '@/api/model/workload/WorkloadStatusReport'
+export * from '@/api/model/llm/LlmConfiguration'
+export * from '@/api/model/llm/LlmProviderType'
 
 // Services
 export * from '@/api/services/workload/IVmNodeService'
@@ -32,3 +34,4 @@ export * from '@/api/services/IKinoticClusterInfoService'
 export * from '@/api/services/ISystemOrganizationService'
 export * from '@/api/services/ISystemMemberService'
 export * from '@/api/services/IWatchEventService'
+export * from '@/api/services/ILlmConfigurationService'

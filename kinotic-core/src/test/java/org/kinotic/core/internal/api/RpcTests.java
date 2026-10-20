@@ -164,6 +164,25 @@ public class RpcTests {
     }
 
     @Test
+    public void testCallAsSendsTheParticipantFromAThreadWithNoContext() throws Exception {
+        String suffix = " Wat";
+        Participant participant = new Participant() {
+            @Override
+            public String getId() { return "called-as"; }
+            @Override
+            public Map<String, String> getMetadata() { return Map.of(); }
+            @Override
+            public List<String> getRoles() { return List.of(); }
+        };
+
+        String result = securityContext.callAs(participant, () -> rpcTestServiceProxy.firstArgParticipant(suffix).toFuture())
+                                       .get(10, TimeUnit.SECONDS);
+
+        Assertions.assertEquals("called-as" + suffix, result);
+        Assertions.assertNull(securityContext.currentParticipant());
+    }
+
+    @Test
     public void testGetByteArray(){
         Mono<byte[]> mono = rpcTestServiceProxy.getByteArray();
 

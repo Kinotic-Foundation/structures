@@ -1,7 +1,7 @@
 import type { Component } from 'vue'
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import {
-    Box, Building2, ChartLine, CloudUpload, Cpu, Gauge, LaptopMinimalCheck, LayoutDashboard, LayoutGrid, Link, Network, ScrollText, Server, Users
+    Box, BrainCircuit, Building2, ChartLine, CloudUpload, Cpu, Gauge, LaptopMinimalCheck, LayoutDashboard, LayoutGrid, Link, Network, ScrollText, Server, Users
 } from '@lucide/vue'
 import { ConnectedAppsPage, OAuthConsentPage, ProjectsIcon, type SidebarItemMeta } from '@kinotic-ai/frontend-common'
 
@@ -149,6 +149,12 @@ const routes: RouteRecordRaw[] = [
                 path: 'change-log',
                 component: () => import('./pages/ChangeLogPage.vue'),
                 meta: { sidebar: consoleItem('Change log', ScrollText, 65, 'Platform') }
+            },
+            {
+                name: 'llm-configurations',
+                path: 'llm-configurations',
+                component: () => import('./pages/LlmConfigurationsPage.vue'),
+                meta: { sidebar: consoleItem('LLM configurations', BrainCircuit, 67, 'Platform') }
             },
             {
                 name: 'organizations',
