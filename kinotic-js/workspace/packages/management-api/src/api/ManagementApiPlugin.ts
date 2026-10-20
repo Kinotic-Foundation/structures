@@ -1,5 +1,6 @@
 import type { IKinotic, KinoticPlugin } from '@kinotic-ai/core'
 import { ApplicationService, type IApplicationService } from '@/api/services/IApplicationService'
+import { TenantService, type ITenantService } from '@/api/services/ITenantService'
 import { ProjectService, type IProjectService } from '@/api/services/IProjectService'
 import { ProjectArtifactService, type IProjectArtifactService } from '@/api/services/deployment/IProjectArtifactService'
 import { MicroserviceDeploymentService, type IMicroserviceDeploymentService } from '@/api/services/deployment/IMicroserviceDeploymentService'
@@ -20,6 +21,7 @@ import { JobMonitoringService, type IJobMonitoringService } from '@/api/services
 
 export interface IManagementApiExtension {
     applications: IApplicationService
+    tenants: ITenantService
     projects: IProjectService
     projectArtifacts: IProjectArtifactService
     microserviceDeployments: IMicroserviceDeploymentService
@@ -43,6 +45,7 @@ export const ManagementApiPlugin: KinoticPlugin<IManagementApiExtension> = {
     install(kinotic: IKinotic): IManagementApiExtension {
         return {
             applications: new ApplicationService(kinotic),
+            tenants: new TenantService(kinotic),
             projects: new ProjectService(kinotic),
             projectArtifacts: new ProjectArtifactService(kinotic),
             microserviceDeployments: new MicroserviceDeploymentService(kinotic),
