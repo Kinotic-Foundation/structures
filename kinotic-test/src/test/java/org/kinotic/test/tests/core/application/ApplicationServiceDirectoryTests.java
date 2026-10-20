@@ -2,7 +2,7 @@ package org.kinotic.test.tests.core.application;
 
 import io.vertx.core.Future;
 import org.junit.jupiter.api.Test;
-import org.kinotic.app.api.services.ServiceDirectoryService;
+import org.kinotic.app.api.services.ApplicationServiceDirectory;
 import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.core.api.crud.Sort;
 import org.kinotic.core.api.directory.ServiceDirectory;
@@ -32,12 +32,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * own is refused.
  */
 @SpringBootTest
-public class ServiceDirectoryServiceTests extends KinoticTestBase {
+public class ApplicationServiceDirectoryTests extends KinoticTestBase {
 
     private static final String NAMESPACE = "com.acme.reports";
 
     @Autowired
-    private ServiceDirectoryService serviceDirectoryService;
+    private ApplicationServiceDirectory applicationServiceDirectory;
 
     @Autowired
     private ServiceDirectory serviceDirectory;
@@ -53,7 +53,7 @@ public class ServiceDirectoryServiceTests extends KinoticTestBase {
         // the organization is the caller's, whatever the entry names
         entry.setOrganizationId("another-org");
 
-        await(runAsOrganization(() -> serviceDirectoryService.register(entry)));
+        await(runAsOrganization(() -> applicationServiceDirectory.register(entry)));
 
         ServiceDirectoryEntry stored = stored(appId, zone + "~" + NAMESPACE + ".ReportService");
         assertEquals(TEST_ORG_ID, stored.getOrganizationId());
@@ -67,7 +67,7 @@ public class ServiceDirectoryServiceTests extends KinoticTestBase {
         assertFalse(stored.isOnline());
 
         // registering the same contract again leaves the one entry
-        await(runAsOrganization(() -> serviceDirectoryService.register(entry(appId, zone, definition(NAMESPACE, "ReportService")))));
+        await(runAsOrganization(() -> applicationServiceDirectory.register(entry(appId, zone, definition(NAMESPACE, "ReportService")))));
         assertEquals(1, entries(appId).size());
     }
 
@@ -76,7 +76,7 @@ public class ServiceDirectoryServiceTests extends KinoticTestBase {
         String appId = application();
         String zone = DomainUtil.applicationZone(TEST_ORG_ID, appId) + ".probes";
 
-        await(runAsOrganization(() -> serviceDirectoryService.register(entry(appId, zone, definition(null, "Probe")))));
+        await(runAsOrganization(() -> applicationServiceDirectory.register(entry(appId, zone, definition(null, "Probe")))));
 
         ServiceDirectoryEntry stored = stored(appId, zone + "~Probe");
         assertEquals(zone, stored.getNamespace());
@@ -90,13 +90,13 @@ public class ServiceDirectoryServiceTests extends KinoticTestBase {
         String unknownApp = "unknown-app-" + suffix();
 
         assertInstanceOf(IllegalArgumentException.class,
-                         failure(() -> serviceDirectoryService.register(entry(appId, otherZone, definition(NAMESPACE, "ReportService")))));
+                         failure(() -> applicationServiceDirectory.register(entry(appId, otherZone, definition(NAMESPACE, "ReportService")))));
         // a zone that merely begins with the application's name is another application's
         assertInstanceOf(IllegalArgumentException.class,
-                         failure(() -> serviceDirectoryService.register(entry(appId, DomainUtil.applicationZone(TEST_ORG_ID, appId) + "x",
+                         failure(() -> applicationServiceDirectory.register(entry(appId, DomainUtil.applicationZone(TEST_ORG_ID, appId) + "x",
                                                                               definition(NAMESPACE, "ReportService")))));
         assertInstanceOf(IllegalArgumentException.class,
-                         failure(() -> serviceDirectoryService.register(entry(unknownApp, DomainUtil.applicationZone(TEST_ORG_ID, unknownApp),
+                         failure(() -> applicationServiceDirectory.register(entry(unknownApp, DomainUtil.applicationZone(TEST_ORG_ID, unknownApp),
                                                                               definition(NAMESPACE, "ReportService")))));
         assertTrue(entries(appId).isEmpty());
         assertTrue(entries(unknownApp).isEmpty());

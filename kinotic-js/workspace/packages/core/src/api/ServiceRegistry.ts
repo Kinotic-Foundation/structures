@@ -60,7 +60,7 @@ export class TextEventFactory implements IEventFactory {
  * The platform service a runtime registers its application services with, in the zone an organization's
  * runtimes reach.
  */
-const SERVICE_DIRECTORY_SERVICE = 'app-api~org.kinotic.app.api.services.ServiceDirectoryService'
+const APPLICATION_SERVICE_DIRECTORY = 'app-api~org.kinotic.app.api.services.ApplicationServiceDirectory'
 // an application's zone is app.<organizationId>.<applicationId>, with the service's own labels after it
 const APPLICATION_ZONE = /^app\.[^.]+\.([^.]+)(\.|$)/
 
@@ -212,7 +212,7 @@ export class ServiceRegistry implements IServiceRegistry {
 
     private async registerEntry(entry: ServiceDirectoryEntry): Promise<void> {
         this.debugLogger(`Registering ${entry.zone}~${qualifiedNameOf(entry.serviceDefinition.namespace, entry.serviceDefinition.name)} in the directory`)
-        await this.serviceProxy(SERVICE_DIRECTORY_SERVICE).invoke('register', [entry])
+        await this.serviceProxy(APPLICATION_SERVICE_DIRECTORY).invoke('register', [entry])
     }
 
     public registerContextInterceptor<T extends ServiceContext>(interceptor: ContextInterceptor<T> | null): void {

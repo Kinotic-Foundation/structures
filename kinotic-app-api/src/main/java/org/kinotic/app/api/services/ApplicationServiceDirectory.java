@@ -15,7 +15,7 @@ import org.kinotic.domain.api.utils.DomainUtil;
 @Publish
 @Version("1.0.0")
 @Zone(DomainUtil.APP_API_ZONE)
-public interface ServiceDirectoryService {
+public interface ApplicationServiceDirectory {
 
     /**
      * Registers a service a runtime of the application serves, replacing the entry stored for the service when

@@ -15,7 +15,7 @@ import {
 
 const ZONE = 'app.acme.crm'
 const NAMESPACE = 'com.acme.reports'
-const DIRECTORY_REGISTER = 'srv://app-api~org.kinotic.app.api.services.ServiceDirectoryService/register'
+const DIRECTORY_REGISTER = 'srv://app-api~org.kinotic.app.api.services.ApplicationServiceDirectory/register'
 
 /**
  * The bus a registry registers its services' entries through: it records what the registry sends and answers

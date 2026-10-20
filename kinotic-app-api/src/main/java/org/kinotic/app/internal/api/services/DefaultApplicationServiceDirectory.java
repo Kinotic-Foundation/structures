@@ -4,7 +4,7 @@ import io.vertx.core.Future;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.Validate;
-import org.kinotic.app.api.services.ServiceDirectoryService;
+import org.kinotic.app.api.services.ApplicationServiceDirectory;
 import org.kinotic.core.api.directory.ServiceDirectory;
 import org.kinotic.core.api.directory.ServiceDirectoryEntry;
 import org.kinotic.core.api.security.SecurityContext;
@@ -17,7 +17,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class DefaultServiceDirectoryService implements ServiceDirectoryService {
+public class DefaultApplicationServiceDirectory implements ApplicationServiceDirectory {
 
     private final SecurityContext securityContext;
     private final ApplicationRepository applications;
