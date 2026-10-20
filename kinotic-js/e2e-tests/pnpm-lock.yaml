@@ -18,8 +18,8 @@ importers:
         specifier: ^5.0.0-beta.24
         version: 5.0.0-beta.24
       '@kinotic-ai/management-api':
-        specifier: ^5.0.0-beta.57
-        version: 5.0.0-beta.57(@kinotic-ai/core@5.0.0-beta.24)
+        specifier: ^5.0.0-beta.58
+        version: 5.0.0-beta.58(@kinotic-ai/core@5.0.0-beta.24)
       '@kinotic-ai/persistence':
         specifier: ^5.0.0-beta.12
         version: 5.0.0-beta.12(@kinotic-ai/core@5.0.0-beta.24)
@@ -464,6 +464,11 @@ packages:
 
   '@kinotic-ai/management-api@5.0.0-beta.57':
     resolution: {integrity: sha512-wxk7FJrALBqu/Ik51kNcGUQbEU35H4RRxOLa2KXZc8V3BSYqYDOzxk8ZwGFk7B5rEOlkR+ZMUoT3htmdKqZXug==}
+    peerDependencies:
+      '@kinotic-ai/core': ^5.0.0-beta.24
+
+  '@kinotic-ai/management-api@5.0.0-beta.58':
+    resolution: {integrity: sha512-MoVOGqGnKBVcVdGcvH2wBWqjJEAGLnO4Qq3F1SZ4NbXkc4NseuB9rUTavdauDQEKUFMeodlHI34hkVsRpaIIRQ==}
     peerDependencies:
       '@kinotic-ai/core': ^5.0.0-beta.24
 
@@ -2575,6 +2580,13 @@ snapshots:
       - utf-8-validate
 
   '@kinotic-ai/management-api@5.0.0-beta.57(@kinotic-ai/core@5.0.0-beta.24)':
+    dependencies:
+      '@kinotic-ai/core': 5.0.0-beta.24
+      '@kinotic-ai/idl': 5.0.0-beta.1
+      '@kinotic-ai/persistence': 5.0.0-beta.12(@kinotic-ai/core@5.0.0-beta.24)
+      rxjs: 7.8.2
+
+  '@kinotic-ai/management-api@5.0.0-beta.58(@kinotic-ai/core@5.0.0-beta.24)':
     dependencies:
       '@kinotic-ai/core': 5.0.0-beta.24
       '@kinotic-ai/idl': 5.0.0-beta.1
