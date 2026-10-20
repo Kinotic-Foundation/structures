@@ -124,7 +124,7 @@ The server reads workload logs from Grafana Loki, and workload traces and metric
 </tbody>
 </table>
 
-In docker-compose the server points at `http://loki:3100`, `http://tempo:3200`, and `http://mimir:9009`; the Helm chart defaults them to `http://loki.observability.svc:3100`, `http://tempo.observability.svc:3100`, and `http://mimir.observability.svc:9009`, the services the KinD and Azure terraform deploy in the `observability` namespace (Tempo's chart serves its HTTP API on 3100).
+In docker-compose the server points at `http://loki:3100`, `http://tempo:3200`, and `http://mimir:9009`; the Helm chart defaults them to `http://loki.observability.svc:3100`, `http://tempo.observability.svc:3100`, and `http://mimir.observability.svc:9009`, the services the Azure terraform deploys in the `observability` namespace (Tempo's chart serves its HTTP API on 3100).
 
 Every server also runs the OpenTelemetry Java agent its image embeds, which exports the server's own traces and metrics to the platform tenant, `kinotic-system`, read by the system console's Platform **Observability** page. The Helm chart attaches it on every server and sends each signal straight to its store, with no collector between; its logs reach Loki through Alloy instead, so the agent exports none:
 

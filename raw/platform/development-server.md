@@ -50,8 +50,8 @@ outgrows the NUCs, a node VM on the host is the fallback: nested KVM is the conf
 measurement in the Cloud Hypervisor evaluation was taken in (Azure `Standard_D4s_v3`).
 
 Proxmox over plain Ubuntu with libvirt because it adds ZFS, snapshots, containers created from
-OCI images, and the `bpg/proxmox` Terraform provider, so the host can be a third terraform
-root beside `kind/` and `azure/`. Incus is the credible alternative for an all-code, no-UI
+OCI images, and the `bpg/proxmox` Terraform provider, so the host can be a terraform
+root beside `azure/`. Incus is the credible alternative for an all-code, no-UI
 host; XCP-ng is out because Xen's nested virtualization is off the path the vm-manager was
 tested on; Harvester wants three nodes.
 
@@ -78,9 +78,8 @@ static addresses as readily as by the Kubernetes API (`KinoticIgniteConfig`), pl
 are two JSON files at a path, TLS is two PEM files at a path, and the docker-compose stack in
 `deployment/docker-compose/` is the complete platform — with Tempo and Mimir, which the Helm
 charts do not deploy yet. The development server runs that stack's images and config files,
-one container each. The Helm charts stay the production artifact; KinD on a laptop is where
-they are rehearsed. If the host ever needs to rehearse them too, a k3s VM slots in without
-touching anything else.
+one container each. The Helm charts stay the production artifact. If the host ever needs to rehearse them, a k3s
+VM slots in without touching anything else.
 
 ### Three Elasticsearch nodes, one physical disk each, one shard and one replica
 
@@ -1233,7 +1232,7 @@ What the three share:
     </td>
     
     <td>
-      Vert.x terminates TLS, matching KinD and Azure; the edge passes each connection through unopened
+      Vert.x terminates TLS, matching Azure; the edge passes each connection through unopened
     </td>
   </tr>
   
@@ -1337,11 +1336,7 @@ What the three share:
     </td>
     
     <td>
-      Same JSON shape <code>
-        deployment/kind/terraform/platform-secrets.tf
-      </code>
-      
-       generates: <code>
+      <code>
         activeKeyId
       </code>
       
@@ -1349,7 +1344,7 @@ What the three share:
         keys
       </code>
       
-       list. A token one server issued verifies at that server alone
+       list, so a key can be added to the set. A token one server issued verifies at that server alone
     </td>
   </tr>
   
