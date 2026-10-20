@@ -220,9 +220,9 @@ kubectl logs -l app.kubernetes.io/name=cert-manager -n cert-manager --tail=20
 
 # The servers
 kubectl logs -l app=kinotic-server-management -n kinotic --tail=20
-curl -sk https://api.kinotic.ai/health          # org
+curl -sk https://api.kinotic.ai/health          # management
 curl -sk https://system-api.kinotic.ai/health   # system
-curl -sk https://apps-api.kinotic.ai/health     # app
+curl -sk https://apps-api.kinotic.io/health     # app
 
 # Grafana
 kubectl logs -l app.kubernetes.io/name=grafana -n observability --tail=10

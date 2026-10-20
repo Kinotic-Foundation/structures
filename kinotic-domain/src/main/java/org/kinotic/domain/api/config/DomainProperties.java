@@ -46,8 +46,8 @@ public class DomainProperties {
 
     /**
      * Base URL every application's API host is a label under, as a browser reaches it (scheme + domain + optional
-     * port, no trailing slash): with {@code https://apps-api.kinotic.ai}, application {@code orders} of organization
-     * {@code acme} is served at {@code https://acme--orders.apps-api.kinotic.ai}, which is also its OAuth issuer, the
+     * port, no trailing slash): with {@code https://apps-api.kinotic.io}, application {@code orders} of organization
+     * {@code acme} is served at {@code https://acme--orders.apps-api.kinotic.io}, which is also its OAuth issuer, the
      * host its UIs are built against, and the host of the callback of each of its OIDC configurations. The base
      * URL itself is the shared host a sign-in through one of the platform's social registrations returns to.
      */
