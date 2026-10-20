@@ -27,6 +27,7 @@ import org.kinotic.management.api.repositories.ProjectDeploymentRepository;
 import org.kinotic.management.api.repositories.UiDeploymentRepository;
 import org.kinotic.management.api.services.ProjectRepoTokenProvider;
 import org.kinotic.system.api.config.KinoticSystemApiProperties;
+import org.kinotic.system.api.config.SiteStorageType;
 import org.kinotic.grind.api.model.JobDefinition;
 import org.kinotic.grind.api.model.Store;
 import org.kinotic.grind.api.model.Tasks;
@@ -368,8 +369,8 @@ public class ProjectDeployJobDefinitionFactory {
      * checking. A commit without UIs publishes nothing.
      */
     private Future<UiDeployments> publishUis(Project project, DeployTarget target, ProjectArtifacts artifacts, String commitSha) {
-        // nothing serves a site without Azure storage, so nothing is uploaded either
-        boolean serving = !properties.getSystemApi().isDisableAzureStorage();
+        // nothing serves a site without site storage, so nothing is uploaded either
+        boolean serving = properties.getSystemApi().getUiDeployment().getSiteStorage() != SiteStorageType.DISABLED;
         String source = "deploy of " + commitSha;
         return uiDeploymentRepository.findAllForProject(project.getId())
                 .compose(existing -> {

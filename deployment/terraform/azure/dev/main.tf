@@ -244,12 +244,14 @@ output "application_local_yml" {
       domain:
         publishedSites:
           domain: ${module.environment.sites_domain}
+          useSsl: true
+          port: ~
           cloudflare:
             enabled: true
             zoneId: ${var.cloudflare_zone_id}
       systemApi:
-        disableAzureStorage: false
         uiDeployment:
+          siteStorage: AZURE
           sitesStorageEndpoint: ${module.environment.sites_storage_blob_endpoint}
   EOT
 }

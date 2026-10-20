@@ -11,10 +11,11 @@ workflow — they're built up from small `compose.*.yml` files using docker-comp
 | **Everything in containers, fastest path** | `docker compose up -d` |
 | **IntelliJ-running servers, just ES + Kibana** | `docker compose -f compose.elasticsearch.yml -f compose.kibana.yml up -d` |
 | **IntelliJ + ES + run migrations once** | `docker compose -f compose.elasticsearch.yml -f compose.kinotic-migration.yml up -d` |
+| **IntelliJ + ES + migrations + published UIs served locally** | `docker compose -f compose.elasticsearch.yml -f compose.kinotic-migration.yml -f compose.sites.yml up -d` |
 | **Full stack with OIDC via local Keycloak** | `docker compose -f compose.yml -f compose.keycloak.yml up -d` |
 | **Backing services for the kinotic-test suite** | `docker compose -f compose.kinotic-test.yml up -d` |
 
-`docker compose down` to stop. `docker compose down -v` to also wipe volumes (ES data).
+`docker compose down` to stop. `docker compose down -v` to also wipe volumes (ES data and the published UIs).
 
 `kinotic-migration` and the three servers use `pull_policy: missing`, so a locally present image
 wins and the stack keeps using it until you ask for a newer one. Run `docker compose pull` to
@@ -25,13 +26,14 @@ the commit under test rather than whatever the published tag currently holds.
 
 | File | Purpose | Brings up |
 |---|---|---|
-| `compose.yml` | Top-level — `include:`s every piece below | Full stack (ES + Kibana + OTEL + load-gen + migration + the three servers) |
+| `compose.yml` | Top-level — `include:`s every piece below | Full stack (ES + Kibana + OTEL + load-gen + migration + Azurite and the sites edge + the three servers) |
 | `compose.elasticsearch.yml` | Elasticsearch | `kinotic-elasticsearch:9200` |
 | `compose.kibana.yml` | Kibana (depends on Elasticsearch) | `kinotic-kibana:5601` |
 | `compose.kinotic-migration.yml` | Runs `kinotic-migration` once against ES, then exits | One-shot job — `service_completed_successfully` is what the servers wait on |
 | `compose.kinotic-servers.yml` | The three Kinotic servers, one Ignite cluster | `kinotic-server-management:9090/58503` (portal, REST and STOMP), `kinotic-server-system:58504`, `kinotic-server-app:58505` |
 | `compose-otel.yml` | OpenTelemetry collector + Grafana + Tempo + Loki + Mimir | `grafana:3000`, `loki:3100`, `tempo:3200`, `mimir:9009` |
 | `compose.gen-schemas.yml` | Load-generator container that pre-populates schemas | One-shot when `compose.yml` brings up the full stack |
+| `compose.sites.yml` | Where published UIs are stored and served: the Azurite emulator, and the local edge that runs the Cloudflare sites Worker (`../cloudflare/sites-worker/worker.js`) over it through `sites-edge.ts` | `kinotic-azurite:10000`, `kinotic-sites-edge:8088` |
 | `compose.keycloak.yml` | Local Keycloak as a social sign-in OIDC provider (dev-only secret) | `keycloak:8888` — see `KEYCLOAK_HOSTS_SETUP.md` |
 | `compose.kinotic-test.yml` | Minimal: ES + migration only, no server | Backing services for the `kinotic-test` suite, which runs the server in-process |
 | `compose.kinotic-e2e-test.yml` | Elasticsearch + migration + the servers, on the `test,e2e-tests,compose` profiles | Used by e2e tests in CI |
@@ -71,6 +73,8 @@ docker compose down -v && docker compose up -d
 | App server | <http://localhost:58505> | REST, and STOMP at `ws://localhost:58505/v1`; each application's API host is `<organizationId>--<applicationId>.localhost:58505` |
 | Elasticsearch | <http://localhost:9200> | `xpack.security.enabled=false` — local only |
 | Kibana | <http://localhost:5601> | |
+| A published UI | `http://<app>--<ui>.<org>.sites.localhost:8088` | Served by `kinotic-sites-edge` from Azurite; the project's deployment page links it. Chrome, Edge and Firefox resolve `*.localhost` to this machine |
+| Azurite | <http://localhost:10000> | The blob endpoint of the `devstoreaccount1` development account; the `sites` container is private |
 | Grafana | <http://localhost:3000> | When `compose-otel.yml` is included. Anonymous auth with the Admin role — no login |
 | Keycloak | <http://keycloak:8888> | When `compose.keycloak.yml` is included; requires `127.0.0.1 keycloak` in `/etc/hosts` per `KEYCLOAK_HOSTS_SETUP.md` |
 
@@ -136,8 +140,8 @@ What this gives you:
 This is the recommended workflow when iterating on backend code:
 
 ```bash
-# 1. ES + run migrations once
-docker compose -f compose.elasticsearch.yml -f compose.kinotic-migration.yml up -d
+# 1. ES + run migrations once, and Azurite and the sites edge the development profile publishes UIs to
+docker compose -f compose.elasticsearch.yml -f compose.kinotic-migration.yml -f compose.sites.yml up -d
 
 # 2. Wait for migration to finish (it's a one-shot)
 docker compose ps kinotic-migration   # State: Exited (0)
@@ -265,8 +269,24 @@ environment" in the contributing guide (`website/content/02.platform/09.contribu
 
 - `kinotic-elastic-data` — Elasticsearch data, a Docker named volume. Survives
   `docker compose down`; removed by `docker compose down -v`.
+- `kinotic-azurite-data` — every published UI's files, a Docker named volume, kept and removed
+  the same way.
 - `~/.kinotic/dev-environment/kinotic-server-management` and `~/.kinotic/dev-environment/kinotic-server-system`
   are bind-mounted read-only into the org and system server containers as `/workspace/config`:
   a developer's tunnel origin and GitHub App, and the App alone, when
   `dev-tools/github-app/dev-github-app.ts create` has written them. The servers keep no state
   of their own there.
+
+## Published UIs
+
+A deployment of a project with UIs uploads each built UI to Azurite, as it uploads to the sites
+storage account in Azure: the system server's `development` profile sets
+`kinotic.systemApi.uiDeployment.siteStorage: AZURITE` and points the publish workload at
+`http://192.168.127.254:10000/devstoreaccount1`, where a BOXLITE workload reaches this machine's
+loopback. `kinotic-sites-edge` serves each UI at `http://<app>--<ui>.<org>.sites.localhost:8088`
+by running the same `worker.js` the Cloudflare edge runs, over Azurite. On start it creates the
+private `sites` container and signs the Worker's read SAS with Azurite's well-known development key,
+which terraform does for the real account.
+
+The upload and removal URLs carry a SAS on the whole `sites` container, every organization's sites,
+since Azurite signs no directory SAS; in Azure each is scoped to its site's directory.

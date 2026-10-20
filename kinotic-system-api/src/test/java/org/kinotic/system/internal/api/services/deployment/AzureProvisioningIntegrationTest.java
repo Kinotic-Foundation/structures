@@ -24,6 +24,7 @@ import org.kinotic.management.api.model.deployment.DeploymentStatus;
 import org.kinotic.management.api.model.deployment.DeploymentStatusType;
 import org.kinotic.management.api.model.deployment.UiDeployment;
 import org.kinotic.system.api.config.KinoticSystemApiProperties;
+import org.kinotic.system.api.config.SiteStorageType;
 import org.kinotic.system.api.config.UiDeploymentProperties;
 import org.yaml.snakeyaml.Yaml;
 
@@ -46,7 +47,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
@@ -92,7 +92,7 @@ class AzureProvisioningIntegrationTest {
         Map<String, Object> kinotic = load(LOCAL_PROFILE);
         properties = systemApiProperties(kinotic);
         domainProperties = domainProperties(kinotic);
-        assumeFalse(properties.getSystemApi().isDisableAzureStorage(), "the local profile disables Azure storage");
+        assumeTrue(uiProperties().getSiteStorage() == SiteStorageType.AZURE, "the local profile stores sites elsewhere than Azure");
         assumeTrue(uiProperties().getSitesStorageEndpoint() != null, "the local profile names no sites account: apply the dev root first");
 
         vertx = Vertx.vertx();
@@ -232,8 +232,8 @@ class AzureProvisioningIntegrationTest {
 
         KinoticSystemApiProperties ret = new KinoticSystemApiProperties();
         ret.getSystemApi()
-           .setDisableAzureStorage(Boolean.TRUE.equals(systemApi.get("disableAzureStorage")))
            .getUiDeployment()
+           .setSiteStorage(SiteStorageType.valueOf(((String) sites.getOrDefault("siteStorage", SiteStorageType.AZURE.name())).toUpperCase()))
            .setSitesStorageEndpoint((String) sites.get("sitesStorageEndpoint"));
         return ret;
     }

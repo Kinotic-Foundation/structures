@@ -52,8 +52,9 @@ terraform apply
 terraform output -raw application_local_yml > ../../../../kinotic-server-system/src/main/resources/application-local.yml
 ```
 
-The last command writes the `local` Spring profile, gitignored, which turns Azure storage on
-(`kinotic.systemApi.disableAzureStorage: false`) and names the sites domain and the account. `.env.local` at the repository root now carries the
+The last command writes the `local` Spring profile, gitignored, which stores the sites in Azure
+(`kinotic.systemApi.uiDeployment.siteStorage: AZURE`, in place of the `development` profile's Azurite),
+serves them over TLS on the default port, and names the sites domain and the account. `.env.local` at the repository root now carries the
 principal's credentials; if the file existed, its other lines are untouched.
 
 ## Checking the setup

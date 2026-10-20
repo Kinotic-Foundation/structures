@@ -1,0 +1,38 @@
+# Where published UIs are stored and served on this machine, in place of the Azure sites storage account
+# and the Cloudflare Worker: the Azurite emulator holds every site's files, and the local edge runs the
+# Worker itself in front of it. The system server's `development` profile uploads to it
+# (kinotic.systemApi.uiDeployment.siteStorage: AZURITE), and a published UI opens at
+# http://<app>--<ui>.<org>.sites.localhost:8088.
+
+services:
+  kinotic-azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:3.37.0
+    container_name: kinotic-azurite
+    # The Azure SDK the system server signs with names a newer service version than the emulator knows
+    command: ["azurite-blob", "--blobHost", "0.0.0.0", "--blobPort", "10000", "--location", "/data", "--skipApiVersionCheck"]
+    ports:
+      # The publish and removal workloads upload through it: a BOXLITE guest's host alias,
+      # 192.168.127.254, is completed over this machine's loopback
+      - "127.0.0.1:10000:10000"
+    volumes:
+      - kinotic-azurite-data:/data
+
+  kinotic-sites-edge:
+    image: oven/bun:1-slim
+    container_name: kinotic-sites-edge
+    depends_on:
+      - kinotic-azurite
+    # The script imports the Worker by its path in the repository, so both keep their places under /deployment
+    command: ["bun", "/deployment/docker-compose/sites-edge.ts"]
+    environment:
+      SITES_DOMAIN: sites.localhost
+      AZURITE_ENDPOINT: http://kinotic-azurite:10000/devstoreaccount1
+      PORTAL_BASE_URL: http://localhost:9090
+    ports:
+      - "127.0.0.1:8088:8088"
+    volumes:
+      - ./sites-edge.ts:/deployment/docker-compose/sites-edge.ts:ro
+      - ../cloudflare/sites-worker/worker.js:/deployment/cloudflare/sites-worker/worker.js:ro
+
+volumes:
+  kinotic-azurite-data:

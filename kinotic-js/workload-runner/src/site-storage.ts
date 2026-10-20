@@ -108,6 +108,11 @@ export async function deleteFilesOfOtherCommits(site: SiteTarget, commitSha: str
 /** Deletes the site's directory and everything under it; one already gone is not a failure. */
 export async function deleteDirectory(site: SiteTarget): Promise<void> {
     await deletePath(site, site.directory, true, [404])
+    // an account without the hierarchical namespace, such as Azurite, has no directory the recursive
+    // delete removes, so the files it left are deleted one by one
+    for (const blob of await listBlobs(site)) {
+        await deleteBlob(site, blob.name)
+    }
 }
 
 async function deletePath(site: SiteTarget, path: string, recursive: boolean, tolerated: number[]): Promise<void> {
