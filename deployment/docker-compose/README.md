@@ -259,9 +259,3 @@ environment" in the contributing guide (`website/content/02.platform/09.contribu
   a developer's tunnel origin and GitHub App, and the App alone, when
   `dev-tools/github-app/dev-github-app.ts create` has written them. The servers keep no state
   of their own there.
-
-## When you outgrow docker-compose
-
-For multi-node clustering (Ignite cluster discovery, replica counts, real workload
-identity, etc.) use the KinD setup in `deployment/kind/`. See
-`deployment/kind/terraform/` for the Terraform-driven local Kubernetes story.
