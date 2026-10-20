@@ -61,7 +61,7 @@ else
   while read -r _ hostname; do
     echo "==> Waiting for https://$hostname"
     for _ in $(seq 1 60); do
-      if [[ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "https://$hostname/v1")" == "400" ]]; then
+      if [[ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "https://$hostname/api/v1")" == "400" ]]; then
         break
       fi
       sleep 5

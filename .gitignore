@@ -93,6 +93,7 @@ kinotic-js/workspace/packages/rpc/allure-report/
 
 terraform.tfstate
 terraform.tfstate.backup
+terraform.tfstate.*.backup
 .terraform.tfstate.lock.info
 .terraform/
 
