@@ -143,7 +143,7 @@ public class RunRecorder implements RunListener {
 
     @Override
     public void taskCompleted(String taskPath, Store store, String storedName,
-                              Object storedValue, SerializedState serializedState) {
+                              Object storedValue, SerializedState serializedState, JsonNode view) {
         TaskRecord record = recordsByPath.get(taskPath);
         if (record == null) {
             log.warn("Task completed for unknown task path {} in run {}", taskPath, jobRunId);
@@ -152,6 +152,10 @@ public class RunRecorder implements RunListener {
                   .setFinished(new Date())
                   .setStoreType(store.getType())
                   .setStoredName(storedName);
+            // the last view is written with the completion, one write where reporting it first would take two
+            if (view != null) {
+                record.setView(view);
+            }
             // the resume replays the durable STATE; watchers read the wired value, so a finished
             // run renders what the live stream showed
             if (store.getType() == StoreType.STATE && serializedState != null) {

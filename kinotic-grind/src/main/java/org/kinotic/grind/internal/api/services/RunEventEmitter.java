@@ -55,7 +55,10 @@ public class RunEventEmitter implements RunListener {
 
     @Override
     public void taskCompleted(String taskPath, Store store, String storedName,
-                              Object storedValue, SerializedState serializedState) {
+                              Object storedValue, SerializedState serializedState, JsonNode view) {
+        if (view != null) {
+            taskViewed(taskPath, view);
+        }
         sink.next(new TaskCompletedEvent(taskPath, store.getType(), storedName, storedValue,
                                          store.isWire() && serializedState != null ? serializedState.value() : null));
     }

@@ -15,9 +15,4 @@ public record DefinitionNode(int sequence, DefaultJobDefinition definition) impl
         return definition.getDescription();
     }
 
-    @Override
-    public String icon() {
-        return definition.getIcon();
-    }
-
 }

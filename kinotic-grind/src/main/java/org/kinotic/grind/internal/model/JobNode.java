@@ -18,10 +18,4 @@ public sealed interface JobNode permits TaskNode, DefinitionNode {
      */
     String description();
 
-    /**
-     * The key of the icon a console shows for the node, or null for its default.
-     * @return the icon key
-     */
-    String icon();
-
 }

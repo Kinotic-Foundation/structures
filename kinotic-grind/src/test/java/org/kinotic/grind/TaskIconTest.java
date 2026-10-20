@@ -16,8 +16,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
- * Icons are facts of the definition: a task's or a nested definition's icon is on its record from
- * discovery, and on the discovery event watchers receive.
+ * Icons are facts of the definition: a task's icon is on its record from discovery, and on the
+ * discovery event watchers receive.
  */
 public class TaskIconTest extends AbstractGrindTest {
 
@@ -26,7 +26,7 @@ public class TaskIconTest extends AbstractGrindTest {
         JobDefinition job = JobDefinition.create("iconic")
                 .name("iconic").version("1")
                 .task(Tasks.fromValue("checkout", "sha").icon(TaskIcons.GIT))
-                .jobDefinition(JobDefinition.create("publish").icon(TaskIcons.GLOBE)
+                .jobDefinition(JobDefinition.create("publish")
                                             .task(Tasks.noop("upload")))
                 .task(Tasks.noop("plain"));
 
@@ -38,9 +38,9 @@ public class TaskIconTest extends AbstractGrindTest {
         Map<String, String> discoveredIcons = discovered.tasks().stream()
                                                         .filter(record -> record.getIcon() != null)
                                                         .collect(Collectors.toMap(TaskRecord::getTaskPath, TaskRecord::getIcon));
-        assertEquals(Map.of("0/1", TaskIcons.GIT, "0/2", TaskIcons.GLOBE), discoveredIcons);
+        assertEquals(Map.of("0/1", TaskIcons.GIT), discoveredIcons);
         assertEquals(TaskIcons.GIT, repository.taskAt(handle.getJobRunId(), "0/1").getIcon());
-        assertEquals(TaskIcons.GLOBE, repository.taskAt(handle.getJobRunId(), "0/2").getIcon());
+        assertNull(repository.taskAt(handle.getJobRunId(), "0/2").getIcon());
         assertNull(repository.taskAt(handle.getJobRunId(), "0/3").getIcon());
     }
 

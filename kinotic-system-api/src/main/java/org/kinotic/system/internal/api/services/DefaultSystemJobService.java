@@ -2,7 +2,6 @@ package org.kinotic.system.internal.api.services;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.grind.api.model.JobDefinition;
@@ -16,47 +15,56 @@ import org.kinotic.system.api.services.SystemJob;
 import org.kinotic.system.api.services.SystemJobService;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class DefaultSystemJobService implements SystemJobService {
 
-    private final List<SystemJob> systemJobs;
     private final JobService jobService;
     private final JobRunRepository jobRunRepository;
     private final Vertx vertx;
+    private final Map<String, SystemJob> jobsByName = new HashMap<>();
+    private final List<SystemJobDescriptor> descriptors;
+
+    // A system job's name, version and description are facts of its bean, so each definition is built
+    // once here to read them, and the names are checked unique before any is listed or started
+    public DefaultSystemJobService(List<SystemJob> systemJobs, JobService jobService,
+                                   JobRunRepository jobRunRepository, Vertx vertx) {
+        this.jobService = jobService;
+        this.jobRunRepository = jobRunRepository;
+        this.vertx = vertx;
+        List<SystemJobDescriptor> described = new ArrayList<>();
+        for (SystemJob job : systemJobs) {
+            JobDefinition definition = job.createJobDefinition();
+            SystemJob other = jobsByName.put(definition.getName(), job);
+            if (other != null) {
+                throw new IllegalStateException("Two system jobs named " + definition.getName() + ": " + other + " and " + job);
+            }
+            described.add(new SystemJobDescriptor(definition.getName(), definition.getVersion(), definition.getDescription()));
+        }
+        described.sort(Comparator.comparing(SystemJobDescriptor::getName));
+        this.descriptors = List.copyOf(described);
+    }
 
     @Override
     public Future<List<SystemJobDescriptor>> findSystemJobs() {
-        List<SystemJobDescriptor> descriptors =
-                systemJobs.stream()
-                          .map(job -> {
-                              JobDefinition definition = job.createJobDefinition();
-                              return new SystemJobDescriptor(definition.getName(),
-                                                             definition.getVersion(),
-                                                             definition.getDescription());
-                          })
-                          .sorted(Comparator.comparing(SystemJobDescriptor::getName))
-                          .toList();
         return Future.succeededFuture(descriptors);
     }
 
     @Override
     public Future<JobRun> startSystemJob(String name) {
         Validate.notBlank(name, "name cannot be blank");
-        JobDefinition definition = systemJobs.stream()
-                                             .map(SystemJob::createJobDefinition)
-                                             .filter(candidate -> name.equals(candidate.getName()))
-                                             .findFirst()
-                                             .orElse(null);
+        SystemJob job = jobsByName.get(name);
         Future<JobRun> ret;
-        if (definition == null) {
+        if (job == null) {
             ret = Future.failedFuture(new IllegalArgumentException("No system job named " + name));
         } else {
-            JobRunHandle handle = jobService.run(definition, JobOwner.system());
+            JobRunHandle handle = jobService.run(job.createJobDefinition(), JobOwner.system());
             String jobRunId = handle.getJobRunId();
             log.info("Starting system job {} as run {}", name, jobRunId);
             // The outcome is recorded on the run; the subscription is what starts it

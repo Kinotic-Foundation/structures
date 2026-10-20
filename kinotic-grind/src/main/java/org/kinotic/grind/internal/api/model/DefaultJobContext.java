@@ -1,6 +1,7 @@
 package org.kinotic.grind.internal.api.model;
 
 import org.kinotic.grind.api.model.JobContext;
+import org.kinotic.grind.api.model.TaskReporter;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
@@ -24,6 +25,9 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class DefaultJobContext implements JobContext {
 
     private final DefaultJobContext parent;
+    // The scope stored values and managed instances belong to: this one, or for a task scope the
+    // scope the task executes in, so nothing a task stores ends with the task
+    private final DefaultJobContext owner;
     // Non-null only on the root scope, so property lookups end at the application configuration
     private final Environment fallbackEnvironment;
     private final DefaultListableBeanFactory beanFactory;
@@ -44,7 +48,13 @@ public class DefaultJobContext implements JobContext {
     }
 
     private DefaultJobContext(DefaultJobContext parent, BeanFactory parentBeanFactory, Environment fallbackEnvironment) {
+        this(parent, parentBeanFactory, fallbackEnvironment, null);
+    }
+
+    private DefaultJobContext(DefaultJobContext parent, BeanFactory parentBeanFactory, Environment fallbackEnvironment,
+                              DefaultJobContext owner) {
         this.parent = parent;
+        this.owner = owner != null ? owner : this;
         this.fallbackEnvironment = fallbackEnvironment;
         this.beanFactory = new DefaultListableBeanFactory(parentBeanFactory);
 
@@ -90,24 +100,24 @@ public class DefaultJobContext implements JobContext {
     public void autowire(Object instance) {
         beanFactory.autowireBean(instance);
         beanFactory.initializeBean(instance, instance.getClass().getSimpleName());
-        managedInstances.add(instance);
+        owner.managedInstances.add(instance);
     }
 
     @Override
     public <T> T instantiate(Class<T> type) {
         T ret = beanFactory.createBean(type);
-        managedInstances.add(ret);
+        owner.managedInstances.add(ret);
         return ret;
     }
 
     @Override
     public void storeProperty(String name, Object value) {
-        properties.put(name, value);
+        owner.properties.put(name, value);
     }
 
     @Override
     public void storeBean(String name, Object bean) {
-        beanFactory.registerSingleton(name, bean);
+        owner.beanFactory.registerSingleton(name, bean);
     }
 
     /**
@@ -116,6 +126,19 @@ public class DefaultJobContext implements JobContext {
      */
     public DefaultJobContext createChild() {
         return new DefaultJobContext(this, beanFactory, null);
+    }
+
+    /**
+     * Creates the scope one task executes in: its lookups find the given {@link TaskReporter} first,
+     * then everything this scope finds, and what the task stores, instantiates or autowires belongs
+     * to this scope.
+     * @param reporter the reporter given to the task
+     * @return the task's scope
+     */
+    public DefaultJobContext createTaskScope(TaskReporter reporter) {
+        DefaultJobContext ret = new DefaultJobContext(this, beanFactory, null, this);
+        ret.beanFactory.registerSingleton(TaskReporter.class.getName(), reporter);
+        return ret;
     }
 
     /**

@@ -1,9 +1,9 @@
 package org.kinotic.grind.api.model;
 
 /**
- * The icon keys the platform's consoles know, for {@link Task#icon(String)},
- * {@link JobDefinition#icon(String)} and {@link org.kinotic.grind.api.annotations.Task#icon()}. A
- * key a console does not know shows its default icon.
+ * The icon keys the platform's consoles know, for {@link Task#icon(String)} and
+ * {@link org.kinotic.grind.api.annotations.Task#icon()}. A key a console does not know shows its
+ * default icon.
  */
 public final class TaskIcons {
 

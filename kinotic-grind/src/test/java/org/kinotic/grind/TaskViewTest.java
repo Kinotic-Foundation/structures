@@ -18,6 +18,7 @@ import org.kinotic.grind.api.model.events.TaskStartedEvent;
 import org.springframework.beans.factory.annotation.Autowired;
 import tools.jackson.databind.JsonNode;
 
+import java.lang.reflect.Proxy;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -25,6 +26,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -209,6 +211,71 @@ public class TaskViewTest extends AbstractGrindTest {
         assertNull(result.error());
         assertWidgetView(lastViewReportedBeforeCompletion(result, "0/1"), "widget", "reported");
         assertWidgetView(recordAt(resumed, "0/1").getView(), "widget", "reported");
+    }
+
+    @Test
+    public void aReplayedStateTaskWithNoResultViewEndsOnTheViewItLastReported() throws Exception {
+        AtomicBoolean fail = new AtomicBoolean(true);
+        JobRunHandle original = jobService.run(reportedStateJob(fail), JobOwner.system());
+        assertNotNull(await(original).error());
+
+        fail.set(false);
+        JobRunHandle resumed = jobService.resume(original.getJobRunId(), reportedStateJob(fail));
+        RunResult result = await(resumed);
+
+        assertNull(result.error());
+        assertWidgetView(startOf(result, "0/1").view(), "widget", "first");
+        assertWidgetView(lastViewReportedBeforeCompletion(result, "0/1"), "widget", "reported");
+        assertWidgetView(recordAt(resumed, "0/1").getView(), "widget", "reported");
+    }
+
+    @Test
+    public void aSkippedTaskKeepsTheValueItWired() throws Exception {
+        AtomicBoolean fail = new AtomicBoolean(true);
+        JobRunHandle original = jobService.run(wiredJob(fail), JobOwner.system());
+        assertNotNull(await(original).error());
+
+        fail.set(false);
+        JobRunHandle resumed = jobService.resume(original.getJobRunId(), wiredJob(fail));
+        RunResult result = await(resumed);
+
+        assertNull(result.error());
+        assertEquals("seen", completionOf(result, "0/1").wireValue().get("name").stringValue());
+        assertEquals("seen", recordAt(resumed, "0/1").getWireValue().get("name").stringValue());
+    }
+
+    @Test
+    public void aTaskMustBeBuiltByTheTasksFactories() {
+        @SuppressWarnings("unchecked")
+        Task<Void> foreign = (Task<Void>) Proxy.newProxyInstance(Task.class.getClassLoader(), new Class<?>[]{Task.class},
+                                                                 (proxy, method, args) -> null);
+
+        assertThrows(IllegalArgumentException.class, () -> JobDefinition.create("foreign").task(foreign));
+    }
+
+    private JobDefinition reportedStateJob(AtomicBoolean fail) {
+        return JobDefinition.create("reported state")
+                .name("reported-state").version("1")
+                .input(new Widget("first"))
+                .task(Tasks.fromCallable("decide", new Callable<WidgetState>() {
+
+                    @Autowired
+                    private TaskReporter reporter;
+
+                    @Override
+                    public WidgetState call() {
+                        reporter.view(WIDGET.of(new Widget("reported")));
+                        return new WidgetState("decided");
+                    }
+                }).store(Store.state("widgetState")).startView(Widget.class, WIDGET::of))
+                .task(failGate(fail));
+    }
+
+    private JobDefinition wiredJob(AtomicBoolean fail) {
+        return JobDefinition.create("wired")
+                .name("wired").version("1")
+                .task(Tasks.fromValue("observe", new Widget("seen")).store(Store.none().wire()))
+                .task(failGate(fail));
     }
 
     private JobDefinition replayJob(AtomicBoolean fail) {

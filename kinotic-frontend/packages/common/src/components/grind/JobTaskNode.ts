@@ -25,12 +25,6 @@ export interface JobTaskNode {
   progress: JobTaskProgress | null
   /** The job scope name the task's value is stored under, once known. */
   storedName: string | null
-  /**
-   * The task's stored value as published to watchers while the run executes, or as
-   * recorded on the task once it completed; null until then, or when the value is neither
-   * published nor recorded.
-   */
-  storedValue: unknown
   /** The latest view the task showed, live while the run is watched and as recorded afterwards; null when it showed none. */
   view: TaskView | null
   children: JobTaskNode[]

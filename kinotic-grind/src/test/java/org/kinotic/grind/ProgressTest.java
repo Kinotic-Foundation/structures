@@ -19,10 +19,11 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Progress reporting: a task injects the scope's {@link TaskReporter}, and each report
+ * Progress reporting: a task injects the {@link TaskReporter} it is given, and each report
  * reaches watchers as a {@link TaskProgressEvent} attributed to the reporting task.
  */
 public class ProgressTest extends AbstractGrindTest {
@@ -136,6 +137,40 @@ public class ProgressTest extends AbstractGrindTest {
         assertNull(result.error());
         assertNull(spawnedError.get());
         assertTrue(result.events().stream().noneMatch(TaskProgressEvent.class::isInstance));
+    }
+
+    @Test
+    public void aReporterKeptPastItsTasksCompletionReportsNothing() throws Exception {
+        AtomicReference<TaskReporter> kept = new AtomicReference<>();
+        JobDefinition job = JobDefinition.create("kept reporter")
+                .name("kept-reporter").version("1")
+                .task(Tasks.fromCallable("keep", new Callable<Void>() {
+
+                    @Autowired
+                    private TaskReporter progress;
+
+                    @Override
+                    public Void call() {
+                        kept.set(progress);
+                        return null;
+                    }
+                }))
+                .task(Tasks.fromCallable("next", () -> {
+                    kept.get().progress(50, "from the first task, while the second runs");
+                    return null;
+                }));
+
+        RunResult result = await(jobService.run(job, JobOwner.system()));
+
+        assertNull(result.error());
+        assertTrue(result.events().stream().noneMatch(TaskProgressEvent.class::isInstance));
+    }
+
+    @Test
+    public void aTasksClassMayNotHoldAReporter() {
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                                                      () -> JobDefinition.fromTasks(ReporterFieldTasks.class));
+        assertTrue(error.getMessage().contains("TaskReporter"));
     }
 
     private org.kinotic.grind.api.model.Task<Void> reportingTask(String message, int percentage) {

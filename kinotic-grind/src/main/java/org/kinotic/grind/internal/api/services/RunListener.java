@@ -56,19 +56,22 @@ public interface RunListener {
     void taskViewed(String taskPath, JsonNode view);
 
     /**
-     * A task finished successfully.
+     * A task finished successfully, after replacing the view it shows when {@code view} is not
+     * null, as {@link #taskViewed(String, JsonNode)} reports it.
      * @param taskPath the task's position in the run's task tree
      * @param store how the task's result was kept
      * @param storedName the name the result was stored under, or null
      * @param storedValue the stored value, or null
      * @param serializedState the value's JSON form, or null unless the store is
      *                        {@link StoreType#STATE} or wire-published
+     * @param view the view the task shows last, as JSON, or null to keep the one it shows
      */
     void taskCompleted(String taskPath,
                        Store store,
                        String storedName,
                        Object storedValue,
-                       SerializedState serializedState);
+                       SerializedState serializedState,
+                       JsonNode view);
 
     /**
      * A task terminated with a failure.

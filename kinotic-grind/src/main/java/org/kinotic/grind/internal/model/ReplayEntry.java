@@ -12,6 +12,7 @@ import tools.jackson.databind.JsonNode;
  * @param value        the recorded stored value, deserialized, or null if the task stored
  *                     nothing or the value could not be restored
  * @param view         the view the completed task's record kept, or null when it kept none
+ * @param wireValue    the wired value the completed task's record kept, or null when it kept none
  */
-public record ReplayEntry(StoreType storeType, boolean dynamicTasks, Object value, JsonNode view) {
+public record ReplayEntry(StoreType storeType, boolean dynamicTasks, Object value, JsonNode view, JsonNode wireValue) {
 }

@@ -110,7 +110,9 @@ public class Tasks {
     }
 
     /**
-     * Creates a {@link Task} applying the given transformation to another task's result.
+     * Creates a {@link Task} applying the given transformation to another task's result. The new
+     * task has the other task's description and icon; its store and views, which concern the
+     * transformed value, are declared on the returned task.
      * @param from the task producing the value
      * @param transformer applied to the produced value
      * @param <T> the produced type

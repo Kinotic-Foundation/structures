@@ -65,7 +65,6 @@ export function useJobRunProgress(jobRunId: string) {
         finished: null,
         progress: null,
         storedName: null,
-        storedValue: null,
         view: null,
         children: []
       })
@@ -93,9 +92,6 @@ export function useJobRunProgress(jobRunId: string) {
     node.started = DatetimeUtil.toEpochMillis(record.started)
     node.finished = DatetimeUtil.toEpochMillis(record.finished)
     node.storedName = record.storedName ?? node.storedName
-    if (record.wireValue !== null && record.wireValue !== undefined) {
-      node.storedValue = record.wireValue
-    }
     // a discovered record holds no view yet, so it never clears one the stream has shown
     if (record.view) {
       node.view = record.view
@@ -122,9 +118,6 @@ export function useJobRunProgress(jobRunId: string) {
         node.finished = node.finished ?? Date.now()
         node.progress = null
         node.storedName = event.storedName ?? node.storedName
-        if (event.wireValue !== null && event.wireValue !== undefined) {
-          node.storedValue = event.wireValue
-        }
         break
       }
       case JobRunEventType.TASK_FAILED: {

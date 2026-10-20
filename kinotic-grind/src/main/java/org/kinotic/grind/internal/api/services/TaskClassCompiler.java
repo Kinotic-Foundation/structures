@@ -11,14 +11,18 @@ import org.kinotic.grind.api.model.JobScope;
 import org.kinotic.grind.api.model.Store;
 import org.kinotic.grind.api.model.StoreType;
 import org.kinotic.grind.api.model.Task;
+import org.kinotic.grind.api.model.TaskReporter;
 
 import java.beans.Introspector;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -41,12 +45,13 @@ public class TaskClassCompiler {
      * @param taskClass the class to compile
      * @return the definition
      * @throws IllegalArgumentException if the class declares no tasks, duplicate orders, a
-     *         task consuming a type only a later task produces, or durable state on a task
-     *         that produces no value
+     *         task consuming a type only a later task produces, durable state on a task
+     *         that produces no value, or a {@link TaskReporter} field or constructor parameter
      */
     public static JobDefinition compile(Class<?> taskClass) {
         List<Method> methods = taskMethodsInOrder(taskClass);
         validateWiring(taskClass, methods);
+        validateReporterInjection(taskClass);
 
         DefaultJobDefinition ret = new DefaultJobDefinition(taskClass.getSimpleName(), JobScope.CHILD, false);
         for (Method method : methods) {
@@ -57,6 +62,21 @@ public class TaskClassCompiler {
             ret.task(meta.icon().isEmpty() ? task : task.icon(meta.icon()));
         }
         return ret;
+    }
+
+    // One instance serves every task of the class while each task is given a reporter of its own, so
+    // a reporter the instance holds would report for the first of its tasks only
+    private static void validateReporterInjection(Class<?> taskClass) {
+        for (Field field : taskClass.getDeclaredFields()) {
+            Validate.isTrue(field.getType() != TaskReporter.class,
+                            "%s holds a TaskReporter in field %s; a tasks class takes it as a @Task method parameter",
+                            taskClass.getName(), field.getName());
+        }
+        for (Constructor<?> constructor : taskClass.getDeclaredConstructors()) {
+            Validate.isTrue(!Arrays.asList(constructor.getParameterTypes()).contains(TaskReporter.class),
+                            "%s takes a TaskReporter in its constructor; a tasks class takes it as a @Task method parameter",
+                            taskClass.getName());
+        }
     }
 
     private static List<Method> taskMethodsInOrder(Class<?> taskClass) {
