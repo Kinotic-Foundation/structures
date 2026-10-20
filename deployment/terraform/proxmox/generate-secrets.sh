@@ -12,9 +12,8 @@
 #                                             GitHub module, also the GitHub App's private key and
 #                                             webhook secret
 #   kinotic-<org|system|app>-server/platform-secrets/jwt-signing-keys
-#                                             the server's own JWT key set, in the shape
-#                                             deployment/kind/terraform/platform-secrets.tf
-#                                             produces, so a key can be added at migration
+#                                             the server's own JWT key set: an activeKeyId and
+#                                             a keys list, so a key can be added at migration
 #   kinotic-<org|system|app>-server/certs/    certbot's fullchain.pem and privkey.pem for the
 #                                             server's names, which certbot places on the host itself
 #   grafana.env                               GF_SECURITY_ADMIN_PASSWORD

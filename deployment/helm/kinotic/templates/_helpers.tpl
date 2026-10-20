@@ -38,8 +38,8 @@ Takes (dict "image" <repository and sha> "root" $).
 {{- end -}}
 
 {{/*
-The files a server's platform-secrets volume holds, as a YAML list of the Key Vault secret or
-Secret key each comes from and the file name it is mounted as: the server's own JWT key set, and
+The files a server's platform-secrets volume holds, as a YAML list of the Key Vault secret each
+comes from and the file name it is mounted as: the server's own JWT key set, and
 the properties Spring imports from the directory as a config tree, each file named after the
 property it sets. The GitHub App's secrets go only to a server with githubApp set, the Turnstile
 site's secret only to one with turnstile set.
@@ -146,11 +146,6 @@ OTEL_INSTRUMENTATION_COMMON_PEER_SERVICE_MAPPING: "{{ range $index, $value := $r
 KINOTIC_APIGATEWAY_SSL_ENABLED: "true"
 KINOTIC_APIGATEWAY_SSL_CERTPATH: "/certs/tls.crt"
 KINOTIC_APIGATEWAY_SSL_KEYPATH: "/certs/tls.key"
-{{- end }}
-{{- if $root.Values.evictionTracking.enabled }}
-
-# ── Eviction tracking ─────────────────────────────────────
-KINOTIC_CACHE_EVICTION_CSV_PATH: "{{ $root.Values.evictionTracking.mountPath | default "/eviction-data" }}/evictions-${POD_NAME}.csv"
 {{- end }}
 
 # ── Extra environment variables ───────────────────────────

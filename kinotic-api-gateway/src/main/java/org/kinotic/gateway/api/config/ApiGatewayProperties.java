@@ -34,7 +34,7 @@ public class ApiGatewayProperties {
     private int stompPort = DEFAULT_STOMP_PORT;
 
     /**
-     * Static-file web server configuration. Disabled in KinD/Azure where the SPA
+     * Static-file web server configuration. Disabled in Azure where the SPA
      * is hosted outside the cluster.
      */
     private WebServerProperties webServer = new WebServerProperties();

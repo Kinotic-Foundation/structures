@@ -19,7 +19,6 @@ Status and next steps for the Azure deployment. Items are ordered by priority wi
 - [x] ES credential sync across namespaces — `es-secret-sync` Helm chart with RBAC and retry
 - [x] NetworkPolicy on ES — allows traffic from kinotic + elastic-system only
 - [x] `beta_mode` toggle — single command to scale from beta to production topology
-- [x] KinD parity — same namespace layout, charts, TLS, NetworkPolicy, secret sync
 - [x] Load generator for sample data
 - [x] Observability — Loki (log storage), Tempo (trace storage), Mimir (metrics storage), Alloy (DaemonSet log collector), Grafana (dashboards, port-forward only)
 - [x] Grafana Entra ID login — auto-provisioned App Registration, on by default

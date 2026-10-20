@@ -396,7 +396,7 @@ output "kinotic_oidc_authority" {
   value = "https://login.microsoftonline.com/common/v2.0"
 }
 
-# Sensitive — used to populate the platform OIDC client secret for local/KinD dev when
+# Sensitive — used to populate the platform OIDC client secret for local dev when
 # you don't want to round-trip through Key Vault. Pull with:
 #   terraform -chdir=deployment/terraform/azure/global output -raw kinotic_oidc_entra_platform_client_secret
 output "kinotic_oidc_entra_platform_client_secret" {

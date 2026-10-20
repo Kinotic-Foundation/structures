@@ -35,6 +35,9 @@ it to track follow-up work. When your PR merges, restart your working branch fro
 request for the next unit of work. If the branch carries unmerged commits, rebase them onto
 the new base instead of discarding them.
 
+A pull request description never mentions Claude or any AI tool: no "Generated with Claude Code"
+line, no `Co-Authored-By` trailer, no session link, and no other attribution to an assistant.
+
 ## Enterprise Features live in kinotic-ee
 
 The root `LICENSE.md` licenses everything under the Elastic License 2.0 with the Kinotic Additional Limitations, except `kinotic-ee/`, which holds the Enterprise Features under the Kinotic Enterprise License (`kinotic-ee/LICENSE`). Every interface in an ELv2 package with an `ee` segment (`org.kinotic.domain.api.ee.services.SecretStorageBackend`) is an Enterprise Extension Point whose production implementations are Enterprise Features. To make a capability enterprise-only, put its interface in the module's `api/ee/` tree, mirroring `api/` (`api/ee/services/`), and put its implementations in `kinotic-ee`, never in an ELv2 module. The package name is the license designation, so an `ee` package may hold a single file.
