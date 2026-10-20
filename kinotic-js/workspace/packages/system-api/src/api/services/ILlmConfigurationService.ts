@@ -6,7 +6,7 @@ import type { LlmConfiguration } from '@/api/model/llm/LlmConfiguration'
  * The large language models the platform's services call, each an LlmConfiguration that platform operators
  * manage and a service selects by name. A configuration's API key is given on save and held in the platform's
  * scope of the secret storage until a save gives another or the configuration is deleted. Published in the
- * system zone, which only SYSTEM participants may address.
+ * system zone, which only SYSTEM participants and the platform's own cluster members may address.
  */
 export interface ILlmConfigurationService {
 
@@ -24,9 +24,6 @@ export interface ILlmConfigurationService {
      * configuration has.
      */
     save(configuration: LlmConfiguration, apiKey: string | null): Promise<LlmConfiguration>
-
-    /** The API key held for the configuration, or null when none is held. */
-    findApiKey(id: string): Promise<string | null>
 
     /** Deletes the configuration and the API key held for it. */
     deleteById(id: string): Promise<void>
@@ -54,10 +51,6 @@ export class LlmConfigurationService implements ILlmConfigurationService {
 
     public save(configuration: LlmConfiguration, apiKey: string | null): Promise<LlmConfiguration> {
         return this.serviceProxy.invoke('save', [configuration, apiKey])
-    }
-
-    public findApiKey(id: string): Promise<string | null> {
-        return this.serviceProxy.invoke('findApiKey', [id])
     }
 
     public deleteById(id: string): Promise<void> {

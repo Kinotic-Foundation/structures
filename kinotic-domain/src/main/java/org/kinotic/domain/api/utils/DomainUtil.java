@@ -64,6 +64,8 @@ public class DomainUtil {
      */
     public static final String APP_ZONE_PREFIX = "app";
 
+    private static final Set<String> PLATFORM_ZONES = Set.of(SYSTEM_API_ZONE, MANAGEMENT_API_ZONE, APP_API_ZONE, APP_ZONE_PREFIX);
+
     /**
      * The prefix of the Elasticsearch indices the platform creates, including the index that holds
      * the items of each published EntityDefinition
@@ -156,6 +158,22 @@ public class DomainUtil {
         validateHostLabelPart(tenantId);
         Validate.isTrue(tenantId.length() <= HostLabelUtil.MAX_TENANT_ID_LENGTH,
                         "Tenant Id '%s' is longer than %d characters; shorten the tenant name", tenantId, HostLabelUtil.MAX_TENANT_ID_LENGTH);
+    }
+
+    /**
+     * Validates a zone of services, beyond the platform's own, that organizations' users may call.
+     *
+     * @param zone the zone to validate
+     * @throws IllegalArgumentException if the zone breaks the zone grammar, or is, falls under, or covers one of the
+     *         platform's zones: {@value #SYSTEM_API_ZONE}, {@value #MANAGEMENT_API_ZONE}, {@value #APP_API_ZONE} or
+     *         {@value #APP_ZONE_PREFIX}
+     */
+    public static void validateOrganizationServiceZone(String zone) {
+        ZoneUtil.validateZone(zone);
+        for (String platformZone : PLATFORM_ZONES) {
+            Validate.isTrue(!ZoneUtil.zoneMatches(zone, Set.of(platformZone)) && !ZoneUtil.zoneMatches(platformZone, Set.of(zone)),
+                            "Zone '%s' overlaps the platform's zone '%s'", zone, platformZone);
+        }
     }
 
     private static void validateZoneLabelId(String id) {

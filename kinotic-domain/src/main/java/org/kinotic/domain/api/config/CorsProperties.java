@@ -16,12 +16,12 @@ public class CorsProperties {
 
     /**
      * The allowed origin pattern for CORS
-     * Defaults to "http://localhost.*"
+     * Defaults to "http://localhost(:\\d+)?", any port on localhost
      * If you want to allow all origins use "*"
      * Internally uses Java Regex Patterns to match
      * @see java.util.regex.Pattern
      */
-    private String allowedOriginPattern = "http://localhost.*";
+    private String allowedOriginPattern = "http://localhost(:\\d+)?";
 
     /**
      * The allowed headers for CORS

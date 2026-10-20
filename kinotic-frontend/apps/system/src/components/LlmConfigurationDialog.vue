@@ -49,7 +49,7 @@
             Temperature
             <span class="text-xs font-normal text-muted-color">Optional</span>
           </label>
-          <InputNumber input-id="llm-temperature" v-model="temperature" :min="0" :max="2" :min-fraction-digits="0" :max-fraction-digits="2"
+          <InputNumber input-id="llm-temperature" v-model="temperature" :min="0" :max="MAX_TEMPERATURES[provider]" :min-fraction-digits="0" :max-fraction-digits="2"
                        class="w-full" input-class="w-full" />
         </div>
       </div>
@@ -74,6 +74,7 @@ import { BrainCircuit } from '@lucide/vue'
 import { Kinotic } from '@kinotic-ai/core'
 import { LlmConfiguration, LlmProviderType } from '@kinotic-ai/system-api'
 import { FormDialog, showErrorToast } from '@kinotic-ai/frontend-common'
+import { LLM_PROVIDER_NAMES } from '@/util/LlmProviderNames'
 
 /**
  * Adds an LLM configuration, or edits the one given, and saves it with the API key typed, if any.
@@ -88,10 +89,13 @@ const emit = defineEmits<{
   (e: 'saved', configuration: LlmConfiguration): void
 }>()
 
-const PROVIDERS = [
-  { label: 'Anthropic', value: LlmProviderType.ANTHROPIC },
-  { label: 'OpenAI', value: LlmProviderType.OPENAI }
-]
+const PROVIDERS = Object.values(LlmProviderType).map(value => ({ label: LLM_PROVIDER_NAMES[value], value }))
+
+// Anthropic accepts a temperature from 0 to 1, OpenAI from 0 to 2
+const MAX_TEMPERATURES: Record<LlmProviderType, number> = {
+  [LlmProviderType.ANTHROPIC]: 1,
+  [LlmProviderType.OPENAI]: 2
+}
 
 const MODEL_PLACEHOLDERS: Record<LlmProviderType, string> = {
   [LlmProviderType.ANTHROPIC]: 'claude-opus-5-5',
@@ -110,9 +114,10 @@ const temperature = ref<number | null>(null)
 const saving = ref(false)
 
 const isNew = computed(() => !props.configuration?.id)
-const complete = computed(() => name.value.trim() !== '' && model.value.trim() !== '')
+const complete = computed(() => name.value.trim() !== '' && model.value.trim() !== ''
+  && (temperature.value === null || temperature.value <= MAX_TEMPERATURES[provider.value]))
 
-// the fields start from the configuration being edited each time the dialog opens
+// the fields start from the configuration being edited each time the dialog opens, and the typed key is dropped when it closes
 watch(() => props.visible, visible => {
   if (visible) {
     const configuration = props.configuration
@@ -123,6 +128,8 @@ watch(() => props.visible, visible => {
     endpoint.value = configuration?.endpoint ?? ''
     maxTokens.value = configuration?.maxTokens ?? null
     temperature.value = configuration?.temperature ?? null
+  } else {
+    apiKey.value = ''
   }
 }, { immediate: true })
 
@@ -139,7 +146,7 @@ async function submit(): Promise<void> {
   })
   saving.value = true
   try {
-    const saved = await Kinotic.llmConfigurations.save(configuration, apiKey.value || null)
+    const saved = await Kinotic.llmConfigurations.save(configuration, apiKey.value.trim() || null)
     toast.add({ severity: 'success', summary: isNew.value ? 'Configuration added' : 'Configuration saved', life: 4000 })
     emit('saved', saved)
     emit('update:visible', false)

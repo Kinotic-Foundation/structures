@@ -29,14 +29,17 @@ public interface LlmConfigurationService {
      * Saves a configuration, new or changed, and makes {@code apiKey}, when given, the key it calls its provider with.
      * Its {@code apiKeyHeld} says whether a key is held, whatever it carried.
      *
-     * @param configuration the configuration, whose name no other configuration has
+     * @param configuration the configuration, whose name no other configuration has; with an id, the existing
+     *                      configuration it replaces, keeping that one's creation time
      * @param apiKey        the API key, or {@code null} or blank to keep the key held for the configuration, if any
      * @return the configuration as saved, with its id
      */
     Future<LlmConfiguration> save(LlmConfiguration configuration, String apiKey);
 
     /**
-     * The API key held for the configuration {@code id}: the secret a service calls the provider with.
+     * The API key held for the configuration {@code id}: the secret a service calls the provider with. The caller
+     * must act as an {@code OrganizationParticipant}, as a platform service calling the model for an organization's
+     * user does; any other caller, SYSTEM participants included, is refused.
      *
      * @return the key, or {@code null} when no configuration has that id or none is held for it
      */

@@ -77,10 +77,13 @@ public class SecurityContext {
     }
 
     /**
-     * Runs {@code call} on a Vert.x context with {@code participant} bound, so everything the call does reads that
-     * participant from {@link #currentParticipant()}, and every service proxy it invokes sends the call as that
-     * participant. Use it to act for a participant from a thread that has no Vert.x context, or whose context is
-     * bound to another participant.
+     * Runs {@code call} on a Vert.x context with {@code participant} bound, so code {@code call} runs synchronously
+     * reads that participant from {@link #currentParticipant()}, and every service proxy invocation {@code call}
+     * starts synchronously sends the call as that participant. A proxy invocation started from a callback, such as
+     * one composed on another invocation's result, runs on the context that completed that result, which need not
+     * carry {@code participant}, so each invocation that must act as {@code participant} is started by its own
+     * {@code callAs}. Use it to act for
+     * a participant from a thread that has no Vert.x context, or whose context is bound to another participant.
      * <p>
      * A remote service trusts the participant a cluster member sends, so {@code participant} must be one this
      * member authenticated, such as the participant of a service invocation it received.
@@ -88,7 +91,8 @@ public class SecurityContext {
      * @param participant the participant to act as
      * @param call        starts the work and returns its completion
      * @param <T>         the type of the call's result
-     * @return a future completed with the call's result or failure
+     * @return a future completed with the call's result or failure, on whichever thread completes the call; a caller
+     *         on a Vert.x context bridges it with {@code Future.fromCompletionStage(stage, context)}
      */
     public <T> CompletableFuture<T> callAs(Participant participant, Supplier<? extends CompletionStage<T>> call) {
         Validate.notNull(participant, "participant must not be null");

@@ -40,10 +40,11 @@ import { ref } from 'vue'
 import Tag from 'primevue/tag'
 import type { MenuItem } from 'primevue/menuitem'
 import { useConfirm } from 'primevue/useconfirm'
-import { FunctionalIterablePage, Kinotic, type IterablePage, type Page, type Pageable } from '@kinotic-ai/core'
-import { LlmProviderType, type LlmConfiguration } from '@kinotic-ai/system-api'
+import { Kinotic, type Pageable } from '@kinotic-ai/core'
+import type { LlmConfiguration } from '@kinotic-ai/system-api'
 import {
   CrudTable,
+  filteredPageLoader,
   PageHeader,
   TimePill,
   useCrudTablePage,
@@ -52,6 +53,7 @@ import {
 } from '@kinotic-ai/frontend-common'
 
 import LlmConfigurationDialog from '@/components/LlmConfigurationDialog.vue'
+import { LLM_PROVIDER_NAMES } from '@/util/LlmProviderNames'
 
 /** One row: a configuration and the columns it is listed by. */
 interface ConfigurationRow extends DescriptiveIdentifiable {
@@ -64,11 +66,6 @@ interface ConfigurationRow extends DescriptiveIdentifiable {
   updated: string | null
 }
 
-const PROVIDER_NAMES: Record<LlmProviderType, string> = {
-  [LlmProviderType.ANTHROPIC]: 'Anthropic',
-  [LlmProviderType.OPENAI]: 'OpenAI'
-}
-
 const headers: CrudHeader[] = [
   { field: 'name', header: 'Name', sortable: false, width: '24%' },
   { field: 'provider', header: 'Provider', sortable: false, width: '16%' },
@@ -78,7 +75,11 @@ const headers: CrudHeader[] = [
 ]
 
 const confirm = useConfirm()
-const { tableSearch, dataSource, refreshTable, run, removeRow } = useCrudTablePage(load)
+const { tableSearch, dataSource, refreshTable, run, removeRow } = useCrudTablePage(
+  filteredPageLoader((pageable: Pageable) => Kinotic.llmConfigurations.findAll(pageable),
+                     toRow,
+                     row => [row.name, row.model, row.provider])
+)
 
 const dialogVisible = ref(false)
 const editing = ref<LlmConfiguration | null>(null)
@@ -88,23 +89,11 @@ function toRow(configuration: LlmConfiguration): ConfigurationRow {
     id: configuration.id ?? '',
     configuration,
     name: configuration.name,
-    provider: PROVIDER_NAMES[configuration.provider] ?? configuration.provider,
+    provider: LLM_PROVIDER_NAMES[configuration.provider] ?? configuration.provider,
     model: configuration.model,
     apiKey: configuration.apiKeyHeld ? 'Key held' : 'No key',
     updated: configuration.updated
   }
-}
-
-// the platform holds few configurations, so they are read in one page and searched here
-async function load(pageable: Pageable, searchText: string | null): Promise<IterablePage<DescriptiveIdentifiable>> {
-  const all = await Kinotic.llmConfigurations.findAll(pageable)
-  let shown = all.content ?? []
-  if (searchText) {
-    const needle = searchText.trim().toLowerCase()
-    shown = shown.filter(c => [c.name, c.model, c.provider].some(field => (field ?? '').toLowerCase().includes(needle)))
-  }
-  const page: Page<DescriptiveIdentifiable> = { content: shown.map(toRow), totalElements: all.totalElements, cursor: undefined }
-  return new FunctionalIterablePage(pageable, page, (next: Pageable) => load(next, searchText))
 }
 
 function openDialog(configuration: LlmConfiguration | null): void {

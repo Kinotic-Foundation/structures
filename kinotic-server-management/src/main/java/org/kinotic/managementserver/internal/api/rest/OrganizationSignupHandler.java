@@ -61,8 +61,6 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes, OidcFlo
             String email = body.getString("email");
             String displayName = body.getString("displayName");
 
-            // the CORS handler in front of every gateway route refuses an Origin outside
-            // kinotic.domain.cors.allowedOriginPattern, so the origin is always a UI this server allows
             signUpService.initiateLocalSignUp(email, displayName, SessionBinding.origin(ctx))
                     .onSuccess(v -> ctx.response()
                             .setStatusCode(200)

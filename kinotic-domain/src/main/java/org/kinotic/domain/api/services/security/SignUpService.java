@@ -19,8 +19,8 @@ public interface SignUpService {
      * @param email       the email to verify
      * @param displayName the founder's display name
      * @param origin      the origin of the UI the sign-up started from, whose {@code /signup/verify} page the
-     *                    link opens, or {@code null} for the portal's; it must be an origin the caller allows
-     *                    UIs at
+     *                    link opens when {@code kinotic.domain.cors.allowedOriginPattern} admits it; the link
+     *                    opens the portal's page for any other origin or {@code null}
      */
     Future<Void> initiateLocalSignUp(String email, String displayName, String origin);
 
