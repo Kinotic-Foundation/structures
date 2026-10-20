@@ -3,6 +3,7 @@ package org.kinotic.authz.internal.api.services;
 import dev.openfga.sdk.api.model.CheckRequest;
 import dev.openfga.sdk.api.model.CheckRequestTupleKey;
 import dev.openfga.sdk.api.model.CheckResponse;
+import dev.openfga.sdk.api.model.ListObjectsRequest;
 import dev.openfga.sdk.api.model.TupleKey;
 import dev.openfga.sdk.api.model.TupleKeyWithoutCondition;
 import dev.openfga.sdk.errors.ApiException;
@@ -10,6 +11,7 @@ import io.vertx.core.Future;
 import lombok.RequiredArgsConstructor;
 import org.kinotic.authz.api.model.AuthzObject;
 import org.kinotic.authz.api.model.AuthzRelation;
+import org.kinotic.authz.api.model.AuthzType;
 import org.kinotic.authz.api.model.RelationshipTuple;
 import org.kinotic.authz.api.services.RelationshipService;
 import org.springframework.stereotype.Component;
@@ -55,6 +57,19 @@ public class DefaultRelationshipService implements RelationshipService {
         return Future.all(store.storeId(), store.modelId())
                      .compose(ids -> fga.check(ids.resultAt(0), new CheckRequest().authorizationModelId(ids.resultAt(1)).tupleKey(key)))
                      .map(CheckResponse::getAllowed);
+    }
+
+    @Override
+    public Future<List<AuthzObject>> listObjects(AuthzObject user, AuthzRelation relation, AuthzType type) {
+        return Future.all(store.storeId(), store.modelId())
+                     .compose(ids -> fga.listObjects(ids.resultAt(0), new ListObjectsRequest().authorizationModelId(ids.resultAt(1))
+                                                                                              .user(user.toString())
+                                                                                              .relation(relation.wireName())
+                                                                                              .type(type.wireName())))
+                     // the engine names each object as <type>:<id>
+                     .map(response -> response.getObjects().stream()
+                                              .map(object -> new AuthzObject(type, object.substring(object.indexOf(':') + 1)))
+                                              .toList());
     }
 
     // The engine refuses a write as a conflict when another writer changed the same tuples in the same moment;

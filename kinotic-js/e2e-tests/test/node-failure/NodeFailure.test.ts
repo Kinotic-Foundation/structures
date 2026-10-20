@@ -8,6 +8,7 @@ import {
     buildConnectOptions,
     E2E_FIXTURE_PASSWORD,
     E2E_ORGANIZATION_ID,
+    grantRuntime,
     kinoticServer
 } from '../TestHelpers.js'
 import {ProbeService, type ProbeEvent} from './ProbeService.js'
@@ -16,9 +17,10 @@ ensureNodeWebSocket()
 
 const execFileAsync = promisify(execFile)
 
-// The host publishes the probe in an app zone of the e2e organization, which the organization's runtime machine may
-// host and call
-const ZONE = `app.${E2E_ORGANIZATION_ID}.node-failure`
+// The host publishes the probe in an app zone of the e2e organization, which the organization's runtime machine is
+// granted to host and may call
+const APPLICATION_ID = 'node-failure'
+const ZONE = `app.${E2E_ORGANIZATION_ID}.${APPLICATION_ID}`
 const PROBE_SERVICE = `${ZONE}~e2e.nodefailure.ProbeService`
 
 /** The organization's runtime machine V3__e2e_app_fixtures seeds, which connects to app server nodes (clientSecret: kinotic). */
@@ -54,6 +56,7 @@ describe('Node failure handling for service proxies', () => {
     const callers: KinoticSingleton[] = []
 
     beforeAll(async () => {
+        await grantRuntime(RUNTIME_MACHINE_ID, APPLICATION_ID)
         Kinotic.zonePrefix = ZONE
         new ProbeService(event => probeEvents.push(event))
         await Kinotic.connect(runtimeConnectOptions(node2()))

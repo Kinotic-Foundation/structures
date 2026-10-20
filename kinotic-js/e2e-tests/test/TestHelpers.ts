@@ -91,6 +91,28 @@ export function appServer(): ServerInfo {
     return kinoticServer('kinotic-server-app')
 }
 
+/**
+ * Grants the machine the runtime of one of the e2e organization's applications, as deploying a project of the
+ * application grants its runtime machine, so the machine may register and host the application's services.
+ */
+export async function grantRuntime(machineId: string, applicationId: string): Promise<void> {
+    // @ts-ignore
+    const openFgaUrl = inject('OPENFGA_URL') as string
+    const listing = await fetch(`${openFgaUrl}/stores?name=kinotic-platform`)
+    expect(listing.ok, 'the authorization engine lists its stores').toBe(true)
+    const {stores} = await listing.json() as {stores: {id: string}[]}
+    // the e2e stack's openfga-init creates the one platform store
+    const write = await fetch(`${openFgaUrl}/stores/${stores[0].id}/write`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({writes: {tuple_keys: [{user: `machine:${machineId}`,
+                                                     relation: 'runtime',
+                                                     object: `application:${E2E_ORGANIZATION_ID}.${applicationId}`}],
+                                       on_duplicate: 'ignore'}})
+    })
+    expect(write.ok, `the grant is written: ${write.ok ? '' : await write.text()}`).toBe(true)
+}
+
 /** REST base URL of the given server, the management server by default. */
 export function restBase(server: ServerInfo = managementServer()): string {
     return buildServerUrl(server, 'http')

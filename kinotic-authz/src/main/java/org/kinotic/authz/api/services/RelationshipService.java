@@ -3,9 +3,11 @@ package org.kinotic.authz.api.services;
 import io.vertx.core.Future;
 import org.kinotic.authz.api.model.AuthzObject;
 import org.kinotic.authz.api.model.AuthzRelation;
+import org.kinotic.authz.api.model.AuthzType;
 import org.kinotic.authz.api.model.RelationshipTuple;
 
 import java.util.Collection;
+import java.util.List;
 
 /**
  * The relationships held in the platform's authorization store, and the checks the store answers from them
@@ -32,5 +34,15 @@ public interface RelationshipService {
      * @return true when the relation is held
      */
     Future<Boolean> check(AuthzObject user, AuthzRelation relation, AuthzObject object);
+
+    /**
+     * The objects of the type on which the user holds the relation, directly or through the model's rules.
+     *
+     * @param user     the subject asked about
+     * @param relation the relation, usually a permission such as {@link AuthzRelation#CAN_REGISTER_SERVICES}
+     * @param type     the type of the objects listed
+     * @return the objects, in no particular order
+     */
+    Future<List<AuthzObject>> listObjects(AuthzObject user, AuthzRelation relation, AuthzType type);
 
 }

@@ -49,8 +49,8 @@ import static org.kinotic.authz.api.model.AuthzRelation.RUNTIME;
 
 /**
  * Exercises the platform store and the relationships against a real OpenFGA: the platform model written once
- * and reused by every node, relationships written in batches and idempotently, and checks answering through the
- * model. OpenFGA runs from the image the compose stack declares when Docker is available, else at the URL in the
+ * and reused by every node, relationships written in batches and idempotently, and checks and listings
+ * answering through the model. OpenFGA runs from the image the compose stack declares when Docker is available, else at the URL in the
  * {@code OPENFGA_URL} environment variable, and the test is skipped when there is neither.
  */
 @SpringBootTest(classes = KinoticAuthzLibrary.class)
@@ -175,6 +175,18 @@ class RelationshipServiceTest {
 
         assertTrue(await(relationships.check(members.getFirst().user(), CAN_READ, tree.project)));
         assertTrue(await(relationships.check(members.getLast().user(), CAN_READ, tree.project)));
+    }
+
+    @Test
+    void theObjectsAUserHoldsAPermissionOnAreListed() throws Exception {
+        Tree hosted = new Tree();
+        Tree other = new Tree();
+        AuthzObject runtime = machine();
+        await(relationships.write(List.of(tuple(runtime, RUNTIME, hosted.application)), List.of()));
+
+        assertEquals(List.of(hosted.application), await(relationships.listObjects(runtime, CAN_REGISTER_SERVICES, AuthzType.APPLICATION)));
+        assertEquals(List.of(), await(relationships.listObjects(machine(), CAN_REGISTER_SERVICES, AuthzType.APPLICATION)));
+        assertFalse(await(relationships.check(runtime, CAN_REGISTER_SERVICES, other.application)));
     }
 
     @Test

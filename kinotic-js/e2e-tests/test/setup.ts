@@ -24,6 +24,9 @@ const SERVER_PORTS = {
 /** A server of the e2e compose stack, by its compose service name. */
 export type KinoticServerName = keyof typeof SERVER_PORTS
 
+/** The port OpenFGA serves its HTTP API on, which compose.openfga.yml publishes as itself. */
+const OPENFGA_PORT = 8080
+
 /** How long a server may take to answer /health, matching the start_period of its compose healthcheck. */
 const SERVER_STARTUP_TIMEOUT_MS = 120_000
 
@@ -44,9 +47,10 @@ export interface GlobalSetup {
 /**
  * Builds the globalSetup of a suite that runs against the compose stack in
  * deployment/docker-compose/compose.kinotic-e2e-test.yml. With VITE_USE_KINOTIC_DOCKER=true the
- * setup brings up Elasticsearch, OpenFGA, the migration and the given servers, and provides KINOTIC_HOST plus
- * KINOTIC_PORTS, the mapped REST and STOMP port of each server by name. Otherwise it points the suite
- * at 127.0.0.1 on the ports the compose file publishes, for a stack started by hand.
+ * setup brings up Elasticsearch, OpenFGA, the migration and the given servers, and provides KINOTIC_HOST,
+ * KINOTIC_PORTS, the mapped REST and STOMP port of each server by name, and OPENFGA_URL, the HTTP API of the
+ * authorization engine. Otherwise it points the suite at 127.0.0.1 on the ports the compose file publishes,
+ * for a stack started by hand.
  * @param serverNames the servers to start
  */
 export function createGlobalSetup(serverNames: KinoticServerName[]): GlobalSetup {
@@ -63,7 +67,7 @@ export function createGlobalSetup(serverNames: KinoticServerName[]): GlobalSetup
                 let compose = new DockerComposeEnvironment(resolvedPath, files)
                     .withWaitStrategy('kinotic-elasticsearch', Wait.forHttp('/_cluster/health', 9200))
                     // the OpenFGA image has no shell, which the default port wait strategy needs
-                    .withWaitStrategy('openfga', Wait.forHttp('/healthz', 8080))
+                    .withWaitStrategy('openfga', Wait.forHttp('/healthz', OPENFGA_PORT))
                     .withEnvironmentFile(path.resolve('../../', 'gradle.properties'))
                 for(const serverName of serverNames){
                     compose = compose.withWaitStrategy(serverName, Wait.forHttp('/health', SERVER_PORTS[serverName])
@@ -91,7 +95,9 @@ export function createGlobalSetup(serverNames: KinoticServerName[]): GlobalSetup
                     }
                 }
 
-                provideServers(project, environment.getContainer(serverNames[0]).getHost(), ports)
+                const openfga = environment.getContainer('openfga')
+                provideServers(project, environment.getContainer(serverNames[0]).getHost(), ports,
+                               `http://${openfga.getHost()}:${openfga.getMappedPort(OPENFGA_PORT)}`)
 
                 console.log('Kinotic started.')
             }else{
@@ -99,7 +105,7 @@ export function createGlobalSetup(serverNames: KinoticServerName[]): GlobalSetup
                 for(const serverName of serverNames){
                     ports[serverName] = PUBLISHED_PORTS[serverName]
                 }
-                provideServers(project, '127.0.0.1', ports)
+                provideServers(project, '127.0.0.1', ports, `http://127.0.0.1:${OPENFGA_PORT}`)
                 console.log('Skipping Kinotic setup because VITE_USE_KINOTIC_DOCKER is false')
             }
         },
@@ -117,11 +123,14 @@ export function createGlobalSetup(serverNames: KinoticServerName[]): GlobalSetup
     }
 }
 
-function provideServers(project: TestProject, host: string, ports: Partial<Record<KinoticServerName, number>>): void {
+function provideServers(project: TestProject, host: string, ports: Partial<Record<KinoticServerName, number>>,
+                        openFgaUrl: string): void {
     // @ts-ignore
     project.provide('KINOTIC_HOST', host)
     // @ts-ignore
     project.provide('KINOTIC_PORTS', ports)
+    // @ts-ignore
+    project.provide('OPENFGA_URL', openFgaUrl)
 }
 
 const globalSetup = createGlobalSetup(['kinotic-server-management', 'kinotic-server-system', 'kinotic-server-app'])

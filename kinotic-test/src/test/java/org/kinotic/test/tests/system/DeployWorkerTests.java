@@ -4,11 +4,16 @@ import io.vertx.core.Future;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.kinotic.authz.api.model.AuthzObject;
+import org.kinotic.authz.api.model.AuthzRelation;
+import org.kinotic.authz.api.model.AuthzType;
+import org.kinotic.authz.api.services.RelationshipService;
 import org.kinotic.core.api.ServiceRegistry;
 import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.domain.api.model.Requeue;
 import org.kinotic.domain.api.services.Reconciler;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
+import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.management.api.model.Project;
 import org.kinotic.management.api.model.deployment.DeployTarget;
 import org.kinotic.management.api.model.deployment.DeploymentState;
@@ -53,8 +58,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * The deployment workers against their real repositories: what each answers for an intent it cannot
- * carry out, for a record the commit dropped, and for a removal, and what the microservice worker
- * does with a restart. A worker is called directly where the test asserts its answer, as the
+ * carry out, for a record the commit dropped, and for a removal, what the microservice worker
+ * does with a restart, and the grant its runtime machine holds. A worker is called directly where the test asserts its answer, as the
  * reconcile master calls it; a removal and a restart are left to the master running in this
  * context, and the test waits for the record to go or the VM to be replaced.
  */
@@ -105,6 +110,9 @@ public class DeployWorkerTests extends KinoticTestBase {
 
     @Autowired
     private ServiceRegistry serviceRegistry;
+
+    @Autowired
+    private RelationshipService relationships;
 
     private final List<String> microserviceIds = new ArrayList<>();
     private final List<String> uiIds = new ArrayList<>();
@@ -223,6 +231,19 @@ public class DeployWorkerTests extends KinoticTestBase {
         assertEquals(WorkloadStatus.STOPPED, await(workloads.findById(firstRun)).getStatus());
         assertEquals(WorkloadStatus.RUNNING, await(workloads.findById(replaced.getWorkloadId())).getStatus());
         assertEquals(4 - ProjectWorkloadSizes.RUNTIME_CPUS, await(nodes.findById(NODE_ID)).getFreeCpus(), "one VM's room is held");
+    }
+
+    @Test
+    public void aDeployedMicroservicesRuntimeIsGrantedItsApplication() throws Exception {
+        String projectId = "worker-runtime-grant";
+        deployable(projectId);
+        MicroserviceDeployment deployment = microservice(projectId, "api", new DeploymentState(DeploymentStatusType.RUNNING, COMMIT));
+
+        MicroserviceDeployment deployed = awaitDeployed(deployment.getId(), null);
+
+        AuthzObject machine = new AuthzObject(AuthzType.MACHINE, deployed.getMachineIdentityId());
+        assertTrue(await(relationships.check(machine, AuthzRelation.CAN_REGISTER_SERVICES, DomainUtil.authzApplication(TEST_ORG_ID, TEST_APP_ID))));
+        assertFalse(await(relationships.check(machine, AuthzRelation.CAN_REGISTER_SERVICES, DomainUtil.authzApplication(TEST_ORG_ID, "other-" + TEST_APP_ID))));
     }
 
     @Test

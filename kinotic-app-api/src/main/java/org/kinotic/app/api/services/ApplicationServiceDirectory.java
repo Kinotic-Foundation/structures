@@ -10,7 +10,9 @@ import org.kinotic.domain.api.utils.DomainUtil;
 /**
  * Where an application's runtimes register the services they serve in the platform's service directory, so
  * the directory lists them beside the platform's own: a runtime registers each service as it comes online.
- * The application must belong to the caller's organization and the entry's zone must be the application's.
+ * The application must belong to the caller's organization, the caller must be a machine granted the right to
+ * register the application's services, such as the runtime of one of its deployments, and the entry's zone must
+ * be the application's.
  */
 @Publish
 @Version("1.0.0")

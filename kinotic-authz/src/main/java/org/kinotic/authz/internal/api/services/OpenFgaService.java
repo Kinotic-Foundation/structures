@@ -7,6 +7,8 @@ import dev.openfga.sdk.api.configuration.Configuration;
 import dev.openfga.sdk.api.configuration.Credentials;
 import dev.openfga.sdk.api.model.CheckRequest;
 import dev.openfga.sdk.api.model.CheckResponse;
+import dev.openfga.sdk.api.model.ListObjectsRequest;
+import dev.openfga.sdk.api.model.ListObjectsResponse;
 import dev.openfga.sdk.api.model.ListStoresResponse;
 import dev.openfga.sdk.api.model.ReadAuthorizationModelsResponse;
 import dev.openfga.sdk.api.model.TupleKey;
@@ -90,6 +92,10 @@ public class OpenFgaService {
 
     public Future<CheckResponse> check(String storeId, CheckRequest request) {
         return call(() -> api.check(storeId, request));
+    }
+
+    public Future<ListObjectsResponse> listObjects(String storeId, ListObjectsRequest request) {
+        return call(() -> api.listObjects(storeId, request));
     }
 
     private static <T> Future<T> call(Callable<CompletableFuture<ApiResponse<T>>> call) {

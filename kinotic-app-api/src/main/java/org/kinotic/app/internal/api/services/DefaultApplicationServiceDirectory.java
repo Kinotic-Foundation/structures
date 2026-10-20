@@ -5,8 +5,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.app.api.services.ApplicationServiceDirectory;
+import org.kinotic.authz.api.model.AuthzObject;
+import org.kinotic.authz.api.model.AuthzRelation;
+import org.kinotic.authz.api.services.RelationshipService;
 import org.kinotic.core.api.directory.ServiceDirectory;
 import org.kinotic.core.api.directory.ServiceDirectoryEntry;
+import org.kinotic.core.api.exceptions.AuthorizationException;
 import org.kinotic.core.api.security.SecurityContext;
 import org.kinotic.domain.api.model.security.participant.OrganizationParticipant;
 import org.kinotic.domain.api.repositories.ApplicationRepository;
@@ -21,6 +25,7 @@ public class DefaultApplicationServiceDirectory implements ApplicationServiceDir
 
     private final SecurityContext securityContext;
     private final ApplicationRepository applications;
+    private final RelationshipService relationships;
     private final ObjectProvider<ServiceDirectory> directoryProvider;
 
     @Override
@@ -29,7 +34,12 @@ public class DefaultApplicationServiceDirectory implements ApplicationServiceDir
         Validate.notBlank(entry.getApplicationId(), "The entry names no application");
         Validate.notNull(entry.getServiceDefinition(), "The entry carries no service definition");
         String applicationId = entry.getApplicationId();
-        String organizationId = securityContext.requireParticipant(OrganizationParticipant.class).getOrganizationId();
+        OrganizationParticipant participant = securityContext.requireParticipant(OrganizationParticipant.class);
+        String organizationId = participant.getOrganizationId();
+        AuthzObject machine = DomainUtil.authzMachine(participant);
+        if (machine == null) {
+            throw new AuthorizationException("Only a machine registers an application's services");
+        }
         String zone = DomainUtil.applicationZone(organizationId, applicationId);
         // a service of the application is addressed in the application's zone, or in one of its own labels under it
         Validate.isTrue(zone.equals(entry.getZone()) || (entry.getZone() != null && entry.getZone().startsWith(zone + ".")),
@@ -39,9 +49,12 @@ public class DefaultApplicationServiceDirectory implements ApplicationServiceDir
         Validate.validState(directory != null, "This server holds no service directory to register a service in");
         // the organization is the caller's, whatever the entry names
         entry.setOrganizationId(organizationId);
-        return applications.requireById(applicationId, organizationId)
-                           .compose(application -> directory.register(entry))
-                           .onSuccess(v -> log.info("Registered the service {} of application {} in the directory",
-                                                    entry.getServiceDefinition().getQualifiedName(), applicationId));
+        return relationships.check(machine, AuthzRelation.CAN_REGISTER_SERVICES, DomainUtil.authzApplication(organizationId, applicationId))
+                            .compose(allowed -> allowed
+                                    ? applications.requireById(applicationId, organizationId)
+                                    : Future.failedFuture(new AuthorizationException("Not authorized to register the services of application " + applicationId)))
+                            .compose(application -> directory.register(entry))
+                            .onSuccess(v -> log.info("Registered the service {} of application {} in the directory",
+                                                     entry.getServiceDefinition().getQualifiedName(), applicationId));
     }
 }

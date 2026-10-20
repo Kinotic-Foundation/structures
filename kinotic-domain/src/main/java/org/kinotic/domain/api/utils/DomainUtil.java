@@ -3,6 +3,8 @@ package org.kinotic.domain.api.utils;
 import com.github.slugify.Slugify;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
+import org.kinotic.authz.api.model.AuthzObject;
+import org.kinotic.authz.api.model.AuthzType;
 import org.kinotic.core.api.security.Participant;
 import org.kinotic.core.api.security.ParticipantConstants;
 import org.kinotic.core.api.utils.ZoneUtil;
@@ -74,6 +76,45 @@ public class DomainUtil {
      */
     public static String applicationZone(String organizationId, String applicationId) {
         return APP_ZONE_PREFIX + "." + organizationId + "." + applicationId;
+    }
+
+    /**
+     * An application as the authorization engine holds it, {@code application:<organizationId>.<applicationId>},
+     * since an application's id is unique only within its organization.
+     *
+     * @param organizationId the application's organization
+     * @param applicationId  the application
+     * @return the application's authorization object
+     * @throws IllegalArgumentException if either id is not a single zone label
+     */
+    public static AuthzObject authzApplication(String organizationId, String applicationId) {
+        // a dot-free id keeps the pair unambiguous, so authzApplicationId can split it again
+        ZoneUtil.validateLabel(organizationId);
+        ZoneUtil.validateLabel(applicationId);
+        return new AuthzObject(AuthzType.APPLICATION, organizationId + "." + applicationId);
+    }
+
+    /**
+     * The application an {@link #authzApplication(String, String)} object names, when it is one of the organization's.
+     *
+     * @param application    an application's authorization object
+     * @param organizationId the organization
+     * @return the application's id, or null when the application belongs to another organization
+     */
+    public static String authzApplicationId(AuthzObject application, String organizationId) {
+        String prefix = organizationId + ".";
+        return application.id().startsWith(prefix) ? application.id().substring(prefix.length()) : null;
+    }
+
+    /**
+     * The subject the authorization engine holds a machine's grants under, {@code machine:<id>}.
+     *
+     * @param participant the participant
+     * @return the machine's subject, or null when the participant is not a machine
+     */
+    public static AuthzObject authzMachine(Participant participant) {
+        String type = participant.getMetadata().get(ParticipantConstants.PARTICIPANT_TYPE_METADATA_KEY);
+        return ParticipantConstants.PARTICIPANT_TYPE_MACHINE.equals(type) ? new AuthzObject(AuthzType.MACHINE, participant.getId()) : null;
     }
 
     /**

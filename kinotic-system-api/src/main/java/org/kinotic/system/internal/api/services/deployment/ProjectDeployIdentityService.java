@@ -3,10 +3,16 @@ package org.kinotic.system.internal.api.services.deployment;
 import io.vertx.core.Future;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.Validate;
+import org.kinotic.authz.api.model.AuthzObject;
+import org.kinotic.authz.api.model.AuthzRelation;
+import org.kinotic.authz.api.model.AuthzType;
+import org.kinotic.authz.api.model.RelationshipTuple;
+import org.kinotic.authz.api.services.RelationshipService;
 import org.kinotic.domain.api.model.security.identity.MachineType;
 import org.kinotic.domain.api.model.security.identity.MachineProvisionResult;
 import org.kinotic.domain.api.model.security.identity.MachineParticipantIdentity;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
+import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.management.api.model.deployment.MicroserviceDeployment;
 import org.kinotic.management.api.model.Project;
 import org.kinotic.management.api.model.deployment.ProjectDeployment;
@@ -14,6 +20,7 @@ import org.kinotic.management.api.repositories.MicroserviceDeploymentRepository;
 import org.kinotic.management.api.repositories.ProjectDeploymentRepository;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.function.Function;
 
 /**
@@ -27,7 +34,8 @@ import java.util.function.Function;
  * services into an application's zone are things the organization does on its own behalf —
  * an APPLICATION-scope identity holds the authority of an end-user of that application, which
  * is not enough to do either. The sync workload's identity is a {@link MachineType#PROJECT_SYNC}
- * machine, a microservice's an {@link MachineType#APP_RUNTIME} one.
+ * machine, a microservice's an {@link MachineType#APP_RUNTIME} one, which is granted the runtime of the project's
+ * application, so it may register and host that application's services and no other's.
  */
 @Component
 @RequiredArgsConstructor
@@ -36,6 +44,7 @@ public class ProjectDeployIdentityService {
     private final ParticipantIdentityService identityService;
     private final ProjectDeploymentRepository projectDeploymentRepository;
     private final MicroserviceDeploymentRepository microserviceDeploymentRepository;
+    private final RelationshipService relationships;
 
     /**
      * Issues credentials for the project's sync workload. The returned secret is disclosed only
@@ -64,7 +73,8 @@ public class ProjectDeployIdentityService {
      * Issues credentials for the runtime workload of one of the project's microservices, which
      * are only ever issued alongside the workload itself: a later deployment restarts the
      * microservice process inside the running VM, and it reconnects with the secret already in
-     * its environment. Records the machine's id on the given deployment.
+     * its environment. Records the machine's id on the given deployment, and grants the machine the runtime of the
+     * project's application.
      *
      * @param project    the project being deployed
      * @param deployment the microservice's deployment, already persisted
@@ -76,6 +86,12 @@ public class ProjectDeployIdentityService {
         return issue(newMachine(project, MachineType.APP_RUNTIME, "runtime " + deployment.getName()), deployment.getMachineIdentityId(), identityId -> {
             deployment.setMachineIdentityId(identityId);
             return microserviceDeploymentRepository.recordMachine(deployment.getId(), identityId);
+        }).compose(provisioned -> {
+            // written on every issue, so a machine reused from an earlier deployment holds the grant as a new one does
+            RelationshipTuple runtime = new RelationshipTuple(new AuthzObject(AuthzType.MACHINE, provisioned.machine().getId()),
+                                                              AuthzRelation.RUNTIME,
+                                                              DomainUtil.authzApplication(project.getOrganizationId(), project.getApplicationId()));
+            return relationships.write(List.of(runtime), List.of()).map(provisioned);
         });
     }
 
