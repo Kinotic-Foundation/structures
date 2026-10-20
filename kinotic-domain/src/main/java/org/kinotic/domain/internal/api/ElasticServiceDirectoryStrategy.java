@@ -13,6 +13,8 @@ import org.kinotic.domain.internal.api.repositories.ServiceDirectoryEntryReposit
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
+import java.util.Collection;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -30,8 +32,18 @@ public class ElasticServiceDirectoryStrategy implements ServiceDirectoryStrategy
     }
 
     @Override
+    public Future<Void> upsertEntries(Collection<ServiceDirectoryEntry> entries) {
+        return repository.upsertEntries(entries);
+    }
+
+    @Override
     public Future<Void> setOnline(String entryId, boolean online, Instant when) {
         return repository.setOnline(entryId, online, when);
+    }
+
+    @Override
+    public Future<Void> setOnline(Map<String, Boolean> onlineByEntryId, Instant when) {
+        return repository.setOnline(onlineByEntryId, when);
     }
 
     @Override
