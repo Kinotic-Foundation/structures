@@ -18,6 +18,6 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 
 	// McpToolDocProcessor lives in this module's main output; run it over the test fixtures so the
-	// Javadoc description resources exist for TestSchemaFactory
+	// Javadoc description resources exist for TestSchemaService
 	testAnnotationProcessor files(sourceSets.main.output)
 }

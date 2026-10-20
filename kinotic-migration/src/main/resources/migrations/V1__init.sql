@@ -206,7 +206,8 @@ CREATE TABLE IF NOT EXISTS kinotic_service_directory (
     ),
     online BOOLEAN,
     lastStatusChange DATE,
-    livenessVerifiedAt LONG
+    livenessVerifiedAt LONG,
+    contractHash KEYWORD
 );
 
 -- Participant Identity: authenticated identities — a person (type=USER), a client acting on a

@@ -14,8 +14,10 @@ import org.kinotic.idl.api.schema.FunctionDefinition;
 import org.kinotic.idl.api.schema.NamespaceDefinition;
 import org.kinotic.idl.api.schema.ServiceDefinition;
 import org.kinotic.idl.api.schema.decorators.McpToolC3Decorator;
+import org.kinotic.idl.internal.directory.C3SchemaToC3Type;
 import org.kinotic.idl.internal.directory.DefaultResolvableTypeConverter;
-import org.kinotic.idl.internal.directory.DefaultSchemaFactory;
+import org.kinotic.core.api.security.Participant;
+import org.kinotic.idl.internal.directory.DefaultSchemaService;
 import org.kinotic.idl.internal.directory.JsonNodeToC3Type;
 import org.kinotic.idl.internal.directory.ReactiveToC3Type;
 import org.kinotic.idl.internal.directory.TokenBufferToC3Type;
@@ -31,6 +33,7 @@ import org.kinotic.idl.internal.directory.jdk.IntegerToC3Type;
 import org.kinotic.idl.internal.directory.jdk.IterableToC3Type;
 import org.kinotic.idl.internal.directory.jdk.LongToC3Type;
 import org.kinotic.idl.internal.directory.jdk.MapToC3Type;
+import org.kinotic.idl.internal.directory.jdk.ObjectToC3Type;
 import org.kinotic.idl.internal.directory.jdk.OptionalToC3Type;
 import org.kinotic.idl.internal.directory.jdk.ShortToC3Type;
 import org.kinotic.idl.internal.directory.jdk.StringToC3Type;
@@ -43,12 +46,13 @@ import org.springframework.core.ReactiveTypeDescriptor;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
+import java.util.Set;
 import java.util.function.Supplier;
 
 /**
  * Verifies every MCP-exposed management-api service converts to a ServiceDefinition with the same converter set
- * the server wires at startup — an unconvertible type anywhere in a signature silently drops the whole
- * service from the directory, and with it every tool it provides.
+ * the server wires at startup — an unconvertible type anywhere in a signature rejects the service's
+ * registration in the directory, and with it the server's startup.
  */
 public class McpServiceSchemaTest {
 
@@ -60,7 +64,6 @@ public class McpServiceSchemaTest {
                                                            new ServiceDeclaration(MicroserviceDeploymentService.class, DefaultMicroserviceDeploymentService.class),
                                                            new ServiceDeclaration(UiDeploymentService.class, DefaultUiDeploymentService.class)));
 
-        // createForServices omits any service that fails conversion, so a shrunken count is the failure signal
         Assertions.assertEquals(4, namespaceDefinition.getServices().size());
     }
 
@@ -154,7 +157,7 @@ public class McpServiceSchemaTest {
         return ret;
     }
 
-    private static DefaultSchemaFactory schemaFactory() {
+    private static DefaultSchemaService schemaFactory() {
         List<ResolvableTypeConverter> converters = List.of(new ArrayToC3Type(),
                                                            new BooleanToC3Type(),
                                                            new ByteToC3Type(),
@@ -167,6 +170,7 @@ public class McpServiceSchemaTest {
                                                            new IterableToC3Type(),
                                                            new LongToC3Type(),
                                                            new MapToC3Type(),
+                                                           new ObjectToC3Type(),
                                                            new OptionalToC3Type(),
                                                            new ShortToC3Type(),
                                                            new StringToC3Type(),
@@ -174,8 +178,9 @@ public class McpServiceSchemaTest {
                                                            new VoidToC3Type(),
                                                            new TokenBufferToC3Type(),
                                                            new JsonNodeToC3Type(),
+                                                           new C3SchemaToC3Type(),
                                                            new ReactiveToC3Type(registryProvider()));
-        return new DefaultSchemaFactory(new DefaultResolvableTypeConverter(converters));
+        return new DefaultSchemaService(new DefaultResolvableTypeConverter(converters), Set.of(Participant.class));
     }
 
     // a registry carrying the Vert.x Future adapter DefaultKinotic registers at startup, so the
