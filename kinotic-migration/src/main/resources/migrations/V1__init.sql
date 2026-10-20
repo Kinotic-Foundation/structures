@@ -177,6 +177,17 @@ CREATE TABLE IF NOT EXISTS kinotic_entity_definition (
     timeReferenceFieldName KEYWORD NOT INDEXED
 );
 
+-- The authorization store of the platform or of one application (AuthzStore): the model the directory implies
+-- for it, reconciled to the model the engine runs. The platform's row exists before any server does.
+CREATE TABLE IF NOT EXISTS kinotic_authz_store (
+    id KEYWORD,
+    organizationId KEYWORD,
+    applicationId KEYWORD,
+    state OBJECT (conditions OBJECT (type KEYWORD, message TEXT, since DATE), parent KEYWORD, dirty BOOLEAN, dirtyAt LONG, unrecorded JSON NOT INDEXED, desired OBJECT (hash KEYWORD), observed OBJECT (hash KEYWORD), generation LONG, observedGeneration LONG, desiredAt LONG, deletionRequested DATE, reconciled BOOLEAN)
+);
+
+INSERT INTO kinotic_authz_store (id) VALUES ('platform') WITH REFRESH, DOCUMENT_ID 'platform';
+
 -- Create the service_directory table if it does not exist
 CREATE TABLE IF NOT EXISTS kinotic_service_directory (
     id KEYWORD,

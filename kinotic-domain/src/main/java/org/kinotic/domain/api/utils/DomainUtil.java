@@ -3,8 +3,10 @@ package org.kinotic.domain.api.utils;
 import com.github.slugify.Slugify;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
-import org.kinotic.authz.api.model.AuthzObject;
-import org.kinotic.authz.api.model.AuthzType;
+import org.kinotic.authz.api.model.Grant;
+import org.kinotic.authz.api.model.RelationshipTuple;
+import org.kinotic.authz.api.model.Resource;
+import org.kinotic.authz.api.model.RoleDefinition;
 import org.kinotic.core.api.security.Participant;
 import org.kinotic.core.api.security.ParticipantConstants;
 import org.kinotic.core.api.utils.ZoneUtil;
@@ -18,11 +20,13 @@ import org.kinotic.domain.api.model.security.identity.Membership;
 import org.kinotic.domain.api.model.security.identity.ParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.ParticipantIdentityType;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
+import org.kinotic.domain.api.model.security.participant.ApplicationParticipant;
 import org.kinotic.domain.api.model.security.participant.DefaultApplicationParticipant;
 import org.kinotic.domain.api.model.security.participant.DefaultOrganizationParticipant;
 import org.kinotic.domain.api.model.security.participant.DefaultSystemParticipant;
 import org.kinotic.domain.api.model.security.participant.ParticipantScope;
 import org.kinotic.domain.api.model.security.participant.ScopedParticipant;
+import org.kinotic.idl.api.utils.AuthzUtil;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import java.nio.charset.StandardCharsets;
@@ -79,42 +83,154 @@ public class DomainUtil {
     }
 
     /**
-     * An application as the authorization engine holds it, {@code application:<organizationId>.<applicationId>},
-     * since an application's id is unique only within its organization.
+     * The participant metadata key naming the owner a delegate acts for, whose authority the delegate holds.
+     */
+    public static final String ON_BEHALF_OF_METADATA_KEY = "onBehalfOf";
+
+    // The authorization types whose ids are unique only within an organization, qualified by it in the stores
+    private static final Set<String> ORGANIZATION_LOCAL_TYPES = Set.of(AuthzUtil.APPLICATION_TYPE, AuthzUtil.PROJECT_TYPE);
+
+    /**
+     * The user a participant acts as in the authorization stores, in {@code user:id} form. A person acts as the
+     * membership it signed in through, {@link #authzMember}, so a grant made in one organization never applies in
+     * another; a delegate acts as the membership of the owner it acts for; a machine and an application's user act
+     * as themselves.
+     *
+     * @param participant the participant making a call
+     * @return the user whose grants answer for it
+     */
+    public static String authzUser(Participant participant) {
+        Map<String, String> metadata = participant.getMetadata() != null ? participant.getMetadata() : Map.of();
+        String owner = metadata.get(ON_BEHALF_OF_METADATA_KEY);
+        String id = owner != null ? owner : participant.getId();
+        String ret;
+        if (participant instanceof ApplicationParticipant
+                || ParticipantConstants.PARTICIPANT_TYPE_MACHINE.equals(metadata.get(ParticipantConstants.PARTICIPANT_TYPE_METADATA_KEY))) {
+            ret = AuthzUtil.object(AuthzUtil.USER_TYPE, id);
+        } else {
+            ret = authzMember(id, scopeOf(participant).organizationId());
+        }
+        return ret;
+    }
+
+    /**
+     * The user an account's membership is in the authorization stores, {@code user:<accountId>@<organizationId>},
+     * or {@code user:<accountId>@system} for a membership of the platform.
+     *
+     * @param accountId      the account
+     * @param organizationId the organization, or null for the platform
+     * @return the membership's user
+     */
+    public static String authzMember(String accountId, String organizationId) {
+        Validate.notBlank(accountId, "accountId cannot be blank");
+        return AuthzUtil.object(AuthzUtil.USER_TYPE, accountId + "@" + (organizationId != null ? organizationId : Membership.PLATFORM));
+    }
+
+    /**
+     * The id an object of the type has in the authorization stores. An application's and a project's id is unique
+     * only within its organization, so theirs is qualified as {@code <organizationId>.<id>}; every other type's id
+     * is unique on its own and kept as it is.
+     *
+     * @param type           the object's type
+     * @param organizationId the organization the object belongs to; required for an application or a project
+     * @param id             the object's id as its organization knows it
+     * @return the object's id in the stores
+     * @throws IllegalArgumentException when an application or a project is named without an organization
+     */
+    public static String authzId(String type, String organizationId, String id) {
+        Validate.notBlank(id, "id cannot be blank");
+        String ret = id;
+        if (ORGANIZATION_LOCAL_TYPES.contains(type)) {
+            Validate.isTrue(StringUtils.isNotBlank(organizationId), "an organization is required to name the %s %s", type, id);
+            ret = organizationId + "." + id;
+        }
+        return ret;
+    }
+
+    /**
+     * The id an organization knows an object of the type by, given its id in the authorization stores: the
+     * inverse of {@link #authzId}.
+     *
+     * @param type    the object's type
+     * @param authzId the object's id in the stores
+     * @return the object's id within its organization
+     */
+    public static String localId(String type, String authzId) {
+        // an organization id holds no '.', so the first one ends it
+        return ORGANIZATION_LOCAL_TYPES.contains(type) ? authzId.substring(authzId.indexOf('.') + 1) : authzId;
+    }
+
+    /**
+     * The id an application has in the authorization stores, which also names the application's own store.
      *
      * @param organizationId the application's organization
-     * @param applicationId  the application
-     * @return the application's authorization object
-     * @throws IllegalArgumentException if either id is not a single zone label
+     * @param applicationId  the application's id within it
+     * @return {@code <organizationId>.<applicationId>}
      */
-    public static AuthzObject authzApplication(String organizationId, String applicationId) {
-        // a dot-free id keeps the pair unambiguous, so authzApplicationId can split it again
-        ZoneUtil.validateLabel(organizationId);
-        ZoneUtil.validateLabel(applicationId);
-        return new AuthzObject(AuthzType.APPLICATION, organizationId + "." + applicationId);
+    public static String authzApplicationId(String organizationId, String applicationId) {
+        return authzId(AuthzUtil.APPLICATION_TYPE, organizationId, applicationId);
     }
 
     /**
-     * The application an {@link #authzApplication(String, String)} object names, when it is one of the organization's.
+     * The application object of the authorization stores, {@code application:<organizationId>.<applicationId>}.
      *
-     * @param application    an application's authorization object
-     * @param organizationId the organization
-     * @return the application's id, or null when the application belongs to another organization
+     * @param organizationId the application's organization
+     * @param applicationId  the application's id within it
+     * @return the object
      */
-    public static String authzApplicationId(AuthzObject application, String organizationId) {
-        String prefix = organizationId + ".";
-        return application.id().startsWith(prefix) ? application.id().substring(prefix.length()) : null;
+    public static String authzApplication(String organizationId, String applicationId) {
+        return AuthzUtil.object(AuthzUtil.APPLICATION_TYPE, authzApplicationId(organizationId, applicationId));
     }
 
     /**
-     * The subject the authorization engine holds a machine's grants under, {@code machine:<id>}.
+     * The two edges of a definition within a tenant, the object a tenant's user is checked on for the definition's
+     * rows: the definition's, and the tenant's. No store holds tuples for the object, so a check on it is given
+     * the edges.
      *
-     * @param participant the participant
-     * @return the machine's subject, or null when the participant is not a machine
+     * @param definitionId the definition's id
+     * @param tenantId     the tenant's id within its application
+     * @return the edges to give the check
      */
-    public static AuthzObject authzMachine(Participant participant) {
-        String type = participant.getMetadata().get(ParticipantConstants.PARTICIPANT_TYPE_METADATA_KEY);
-        return ParticipantConstants.PARTICIPANT_TYPE_MACHINE.equals(type) ? new AuthzObject(AuthzType.MACHINE, participant.getId()) : null;
+    public static List<RelationshipTuple> tenantDefinitionEdges(String definitionId, String tenantId) {
+        String object = AuthzUtil.object(AuthzUtil.TENANT_DEFINITION_TYPE, AuthzUtil.tenantDefinitionId(definitionId, tenantId));
+        return List.of(new RelationshipTuple(AuthzUtil.object(AuthzUtil.ENTITY_DEFINITION_TYPE, definitionId), AuthzUtil.DEFINITION_RELATION, object),
+                       new RelationshipTuple(AuthzUtil.object(AuthzUtil.TENANT_TYPE, tenantId), AuthzUtil.TENANT_TYPE, object));
+    }
+
+    /**
+     * The object a resource named as its organization knows it is in the authorization stores, in {@code type:id}
+     * form.
+     *
+     * @param organizationId the organization the resource belongs to
+     * @param resource       the resource
+     * @return the object
+     */
+    public static String authzObject(String organizationId, Resource resource) {
+        return AuthzUtil.object(resource.type(), authzId(resource.type(), organizationId, resource.id()));
+    }
+
+    /**
+     * A grant read from the authorization stores, its resource named as the resource's organization knows it.
+     *
+     * @param grant the grant as the stores hold it
+     * @return the grant with the resource's local id
+     */
+    public static Grant localGrant(Grant grant) {
+        Resource resource = grant.resource();
+        return new Grant(grant.id(), grant.roleId(), grant.subject(), new Resource(resource.type(), localId(resource.type(), resource.id())));
+    }
+
+    /**
+     * Confirms a role is among those a grant can name.
+     *
+     * @param roles  the roles a grant can name
+     * @param roleId the role asked for
+     * @throws IllegalArgumentException when none of the roles has the id
+     */
+    public static void requireRole(List<RoleDefinition> roles, String roleId) {
+        if (roles.stream().noneMatch(role -> role.id().equals(roleId))) {
+            throw new IllegalArgumentException("No role a grant here can name has id " + roleId);
+        }
     }
 
     /**
@@ -549,7 +665,7 @@ public class DomainUtil {
                              user.getDisplayName() != null ? user.getDisplayName() : user.getEmail());
             }
             case DelegatingParticipantIdentity delegate -> {
-                metadata.put("onBehalfOf", delegate.getOwnerId());
+                metadata.put(ON_BEHALF_OF_METADATA_KEY, delegate.getOwnerId());
                 metadata.put("displayName",
                              delegate.getDisplayName() != null ? delegate.getDisplayName() : delegate.getId());
             }

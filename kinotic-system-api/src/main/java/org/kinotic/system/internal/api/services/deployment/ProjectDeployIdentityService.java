@@ -3,10 +3,7 @@ package org.kinotic.system.internal.api.services.deployment;
 import io.vertx.core.Future;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.Validate;
-import org.kinotic.authz.api.model.AuthzObject;
-import org.kinotic.authz.api.model.AuthzRelation;
-import org.kinotic.authz.api.model.AuthzType;
-import org.kinotic.authz.api.model.RelationshipTuple;
+import org.kinotic.authz.api.services.AuthzStoreService;
 import org.kinotic.authz.api.services.RelationshipService;
 import org.kinotic.domain.api.model.security.identity.MachineType;
 import org.kinotic.domain.api.model.security.identity.MachineProvisionResult;
@@ -18,9 +15,12 @@ import org.kinotic.management.api.model.Project;
 import org.kinotic.management.api.model.deployment.ProjectDeployment;
 import org.kinotic.management.api.repositories.MicroserviceDeploymentRepository;
 import org.kinotic.management.api.repositories.ProjectDeploymentRepository;
+import org.kinotic.idl.api.utils.AuthzUtil;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 
 /**
@@ -34,8 +34,10 @@ import java.util.function.Function;
  * services into an application's zone are things the organization does on its own behalf —
  * an APPLICATION-scope identity holds the authority of an end-user of that application, which
  * is not enough to do either. The sync workload's identity is a {@link MachineType#PROJECT_SYNC}
- * machine, a microservice's an {@link MachineType#APP_RUNTIME} one, which is granted the runtime of the project's
- * application, so it may register and host that application's services and no other's.
+ * machine, a microservice's an {@link MachineType#APP_RUNTIME} one. Every issue grants the machine what its workload
+ * does: both edit the project; the sync workload edits the application's entity definitions, and a runtime is the
+ * application's runtime, so it may register and host that application's services and no other's, and works on the
+ * rows of the application's definitions.
  */
 @Component
 @RequiredArgsConstructor
@@ -62,7 +64,7 @@ public class ProjectDeployIdentityService {
                         ret = Future.failedFuture(new IllegalStateException(
                                 "No deployment record for project " + project.getId()));
                     } else {
-                        ret = issue(newMachine(project, MachineType.PROJECT_SYNC, "deploy sync"), deployment.getSyncMachineIdentityId(),
+                        ret = issue(newMachine(project, MachineType.PROJECT_SYNC, "deploy sync"), project, deployment.getSyncMachineIdentityId(),
                                     identityId -> projectDeploymentRepository.recordSyncMachine(project.getId(), project.getOrganizationId(), identityId));
                     }
                     return ret;
@@ -73,8 +75,7 @@ public class ProjectDeployIdentityService {
      * Issues credentials for the runtime workload of one of the project's microservices, which
      * are only ever issued alongside the workload itself: a later deployment restarts the
      * microservice process inside the running VM, and it reconnects with the secret already in
-     * its environment. Records the machine's id on the given deployment, and grants the machine the runtime of the
-     * project's application.
+     * its environment. Records the machine's id on the given deployment.
      *
      * @param project    the project being deployed
      * @param deployment the microservice's deployment, already persisted
@@ -83,19 +84,14 @@ public class ProjectDeployIdentityService {
     public Future<MachineProvisionResult> issueRuntimeCredentials(Project project, MicroserviceDeployment deployment) {
         Validate.notNull(project, "project is required");
         Validate.notNull(deployment, "deployment is required");
-        return issue(newMachine(project, MachineType.APP_RUNTIME, "runtime " + deployment.getName()), deployment.getMachineIdentityId(), identityId -> {
+        return issue(newMachine(project, MachineType.APP_RUNTIME, "runtime " + deployment.getName()), project, deployment.getMachineIdentityId(), identityId -> {
             deployment.setMachineIdentityId(identityId);
             return microserviceDeploymentRepository.recordMachine(deployment.getId(), identityId);
-        }).compose(provisioned -> {
-            // written on every issue, so a machine reused from an earlier deployment holds the grant as a new one does
-            RelationshipTuple runtime = new RelationshipTuple(new AuthzObject(AuthzType.MACHINE, provisioned.machine().getId()),
-                                                              AuthzRelation.RUNTIME,
-                                                              DomainUtil.authzApplication(project.getOrganizationId(), project.getApplicationId()));
-            return relationships.write(List.of(runtime), List.of()).map(provisioned);
         });
     }
 
     private Future<MachineProvisionResult> issue(MachineParticipantIdentity unsaved,
+                                                 Project project,
                                                  String identityId,
                                                  Function<String, Future<Void>> recordIdentity) {
         Future<MachineProvisionResult> ret;
@@ -117,7 +113,8 @@ public class ProjectDeployIdentityService {
                         return issued;
                     });
         }
-        return ret;
+        // bound on every issue, so a machine reused from an earlier deployment holds the grants as a new one does
+        return ret.compose(result -> bind(result.machine().getId(), unsaved.getMachineType(), project).map(result));
     }
 
     /**
@@ -129,6 +126,29 @@ public class ProjectDeployIdentityService {
         return identityService.createMachine(unsaved)
                 .compose(provisioned -> recordIdentity.apply(provisioned.machine().getId())
                                                       .map(provisioned));
+    }
+
+    // Each role is bound under a binding id of the machine's own, so issuing credentials again binds each role once
+    private Future<Void> bind(String machineId, MachineType kind, Project project) {
+        String machine = AuthzUtil.object(AuthzUtil.USER_TYPE, machineId);
+        String projectObject = AuthzUtil.object(AuthzUtil.PROJECT_TYPE,
+                                                DomainUtil.authzId(AuthzUtil.PROJECT_TYPE, project.getOrganizationId(), project.getId()));
+        String application = DomainUtil.authzApplication(project.getOrganizationId(), project.getApplicationId());
+        List<Map.Entry<String, String>> grants = new ArrayList<>();
+        grants.add(Map.entry(AuthzUtil.roleId(AuthzUtil.PROJECT_TYPE, AuthzUtil.EDITOR), projectObject));
+        if (kind == MachineType.APP_RUNTIME) {
+            grants.add(Map.entry(AuthzUtil.APPLICATION_RUNTIME_ROLE, application));
+            grants.add(Map.entry(AuthzUtil.roleId(AuthzUtil.ENTITY_DEFINITION_TYPE, AuthzUtil.ADMIN), application));
+        } else {
+            grants.add(Map.entry(AuthzUtil.roleId(AuthzUtil.ENTITY_DEFINITION_TYPE, AuthzUtil.EDITOR), application));
+        }
+        Future<Void> ret = Future.succeededFuture();
+        for (Map.Entry<String, String> grant : grants) {
+            String roleId = grant.getKey();
+            ret = ret.compose(v -> relationships.ensureBound(AuthzStoreService.PLATFORM, roleId + "-of-" + machineId,
+                                                             roleId, machine, grant.getValue()));
+        }
+        return ret;
     }
 
     /**

@@ -9,6 +9,7 @@ import org.apache.commons.lang3.Validate;
 import org.kinotic.core.api.crud.CursorPageable;
 import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
+import org.kinotic.core.api.crud.Sort;
 import org.kinotic.core.api.directory.McpToolAnnotations;
 import org.kinotic.core.api.directory.McpToolDefinition;
 import org.kinotic.core.api.directory.McpToolDefinitionList;
@@ -16,12 +17,15 @@ import org.kinotic.core.api.directory.ServiceDirectory;
 import org.kinotic.core.api.directory.ServiceDirectoryEntry;
 import org.kinotic.core.api.directory.ServiceDirectoryStrategy;
 import io.vertx.core.Future;
+import io.vertx.core.Vertx;
 import org.kinotic.core.api.event.CRI;
 import org.kinotic.core.api.event.EventBusService;
 import org.kinotic.core.api.event.EventConstants;
 import org.kinotic.core.api.security.Participant;
 import org.kinotic.core.api.service.ServiceIdentifier;
 import org.kinotic.core.api.utils.KinoticUtil;
+import org.kinotic.idl.api.annotations.AuthzResource;
+import org.kinotic.idl.api.annotations.AuthzUnchecked;
 import org.kinotic.idl.api.annotations.McpTool;
 import org.kinotic.idl.api.converter.IdlConverterFactory;
 import org.kinotic.idl.api.converter.jsonschema.McpJsonSchemaGenerator;
@@ -59,7 +63,8 @@ import java.util.Set;
 
 /**
  * The {@link ServiceDirectory}: publishes the contracts of services that opt in with
- * {@code @Publish(advertise = true)} or expose an {@code @McpTool} function, and the services an application's
+ * {@code @Publish(advertise = true)}, expose an {@code @McpTool} function or declare an {@code @AuthzResource} or
+ * {@code @AuthzUnchecked}, and the services an application's
  * runtimes register, keeps liveness verified against cluster registrations, serves the directory queries, and deploys the
  * {@link ServiceLivenessUpdater} as one HA cluster singleton on startup. Services registered while the
  * context starts are converted in one session once every singleton exists, so a service whose contract cannot
@@ -75,6 +80,8 @@ import java.util.Set;
 public class DefaultServiceDirectory implements ServiceDirectory, SmartInitializingSingleton {
 
     private static final String LIVENESS_SINGLETON_NAME = "kinotic-service-liveness-updater";
+    // the platform publishes a few dozen services, so its definitions are read in a page or two
+    private static final int DEFINITIONS_PAGE_SIZE = 200;
 
     // A strategy pattern is used, to favor composition over inheritance
     private final ServiceDirectoryStrategy strategy;
@@ -82,6 +89,7 @@ public class DefaultServiceDirectory implements ServiceDirectory, SmartInitializ
     private final SchemaService schemaService;
     private final McpJsonSchemaGenerator schemaGenerator;
     private final Ignite ignite;
+    private final Vertx vertx;
 
     // Registrations arriving while singletons are created are held here and converted in ONE conversion
     // session once all of them exist, so model types shared between services are converted once per node
@@ -104,7 +112,8 @@ public class DefaultServiceDirectory implements ServiceDirectory, SmartInitializ
                                    EventBusService eventBusService,
                                    SchemaServiceFactory schemaServiceFactory,
                                    IdlConverterFactory idlConverterFactory,
-                                   Ignite ignite) {
+                                   Ignite ignite,
+                                   Vertx vertx) {
         this.strategy = strategy;
         this.eventBusService = eventBusService;
         // a Participant is bound from the security context, never from the request, the rule
@@ -112,6 +121,7 @@ public class DefaultServiceDirectory implements ServiceDirectory, SmartInitializ
         this.schemaService = schemaServiceFactory.create(Set.of(Participant.class));
         this.schemaGenerator = new McpJsonSchemaGenerator(idlConverterFactory);
         this.ignite = ignite;
+        this.vertx = vertx;
     }
 
     @Override
@@ -157,6 +167,7 @@ public class DefaultServiceDirectory implements ServiceDirectory, SmartInitializ
                 registered.add(serviceIdentifier);
             }
             strategy.upsertEntry(entry)
+                    .onSuccess(v -> announce(entry.getId()))
                     .compose(v -> refreshOnline(serviceIdentifier))
                     .onFailure(throwable -> log.error("Failed to register service {} in the directory", serviceIdentifier, throwable));
         }
@@ -192,6 +203,7 @@ public class DefaultServiceDirectory implements ServiceDirectory, SmartInitializ
                 // before the snapshot, so an observation that starts later always lands after this one
                 Instant observed = Instant.now();
                 strategy.upsertEntries(batch.values())
+                        .onSuccess(v -> batch.values().forEach(entry -> announce(entry.getId())))
                         .compose(v -> eventBusService.activeServiceAddresses())
                         .compose(addresses -> {
                             Set<String> services = servicesOf(addresses);
@@ -206,6 +218,12 @@ public class DefaultServiceDirectory implements ServiceDirectory, SmartInitializ
                 log.error("Startup directory publish failed", e);
             }
         }
+    }
+
+    // The entry's write is refreshed before it returns, so a node reading the contract on this announcement
+    // reads the one written
+    private void announce(String entryId) {
+        vertx.eventBus().publish(ServiceDirectory.CONTRACT_CHANGED_ADDRESS, entryId);
     }
 
     // Every node requests the deployment; Ignite elects a single host for it cluster-wide
@@ -248,20 +266,25 @@ public class DefaultServiceDirectory implements ServiceDirectory, SmartInitializ
     }
 
     @Override
+    public Future<ServiceDirectoryEntry> findEntry(String entryId) {
+        return strategy.findEntry(entryId);
+    }
+
+    @Override
     public Future<Void> register(ServiceDirectoryEntry entry) {
         Validate.notNull(entry, "entry cannot be null");
         Validate.notBlank(entry.getOrganizationId(), "The entry names no organization");
         Validate.notBlank(entry.getApplicationId(), "The entry names no application");
         Validate.notBlank(entry.getZone(), "The entry names no zone");
         Validate.notNull(entry.getServiceDefinition(), "The entry carries no service definition");
-        ServiceDefinition definition = entry.getServiceDefinition();
-        Validate.notBlank(definition.getName(), "The service definition names no name");
+        ServiceDefinition declared = entry.getServiceDefinition();
         // a runtime serves a service published in no namespace at <zone>~<Name>, so the zone is its namespace,
         // which keeps its qualified name apart from every other application's
-        boolean inZoneNamespace = definition.getNamespace() == null || definition.getNamespace().isBlank();
+        boolean inZoneNamespace = declared.getNamespace() == null || declared.getNamespace().isBlank();
         if (inZoneNamespace) {
-            definition.setNamespace(entry.getZone());
+            declared.setNamespace(entry.getZone());
         }
+        ServiceDefinition definition = schemaService.deriveChecks(declared);
         // addressed as the runtime registers it: the zone and the qualified name, no scope, whatever its version,
         // with the zone written once for a service in the zone's namespace
         String entryId = entry.getZone() + ZoneUtil.ZONE_DELIMITER + (inZoneNamespace ? definition.getName() : definition.getQualifiedName());
@@ -284,7 +307,44 @@ public class DefaultServiceDirectory implements ServiceDirectory, SmartInitializ
                 .setMcpExposed(!tools.isEmpty())
                 .setMcpTools(tools.isEmpty() ? null : tools);
         return strategy.upsertEntry(stored)
+                       .onSuccess(v -> announce(entryId))
                        .compose(v -> refreshOnline(entryId, serviceAddress));
+    }
+
+    @Override
+    public Future<List<ServiceDefinition>> findSystemDefinitions() {
+        return systemDefinitions(0, new ArrayList<>());
+    }
+
+    private Future<List<ServiceDefinition>> systemDefinitions(int pageNumber, List<ServiceDefinition> collected) {
+        return strategy.findSystemEntries(Pageable.create(pageNumber, DEFINITIONS_PAGE_SIZE, Sort.by("id")))
+                       .compose(page -> {
+                           for (ServiceDirectoryEntry entry : page.getContent()) {
+                               collected.add(entry.getServiceDefinition());
+                           }
+                           return page.getContent().size() < DEFINITIONS_PAGE_SIZE
+                                   ? Future.succeededFuture(collected)
+                                   : systemDefinitions(pageNumber + 1, collected);
+                       });
+    }
+
+    @Override
+    public Future<List<ServiceDefinition>> findApplicationDefinitions(String organizationId, String applicationId) {
+        return applicationDefinitions(organizationId, applicationId, 0, new ArrayList<>());
+    }
+
+    private Future<List<ServiceDefinition>> applicationDefinitions(String organizationId, String applicationId, int pageNumber, List<ServiceDefinition> collected) {
+        return strategy.findEntriesScopedTo(organizationId, applicationId, Pageable.create(pageNumber, DEFINITIONS_PAGE_SIZE, Sort.by("id")))
+                       .compose(page -> {
+                           for (ServiceDirectoryEntry entry : page.getContent()) {
+                               if (entry.getServiceDefinition() != null) {
+                                   collected.add(entry.getServiceDefinition());
+                               }
+                           }
+                           return page.getContent().size() < DEFINITIONS_PAGE_SIZE
+                                   ? Future.succeededFuture(collected)
+                                   : applicationDefinitions(organizationId, applicationId, pageNumber + 1, collected);
+                       });
     }
 
     @Override
@@ -460,9 +520,13 @@ public class DefaultServiceDirectory implements ServiceDirectory, SmartInitializ
     }
 
     // Directory inclusion is opt-in via @Publish(advertise = true); an @McpTool function is already
-    // explicit intent to expose the service, so it implies inclusion
+    // explicit intent to expose the service, so it implies inclusion, and an @AuthzResource or @AuthzUnchecked
+    // service must be in the directory for the gateway to find its checks or its mark
     private boolean shouldPublishToDirectory(ServiceDeclaration registration) {
-        return isAdvertised(registration.serviceInterface()) || hasMcpToolFunction(registration);
+        return isAdvertised(registration.serviceInterface())
+                || hasMcpToolFunction(registration)
+                || AnnotationUtils.findAnnotation(registration.serviceInterface(), AuthzResource.class) != null
+                || AnnotationUtils.findAnnotation(registration.serviceInterface(), AuthzUnchecked.class) != null;
     }
 
     private boolean isAdvertised(Class<?> serviceInterface) {
