@@ -64,8 +64,8 @@ public class DefaultGitHubAppInstallationService
 
     @Override
     public Future<String> startInstall(String returnTo) {
-        // the portal's callback navigates to returnTo once the install completes, so it may only lead to the
-        // portal itself or to a UI the CORS allowlist admits
+        // GitHubInstallCallbackHandler forwards the install's code to an absolute returnTo, and the portal navigates
+        // to a path, so it may only lead to the portal itself or to a UI the CORS allowlist admits
         if (returnTo != null && !isAllowedReturnTo(returnTo)) {
             return Future.failedFuture(new IllegalArgumentException(
                     "returnTo must be a path, or a URL on an origin kinotic.domain.cors.allowedOriginPattern allows"));

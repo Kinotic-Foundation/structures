@@ -50,13 +50,7 @@ onMounted(async () => {
 
   try {
     const result = await Kinotic.githubAppInstallations.completeInstall(installationId, stateValue, code)
-    const returnTo = result.returnTo ?? SETTINGS_PATH
-    // an absolute URL belongs to another UI that started the install, such as one built on Kinotic
-    if (/^https?:\/\//i.test(returnTo)) {
-      window.location.assign(returnTo)
-    } else {
-      router.replace(returnTo)
-    }
+    router.replace(result.returnTo ?? SETTINGS_PATH)
   } catch (e) {
     state.value = 'error'
     errorMessage.value = (e as Error)?.message ?? 'Unknown error completing GitHub install.'

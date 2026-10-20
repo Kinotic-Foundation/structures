@@ -70,6 +70,18 @@ public class GitHubInstallStateService {
         return cache.getAndRemove(state);
     }
 
+    /**
+     * The {@link StagedInstall} for {@code state}, left in place for {@link #consume(String)}. Returns {@code null}
+     * when the state is absent, expired, or already consumed.
+     */
+    public StagedInstall peek(String state) {
+        StagedInstall ret = null;
+        if (state != null && !state.isBlank()) {
+            ret = cache.get(state);
+        }
+        return ret;
+    }
+
     private static String randomState() {
         byte[] buf = new byte[32];
         RANDOM.nextBytes(buf);
