@@ -15,7 +15,7 @@
       @update:search="tableSearch = $event"
       @row-hover="row => hoverRow(row as ConfigurationRow)"
       @on-row-click="row => openRow(row as ConfigurationRow)"
-      @add-item="openDialog(null)"
+      @add-item="openForm(null)"
     >
       <template #item.provider="{ item }">
         <span class="flex items-center gap-2 font-sans">
@@ -52,39 +52,41 @@
         <CopyableUrl v-if="startUrlOf(selectedRow.configuration)" label="Direct sign-in link" :url="startUrlOf(selectedRow.configuration)"
                      :help="START_URL_HELP" />
         <div>
-          <Button label="Edit" icon="pi pi-pencil" severity="secondary" outlined @click="openDialog(selectedRow.configuration)" />
+          <Button label="Edit" icon="pi pi-pencil" severity="secondary" outlined @click="openForm(selectedRow.configuration)" />
         </div>
       </div>
     </SteppingDrawer>
 
-    <OidcConfigurationDialog v-model:visible="dialogVisible" :configuration="editing" :application-id="applicationId" :tenants="tenants"
+    <OidcConfigurationDrawer v-model:visible="formVisible" :configuration="editing" :application-id="applicationId" :tenants="tenants"
                              @saved="onSaved" />
 
-    <FormDialog v-model:visible="copyDialogVisible" :icon="Copy" title="Copy to application"
-                :description="copyDescription" @submit="submitCopy">
-      <div v-if="copied" class="flex flex-col gap-5">
-        <p class="text-sm text-surface-700 dark:text-surface-200">
-          The copy has a callback URL of its own. Add it to the application registration at the provider as a redirect URI;
-          sign-ins through the copy fail until it is registered there.
-        </p>
-        <CopyableUrl label="Callback URL of the copy" :url="copiedCallbackUrl" />
-      </div>
-      <div v-else>
-        <label for="copy-application" class="mb-2 block text-sm font-medium">Application</label>
-        <Select input-id="copy-application" v-model="copyApplicationId" :options="copyTargets" option-label="name" option-value="id"
-                placeholder="Choose an application" class="w-full" :empty-message="'No other application'" />
-        <p class="mt-1.5 text-[0.8125rem] text-muted-color">
-          The copy carries the provider, account, client ID and secret, and is offered at that application's login.
-        </p>
-      </div>
+    <FormDrawer :visible="copyFormVisible" title="Copy to application" :description="copyDescription"
+                @close="copyFormVisible = false">
+      <form id="copy-configuration-form" @submit.prevent="submitCopy">
+        <div v-if="copied" class="flex flex-col gap-5">
+          <p class="text-sm text-surface-700 dark:text-surface-200">
+            The copy has a callback URL of its own. Add it to the application registration at the provider as a redirect URI;
+            sign-ins through the copy fail until it is registered there.
+          </p>
+          <CopyableUrl label="Callback URL of the copy" :url="copiedCallbackUrl" />
+        </div>
+        <div v-else>
+          <label for="copy-application" class="mb-2 block text-sm font-medium">Application</label>
+          <Select input-id="copy-application" v-model="copyApplicationId" :options="copyTargets" option-label="name" option-value="id"
+                  placeholder="Choose an application" class="w-full" :empty-message="'No other application'" />
+          <p class="mt-1.5 text-[0.8125rem] text-muted-color">
+            The copy carries the provider, account, client ID and secret, and is offered at that application's login.
+          </p>
+        </div>
+      </form>
       <template #footer>
-        <Button v-if="copied" type="button" label="Done" @click="copyDialogVisible = false" />
+        <Button v-if="copied" type="button" label="Done" @click="copyFormVisible = false" />
         <template v-else>
-          <Button type="button" label="Cancel" severity="secondary" outlined @click="copyDialogVisible = false" />
-          <Button type="submit" label="Copy" icon="pi pi-copy" :loading="copying" :disabled="copyApplicationId === null" />
+          <Button type="button" label="Cancel" severity="secondary" outlined @click="copyFormVisible = false" />
+          <Button type="submit" form="copy-configuration-form" label="Copy" icon="pi pi-copy" :loading="copying" :disabled="copyApplicationId === null" />
         </template>
       </template>
-    </FormDialog>
+    </FormDrawer>
   </div>
 </template>
 
@@ -96,7 +98,7 @@ import Tag from 'primevue/tag'
 import type { MenuItem } from 'primevue/menuitem'
 import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
-import { Building2, CalendarClock, Copy, Fingerprint, Globe, KeyRound, UsersRound } from '@lucide/vue'
+import { Building2, CalendarClock, Fingerprint, Globe, KeyRound, UsersRound } from '@lucide/vue'
 import { FunctionalIterablePage, Kinotic, Pageable, type IterablePage, type Page } from '@kinotic-ai/core'
 import {
   OidcConfigurationType,
@@ -108,7 +110,7 @@ import {
   CrudTable,
   DatetimeUtil,
   FactList,
-  FormDialog,
+  FormDrawer,
   SteppingDrawer,
   showErrorToast,
   useCrudTablePage,
@@ -117,7 +119,7 @@ import {
   type DescriptiveIdentifiable
 } from '@kinotic-ai/frontend-common'
 import CopyableUrl from '@/components/CopyableUrl.vue'
-import OidcConfigurationDialog from '@/components/OidcConfigurationDialog.vue'
+import OidcConfigurationDrawer from '@/components/OidcConfigurationDrawer.vue'
 import { providerDisplayName } from '@/components/SocialAuthButton.vue'
 import { APPLICATION_STATE } from '@/states/IApplicationState'
 import { PROVIDER_LOGOS, START_URL_HELP, startUrlOf } from '@/util/oidcConfigurations'
@@ -150,11 +152,11 @@ const { selected: selectedRow, visible: drawerVisible, position, open: openRow, 
         highlighted: highlightedRow, hover: hoverRow } = useSteppingDrawer(shownRows, row => row.id)
 
 const tenants = ref<Tenant[]>([])
-const dialogVisible = ref(false)
+const formVisible = ref(false)
 const editing = ref<OwnedOidcConfiguration | null>(null)
 const selectedCallbackUrl = ref<string | null>(null)
 
-const copyDialogVisible = ref(false)
+const copyFormVisible = ref(false)
 const copySource = ref<OwnedOidcConfiguration | null>(null)
 const copyApplicationId = ref<string | null>(null)
 const copying = ref(false)
@@ -272,9 +274,9 @@ function facts(configuration: OwnedOidcConfiguration) {
   ]
 }
 
-function openDialog(configuration: OwnedOidcConfiguration | null): void {
+function openForm(configuration: OwnedOidcConfiguration | null): void {
   editing.value = configuration
-  dialogVisible.value = true
+  formVisible.value = true
 }
 
 function onSaved(configuration: OwnedOidcConfiguration): void {
@@ -284,12 +286,12 @@ function onSaved(configuration: OwnedOidcConfiguration): void {
   refreshTable()
 }
 
-function openCopyDialog(configuration: OwnedOidcConfiguration): void {
+function openCopyForm(configuration: OwnedOidcConfiguration): void {
   copySource.value = configuration
   copyApplicationId.value = null
   copied.value = null
   copiedCallbackUrl.value = null
-  copyDialogVisible.value = true
+  copyFormVisible.value = true
   if (APPLICATION_STATE.allApplications.length === 0) {
     APPLICATION_STATE.loadAllApplications()
   }
@@ -297,7 +299,7 @@ function openCopyDialog(configuration: OwnedOidcConfiguration): void {
 
 async function submitCopy(): Promise<void> {
   if (copied.value) {
-    copyDialogVisible.value = false
+    copyFormVisible.value = false
     return
   }
   if (!copySource.value?.id || copyApplicationId.value === null) {
@@ -318,8 +320,8 @@ async function submitCopy(): Promise<void> {
 function rowActions(row: ConfigurationRow): MenuItem[] {
   const configuration = row.configuration
   return [
-    { label: 'Edit', icon: 'pi pi-pencil', command: () => openDialog(configuration) },
-    { label: 'Copy to application', icon: 'pi pi-copy', command: () => openCopyDialog(configuration) },
+    { label: 'Edit', icon: 'pi pi-pencil', command: () => openForm(configuration) },
+    { label: 'Copy to application', icon: 'pi pi-copy', command: () => openCopyForm(configuration) },
     {
       label: configuration.enabled ? 'Disable' : 'Enable',
       icon: configuration.enabled ? 'pi pi-ban' : 'pi pi-check-circle',

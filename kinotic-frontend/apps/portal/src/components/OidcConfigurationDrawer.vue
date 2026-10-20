@@ -1,139 +1,140 @@
 <template>
-  <FormDialog :visible="visible" :icon="KeyRound" :title="title" :description="description"
-              @update:visible="emit('update:visible', $event)" @submit="submit">
-    <!-- After a new configuration is saved: what the provider must be given before a sign-in through it succeeds -->
-    <div v-if="saved" class="flex flex-col gap-5">
-      <p class="text-sm text-surface-700 dark:text-surface-200">
-        Add the callback URL below to the application registration at {{ providerDisplayName(saved.provider) }} as a redirect URI.
-        Sign-ins through this provider fail until it is registered there.
-      </p>
-      <CopyableUrl label="Callback URL" :url="callbackUrl" />
-      <CopyableUrl v-if="startUrl" label="Direct sign-in link" :url="startUrl" :help="START_URL_HELP" />
-    </div>
-
-    <div v-else class="flex flex-col gap-5">
-      <div>
-        <label for="oidc-provider" class="mb-2 block text-sm font-medium">Provider</label>
-        <Select v-if="isNew" input-id="oidc-provider" v-model="provider" :options="ORGANIZATION_OIDC_PROVIDERS" option-value="provider"
-                class="w-full">
-          <template #value="{ value }">
-            <span class="flex items-center gap-2.5">
-              <img :src="PROVIDER_LOGOS[value as OidcProviderType]" alt="" class="h-4 w-4" />
-              {{ providerDisplayName(value) }}
-            </span>
-          </template>
-          <template #option="{ option }">
-            <span class="flex items-center gap-2.5">
-              <img :src="PROVIDER_LOGOS[option.provider as OidcProviderType]" alt="" class="h-4 w-4" />
-              {{ providerDisplayName(option.provider) }}
-            </span>
-          </template>
-        </Select>
-        <div v-else class="flex items-center gap-2.5 rounded-lg border border-surface-200 bg-surface-50 px-3 py-2 text-sm dark:border-surface-700 dark:bg-surface-800/60">
-          <img :src="PROVIDER_LOGOS[provider]" alt="" class="h-4 w-4" />
-          <span class="flex-1">{{ providerDisplayName(provider) }}</span>
-          <Lock :size="14" :stroke-width="1.75" class="text-surface-400" aria-hidden="true" />
-        </div>
-      </div>
-
-      <div v-if="applicationId !== null">
-        <label for="oidc-scope" class="mb-2 block text-sm font-medium">Offered at</label>
-        <Select v-if="isNew" input-id="oidc-scope" v-model="tenantId" :options="scopeOptions" option-label="label" option-value="value"
-                :disabled="scopeOptions.length === 1" class="w-full" />
-        <div v-else class="flex items-center gap-2.5 rounded-lg border border-surface-200 bg-surface-50 px-3 py-2 text-sm dark:border-surface-700 dark:bg-surface-800/60">
-          <span class="flex-1">{{ scopeLabel(tenantId) }}</span>
-          <Lock :size="14" :stroke-width="1.75" class="text-surface-400" aria-hidden="true" />
-        </div>
-        <p class="mt-1.5 text-[0.8125rem] text-muted-color">The application's login, or the login of one of its tenants.</p>
-      </div>
-
-      <div>
-        <label for="oidc-name" class="mb-2 block text-sm font-medium">Display name</label>
-        <InputText id="oidc-name" v-model="name" placeholder="Acme Okta" autocomplete="off" class="w-full" />
-        <p class="mt-1.5 text-[0.8125rem] text-muted-color">What the login page prints on the provider's button.</p>
-      </div>
-
-      <div v-if="offered?.providerAccountLabel">
-        <label for="oidc-account" class="mb-2 block text-sm font-medium">{{ offered.providerAccountLabel }}</label>
-        <InputText id="oidc-account" v-model="providerAccount" :placeholder="ACCOUNT_PLACEHOLDERS[provider]" autocomplete="off"
-                   :invalid="accountInvalid" class="w-full font-mono" />
-        <p v-if="accountInvalid" class="mt-1.5 text-[0.8125rem] text-red-600 dark:text-red-400">
-          Enter the {{ offered.providerAccountLabel }} in the form {{ ACCOUNT_PLACEHOLDERS[provider] }}.
+  <FormDrawer :visible="visible" :title="title" :description="description" @close="emit('update:visible', false)">
+    <form id="oidc-configuration-form" @submit.prevent="submit">
+      <!-- After a new configuration is saved: what the provider must be given before a sign-in through it succeeds -->
+      <div v-if="saved" class="flex flex-col gap-5">
+        <p class="text-sm text-surface-700 dark:text-surface-200">
+          Add the callback URL below to the application registration at {{ providerDisplayName(saved.provider) }} as a redirect URI.
+          Sign-ins through this provider fail until it is registered there.
         </p>
-      </div>
-
-      <div>
-        <label for="oidc-client-id" class="mb-2 block text-sm font-medium">Client ID</label>
-        <InputText id="oidc-client-id" v-model="clientId" autocomplete="off" class="w-full font-mono" />
-      </div>
-
-      <div>
-        <label for="oidc-client-secret" class="mb-2 block text-sm font-medium">Client secret</label>
-        <Password input-id="oidc-client-secret" v-model="clientSecret" :feedback="false" toggle-mask :disabled="isNew && publicClient"
-                  :placeholder="secretPlaceholder" :input-props="{ autocomplete: 'new-password' }" class="w-full" input-class="w-full" />
-        <div v-if="isNew" class="mt-2.5 flex items-center gap-2">
-          <Checkbox input-id="oidc-public-client" v-model="publicClient" binary />
-          <label for="oidc-public-client" class="text-sm">Public client (no secret)</label>
-        </div>
-        <div v-else-if="configuration?.confidentialClient" class="mt-1.5 flex items-center justify-between gap-3">
-          <p class="text-[0.8125rem] text-muted-color">Leave it empty to keep the secret held for this provider.</p>
-          <Button type="button" label="Make this a public client" severity="danger" text size="small" :loading="removingSecret"
-                  @click="confirmMakePublic" />
-        </div>
-      </div>
-
-      <div v-if="applicationId !== null" class="flex items-start gap-3 rounded-xl border border-surface-200 bg-surface-0 px-4 py-3.5 dark:border-surface-700 dark:bg-surface-900">
-        <ToggleSwitch input-id="oidc-create-users" v-model="createUserOnSignIn" class="mt-0.5 shrink-0" />
-        <div class="flex flex-col gap-1">
-          <label for="oidc-create-users" class="text-sm font-medium text-surface-950 dark:text-surface-0">Create users on first sign-in</label>
-          <p class="text-[0.8125rem] text-muted-color">
-            {{ createUserOnSignIn
-                ? 'Someone the provider verifies who is not yet a user here becomes one the first time they sign in.'
-                : 'Someone the provider verifies who is not yet a user here is refused until they are invited or created.' }}
-          </p>
-        </div>
-      </div>
-
-      <div class="flex items-start gap-3 rounded-xl border border-surface-200 bg-surface-0 px-4 py-3.5 dark:border-surface-700 dark:bg-surface-900">
-        <ToggleSwitch input-id="oidc-enabled" v-model="enabled" class="mt-0.5 shrink-0" />
-        <div class="flex flex-col gap-1">
-          <label for="oidc-enabled" class="text-sm font-medium text-surface-950 dark:text-surface-0">Enabled</label>
-          <p class="text-[0.8125rem] text-muted-color">
-            {{ enabled ? 'The login page offers this provider.' : 'The login page does not offer this provider, and no one signs in through it.' }}
-          </p>
-        </div>
-      </div>
-
-      <div>
-        <button type="button" class="flex items-center gap-1.5 text-sm font-medium text-surface-700 hover:text-surface-950 dark:text-surface-200 dark:hover:text-surface-0"
-                :aria-expanded="showAdvanced" @click="showAdvanced = !showAdvanced">
-          <ChevronRight :size="16" :stroke-width="1.75" :class="['transition-transform', showAdvanced ? 'rotate-90' : '']" aria-hidden="true" />
-          Advanced
-        </button>
-        <div v-if="showAdvanced" class="mt-3">
-          <label for="oidc-audience" class="mb-2 flex items-center justify-between text-sm font-medium">
-            Audience
-            <span class="text-xs font-normal text-muted-color">Optional</span>
-          </label>
-          <InputText id="oidc-audience" v-model="audience" autocomplete="off" class="w-full font-mono" />
-          <p class="mt-1.5 text-[0.8125rem] text-muted-color">The aud claim the provider's tokens carry, when it is not the client ID.</p>
-        </div>
-      </div>
-
-      <template v-if="!isNew">
-        <CopyableUrl label="Callback URL" :url="callbackUrl" help="The redirect URI registered at the provider." />
+        <CopyableUrl label="Callback URL" :url="callbackUrl" />
         <CopyableUrl v-if="startUrl" label="Direct sign-in link" :url="startUrl" :help="START_URL_HELP" />
-      </template>
-    </div>
+      </div>
+
+      <div v-else class="flex flex-col gap-5">
+        <div>
+          <label for="oidc-provider" class="mb-2 block text-sm font-medium">Provider</label>
+          <Select v-if="isNew" input-id="oidc-provider" v-model="provider" :options="ORGANIZATION_OIDC_PROVIDERS" option-value="provider"
+                  class="w-full">
+            <template #value="{ value }">
+              <span class="flex items-center gap-2.5">
+                <img :src="PROVIDER_LOGOS[value as OidcProviderType]" alt="" class="h-4 w-4" />
+                {{ providerDisplayName(value) }}
+              </span>
+            </template>
+            <template #option="{ option }">
+              <span class="flex items-center gap-2.5">
+                <img :src="PROVIDER_LOGOS[option.provider as OidcProviderType]" alt="" class="h-4 w-4" />
+                {{ providerDisplayName(option.provider) }}
+              </span>
+            </template>
+          </Select>
+          <div v-else class="flex items-center gap-2.5 rounded-lg border border-surface-200 bg-surface-50 px-3 py-2 text-sm dark:border-surface-700 dark:bg-surface-800/60">
+            <img :src="PROVIDER_LOGOS[provider]" alt="" class="h-4 w-4" />
+            <span class="flex-1">{{ providerDisplayName(provider) }}</span>
+            <Lock :size="14" :stroke-width="1.75" class="text-surface-400" aria-hidden="true" />
+          </div>
+        </div>
+
+        <div v-if="applicationId !== null">
+          <label for="oidc-scope" class="mb-2 block text-sm font-medium">Offered at</label>
+          <Select v-if="isNew" input-id="oidc-scope" v-model="tenantId" :options="scopeOptions" option-label="label" option-value="value"
+                  :disabled="scopeOptions.length === 1" class="w-full" />
+          <div v-else class="flex items-center gap-2.5 rounded-lg border border-surface-200 bg-surface-50 px-3 py-2 text-sm dark:border-surface-700 dark:bg-surface-800/60">
+            <span class="flex-1">{{ scopeLabel(tenantId) }}</span>
+            <Lock :size="14" :stroke-width="1.75" class="text-surface-400" aria-hidden="true" />
+          </div>
+          <p class="mt-1.5 text-[0.8125rem] text-muted-color">The application's login, or the login of one of its tenants.</p>
+        </div>
+
+        <div>
+          <label for="oidc-name" class="mb-2 block text-sm font-medium">Display name</label>
+          <InputText id="oidc-name" v-model="name" placeholder="Acme Okta" autocomplete="off" class="w-full" />
+          <p class="mt-1.5 text-[0.8125rem] text-muted-color">What the login page prints on the provider's button.</p>
+        </div>
+
+        <div v-if="offered?.providerAccountLabel">
+          <label for="oidc-account" class="mb-2 block text-sm font-medium">{{ offered.providerAccountLabel }}</label>
+          <InputText id="oidc-account" v-model="providerAccount" :placeholder="ACCOUNT_PLACEHOLDERS[provider]" autocomplete="off"
+                     :invalid="accountInvalid" class="w-full font-mono" />
+          <p v-if="accountInvalid" class="mt-1.5 text-[0.8125rem] text-red-600 dark:text-red-400">
+            Enter the {{ offered.providerAccountLabel }} in the form {{ ACCOUNT_PLACEHOLDERS[provider] }}.
+          </p>
+        </div>
+
+        <div>
+          <label for="oidc-client-id" class="mb-2 block text-sm font-medium">Client ID</label>
+          <InputText id="oidc-client-id" v-model="clientId" autocomplete="off" class="w-full font-mono" />
+        </div>
+
+        <div>
+          <label for="oidc-client-secret" class="mb-2 block text-sm font-medium">Client secret</label>
+          <Password input-id="oidc-client-secret" v-model="clientSecret" :feedback="false" toggle-mask :disabled="isNew && publicClient"
+                    :placeholder="secretPlaceholder" :input-props="{ autocomplete: 'new-password' }" class="w-full" input-class="w-full" />
+          <div v-if="isNew" class="mt-2.5 flex items-center gap-2">
+            <Checkbox input-id="oidc-public-client" v-model="publicClient" binary />
+            <label for="oidc-public-client" class="text-sm">Public client (no secret)</label>
+          </div>
+          <div v-else-if="configuration?.confidentialClient" class="mt-1.5 flex items-center justify-between gap-3">
+            <p class="text-[0.8125rem] text-muted-color">Leave it empty to keep the secret held for this provider.</p>
+            <Button type="button" label="Make this a public client" severity="danger" text size="small" :loading="removingSecret"
+                    @click="confirmMakePublic" />
+          </div>
+        </div>
+
+        <div v-if="applicationId !== null" class="flex items-start gap-3 rounded-xl border border-surface-200 bg-surface-0 px-4 py-3.5 dark:border-surface-700 dark:bg-surface-900">
+          <ToggleSwitch input-id="oidc-create-users" v-model="createUserOnSignIn" class="mt-0.5 shrink-0" />
+          <div class="flex flex-col gap-1">
+            <label for="oidc-create-users" class="text-sm font-medium text-surface-950 dark:text-surface-0">Create users on first sign-in</label>
+            <p class="text-[0.8125rem] text-muted-color">
+              {{ createUserOnSignIn
+                  ? 'Someone the provider verifies who is not yet a user here becomes one the first time they sign in.'
+                  : 'Someone the provider verifies who is not yet a user here is refused until they are invited or created.' }}
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-start gap-3 rounded-xl border border-surface-200 bg-surface-0 px-4 py-3.5 dark:border-surface-700 dark:bg-surface-900">
+          <ToggleSwitch input-id="oidc-enabled" v-model="enabled" class="mt-0.5 shrink-0" />
+          <div class="flex flex-col gap-1">
+            <label for="oidc-enabled" class="text-sm font-medium text-surface-950 dark:text-surface-0">Enabled</label>
+            <p class="text-[0.8125rem] text-muted-color">
+              {{ enabled ? 'The login page offers this provider.' : 'The login page does not offer this provider, and no one signs in through it.' }}
+            </p>
+          </div>
+        </div>
+
+        <div>
+          <button type="button" class="flex items-center gap-1.5 text-sm font-medium text-surface-700 hover:text-surface-950 dark:text-surface-200 dark:hover:text-surface-0"
+                  :aria-expanded="showAdvanced" @click="showAdvanced = !showAdvanced">
+            <ChevronRight :size="16" :stroke-width="1.75" :class="['transition-transform', showAdvanced ? 'rotate-90' : '']" aria-hidden="true" />
+            Advanced
+          </button>
+          <div v-if="showAdvanced" class="mt-3">
+            <label for="oidc-audience" class="mb-2 flex items-center justify-between text-sm font-medium">
+              Audience
+              <span class="text-xs font-normal text-muted-color">Optional</span>
+            </label>
+            <InputText id="oidc-audience" v-model="audience" autocomplete="off" class="w-full font-mono" />
+            <p class="mt-1.5 text-[0.8125rem] text-muted-color">The aud claim the provider's tokens carry, when it is not the client ID.</p>
+          </div>
+        </div>
+
+        <template v-if="!isNew">
+          <CopyableUrl label="Callback URL" :url="callbackUrl" help="The redirect URI registered at the provider." />
+          <CopyableUrl v-if="startUrl" label="Direct sign-in link" :url="startUrl" :help="START_URL_HELP" />
+        </template>
+      </div>
+    </form>
 
     <template #footer>
       <Button v-if="saved" type="button" label="Done" @click="emit('update:visible', false)" />
       <template v-else>
         <Button type="button" label="Cancel" severity="secondary" outlined @click="emit('update:visible', false)" />
-        <Button type="submit" :label="isNew ? 'Add provider' : 'Save'" :loading="saving" :disabled="!complete" />
+        <Button type="submit" form="oidc-configuration-form" :label="isNew ? 'Add provider' : 'Save'" :loading="saving" :disabled="!complete" />
       </template>
     </template>
-  </FormDialog>
+  </FormDrawer>
 </template>
 
 <script setup lang="ts">
@@ -146,7 +147,7 @@ import Select from 'primevue/select'
 import ToggleSwitch from 'primevue/toggleswitch'
 import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
-import { ChevronRight, KeyRound, Lock } from '@lucide/vue'
+import { ChevronRight, Lock } from '@lucide/vue'
 import { Kinotic } from '@kinotic-ai/core'
 import {
   OidcConfigurationType,
@@ -157,7 +158,7 @@ import {
   type OwnedOidcConfiguration,
   type Tenant
 } from '@kinotic-ai/management-api'
-import { FormDialog, showErrorToast } from '@kinotic-ai/frontend-common'
+import { FormDrawer, showErrorToast } from '@kinotic-ai/frontend-common'
 import CopyableUrl from '@/components/CopyableUrl.vue'
 import { PROVIDER_LOGOS, START_URL_HELP, startUrlOf } from '@/util/oidcConfigurations'
 import { providerDisplayName } from '@/components/SocialAuthButton.vue'
@@ -203,7 +204,7 @@ const createUserOnSignIn = ref(false)
 const showAdvanced = ref(false)
 const saving = ref(false)
 const removingSecret = ref(false)
-/** The new configuration once saved, which switches the dialog to its callback URL. */
+/** The new configuration once saved, which switches the drawer to its callback URL. */
 const saved = ref<OwnedOidcConfiguration | null>(null)
 const callbackUrl = ref<string | null>(null)
 

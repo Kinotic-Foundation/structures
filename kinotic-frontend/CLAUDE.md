@@ -19,6 +19,16 @@ holding one of its exports, which can close a cycle that leaves the page blank. 
 builds fail on a dynamic import of it and on any import cycle between output chunks
 (`packages/common/vite/bundleGuards.ts`).
 
+## Add and edit forms open in a right-hand drawer
+
+A form that adds or edits something (an application, a project, a member, a sign-in provider)
+opens in `FormDrawer` from `@kinotic-ai/frontend-common`, the panel that slides in from the right,
+never in a modal dialog. Put the fields in a `<form id="…" @submit.prevent="…">` in the default slot
+and the buttons in the `footer` slot, with the submit button naming the form (`form="…"`);
+`ApplicationSidebar.vue` and `OidcConfigurationDrawer.vue` in the portal are examples. A row's
+details open in `SteppingDrawer`, also on the right. A modal is for what is not a form: a
+confirmation (`useConfirm`), a value shown once (`MachineSecretDialog`), or a log viewer.
+
 ## Package Manager
 
 **IMPORTANT:** This project uses **pnpm** for package management and script execution.
