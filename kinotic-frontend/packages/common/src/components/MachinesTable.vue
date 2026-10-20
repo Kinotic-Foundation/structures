@@ -56,42 +56,44 @@
     </template>
   </CrudTable>
 
-  <FormDialog v-model:visible="createDialogVisible" :icon="ServerCog" title="Create machine"
+  <FormDrawer :visible="createFormVisible" title="Create machine"
               description="A machine is a client that connects to Kinotic on its own, without a person signing in."
-              @submit="create">
-    <div>
-      <label for="machine-name" class="mb-2 block text-sm font-medium">Name</label>
-      <IconField>
-        <InputIcon><TagIcon :size="16" :stroke-width="1.75" aria-hidden="true" /></InputIcon>
-        <InputText id="machine-name" v-model="machineName" placeholder="vm-manager, billing-sync, …"
-                   autocomplete="off" autofocus class="w-full" />
-      </IconField>
-      <p class="mt-1.5 text-[0.8125rem] text-muted-color">Name it for what it runs as, so it reads clearly in the list.</p>
-    </div>
+              @close="createFormVisible = false">
+    <form id="create-machine-form" class="flex flex-col gap-6" @submit.prevent="create">
+      <div>
+        <label for="machine-name" class="mb-2 block text-sm font-medium">Name</label>
+        <IconField>
+          <InputIcon><TagIcon :size="16" :stroke-width="1.75" aria-hidden="true" /></InputIcon>
+          <InputText id="machine-name" v-model="machineName" placeholder="vm-manager, billing-sync, …"
+                     autocomplete="off" autofocus class="w-full" />
+        </IconField>
+        <p class="mt-1.5 text-[0.8125rem] text-muted-color">Name it for what it runs as, so it reads clearly in the list.</p>
+      </div>
 
-    <div class="rounded-xl border border-surface-200 bg-surface-0 px-4 pt-3.5 pb-1 dark:border-surface-700 dark:bg-surface-900">
-      <p class="mb-2.5 text-sm font-semibold text-surface-950 dark:text-surface-0">What happens next</p>
-      <ol>
-        <li v-for="(step, position) in NEXT_STEPS" :key="step.title"
-            class="flex items-start gap-3 border-t border-surface-100 py-2.5 dark:border-surface-800">
-          <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-surface-100 text-[0.6875rem] font-semibold tabular-nums text-surface-600 dark:bg-surface-800 dark:text-surface-300">{{ position + 1 }}</span>
-          <div class="min-w-0">
-            <p class="text-sm text-surface-800 dark:text-surface-100">{{ step.title }}</p>
-            <p class="mt-0.5 text-[0.8125rem] text-muted-color">{{ step.detail }}</p>
-          </div>
-        </li>
-      </ol>
-    </div>
+      <div class="rounded-xl border border-surface-200 bg-surface-0 px-4 pt-3.5 pb-1 dark:border-surface-700 dark:bg-surface-900">
+        <p class="mb-2.5 text-sm font-semibold text-surface-950 dark:text-surface-0">What happens next</p>
+        <ol>
+          <li v-for="(step, position) in NEXT_STEPS" :key="step.title"
+              class="flex items-start gap-3 border-t border-surface-100 py-2.5 dark:border-surface-800">
+            <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-surface-100 text-[0.6875rem] font-semibold tabular-nums text-surface-600 dark:bg-surface-800 dark:text-surface-300">{{ position + 1 }}</span>
+            <div class="min-w-0">
+              <p class="text-sm text-surface-800 dark:text-surface-100">{{ step.title }}</p>
+              <p class="mt-0.5 text-[0.8125rem] text-muted-color">{{ step.detail }}</p>
+            </div>
+          </li>
+        </ol>
+      </div>
 
-    <p v-if="$slots['create-hint']" class="-mt-2 text-[0.8125rem] leading-relaxed text-muted-color">
-      <slot name="create-hint" />
-    </p>
+      <p v-if="$slots['create-hint']" class="-mt-2 text-[0.8125rem] leading-relaxed text-muted-color">
+        <slot name="create-hint" />
+      </p>
+    </form>
 
     <template #footer>
-      <Button type="button" label="Cancel" severity="secondary" outlined @click="createDialogVisible = false" />
-      <Button type="submit" label="Create machine" :loading="creating" :disabled="machineName.trim() === ''" />
+      <Button type="button" label="Cancel" severity="secondary" outlined @click="createFormVisible = false" />
+      <Button type="submit" form="create-machine-form" label="Create machine" :loading="creating" :disabled="machineName.trim() === ''" />
     </template>
-  </FormDialog>
+  </FormDrawer>
 
   <MachineSecretDialog v-model="secret" />
 </template>
@@ -112,7 +114,7 @@ import type { Page, Pageable } from '@kinotic-ai/core'
 import type { MachineParticipantIdentity, MachineProvisionResult } from '@kinotic-ai/management-api'
 
 import CrudTable from './CrudTable.vue'
-import FormDialog from './FormDialog.vue'
+import FormDrawer from './FormDrawer.vue'
 import MachineSecretDialog, { type MachineSecret } from './MachineSecretDialog.vue'
 import { filteredPageLoader, statusSeverity, useCrudTablePage } from './useCrudTablePage'
 import type { CrudHeader } from '../types/CrudHeader'
@@ -180,7 +182,7 @@ const NEXT_STEPS = [
   { title: 'Copy the secret right away', detail: 'It is shown once. A lost secret can only be rotated, never shown again.' }
 ]
 
-const createDialogVisible = ref(false)
+const createFormVisible = ref(false)
 const machineName = ref('')
 const creating = ref(false)
 const secret = ref<MachineSecret | null>(null)
@@ -213,7 +215,7 @@ function toRow(machine: MachineParticipantIdentity): MachineRow {
 
 function openCreateDialog() {
   machineName.value = ''
-  createDialogVisible.value = true
+  createFormVisible.value = true
 }
 
 async function create() {
@@ -225,7 +227,7 @@ async function create() {
   creating.value = true
   try {
     const result = await props.machines.createMachine(name)
-    createDialogVisible.value = false
+    createFormVisible.value = false
     secret.value = {
       title: `Machine created — ${name}`,
       clientId: result.machine.id ?? '',

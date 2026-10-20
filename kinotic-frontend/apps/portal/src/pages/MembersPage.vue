@@ -14,7 +14,7 @@
       @update:search="tableSearch = $event"
       @row-hover="row => hoverMember(row as MemberRow)"
       @on-row-click="row => openMember(row as MemberRow)"
-      @add-item="openMemberDialog"
+      @add-item="openMemberForm"
     >
       <template #item.displayName="{ item }">
         {{ item.displayName || '—' }}
@@ -38,8 +38,8 @@
       <MemberDetail v-if="selectedMember" :member="selectedMember" :tint="memberTint" :index="position - 1" />
     </SteppingDrawer>
 
-    <FormDialog v-model:visible="memberDialogVisible" :icon="UserPlus" :title="addLabel" :description="addDescription"
-                @submit="submitMember">
+    <FormDrawer :visible="memberFormVisible" :title="addLabel" :description="addDescription" @close="memberFormVisible = false">
+      <form id="member-form" @submit.prevent="submitMember">
         <div class="flex flex-col gap-5">
           <div>
             <label for="member-email" class="mb-2 block text-sm font-medium">Email</label>
@@ -88,13 +88,14 @@
             </li>
           </ul>
         </div>
+      </form>
 
-        <template #footer>
-          <Button type="button" label="Cancel" severity="secondary" outlined @click="memberDialogVisible = false" />
-          <Button type="submit" :label="props.applicationId !== null ? 'Send invitation' : 'Add member'"
-                  :icon="props.applicationId !== null ? 'pi pi-send' : 'pi pi-user-plus'" :loading="saving" :disabled="memberEmail.trim() === ''" />
-        </template>
-    </FormDialog>
+      <template #footer>
+        <Button type="button" label="Cancel" severity="secondary" outlined @click="memberFormVisible = false" />
+        <Button type="submit" form="member-form" :label="props.applicationId !== null ? 'Send invitation' : 'Add member'"
+                :icon="props.applicationId !== null ? 'pi pi-send' : 'pi pi-user-plus'" :loading="saving" :disabled="memberEmail.trim() === ''" />
+      </template>
+    </FormDrawer>
   </div>
 </template>
 
@@ -109,7 +110,7 @@ import ToggleSwitch from 'primevue/toggleswitch'
 import type { MenuItem } from 'primevue/menuitem'
 import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
-import { Check, Globe, KeyRound, Mail, ShieldCheck, UserPlus, UserRound } from '@lucide/vue'
+import { Check, Globe, KeyRound, Mail, ShieldCheck, UserRound } from '@lucide/vue'
 import githubLogo from '@/assets/github-icon.svg'
 import googleLogo from '@/assets/google-icon.svg'
 import microsoftLogo from '@/assets/microsoft_online-icon.svg'
@@ -123,7 +124,7 @@ import {
 } from '@kinotic-ai/core'
 import type { Member, PendingInviteSummary } from '@kinotic-ai/management-api'
 
-import { CrudTable, FormDialog, MemberDetail, SteppingDrawer, TINTS, useSteppingDrawer,
+import { CrudTable, FormDrawer, MemberDetail, SteppingDrawer, TINTS, useSteppingDrawer,
          type MemberSummary } from '@kinotic-ai/frontend-common'
 import { PageHeader } from '@kinotic-ai/frontend-common'
 import { statusSeverity, useCrudTablePage } from '@kinotic-ai/frontend-common'
@@ -176,7 +177,7 @@ const PROVIDER_BRANDS: Record<string, { name: string, logo: string }> = {
   github: { name: 'GitHub', logo: githubLogo }
 }
 
-const memberDialogVisible = ref(false)
+const memberFormVisible = ref(false)
 const memberEmail = ref('')
 const memberDisplayName = ref('')
 const sendInvitation = ref(true)
@@ -213,7 +214,7 @@ const addDescription = computed<string>(() => {
       : 'Add a person to your organization. They are pending until they first sign in.'
 })
 
-// The ways an invitee can accept, one row each in the invite dialog
+// The ways an invitee can accept, one row each in the invite form
 const signInMethods = computed<SignInMethod[]>(() => {
   const password: SignInMethod = { name: 'Setting a password', icon: markRaw(KeyRound) }
   return props.applicationId !== null
@@ -306,11 +307,11 @@ function providerMethod(key: string): SignInMethod {
       : { name: `Signing in with ${key.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ')}`, icon: markRaw(Globe) }
 }
 
-function openMemberDialog() {
+function openMemberForm() {
   memberEmail.value = ''
   memberDisplayName.value = ''
   sendInvitation.value = true
-  memberDialogVisible.value = true
+  memberFormVisible.value = true
 }
 
 async function submitMember() {
@@ -335,7 +336,7 @@ async function submitMember() {
               : `Added ${email}; they sign in through your organization's provider`
       toast.add({ severity: 'success', summary: 'Member added', detail, life: 6000 })
     }
-    memberDialogVisible.value = false
+    memberFormVisible.value = false
     // A leftover filter would hide the new Pending row; clearing it reloads the
     // table through CrudTable's search-prop watch, so refresh only when empty.
     if (tableSearch.value) {
