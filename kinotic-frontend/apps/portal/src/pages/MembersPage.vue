@@ -73,20 +73,19 @@
               </p>
             </div>
           </div>
-        </div>
-
-        <div v-if="props.applicationId !== null || sendInvitation"
-             class="rounded-xl border border-surface-200 bg-surface-0 px-4 pt-3.5 pb-1 dark:border-surface-700 dark:bg-surface-900">
-          <p class="mb-2.5 text-sm font-semibold text-surface-950 dark:text-surface-0">They can accept by</p>
-          <ul>
-            <li v-for="method in signInMethods" :key="method.name"
-                class="flex items-center gap-3 border-t border-surface-100 py-2.5 dark:border-surface-800">
-              <img v-if="method.logo" :src="method.logo" alt="" class="h-5 w-5 shrink-0" />
-              <component :is="method.icon" v-else :size="20" :stroke-width="1.75" class="shrink-0 text-surface-600 dark:text-surface-300" aria-hidden="true" />
-              <span class="flex-1 text-sm text-surface-800 dark:text-surface-100">{{ method.name }}</span>
-              <Check :size="16" :stroke-width="2" class="shrink-0 text-emerald-500" aria-hidden="true" />
-            </li>
-          </ul>
+          <div v-if="props.applicationId !== null || sendInvitation"
+               class="rounded-xl border border-surface-200 bg-surface-0 px-4 pt-3.5 pb-1 dark:border-surface-700 dark:bg-surface-900">
+            <p class="mb-2.5 text-sm font-semibold text-surface-950 dark:text-surface-0">They can accept by</p>
+            <ul>
+              <li v-for="method in signInMethods" :key="method.name"
+                  class="flex items-center gap-3 border-t border-surface-100 py-2.5 dark:border-surface-800">
+                <img v-if="method.logo" :src="method.logo" alt="" class="h-5 w-5 shrink-0" />
+                <component :is="method.icon" v-else :size="20" :stroke-width="1.75" class="shrink-0 text-surface-600 dark:text-surface-300" aria-hidden="true" />
+                <span class="flex-1 text-sm text-surface-800 dark:text-surface-100">{{ method.name }}</span>
+                <Check :size="16" :stroke-width="2" class="shrink-0 text-emerald-500" aria-hidden="true" />
+              </li>
+            </ul>
+          </div>
         </div>
       </form>
 
