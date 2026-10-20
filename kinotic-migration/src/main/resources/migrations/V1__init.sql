@@ -188,6 +188,28 @@ CREATE TABLE IF NOT EXISTS kinotic_authz_store (
 
 INSERT INTO kinotic_authz_store (id) VALUES ('platform') WITH REFRESH, DOCUMENT_ID 'platform';
 
+-- A custom role of an organization (Role): a name and a description for the bundle of permissions the role
+-- is in the authorization engine, where its grants are made. The built-in roles have no row.
+CREATE TABLE IF NOT EXISTS kinotic_role (
+    id KEYWORD,
+    organizationId KEYWORD,
+    name KEYWORD,
+    description TEXT,
+    created DATE,
+    updated DATE
+);
+
+-- A group of an organization's members (Group): a name and a description for the membership the group has
+-- in the authorization engine, where a grant made to the group reaches its members.
+CREATE TABLE IF NOT EXISTS kinotic_group (
+    id KEYWORD,
+    organizationId KEYWORD,
+    name KEYWORD,
+    description TEXT,
+    created DATE,
+    updated DATE
+);
+
 -- Create the service_directory table if it does not exist
 CREATE TABLE IF NOT EXISTS kinotic_service_directory (
     id KEYWORD,
