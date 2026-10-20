@@ -500,7 +500,7 @@ Email verification is the security gate — no `Organization`, account or member
 11. CompleteOrg.vue shows a "Connect GitHub" step explaining that the next GitHub
     round-trip authorizes repository access (distinct from the sign-in, which only
     proved identity). Clicking "Continue to GitHub" calls
-    githubAppInstallations.startInstall("/applications") and redirects the whole tab to
+    githubAppInstallations.startInstall("/") and redirects the whole tab to
     the returned GitHub install URL. The App requests user authorization (OAuth) during
     installation, so GitHub returns to /github/install/callback — the App's first
     registered callback URL — with code, installation_id, and the state minted by
@@ -508,9 +508,10 @@ Email verification is the security gate — no `Organization`, account or member
     the code with the github-platform credential for the authorizing user's access
     token, and binds the installation only when GitHub's /user/installations reports
     that user can access it (see [Defense in Depth](/platform/defense-in-depth)). It
-    then lands on /applications — project creation requires the install, so the new org
-    arrives ready. If the install can't start, the page falls back to /applications
-    directly.
+    then lands on / — project creation requires the install, so the new org arrives
+    ready. If the install can't start, the page falls back to / directly. The portal's /
+    opens the Quickstart until the organization has its first project, and Applications
+    after that.
 ```
 
 The `PendingSignUp` is consumed once. The `?token=` in the redirect to `/register` is the short-lived `PendingSignUp` verification token, not an auth credential — the actual login is established by the session cookie set when the org-naming POST succeeds.
