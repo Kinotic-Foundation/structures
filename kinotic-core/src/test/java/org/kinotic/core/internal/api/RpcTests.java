@@ -600,6 +600,29 @@ public class RpcTests {
     }
 
     @Test
+    public void testPageOfObjects(){
+        StepVerifier.create(rpcTestServiceProxy.getPageOfSimpleObjects())
+                    .assertNext(page -> {
+                        Assertions.assertEquals(1L, page.getTotalElements());
+                        Assertions.assertEquals(List.of(RpcTestService.STATIC_SIMPLE_OBJECT), page.getContent());
+                    })
+                    .expectComplete()
+                    .verify();
+    }
+
+    @Test
+    public void testCursorPageOfObjects(){
+        StepVerifier.create(rpcTestServiceProxy.getCursorPageOfSimpleObjects())
+                    .assertNext(page -> {
+                        Assertions.assertEquals("next", page.getCursor());
+                        Assertions.assertEquals(2L, page.getTotalElements());
+                        Assertions.assertEquals(List.of(RpcTestService.STATIC_SIMPLE_OBJECT), page.getContent());
+                    })
+                    .expectComplete()
+                    .verify();
+    }
+
+    @Test
     public void testRpcCompletableFutureString(){
         CompletableFuture<String> mono = rpcTestServiceProxy.getString();
 

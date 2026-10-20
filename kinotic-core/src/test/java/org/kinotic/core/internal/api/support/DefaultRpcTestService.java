@@ -5,6 +5,8 @@ package org.kinotic.core.internal.api.support;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
+import org.kinotic.core.api.crud.CursorPage;
+import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.security.Participant;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -101,6 +103,16 @@ public class DefaultRpcTestService implements RpcTestService{
     @Override
     public List<String> getListOfStrings() {
         return LIST_OF_STRINGS;
+    }
+
+    @Override
+    public CursorPage<SimpleObject> getCursorPageOfSimpleObjects() {
+        return new CursorPage<>(List.of(STATIC_SIMPLE_OBJECT), "next", 2L);
+    }
+
+    @Override
+    public Page<SimpleObject> getPageOfSimpleObjects() {
+        return new Page<>(List.of(STATIC_SIMPLE_OBJECT), 1L);
     }
 
     @Override
