@@ -200,6 +200,38 @@ is loaded the same way.
   <tr>
     <td>
       <code>
+        servicesPaths
+      </code>
+    </td>
+    
+    <td>
+      The directories the CLI scans for classes decorated with <code>
+        @Publish
+      </code>
+      
+      , the services the project serves. <code>
+        kinotic generate
+      </code>
+      
+       and <code>
+        kinotic sync
+      </code>
+      
+       write their definitions to <code>
+        ServiceDefinitions.ts
+      </code>
+      
+       under <code>
+        generatedPath
+      </code>
+      
+      , which the project imports so each service registers in the platform's service directory as it comes online.
+    </td>
+  </tr>
+  
+  <tr>
+    <td>
+      <code>
         generatedPath
       </code>
     </td>
@@ -209,7 +241,19 @@ is loaded the same way.
         entitiesPaths
       </code>
       
-       entries that are plain strings. Ignored for entries that use <code>
+       entries that are plain strings and for the <code>
+        ServiceDefinitions
+      </code>
+      
+       module of <code>
+        servicesPaths
+      </code>
+      
+      . Ignored for <code>
+        entitiesPaths
+      </code>
+      
+       entries that use <code>
         EntitiesPathConfig
       </code>
       

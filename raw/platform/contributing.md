@@ -49,6 +49,22 @@ We welcome contributions to Kinotic OS. This guide covers the repository structu
   <tr>
     <td>
       <code>
+        kinotic-app-api/
+      </code>
+    </td>
+    
+    <td>
+      The <code>
+        app-api
+      </code>
+      
+       services an application's runtimes and users call, hosted by the app server — the service directory registration of an application's services
+    </td>
+  </tr>
+  
+  <tr>
+    <td>
+      <code>
         kinotic-ee/
       </code>
     </td>
