@@ -2,7 +2,7 @@ package org.kinotic.domain.api.rest.support;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.ext.auth.oauth2.providers.OpenIDConnectAuth;
-import org.kinotic.domain.api.model.security.OidcProviderKind;
+import org.kinotic.domain.api.model.security.OidcProviderType;
 import org.kinotic.domain.api.model.security.identity.ParticipantIdentity;
 
 import java.nio.charset.StandardCharsets;
@@ -101,7 +101,7 @@ public final class OAuth2Util {
      * provider) — a token without an email claim cannot drive an
      * {@link ParticipantIdentity} lookup or creation.
      */
-    public static boolean isEmailVerified(Map<String, Object> claims, OidcProviderKind provider) {
+    public static boolean isEmailVerified(Map<String, Object> claims, OidcProviderType provider) {
         if (claims == null) return false;
         Object email = claims.get("email");
         if (!(email instanceof String emailStr) || emailStr.isBlank()) return false;
@@ -111,7 +111,7 @@ public final class OAuth2Util {
         if (explicit instanceof String s) return Boolean.parseBoolean(s);
 
         // No explicit claim — fall back to the per-provider trust convention.
-        return provider == OidcProviderKind.AZURE_AD || provider == OidcProviderKind.APPLE;
+        return provider == OidcProviderType.AZURE_AD || provider == OidcProviderType.APPLE;
     }
 
     /**

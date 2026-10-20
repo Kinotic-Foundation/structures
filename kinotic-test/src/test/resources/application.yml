@@ -16,9 +16,11 @@ kinotic:
   debug: true
   maxNumberOfCoresToUse: 4
   domain:
+    # the portal the emailed links open; the test node presents the management server's development UI
+    portalBaseUrl: http://localhost:9090
     email:
-      # the UI the emailed links open; the test node presents the management server's development UI
-      linkBaseUrl: http://localhost:9090
+      # no Azure Communication Services here: an invitation or verification send logs its link instead
+      enabled: false
     oauth:
       # Placeholder for tests only; nothing here drives the authorization-code flow, but the list
       # is validated non-empty so the context starts.

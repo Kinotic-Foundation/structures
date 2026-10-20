@@ -7,7 +7,7 @@ import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.domain.api.model.Reconcilable;
 import org.kinotic.domain.api.model.ReconcileState;
-import org.kinotic.domain.api.model.WatchEventKind;
+import org.kinotic.domain.api.model.WatchEventType;
 import org.kinotic.domain.internal.api.services.CrudServiceTemplate;
 import org.springframework.stereotype.Component;
 
@@ -131,7 +131,7 @@ public class ReconcileStateRepository {
         @SuppressWarnings("unchecked")
         Map<String, Object> upsertDocument = upsert == null ? null : crudServiceTemplate.getObjectMapper().convertValue(upsert, Map.class);
         return watchedStateRepository.write(document, UPDATE_DESIRED, params,
-                                            new WatchedChange(WatchEventKind.DESIRED_UPDATED, source, "Desired " + desired, desired),
+                                            new WatchedChange(WatchEventType.DESIRED_UPDATED, source, "Desired " + desired, desired),
                                             upsertDocument);
     }
 
@@ -154,7 +154,7 @@ public class ReconcileStateRepository {
         params.put("observed", observed);
         params.put("seen", seen);
         return watchedStateRepository.write(document, REPORT_OBSERVED, params,
-                                            new WatchedChange(WatchEventKind.OBSERVED_REPORTED, source, "Observed " + observed, observed));
+                                            new WatchedChange(WatchEventType.OBSERVED_REPORTED, source, "Observed " + observed, observed));
     }
 
     /**
@@ -170,7 +170,7 @@ public class ReconcileStateRepository {
         Validate.notNull(document, "document cannot be null");
         Validate.notBlank(source, "source cannot be blank");
         return watchedStateRepository.write(document, RENEW_DESIRED, Map.of(),
-                                            new WatchedChange(WatchEventKind.DESIRED_RENEWED, source, "Desired renewed", null));
+                                            new WatchedChange(WatchEventType.DESIRED_RENEWED, source, "Desired renewed", null));
     }
 
     /**
@@ -187,6 +187,6 @@ public class ReconcileStateRepository {
         Validate.notBlank(source, "source cannot be blank");
         Date at = new Date();
         return watchedStateRepository.write(document, REQUEST_DELETION, Map.of("at", at.toInstant().toString()),
-                                            new WatchedChange(WatchEventKind.DELETION_REQUESTED, source, "Deletion requested", at));
+                                            new WatchedChange(WatchEventType.DELETION_REQUESTED, source, "Deletion requested", at));
     }
 }

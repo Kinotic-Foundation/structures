@@ -13,9 +13,9 @@ import java.util.Date;
  * identity is established until the user completes onboarding, at which point it is consumed to
  * create the new Organization and its admin {@link ParticipantIdentity}, then deleted.
  * <p>
- * {@link #authType} records how the email was established: LOCAL (email/password verified by
- * clicking the link) or OIDC (federated, pre-verified by the IdP, carrying {@link #oidcSubject}
- * and {@link #oidcConfigId}).
+ * {@link #authType} records how the email was established: PASSWORD (verified by clicking the
+ * emailed link) or OIDC (federated, pre-verified by the IdP, carrying {@link #oidcSubject} and
+ * {@link #oidcConfigId}).
  */
 @Getter
 @Setter
@@ -39,12 +39,12 @@ public class PendingSignUp implements PendingVerification {
     /** Display name for the eventual {@link ParticipantIdentity}. For OIDC this is taken from the IdP claims. */
     private String displayName;
 
-    /** How the email was established — drives whether a password/credential is involved. */
+    /** How the email was established, and so whether a password is collected at completion. */
     private AuthType authType;
 
-    /** OIDC {@code sub} claim; null for LOCAL. */
+    /** OIDC {@code sub} claim; null for PASSWORD. */
     private String oidcSubject;
 
-    /** Id of the OIDC configuration that produced the identity; null for LOCAL. */
+    /** Id of the OIDC configuration that produced the identity; null for PASSWORD. */
     private String oidcConfigId;
 }

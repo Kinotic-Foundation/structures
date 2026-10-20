@@ -6,7 +6,7 @@ import org.apache.commons.lang3.Validate;
 import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.core.api.security.SecurityContext;
-import org.kinotic.domain.api.model.security.identity.MachineKind;
+import org.kinotic.domain.api.model.security.identity.MachineType;
 import org.kinotic.domain.api.model.security.identity.MachineParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.ParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.MachineProvisionResult;
@@ -41,7 +41,7 @@ public class DefaultMachineService implements MachineService {
         return applicationRepository.requireById(applicationId, participant.getOrganizationId())
                 .compose(app -> {
                     MachineParticipantIdentity machine = new MachineParticipantIdentity();
-                    machine.setMachineKind(MachineKind.CLIENT)
+                    machine.setMachineType(MachineType.CLIENT)
                            .setDisplayName(displayName)
                            .setOrganizationId(participant.getOrganizationId())
                            .setApplicationId(applicationId);

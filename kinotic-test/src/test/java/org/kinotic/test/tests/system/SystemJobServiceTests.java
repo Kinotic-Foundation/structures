@@ -1,6 +1,5 @@
 package org.kinotic.test.tests.system;
 
-import io.vertx.core.Future;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.kinotic.grind.api.model.ExecutionStatus;
@@ -17,7 +16,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -100,9 +98,5 @@ public class SystemJobServiceTests extends KinoticTestBase {
             ret = await(jobRuns.findRun(jobRunId));
         }
         return ret;
-    }
-
-    private static <T> T await(Future<T> future) throws Exception {
-        return future.toCompletionStage().toCompletableFuture().get(30, TimeUnit.SECONDS);
     }
 }

@@ -24,7 +24,7 @@ public final class MachineParticipantIdentity extends ParticipantIdentity {
     /**
      * What the machine is for; set when it is provisioned.
      */
-    private MachineKind machineKind;
+    private MachineType machineType;
 
     @Override
     public ParticipantIdentityType getType() {

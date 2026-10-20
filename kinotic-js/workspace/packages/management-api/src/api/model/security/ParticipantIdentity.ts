@@ -1,5 +1,4 @@
 import type { Identifiable } from '@kinotic-ai/core'
-import { AuthType } from '@/api/model/security/AuthType'
 import { ParticipantIdentityType } from '@/api/model/security/ParticipantIdentityType'
 
 /**
@@ -16,7 +15,6 @@ export abstract class ParticipantIdentity implements Identifiable<string> {
     public id: string | null = null
     public abstract readonly type: ParticipantIdentityType
     public displayName: string | null = null
-    public authType: AuthType | null = null
     public organizationId: string | null = null
     public applicationId: string | null = null
     public tenantId: string | null = null

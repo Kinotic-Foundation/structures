@@ -137,7 +137,7 @@ export class LoadTaskGeneratorFactory {
                     login        : 'kinotic@kinotic.local',
                     passcode     : 'kinotic',
                     authScopeType: 'ORGANIZATION',
-                    authScopeId  : 'kinotic-test',
+                    authScopeId  : 'test-org',
                     tenantId     : tenantId
                 }
             }

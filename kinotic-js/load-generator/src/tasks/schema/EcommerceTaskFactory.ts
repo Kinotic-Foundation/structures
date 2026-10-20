@@ -15,7 +15,7 @@ import { createKinoticTaskBuilder } from './CreateKinoticTaskBuilder'
 import { initKinoticAppClient } from '../../utils/AuthHelpers'
 
 export class EcommerceTaskFactory {
-    private readonly organizationId = 'kinotic-test'
+    private readonly organizationId = 'test-org'
     private readonly applicationId = 'ecommerce'
     private projectId = 'ecommerce_main_project'
     private readonly taskBuilder: CreateKinoticTaskBuilder

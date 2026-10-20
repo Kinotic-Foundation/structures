@@ -17,7 +17,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -85,9 +84,5 @@ public class JobRunLivenessTests extends KinoticTestBase {
         return new StatusCondition(StatusConditionType.SERVER_NODE_LEFT,
                                    "Node " + DEPARTED_NODE_ID + " left the cluster while the run was live",
                                    new Date());
-    }
-
-    private static <T> T await(Future<T> future) throws Exception {
-        return future.toCompletionStage().toCompletableFuture().get(30, TimeUnit.SECONDS);
     }
 }

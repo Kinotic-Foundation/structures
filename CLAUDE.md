@@ -49,7 +49,7 @@ Always use Lombok where possible: `@Getter`, `@Setter`, `@Accessors(chain = true
 
 Prefer a single `return` per method. Guard clauses that short-circuit errors or degenerate cases at the top of a method are fine (throwing, or bailing before the real work), but branching LOGIC paths use if/else assigning a result variable that is returned once at the end (the `String ret; if (...) { ret = ...; } else { ret = ...; } return ret;` idiom used throughout the codebase) — never a `return` inside each branch.
 
-Use `enum` for any field whose value is constrained to a known set — never `String` with magic-string constants. Spring and Vert.x both auto-coerce JSON strings to enum values when deserializing into typed POJOs (Jackson's `@JsonCreator` / case-insensitive matching is built-in), so the wire contract stays string-friendly while the in-process type catches typos at compile time. Examples: `AuthType`, `OidcProviderKind`.
+Use `enum` for any field whose value is constrained to a known set — never `String` with magic-string constants. Spring and Vert.x both auto-coerce JSON strings to enum values when deserializing into typed POJOs (Jackson's `@JsonCreator` / case-insensitive matching is built-in), so the wire contract stays string-friendly while the in-process type catches typos at compile time. Examples: `DelegateType`, `OidcProviderType`.
 
 When bridging a `CompletableFuture` into Vert.x, always pass the context: `Future.fromCompletionStage(stage, vertx.getOrCreateContext())`, never the single-argument overload. The stage may complete on a foreign thread (Azure SDK, Caffeine loader, JDK executor), and without the context argument everything composed after it leaves the request's Vert.x context — breaking anything downstream that reads a context-local, such as `SecurityContext`'s participant. For delays, use `vertx.timer(...)` instead of a JDK scheduled executor for the same reason.
 
@@ -98,6 +98,8 @@ Never remove or alter an existing authorship comment — `Created by <name> on <
 Properties should never be created for something that will not need to be configured differently in different environments. i.e. Kinotic Cloud dev vs Kinotic Cloud prod. In the case of a route or something that will be the same for multiple environments, create a constant.
 
 Never gate a bean on a Spring profile — `@Profile` is for test contexts only; profile-gated beans are hard to audit. Profiles are property bundles: an `application-<name>.yml` selects property values for a deployment shape. Which modules a server runs is decided by its server module: every library module auto-configures once it is on the runtime classpath, so the server's `build.gradle` dependencies select the modules, and `@SpringBootApplication(exclude = …)` excludes the auto-configuration of a module the server needs only for its types (`TestServerApplication` excludes `KinoticDomainAutoConfiguration`). Enabling or disabling a feature within a module is done with an explicit `kinotic.*` property read by `@ConditionalOnProperty` (`kinotic.managementApi.github.disableProvisioner` is the established idiom), so what a deployment runs can be read from its server module and YAML alone.
+
+One fact, one property. Never add a property whose value always equals another property's: a per-server copy of a setting, or a feature's own copy of a URL or domain that another module already configures. Put the fact in one property on the properties class of the nearest module that every reader of it loads, decided by where it is needed, never by default in a catch-all: the management server's API URL is read by management-api and the management server, which loads management-api, so it is `kinotic.managementApi.apiBaseUrl`; the app API URL is also read by the app server, which loads only kinotic-domain, so it is `kinotic.domain.appApiBaseUrl`. Derive anything else from that one property in code. Before adding a property, grep the yml profiles, Helm values, Terraform and compose files for the value it would hold; if another property already holds it, read that one. Two properties that must always match are Shotgun Surgery across every deployment file, and a bug the first time one is changed without the other.
 
 Properties are always scoped to the module and feature they configure: a setting lives as a field on the properties class of the thing it controls, nested under that module's tree (`kinotic.managementApi.github.disableProvisioner`, `kinotic.systemApi.deployment.managementServer.host`). The only root-level `kinotic.*` entries are genuinely platform-wide settings. Never park a feature-level flag at the root — a flag whose home class exists belongs on it, both as a field and in the `@ConditionalOnProperty` path.
 
@@ -150,6 +152,15 @@ column; the grammar reference explains what each nested element costs.
 ## Keep docs in sync with code
 
 When a change alters something the docs describe — a wire contract, public API signature, REST route, auth mechanism, configuration option, or user-facing behavior — update the affected docs in the same change. `website/content/**` must always reflect the correct and current shape of the system; stale docs are a defect, not a follow-up. Before finishing, grep `website/content` for the symbols, routes, and field names you changed and reconcile every hit. If a change is genuinely too large to document in the same pass, say so explicitly rather than leaving the docs silently wrong.
+
+## Docs follow features, never the other way round
+
+`website/content/**` describes what the code does; it never decides what the code should do. A
+request from the user drives a feature, and the docs are updated afterwards to match what was
+built. Never treat a sentence in the docs as the specification of a behaviour the code lacks, and
+never build, keep or refuse something because the docs say so. When a request contradicts the
+docs, or the docs claim a behaviour the code does not have, say so and ask which way to go; do not
+pick the docs' side on your own. The only authority a doc has is over the docs.
 
 ## Avoid these code smells
 

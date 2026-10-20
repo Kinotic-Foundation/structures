@@ -1,11 +1,11 @@
 import {Kinotic, Pageable} from '@kinotic-ai/core'
-import {DelegateKind, DelegateService} from '@kinotic-ai/management-api'
+import {DelegateType, DelegateService} from '@kinotic-ai/management-api'
 import type {DelegatingParticipantIdentity} from '@kinotic-ai/management-api'
 import * as allure from 'allure-js-commons'
 import {randomBytes, createHash} from 'node:crypto'
 import {WebSocket} from 'ws'
 import {afterAll, beforeAll, describe, expect, it} from 'vitest'
-import {E2E_FIXTURE_PASSWORD, E2E_ORG_USER_EMAIL, initKinoticClient, postForm, restBase, shutdownKinoticClient,
+import {E2E_FIXTURE_PASSWORD, E2E_ORG_USER_EMAIL, E2E_ORGANIZATION_ID, initKinoticClient, postForm, restBase, shutdownKinoticClient,
         stompUrl} from '../TestHelpers.js'
 
 const DEVICE_CODE_GRANT_TYPE = 'urn:ietf:params:oauth:grant-type:device_code'
@@ -121,7 +121,7 @@ describe('Kinotic JS', () => {
         expect(start.user_code).toBeTruthy()
 
         // the /device page approval, as DeviceVerification.vue sends it with the org user's session
-        const login = await fetch(`${restBase()}/api/auth/org/login`, {
+        const login = await fetch(`${restBase()}/api/auth/org/login/${E2E_ORGANIZATION_ID}`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({email: E2E_ORG_USER_EMAIL, password: E2E_FIXTURE_PASSWORD})
@@ -163,7 +163,7 @@ describe('Kinotic JS', () => {
         const delegateService = new DelegateService(Kinotic)
         const delegates = await delegateService.findMyDelegates(Pageable.create(0, 25))
         const cliDelegate: DelegatingParticipantIdentity | undefined =
-            delegates.content?.find(d => d.delegateKind === DelegateKind.CLI)
+            delegates.content?.find(d => d.delegateType === DelegateType.CLI)
         expect(cliDelegate).toBeDefined()
         expect(cliDelegate!.enabled).toBe(true)
         const sessions = await delegateService.findSessions(cliDelegate!.id!)

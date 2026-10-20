@@ -1,4 +1,4 @@
-import type { MachineKind } from '@/api/model/security/MachineKind'
+import type { MachineType } from '@/api/model/security/MachineType'
 import { ParticipantIdentity } from '@/api/model/security/ParticipantIdentity'
 import { ParticipantIdentityType } from '@/api/model/security/ParticipantIdentityType'
 
@@ -14,5 +14,5 @@ export class MachineParticipantIdentity extends ParticipantIdentity {
     /**
      * What the machine is for; set when it is provisioned.
      */
-    public machineKind: MachineKind | null = null
+    public machineType: MachineType | null = null
 }

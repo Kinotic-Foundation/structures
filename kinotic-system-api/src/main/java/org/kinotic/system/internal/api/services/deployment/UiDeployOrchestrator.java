@@ -3,6 +3,7 @@ package org.kinotic.system.internal.api.services.deployment;
 import io.vertx.core.Future;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.kinotic.domain.api.config.KinoticDomainProperties;
 import org.kinotic.domain.api.model.ReconcileState;
 import org.kinotic.domain.api.services.Reconciler;
 import org.kinotic.domain.api.model.Requeue;
@@ -50,6 +51,7 @@ public class UiDeployOrchestrator implements Reconciler<UiDeployment> {
     private final SiteWorkloadFactory siteWorkloadFactory;
     private final WorkloadOrchestrationService workloadOrchestrationService;
     private final KinoticSystemApiProperties properties;
+    private final KinoticDomainProperties domainProperties;
 
     @Override
     public WatchedType type() {
@@ -117,7 +119,7 @@ public class UiDeployOrchestrator implements Reconciler<UiDeployment> {
                     if (project == null || project.getNodeId() == null || properties.getSystemApi().isDisableAzureStorage()) {
                         ret = Future.succeededFuture();
                     } else {
-                        ret = siteStorageService.issueRemovalUrl(properties.getSystemApi().getUiDeployment().resolveHostname(current.getId()), REMOVAL_URL_TTL)
+                        ret = siteStorageService.issueRemovalUrl(domainProperties.getDomain().getPublishedSites().resolveHostname(current.getId()), REMOVAL_URL_TTL)
                                 .map(url -> siteWorkloadFactory.removal(current, project.getNodeId(), url))
                                 .compose(workloadOrchestrationService::deployWorkload)
                                 .compose(finished -> {

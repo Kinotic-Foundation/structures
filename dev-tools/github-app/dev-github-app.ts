@@ -4,7 +4,7 @@
 // "Local development environment".
 //
 //   bun dev-tools/github-app/dev-github-app.ts create --domain <you>.ngrok-free.dev [--name <app-name>] [--org <github-org>] [--force]
-//   bun dev-tools/github-app/dev-github-app.ts sync-es [--organization-id kinotic-test] [--es http://localhost:9200]
+//   bun dev-tools/github-app/dev-github-app.ts sync-es [--organization-id test-org] [--es http://localhost:9200]
 //
 // create runs GitHub's App manifest flow: a browser page posts the manifest below to GitHub,
 // the developer confirms, GitHub redirects back here with a code, and the code is exchanged
@@ -37,7 +37,7 @@ const APP_JSON = join(ENVIRONMENT_DIR, 'github-app.json')
 // The OrgSignupOidcConfiguration row id and secretNameRef seeded in V1__init.sql
 const SIGN_IN_CONFIG_ID = 'github-platform'
 // Organization the development migration seeds and its kinotic@kinotic.local user belongs to
-const DEFAULT_ORGANIZATION_ID = 'kinotic-test'
+const DEFAULT_ORGANIZATION_ID = 'test-org'
 
 interface CreatedApp {
     id: number
@@ -71,7 +71,7 @@ switch (positionals[0]) {
         break
     default:
         fail('usage: dev-github-app.ts create --domain <you>.ngrok-free.dev [--name <app-name>] [--org <github-org>] [--force]\n'
-             + '       dev-github-app.ts sync-es [--organization-id kinotic-test] [--es http://localhost:9200]')
+             + '       dev-github-app.ts sync-es [--organization-id test-org] [--es http://localhost:9200]')
 }
 
 async function create() {
@@ -172,12 +172,11 @@ function manifestPage(origin: string, name: string, redirectUrl: string, state: 
         hook_attributes: { url: `${origin}/api/github/webhook`, active: true },
         redirect_url: redirectUrl,
         // With request_oauth_on_install GitHub sends the post-install redirect to the first
-        // callback URL, carrying the user-authorization code completeInstall verifies
+        // callback URL, carrying the user-authorization code completeInstall verifies.
         callback_urls: [
             `${origin}/github/install/callback`,
+            // every sign-in flow through the registration returns to its one login callback
             `${origin}/api/auth/org/login/social/callback/${SIGN_IN_CONFIG_ID}`,
-            `${origin}/api/auth/org/signup/social/callback/${SIGN_IN_CONFIG_ID}`,
-            `${origin}/api/auth/invite/oidc/callback/${SIGN_IN_CONFIG_ID}`,
         ],
         request_oauth_on_install: true,
         // The installation-token scopes GitHubApiClient requests, and the sign-in email lookup.
@@ -215,26 +214,23 @@ function managementServerYml(origin: string, app: CreatedApp): string {
 # The github-platform sign-in row's OAuth client secret, resolved by EnvVarSecretReferenceResolver
 KINOTIC_AKV_GITHUB_PLATFORM: ${JSON.stringify(app.client_secret)}
 kinotic:
-  managementServer:
-    apiBaseUrl: ${origin}
-    portalBaseUrl: ${origin}
   domain:
-    email:
-      linkBaseUrl: ${origin}
-${githubYml(app)}`
+    portalBaseUrl: ${origin}
+${managementApiYml(app, origin)}`
 }
 
 // The system server keeps its own origins and mints deployments' fetch tokens as the App
 function systemServerYml(app: CreatedApp): string {
     return `# Written by dev-tools/github-app/dev-github-app.ts; imported by the system server's application-development.yml
 kinotic:
-${githubYml(app)}`
+${managementApiYml(app)}`
 }
 
-function githubYml(app: CreatedApp): string {
+// The managementApi block: the GitHub App, and for the management server its API's URL, the tunnel's origin
+function managementApiYml(app: CreatedApp, apiBaseUrl?: string): string {
     const pem = app.pem.trim().split('\n').map(line => `        ${line}`).join('\n')
     return `  managementApi:
-    github:
+${apiBaseUrl ? `    apiBaseUrl: ${apiBaseUrl}\n` : ''}    github:
       appId: "${app.id}"
       appSlug: ${app.slug}
       webhookSecret: ${JSON.stringify(app.webhook_secret)}
@@ -256,7 +252,7 @@ async function syncEs(app: CreatedApp) {
 }
 
 async function pointSignInRow(clientId: string) {
-    const resp = await fetch(`${values.es}/kinotic_org_signup_oidc_configuration/_update/${SIGN_IN_CONFIG_ID}?refresh=true`, {
+    const resp = await fetch(`${values.es}/kinotic_oidc_configuration/_update/${SIGN_IN_CONFIG_ID}?refresh=true`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         // updated is part of the server's OAuth client cache key, so the new client id takes effect

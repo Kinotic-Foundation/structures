@@ -1,20 +1,22 @@
 # ── DNS Records ───────────────────────────────────────────────────────────────
 # Each server's names → its LoadBalancer, which carries 443 to the server's gateway (REST,
-# STOMP/WebSocket, the login and OIDC callback endpoints): api.<domain> the management server,
-# system-api.<domain> the system server, and apps-api.<domain> with every application's
-# <organizationId>--<applicationId>.apps-api.<domain> the app server.
+# STOMP/WebSocket, the login and OIDC callback endpoints): api.<domain> the management server
+# and system-api.<domain> the system server, in the platform zone. The records are not proxied:
+# the servers terminate TLS with their own certificate, and the WebSocket and STOMP traffic
+# reaches them directly. The app server's names, apps-api.<zone> with every application's
+# <organizationId>--<applicationId> under it, are in the customers' zone (cloudflare.tf),
+# proxied to the same kind of load balancer.
 
 locals {
   server_records = {
     "api"        = "kinotic-server-management"
     "system-api" = "kinotic-server-system"
-    "apps-api"   = "kinotic-server-app"
-    "*.apps-api" = "kinotic-server-app"
   }
+  server_services = toset(concat(values(local.server_records), ["kinotic-server-app"]))
 }
 
 data "kubernetes_service" "server" {
-  for_each = toset(values(local.server_records))
+  for_each = local.server_services
 
   metadata {
     name      = each.key
@@ -23,17 +25,24 @@ data "kubernetes_service" "server" {
   depends_on = [helm_release.kinotic]
 }
 
-resource "azurerm_dns_a_record" "server" {
-  for_each = local.server_records
+# The records in the Azure zone are forgotten, not destroyed: the zone keeps answering while the
+# registrar's change to Cloudflare propagates, and is deleted by hand with them afterwards
+removed {
+  from = azurerm_dns_a_record.server
 
-  name                = each.key
-  zone_name           = local.global.dns_zone_name
-  resource_group_name = local.global.resource_group_name
-  ttl                 = 300
-  records             = [data.kubernetes_service.server[each.value].status[0].load_balancer[0].ingress[0].ip]
+  lifecycle {
+    destroy = false
+  }
 }
 
-moved {
-  from = azurerm_dns_a_record.api
-  to   = azurerm_dns_a_record.server["api"]
+resource "cloudflare_dns_record" "server" {
+  for_each = local.server_records
+
+  zone_id = local.global.dns_zone_id
+  name    = "${each.key}.${local.global.dns_zone_name}"
+  type    = "A"
+  content = data.kubernetes_service.server[each.value].status[0].load_balancer[0].ingress[0].ip
+  proxied = false
+  ttl     = 300
+  comment = "The ${each.value} load balancer"
 }

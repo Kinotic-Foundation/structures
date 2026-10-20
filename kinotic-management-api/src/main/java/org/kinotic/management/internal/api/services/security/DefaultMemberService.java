@@ -2,21 +2,27 @@ package org.kinotic.management.internal.api.services.security;
 
 import io.vertx.core.Future;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.core.api.security.SecurityContext;
-import org.kinotic.domain.api.model.Application;
-import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
+import org.kinotic.domain.api.model.security.Member;
+import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
 import org.kinotic.domain.api.model.security.PendingInvite;
+import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 import org.kinotic.domain.api.model.security.participant.OrganizationParticipant;
-import org.kinotic.domain.api.services.security.ParticipantIdentityService;
-import org.kinotic.domain.api.services.security.InviteService;
-import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.domain.api.repositories.ApplicationRepository;
+import org.kinotic.domain.api.services.security.InviteService;
+import org.kinotic.domain.api.services.security.MembershipService;
+import org.kinotic.domain.api.services.security.OidcConfigurationService;
+import org.kinotic.domain.api.services.security.ParticipantIdentityService;
+import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.management.api.model.PendingInviteSummary;
 import org.kinotic.management.api.services.security.MemberService;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 @Component
 @RequiredArgsConstructor
@@ -24,59 +30,165 @@ public class DefaultMemberService implements MemberService {
 
     private final SecurityContext securityContext;
     private final ParticipantIdentityService identityService;
+    private final MembershipService membershipService;
     private final InviteService inviteService;
+    private final OidcConfigurationService oidcConfigurationService;
     private final ApplicationRepository applicationRepository;
 
     @Override
-    public Future<Page<UserParticipantIdentity>> findMembers(String applicationId, Pageable pageable) {
+    public Future<Page<Member>> findMembers(String applicationId, Pageable pageable) {
         OrganizationParticipant participant = requireOrgParticipant();
-        // scope-composed query: a foreign or unknown application matches nothing
-        return identityService.findUsersByScope(participant.getOrganizationId(), applicationId, pageable);
+        // an application's members are its users; scope-composed query, so a foreign or unknown application matches nothing
+        return applicationId == null
+                ? membershipService.findMembers(participant.getOrganizationId(), pageable)
+                : identityService.findUsersByScope(participant.getOrganizationId(), applicationId, pageable)
+                                 .map(page -> page.map(Member::of));
     }
 
     @Override
-    public Future<Page<UserParticipantIdentity>> searchMembers(String searchText, String applicationId, Pageable pageable) {
+    public Future<Page<Member>> searchMembers(String searchText, String applicationId, Pageable pageable) {
         OrganizationParticipant participant = requireOrgParticipant();
-        return identityService.searchUsersByScope(searchText,
-                                                  participant.getOrganizationId(),
-                                                  applicationId,
-                                                  pageable);
+        return applicationId == null
+                ? membershipService.searchMembers(searchText, participant.getOrganizationId(), pageable)
+                : identityService.searchUsersByScope(searchText, participant.getOrganizationId(), applicationId, pageable)
+                                 .map(page -> page.map(Member::of));
+    }
+
+    @Override
+    public Future<Member> addMember(String email, String displayName, boolean sendInvitation) {
+        Validate.notBlank(email, "email is required");
+        OrganizationParticipant participant = requireOrgParticipant();
+        String address = DomainUtil.normalizeEmail(email);
+        return identityService.findByEmail(address, null, null)
+                              .compose(account -> account == null
+                                      ? provision(participant, address, displayName, sendInvitation)
+                                      // the account is someone's, or another organization's member to claim: joining it
+                                      // to this organization needs its holder's acceptance, whatever was asked
+                                      : invite(participant, address, displayName, null)
+                                              .map(invite -> new Member(null, invite.getEmail(), invite.getDisplayName(), true,
+                                                                        invite.getCreated(), true)));
+    }
+
+    // the organization creates the account and its membership at once: an invitation lets the address claim the
+    // account, and without one only the organization's own provider can, so it must have one
+    private Future<Member> provision(OrganizationParticipant participant, String address, String displayName, boolean sendInvitation) {
+        String organizationId = participant.getOrganizationId();
+        Future<Void> admissible = sendInvitation ? Future.succeededFuture() : requireOwnProvider(organizationId);
+        UserParticipantIdentity account = new UserParticipantIdentity();
+        account.setEmail(address)
+               .setDisplayName(StringUtils.trimToNull(displayName));
+        return admissible.compose(v -> identityService.createUser(account, null))
+                         .compose(created -> membershipService.addMember(created.getId(), organizationId)
+                                 .compose(membership -> {
+                                     Future<Void> invited = sendInvitation
+                                             ? invite(participant, address, displayName, null).mapEmpty()
+                                             : Future.succeededFuture();
+                                     return invited.map(v -> new Member(created.getId(), created.getEmail(), created.getDisplayName(),
+                                                                        true, membership.getCreated(), true));
+                                 }));
+    }
+
+    private Future<Void> requireOwnProvider(String organizationId) {
+        return oidcConfigurationService.findEnabledForScope(organizationId, null).map(offered -> {
+            Validate.isTrue(offered.stream().anyMatch(OrganizationOidcConfiguration.class::isInstance),
+                            "Without an invitation a new member can sign in only through one of your organization's own"
+                                    + " sign-in providers; configure one or send the invitation.");
+            return null;
+        });
+    }
+
+    @Override
+    public Future<Void> sendInvitation(String email) {
+        Validate.notBlank(email, "email is required");
+        OrganizationParticipant participant = requireOrgParticipant();
+        String organizationId = participant.getOrganizationId();
+        String address = DomainUtil.normalizeEmail(email);
+        return inviteService.findPendingInvite(address, organizationId).compose(pending -> {
+            Future<Void> ret;
+            if (pending != null) {
+                ret = inviteService.resendInvite(pending.getId(), organizationId);
+            } else {
+                // a member added without an invitation gets one now, to claim the account with
+                ret = pendingMember(address, organizationId)
+                        .compose(member -> invite(participant, address, member.getDisplayName(), null))
+                        .mapEmpty();
+            }
+            return ret;
+        });
+    }
+
+    // the account of the organization's member at the address that no sign-in method signs in yet
+    private Future<UserParticipantIdentity> pendingMember(String address, String organizationId) {
+        return identityService.findByEmail(address, null, null).compose(account -> {
+            Validate.isTrue(account != null, "No pending member has this email.");
+            return membershipService.findMembership(account.getId(), organizationId).compose(membership -> {
+                Validate.isTrue(membership != null, "No pending member has this email.");
+                return identityService.hasSignInMethod(account.getId()).map(claimed -> {
+                    Validate.isTrue(!claimed, "This member has already signed in.");
+                    return account;
+                });
+            });
+        });
     }
 
     @Override
     public Future<PendingInviteSummary> inviteMember(String email, String displayName, String applicationId) {
         Validate.notBlank(email, "email is required");
+        Validate.isTrue(StringUtils.isNotBlank(applicationId), "applicationId is required; an organization's members are added with addMember");
         OrganizationParticipant participant = requireOrgParticipant();
-        return requireOwnedApplication(applicationId, participant.getOrganizationId())
-                .compose(app -> {
-                    PendingInvite invite = new PendingInvite()
-                            .setEmail(email)
-                            .setDisplayName(displayName)
-                            .setOrganizationId(participant.getOrganizationId())
-                            .setApplicationId(applicationId)
-                            .setInvitedById(participant.getId())
-                            .setInvitedByName(participantDisplayName(participant));
-                    return inviteService.createInvite(invite);
-                })
-                .map(PendingInviteSummary::from);
+        // an invitation persists a reference to the application, so it must be one of the organization's
+        return applicationRepository.requireById(applicationId, participant.getOrganizationId())
+                                    .compose(app -> invite(participant, DomainUtil.normalizeEmail(email), displayName, applicationId))
+                                    .map(PendingInviteSummary::from);
+    }
+
+    private Future<PendingInvite> invite(OrganizationParticipant participant, String email, String displayName, String applicationId) {
+        PendingInvite invite = new PendingInvite()
+                .setEmail(email)
+                .setDisplayName(displayName)
+                .setOrganizationId(participant.getOrganizationId())
+                .setApplicationId(applicationId)
+                .setInvitedById(participant.getId())
+                .setInvitedByName(participantDisplayName(participant));
+        return inviteService.createInvite(invite);
     }
 
     @Override
     public Future<Void> setMemberEnabled(String identityId, boolean enabled) {
         OrganizationParticipant participant = requireOrgParticipant();
         return loadOwnedMember(identityId, participant)
-                // saveSync so the console's immediate re-query sees the change
-                .compose(user -> identityService.saveSync(user.setEnabled(enabled)))
-                .mapEmpty();
+                .compose(member -> member.isAccount()
+                        ? membershipService.setMemberEnabled(member.getId(), participant.getOrganizationId(), enabled)
+                        // saveSync so the console's immediate re-query sees the change
+                        : identityService.saveSync(member.setEnabled(enabled)).mapEmpty());
     }
 
     @Override
     public Future<Void> removeMember(String identityId) {
         OrganizationParticipant participant = requireOrgParticipant();
         return loadOwnedMember(identityId, participant)
-                // Cascades the IdentityCredential; sync so the console's immediate re-query
-                // no longer shows the member.
-                .compose(user -> identityService.deleteByIdSync(user.getId()));
+                .compose(member -> member.isAccount()
+                        ? removeAccountMember(member, participant.getOrganizationId())
+                        // Cascades the IdentityCredential; sync so the console's immediate re-query
+                        // no longer shows the member.
+                        : identityService.deleteByIdSync(member.getId()));
+    }
+
+    // the membership goes, with the invitation the member never accepted, and so does an account nobody signs in to
+    // that holds no other membership, which nothing could reach
+    private Future<Void> removeAccountMember(UserParticipantIdentity account, String organizationId) {
+        return membershipService.removeMember(account.getId(), organizationId)
+                .compose(v -> inviteService.findPendingInvite(account.getEmail(), organizationId))
+                .compose(invite -> invite == null
+                        ? Future.<Void>succeededFuture()
+                        : inviteService.cancelInvite(invite.getId(), organizationId))
+                .compose(v -> identityService.hasSignInMethod(account.getId()))
+                .compose(claimed -> claimed
+                        ? Future.succeededFuture(false)
+                        : membershipService.findMemberships(account.getId()).map(List::isEmpty))
+                .compose(orphaned -> orphaned
+                        ? identityService.deleteByIdSync(account.getId())
+                        : Future.<Void>succeededFuture());
     }
 
     @Override
@@ -103,23 +215,9 @@ public class DefaultMemberService implements MemberService {
     }
 
     /**
-     * The write-path guard: an invitation persists a reference to an application, so the
-     * application must exist in the participant's org. Completes with null for an org-member
-     * invite (no applicationId).
-     */
-    private Future<Application> requireOwnedApplication(String applicationId, String organizationId) {
-        Future<Application> ret;
-        if (applicationId == null) {
-            ret = Future.succeededFuture();
-        } else {
-            ret = applicationRepository.requireById(applicationId, organizationId);
-        }
-        return ret;
-    }
-
-    /**
-     * Loads a member of the participant's organization for mutation. Rejects acting on the
-     * caller's own account, so an admin can't disable or remove themselves out of the org.
+     * Loads a member of the participant's organization for mutation: an account holding a membership of it,
+     * or a user of one of its applications. Rejects acting on the caller's own account, so an admin can't
+     * disable or remove themselves out of the org.
      */
     private Future<UserParticipantIdentity> loadOwnedMember(String identityId, OrganizationParticipant participant) {
         Validate.notBlank(identityId, "identityId is required");
@@ -128,11 +226,20 @@ public class DefaultMemberService implements MemberService {
                     new IllegalArgumentException("You cannot perform this action on your own account."));
         }
         return identityService.findById(identityId)
-                // a delegate id gets the same not-found as a foreign one — member management
-                // operates on people; delegates are managed by their owner's revocation flow
-                .map(identity -> DomainUtil.requireOwned(identity, UserParticipantIdentity.class,
-                        user -> participant.getOrganizationId().equals(user.getOrganizationId()),
-                        "Member not found."));
+                .compose(identity -> {
+                    // a delegate id gets the same not-found as a foreign one — member management
+                    // operates on people; delegates are managed by their owner's revocation flow
+                    UserParticipantIdentity user = DomainUtil.requireOwned(identity, UserParticipantIdentity.class,
+                            found -> found.isAccount() || participant.getOrganizationId().equals(found.getOrganizationId()),
+                            "Member not found.");
+                    // an account is the organization's member only through a membership of it
+                    return user.isAccount()
+                            ? membershipService.findMembership(user.getId(), participant.getOrganizationId()).map(membership -> {
+                                Validate.isTrue(membership != null, "Member not found.");
+                                return user;
+                            })
+                            : Future.succeededFuture(user);
+                });
     }
 
     private static String participantDisplayName(OrganizationParticipant participant) {

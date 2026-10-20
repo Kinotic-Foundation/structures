@@ -144,8 +144,17 @@ public final class SessionBinding {
         return authority != null ? authority.host() : null;
     }
 
+    /**
+     * The session key of the entry named {@code name} belonging to the page at {@code origin}: a session
+     * serves every page that presents its cookie, so what a page's own sign-in leaves for it is keyed by the
+     * page, as its login is. A request that names no page has its own slot.
+     */
+    public static String pageKey(String name, String origin) {
+        return name + "@" + (origin != null ? origin : "");
+    }
+
     private static String loginKey(String origin) {
-        return LOGIN_KEY_PREFIX + (origin != null ? origin : "");
+        return pageKey(ConnectedInfo.class.getName(), origin);
     }
 
     private static Stream<ConnectedInfo> logins(Session session) {

@@ -25,7 +25,7 @@ export class BaseProviderRepository extends EntityRepository<Provider> {
   private readonly shouldValidate: boolean
 
   constructor(shouldValidate: boolean = true, entitiesRepository?: IEntitiesRepository) {
-    super('kinotic-test', 'healthcare', 'Provider', entitiesRepository)
+    super('test-org', 'healthcare', 'Provider', entitiesRepository)
     this.shouldValidate = shouldValidate
   }
 

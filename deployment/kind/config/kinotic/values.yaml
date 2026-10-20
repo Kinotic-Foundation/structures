@@ -8,6 +8,13 @@ image:
 servers:
   kinotic-server-management:
     replicaCount: 1
+    # No Cloudflare zone: an organization's sites record is logged in place of being created, and no DNS
+    # token is mounted
+    cloudflareDns: false
+    # Cloudflare's always-passing Turnstile test site; its secret key is in the KinD Secret
+    managementServer:
+      turnstile:
+        siteKey: 1x00000000000000000000AA
     # The portal, served from the management server's jar: https://localhost (or http://localhost:9090)
     webServer:
       enabled: true
@@ -29,16 +36,17 @@ servers:
         memory: 2Gi
   kinotic-server-system:
     replicaCount: 1
+    cloudflareDns: false
     tlsSecretName: kinotic-tls
     service:
       type: NodePort
       nodePorts:
         gateway: 30504
     extraEnv:
-      # No Azure storage accounts: the site provisioner is the mock, and the site settings, validated
-      # at boot, are placeholders
+      # No Azure storage accounts: the site provisioner is the mock, and the site settings are
+      # placeholders, the storage endpoint because it is validated at boot
       KINOTIC_SYSTEMAPI_DISABLEAZURESTORAGE: "true"
-      KINOTIC_SYSTEMAPI_UIDEPLOYMENT_SITESDOMAIN: apps.localhost
+      KINOTIC_DOMAIN_PUBLISHEDSITES_DOMAIN: apps.localhost
       KINOTIC_SYSTEMAPI_UIDEPLOYMENT_SITESSTORAGEENDPOINT: "-"
       # What a workload dials, on the ports KinD maps on the host: the management server for sync and SBOM,
       # the app server for runtime. A workload runs in a micro VM outside the cluster; a BOXLITE

@@ -8,7 +8,7 @@ import { v4 as uuidv4 } from "uuid"
 // Same app-zone setup as Publish.test.ts, under its own application id so the two suites
 // never share service registrations on the gateway.
 const APP_ID = 'reconnect-app'
-const ZONE = `app.kinotic-test.${APP_ID}`
+const ZONE = `app.test-org.${APP_ID}`
 
 describe('Kinotic JS', () => {
   describe('packages/core', () => {

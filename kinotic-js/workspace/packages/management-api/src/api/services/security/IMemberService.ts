@@ -8,7 +8,7 @@ import {
     type Page,
     type Pageable
 } from '@kinotic-ai/core'
-import { UserParticipantIdentity } from '@/api/model/security/UserParticipantIdentity'
+import { Member } from '@/api/model/security/Member'
 import { PendingInviteSummary } from '@/api/model/security/PendingInviteSummary'
 
 /**
@@ -20,20 +20,39 @@ import { PendingInviteSummary } from '@/api/model/security/PendingInviteSummary'
 export interface IMemberService {
 
     /** Lists the members of the scope. */
-    findMembers(applicationId: string | null, pageable: Pageable): Promise<IterablePage<UserParticipantIdentity>>
+    findMembers(applicationId: string | null, pageable: Pageable): Promise<IterablePage<Member>>
 
     /**
      * Searches the scope's members by free text over email and display name. Blank
      * searchText is equivalent to {@link findMembers}.
      */
-    searchMembers(searchText: string, applicationId: string | null, pageable: Pageable): Promise<IterablePage<UserParticipantIdentity>>
+    searchMembers(searchText: string, applicationId: string | null, pageable: Pageable): Promise<IterablePage<Member>>
 
     /**
-     * Invites someone into the scope by email. Sends the invitation email and returns the
-     * pending invitation. Rejects when the email already has an account in the scope or an
-     * invitation is already pending for it.
+     * Adds a person to the organization by email. An address with no account yet gets one, with no sign-in method,
+     * and its membership at once, so the person is listed as pending; with sendInvitation an invitation is emailed,
+     * whose acceptance claims the account, and without one the person signs in through one of the organization's own
+     * providers, which claims the account on the first sign-in, so the organization must have one. An address that
+     * already has an account is emailed an invitation whatever sendInvitation says, since joining needs its holder's
+     * acceptance, and joins once accepted. Rejects an address that is already a member, one an invitation is already
+     * pending for, or an address with no account when no invitation is sent and the organization has no provider of
+     * its own. Returns the member as listed, pending until they first sign in; for an address that already had an
+     * account, a pending member with no id yet.
      */
-    inviteMember(email: string, displayName: string | null, applicationId: string | null): Promise<PendingInviteSummary>
+    addMember(email: string, displayName: string | null, sendInvitation: boolean): Promise<Member>
+
+    /**
+     * Emails an invitation to a pending member of the organization: the one they have, again, or a new one for a
+     * member added without. Rejects an address that is not a pending member's.
+     */
+    sendInvitation(email: string): Promise<void>
+
+    /**
+     * Invites someone into one of the organization's applications by email. Sends the invitation email and returns
+     * the pending invitation, whose acceptance creates the application's user. Rejects when the email already has a
+     * user in the application or an invitation is already pending for it.
+     */
+    inviteMember(email: string, displayName: string | null, applicationId: string): Promise<PendingInviteSummary>
 
     /**
      * Enables or disables a member of the caller's organization. Disabling gates future
@@ -42,8 +61,9 @@ export interface IMemberService {
     setMemberEnabled(userId: string, enabled: boolean): Promise<void>
 
     /**
-     * Permanently removes a member of the caller's organization, including any stored
-     * credential. Callers cannot remove themselves.
+     * Removes a member of the caller's organization: the account's membership, and the account itself when no
+     * sign-in method signs it in and no other membership remains; or an application user with its stored credential.
+     * Callers cannot remove themselves.
      */
     removeMember(userId: string): Promise<void>
 
@@ -54,7 +74,7 @@ export interface IMemberService {
     cancelInvite(inviteId: string): Promise<void>
 
     /** An {@link IDataSource} over the scope's members, for table components. */
-    memberDataSource(applicationId: string | null): IDataSource<UserParticipantIdentity>
+    memberDataSource(applicationId: string | null): IDataSource<Member>
 
 }
 
@@ -66,19 +86,27 @@ export class MemberService implements IMemberService {
         this.serviceProxy = kinotic.serviceProxy(`${MANAGEMENT_API_ZONE}~org.kinotic.management.api.services.security.MemberService`)
     }
 
-    public async findMembers(applicationId: string | null, pageable: Pageable): Promise<IterablePage<UserParticipantIdentity>> {
-        const page: Page<UserParticipantIdentity> = await this.serviceProxy.invoke('findMembers', [applicationId, pageable])
+    public async findMembers(applicationId: string | null, pageable: Pageable): Promise<IterablePage<Member>> {
+        const page: Page<Member> = await this.serviceProxy.invoke('findMembers', [applicationId, pageable])
         return new FunctionalIterablePage(pageable, page,
             (next: Pageable) => this.serviceProxy.invoke('findMembers', [applicationId, next]))
     }
 
-    public async searchMembers(searchText: string, applicationId: string | null, pageable: Pageable): Promise<IterablePage<UserParticipantIdentity>> {
-        const page: Page<UserParticipantIdentity> = await this.serviceProxy.invoke('searchMembers', [searchText, applicationId, pageable])
+    public async searchMembers(searchText: string, applicationId: string | null, pageable: Pageable): Promise<IterablePage<Member>> {
+        const page: Page<Member> = await this.serviceProxy.invoke('searchMembers', [searchText, applicationId, pageable])
         return new FunctionalIterablePage(pageable, page,
             (next: Pageable) => this.serviceProxy.invoke('searchMembers', [searchText, applicationId, next]))
     }
 
-    public inviteMember(email: string, displayName: string | null, applicationId: string | null): Promise<PendingInviteSummary> {
+    public addMember(email: string, displayName: string | null, sendInvitation: boolean): Promise<Member> {
+        return this.serviceProxy.invoke('addMember', [email, displayName, sendInvitation])
+    }
+
+    public sendInvitation(email: string): Promise<void> {
+        return this.serviceProxy.invoke('sendInvitation', [email])
+    }
+
+    public inviteMember(email: string, displayName: string | null, applicationId: string): Promise<PendingInviteSummary> {
         return this.serviceProxy.invoke('inviteMember', [email, displayName, applicationId])
     }
 
@@ -100,7 +128,7 @@ export class MemberService implements IMemberService {
         return this.serviceProxy.invoke('cancelInvite', [inviteId])
     }
 
-    public memberDataSource(applicationId: string | null): IDataSource<UserParticipantIdentity> {
+    public memberDataSource(applicationId: string | null): IDataSource<Member> {
         return {
             findAll: (pageable: Pageable) => this.findMembers(applicationId, pageable),
             search: (searchText: string, pageable: Pageable) => this.searchMembers(searchText, applicationId, pageable)

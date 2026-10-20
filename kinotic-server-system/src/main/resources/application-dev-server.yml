@@ -1,6 +1,6 @@
 # The development server's system server: kinotic-server-system as a container on one Proxmox host
 # beside three Elasticsearch nodes and the observability stack (deployment/terraform/proxmox), with
-# Front Door, the sites storage account, email, and a Key Vault in Azure
+# the sites storage account, email, and a Key Vault in Azure and the sites Worker on Cloudflare
 # (deployment/terraform/azure/dev-server). Activated as `production,dev-server`. Holds what is
 # fixed for this shape of deployment; everything that differs per server — hostnames,
 # endpoints, addresses — arrives through the environment the terraform root composes, and

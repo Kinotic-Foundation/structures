@@ -29,6 +29,18 @@
   </form>
 </template>
 
+<script lang="ts">
+/** The name a provider kind is shown by, on its sign-in button and wherever the portal lists it. */
+export function providerDisplayName(provider: string): string {
+  switch (provider) {
+    case 'azure-ad': return 'Microsoft'
+    case 'github':   return 'GitHub'
+    case 'google':   return 'Google'
+    default:         return provider.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ')
+  }
+}
+</script>
+
 <script setup lang="ts">
 import { computed } from 'vue'
 import { isDark } from '@kinotic-ai/frontend-common'
@@ -39,12 +51,15 @@ import googleSignUpLight from '@/assets/social/google/web_light_rd_SU.svg'
 import googleSignUpDark  from '@/assets/social/google/web_dark_rd_SU.svg'
 import microsoftLogoUrl  from '@/assets/social/entra/ms-symbollockup_mssymbol_19.svg'
 
-export type Intent = 'sign-in' | 'sign-up'
+/** What the button does: signs in, signs up, or connects the provider to the signed-in account. */
+export type Intent = 'sign-in' | 'sign-up' | 'connect'
 
 const props = defineProps<{
   provider: string
   action: string
   intent: Intent
+  /** The configuration's own name, shown for a provider without branded artwork, such as an organization's Okta. */
+  name?: string
 }>()
 
 const isDarkMode = isDark
@@ -60,26 +75,20 @@ const brandedAsset = computed<string | null>(() => {
 
 const microsoftLogo = microsoftLogoUrl
 
-const microsoftLabel = computed<string>(() => {
-  return props.intent === 'sign-up' ? 'Sign up with Microsoft' : 'Sign in with Microsoft'
-})
-
-const githubLabel = computed<string>(() => {
-  return props.intent === 'sign-up' ? 'Sign up with GitHub' : 'Sign in with GitHub'
-})
-
-const providerDisplayName = computed<string>(() => {
-  switch (props.provider) {
-    case 'azure-ad': return 'Microsoft'
-    case 'github':   return 'GitHub'
-    case 'google':   return 'Google'
-    default:         return props.provider.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ')
+/** The verb the intent reads as before the provider's name. */
+const verb = computed<string>(() => {
+  switch (props.intent) {
+    case 'sign-up': return 'Sign up with'
+    case 'connect': return 'Connect'
+    default:        return 'Sign in with'
   }
 })
 
-const genericLabel = computed<string>(() => {
-  return `${props.intent === 'sign-up' ? 'Sign up' : 'Sign in'} with ${providerDisplayName.value}`
-})
+const microsoftLabel = computed<string>(() => `${verb.value} Microsoft`)
+
+const githubLabel = computed<string>(() => `${verb.value} GitHub`)
+
+const genericLabel = computed<string>(() => `${verb.value} ${props.name ?? providerDisplayName(props.provider)}`)
 
 const ariaLabel = genericLabel
 </script>

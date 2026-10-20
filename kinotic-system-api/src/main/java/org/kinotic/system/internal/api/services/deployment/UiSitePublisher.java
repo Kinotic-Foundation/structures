@@ -5,16 +5,17 @@ import io.vertx.core.json.JsonObject;
 import lombok.RequiredArgsConstructor;
 import org.kinotic.core.api.exceptions.AlreadyExistsException;
 import org.kinotic.core.api.utils.ZoneUtil;
+import org.kinotic.domain.api.config.KinoticDomainProperties;
+import org.kinotic.domain.api.config.PublishedSitesProperties;
 import org.kinotic.domain.api.utils.HostLabelUtil;
 import org.kinotic.domain.api.model.WatchedParent;
 import org.kinotic.domain.api.model.WatchedType;
+import org.kinotic.domain.api.services.OrganizationDnsRecordProvisioner;
 import org.kinotic.management.api.model.Project;
 import org.kinotic.management.api.model.deployment.UiArtifact;
 import org.kinotic.management.api.model.deployment.UiDeployment;
 import org.kinotic.management.api.model.workload.Workload;
 import org.kinotic.management.api.repositories.UiDeploymentRepository;
-import org.kinotic.system.api.config.KinoticSystemApiProperties;
-import org.kinotic.system.api.config.UiDeploymentProperties;
 import org.kinotic.management.api.model.deployment.DeployTarget;
 import org.kinotic.system.api.services.deployment.SiteStorageService;
 import org.kinotic.system.api.services.workload.WorkloadOrchestrationService;
@@ -42,14 +43,18 @@ public class UiSitePublisher {
     private final SiteStorageService siteStorageService;
     private final SiteWorkloadFactory siteWorkloadFactory;
     private final WorkloadOrchestrationService workloadOrchestrationService;
-    private final KinoticSystemApiProperties properties;
+    private final OrganizationDnsRecordProvisioner dnsRecordProvisioner;
+    private final KinoticDomainProperties domainProperties;
 
     /**
-     * The row a UI publishes to: its existing site, or one minted for its first publish. Fails when
-     * the site of a UI of the same name belongs to another project of the application.
+     * The row a UI publishes to: its existing site, or one minted for its first publish, which also ensures
+     * the organization's subdomain is provisioned at the edge. Fails when the site of a UI of the same name
+     * belongs to another project of the application, or the edge refused the subdomain.
      */
     public Future<UiDeployment> deploymentFor(Project project, UiArtifact ui, UiDeployment existing) {
-        return existing == null ? mintDeployment(project, ui) : Future.succeededFuture(existing);
+        return existing == null
+                ? dnsRecordProvisioner.ensure(project.getOrganizationId()).compose(v -> mintDeployment(project, ui))
+                : Future.succeededFuture(existing);
     }
 
     /**
@@ -72,27 +77,30 @@ public class UiSitePublisher {
     }
 
     private String hostname(UiDeployment row) {
-        return uiDeployment().resolveHostname(row.getId());
+        return publishedSites().resolveHostname(row.getId());
     }
 
     /**
-     * Mints the site's label, {@code <org>--<app>--<ui>}, and its URL under the sites domain. The store
-     * enforces the label's uniqueness on create, which keeps a UI name to one project of the application.
+     * Mints the site's id, {@code <app>--<ui>.<org>}, its hostname under the sites domain, and its URL. The store
+     * enforces the id's uniqueness on create, which keeps a UI name to one project of the application.
      */
     private Future<UiDeployment> mintDeployment(Project project, UiArtifact ui) {
         String label = HostLabelUtil.siteLabel(project.applicationKey(), ui.name());
         // guards rows written around the services that validate each part, such as a migration's seed data:
         // a label outside DNS's grammar names no host under the sites domain
         ZoneUtil.validateLabel(label);
+        ZoneUtil.validateLabel(project.getOrganizationId());
         Future<UiDeployment> ret;
-        if (label.length() > HostLabelUtil.MAX_HOST_LABEL_LENGTH) {
+        if (label.length() > HostLabelUtil.MAX_SITE_LABEL_LENGTH) {
             ret = Future.failedFuture(new IllegalStateException("The hostname label " + label + " for UI " + ui.name()
                     + " of application " + project.getApplicationId() + " of organization " + project.getOrganizationId()
-                    + " is longer than " + HostLabelUtil.MAX_HOST_LABEL_LENGTH + " characters; shorten the application or UI name"));
+                    + " is longer than " + HostLabelUtil.MAX_SITE_LABEL_LENGTH
+                    + " characters, the most a site label may take so a tenant's name fits in front of it; shorten the application or UI name"));
         } else {
+            String siteId = HostLabelUtil.siteId(project.applicationKey(), ui.name());
             UiDeployment deployment = new UiDeployment()
-                    .setId(label)
-                    .setUrl(uiDeployment().resolveSiteUrl(label))
+                    .setId(siteId)
+                    .setUrl(publishedSites().resolveSiteUrl(siteId))
                     .setOrganizationId(project.getOrganizationId())
                     .setApplicationId(project.getApplicationId())
                     .setProjectId(project.getId())
@@ -109,8 +117,8 @@ public class UiSitePublisher {
         return ret;
     }
 
-    private UiDeploymentProperties uiDeployment() {
-        return properties.getSystemApi().getUiDeployment();
+    private PublishedSitesProperties publishedSites() {
+        return domainProperties.getDomain().getPublishedSites();
     }
 
 }

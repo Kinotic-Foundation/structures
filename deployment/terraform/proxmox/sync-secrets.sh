@@ -2,8 +2,10 @@
 # Copies a secrets directory (generate-secrets.sh) to the host's secrets directory, each
 # server's directory owned by the user the servers' containers run as, and restarts the
 # containers that read it: the applier for the servers and Grafana, whose env files it merges,
-# and a reboot for each server, which reads its mounted directory itself. The certificates
-# certbot placed on the host are left alone.
+# and a reboot for each server, which reads its mounted directory itself. The Cloudflare DNS
+# token in kinotic-servers.env is also written into the credentials file certbot's dns-cloudflare
+# plugin and kinotic-dyndns read, so the host's certificates and records follow the same token.
+# The certificates certbot placed on the host are left alone.
 #
 #   sync-secrets.sh <secrets dir> [host]      host defaults to the root's proxmox_host output
 set -euo pipefail
@@ -24,6 +26,8 @@ ssh "root@$HOST" "
   for dir in '$DEST'/kinotic-server-*; do
     [ -d \"\$dir\" ] && chown -R 101002:101001 \"\$dir\"
   done
+  token=\$(sed -n 's/^KINOTIC_DOMAIN_PUBLISHEDSITES_CLOUDFLARE_APITOKEN=//p' '$DEST/kinotic-servers.env')
+  [ -n \"\$token\" ] && printf 'dns_cloudflare_api_token = %s\n' \"\$token\" | install -m 0600 /dev/stdin /etc/kinotic/certbot-cloudflare.ini
   for manifest in '$SNIPPETS'/kinotic-kinotic-server-*.manifest.json '$SNIPPETS/kinotic-grafana.manifest.json'; do
     [ -e \"\$manifest\" ] && python3 '$SNIPPETS/kinotic-apply-container.py' \"\$manifest\"
   done

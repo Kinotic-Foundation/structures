@@ -4,17 +4,17 @@
 
 <script setup lang="ts">
 /** The kind of scope a breadcrumb segment names. */
-export type ScopeKind = 'system' | 'organization' | 'application' | 'project'
+export type ScopeType = 'system' | 'organization' | 'application' | 'project'
 
 /**
  * The small outlined pill after a breadcrumb segment's name, naming the kind of scope it is in
  * that kind's color. Hidden on the narrowest screens.
  */
 defineProps<{
-  kind: ScopeKind
+  kind: ScopeType
 }>()
 
-const COLORS: Record<ScopeKind, string> = {
+const COLORS: Record<ScopeType, string> = {
   system: 'border-surface-300 bg-surface-100 text-surface-600 dark:border-surface-600 dark:bg-surface-800 dark:text-surface-300',
   organization: 'border-green-200 bg-green-50 text-green-700 dark:border-green-500/30 dark:bg-green-500/10 dark:text-green-300',
   application: 'border-blue-200 bg-blue-50 text-blue-600 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-300',
