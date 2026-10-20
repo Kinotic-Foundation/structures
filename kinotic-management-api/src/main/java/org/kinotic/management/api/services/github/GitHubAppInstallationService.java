@@ -39,7 +39,9 @@ public interface GitHubAppInstallationService {
      * @param returnTo SPA route the user wants to land back on after the install
      *                 completes; echoed back from {@link #completeInstall(long, String, String)}.
      *                 May carry query params (e.g. {@code /projects?openNewProject=1})
-     *                 to signal "what to do on arrival" to the destination page. May be null.
+     *                 to signal "what to do on arrival" to the destination page, or be an
+     *                 absolute http(s) URL that returns the browser to another UI, such as
+     *                 one built on Kinotic that started the install. May be null.
      */
     Future<String> startInstall(String returnTo);
 

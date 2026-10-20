@@ -19,7 +19,8 @@ export interface IGitHubAppInstallationService {
      *
      * returnTo is echoed back from {@link completeInstall} and may carry query
      * params (e.g. {@code /projects?openNewProject=1}) so the destination page
-     * can pick up where the user was.
+     * can pick up where the user was. An absolute http(s) URL returns the browser
+     * to another UI, such as one built on Kinotic that started the install.
      */
     startInstall(returnTo: string | null): Promise<string>
 
