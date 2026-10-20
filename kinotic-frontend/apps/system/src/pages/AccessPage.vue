@@ -39,7 +39,7 @@
       <AccessCheckPanel :tint="TINTS.ink" :operators="operators" :machines="machines" :roles="roles" :catalog="catalog"
                         :label-of="labelOf" :initial-subject-id="subjectFilter?.id" />
 
-      <GrantAccessDrawer v-model:visible="grantDrawerVisible" :roles="orderedRoles" :operators="operators" :machines="machines"
+      <GrantAccessDrawer v-model:visible="grantDrawerVisible" :roles="roles" :operators="operators" :machines="machines"
                          @granted="onGranted" />
     </div>
   </div>
@@ -94,9 +94,6 @@ const shown = computed(() => subjectFilter.value
     ? grants.value.filter(grant => grant.subject.id === subjectFilter.value?.id)
     : grants.value)
 
-// the platform's own roles lead the picker, the organization tree's follow
-const orderedRoles = computed(() => [...roles.value].sort((a, b) => Number(platformRole(b)) - Number(platformRole(a)) || a.name.localeCompare(b.name)))
-
 /** The platform's own permissions: what explain answers for, read from the roles that bundle them. */
 const catalog = computed(() => {
   const names = new Set<string>()
@@ -142,11 +139,6 @@ async function canManageSelf(): Promise<boolean> {
     ret = (await Kinotic.systemAccess.explain({ kind: SubjectKind.USER, id: operatorId }, 'can_manage_access')).allowed
   }
   return ret
-}
-
-function platformRole(role: RoleDefinition): boolean {
-  const id = role.id ?? ''
-  return id.startsWith('platform.') || id.startsWith('vm_node.')
 }
 
 function roleOf(roleId: string): RoleDefinition | undefined {

@@ -137,6 +137,9 @@ public abstract class KinoticTestBase {
             // the first context of a run publishes every contract in one write and the reconciler then takes the
             // model they imply; a check for a permission the store's model lacks fails rather than refuses
             assertTrue(awaitUntil(this::platformModelCurrent), "the platform store never ran the model of the platform's services");
+            // OrganizationGraphBootstrap leaves an organization that has an administrator as it is, so the test
+            // participant is bound only once the bootstrap has bound the seeded creator
+            assertTrue(awaitUntil(this::administered), "the organization graph bootstrap never bound the test organization's creator");
             assertTrue(awaitUntil(this::bound), "the platform store never accepted the test participant's administrator binding");
             testParticipantAdministers = true;
         }
@@ -147,6 +150,12 @@ public abstract class KinoticTestBase {
         AuthzStore platform = await(authzStores.findById(AuthzStore.PLATFORM));
         AuthzModelRevision observed = platform != null ? platform.getState().getObserved() : null;
         return !services.isEmpty() && observed != null && observed.hash().equals(modelGenerator.platformModel(services).hash());
+    }
+
+    private boolean administered() throws Exception {
+        return await(relationshipService.findGrants(AuthzStoreService.PLATFORM, AuthzUtil.object(AuthzUtil.ORGANIZATION_TYPE, TEST_ORG_ID)))
+                .stream()
+                .anyMatch(grant -> AuthzUtil.ORGANIZATION_ADMIN_ROLE.equals(grant.roleId()) && !TEST_PARTICIPANT_ADMIN_BINDING.equals(grant.id()));
     }
 
     private boolean bound() {

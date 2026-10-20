@@ -201,10 +201,10 @@ class OpenFgaIntegrationTest {
         List<AuthorizationModel> versions = await(fga.readAuthorizationModels(storeId, 10, null)).getAuthorizationModels();
         assertEquals(grownModelId, versions.getFirst().getId());
         AuthorizationModel bridge = versions.get(1);
-        assertTrue(relationsOf(bridge, "role").contains("report_can_read"));
+        assertTrue(relationsOf(bridge, "tenant_role").contains("report_can_read"));
         assertFalse(relationsOf(bridge, "tenant").contains("report_can_read"));
         assertTrue(relationsOf(bridge, "tenant").contains("entity_definition_can_read"));
-        assertTrue(await(relationshipService.holds(store, new RelationshipTuple("user:*", "report_can_read", "role:tenant.admin"))));
+        assertTrue(await(relationshipService.holds(store, new RelationshipTuple("user:*", "report_can_read", AuthzUtil.roleObject("tenant.admin")))));
         // a model in step writes nothing more
         assertEquals(grownModelId, await(relationshipService.ensureModelWithRoles(store, grown)));
         assertEquals(versions.size(), await(fga.readAuthorizationModels(storeId, 10, null)).getAuthorizationModels().size());
@@ -268,10 +268,10 @@ class OpenFgaIntegrationTest {
                 new RelationshipTuple("organization:acme-checks", "organization", "application:crm-checks"),
                 new RelationshipTuple("application:crm-checks", "application", "project:billing-checks"),
                 new RelationshipTuple("application:crm-checks", "application", "project:shipping-checks"),
-                new RelationshipTuple("user:*", "project_can_edit", "role:project_editor_checks"),
-                new RelationshipTuple("role:project_editor_checks", "role", "role_binding:sally_edits_billing_checks"),
-                new RelationshipTuple("user:sally-checks", "member", "role_binding:sally_edits_billing_checks"),
-                new RelationshipTuple("role_binding:sally_edits_billing_checks", "role_binding", "project:billing-checks"));
+                new RelationshipTuple("user:*", "project_can_edit", "project_role:project.editor_checks"),
+                new RelationshipTuple("project_role:project.editor_checks", "role", "project_role_binding:sally_edits_billing_checks"),
+                new RelationshipTuple("user:sally-checks", "member", "project_role_binding:sally_edits_billing_checks"),
+                new RelationshipTuple("project_role_binding:sally_edits_billing_checks", "role_binding", "project:billing-checks"));
         await(relationshipService.write(PLATFORM, written, List.of()));
 
         assertTrue(await(relationshipService.check(PLATFORM, modelId, new RelationshipTuple("user:sally-checks", "project_can_edit", "project:billing-checks"), Consistency.HIGHER_CONSISTENCY)));
@@ -283,7 +283,7 @@ class OpenFgaIntegrationTest {
                      await(relationshipService.listObjects(PLATFORM, modelId, "user:sally-checks", "project_can_read", "project", Consistency.HIGHER_CONSISTENCY)));
 
         await(relationshipService.write(PLATFORM, List.of(), List.of(
-                new RelationshipTuple("user:sally-checks", "member", "role_binding:sally_edits_billing_checks"))));
+                new RelationshipTuple("user:sally-checks", "member", "project_role_binding:sally_edits_billing_checks"))));
         assertFalse(await(relationshipService.check(PLATFORM, modelId, new RelationshipTuple("user:sally-checks", "project_can_edit", "project:billing-checks"), Consistency.HIGHER_CONSISTENCY)));
         // the store is shared with the other tests and with a run against a persistent engine, so nothing written here stays
         await(relationshipService.remove(PLATFORM, written));
@@ -295,7 +295,7 @@ class OpenFgaIntegrationTest {
         String modelId = await(storeService.ensureModel(PLATFORM, model));
 
         await(relationshipService.ensureRoles(PLATFORM, model.roles()));
-        List<RelationshipTuple> editor = await(relationshipService.read(PLATFORM, "role:project.editor"));
+        List<RelationshipTuple> editor = await(relationshipService.read(PLATFORM, AuthzUtil.roleObject("project.editor")));
         assertEquals(Set.of("project_can_edit", "project_can_read"),
                      editor.stream().map(RelationshipTuple::relation).collect(Collectors.toSet()));
         // in step already: nothing is written, and nothing fails on a tuple held already
@@ -303,18 +303,23 @@ class OpenFgaIntegrationTest {
         // a permission the role no longer bundles is removed, one it lacks is added
         await(relationshipService.ensureRoles(PLATFORM, Map.of("project.editor", Set.of("project_can_read", "project_can_delete"))));
         assertEquals(Set.of("project_can_delete", "project_can_read"),
-                     await(relationshipService.read(PLATFORM, "role:project.editor")).stream().map(RelationshipTuple::relation).collect(Collectors.toSet()));
+                     await(relationshipService.read(PLATFORM, AuthzUtil.roleObject("project.editor"))).stream().map(RelationshipTuple::relation).collect(Collectors.toSet()));
         await(relationshipService.ensureRoles(PLATFORM, model.roles()));
 
         await(relationshipService.ensure(PLATFORM, List.of(new RelationshipTuple("application:crm-roles", "application", "project:billing-roles"))));
         String bindingId = await(relationshipService.bind(PLATFORM, "project.editor", "user:sally-roles", "project:billing-roles"));
-        assertTrue(await(relationshipService.holds(PLATFORM, new RelationshipTuple("role_binding:" + bindingId, "role_binding", "project:billing-roles"))));
+        assertTrue(await(relationshipService.holds(PLATFORM, new RelationshipTuple(AuthzUtil.bindingObject("project:billing-roles", bindingId), "role_binding", "project:billing-roles"))));
         assertTrue(await(relationshipService.check(PLATFORM, modelId, new RelationshipTuple("user:sally-roles", "project_can_edit", "project:billing-roles"), Consistency.HIGHER_CONSISTENCY)));
         assertFalse(await(relationshipService.check(PLATFORM, modelId, new RelationshipTuple("user:sally-roles", "project_can_delete", "project:billing-roles"), Consistency.HIGHER_CONSISTENCY)));
         // a binding of the organization admin on the organization reaches the project inside it
         await(relationshipService.ensure(PLATFORM, List.of(new RelationshipTuple("organization:acme-roles", "organization", "application:crm-roles"))));
         await(relationshipService.bind(PLATFORM, AuthzUtil.ORGANIZATION_ADMIN_ROLE, "user:marcus-roles", "organization:acme-roles"));
         assertTrue(await(relationshipService.check(PLATFORM, modelId, new RelationshipTuple("user:marcus-roles", "project_can_delete", "project:billing-roles"), Consistency.HIGHER_CONSISTENCY)));
+        // the engine refuses a role homed above the resource, and a binding attached to a resource of another type
+        assertThrows(ExecutionException.class,
+                     () -> await(relationshipService.bind(PLATFORM, AuthzUtil.ORGANIZATION_ADMIN_ROLE, "user:marcus-roles", "project:billing-roles")));
+        assertThrows(ExecutionException.class, () -> await(relationshipService.write(PLATFORM, List.of(
+                new RelationshipTuple("organization_role_binding:misplaced-roles", "role_binding", "project:billing-roles")), List.of())));
     }
 
     @Test
@@ -367,9 +372,9 @@ class OpenFgaIntegrationTest {
         await(relationshipService.ensureRoles(PLATFORM, model.roles()));
         await(relationshipService.ensure(PLATFORM, List.of(new RelationshipTuple("application:crm-unbind", "application", "project:billing-unbind"))));
         String bindingId = await(relationshipService.bind(PLATFORM, "project.editor", "user:sally-unbind", "project:billing-unbind"));
-        String binding = "role_binding:" + bindingId;
+        String binding = AuthzUtil.bindingObject("project:billing-unbind", bindingId);
         assertTrue(await(relationshipService.check(PLATFORM, modelId, new RelationshipTuple("user:sally-unbind", "project_can_edit", "project:billing-unbind"), Consistency.HIGHER_CONSISTENCY)));
-        assertTrue(await(relationshipService.readByUser(PLATFORM, "role:project.editor", "role_binding")).stream()
+        assertTrue(await(relationshipService.readByUser(PLATFORM, AuthzUtil.roleObject("project.editor"), "project_role_binding")).stream()
                         .anyMatch(tuple -> tuple.object().equals(binding)));
 
         await(relationshipService.unbind(PLATFORM, bindingId, "project:billing-unbind"));

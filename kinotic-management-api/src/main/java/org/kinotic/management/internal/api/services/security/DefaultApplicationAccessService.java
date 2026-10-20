@@ -4,6 +4,7 @@ import io.vertx.core.Future;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.authz.api.model.AccessExplanation;
+import org.kinotic.authz.api.model.AuthzModel;
 import org.kinotic.authz.api.model.Consistency;
 import org.kinotic.authz.api.model.Grant;
 import org.kinotic.authz.api.model.RelationshipTuple;
@@ -11,8 +12,10 @@ import org.kinotic.authz.api.model.Resource;
 import org.kinotic.authz.api.model.RoleDefinition;
 import org.kinotic.authz.api.model.Subject;
 import org.kinotic.authz.api.model.SubjectKind;
+import org.kinotic.authz.api.services.AuthzModelGenerator;
 import org.kinotic.authz.api.services.AuthzStoreService;
 import org.kinotic.authz.api.services.RelationshipService;
+import org.kinotic.core.api.directory.ServiceDirectory;
 import org.kinotic.core.api.security.SecurityContext;
 import org.kinotic.domain.api.model.Application;
 import org.kinotic.domain.api.model.security.identity.ParticipantIdentity;
@@ -38,10 +41,12 @@ public class DefaultApplicationAccessService implements ApplicationAccessService
     private final AuthzStoreService stores;
     private final RelationshipService relationships;
     private final EntityDefinitionRepository entityDefinitions;
+    private final ServiceDirectory directory;
+    private final AuthzModelGenerator generator;
 
     @Override
     public Future<List<RoleDefinition>> findRoles(String applicationId) {
-        return requireApplication(applicationId).compose(application -> relationships.findRoles(storeOf(application)));
+        return requireApplication(applicationId).compose(this::model).map(model -> model.builtInRoles(AuthzUtil.APPLICATION_TYPE));
     }
 
     @Override
@@ -57,7 +62,7 @@ public class DefaultApplicationAccessService implements ApplicationAccessService
         validate(subject);
         Validate.notBlank(roleId, "roleId cannot be blank");
         return requireApplication(applicationId)
-                .compose(application -> requireRole(application, roleId)
+                .compose(application -> requireGrantable(application, roleId, resource.type())
                         .compose(v -> requireSubject(application, subject))
                         .compose(v -> contained(application, resource))
                         .compose(v -> relationships.bind(storeOf(application), roleId, userOf(subject), objectOf(application, resource))))
@@ -175,13 +180,26 @@ public class DefaultApplicationAccessService implements ApplicationAccessService
                            .map(application -> DomainUtil.requireOwned(application, organizationId, "No application of the organization has id " + applicationId));
     }
 
-    private Future<Void> requireRole(Application application, String roleId) {
-        return relationships.read(storeOf(application), AuthzUtil.object(AuthzUtil.ROLE_TYPE, roleId)).map(held -> {
-            if (held.isEmpty()) {
+    // A role of the application's model homed at the resource's type or inside it
+    private Future<Void> requireGrantable(Application application, String roleId, String resourceType) {
+        return model(application).map(model -> {
+            if (!model.roles().containsKey(roleId)) {
                 throw new IllegalArgumentException("No role of the application has id " + roleId);
+            }
+            if (!model.grantable(roleId, resourceType)) {
+                throw new IllegalArgumentException("Role " + roleId + " is homed at " + AuthzUtil.roleHome(roleId)
+                                                           + " and cannot be granted on a " + resourceType);
             }
             return null;
         });
+    }
+
+    // The model the application's store runs: the platform's services its users call and the services its
+    // runtimes registered
+    private Future<AuthzModel> model(Application application) {
+        return directory.findSystemDefinitions()
+                        .compose(platform -> directory.findApplicationDefinitions(application.getOrganizationId(), application.getId())
+                                                      .map(services -> generator.applicationModel(platform, services)));
     }
 
     // A grant in an application's store is made to one of its own users or machines

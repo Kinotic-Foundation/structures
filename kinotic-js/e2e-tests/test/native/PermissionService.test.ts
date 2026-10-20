@@ -45,12 +45,17 @@ describe('Kinotic JS', () => {
         const editor = roles.find(role => role.id === 'project.editor')
         expect(editor?.builtIn).toBe(true)
         expect(editor?.permissions).toContain('project_can_edit')
+        expect(editor?.grantableOn.sort()).toEqual(['application', 'organization', 'project'])
+        // the platform's own roles and a tenant's are not the organization's to grant
+        expect(roles.every(role => ['organization', 'application', 'project', 'entity_definition'].includes(role.resourceType))).toBe(true)
+        expect(catalog.platform).toBeUndefined()
     })
 
     it('defines a custom role from the catalog and deletes it once unused', async () => {
         const saved = await Kinotic.permissions.saveRole({id: null, name: 'Release Manager e2e', description: 'ships projects',
-                                                          builtIn: false, permissions: ['project_can_edit', 'project_can_read']})
-        expect(saved.id).toBeTruthy()
+                                                          builtIn: false, resourceType: 'project', grantableOn: [],
+                                                          permissions: ['project_can_edit', 'project_can_read']})
+        expect(saved.id?.startsWith('project.')).toBe(true)
         expect(saved.builtIn).toBe(false)
         try {
             const listed = (await Kinotic.permissions.findRoles()).find(role => role.id === saved.id) as RoleDefinition
@@ -58,6 +63,8 @@ describe('Kinotic JS', () => {
 
             // a permission the model does not have is refused
             await expect(Kinotic.permissions.saveRole({...saved, permissions: ['project_can_fly']})).rejects.toThrow()
+            // as is one from above the role's level
+            await expect(Kinotic.permissions.saveRole({...saved, permissions: ['organization_can_manage_access']})).rejects.toThrow()
         } finally {
             await Kinotic.permissions.deleteRole(saved.id!)
         }

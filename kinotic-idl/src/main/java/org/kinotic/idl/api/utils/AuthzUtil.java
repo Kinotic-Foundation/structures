@@ -24,11 +24,19 @@ public final class AuthzUtil {
     /** The id of the one platform object, so a check on the platform needs no id from the request. */
     public static final String PLATFORM_OBJECT_ID = "kinotic";
 
-    /** The kernel types every store has: the identities, the bundles of permissions and the grants of them. */
+    /** The kernel types every store has: the identities. */
     public static final String USER_TYPE = "user";
     public static final String GROUP_TYPE = "group";
-    public static final String ROLE_TYPE = "role";
-    public static final String ROLE_BINDING_TYPE = "role_binding";
+    /**
+     * The suffix of the type of a role homed at a resource type, {@code project_role}, which bundles only
+     * permissions of that type and of the types inside it.
+     */
+    public static final String ROLE_TYPE_SUFFIX = "_role";
+    /**
+     * The suffix of the type of a binding attached to a resource type, {@code project_role_binding}, which grants
+     * only roles homed at that type or inside it.
+     */
+    public static final String ROLE_BINDING_TYPE_SUFFIX = "_role_binding";
 
     /** The type an entity definition is in the platform store, under its application. */
     public static final String ENTITY_DEFINITION_TYPE = "entity_definition";
@@ -161,6 +169,49 @@ public final class AuthzUtil {
      */
     public static String roleId(String type, String level) {
         return type + "." + level;
+    }
+
+    /**
+     * The resource type a role is homed at, the prefix of its id: {@code project} for {@code project.editor}, and
+     * for a custom role the level it was created at.
+     */
+    public static String roleHome(String roleId) {
+        int dot = roleId.indexOf('.');
+        if (dot <= 0) {
+            throw new IllegalArgumentException("A role id is <home type>.<name>, not " + roleId);
+        }
+        return roleId.substring(0, dot);
+    }
+
+    /**
+     * The type of the roles homed at a resource type: {@code project_role} for {@code project}.
+     */
+    public static String roleType(String homeType) {
+        return homeType + ROLE_TYPE_SUFFIX;
+    }
+
+    /**
+     * A role's object in a store, typed by its home: {@code project_role:project.editor}.
+     */
+    public static String roleObject(String roleId) {
+        return object(roleType(roleHome(roleId)), roleId);
+    }
+
+    /**
+     * The type of the bindings attached to a resource type: {@code project_role_binding} for {@code project}.
+     */
+    public static String roleBindingType(String resourceType) {
+        return resourceType + ROLE_BINDING_TYPE_SUFFIX;
+    }
+
+    /**
+     * A binding's object in a store, typed by the resource it is attached to.
+     *
+     * @param resourceObject the resource the binding is attached to, {@code type:id}
+     * @param bindingId      the binding's id
+     */
+    public static String bindingObject(String resourceObject, String bindingId) {
+        return object(roleBindingType(typeOf(resourceObject)), bindingId);
     }
 
     /**

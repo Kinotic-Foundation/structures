@@ -17,18 +17,19 @@ import type { UserParticipantIdentity } from '@/api/model/security/UserParticipa
 export interface IPermissionService {
 
     /**
-     * The catalog a custom role is defined from: the model names of the permissions, such as project_can_edit,
-     * grouped by the resource type they are about.
+     * The catalog a custom role is defined from: the model names of the permissions of the organization's tree,
+     * such as project_can_edit, grouped by the resource type they are about.
      */
     findPermissions(): Promise<Record<string, string[]>>
 
-    /** The built-in roles the model defines and the custom roles the organization has defined. */
+    /** The built-in roles homed in the organization's tree and the custom roles the organization has defined. */
     findRoles(): Promise<RoleDefinition[]>
 
     /**
      * Defines a custom role, or reshapes one: with no id a new role is created, with the id of a custom role
-     * its name, description and permissions are replaced, which changes every grant of it at once. A built-in
-     * role cannot be saved, and a permission the model does not have is refused.
+     * its name, description and permissions are replaced, which changes every grant of it at once. A new role is
+     * homed at its resourceType, which a saved role keeps. A built-in role cannot be saved, and a permission
+     * outside the role's home and the types inside it is refused.
      */
     saveRole(role: RoleDefinition): Promise<RoleDefinition>
 
@@ -55,7 +56,7 @@ export interface IPermissionService {
 
     /**
      * Grants a role to a user or a group on a resource: the subject holds every permission the role bundles on
-     * the resource and on everything inside it.
+     * the resource and on everything inside it. A role is granted only on a type its grantableOn names.
      */
     grant(subject: Subject, roleId: string, resource: Resource): Promise<Grant>
 

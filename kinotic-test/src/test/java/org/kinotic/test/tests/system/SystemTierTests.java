@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.kinotic.authz.api.model.AccessExplanation;
 import org.kinotic.authz.api.model.AuthzModel;
 import org.kinotic.authz.api.model.Grant;
+import org.kinotic.authz.api.model.RoleDefinition;
 import org.kinotic.authz.api.model.Subject;
 import org.kinotic.authz.api.model.SubjectKind;
 import org.kinotic.authz.api.services.AuthzModelGenerator;
@@ -43,6 +44,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -229,7 +231,7 @@ public class SystemTierTests extends KinoticTestBase {
         await(nodeOrchestration.deregisterNode(node.getId()));
         assertTrue(awaitUntil(() -> await(vmNodeService.findById(node.getId())) == null), "the node was never finalized");
         assertTrue(awaitUntil(() -> await(relationships.read(PLATFORM, nodeObject)).isEmpty()), "the node is still in the graph");
-        assertTrue(await(relationships.read(PLATFORM, AuthzUtil.object(AuthzUtil.ROLE_BINDING_TYPE, grants.getFirst().id()))).isEmpty());
+        assertTrue(await(relationships.read(PLATFORM, AuthzUtil.bindingObject(nodeObject, grants.getFirst().id()))).isEmpty());
     }
 
     @Test
@@ -244,10 +246,18 @@ public class SystemTierTests extends KinoticTestBase {
         assertInstanceOf(IllegalArgumentException.class,
                          failure(() -> access.grant(new Subject(SubjectKind.USER, operator.getId()), "project.editor-of-nothing")));
         assertInstanceOf(IllegalArgumentException.class, failure(() -> access.revoke("no-such-grant")));
-        // the roles a platform grant can name are the model's, the staff roles among them
-        List<String> roles = await(access.findRoles()).stream().map(role -> role.id()).toList();
+        // the roles a platform grant can name are the platform's own and those of the types on it, none of an
+        // organization's or a tenant's
+        List<RoleDefinition> defined = await(access.findRoles());
+        List<String> roles = defined.stream().map(RoleDefinition::id).toList();
         assertTrue(roles.containsAll(List.of(AuthzUtil.PLATFORM_ADMIN_ROLE, AuthzUtil.PLATFORM_OPERATOR_ROLE, AuthzUtil.PLATFORM_SUPPORT_ROLE,
                                              VmNodeOrchestrationService.REGISTRAR_ROLE, VmNodeOrchestrationService.AGENT_ROLE)), roles.toString());
+        Set<String> organizationTree = Set.of(AuthzUtil.ORGANIZATION_TYPE, AuthzUtil.APPLICATION_TYPE, AuthzUtil.PROJECT_TYPE,
+                                              AuthzUtil.ENTITY_DEFINITION_TYPE, AuthzUtil.TENANT_TYPE);
+        assertTrue(defined.stream().noneMatch(role -> organizationTree.contains(role.resourceType())), roles.toString());
+        assertTrue(defined.stream().allMatch(role -> role.grantableOn().contains(AuthzUtil.PLATFORM_TYPE)), roles.toString());
+        assertInstanceOf(IllegalArgumentException.class,
+                         failure(() -> access.grant(new Subject(SubjectKind.USER, operator.getId()), AuthzUtil.ORGANIZATION_ADMIN_ROLE)));
     }
 
     @Test

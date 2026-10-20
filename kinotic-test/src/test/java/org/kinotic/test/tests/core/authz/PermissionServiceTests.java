@@ -102,8 +102,10 @@ public class PermissionServiceTests extends KinoticTestBase {
         assertTrue(catalog.get(ProjectService.RESOURCE_TYPE).contains("project_can_edit"));
 
         RoleDefinition saved = await(runAsOrganization(() -> permissions.saveRole(
-                new RoleDefinition(null, "Release Manager " + suffix(), "ships projects", false, Set.of("project_can_edit", "project_can_read")))));
+                new RoleDefinition(null, "Release Manager " + suffix(), "ships projects", false, ProjectService.RESOURCE_TYPE, null,
+                                   Set.of("project_can_edit", "project_can_read")))));
         assertNotNull(saved.id());
+        assertEquals(ProjectService.RESOURCE_TYPE, AuthzUtil.roleHome(saved.id()));
         assertFalse(saved.builtIn());
         List<RoleDefinition> roles = await(runAsOrganization(permissions::findRoles));
         RoleDefinition editor = roles.stream().filter(role -> role.id().equals("project.editor")).findFirst().orElseThrow();
@@ -113,14 +115,19 @@ public class PermissionServiceTests extends KinoticTestBase {
         RoleDefinition listed = roles.stream().filter(role -> role.id().equals(saved.id())).findFirst().orElseThrow();
         assertEquals(Set.of("project_can_edit", "project_can_read"), listed.permissions());
 
-        // a permission the model does not have, and a built-in role, are refused
+        // a permission the model does not have, one from above the role's home, a home outside the organization's
+        // tier, and a built-in role, are refused
         assertThrows(ExecutionException.class, () -> await(runAsOrganization(() -> permissions.saveRole(
-                new RoleDefinition(null, "Pilot", null, false, Set.of("project_can_fly"))))));
+                new RoleDefinition(null, "Pilot", null, false, ProjectService.RESOURCE_TYPE, null, Set.of("project_can_fly"))))));
         assertThrows(ExecutionException.class, () -> await(runAsOrganization(() -> permissions.saveRole(
-                new RoleDefinition("project.editor", "Project Editor", null, true, Set.of("project_can_edit"))))));
+                new RoleDefinition(null, "Climber", null, false, ProjectService.RESOURCE_TYPE, null, Set.of("application_can_edit"))))));
+        assertThrows(ExecutionException.class, () -> await(runAsOrganization(() -> permissions.saveRole(
+                new RoleDefinition(null, "Operator", null, false, AuthzUtil.PLATFORM_TYPE, null, Set.of("project_can_read"))))));
+        assertThrows(ExecutionException.class, () -> await(runAsOrganization(() -> permissions.saveRole(
+                new RoleDefinition("project.editor", "Project Editor", null, true, ProjectService.RESOURCE_TYPE, null, Set.of("project_can_edit"))))));
 
         // reshaping the role changes what it bundles
-        await(runAsOrganization(() -> permissions.saveRole(new RoleDefinition(saved.id(), saved.name(), null, false, Set.of("project_can_read")))));
+        await(runAsOrganization(() -> permissions.saveRole(new RoleDefinition(saved.id(), saved.name(), null, false, null, null, Set.of("project_can_read")))));
         assertEquals(Set.of("project_can_read"), bundled(saved.id()));
 
         // a role a grant holds stays until the grant is revoked
@@ -133,6 +140,39 @@ public class PermissionServiceTests extends KinoticTestBase {
         await(runAsOrganization(() -> permissions.deleteRole(saved.id())));
         assertTrue(bundled(saved.id()).isEmpty());
         assertFalse(await(runAsOrganization(permissions::findRoles)).stream().anyMatch(role -> role.id().equals(saved.id())));
+    }
+
+    @Test
+    public void theOrganizationsTierOffersAndAcceptsOnlyItsOwnRoles() throws Exception {
+        Set<String> tier = Set.of(AuthzUtil.ORGANIZATION_TYPE, AuthzUtil.APPLICATION_TYPE, ProjectService.RESOURCE_TYPE, AuthzUtil.ENTITY_DEFINITION_TYPE);
+        Map<String, Set<String>> catalog = await(runAsOrganization(permissions::findPermissions));
+        assertTrue(tier.containsAll(catalog.keySet()), catalog.keySet().toString());
+        List<RoleDefinition> roles = await(runAsOrganization(permissions::findRoles));
+        for (RoleDefinition role : roles) {
+            assertTrue(tier.contains(role.resourceType()), "role " + role.id() + " is homed outside the organization's tier");
+            assertTrue(tier.containsAll(role.grantableOn()), "role " + role.id() + " is grantable outside the organization's tier");
+        }
+        List<String> ids = roles.stream().map(RoleDefinition::id).toList();
+        assertFalse(ids.contains(AuthzUtil.PLATFORM_SUPPORT_ROLE), ids.toString());
+        assertFalse(ids.contains(AuthzUtil.roleId(AuthzUtil.TENANT_TYPE, AuthzUtil.ADMIN)), ids.toString());
+        assertFalse(ids.stream().anyMatch(id -> id.startsWith("vm_node.")), ids.toString());
+        RoleDefinition projectEditor = roles.stream().filter(role -> role.id().equals("project.editor")).findFirst().orElseThrow();
+        assertEquals(Set.of(AuthzUtil.ORGANIZATION_TYPE, AuthzUtil.APPLICATION_TYPE, ProjectService.RESOURCE_TYPE), projectEditor.grantableOn());
+
+        // a role homed above the resource, and a platform role, are refused by the service
+        Project project = project(application());
+        Resource onProject = new Resource(ProjectService.RESOURCE_TYPE, project.getId());
+        Resource onOrganization = new Resource(AuthzUtil.ORGANIZATION_TYPE, TEST_ORG_ID);
+        Subject subject = user(member(TEST_ORG_ID, "tier"));
+        assertThrows(ExecutionException.class, () -> await(runAsOrganization(() -> permissions.grant(subject, AuthzUtil.ORGANIZATION_ADMIN_ROLE, onProject))));
+        assertThrows(ExecutionException.class, () -> await(runAsOrganization(() -> permissions.grant(subject, AuthzUtil.PLATFORM_SUPPORT_ROLE, onOrganization))));
+
+        // and by the engine for a writer that skips the service
+        String user = DomainUtil.authzMember(subject.id(), TEST_ORG_ID);
+        assertThrows(ExecutionException.class, () -> await(relationships.bind(AuthzStoreService.PLATFORM, AuthzUtil.ORGANIZATION_ADMIN_ROLE, user,
+                                                                              DomainUtil.authzObject(TEST_ORG_ID, onProject))));
+        assertThrows(ExecutionException.class, () -> await(relationships.bind(AuthzStoreService.PLATFORM, AuthzUtil.PLATFORM_SUPPORT_ROLE, user,
+                                                                              DomainUtil.authzObject(TEST_ORG_ID, onOrganization))));
     }
 
     @Test
@@ -225,7 +265,7 @@ public class PermissionServiceTests extends KinoticTestBase {
     }
 
     private Set<String> bundled(String roleId) throws Exception {
-        return await(relationships.read(AuthzStoreService.PLATFORM, AuthzUtil.object(AuthzUtil.ROLE_TYPE, roleId)))
+        return await(relationships.read(AuthzStoreService.PLATFORM, AuthzUtil.roleObject(roleId)))
                 .stream().map(RelationshipTuple::relation).collect(java.util.stream.Collectors.toSet());
     }
 

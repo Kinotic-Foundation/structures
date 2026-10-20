@@ -79,7 +79,7 @@ import { Kinotic } from '@kinotic-ai/core'
 import type { Grant, Resource, RoleDefinition } from '@kinotic-ai/management-api'
 import { DashboardSection, EmptyChartCharacter, RoleCell, SubjectCell, TableChip, showErrorToast, typeLabel } from '@kinotic-ai/frontend-common'
 import { useAccess } from '@/composables/useAccess'
-import { accessPath, grantsAbove, grantsOn, roleFits } from '@/util/access'
+import { accessPath, grantsAbove, grantsOn } from '@/util/access'
 import AccessCheckPanel from './AccessCheckPanel.vue'
 import GrantAccessDrawer from './GrantAccessDrawer.vue'
 import { useSubjects } from './useSubjects'
@@ -113,7 +113,7 @@ const grantDrawerVisible = ref(false)
 const context = computed(() => ({ applicationId: props.applicationId, projectId: props.projectId }))
 const here = computed(() => grantsOn(grants.value, props.resource))
 const above = computed(() => grantsAbove(grants.value, props.resource))
-const fittingRoles = computed(() => roles.value.filter(role => roleFits(role, props.resource.type)))
+const fittingRoles = computed(() => roles.value.filter(role => role.grantableOn.includes(props.resource.type)))
 
 watch(() => [props.resource.type, props.resource.id], load, { immediate: true })
 

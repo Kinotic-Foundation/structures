@@ -7,10 +7,12 @@ import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.authz.api.model.RelationshipTuple;
+import org.kinotic.authz.api.services.AuthzModelGenerator;
 import org.kinotic.authz.api.services.AuthzStoreService;
 import org.kinotic.authz.api.services.RelationshipService;
 import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
+import org.kinotic.core.api.directory.ServiceDirectory;
 import org.kinotic.core.api.security.Participant;
 import org.kinotic.domain.api.exceptions.AccountDisabledException;
 import org.kinotic.domain.api.model.security.Member;
@@ -27,6 +29,7 @@ import org.kinotic.domain.internal.api.repositories.MembershipRepository;
 import org.kinotic.domain.internal.api.repositories.OidcBindingRepository;
 import org.kinotic.domain.internal.api.repositories.ParticipantIdentityRepository;
 import org.kinotic.idl.api.utils.AuthzUtil;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -48,6 +51,9 @@ public class DefaultMembershipService implements MembershipService {
     private final IdentityCredentialRepository credentialRepository;
     private final OidcBindingRepository bindingRepository;
     private final RelationshipService relationships;
+    private final AuthzModelGenerator generator;
+    // the directory's strategy is built from this module's beans, so it is resolved when a membership is removed
+    private final ObjectProvider<ServiceDirectory> directoryProvider;
 
     @Override
     public Future<Membership> addMember(String identityId, String organizationId) {
@@ -199,7 +205,7 @@ public class DefaultMembershipService implements MembershipService {
                                                           .toList()))
                 // the graph before the record: a removal that fails leaves the member to be removed again
                 .compose(v -> left(identityId, organizationId))
-                .compose(v -> withdrawn(DomainUtil.authzMember(identityId, organizationId)))
+                .compose(v -> withdrawn(DomainUtil.authzMember(identityId, organizationId), organizationId))
                 // sync so the console's immediate re-query no longer shows the member
                 .compose(v -> membershipRepository.deleteByIdSync(Membership.idOf(identityId, organizationId)));
     }
@@ -218,15 +224,24 @@ public class DefaultMembershipService implements MembershipService {
                 : relationships.remove(AuthzStoreService.PLATFORM, List.of(memberOf(identityId, organizationId)));
     }
 
-    // The membership's user leaves every group and every grant, so an account joining again starts with none
-    private Future<Void> withdrawn(String user) {
-        return Future.all(relationships.readByUser(AuthzStoreService.PLATFORM, user, AuthzUtil.GROUP_TYPE),
-                          relationships.readByUser(AuthzStoreService.PLATFORM, user, AuthzUtil.ROLE_BINDING_TYPE))
-                     .compose(held -> {
-                         List<RelationshipTuple> all = new ArrayList<>(held.<List<RelationshipTuple>>resultAt(0));
-                         all.addAll(held.<List<RelationshipTuple>>resultAt(1));
-                         return relationships.remove(AuthzStoreService.PLATFORM, all);
-                     });
+    // The membership's user leaves every group and every grant, so an account joining again starts with none; a
+    // binding is typed by what it is attached to, so the grants are read on each type of the membership's tier
+    private Future<Void> withdrawn(String user, String organizationId) {
+        String tier = organizationId == null ? AuthzUtil.PLATFORM_TYPE : AuthzUtil.ORGANIZATION_TYPE;
+        return directoryProvider.getObject().findSystemDefinitions().map(generator::platformModel).compose(model -> {
+            List<Future<List<RelationshipTuple>>> reads = new ArrayList<>();
+            reads.add(relationships.readByUser(AuthzStoreService.PLATFORM, user, AuthzUtil.GROUP_TYPE));
+            for (String type : model.tier(tier)) {
+                reads.add(relationships.readByUser(AuthzStoreService.PLATFORM, user, AuthzUtil.roleBindingType(type)));
+            }
+            return Future.all(reads);
+        }).compose(held -> {
+            List<RelationshipTuple> all = new ArrayList<>();
+            for (int i = 0; i < held.size(); i++) {
+                all.addAll(held.<List<RelationshipTuple>>resultAt(i));
+            }
+            return relationships.remove(AuthzStoreService.PLATFORM, all);
+        });
     }
 
     private static RelationshipTuple memberOf(String identityId, String organizationId) {

@@ -116,6 +116,7 @@ public class ApplicationStoreTests extends KinoticTestBase {
         assertTrue(tenantAdmin.builtIn());
         assertTrue(tenantAdmin.permissions().contains(AuthzUtil.permissionName(AuthzUtil.ENTITY_DEFINITION_TYPE, AuthzUtil.CAN_DELETE)),
                    tenantAdmin.permissions().toString());
+        assertEquals(Set.of(AuthzUtil.APPLICATION_TYPE, AuthzUtil.TENANT_TYPE), tenantAdmin.grantableOn());
         // the application is placed in its own store, and each definition created is placed under it, which is what
         // lets a grant on the tenant reach the definition's rows there
         String application = AuthzUtil.object(AuthzUtil.APPLICATION_TYPE, store);
@@ -214,6 +215,13 @@ public class ApplicationStoreTests extends KinoticTestBase {
                          failure(() -> access.grant(TEST_APP_ID, new Subject(SubjectKind.USER, TEST_ORGANIZATION_PARTICIPANT.getId()), editor, tenant)));
         // a grant of a role the store does not define
         assertInstanceOf(IllegalArgumentException.class, failure(() -> access.grant(TEST_APP_ID, subject, "project.editor", tenant)));
+        // a grant on a tenant of the application's own role, which is homed above the tenant
+        assertInstanceOf(IllegalArgumentException.class,
+                         failure(() -> access.grant(TEST_APP_ID, subject, AuthzUtil.roleId(AuthzUtil.APPLICATION_TYPE, AuthzUtil.ADMIN), tenant)));
+        // a grant on a definition within a tenant of a role homed at the tenant
+        assertInstanceOf(IllegalArgumentException.class,
+                         failure(() -> access.grant(TEST_APP_ID, subject, AuthzUtil.roleId(AuthzUtil.TENANT_TYPE, AuthzUtil.ADMIN),
+                                                    new Resource(AuthzUtil.TENANT_DEFINITION_TYPE, AuthzUtil.tenantDefinitionId(person.getId(), bob.getTenantId())))));
         // a grant in an application of another organization, or of none
         assertInstanceOf(IllegalArgumentException.class, failure(() -> access.grant("no-such-application", subject, editor, tenant)));
     }

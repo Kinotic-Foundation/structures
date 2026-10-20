@@ -30,14 +30,14 @@ public class DefaultAuthzModelGenerator implements AuthzModelGenerator {
 
     static final String USER = AuthzUtil.USER_TYPE;
     static final String GROUP = AuthzUtil.GROUP_TYPE;
-    static final String ROLE = AuthzUtil.ROLE_TYPE;
-    static final String ROLE_BINDING = AuthzUtil.ROLE_BINDING_TYPE;
     static final String ORGANIZATION = AuthzUtil.ORGANIZATION_TYPE;
     static final String APPLICATION = AuthzUtil.APPLICATION_TYPE;
     static final String TENANT = AuthzUtil.TENANT_TYPE;
     static final String MEMBER = AuthzUtil.MEMBER_RELATION;
     static final String END_USER = AuthzUtil.END_USER_RELATION;
     static final String GRANT = AuthzUtil.GRANT_RELATION;
+    static final String ROLE = AuthzUtil.ROLE_RELATION;
+    static final String ROLE_BINDING = AuthzUtil.ROLE_BINDING_RELATION;
 
     private static final String SCHEMA_VERSION = "1.1";
     private static final String ENTITY_DEFINITION = AuthzUtil.ENTITY_DEFINITION_TYPE;
@@ -89,25 +89,23 @@ public class DefaultAuthzModelGenerator implements AuthzModelGenerator {
                 }
             }
         }
-        Set<String> allPermissions = new TreeSet<>();
-        for (ResourceType type : types.values()) {
-            for (String permission : type.permissions.keySet()) {
-                allPermissions.add(AuthzUtil.permissionName(type.name, permission));
-            }
-        }
+        Map<String, Set<String>> bindable = bindable(kind, types, carried);
 
         ObjectNode definition = JsonNodeFactory.instance.objectNode();
         definition.put("schema_version", SCHEMA_VERSION);
         ArrayNode typeDefinitions = definition.putArray("type_definitions");
         typeDefinitions.add(typeDefinition(USER, Map.of()));
         typeDefinitions.add(typeDefinition(GROUP, Map.of(MEMBER, direct(List.of(USER, GROUP + "#" + MEMBER)))));
-        typeDefinitions.add(roleType(allPermissions));
-        typeDefinitions.add(roleBindingType(kind, allPermissions));
         for (ResourceType type : new TreeMap<>(types).values()) {
+            typeDefinitions.add(roleType(type.name, permissionsOf(carried.get(type.name), types)));
+            typeDefinitions.add(roleBindingType(kind, type.name, bindable.get(type.name), permissionsOf(carried.get(type.name), types)));
             typeDefinitions.add(resourceType(type, types, carried.get(type.name)));
         }
         if (kind == AuthzStoreKind.APPLICATION) {
-            typeDefinitions.add(tenantDefinitionType(types.get(ENTITY_DEFINITION)));
+            ResourceType entityDefinition = types.get(ENTITY_DEFINITION);
+            typeDefinitions.add(roleBindingType(kind, TENANT_DEFINITION, bindable.get(TENANT_DEFINITION),
+                                                permissionsOf(Set.of(ENTITY_DEFINITION), types)));
+            typeDefinitions.add(tenantDefinitionType(entityDefinition));
         }
 
         Map<String, Set<String>> catalog = new TreeMap<>();
@@ -116,7 +114,59 @@ public class DefaultAuthzModelGenerator implements AuthzModelGenerator {
                 catalog.put(type.name, new TreeSet<>(type.permissions.keySet()));
             }
         }
-        return new AuthzModel(definition, ModelHash.of(definition), catalog, builtInRoles(kind, types, carried));
+        return new AuthzModel(definition, ModelHash.of(definition), catalog, builtInRoles(kind, types, carried), bindable);
+    }
+
+    /**
+     * The home types of the roles a binding on each resource type may grant: the type itself and the types it
+     * carries, except those across a trust boundary below it. In the platform's store an organization and a tenant
+     * are boundaries, so the platform grants none of an organization's roles and an organization none of a
+     * tenant's; an application's store has none. A definition within a tenant grants the definition's roles.
+     */
+    private static Map<String, Set<String>> bindable(AuthzStoreKind kind,
+                                                     Map<String, ResourceType> types,
+                                                     Map<String, Set<String>> carried) {
+        Set<String> boundaries = kind == AuthzStoreKind.PLATFORM ? Set.of(ORGANIZATION, TENANT) : Set.of();
+        Map<String, Set<String>> ret = new TreeMap<>();
+        for (ResourceType type : types.values()) {
+            Set<String> homes = new TreeSet<>();
+            for (String home : carried.get(type.name)) {
+                if (withinBoundary(home, type.name, types, boundaries)) {
+                    homes.add(home);
+                }
+            }
+            ret.put(type.name, homes);
+        }
+        if (kind == AuthzStoreKind.APPLICATION) {
+            ret.put(TENANT_DEFINITION, Set.of(ENTITY_DEFINITION));
+        }
+        return ret;
+    }
+
+    // Whether the path up from the home to the type it is bound on crosses no boundary; a home carried by no
+    // parent path, as a tenant carries the application's entity types in an application's store, crosses none
+    private static boolean withinBoundary(String home, String boundOn, Map<String, ResourceType> types, Set<String> boundaries) {
+        boolean ret = true;
+        String at = home;
+        while (at != null && !at.equals(boundOn)) {
+            if (boundaries.contains(at)) {
+                ret = false;
+                at = null;
+            } else {
+                at = types.get(at).parent;
+            }
+        }
+        return ret;
+    }
+
+    // The model names of every permission of the given types
+    private static Set<String> permissionsOf(Set<String> typeNames, Map<String, ResourceType> types) {
+        Set<String> ret = new TreeSet<>();
+        for (String name : typeNames) {
+            ResourceType type = types.get(name);
+            ret.addAll(modelNames(type, type.permissions.keySet()));
+        }
+        return ret;
     }
 
     /**
@@ -296,6 +346,12 @@ public class DefaultAuthzModelGenerator implements AuthzModelGenerator {
 
     private static void validate(Map<String, ResourceType> types) {
         for (ResourceType type : types.values()) {
+            // the model names a type's roles and bindings by suffixing it, so a type named like one would collide
+            if (type.name.endsWith(AuthzUtil.ROLE_TYPE_SUFFIX) || type.name.endsWith(AuthzUtil.ROLE_BINDING_TYPE_SUFFIX)) {
+                throw new IllegalArgumentException("Resource type '" + type.name + "' ends with '" + AuthzUtil.ROLE_TYPE_SUFFIX
+                                                           + "' or '" + AuthzUtil.ROLE_BINDING_TYPE_SUFFIX
+                                                           + "', which name the model's roles and bindings");
+            }
             if (type.parent != null && !types.containsKey(type.parent)) {
                 throw new IllegalArgumentException("Resource type '" + type.name + "' declares the parent '" + type.parent
                                                            + "', which this model does not have");
@@ -332,23 +388,25 @@ public class DefaultAuthzModelGenerator implements AuthzModelGenerator {
     }
 
     /**
-     * A role is a bundle of permissions: for each permission the model has, the role holds it for everyone or for
-     * nobody, which the binding then narrows to its members.
+     * A role homed at a type is a bundle of the permissions of that type and of the types it carries: for each,
+     * the role holds it for everyone or for nobody, which the binding then narrows to its members. The engine
+     * refuses a role bundling a permission from above its home.
      */
-    private static ObjectNode roleType(Set<String> allPermissions) {
+    private static ObjectNode roleType(String home, Set<String> permissions) {
         Map<String, ObjectNode> relations = new LinkedHashMap<>();
         relations.put(GRANT, direct(List.of(USER + ":*")));
-        for (String permission : allPermissions) {
+        for (String permission : permissions) {
             relations.put(permission, direct(List.of(USER + ":*")));
         }
-        return typeDefinition(ROLE, relations);
+        return typeDefinition(AuthzUtil.roleType(home), relations);
     }
 
     /**
-     * A binding is one role granted to some members on one resource: a member holds a permission through it
-     * when the role bundles that permission.
+     * A binding attached to a type is one role granted to some members on one resource of it: a member holds a
+     * permission through it when the role bundles that permission. The engine refuses a binding of a role whose
+     * home is not one the type may grant.
      */
-    private static ObjectNode roleBindingType(AuthzStoreKind kind, Set<String> allPermissions) {
+    private static ObjectNode roleBindingType(AuthzStoreKind kind, String boundOn, Set<String> homes, Set<String> permissions) {
         List<String> memberTypes = new ArrayList<>(List.of(USER, GROUP + "#" + MEMBER));
         if (kind == AuthzStoreKind.PLATFORM) {
             memberTypes.add(ORGANIZATION + "#" + MEMBER);
@@ -356,12 +414,12 @@ public class DefaultAuthzModelGenerator implements AuthzModelGenerator {
         memberTypes.add(APPLICATION + "#" + END_USER);
         memberTypes.add(TENANT + "#" + MEMBER);
         Map<String, ObjectNode> relations = new LinkedHashMap<>();
-        relations.put(ROLE, direct(List.of(ROLE)));
+        relations.put(ROLE, direct(homes.stream().map(AuthzUtil::roleType).toList()));
         relations.put(MEMBER, direct(memberTypes));
-        for (String permission : allPermissions) {
+        for (String permission : permissions) {
             relations.put(permission, intersection(List.of(computed(MEMBER), tupleToUserset(ROLE, permission))));
         }
-        return typeDefinition(ROLE_BINDING, relations);
+        return typeDefinition(AuthzUtil.roleBindingType(boundOn), relations);
     }
 
     private static ObjectNode resourceType(ResourceType type, Map<String, ResourceType> types, Set<String> carriedTypes) {
@@ -375,7 +433,7 @@ public class DefaultAuthzModelGenerator implements AuthzModelGenerator {
         for (Map.Entry<String, String> inherited : type.inherited.entrySet()) {
             relations.put(inherited.getKey(), tupleToUserset(inherited.getValue(), inherited.getKey()));
         }
-        relations.put(ROLE_BINDING, direct(List.of(ROLE_BINDING)));
+        relations.put(ROLE_BINDING, direct(List.of(AuthzUtil.roleBindingType(type.name))));
         for (String carried : carriedTypes) {
             ResourceType about = types.get(carried);
             for (Map.Entry<String, Set<String>> permission : new TreeMap<>(about.permissions).entrySet()) {
@@ -407,7 +465,7 @@ public class DefaultAuthzModelGenerator implements AuthzModelGenerator {
         Map<String, ObjectNode> relations = new LinkedHashMap<>();
         relations.put(DEFINITION, direct(List.of(ENTITY_DEFINITION)));
         relations.put(TENANT, direct(List.of(TENANT)));
-        relations.put(ROLE_BINDING, direct(List.of(ROLE_BINDING)));
+        relations.put(ROLE_BINDING, direct(List.of(AuthzUtil.roleBindingType(TENANT_DEFINITION))));
         relations.put(PLACED, tupleToUserset(DEFINITION, PLACED));
         for (Map.Entry<String, Set<String>> permission : new TreeMap<>(definition.permissions).entrySet()) {
             String name = AuthzUtil.permissionName(definition.name, permission.getKey());

@@ -16,6 +16,11 @@
           <Textarea id="role-description" v-model="description" rows="2" auto-resize placeholder="What the role is for" class="w-full" />
         </div>
         <div>
+          <label for="role-level" class="mb-2 block text-sm font-medium">Level</label>
+          <Select id="role-level" v-model="home" :options="homes" option-label="label" option-value="type" :disabled="!!role?.id" class="w-full" />
+          <p class="mt-1.5 text-[0.8125rem] text-muted-color">The role bundles permissions of this level and below, and is granted here or above. It cannot be changed once created.</p>
+        </div>
+        <div>
           <span class="mb-2 block text-sm font-medium">Permissions</span>
           <div class="rounded-xl border border-surface-200 dark:border-surface-700">
             <fieldset v-for="group in groups" :key="group.type" class="border-t border-surface-100 px-4 py-3 first:border-t-0 dark:border-surface-800">
@@ -45,13 +50,14 @@
 import { computed, ref, watch } from 'vue'
 import Button from 'primevue/button'
 import Checkbox from 'primevue/checkbox'
+import Select from 'primevue/select'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import { useToast } from 'primevue/usetoast'
 import { Kinotic } from '@kinotic-ai/core'
 import type { RoleDefinition } from '@kinotic-ai/management-api'
 import { FormDrawer, permissionLabel, showErrorToast, splitPermission, typeLabel } from '@kinotic-ai/frontend-common'
-import { RESOURCE_TYPES } from '@/util/access'
+import { homeTypes, typesWithin } from '@/util/access'
 
 /**
  * Defines a custom role from the catalog, or reshapes one: its name, description and the permissions it
@@ -63,6 +69,8 @@ const props = defineProps<{
   role: RoleDefinition | null
   /** The catalog: the model names of every permission, by type. */
   catalog: Record<string, string[]>
+  /** The organization's roles, whose built-in ones give the levels a role may be homed at. */
+  roles: RoleDefinition[]
 }>()
 
 const emit = defineEmits<{
@@ -73,13 +81,15 @@ const emit = defineEmits<{
 const toast = useToast()
 const name = ref('')
 const description = ref('')
+const home = ref<string | null>(null)
 const selected = ref<string[]>([])
 const saving = ref(false)
 
-// the organization's tree first, then any other type a service declares
+const homes = computed(() => homeTypes(props.roles).map(type => ({ type, label: typeLabel(type) })))
+
+// the permissions of the level and of the types below it, outermost first
 const groups = computed(() => {
-  const types = [...RESOURCE_TYPES.filter(type => type in props.catalog),
-                 ...Object.keys(props.catalog).filter(type => !(RESOURCE_TYPES as readonly string[]).includes(type)).sort()]
+  const types = home.value ? typesWithin(home.value, props.roles).filter(type => type in props.catalog) : []
   return types.map(type => ({
     type,
     label: typeLabel(type),
@@ -91,12 +101,19 @@ watch(() => props.visible, visible => {
   if (visible) {
     name.value = props.role?.name ?? ''
     description.value = props.role?.description ?? ''
+    home.value = props.role?.resourceType ?? homes.value[0]?.type ?? null
     selected.value = [...(props.role?.permissions ?? [])]
   }
 })
 
+// a permission from outside the level cannot be saved, so changing the level drops it
+watch(home, () => {
+  const offered = new Set(groups.value.flatMap(group => group.options.map(option => option.name)))
+  selected.value = selected.value.filter(permission => offered.has(permission))
+})
+
 async function submit(): Promise<void> {
-  if (name.value.trim() === '' || selected.value.length === 0) {
+  if (name.value.trim() === '' || selected.value.length === 0 || home.value === null) {
     return
   }
   saving.value = true
@@ -106,6 +123,8 @@ async function submit(): Promise<void> {
       name: name.value.trim(),
       description: description.value.trim() || null,
       builtIn: false,
+      resourceType: home.value,
+      grantableOn: [],
       permissions: selected.value
     })
     toast.add({ severity: 'success', summary: props.role?.id ? 'Role saved' : 'Role created', life: 4000 })

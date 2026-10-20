@@ -21,7 +21,6 @@ import org.kinotic.authz.api.model.Consistency;
 import org.kinotic.authz.api.model.Grant;
 import org.kinotic.authz.api.model.RelationshipTuple;
 import org.kinotic.authz.api.model.Resource;
-import org.kinotic.authz.api.model.RoleDefinition;
 import org.kinotic.authz.api.model.Subject;
 import org.kinotic.authz.api.model.SubjectKind;
 import org.kinotic.authz.api.services.RelationshipService;
@@ -122,13 +121,13 @@ public class DefaultRelationshipService implements RelationshipService {
         List<Future<List<RelationshipTuple>>> reads = new ArrayList<>();
         List<String> ids = new ArrayList<>(roles.keySet());
         for (String roleId : ids) {
-            reads.add(read(store, AuthzUtil.object(AuthzUtil.ROLE_TYPE, roleId)));
+            reads.add(read(store, AuthzUtil.roleObject(roleId)));
         }
         return Future.all(reads).compose(held -> {
             List<RelationshipTuple> writes = new ArrayList<>();
             List<RelationshipTuple> deletes = new ArrayList<>();
             for (int i = 0; i < ids.size(); i++) {
-                String role = AuthzUtil.object(AuthzUtil.ROLE_TYPE, ids.get(i));
+                String role = AuthzUtil.roleObject(ids.get(i));
                 Set<String> desired = roles.get(ids.get(i));
                 Set<String> bundled = new HashSet<>();
                 for (RelationshipTuple tuple : held.<List<RelationshipTuple>>resultAt(i)) {
@@ -162,17 +161,18 @@ public class DefaultRelationshipService implements RelationshipService {
         return ensure(store, binding(bindingId, roleId, member, object));
     }
 
-    // A binding is three relationships: its role, its member, and its attachment to the object
+    // A binding is three relationships: its role, its member, and its attachment to the object. The role is typed by
+    // its home and the binding by the object's type, so the engine refuses a role the object's type may not grant
     private static List<RelationshipTuple> binding(String bindingId, String roleId, String member, String object) {
-        String binding = AuthzUtil.object(AuthzUtil.ROLE_BINDING_TYPE, bindingId);
-        return List.of(new RelationshipTuple(AuthzUtil.object(AuthzUtil.ROLE_TYPE, roleId), AuthzUtil.ROLE_RELATION, binding),
+        String binding = AuthzUtil.bindingObject(object, bindingId);
+        return List.of(new RelationshipTuple(AuthzUtil.roleObject(roleId), AuthzUtil.ROLE_RELATION, binding),
                        new RelationshipTuple(member, AuthzUtil.MEMBER_RELATION, binding),
                        new RelationshipTuple(binding, AuthzUtil.ROLE_BINDING_RELATION, object));
     }
 
     @Override
     public Future<Void> unbind(String store, String bindingId, String object) {
-        String binding = AuthzUtil.object(AuthzUtil.ROLE_BINDING_TYPE, bindingId);
+        String binding = AuthzUtil.bindingObject(object, bindingId);
         return read(store, binding).compose(held -> {
             List<RelationshipTuple> tuples = new ArrayList<>(held);
             tuples.add(new RelationshipTuple(binding, AuthzUtil.ROLE_BINDING_RELATION, object));
@@ -181,22 +181,8 @@ public class DefaultRelationshipService implements RelationshipService {
     }
 
     @Override
-    public Future<List<RoleDefinition>> findRoles(String store) {
-        // the roles the store's model defines are the ones holding a permission for everyone
-        return readByUser(store, AuthzUtil.EVERYONE, AuthzUtil.ROLE_TYPE).map(held -> {
-            Map<String, TreeSet<String>> permissions = new TreeMap<>();
-            for (RelationshipTuple tuple : held) {
-                permissions.computeIfAbsent(AuthzUtil.idOf(tuple.object()), k -> new TreeSet<>()).add(tuple.relation());
-            }
-            List<RoleDefinition> ret = new ArrayList<>();
-            permissions.forEach((id, bundled) -> ret.add(new RoleDefinition(id, AuthzUtil.builtInRoleName(id), null, true, bundled)));
-            return ret;
-        });
-    }
-
-    @Override
     public Future<Void> revoke(String store, String bindingId, String object) {
-        String binding = AuthzUtil.object(AuthzUtil.ROLE_BINDING_TYPE, bindingId);
+        String binding = AuthzUtil.bindingObject(object, bindingId);
         return holds(store, new RelationshipTuple(binding, AuthzUtil.ROLE_BINDING_RELATION, object)).compose(made -> {
             if (!made) {
                 throw new IllegalArgumentException("No grant " + bindingId + " was made on " + object);
@@ -249,7 +235,7 @@ public class DefaultRelationshipService implements RelationshipService {
     @Override
     public Future<Boolean> explains(String store, String modelId, Grant grant, Subject subject, String permission) {
         Future<Boolean> bundled = holds(store, new RelationshipTuple(AuthzUtil.EVERYONE, permission,
-                                                                     AuthzUtil.object(AuthzUtil.ROLE_TYPE, grant.roleId())));
+                                                                     AuthzUtil.roleObject(grant.roleId())));
         Future<Boolean> member;
         if (grant.subject().equals(subject)) {
             member = Future.succeededFuture(true);

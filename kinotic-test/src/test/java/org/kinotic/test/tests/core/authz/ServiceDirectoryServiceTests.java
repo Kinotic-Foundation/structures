@@ -120,7 +120,8 @@ public class ServiceDirectoryServiceTests extends KinoticTestBase {
         assertEquals("tenant:{@tenantId}", generate.getResource() + ":" + generate.getResourceId());
         assertEquals(type + "_can_generate", generate.getPermissionResource() + "_" + generate.getPermission());
         // the application's store takes the service up: a viewer of its type, and the role it declares
-        assertTrue(awaitUntil(() -> roleIds().containsAll(List.of(AuthzUtil.roleId(type, AuthzUtil.VIEWER), type + ".generator"))),
+        assertTrue(awaitUntil(() -> roleIds().containsAll(List.of(AuthzUtil.roleId(type, AuthzUtil.VIEWER), type + ".generator"))
+                                    && seeded(type + ".generator")),
                    "the store never ran a model carrying the service");
         RoleDefinition generator = await(runAsOrganization(() -> access.findRoles(TEST_APP_ID))).stream()
                                                                                               .filter(role -> role.id().equals(type + ".generator"))
@@ -216,12 +217,15 @@ public class ServiceDirectoryServiceTests extends KinoticTestBase {
         return reports(name, type, true);
     }
 
-    // The reports service of the given type: generate checked for the declared permission, or served unchecked
+    // The reports service of the given type: generate checked for the declared permission and the role bundling it,
+    // or served unchecked with no role, as a role may bundle only a permission a function requires
     private static ServiceDefinition reports(String name, String type, boolean generateChecked) {
         AuthzResourceC3Decorator resource = new AuthzResourceC3Decorator()
                 .setResourceType(type)
                 .setParent(AuthzUtil.TENANT_TYPE)
-                .setRoles(List.of(new AuthzRoleDeclaration().setId(type + ".generator").setPermissions(List.of("can_generate"))));
+                .setRoles(generateChecked
+                                  ? List.of(new AuthzRoleDeclaration().setId(type + ".generator").setPermissions(List.of("can_generate")))
+                                  : List.of());
         ServiceDefinition ret = new ServiceDefinition().setNamespace(NAMESPACE).setName(name);
         ret.setDecorators(List.of(resource));
         ret.addFunction(function("findReports", null));
@@ -247,6 +251,18 @@ public class ServiceDirectoryServiceTests extends KinoticTestBase {
         Set<String> ret = new HashSet<>();
         for (RoleDefinition role : await(runAsOrganization(() -> access.findRoles(TEST_APP_ID)))) {
             ret.add(role.id());
+        }
+        return ret;
+    }
+
+    // Whether the application's store holds the role's permissions, which the reconciler writes once the store runs
+    // the model defining the role's type
+    private boolean seeded(String roleId) {
+        boolean ret;
+        try {
+            ret = !await(relationships.read(DomainUtil.authzApplicationId(TEST_ORG_ID, TEST_APP_ID), AuthzUtil.roleObject(roleId))).isEmpty();
+        } catch (Exception e) {
+            ret = false;
         }
         return ret;
     }

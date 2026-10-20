@@ -40,7 +40,7 @@
       </DataTable>
     </DashboardSection>
 
-    <RoleEditorDrawer v-model:visible="editorVisible" :role="editing" :catalog="catalog" @saved="onSaved" />
+    <RoleEditorDrawer v-model:visible="editorVisible" :role="editing" :catalog="catalog" :roles="roles" @saved="onSaved" />
   </div>
 </template>
 

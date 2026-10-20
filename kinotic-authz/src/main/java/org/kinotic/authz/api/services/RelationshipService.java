@@ -4,7 +4,6 @@ import io.vertx.core.Future;
 import org.kinotic.authz.api.model.AuthzModel;
 import org.kinotic.authz.api.model.Consistency;
 import org.kinotic.authz.api.model.Grant;
-import org.kinotic.authz.api.model.RoleDefinition;
 import org.kinotic.authz.api.model.RelationshipTuple;
 import org.kinotic.authz.api.model.Subject;
 
@@ -100,24 +99,16 @@ public interface RelationshipService {
     Future<String> ensureModelWithRoles(String store, AuthzModel model);
 
     /**
-     * The built-in roles the store's model defines, as the store's worker wrote them for the model the store
-     * runs: each one with the model names of the permissions it bundles.
-     *
-     * @param store the store, named as its record is
-     * @return the roles, in the order of their ids
-     */
-    Future<List<RoleDefinition>> findRoles(String store);
-
-    /**
      * Grants a role to a member on a resource: one binding, attached to the resource, holding the role and the
      * member, through which the member holds every permission the role bundles on the resource and on
-     * everything inside it.
+     * everything inside it. The engine refuses a role whose home the resource's type may not grant.
      *
      * @param store  the store, named as its record is
-     * @param roleId the role granted, such as a built-in role's id
+     * @param roleId the role granted, {@code <home type>.<name>}, such as a built-in role's id
      * @param member who holds it, in {@code type:id} form, or a userset such as {@code group:id#member}
      * @param object the resource the grant is made on, in {@code type:id} form
-     * @return the id of the binding
+     * @return the id of the binding; fails with the engine's validation error when the resource's type may not
+     *         grant the role
      */
     Future<String> bind(String store, String roleId, String member, String object);
 

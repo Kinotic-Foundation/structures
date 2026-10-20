@@ -158,7 +158,7 @@ public class GraphSyncTests extends KinoticTestBase {
         assertTrue(model.roles().get(AuthzUtil.ORGANIZATION_ADMIN_ROLE).containsAll(
                 Set.of("project_can_delete", "entity_definition_can_delete", "application_can_edit")));
         for (Map.Entry<String, Set<String>> role : model.roles().entrySet()) {
-            Set<String> bundled = await(relationships.read(AuthzStoreService.PLATFORM, AuthzUtil.object(AuthzUtil.ROLE_TYPE, role.getKey())))
+            Set<String> bundled = await(relationships.read(AuthzStoreService.PLATFORM, AuthzUtil.roleObject(role.getKey())))
                     .stream()
                     .filter(tuple -> AuthzUtil.EVERYONE.equals(tuple.user()))
                     .map(RelationshipTuple::relation)

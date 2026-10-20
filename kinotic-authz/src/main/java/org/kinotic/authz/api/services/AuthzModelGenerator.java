@@ -9,10 +9,13 @@ import java.util.Collection;
  * Generates a store's authorization model from the services it serves. The model is a pure function of its
  * inputs, so two calls with the same declarations produce the same definition and hash.
  *
- * Every model carries the kernel: {@code user}, {@code group}, {@code role} and {@code role_binding}, plus the
- * membership relations of the kinds of store, and an application's model the fixed types of its data,
- * {@code entity_definition} for a definition's rows and {@code tenant_definition} for those rows within one
- * tenant. Each service declaring an {@code @AuthzResource} contributes its type, its parent and the permissions
+ * Every model carries the kernel: {@code user} and {@code group}, plus the membership relations of the kinds of
+ * store, and for each resource type {@code <type>} a role type {@code <type>_role}, whose roles bundle only the
+ * permissions of the type and of the types inside it, and a binding type {@code <type>_role_binding}, the only
+ * binding a resource of the type accepts, which grants only roles homed at the type or inside it within its trust
+ * boundary (the platform's store bounds an organization and a tenant). An application's model also carries the
+ * fixed types of its data, {@code entity_definition} for a definition's rows and {@code tenant_definition} for
+ * those rows within one tenant. Each service declaring an {@code @AuthzResource} contributes its type, its parent and the permissions
  * its functions require, the entities repository among them, so a definition's rows have the permissions it
  * declares. A permission is named {@code <type>_<permission>} throughout, it is
  * held by a binding of a role that bundles it on the resource or on any ancestor, and the derived

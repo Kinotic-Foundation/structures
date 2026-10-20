@@ -15,6 +15,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -178,9 +179,7 @@ public class AuthzModelGeneratorTest {
         AuthzModel model = generator.platformModel(platformServices());
 
         assertEquals("1.1", model.definition().get("schema_version").asString());
-        assertEquals(Set.of("user", "group", "role", "role_binding",
-                            "application", "organization", "platform", "project", "tenant", "vm_node"),
-                     typeNames(model));
+        assertEquals(withRoleTypes("application", "organization", "platform", "project", "tenant", "vm_node"), typeNames(model));
         assertEquals(List.of("application"), directTypes(type(model, "project"), "application"));
         assertEquals(List.of("user"), directTypes(type(model, "organization"), "member"));
         assertEquals(List.of("user"), directTypes(type(model, "application"), "end_user"));
@@ -219,19 +218,58 @@ public class AuthzModelGeneratorTest {
     }
 
     @Test
-    public void rolesBundleEveryPermissionAndBindingsNarrowThemToMembers() {
+    public void rolesBundleTheirHomesPermissionsAndBindingsNarrowThemToMembers() {
         AuthzModel model = generator.platformModel(platformServices());
 
-        assertEquals(List.of("user:*"), directTypes(type(model, "role"), "grant"));
-        assertEquals(List.of("user:*"), directTypes(type(model, "role"), "project_can_deploy"));
-        assertEquals(List.of("user:*"), directTypes(type(model, "role"), "vm_node_can_register_node"));
-        assertEquals(List.of("user:*"), directTypes(type(model, "role"), "platform_can_read_cluster"));
-        assertEquals(List.of("role"), directTypes(type(model, "role_binding"), "role"));
+        assertEquals(List.of("user:*"), directTypes(type(model, "project_role"), "grant"));
+        assertEquals(List.of("user:*"), directTypes(type(model, "project_role"), "project_can_deploy"));
+        // a role homed at a type bundles only the permissions of the type and of the types inside it
+        assertFalse(type(model, "project_role").get("relations").has("organization_can_read_members"));
+        assertFalse(type(model, "organization_role").get("relations").has("platform_can_read_cluster"));
+        assertEquals(List.of("user:*"), directTypes(type(model, "platform_role"), "project_can_deploy"));
+        assertEquals(List.of("user:*"), directTypes(type(model, "platform_role"), "vm_node_can_register_node"));
         assertEquals(List.of("user", "group#member", "organization#member", "application#end_user", "tenant#member"),
-                     directTypes(type(model, "role_binding"), "member"));
+                     directTypes(type(model, "project_role_binding"), "member"));
         assertEquals(List.of("computed:member", "ttu:role->project_can_deploy"),
-                     children(type(model, "role_binding"), "project_can_deploy", "intersection"));
-        assertEquals(List.of("role_binding"), directTypes(type(model, "project"), "role_binding"));
+                     children(type(model, "project_role_binding"), "project_can_deploy", "intersection"));
+        // a resource accepts only the binding of its own type
+        assertEquals(List.of("project_role_binding"), directTypes(type(model, "project"), "role_binding"));
+        assertEquals(List.of("organization_role_binding"), directTypes(type(model, "organization"), "role_binding"));
+    }
+
+    @Test
+    public void aBindingGrantsOnlyRolesHomedAtItsTypeOrInsideItWithinItsTrustBoundary() {
+        AuthzModel model = generator.platformModel(platformServices());
+
+        assertEquals(List.of("project_role"), directTypes(type(model, "project_role_binding"), "role"));
+        assertEquals(List.of("application_role", "project_role"), directTypes(type(model, "application_role_binding"), "role"));
+        // an organization grants none of a tenant's roles, and the platform none of an organization's
+        assertEquals(List.of("application_role", "organization_role", "project_role"),
+                     directTypes(type(model, "organization_role_binding"), "role"));
+        assertEquals(List.of("platform_role", "vm_node_role"), directTypes(type(model, "platform_role_binding"), "role"));
+        assertEquals(List.of("tenant_role"), directTypes(type(model, "tenant_role_binding"), "role"));
+        assertTrue(model.grantable("project.editor", "organization"));
+        assertFalse(model.grantable(AuthzUtil.ORGANIZATION_ADMIN_ROLE, "project"));
+        assertFalse(model.grantable("project.editor", "platform"));
+        assertFalse(model.grantable("tenant.admin", "organization"));
+        assertEquals(Set.of("application", "organization", "project"), model.grantableOn("project", "organization"));
+        assertEquals(Set.of(), model.grantableOn(AuthzUtil.PLATFORM_TYPE, "organization"));
+        assertEquals(Set.of("organization", "project"), model.catalog("organization").keySet());
+    }
+
+    // The kernel types, and each resource type beside its role and binding types
+    private static Set<String> withRoleTypes(String... resourceTypes) {
+        Set<String> ret = new TreeSet<>(Set.of("user", "group"));
+        for (String type : resourceTypes) {
+            ret.addAll(Set.of(type, AuthzUtil.roleType(type), AuthzUtil.roleBindingType(type)));
+        }
+        return ret;
+    }
+
+    private static Set<String> applicationTypes() {
+        Set<String> ret = withRoleTypes("application", "entity_definition", "tenant");
+        ret.addAll(Set.of("tenant_definition", "tenant_definition_role_binding"));
+        return ret;
     }
 
     @Test
@@ -282,7 +320,7 @@ public class AuthzModelGeneratorTest {
         AuthzModel model = generator.platformModel(platformServices());
 
         // the administrator holds everything in the model
-        Set<String> everything = new java.util.TreeSet<>();
+        Set<String> everything = new TreeSet<>();
         model.permissions().forEach((type, permissions) -> permissions.forEach(permission -> everything.add(AuthzUtil.permissionName(type, permission))));
         assertEquals(everything, model.roles().get(AuthzUtil.PLATFORM_ADMIN_ROLE));
         // the operator holds the platform's own permissions and reads everything on it
@@ -349,11 +387,18 @@ public class AuthzModelGeneratorTest {
     public void applicationModelRootsAtTheApplicationWithTheFixedEntityTypes() {
         AuthzModel model = generator.applicationModel(List.of(entitiesRepository()), List.of());
 
-        assertEquals(Set.of("user", "group", "role", "role_binding", "application", "entity_definition", "tenant", "tenant_definition"),
-                     typeNames(model));
+        assertEquals(applicationTypes(), typeNames(model));
         assertFalse(type(model, "application").get("relations").has("organization"));
         assertEquals(List.of("user", "group#member", "application#end_user", "tenant#member"),
-                     directTypes(type(model, "role_binding"), "member"));
+                     directTypes(type(model, "tenant_role_binding"), "member"));
+        // the application grants every role of its store, a tenant all but the application's, a definition within a
+        // tenant only the definition's
+        assertEquals(List.of("application_role", "entity_definition_role", "tenant_role"),
+                     directTypes(type(model, "application_role_binding"), "role"));
+        assertEquals(List.of("entity_definition_role", "tenant_role"), directTypes(type(model, "tenant_role_binding"), "role"));
+        assertEquals(List.of("entity_definition_role"), directTypes(type(model, "tenant_definition_role_binding"), "role"));
+        assertEquals(List.of("tenant_definition_role_binding"), directTypes(type(model, "tenant_definition"), "role_binding"));
+        assertFalse(model.grantable("application.admin", "tenant"));
         // the application is placed in its own store by a wildcard tuple, and a definition under it is placed through it
         assertEquals(List.of("user:*"), directTypes(type(model, "application"), "placed"));
         assertEquals(List.of("application"), directTypes(type(model, "entity_definition"), "application"));
@@ -395,7 +440,7 @@ public class AuthzModelGeneratorTest {
                                                    entitiesRepository());
         AuthzModel model = generator.applicationModel(platform, List.of());
 
-        assertEquals(Set.of("user", "group", "role", "role_binding", "application", "entity_definition", "tenant", "tenant_definition"), typeNames(model));
+        assertEquals(applicationTypes(), typeNames(model));
         assertEquals(Set.of("can_read_members"), model.permissions().get("tenant"));
         assertEquals(Set.of("can_create", "can_delete", "can_edit", "can_read"), model.permissions().get("entity_definition"));
         assertFalse(model.permissions().containsKey("application"));

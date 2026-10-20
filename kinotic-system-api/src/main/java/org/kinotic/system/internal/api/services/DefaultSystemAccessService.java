@@ -46,11 +46,7 @@ public class DefaultSystemAccessService implements SystemAccessService {
 
     @Override
     public Future<List<RoleDefinition>> findRoles() {
-        return model().map(model -> {
-            List<RoleDefinition> ret = new ArrayList<>();
-            model.roles().forEach((id, permissions) -> ret.add(new RoleDefinition(id, AuthzUtil.builtInRoleName(id), null, true, permissions)));
-            return ret;
-        });
+        return model().map(model -> model.builtInRoles(AuthzUtil.PLATFORM_TYPE));
     }
 
     @Override
@@ -63,7 +59,7 @@ public class DefaultSystemAccessService implements SystemAccessService {
         validate(subject);
         Validate.notBlank(roleId, "roleId cannot be blank");
         return model().compose(model -> {
-            if (!model.roles().containsKey(roleId)) {
+            if (!model.roles().containsKey(roleId) || !model.grantable(roleId, AuthzUtil.PLATFORM_TYPE)) {
                 throw new IllegalArgumentException("No role of the platform has id " + roleId);
             }
             return requireStaff(subject);

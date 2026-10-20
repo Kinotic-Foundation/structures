@@ -1,21 +1,20 @@
 import type { Grant, Resource, RoleDefinition } from '@kinotic-ai/management-api'
-import { splitPermission } from '@kinotic-ai/frontend-common'
 
-/** The resource types of an organization's tree, each contained in the one before it. */
-export const RESOURCE_TYPES = ['organization', 'application', 'project', 'entity_definition'] as const
-
-export type ResourceType = typeof RESOURCE_TYPES[number]
-
-/** The types a resource of the given type contains, itself first; every type for an unknown one. */
-export function typesWithin(type: string): string[] {
-  const at = RESOURCE_TYPES.indexOf(type as ResourceType)
-  return at < 0 ? [...RESOURCE_TYPES] : RESOURCE_TYPES.slice(at)
+/**
+ * The home types of the built-in roles, outermost first: a type is above another when a role homed at the other may
+ * be granted on it, so the fewer types a home's roles may be granted on, the higher it sits.
+ */
+export function homeTypes(roles: RoleDefinition[]): string[] {
+  const reach = new Map<string, number>()
+  for (const role of roles.filter(role => role.builtIn)) {
+    reach.set(role.resourceType, role.grantableOn.length)
+  }
+  return [...reach.keys()].sort((a, b) => reach.get(a)! - reach.get(b)! || a.localeCompare(b))
 }
 
-/** Whether a grant of the role on a resource of the type gives anything: a permission of the type or of one inside it. */
-export function roleFits(role: RoleDefinition, type: string): boolean {
-  const within = typesWithin(type)
-  return role.permissions.some(permission => within.includes(splitPermission(permission).type))
+/** The home types whose roles a role homed at the given type may bundle the permissions of: the type and those inside it. */
+export function typesWithin(home: string, roles: RoleDefinition[]): string[] {
+  return homeTypes(roles).filter(type => roles.some(role => role.builtIn && role.resourceType === type && role.grantableOn.includes(home)))
 }
 
 /** Whether two resources are the same node. */
