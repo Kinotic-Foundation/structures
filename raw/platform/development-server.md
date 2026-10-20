@@ -881,11 +881,7 @@ What differs between the three:
   <tr>
     <td>
       <code>
-        kinotic.managementServer.apiBaseUrl
-      </code>
-      
-      , <code>
-        portalBaseUrl
+        kinotic.managementApi.apiBaseUrl
       </code>
     </td>
     
@@ -898,17 +894,67 @@ What differs between the three:
         issuerBaseUrl
       </code>
       
-       set, the OAuth issuer; <code>
+       set, the OAuth issuer
+    </td>
+    
+    <td>
+      —
+    </td>
+    
+    <td>
+      —
+    </td>
+  </tr>
+  
+  <tr>
+    <td>
+      <code>
+        kinotic.domain.appApiBaseUrl
+      </code>
+      
+      , which every server shares
+    </td>
+    
+    <td>
+      <code>
+        https://apps-api.dev.kinotic.io
+      </code>
+      
+      , the host of an application's OIDC callback
+    </td>
+    
+    <td>
+      the same; the URL a UI build is handed
+    </td>
+    
+    <td>
+      the same; what it serves, each application's host its own issuer
+    </td>
+  </tr>
+  
+  <tr>
+    <td>
+      <code>
+        kinotic.domain.portalBaseUrl
+      </code>
+      
+      , which every server shares
+    </td>
+    
+    <td>
+      <code>
         https://dev-portal.kinotic.ai
       </code>
+      
+      , where browser flows return and the emailed links open
     </td>
     
     <td>
-      —
+      the same; the invites its member service sends open there
     </td>
     
     <td>
-      —
+      the same
     </td>
   </tr>
   
@@ -934,80 +980,6 @@ What differs between the three:
       
       ; <code>
         https://dev-console.kinotic.ai
-      </code>
-    </td>
-    
-    <td>
-      —
-    </td>
-  </tr>
-  
-  <tr>
-    <td>
-      <code>
-        kinotic.appServer.apiBaseUrl
-      </code>
-    </td>
-    
-    <td>
-      —
-    </td>
-    
-    <td>
-      —
-    </td>
-    
-    <td>
-      <code>
-        https://apps-api.dev.kinotic.io
-      </code>
-      
-      : each application's host is its own issuer
-    </td>
-  </tr>
-  
-  <tr>
-    <td>
-      <code>
-        kinotic.systemApi.deployment.appApiBaseUrl
-      </code>
-    </td>
-    
-    <td>
-      —
-    </td>
-    
-    <td>
-      <code>
-        https://apps-api.dev.kinotic.io
-      </code>
-      
-      , for the URL a UI build is handed
-    </td>
-    
-    <td>
-      —
-    </td>
-  </tr>
-  
-  <tr>
-    <td>
-      <code>
-        kinotic.domain.email.linkBaseUrl
-      </code>
-    </td>
-    
-    <td>
-      <code>
-        https://dev-portal.kinotic.ai
-      </code>
-      
-      , where the emailed links open
-    </td>
-    
-    <td>
-      <code>
-        https://dev-portal.kinotic.ai
       </code>
     </td>
     
@@ -1103,11 +1075,7 @@ What differs between the three:
       </code>
       
       , <code>
-        uiDeployment.sitesDomain
-      </code>
-      
-       / <code>
-        sitesStorageEndpoint
+        uiDeployment.sitesStorageEndpoint
       </code>
       
       , <code>
@@ -1124,11 +1092,11 @@ What differs between the three:
         false
       </code>
       
-      , so the sites Worker serves the published UIs; <code>
+      , so the sites Worker serves the published UIs; the development server's sites account; <code>
         dev.kinotic.io
       </code>
       
-      , the development server's sites account; the Cloudflare zone each organization's record is created in
+       and the Cloudflare zone each organization's record is created in
     </td>
     
     <td>
@@ -1305,11 +1273,19 @@ What the three share:
         kubernetes
       </code>
       
-       profile hardcodes <code>
-        kinotic.ai
+       profiles hardcode the production origins, <code>
+        portal.kinotic.ai
       </code>
       
-       and is not active here
+      , <code>
+        console.kinotic.ai
+      </code>
+      
+       and the sites under <code>
+        kinotic.io
+      </code>
+      
+      , and are not active here
     </td>
   </tr>
   

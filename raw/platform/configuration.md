@@ -957,9 +957,14 @@ under a platform domain, and every UI a deployment builds is handed its applicat
 to connect to (see [the UI build contract](/apps/application-structure/applications-and-projects#the-ui-build-contract)).
 The app server serves every application at its host: its login and OAuth routes take the
 application from the host a request is addressed to and answer `404` on any other host, and it
-signs an application's users in only from pages that are the application's own UIs. The app server
-configures both under `kinotic.appServer.*`; the system server is handed the same domain under
-`kinotic.systemApi.deployment.appApiBaseUrl`, which each UI build receives as the host to connect to:
+signs an application's users in only from pages that are the application's own UIs. Each URL a
+browser reaches is one setting, in the module every server that reads it loads. The application
+hosts are `kinotic.domain.appApiBaseUrl`: the app server serves them, the system server hands each
+UI build its application's host to connect to, and the management server builds the callback URLs
+an organization registers with its own identity providers. The portal is `kinotic.domain.portalBaseUrl`:
+where the management server's browser flows return and where the platform's emailed links open. The
+management server's API is `kinotic.managementApi.apiBaseUrl`, read only by the servers that load
+management-api. The Helm chart sets all three from the same paths in its values:
 
 <table>
 <thead>
@@ -982,7 +987,7 @@ configures both under `kinotic.appServer.*`; the system server is handed the sam
   <tr>
     <td>
       <code>
-        kinotic.appServer.apiBaseUrl
+        kinotic.domain.appApiBaseUrl
       </code>
     </td>
     
@@ -1007,8 +1012,72 @@ configures both under `kinotic.appServer.*`; the system server is handed the sam
         https://acme--orders.apps-api.kinotic.io
       </code>
       
-      , which is also its OAuth issuer. The development profile sets <code>
+      , which is also its OAuth issuer, the host its UIs are built against, and the host of the callback URL <code>
+        OwnedOidcConfigurationService.findCallbackUrl
+      </code>
+      
+       gives an application's or a tenant's OIDC configuration. The base URL itself is the shared host a sign-in through one of the platform's social registrations returns to. The development profiles set <code>
         http://localhost:58505
+      </code>
+    </td>
+  </tr>
+  
+  <tr>
+    <td>
+      <code>
+        kinotic.managementApi.apiBaseUrl
+      </code>
+    </td>
+    
+    <td>
+      —
+    </td>
+    
+    <td>
+      The management server's API as a browser reaches it: the base of its OIDC redirect URIs, including the callback URL <code>
+        findCallbackUrl
+      </code>
+      
+       gives an organization's own OIDC configuration, and its OAuth issuer unless <code>
+        kinotic.managementServer.issuerBaseUrl
+      </code>
+      
+       is set. The management server's development profile sets <code>
+        http://localhost:5173
+      </code>
+      
+      , the portal's vite dev server, and its <code>
+        compose
+      </code>
+      
+       profile <code>
+        http://localhost:9090
+      </code>
+    </td>
+  </tr>
+  
+  <tr>
+    <td>
+      <code>
+        kinotic.domain.portalBaseUrl
+      </code>
+    </td>
+    
+    <td>
+      —
+    </td>
+    
+    <td>
+      The portal as a browser reaches it: where the management server's browser flows send the user, and the base of the verification, invite and sign-in links in the platform's emails, which every server that sends mail reads. The development profiles set <code>
+        http://localhost:5173
+      </code>
+      
+      , and the management server's <code>
+        compose
+      </code>
+      
+       profile <code>
+        http://localhost:9090
       </code>
     </td>
   </tr>
@@ -1036,22 +1105,6 @@ configures both under `kinotic.appServer.*`; the system server is handed the sam
        under the sites domain
     </td>
   </tr>
-  
-  <tr>
-    <td>
-      <code>
-        kinotic.systemApi.deployment.appApiBaseUrl
-      </code>
-    </td>
-    
-    <td>
-      —
-    </td>
-    
-    <td>
-      The same base URL, on the system server: the host each UI build is handed as where its application's API is reached
-    </td>
-  </tr>
 </tbody>
 </table>
 
@@ -1059,8 +1112,8 @@ configures both under `kinotic.appServer.*`; the system server is handed the sam
 
 A deployment of a commit that contains a UI publishes it into the platform's sites storage
 account, one per environment, and it is served at its own hostname under the organization's
-subdomain of the sites domain by the Cloudflare sites Worker. Both are configured under
-`kinotic.systemApi.uiDeployment.*`:
+subdomain of the sites domain, `kinotic.domain.publishedSites.domain` below, by the Cloudflare sites
+Worker. The account is configured under `kinotic.systemApi.uiDeployment.*`:
 
 <table>
 <thead>
@@ -1083,30 +1136,6 @@ subdomain of the sites domain by the Cloudflare sites Worker. Both are configure
   <tr>
     <td>
       <code>
-        sitesDomain
-      </code>
-    </td>
-    
-    <td>
-      —
-    </td>
-    
-    <td>
-      The domain every organization's sites are under, e.g. <code>
-        kinotic.io
-      </code>
-      
-      : a site is <code>
-        <applicationId>--<uiName>.<organizationId>.<sitesDomain>
-      </code>
-      
-      . Required
-    </td>
-  </tr>
-  
-  <tr>
-    <td>
-      <code>
         sitesStorageEndpoint
       </code>
     </td>
@@ -1126,8 +1155,8 @@ subdomain of the sites domain by the Cloudflare sites Worker. Both are configure
 </tbody>
 </table>
 
-The required settings are validated at boot, like the GitHub App settings, so an environment
-[without Azure storage](#without-azure-storage) still sets them, to placeholders. In the Azure
+The endpoint is validated at boot, like the GitHub App settings, so an environment
+[without Azure storage](#without-azure-storage) still sets it, to a placeholder. In the Azure
 deployment terraform creates the account and the Cloudflare side and passes the account and
 domain to the server (see the [deployment guide](/platform/deployment-guide)); the `local`
 profile of the [contributing guide](/platform/contributing#publishing-uis-against-azure) names
@@ -1137,9 +1166,9 @@ and removal workloads act through. The sites Worker reads the account over its b
 with a read-only SAS on the container, which terraform mints and binds to the Worker as a
 secret; the container is private, so a site's files are reachable only through the Worker.
 
-Each organization's subdomain of the sites domain needs a DNS record at the edge, which the
-platform creates when the organization is created and again before its first site is
-published. Every server that does so is configured under `kinotic.domain.publishedSites.*`:
+The sites domain, and the edge each organization's subdomain of it needs a DNS record at, are
+configured under `kinotic.domain.publishedSites.*`. The platform creates the record when the
+organization is created and again before its first site is published:
 
 <table>
 <thead>
@@ -1171,17 +1200,19 @@ published. Every server that does so is configured under `kinotic.domain.publish
     </td>
     
     <td>
-      The sites domain, the same value as <code>
-        uiDeployment.sitesDomain
-      </code>
-      
-      , e.g. <code>
+      The domain every organization's sites are under, e.g. <code>
         kinotic.io
       </code>
       
        or <code>
         dev.kinotic.io
       </code>
+      
+      : a site is <code>
+        <applicationId>--<uiName>.<organizationId>.<domain>
+      </code>
+      
+      . Required on the system server to publish a UI; an application's login admits pages under it
     </td>
   </tr>
   

@@ -631,13 +631,10 @@ deployments fetch their repositories with.
 # The github-platform sign-in row's OAuth client secret
 KINOTIC_AKV_GITHUB_PLATFORM: "<client secret>"
 kinotic:
-  managementServer:
-    apiBaseUrl: https://you.ngrok-free.dev
-    portalBaseUrl: https://you.ngrok-free.dev
   domain:
-    email:
-      linkBaseUrl: https://you.ngrok-free.dev
+    portalBaseUrl: https://you.ngrok-free.dev
   managementApi:
+    apiBaseUrl: https://you.ngrok-free.dev
     github:
       appId: "1234567"
       appSlug: kinotic-dev-you
