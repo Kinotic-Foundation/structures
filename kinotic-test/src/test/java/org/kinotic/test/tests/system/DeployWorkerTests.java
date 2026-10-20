@@ -4,9 +4,9 @@ import io.vertx.core.Future;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.kinotic.authz.api.model.AuthzObject;
-import org.kinotic.authz.api.model.AuthzRelation;
-import org.kinotic.authz.api.model.AuthzType;
+import org.kinotic.authz.api.model.Consistency;
+import org.kinotic.authz.api.model.RelationshipTuple;
+import org.kinotic.authz.api.services.AuthzStoreService;
 import org.kinotic.authz.api.services.RelationshipService;
 import org.kinotic.core.api.ServiceRegistry;
 import org.kinotic.core.api.crud.Pageable;
@@ -14,6 +14,7 @@ import org.kinotic.domain.api.model.Requeue;
 import org.kinotic.domain.api.services.Reconciler;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.utils.DomainUtil;
+import org.kinotic.idl.api.utils.AuthzUtil;
 import org.kinotic.management.api.model.Project;
 import org.kinotic.management.api.model.deployment.DeployTarget;
 import org.kinotic.management.api.model.deployment.DeploymentState;
@@ -113,6 +114,9 @@ public class DeployWorkerTests extends KinoticTestBase {
 
     @Autowired
     private RelationshipService relationships;
+
+    @Autowired
+    private AuthzStoreService stores;
 
     private final List<String> microserviceIds = new ArrayList<>();
     private final List<String> uiIds = new ArrayList<>();
@@ -241,9 +245,15 @@ public class DeployWorkerTests extends KinoticTestBase {
 
         MicroserviceDeployment deployed = awaitDeployed(deployment.getId(), null);
 
-        AuthzObject machine = new AuthzObject(AuthzType.MACHINE, deployed.getMachineIdentityId());
-        assertTrue(await(relationships.check(machine, AuthzRelation.CAN_REGISTER_SERVICES, DomainUtil.authzApplication(TEST_ORG_ID, TEST_APP_ID))));
-        assertFalse(await(relationships.check(machine, AuthzRelation.CAN_REGISTER_SERVICES, DomainUtil.authzApplication(TEST_ORG_ID, "other-" + TEST_APP_ID))));
+        String machine = AuthzUtil.object(AuthzUtil.USER_TYPE, deployed.getMachineIdentityId());
+        String registers = AuthzUtil.permissionName(AuthzUtil.APPLICATION_TYPE, AuthzUtil.CAN_REGISTER_SERVICES);
+        String modelId = await(stores.modelId(AuthzStoreService.PLATFORM));
+        assertTrue(await(relationships.check(AuthzStoreService.PLATFORM, modelId,
+                                             new RelationshipTuple(machine, registers, DomainUtil.authzApplication(TEST_ORG_ID, TEST_APP_ID)),
+                                             Consistency.HIGHER_CONSISTENCY)));
+        assertFalse(await(relationships.check(AuthzStoreService.PLATFORM, modelId,
+                                              new RelationshipTuple(machine, registers, DomainUtil.authzApplication(TEST_ORG_ID, "other-" + TEST_APP_ID)),
+                                              Consistency.HIGHER_CONSISTENCY)));
     }
 
     @Test

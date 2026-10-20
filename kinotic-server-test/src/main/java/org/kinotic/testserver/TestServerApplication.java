@@ -9,8 +9,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 /**
  * A gateway for the {@code @kinotic-ai/core} RPC tests: kinotic-core and the api gateway, with
- * {@link TestSecurityService} authenticating connections, {@link TestZoneRulesService} deciding their zones and
- * {@link ITestService} to call. It needs no Elasticsearch and no authorization engine.
+ * {@link TestSecurityService} authenticating connections, {@link TestZoneRulesService} deciding their zones,
+ * {@link TestRequestAuthorizer} admitting every request and {@link ITestService} to call. It needs no
+ * Elasticsearch and no authorization engine.
  */
 // Only kinotic-domain's model types are used here; its services, and the kinotic-sql executors it
 // carries, need Elasticsearch, and the kinotic-authz services it carries need OpenFGA

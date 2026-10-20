@@ -3,15 +3,11 @@ package org.kinotic.test.tests.core.application;
 import io.vertx.core.Future;
 import org.junit.jupiter.api.Test;
 import org.kinotic.app.api.services.ApplicationServiceDirectory;
-import org.kinotic.authz.api.model.AuthzObject;
-import org.kinotic.authz.api.model.AuthzRelation;
-import org.kinotic.authz.api.model.AuthzType;
-import org.kinotic.authz.api.model.RelationshipTuple;
+import org.kinotic.authz.api.services.AuthzStoreService;
 import org.kinotic.authz.api.services.RelationshipService;
 import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.core.api.crud.Sort;
 import org.kinotic.core.api.event.CRI;
-import org.kinotic.core.api.exceptions.AuthorizationException;
 import org.kinotic.core.api.security.ParticipantConstants;
 import org.kinotic.core.api.directory.ServiceDirectory;
 import org.kinotic.core.api.directory.ServiceDirectoryEntry;
@@ -20,6 +16,7 @@ import org.kinotic.domain.api.model.security.participant.DefaultOrganizationPart
 import org.kinotic.domain.api.model.security.participant.OrganizationParticipant;
 import org.kinotic.domain.api.services.security.ZoneRulesService;
 import org.kinotic.domain.api.utils.DomainUtil;
+import org.kinotic.idl.api.utils.AuthzUtil;
 import org.kinotic.idl.api.schema.FunctionDefinition;
 import org.kinotic.idl.api.schema.ServiceDefinition;
 import org.kinotic.management.api.services.ApplicationService;
@@ -43,13 +40,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Verifies how an application runtime registers and hosts its services: a runtime registers a service of the
  * application it is granted the runtime of in that application's zone, a service published in no namespace is
  * addressed in the zone's namespace, and a registration in another zone, for an application the organization does
- * not own or for an application the runtime is not granted is refused. A runtime subscribes only in the zones of
- * the applications it is granted. Each test writes the grant a deployment writes for its runtime machine.
+ * not own is refused. The gateway admits a registration only from a runtime granted the application's runtime role.
+ * A runtime subscribes only in the zones of the applications it is granted. Each test writes the grant a
+ * deployment writes for its runtime machine.
  */
 @SpringBootTest
 public class ApplicationServiceDirectoryTests extends KinoticTestBase {
 
     private static final String NAMESPACE = "com.acme.reports";
+    private static final String DIRECTORY_SERVICE = DomainUtil.APP_API_ZONE + "~" + ApplicationServiceDirectory.class.getName();
 
     @Autowired
     private ApplicationServiceDirectory applicationServiceDirectory;
@@ -134,16 +133,19 @@ public class ApplicationServiceDirectoryTests extends KinoticTestBase {
     @Test
     public void onlyARuntimeGrantedTheApplicationRegistersItsServices() throws Exception {
         String appId = application();
-        String zone = DomainUtil.applicationZone(TEST_ORG_ID, appId);
+        List<ServiceDirectoryEntry> register = List.of(entry(appId, DomainUtil.applicationZone(TEST_ORG_ID, appId),
+                                                             definition(NAMESPACE, "ReportService")));
 
-        assertInstanceOf(AuthorizationException.class,
-                         failure(() -> applicationServiceDirectory.register(entry(appId, zone, definition(NAMESPACE, "ReportService")))));
-        // a person of the organization registers no application's services
+        assertRefused(DIRECTORY_SERVICE, "register", runtime, register, AuthzUtil.CAN_REGISTER_SERVICES);
         grantRuntime(appId);
-        assertInstanceOf(AuthorizationException.class,
-                         failure(TEST_ORGANIZATION_PARTICIPANT,
-                                 () -> applicationServiceDirectory.register(entry(appId, zone, definition(NAMESPACE, "ReportService")))));
-        assertTrue(entries(appId).isEmpty());
+        assertTrue(awaitUntil(() -> admitted(DIRECTORY_SERVICE, "register", runtime, register)), "the granted runtime was never admitted");
+        // a person of the organization holding no role registers no application's services
+        OrganizationParticipant person = new DefaultOrganizationParticipant(UUID.randomUUID().toString(),
+                                                                            TEST_ORG_ID,
+                                                                            Map.of(ParticipantConstants.PARTICIPANT_TYPE_METADATA_KEY,
+                                                                                   ParticipantConstants.PARTICIPANT_TYPE_USER),
+                                                                            List.of());
+        assertRefused(DIRECTORY_SERVICE, "register", person, register, AuthzUtil.CAN_REGISTER_SERVICES);
     }
 
     @Test
@@ -177,10 +179,11 @@ public class ApplicationServiceDirectoryTests extends KinoticTestBase {
     }
 
     private void grantRuntime(String applicationId) throws Exception {
-        await(relationships.write(List.of(new RelationshipTuple(new AuthzObject(AuthzType.MACHINE, runtime.getId()),
-                                                                AuthzRelation.RUNTIME,
-                                                                DomainUtil.authzApplication(TEST_ORG_ID, applicationId))),
-                                  List.of()));
+        await(relationships.ensureBound(AuthzStoreService.PLATFORM,
+                                        "runtime-of-" + runtime.getId() + "-" + applicationId,
+                                        AuthzUtil.APPLICATION_RUNTIME_ROLE,
+                                        AuthzUtil.object(AuthzUtil.USER_TYPE, runtime.getId()),
+                                        DomainUtil.authzApplication(TEST_ORG_ID, applicationId)));
     }
 
     private static ServiceDirectoryEntry entry(String applicationId, String zone, ServiceDefinition definition) {
