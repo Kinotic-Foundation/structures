@@ -326,7 +326,7 @@ async function switchTo(organizationId: string) {
     if (!res.ok) {
       throw new Error(`The switch was refused (${res.status})`)
     }
-    window.location.assign('/applications')
+    window.location.assign('/')
   } catch (err) {
     showErrorToast(toast, 'Failed to switch organization', err, { life: 8000 })
     switchingTo.value = null
