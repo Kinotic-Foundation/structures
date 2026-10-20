@@ -67,6 +67,18 @@ public class DomainUtil {
     private static final Set<String> PLATFORM_ZONES = Set.of(SYSTEM_API_ZONE, MANAGEMENT_API_ZONE, APP_API_ZONE, APP_ZONE_PREFIX);
 
     /**
+     * The zone an application's own services are addressed in, {@code app.<organizationId>.<applicationId>},
+     * which the application's runtimes and users reach and nothing outside the application does.
+     *
+     * @param organizationId the application's organization
+     * @param applicationId  the application
+     * @return the zone
+     */
+    public static String applicationZone(String organizationId, String applicationId) {
+        return APP_ZONE_PREFIX + "." + organizationId + "." + applicationId;
+    }
+
+    /**
      * The prefix of the Elasticsearch indices the platform creates, including the index that holds
      * the items of each published EntityDefinition
      */

@@ -354,7 +354,7 @@ The repository contains the major components required to build and operate Kinot
 |---|---|
 | [`kinotic-js`](kinotic-js) | TypeScript workspace: client SDKs, the `kinotic` CLI, the VM manager, the workload runner, and end-to-end tests |
 | [`kinotic-frontend`](kinotic-frontend) | Vue applications: the organization portal, the system console, and their shared components |
-| [`deployment`](deployment) | Helm charts, docker-compose stacks, Terraform, KinD, and VM node provisioning |
+| [`deployment`](deployment) | Helm charts, docker-compose stacks, Terraform, and VM node provisioning |
 | [`website`](website) | The documentation site published at [kinotic.ai/docs](https://kinotic.ai/docs/) |
 
 The platform is primarily built around Java 25, Spring Boot, Vert.x, TypeScript, Vue, Bun, Kubernetes, Firecracker, Elasticsearch, Grafana Loki, and OpenTelemetry.

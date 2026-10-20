@@ -243,7 +243,7 @@ async function handleAccept() {
     if (res.status === 204) {
       // Organization member — the session is established; open the realtime connection.
       await userState.login()
-      await KINOTIC_UI.navigate('/applications')
+      await KINOTIC_UI.navigate('/')
       return
     }
     const data = await res.json()

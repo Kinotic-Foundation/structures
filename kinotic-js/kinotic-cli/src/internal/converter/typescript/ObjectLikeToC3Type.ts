@@ -1,4 +1,4 @@
-import {Type, Symbol, DecoratableNode} from 'ts-morph'
+import {DecoratableNode, Node, Type} from 'ts-morph'
 import {ArrayC3Type, C3Type, DateC3Type, ObjectC3Type, PropertyDefinition} from '@kinotic-ai/idl'
 import {ConverterConstants} from '@/internal/converter/ConverterConstants'
 import {TypescriptConversionState} from './TypescriptConversionState'
@@ -15,7 +15,7 @@ export class ObjectLikeToC3Type implements ITypeConverter<Type, C3Type, Typescri
     convert(value: Type, conversionContext: IConversionContext<Type, C3Type, TypescriptConversionState>): C3Type {
         let ret: ObjectC3Type
 
-        const name = value.getSymbolOrThrow("No Symbol could be found for object: "+value.getText()).getName()
+        const name = this.nameOf(value)
         const namespace = conversionContext.state().application
         ret = new ObjectC3Type(name, namespace)
 
@@ -45,21 +45,43 @@ export class ObjectLikeToC3Type implements ITypeConverter<Type, C3Type, Typescri
     }
 
     supports(value: Type): boolean {
-        return value.isObject() && !value.isArray();
+        return (value.isObject() && !value.isArray())
+            || (value.isIntersection() && value.getIntersectionTypes().every(t => t.isObject() && !t.isArray()))
+    }
+
+    // The type's own name; an instance of a generic type adds its type arguments, so Page<Report> and Page<User>
+    // stay apart, and an unnamed intersection joins the names of its parts
+    private nameOf(value: Type): string {
+        let ret: string
+        if (value.isIntersection() && !value.getAliasSymbol()) {
+            ret = value.getIntersectionTypes().map(t => this.nameOf(t)).join('_')
+        } else {
+            const symbol = value.getSymbol()
+            const alias = value.getAliasSymbol()
+            const aliasArguments = value.getAliasTypeArguments()
+            let base: string
+            let typeArguments: Type[]
+            if (alias && (aliasArguments.length > 0 || !symbol)) {
+                base = alias.getName()
+                typeArguments = aliasArguments
+            } else if (symbol) {
+                base = symbol.getName()
+                typeArguments = value.getTypeArguments()
+            } else {
+                throw new Error("No Symbol could be found for object: " + value.getText())
+            }
+            ret = [base, ...typeArguments.map(t => (t.getAliasSymbol() ?? t.getSymbol())?.getName() ?? t.getText())]
+                .join('_')
+                .replace(/[^\w$]/g, '_')
+        }
+        return ret
     }
 
     private convertDecorators(value: Type, ret: ObjectC3Type) {
-        const errText = "No value declaration could be found for object " + value.getText()
-        const valueDeclaration = value.getSymbolOrThrow(errText)
-                                                   .getValueDeclarationOrThrow(errText)
-
-        // Typescript cannot detect that this can be a DecoratableNode, so we have to cast it twice
-        const decoratableNode = valueDeclaration as unknown as DecoratableNode
-
-        // Now Add any class level decorators
-        const decorators = decoratableNode.getDecorators()
-        if (decorators) {
-            for (const decorator of decorators) {
+        // an interface or a type literal has no value declaration, and nothing to decorate
+        const valueDeclaration = value.getSymbol()?.getValueDeclaration()
+        if (valueDeclaration && Node.isDecoratable(valueDeclaration)) {
+            for (const decorator of valueDeclaration.getDecorators()) {
                 const c3Decorator = tsDecoratorToC3Decorator(decorator)
                 if (c3Decorator) {
                     ret.addDecorator(c3Decorator)
@@ -72,25 +94,34 @@ export class ObjectLikeToC3Type implements ITypeConverter<Type, C3Type, Typescri
         const properties = value.getProperties()
         for (const property of properties) {
             const propertyName = property.getName()
+            // a mapped type's property, as Partial and Pick make, has the declaration it was mapped from but no value declaration
+            const declaration = property.getValueDeclaration() ?? property.getDeclarations()[0]
+            if (!declaration) {
+                throw new Error("No declaration could be found for property " + propertyName)
+            }
+            // the property's type in this type, so a generic type's property has its type argument
+            const propertyType = property.getTypeAtLocation(declaration)
 
-            conversionContext.beginProcessingProperty(propertyName)
+            // JSON leaves out a method or a function-valued property
+            if (propertyType.getNonNullableType().getCallSignatures().length === 0) {
+                conversionContext.beginProcessingProperty(propertyName)
 
-            let propertyDefinition = this.convertProperty(property, propertyName, conversionContext)
+                let propertyDefinition = this.convertProperty(declaration, propertyType, propertyName, conversionContext)
 
-            ret.addPropertyDefinition(propertyDefinition);
+                ret.addPropertyDefinition(propertyDefinition);
 
-            conversionContext.endProcessingProperty()
+                conversionContext.endProcessingProperty()
+            }
         }
     }
 
-    private convertProperty(property: Symbol,
+    private convertProperty(valueDeclaration: Node,
+                            propertyType: Type,
                             propertyName: string,
                             conversionContext: IConversionContext<Type, C3Type, TypescriptConversionState>): PropertyDefinition {
-        const valueDeclaration = property.getValueDeclarationOrThrow("No value declaration could be found for property " + propertyName)
-
         let propertyDefinition: PropertyDefinition
 
-        if(valueDeclaration.getType().isUnion()){
+        if(propertyType.isUnion()){
             conversionContext.state().unionPropertyNameStack.push(propertyName)
         }
 
@@ -108,10 +139,10 @@ export class ObjectLikeToC3Type implements ITypeConverter<Type, C3Type, Typescri
                 const converted = convertPrecisionToC3Type(precisionDecorator)
                 propertyDefinition = new PropertyDefinition(propertyName, converted)
             } else if (decoratableNode.getDecorator('DateTime')) {
-                const converted = this.convertDateTime(valueDeclaration.getType(), propertyName)
+                const converted = this.convertDateTime(propertyType, propertyName)
                 propertyDefinition = new PropertyDefinition(propertyName, converted)
             } else {
-                const converted = conversionContext.convert(valueDeclaration.getType())
+                const converted = conversionContext.convert(propertyType)
                 propertyDefinition = new PropertyDefinition(propertyName, converted)
             }
 
@@ -136,11 +167,11 @@ export class ObjectLikeToC3Type implements ITypeConverter<Type, C3Type, Typescri
             }
 
         }else{
-            const converted = conversionContext.convert(valueDeclaration.getType())
+            const converted = conversionContext.convert(propertyType)
             propertyDefinition = new PropertyDefinition(propertyName, converted)
         }
 
-        if(valueDeclaration.getType().isUnion()){
+        if(propertyType.isUnion()){
             conversionContext.state().unionPropertyNameStack.pop()
         }
 

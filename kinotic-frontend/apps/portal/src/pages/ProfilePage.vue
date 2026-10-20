@@ -142,30 +142,32 @@
       </section>
     </div>
 
-    <FormDialog v-model:visible="passwordDialogVisible" :icon="KeyRound"
+    <FormDrawer :visible="passwordFormVisible"
                 :title="hasPassword ? 'Change password' : 'Set a password'"
                 :description="hasPassword ? 'Enter your current password, then the new one.' : 'A password lets you sign in without a provider.'"
-                @submit="savePassword">
-      <div class="flex flex-col gap-4">
-        <div v-if="hasPassword">
-          <label for="current-password" class="mb-2 block text-sm font-medium">Current password</label>
-          <Password id="current-password" v-model="currentPassword" :feedback="false" toggleMask class="w-full" input-class="w-full" autofocus />
+                @close="passwordFormVisible = false">
+      <form id="password-form" @submit.prevent="savePassword">
+        <div class="flex flex-col gap-4">
+          <div v-if="hasPassword">
+            <label for="current-password" class="mb-2 block text-sm font-medium">Current password</label>
+            <Password id="current-password" v-model="currentPassword" :feedback="false" toggleMask class="w-full" input-class="w-full" autofocus />
+          </div>
+          <div>
+            <label for="new-password" class="mb-2 block text-sm font-medium">New password</label>
+            <Password id="new-password" v-model="newPassword" :feedback="false" toggleMask class="w-full" input-class="w-full" />
+          </div>
+          <div>
+            <label for="confirm-password" class="mb-2 block text-sm font-medium">Confirm new password</label>
+            <Password id="confirm-password" v-model="confirmPassword" :feedback="false" toggleMask class="w-full" input-class="w-full"
+                      :invalid="confirmPassword !== '' && confirmPassword !== newPassword" />
+          </div>
         </div>
-        <div>
-          <label for="new-password" class="mb-2 block text-sm font-medium">New password</label>
-          <Password id="new-password" v-model="newPassword" :feedback="false" toggleMask class="w-full" input-class="w-full" />
-        </div>
-        <div>
-          <label for="confirm-password" class="mb-2 block text-sm font-medium">Confirm new password</label>
-          <Password id="confirm-password" v-model="confirmPassword" :feedback="false" toggleMask class="w-full" input-class="w-full"
-                    :invalid="confirmPassword !== '' && confirmPassword !== newPassword" />
-        </div>
-      </div>
+      </form>
       <template #footer>
-        <Button type="button" label="Cancel" severity="secondary" outlined @click="passwordDialogVisible = false" />
-        <Button type="submit" :label="hasPassword ? 'Change password' : 'Set password'" :loading="savingPassword" :disabled="!canSavePassword" />
+        <Button type="button" label="Cancel" severity="secondary" outlined @click="passwordFormVisible = false" />
+        <Button type="submit" form="password-form" :label="hasPassword ? 'Change password' : 'Set password'" :loading="savingPassword" :disabled="!canSavePassword" />
       </template>
-    </FormDialog>
+    </FormDrawer>
   </div>
 </template>
 
@@ -181,7 +183,7 @@ import { useToast } from 'primevue/usetoast'
 import { Building2, KeyRound, ShieldCheck } from '@lucide/vue'
 import { Kinotic } from '@kinotic-ai/core'
 import { type LoginProviderSummary, OidcConfigurationType, type Organization, PASSWORD_SIGN_IN_METHOD_ID, type SignInMethod, AuthType } from '@kinotic-ai/management-api'
-import { FormDialog, apiUrl } from '@kinotic-ai/frontend-common'
+import { FormDrawer, apiUrl } from '@kinotic-ai/frontend-common'
 import SocialAuthButton from '@/components/SocialAuthButton.vue'
 import { USER_STATE } from '@/states/IUserState'
 
@@ -211,7 +213,7 @@ const connectableProviders = ref<LoginProviderSummary[]>([])
 const organizations = ref<Organization[]>([])
 const switchingTo = ref<string | null>(null)
 
-const passwordDialogVisible = ref(false)
+const passwordFormVisible = ref(false)
 const currentPassword = ref('')
 const newPassword = ref('')
 const confirmPassword = ref('')
@@ -285,7 +287,7 @@ function openPasswordDialog() {
   currentPassword.value = ''
   newPassword.value = ''
   confirmPassword.value = ''
-  passwordDialogVisible.value = true
+  passwordFormVisible.value = true
 }
 
 async function savePassword() {
@@ -293,7 +295,7 @@ async function savePassword() {
   savingPassword.value = true
   try {
     await Kinotic.profile.setPassword(hasPassword.value ? currentPassword.value : null, newPassword.value)
-    passwordDialogVisible.value = false
+    passwordFormVisible.value = false
     toast.add({ severity: 'success', summary: hasPassword.value ? 'Password changed' : 'Password set', life: 5000 })
     methods.value = await Kinotic.profile.findMySignInMethods()
   } catch (err) {
@@ -326,7 +328,7 @@ async function switchTo(organizationId: string) {
     if (!res.ok) {
       throw new Error(`The switch was refused (${res.status})`)
     }
-    window.location.assign('/applications')
+    window.location.assign('/')
   } catch (err) {
     showErrorToast(toast, 'Failed to switch organization', err, { life: 8000 })
     switchingTo.value = null

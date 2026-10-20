@@ -21,7 +21,7 @@ export class TypescriptConverterStrategy implements IConverterStrategy<Type, C3T
     // QueryOptions is an object, but we need the specific type
     // Arrays are considered objects but objects are not arrays. So the Array converter must come before the "ObjectLike" converter
     // Enums ar considered unions but unions are not enums. So the enum converter must come before the union converter
-    private readonly _typeConverters = [new PrimitiveToC3Type(),
+    private readonly _typeConverters: Array<ITypeConverter<Type, C3Type, TypescriptConversionState>> = [new PrimitiveToC3Type(),
                                         new TenantSelectionToC3Type(),
                                         new QueryOptionsToC3Type(),
                                         new ArrayToC3Type(),
@@ -29,9 +29,17 @@ export class TypescriptConverterStrategy implements IConverterStrategy<Type, C3T
                                         new EnumToC3Type(),
                                         new UnionToC3Type()]
 
-    constructor(initialState: (() => TypescriptConversionState) | TypescriptConversionState, logger: Logger) {
+    /**
+     * @param initialState the state each conversion starts from
+     * @param logger the logger conversion errors are written to
+     * @param leadingConverters converters consulted before the ones an entity's properties use
+     */
+    constructor(initialState: (() => TypescriptConversionState) | TypescriptConversionState,
+                logger: Logger,
+                leadingConverters: Array<ITypeConverter<Type, C3Type, TypescriptConversionState>> = []) {
         this._initialState = initialState
         this._logger = logger
+        this._typeConverters = [...leadingConverters, ...this._typeConverters]
     }
 
     initialState(): (() => TypescriptConversionState) | TypescriptConversionState {

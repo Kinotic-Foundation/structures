@@ -14,8 +14,8 @@ import io.vertx.ext.web.handler.StaticHandler;
 
 /**
  * Serves the kinotic-frontend SPA from {@code resources/webroot} on a dedicated port.
- * Only deployed when {@link WebServerProperties#isEnabled()} is true — KinD and Azure
- * skip this and host the SPA outside the cluster.
+ * Only deployed when {@link WebServerProperties#isEnabled()} is true — Azure
+ * skips this and host the SPA outside the cluster.
  * <p>
  * CORS and the health-check endpoint live on the api-gateway router (port 58503), not
  * here, so probes and cross-origin API calls keep working when this verticle is off.

@@ -164,7 +164,7 @@ async function handleSubmit() {
     localStorage.setItem(LAST_ORGANIZATION_KEY, props.organizationId)
     // Open the realtime connection, authenticated by the freshly set session cookie.
     await userState.login()
-    const referer = (route.query.referer as string | undefined) || '/applications'
+    const referer = (route.query.referer as string | undefined) || '/'
     await KINOTIC_UI.navigate(referer)
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Invalid credentials'

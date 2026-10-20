@@ -80,11 +80,7 @@ allure-results/
 
 .vscode/chrome-debug-profile/
 
-# KinD cluster local overrides (not for source control)
-dev-tools/kind/config/helm-values.local.yaml
-
 # Eviction tracking data (generated during testing)
-dev-tools/kind/eviction-data/
 eviction-data/
 **/eviction-events*.csv
 eviction-events.csv

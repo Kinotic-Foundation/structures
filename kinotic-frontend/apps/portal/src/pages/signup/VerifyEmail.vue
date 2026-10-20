@@ -123,7 +123,7 @@ async function handleSubmit() {
 
     // The org, admin user, and browser session are created; connect with it and go to the app.
     await userState.login()
-    await KINOTIC_UI.navigate('/applications')
+    await KINOTIC_UI.navigate('/')
   } catch (error: unknown) {
     displayAlert(error instanceof Error ? error.message : 'Account creation failed')
   } finally {

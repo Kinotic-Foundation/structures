@@ -54,7 +54,7 @@ public class ApiGatewayVertcleFactory {
         Router router = ApiGatewayUtil.createRouterWithCors(vertx, domainProperties.getDomain().getCors());
 
         // Health check on the api-gateway port so probes work even when the static
-        // web-server (9090) is disabled in KinD/Azure.
+        // web-server (9090) is disabled in Azure.
         router.get("/health")
               .handler(HealthCheckHandler.createWithHealthChecks(healthChecks));
 

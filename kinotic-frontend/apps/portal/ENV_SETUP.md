@@ -11,7 +11,6 @@ which is what the vite dev proxy and the gateway-served production build both ne
 | `pnpm dev:tunnel` | `.env` + `.env.tunnel` | same origin, through the vite proxy |
 | `pnpm build` | `.env` | `http://localhost:58503` |
 | `pnpm build:dev` | `.env` | `http://localhost:58503` |
-| `pnpm build:kind` | `.env` + `.env.kind` | `https://localhost:58503` |
 
 Only `VITE_`-prefixed vars reach client code, and the dev server must be restarted to pick
 up a change. Precedence is `.env` < `.env.<mode>` < `.env.local`; `.env.local` is gitignored

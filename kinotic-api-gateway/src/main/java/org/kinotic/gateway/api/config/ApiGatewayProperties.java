@@ -45,7 +45,7 @@ public class ApiGatewayProperties {
     private Set<String> organizationServiceZones = Set.of();
 
     /**
-     * Static-file web server configuration. Disabled in KinD/Azure where the SPA
+     * Static-file web server configuration. Disabled in Azure where the SPA
      * is hosted outside the cluster.
      */
     private WebServerProperties webServer = new WebServerProperties();
