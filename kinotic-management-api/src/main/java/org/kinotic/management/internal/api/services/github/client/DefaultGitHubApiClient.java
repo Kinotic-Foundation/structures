@@ -265,6 +265,18 @@ public class DefaultGitHubApiClient implements GitHubApiClient {
     }
 
     @Override
+    public Future<InstallationDetails> getInstallation(long installationId) {
+        return request(HttpMethod.GET, "/app/installations/" + installationId, jwtFactory.getAppJwt())
+                .send()
+                .compose(resp -> {
+                    if (resp.statusCode() != 200) {
+                        return Future.failedFuture(httpError("getInstallation", resp));
+                    }
+                    return Future.succeededFuture(toInstallationDetails(resp.bodyAsJsonObject()));
+                });
+    }
+
+    @Override
     public Future<List<InstallationDetails>> listUserInstallations(String userAccessToken) {
         return fetchUserInstallationsPage(userAccessToken, 1, new ArrayList<>());
     }
@@ -283,13 +295,7 @@ public class DefaultGitHubApiClient implements GitHubApiClient {
                             JsonArray installations = resp.bodyAsJsonObject()
                                                           .getJsonArray("installations", new JsonArray());
                             for (int i = 0; i < installations.size(); i++) {
-                                JsonObject entry = installations.getJsonObject(i);
-                                JsonObject account = entry.getJsonObject("account");
-                                collected.add(new InstallationDetails(
-                                        entry.getLong("id"),
-                                        entry.getLong("app_id"),
-                                        account != null ? account.getString("login") : null,
-                                        account != null ? account.getString("type") : null));
+                                collected.add(toInstallationDetails(installations.getJsonObject(i)));
                             }
                             Future<List<InstallationDetails>> ret;
                             if (installations.size() < USER_INSTALLATIONS_PAGE_SIZE) {
@@ -307,6 +313,14 @@ public class DefaultGitHubApiClient implements GitHubApiClient {
                                         Map<String, String> permissions) {
         return Future.fromCompletionStage(tokenCache.get(new TokenKey(installationId, repoId, permissions)),
                                           vertx.getOrCreateContext());
+    }
+
+    private static InstallationDetails toInstallationDetails(JsonObject installation) {
+        JsonObject account = installation.getJsonObject("account");
+        return new InstallationDetails(installation.getLong("id"),
+                                       installation.getLong("app_id"),
+                                       account != null ? account.getString("login") : null,
+                                       account != null ? account.getString("type") : null);
     }
 
     private GitHubApiException httpError(String op, HttpResponse<Buffer> resp) {

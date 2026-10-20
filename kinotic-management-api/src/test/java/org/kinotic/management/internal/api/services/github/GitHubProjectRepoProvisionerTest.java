@@ -8,6 +8,8 @@ import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.kinotic.core.api.security.SecurityContext;
+import org.kinotic.domain.api.model.security.participant.DefaultOrganizationParticipant;
 import org.kinotic.management.api.model.Project;
 import org.kinotic.management.api.model.RepositoryConnectionStatus;
 import org.kinotic.management.api.config.GithubProperties;
@@ -17,8 +19,10 @@ import org.kinotic.management.api.services.github.GitHubAppInstallationService;
 import org.kinotic.management.internal.api.services.github.client.CreatedRepository;
 import org.kinotic.management.internal.api.services.github.client.GitHubApiClient;
 import org.kinotic.management.internal.api.services.github.client.GitHubApiException;
+import org.kinotic.management.internal.api.services.github.client.InstallationDetails;
 import org.kinotic.management.internal.api.services.github.client.TreeEntry;
 import org.mockito.ArgumentCaptor;
+import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -47,6 +51,8 @@ class GitHubProjectRepoProvisionerTest {
 
     private GitHubAppInstallationService installationService;
     private GitHubApiClient apiClient;
+    private GithubProperties githubProperties;
+    private SecurityContext securityContext;
     private GitHubProjectRepoProvisioner provisioner;
     private Vertx vertx;
 
@@ -59,10 +65,15 @@ class GitHubProjectRepoProvisionerTest {
     void setUp() {
         installationService = mock(GitHubAppInstallationService.class);
         apiClient = mock(GitHubApiClient.class);
-        GithubProperties githubProperties = new GithubProperties().setRepoTemplate("kinotic-ai/project-template");
+        githubProperties = new GithubProperties().setRepoTemplate("kinotic-ai/project-template");
         vertx = Vertx.vertx();
-        provisioner = new GitHubProjectRepoProvisioner(vertx, installationService, apiClient,
-                                                       githubProperties, new GraalJsSpawnRenderer());
+        DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
+        beanFactory.registerSingleton("vertx", vertx);
+        securityContext = new SecurityContext(beanFactory.getBeanProvider(Vertx.class));
+        provisioner = new GitHubProjectRepoProvisioner(vertx, installationService,
+                                                       new PlatformGitHubInstallation(githubProperties, apiClient),
+                                                       securityContext, apiClient, githubProperties,
+                                                       new GraalJsSpawnRenderer());
 
         GitHubAppInstallation install = new GitHubAppInstallation();
         install.setGithubInstallationId(42L);
@@ -157,6 +168,28 @@ class GitHubProjectRepoProvisionerTest {
         assertEquals("acme/demo", project.getRepoFullName());
         assertEquals(99L, project.getRepoId());
         assertEquals(RepositoryConnectionStatus.INITIALIZATION_FAILED, project.getRepoConnectionStatus());
+    }
+
+    @Test
+    void createsTheRepoInThePlatformInstallationForAnOrganizationWithoutGitHub() throws Exception {
+        githubProperties.setPlatformInstallationId(7L);
+        when(installationService.findForCurrentOrg()).thenReturn(Future.succeededFuture(null));
+        when(apiClient.getInstallation(7L))
+                .thenReturn(Future.succeededFuture(new InstallationDetails(7L, 1L, "kinotic-apps", "Organization")));
+        when(apiClient.getToken(eq(7L), isNull(), eq(GitHubApiClient.CREATE_REPOSITORY)))
+                .thenReturn(Future.succeededFuture(new GitHubToken("platform-token", Instant.now().plusSeconds(3600))));
+        when(apiClient.createRepoFromTemplate(eq("platform-token"), eq("kinotic-ai/project-template"),
+                                              eq("kinotic-apps"), eq("org-1-demo"), any(), eq(true)))
+                .thenReturn(Future.succeededFuture(new CreatedRepository(100L, "kinotic-apps/org-1-demo", "main")));
+        when(apiClient.getToken(eq(7L), eq(100L), eq(GitHubApiClient.WRITE_CONTENTS)))
+                .thenReturn(Future.failedFuture(new GitHubApiException("mintToken failed: HTTP 500")));
+        DefaultOrganizationParticipant participant = new DefaultOrganizationParticipant("user-1", "org-1", Map.of(), List.of());
+
+        Project project = securityContext.callAs(participant, () -> provisioner.provision(project()).toCompletionStage())
+                                         .get(10, java.util.concurrent.TimeUnit.SECONDS);
+
+        assertEquals("kinotic-apps/org-1-demo", project.getRepoFullName());
+        assertEquals(100L, project.getRepoId());
     }
 
     @Test
