@@ -35,7 +35,10 @@ public class LlmConfiguration implements Identifiable<String> {
     /** The most tokens a response may hold, or {@code null} for the calling service's default. */
     private Integer maxTokens;
 
-    /** The sampling temperature, or {@code null} for the provider's default. */
+    /**
+     * The sampling temperature, from 0 to the provider's {@link LlmProviderType#getMaxTemperature()}, or {@code null}
+     * for the provider's default.
+     */
     private Double temperature;
 
     /** Whether an API key is held for the configuration. */

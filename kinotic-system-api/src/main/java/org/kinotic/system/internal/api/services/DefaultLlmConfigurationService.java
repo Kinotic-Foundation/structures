@@ -52,6 +52,10 @@ public class DefaultLlmConfigurationService implements LlmConfigurationService {
         Validate.notBlank(configuration.getName(), "name is required");
         Validate.notNull(configuration.getProvider(), "provider is required");
         Validate.notBlank(configuration.getModel(), "model is required");
+        Validate.isTrue(configuration.getTemperature() == null
+                        || (configuration.getTemperature() >= 0
+                            && configuration.getTemperature() <= configuration.getProvider().getMaxTemperature()),
+                        "temperature must be from 0 to %s for %s", configuration.getProvider().getMaxTemperature(), configuration.getProvider());
         Validate.isTrue(configuration.getId() == null || StringUtils.isNotBlank(configuration.getId()), "id must not be blank");
         Date now = new Date();
         Future<LlmConfiguration> stored;
@@ -62,7 +66,7 @@ public class DefaultLlmConfigurationService implements LlmConfigurationService {
         } else {
             // an update keeps the stored creation time, and a caller cannot pick the id a new configuration's key is held under
             stored = repository.findById(configuration.getId()).map(existing -> {
-                Validate.notNull(existing, "No LLM configuration has id '%s'", configuration.getId());
+                Validate.isTrue(existing != null, "No LLM configuration has id '%s'", configuration.getId());
                 configuration.setCreated(existing.getCreated());
                 return existing;
             });

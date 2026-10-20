@@ -50,7 +50,10 @@
             <span class="text-xs font-normal text-muted-color">Optional</span>
           </label>
           <InputNumber input-id="llm-temperature" v-model="temperature" :min="0" :max="MAX_TEMPERATURES[provider]" :min-fraction-digits="0" :max-fraction-digits="2"
-                       class="w-full" input-class="w-full" />
+                       :invalid="!temperatureInRange" class="w-full" input-class="w-full" />
+          <p v-if="!temperatureInRange" class="mt-1.5 text-[0.8125rem] text-red-700 dark:text-red-400">
+            {{ LLM_PROVIDER_NAMES[provider] }} accepts a temperature from 0 to {{ MAX_TEMPERATURES[provider] }}.
+          </p>
         </div>
       </div>
     </div>
@@ -114,8 +117,8 @@ const temperature = ref<number | null>(null)
 const saving = ref(false)
 
 const isNew = computed(() => !props.configuration?.id)
-const complete = computed(() => name.value.trim() !== '' && model.value.trim() !== ''
-  && (temperature.value === null || temperature.value <= MAX_TEMPERATURES[provider.value]))
+const temperatureInRange = computed(() => temperature.value === null || temperature.value <= MAX_TEMPERATURES[provider.value])
+const complete = computed(() => name.value.trim() !== '' && model.value.trim() !== '' && temperatureInRange.value)
 
 // the fields start from the configuration being edited each time the dialog opens, and the typed key is dropped when it closes
 watch(() => props.visible, visible => {
