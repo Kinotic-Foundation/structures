@@ -81,7 +81,6 @@ output "dev_server_env" {
   value = {
     DEV_SERVER_PORTAL_HOSTNAME                          = local.portal_hostname
     DEV_SERVER_CONSOLE_HOSTNAME                         = local.console_hostname
-    KINOTIC_SYSTEMAPI_UIDEPLOYMENT_SITESDOMAIN          = module.environment.sites_domain
     KINOTIC_SYSTEMAPI_UIDEPLOYMENT_SITESSTORAGEENDPOINT = module.environment.sites_storage_blob_endpoint
     KINOTIC_DOMAIN_PUBLISHEDSITES_DOMAIN                = module.environment.sites_domain
     KINOTIC_DOMAIN_PUBLISHEDSITES_CLOUDFLARE_ENABLED    = "true"

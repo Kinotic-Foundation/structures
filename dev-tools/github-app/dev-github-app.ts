@@ -214,12 +214,9 @@ function managementServerYml(origin: string, app: CreatedApp): string {
 # The github-platform sign-in row's OAuth client secret, resolved by EnvVarSecretReferenceResolver
 KINOTIC_AKV_GITHUB_PLATFORM: ${JSON.stringify(app.client_secret)}
 kinotic:
-  managementServer:
-    portalBaseUrl: ${origin}
   domain:
     managementApiBaseUrl: ${origin}
-    email:
-      linkBaseUrl: ${origin}
+    portalBaseUrl: ${origin}
 ${githubYml(app)}`
 }
 

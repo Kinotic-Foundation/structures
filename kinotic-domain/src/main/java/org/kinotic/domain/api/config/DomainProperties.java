@@ -60,6 +60,12 @@ public class DomainProperties {
      */
     private String appApiBaseUrl;
 
+    /**
+     * Base URL of the portal as a browser reaches it (no trailing slash): where the management server's browser
+     * flows send the user, and the base of the verification, invite and sign-in links in the platform's emails.
+     */
+    private String portalBaseUrl;
+
     @NotNull
     private Duration elasticConnectionTimeout = Duration.ofSeconds(5);
 

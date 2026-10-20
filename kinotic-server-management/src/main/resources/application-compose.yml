@@ -3,13 +3,8 @@
 # IDE-based dev.
 kinotic:
   domain:
-    email:
-      # The portal build the server serves on 9090 serves the pages the emailed links open
-      linkBaseUrl: http://localhost:9090
-    # The API behind the portal build the server serves on 9090. A developer's tunnel replaces it and
-    # the portal's URL below from ./config/application.yml, which compose.kinotic-servers.yml mounts
-    # and which outranks every file packaged in the jar.
-    managementApiBaseUrl: http://localhost:9090
-  managementServer:
-    # The portal build the server serves on 9090
+    # The portal build the server serves on 9090, and the API behind it. A developer's tunnel replaces
+    # both from ./config/application.yml, which compose.kinotic-servers.yml mounts and which outranks
+    # every file packaged in the jar.
     portalBaseUrl: http://localhost:9090
+    managementApiBaseUrl: http://localhost:9090

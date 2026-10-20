@@ -18,6 +18,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.Timeout;
+import org.kinotic.domain.api.config.KinoticDomainProperties;
+import org.kinotic.domain.api.config.PublishedSitesProperties;
 import org.kinotic.management.api.model.deployment.DeploymentStatus;
 import org.kinotic.management.api.model.deployment.DeploymentStatusType;
 import org.kinotic.management.api.model.deployment.UiDeployment;
@@ -77,6 +79,7 @@ class AzureProvisioningIntegrationTest {
 
     private Vertx vertx;
     private KinoticSystemApiProperties properties;
+    private KinoticDomainProperties domainProperties;
     private TokenCredential credential;
     private HttpUiDeploymentProvisioner siteProvisioner;
     private AzureSiteStorageService siteStorage;
@@ -86,13 +89,15 @@ class AzureProvisioningIntegrationTest {
     void requireAzure() throws IOException {
         assumeTrue(Files.exists(LOCAL_PROFILE), "no " + LOCAL_PROFILE + ": not a developer machine set up for Azure");
         assumeTrue(System.getenv("AZURE_CLIENT_ID") != null, "AZURE_CLIENT_ID is not set: .env.local is not in the environment");
-        properties = load(LOCAL_PROFILE);
+        Map<String, Object> kinotic = load(LOCAL_PROFILE);
+        properties = systemApiProperties(kinotic);
+        domainProperties = domainProperties(kinotic);
         assumeFalse(properties.getSystemApi().isDisableAzureStorage(), "the local profile disables Azure storage");
         assumeTrue(uiProperties().getSitesStorageEndpoint() != null, "the local profile names no sites account: apply the dev root first");
 
         vertx = Vertx.vertx();
         credential = new DefaultAzureCredentialBuilder().build();
-        siteProvisioner = new HttpUiDeploymentProvisioner(vertx, properties);
+        siteProvisioner = new HttpUiDeploymentProvisioner(vertx, domainProperties);
         siteStorage = new AzureSiteStorageService(vertx, properties);
     }
 
@@ -107,7 +112,7 @@ class AzureProvisioningIntegrationTest {
     @Order(1)
     @Timeout(value = SITE_TIMEOUT_MINUTES, unit = TimeUnit.MINUTES)
     void servesASite() throws Exception {
-        String hostname = uiProperties().resolveHostname(SITE_LABEL);
+        String hostname = publishedSites().resolveHostname(SITE_LABEL);
         // the files go up through the site's upload URL before the site is checked, as the publish task orders it
         String uploadUrl = await(siteStorage.issueUploadUrl(hostname, Duration.ofMinutes(STEP_TIMEOUT_MINUTES)));
         upload(uploadUrl, "version.json", new JsonObject().put("commitSha", COMMIT_SHA).encode(), "application/json", COMMIT_SHA);
@@ -129,7 +134,7 @@ class AzureProvisioningIntegrationTest {
         }
         assertEquals(DeploymentStatusType.READY, site.type(), site.message());
 
-        String url = uiProperties().resolveSiteUrl(SITE_LABEL);
+        String url = publishedSites().resolveSiteUrl(SITE_LABEL);
         assertEquals(new JsonObject().put("commitSha", COMMIT_SHA).encode(), get(url + "/version.json").body(), "a file is served as it is");
         assertEquals(INDEX_HTML, get(url + "/").body(), "the spa rule serves index.html at the root");
         assertEquals(INDEX_HTML, get(url + "/some/route").body(), "the spa rule serves index.html for a route");
@@ -145,8 +150,8 @@ class AzureProvisioningIntegrationTest {
     @Order(2)
     @Timeout(value = STEP_TIMEOUT_MINUTES, unit = TimeUnit.MINUTES)
     void issuesCredentialsScopedToOneSite() throws Exception {
-        String hostname = uiProperties().resolveHostname(SITE_LABEL + "-scope");
-        String other = uiProperties().resolveHostname(SITE_LABEL + "-other");
+        String hostname = publishedSites().resolveHostname(SITE_LABEL + "-scope");
+        String other = publishedSites().resolveHostname(SITE_LABEL + "-other");
         String container = uiProperties().getSitesStorageEndpoint().replaceAll("/$", "") + "/" + SITES_CONTAINER;
 
         String uploadUrl = await(siteStorage.issueUploadUrl(hostname, Duration.ofMinutes(STEP_TIMEOUT_MINUTES)));
@@ -201,26 +206,46 @@ class AzureProvisioningIntegrationTest {
         return ret;
     }
 
+    private PublishedSitesProperties publishedSites() {
+        return domainProperties.getDomain().getPublishedSites();
+    }
+
     private UiDeploymentProperties uiProperties() {
         return properties.getSystemApi().getUiDeployment();
     }
 
-    /** Binds the property block the site provisioner and storage service read from the local profile's YAML. */
+    /** The {@code kinotic} tree of the local profile's YAML. */
     @SuppressWarnings("unchecked")
-    private static KinoticSystemApiProperties load(Path localProfile) throws IOException {
+    private static Map<String, Object> load(Path localProfile) throws IOException {
         Map<String, Object> yaml;
         try (Reader reader = Files.newBufferedReader(localProfile)) {
             yaml = new Yaml().load(reader);
         }
-        Map<String, Object> systemApi = (Map<String, Object>) ((Map<String, Object>) yaml.get("kinotic")).get("systemApi");
+        return (Map<String, Object>) yaml.get("kinotic");
+    }
+
+    /** Binds the property block the site provisioner and storage service read. */
+    @SuppressWarnings("unchecked")
+    private static KinoticSystemApiProperties systemApiProperties(Map<String, Object> kinotic) {
+        Map<String, Object> systemApi = (Map<String, Object>) kinotic.get("systemApi");
         Map<String, Object> sites = (Map<String, Object>) systemApi.get("uiDeployment");
 
         KinoticSystemApiProperties ret = new KinoticSystemApiProperties();
         ret.getSystemApi()
            .setDisableAzureStorage(Boolean.TRUE.equals(systemApi.get("disableAzureStorage")))
            .getUiDeployment()
-           .setSitesDomain((String) sites.get("sitesDomain"))
            .setSitesStorageEndpoint((String) sites.get("sitesStorageEndpoint"));
+        return ret;
+    }
+
+    /** Binds the domain the sites are served under, which the site provisioner reads. */
+    @SuppressWarnings("unchecked")
+    private static KinoticDomainProperties domainProperties(Map<String, Object> kinotic) {
+        Map<String, Object> domain = (Map<String, Object>) kinotic.get("domain");
+        Map<String, Object> publishedSites = (Map<String, Object>) domain.get("publishedSites");
+
+        KinoticDomainProperties ret = new KinoticDomainProperties();
+        ret.getDomain().getPublishedSites().setDomain((String) publishedSites.get("domain"));
         return ret;
     }
 

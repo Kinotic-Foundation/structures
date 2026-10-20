@@ -22,12 +22,9 @@ servers:
     webServer:
       enabled: true
       port: 9090
-    # kinotic.managementServer.*: the portal this server's browser flows use (no trailing slash);
-    # its API's own URL is kinotic.domain.managementApiBaseUrl below
+    # kinotic.managementServer.*: the Turnstile site this server's open routes are guarded by; the
+    # URLs of its API and the portal are kinotic.domain.managementApiBaseUrl and portalBaseUrl below
     managementServer:
-      # the portal, where browser flows return and where the emailed verification and invite
-      # links open
-      portalBaseUrl: "http://localhost:9090"
       # kinotic.managementServer.turnstile.siteKey: the Cloudflare Turnstile site the portal's
       # find-my-organizations form presents; its secret is mounted with turnstile set below
       turnstile:
@@ -136,9 +133,10 @@ kinotic:
     # server serves, each host its own OAuth issuer; what the system server hands each UI build; and
     # the host of the callback URL of an application's and a tenant's OIDC configurations
     appApiBaseUrl: "http://localhost:58505"
-    # kinotic.domain.email.* — outbound mail via Azure Communication Services. The links in the
-    # mail open in the portal, so each server that sends mail is handed the management server's
-    # portalBaseUrl as kinotic.domain.email.linkBaseUrl.
+    # kinotic.domain.portalBaseUrl: the portal (no trailing slash), where the management server's
+    # browser flows return and where the emailed verification and invite links open
+    portalBaseUrl: "http://localhost:9090"
+    # kinotic.domain.email.* — outbound mail via Azure Communication Services
     email:
       # When false, EmailService logs verification URLs instead of sending. Required for
       # local/dev environments without a real ACS resource.

@@ -411,7 +411,7 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
 
     // the origin of the portal's pages, which a start reached by a link belongs to
     private String portalOrigin() {
-        URI portal = URI.create(properties.getPortalBaseUrl());
+        URI portal = URI.create(domainProperties.getDomain().getPortalBaseUrl());
         return portal.getScheme() + "://" + portal.getAuthority();
     }
 

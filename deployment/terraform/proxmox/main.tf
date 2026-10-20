@@ -179,12 +179,9 @@ locals {
       hostnames   = [local.azure.api_hostname]
       description = "the organizations' API: the portal, the CLI, MCP hosts, the GitHub webhook"
       env = {
-        KINOTIC_MANAGEMENTSERVER_PORTALBASEURL  = "https://${local.azure.portal_hostname}"
-        # the emailed verification and invite links open in the portal
-        KINOTIC_DOMAIN_EMAIL_LINKBASEURL = "https://${local.azure.portal_hostname}"
-        KINOTIC_MANAGEMENTAPI_LOKIURL    = local.service_urls["http://loki:3100"]
-        KINOTIC_MANAGEMENTAPI_TEMPOURL   = local.service_urls["http://tempo:3200"]
-        KINOTIC_MANAGEMENTAPI_MIMIRURL   = local.service_urls["http://mimir:9009"]
+        KINOTIC_MANAGEMENTAPI_LOKIURL  = local.service_urls["http://loki:3100"]
+        KINOTIC_MANAGEMENTAPI_TEMPOURL = local.service_urls["http://tempo:3200"]
+        KINOTIC_MANAGEMENTAPI_MIMIRURL = local.service_urls["http://mimir:9009"]
       }
     }
     kinotic-server-system = {
@@ -196,8 +193,6 @@ locals {
       env = {
         KINOTIC_SYSTEMSERVER_APIBASEURL     = "https://${local.azure.system_api_hostname}"
         KINOTIC_SYSTEMSERVER_CONSOLEBASEURL = "https://${local.azure.console_hostname}"
-        # Invites the member service this server hosts sends are accepted in the portal
-        KINOTIC_DOMAIN_EMAIL_LINKBASEURL = "https://${local.azure.portal_hostname}"
         # What a workload dials, by the name its certificate carries, and the one destination its
         # egress policy permits; the node pins every server's name to the edge's LAN address
         # (hosts_entry)
@@ -237,9 +232,11 @@ locals {
     KINOTIC_MAX_OFF_HEAP_MEMORY  = "419430400"
     KINOTIC_DOMAIN_EMAIL_ENABLED = "true"
 
-    # The management server's API and every application's API host, as a browser reaches them
+    # The management server's API, every application's API host and the portal, as a browser reaches
+    # them; the emailed verification and invite links open in the portal
     KINOTIC_DOMAIN_MANAGEMENTAPIBASEURL = "https://${local.azure.api_hostname}"
     KINOTIC_DOMAIN_APPAPIBASEURL        = "https://${local.azure.apps_api_domain}"
+    KINOTIC_DOMAIN_PORTALBASEURL        = "https://${local.azure.portal_hostname}"
 
     # The servers find each other over their private addresses and form one Ignite cluster
     KINOTIC_IGNITE_DISCOVERYTYPE  = "LOCAL"

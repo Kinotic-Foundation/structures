@@ -12,8 +12,6 @@ kinotic:
       webhookSecret: "-"
       appPrivateKey: "-"
   managementServer:
-    # The portal's vite dev server, which also serves the API (kinotic.domain.managementApiBaseUrl below)
-    portalBaseUrl: http://localhost:5173
     turnstile:
       # Cloudflare's always-passing test site: the find-my-organizations form renders the widget and every
       # token verifies, so the form works with no Turnstile site of one's own
@@ -26,11 +24,11 @@ kinotic:
     # ~/.kinotic/dev-environment/kinotic-server-management/application.yml, imported below, so SPA links,
     # OIDC/OAuth redirect_uris, GitHub callbacks, and the MCP surface all share the tunnel's one origin.
     managementApiBaseUrl: http://localhost:5173
+    # The portal's vite dev server, where browser flows return and the emailed links open
+    portalBaseUrl: http://localhost:5173
     # The app server as `pnpm dev` runs it: the host of an application's or a tenant's OIDC callback
     appApiBaseUrl: http://localhost:58505
     email:
-      # The portal serves the pages the emailed verification and invite links open
-      linkBaseUrl: http://localhost:5173
       # No real ACS in dev — EmailService logs verification URLs instead of sending.
       # To test against real ACS, flip enabled=true (endpoint/sender are pre-filled).
       enabled: true

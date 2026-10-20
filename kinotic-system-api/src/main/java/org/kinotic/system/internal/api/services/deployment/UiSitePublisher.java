@@ -5,6 +5,8 @@ import io.vertx.core.json.JsonObject;
 import lombok.RequiredArgsConstructor;
 import org.kinotic.core.api.exceptions.AlreadyExistsException;
 import org.kinotic.core.api.utils.ZoneUtil;
+import org.kinotic.domain.api.config.KinoticDomainProperties;
+import org.kinotic.domain.api.config.PublishedSitesProperties;
 import org.kinotic.domain.api.utils.HostLabelUtil;
 import org.kinotic.domain.api.model.WatchedParent;
 import org.kinotic.domain.api.model.WatchedType;
@@ -14,8 +16,6 @@ import org.kinotic.management.api.model.deployment.UiArtifact;
 import org.kinotic.management.api.model.deployment.UiDeployment;
 import org.kinotic.management.api.model.workload.Workload;
 import org.kinotic.management.api.repositories.UiDeploymentRepository;
-import org.kinotic.system.api.config.KinoticSystemApiProperties;
-import org.kinotic.system.api.config.UiDeploymentProperties;
 import org.kinotic.management.api.model.deployment.DeployTarget;
 import org.kinotic.system.api.services.deployment.SiteStorageService;
 import org.kinotic.system.api.services.workload.WorkloadOrchestrationService;
@@ -44,7 +44,7 @@ public class UiSitePublisher {
     private final SiteWorkloadFactory siteWorkloadFactory;
     private final WorkloadOrchestrationService workloadOrchestrationService;
     private final OrganizationDnsRecordProvisioner dnsRecordProvisioner;
-    private final KinoticSystemApiProperties properties;
+    private final KinoticDomainProperties domainProperties;
 
     /**
      * The row a UI publishes to: its existing site, or one minted for its first publish, which also ensures
@@ -77,7 +77,7 @@ public class UiSitePublisher {
     }
 
     private String hostname(UiDeployment row) {
-        return uiDeployment().resolveHostname(row.getId());
+        return publishedSites().resolveHostname(row.getId());
     }
 
     /**
@@ -100,7 +100,7 @@ public class UiSitePublisher {
             String siteId = HostLabelUtil.siteId(project.applicationKey(), ui.name());
             UiDeployment deployment = new UiDeployment()
                     .setId(siteId)
-                    .setUrl(uiDeployment().resolveSiteUrl(siteId))
+                    .setUrl(publishedSites().resolveSiteUrl(siteId))
                     .setOrganizationId(project.getOrganizationId())
                     .setApplicationId(project.getApplicationId())
                     .setProjectId(project.getId())
@@ -117,8 +117,8 @@ public class UiSitePublisher {
         return ret;
     }
 
-    private UiDeploymentProperties uiDeployment() {
-        return properties.getSystemApi().getUiDeployment();
+    private PublishedSitesProperties publishedSites() {
+        return domainProperties.getDomain().getPublishedSites();
     }
 
 }

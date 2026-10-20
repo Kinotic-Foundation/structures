@@ -93,9 +93,8 @@ KINOTIC_APIGATEWAY_WEBSERVER_PORT: "{{ $server.webServer.port }}"
 # ── Public URLs + email ───────────────────────────────────
 KINOTIC_DOMAIN_MANAGEMENTAPIBASEURL: "{{ $root.Values.kinotic.domain.managementApiBaseUrl }}"
 KINOTIC_DOMAIN_APPAPIBASEURL: "{{ $root.Values.kinotic.domain.appApiBaseUrl }}"
+KINOTIC_DOMAIN_PORTALBASEURL: "{{ $root.Values.kinotic.domain.portalBaseUrl }}"
 {{- with $server.managementServer }}
-KINOTIC_MANAGEMENTSERVER_PORTALBASEURL: "{{ .portalBaseUrl }}"
-KINOTIC_DOMAIN_EMAIL_LINKBASEURL: "{{ .portalBaseUrl }}"
 {{- with .turnstile }}
 KINOTIC_MANAGEMENTSERVER_TURNSTILE_SITEKEY: "{{ .siteKey }}"
 {{- end }}
@@ -103,12 +102,6 @@ KINOTIC_MANAGEMENTSERVER_TURNSTILE_SITEKEY: "{{ .siteKey }}"
 {{- with $server.systemServer }}
 KINOTIC_SYSTEMSERVER_APIBASEURL: "{{ .apiBaseUrl }}"
 KINOTIC_SYSTEMSERVER_CONSOLEBASEURL: "{{ .consoleBaseUrl }}"
-{{- end }}
-{{- if $server.systemServer }}
-{{- with (index $root.Values.servers "kinotic-server-management").managementServer }}
-# invites the member service this server hosts sends are accepted in the portal
-KINOTIC_DOMAIN_EMAIL_LINKBASEURL: "{{ .portalBaseUrl }}"
-{{- end }}
 {{- end }}
 KINOTIC_DOMAIN_EMAIL_ENABLED: "{{ $root.Values.kinotic.domain.email.enabled }}"
 {{- if $root.Values.kinotic.domain.email.enabled }}

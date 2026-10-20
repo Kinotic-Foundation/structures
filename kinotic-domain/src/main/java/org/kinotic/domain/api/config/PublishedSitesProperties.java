@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import org.apache.commons.lang3.Validate;
 
 /**
  * Where organizations' published sites are hosted, bound under {@code kinotic.domain.publishedSites.*}: the
@@ -18,8 +19,8 @@ import lombok.experimental.Accessors;
 public class PublishedSitesProperties {
 
     /**
-     * The domain every organization's sites are under, e.g. {@code kinotic.io}: the same value the system
-     * server serves sites under as {@code kinotic.systemApi.uiDeployment.sitesDomain}. A subdomain of the
+     * The domain every organization's sites are under, e.g. {@code kinotic.io}: the UI {@code admin} of application
+     * {@code shop} of organization {@code acme} is served at {@code shop--admin.acme.kinotic.io}. A subdomain of the
      * edge's zone names the environment, e.g. {@code dev-nm.kinotic.io}.
      */
     private String domain;
@@ -29,4 +30,23 @@ public class PublishedSitesProperties {
      */
     @Valid
     private CloudflareDnsProperties cloudflare = new CloudflareDnsProperties();
+
+    /**
+     * The hostname a site with the given id is served at.
+     *
+     * @throws IllegalArgumentException when {@link #domain} is not set
+     */
+    public String resolveHostname(String siteId) {
+        Validate.notBlank(domain, "kinotic.domain.publishedSites.domain is required");
+        return siteId + "." + domain;
+    }
+
+    /**
+     * Where a site with the given id is served.
+     *
+     * @throws IllegalArgumentException when {@link #domain} is not set
+     */
+    public String resolveSiteUrl(String siteId) {
+        return "https://" + resolveHostname(siteId);
+    }
 }

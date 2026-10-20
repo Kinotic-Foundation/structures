@@ -39,7 +39,7 @@ resource "helm_release" "kinotic" {
       # TLS — enable when mkcert is available
       { name = "tls.enabled", value = var.use_mkcert ? "true" : "false" },
       # The portal's URL, and the API behind it — switches scheme based on mkcert. KinD maps host 443 (TLS) and 9090 (plain).
-      { name = "servers.kinotic-server-management.managementServer.portalBaseUrl", value = var.use_mkcert ? "https://localhost" : "http://localhost:9090" },
+      { name = "kinotic.domain.portalBaseUrl", value = var.use_mkcert ? "https://localhost" : "http://localhost:9090" },
       { name = "kinotic.domain.managementApiBaseUrl", value = var.use_mkcert ? "https://localhost" : "http://localhost:9090" },
       # The base every application's API host is a label under, on the app server's port, in the gateways' scheme
       { name = "kinotic.domain.appApiBaseUrl", value = var.use_mkcert ? "https://localhost:58505" : "http://localhost:58505" },

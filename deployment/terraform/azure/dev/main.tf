@@ -250,7 +250,6 @@ output "application_local_yml" {
       systemApi:
         disableAzureStorage: false
         uiDeployment:
-          sitesDomain: ${module.environment.sites_domain}
           sitesStorageEndpoint: ${module.environment.sites_storage_blob_endpoint}
   EOT
 }

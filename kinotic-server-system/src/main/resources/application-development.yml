@@ -22,7 +22,6 @@ kinotic:
     # guide, "Publishing UIs against Azure")
     disableAzureStorage: true
     uiDeployment:
-      sitesDomain: apps.localhost
       # validated at boot; nothing reads it while Azure storage is disabled
       sitesStorageEndpoint: "-"
     deployment:
@@ -49,9 +48,11 @@ kinotic:
     # What a UI build is handed: the app server as a browser reaches it, not the address a workload
     # dials above
     appApiBaseUrl: http://localhost:58505
-    email:
-      # Invites the member service this server hosts sends are accepted in the portal
-      linkBaseUrl: http://localhost:5173
+    # Invites the member service this server hosts sends are accepted in the portal
+    portalBaseUrl: http://localhost:5173
+    # The domain a published UI's site is named under
+    publishedSites:
+      domain: apps.localhost
     elastic-connections:
       - scheme: "http"
         host: "localhost"
