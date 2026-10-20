@@ -5,9 +5,9 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.kinotic.appserver.api.config.AppServerProperties;
 import org.kinotic.appserver.internal.api.services.security.SocialLoginHandoff;
 import org.kinotic.appserver.internal.api.services.security.SocialLoginHandoffService;
+import org.kinotic.domain.api.config.KinoticDomainProperties;
 import org.kinotic.domain.api.model.ApplicationKey;
 import org.kinotic.domain.api.model.security.ApplicationSocialOidcConfiguration;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
@@ -28,7 +28,7 @@ import org.springframework.stereotype.Component;
  * Sign-in to an application through one of the platform's social registrations
  * ({@link ApplicationSocialOidcConfiguration}). The registration is shared by every application that offers
  * it, and a provider returns the browser only to a redirect URI registered in advance, so the provider
- * returns to one host for all of them: the app server's own, {@code kinotic.appServer.apiBaseUrl}. The flow
+ * returns to one host for all of them: the app server's own, {@code kinotic.domain.appApiBaseUrl}. The flow
  * therefore runs across two hosts. The application's API host starts it ({@link ApplicationLoginHandler}'s
  * start answers with the authorize URL on the shared host), the shared host runs the provider round-trip on
  * its own session, and its callback
@@ -51,7 +51,7 @@ public class ApplicationSocialLoginHandler implements SuppliesGatewayRoutes {
     private final OidcFlowOrchestrator oidcFlowOrchestrator;
     private final SocialLoginHandoffService handoffService;
     private final ApplicationAuthEndpointSupport authEndpointSupport;
-    private final AppServerProperties properties;
+    private final KinoticDomainProperties domainProperties;
 
     @Override
     public void mountRoutes(Router router) {
@@ -148,7 +148,7 @@ public class ApplicationSocialLoginHandler implements SuppliesGatewayRoutes {
                                                        .setOrigin(result.origin())
                                                        .setBinding(ctx.session().remove(ApplicationAuthEndpointSupport.SOCIAL_LOGIN_BINDING_SESSION_KEY)));
             ctx.response().setStatusCode(302)
-               .putHeader("Location", HostLabelUtil.apiUrl(applicationKey, properties.getApiBaseUrl()) + COMPLETE_PATH + code)
+               .putHeader("Location", HostLabelUtil.apiUrl(applicationKey, domainProperties.getDomain().getAppApiBaseUrl()) + COMPLETE_PATH + code)
                .end();
         }
     }
@@ -182,6 +182,6 @@ public class ApplicationSocialLoginHandler implements SuppliesGatewayRoutes {
 
     // the shared host is the callback's base: the one redirect URI the registration lists for every application
     private String callbackUrl(String configId) {
-        return properties.getApiBaseUrl() + CALLBACK_PATH + configId;
+        return domainProperties.getDomain().getAppApiBaseUrl() + CALLBACK_PATH + configId;
     }
 }

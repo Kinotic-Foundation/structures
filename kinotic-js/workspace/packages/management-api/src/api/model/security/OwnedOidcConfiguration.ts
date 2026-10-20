@@ -30,7 +30,7 @@ export interface OwnedOidcConfiguration {
     authority: string | null
     audience: string | null
     enabled: boolean
-    /** Whether a client secret is held for the configuration. */
+    /** Whether a client secret is held for the configuration; set by the server on save, whatever was sent. */
     confidentialClient: boolean
     /**
      * Whether an identity the provider verifies that no user of the scope is bound to becomes a user of the scope

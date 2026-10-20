@@ -37,17 +37,15 @@ resource "helm_release" "kinotic" {
     { name = "servers.kinotic-server-management.webServer.enabled", value = "false" },
     # Where the portal and the console live — post-OIDC redirects and the emailed links — and
     # where each server's REST endpoints live, the OIDC redirect_uri
-    { name = "servers.kinotic-server-management.managementServer.portalBaseUrl", value = "https://portal.${local.global.dns_zone_name}" },
-    { name = "servers.kinotic-server-management.managementServer.apiBaseUrl", value = "https://api.${local.global.dns_zone_name}" },
+    { name = "kinotic.domain.portalBaseUrl", value = "https://portal.${local.global.dns_zone_name}" },
+    { name = "kinotic.managementApi.apiBaseUrl", value = "https://api.${local.global.dns_zone_name}" },
     # The Turnstile site the portal's find-my-organizations form presents; the management server verifies its
     # tokens with the secret the global root stores
     { name = "servers.kinotic-server-management.managementServer.turnstile.siteKey", value = var.turnstile_site_key },
     { name = "servers.kinotic-server-system.systemServer.consoleBaseUrl", value = "https://console.${local.global.dns_zone_name}" },
     { name = "servers.kinotic-server-system.systemServer.apiBaseUrl", value = "https://system-api.${local.global.dns_zone_name}" },
-    # Every application's API host, <organizationId>--<applicationId>.apps-api.<cloudflare zone>: what
-    # the app server serves, and what the system server hands each UI build
-    { name = "servers.kinotic-server-app.appServer.apiBaseUrl", value = "https://${local.apps_api_domain}" },
-    { name = "servers.kinotic-server-system.deployment.appApiBaseUrl", value = "https://${local.apps_api_domain}" },
+    # Every application's API host, <organizationId>--<applicationId>.apps-api.<cloudflare zone>
+    { name = "kinotic.domain.appApiBaseUrl", value = "https://${local.apps_api_domain}" },
     # What a workload dials: the management server for sync, the app server for runtime
     { name = "servers.kinotic-server-system.extraEnv.KINOTIC_SYSTEMAPI_DEPLOYMENT_MANAGEMENTSERVER_HOST", value = "api.${local.global.dns_zone_name}" },
     { name = "servers.kinotic-server-system.extraEnv.KINOTIC_SYSTEMAPI_DEPLOYMENT_MANAGEMENTSERVER_PORT", value = "443" },
@@ -61,9 +59,8 @@ resource "helm_release" "kinotic" {
     # Cluster Key Vault for tenant/app secrets
     { name = "extraEnv.KINOTIC_DOMAIN_SECRETSTORAGE_BACKEND", value = "AZURE" },
     { name = "extraEnv.KINOTIC_DOMAIN_SECRETSTORAGE_AZURE_VAULTURL", value = azurerm_key_vault.main.vault_uri },
-    # UI sites — the domain published UIs are served under and the account the system server
-    # publishes them into
-    { name = "servers.kinotic-server-system.extraEnv.KINOTIC_SYSTEMAPI_UIDEPLOYMENT_SITESDOMAIN", value = local.cloudflare_sites_domain },
+    # UI sites — the account the system server publishes them into; the domain they are served
+    # under is KINOTIC_DOMAIN_PUBLISHEDSITES_DOMAIN below
     { name = "servers.kinotic-server-system.extraEnv.KINOTIC_SYSTEMAPI_UIDEPLOYMENT_SITESSTORAGEENDPOINT", value = module.sites.storage_blob_endpoint },
     # Each organization's sites subdomain: every server knows the domain, whose pages an application's
     # login admits; the management server creates an organization's record at sign-up and the system

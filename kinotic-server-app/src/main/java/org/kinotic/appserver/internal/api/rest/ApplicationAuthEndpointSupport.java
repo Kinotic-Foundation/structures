@@ -33,14 +33,14 @@ import java.util.regex.Pattern;
 
 /**
  * The app server's {@link AuthEndpointSupport}. Every request the app server serves is addressed to one
- * application's API host, {@code <organizationId>--<applicationId>} under {@code kinotic.appServer.apiBaseUrl},
+ * application's API host, {@code <organizationId>--<applicationId>} under {@code kinotic.domain.appApiBaseUrl},
  * and {@link #applicationKey} names that application; the browser flows send the user to its primary UI.
  */
 @Component
 public class ApplicationAuthEndpointSupport extends AuthEndpointSupport {
 
     /**
-     * Path on the shared host, {@code kinotic.appServer.apiBaseUrl}, that begins a sign-in through one of the
+     * Path on the shared host, {@code kinotic.domain.appApiBaseUrl}, that begins a sign-in through one of the
      * platform's social registrations; {@link #socialAuthorizeUrl} builds the URL a start answers with.
      */
     public static final String SOCIAL_AUTHORIZE_PATH = "/api/auth/app/login/social/authorize";
@@ -182,7 +182,7 @@ public class ApplicationAuthEndpointSupport extends AuthEndpointSupport {
      */
     public String socialAuthorizeUrl(LoginScope scope, String configId, String origin, String binding) {
         ApplicationKey applicationKey = scope.application();
-        String ret = properties.getApiBaseUrl() + SOCIAL_AUTHORIZE_PATH
+        String ret = domainProperties.getDomain().getAppApiBaseUrl() + SOCIAL_AUTHORIZE_PATH
                 + "?organizationId=" + URLEncoder.encode(applicationKey.organizationId(), StandardCharsets.UTF_8)
                 + "&applicationId=" + URLEncoder.encode(applicationKey.applicationId(), StandardCharsets.UTF_8)
                 + "&configurationId=" + URLEncoder.encode(configId, StandardCharsets.UTF_8)
@@ -221,6 +221,6 @@ public class ApplicationAuthEndpointSupport extends AuthEndpointSupport {
     private ApplicationKey findApplicationKey(RoutingContext ctx) {
         // authority() is the request's Host header, parsed; null on an HTTP/1.0 request that sent none
         HostAndPort authority = ctx.request().authority();
-        return authority != null ? HostLabelUtil.fromHost(authority.host(), properties.getApiBaseUrl()) : null;
+        return authority != null ? HostLabelUtil.fromHost(authority.host(), domainProperties.getDomain().getAppApiBaseUrl()) : null;
     }
 }

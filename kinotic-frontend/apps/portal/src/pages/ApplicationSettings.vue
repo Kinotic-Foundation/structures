@@ -1,12 +1,15 @@
 <template>
   <div>
     <PageHeader title="Settings"
-                description="Name, description, tenancy, primary UI, and the emails this application sends." />
+                description="Name, description, tenancy, primary UI, sign-in providers, and the emails this application sends." />
 
     <Tabs lazy :value="activeTab" @update:value="selectTab">
       <TabList>
         <Tab value="general">
           <span class="flex items-center gap-2"><SlidersHorizontal :size="18" :stroke-width="1.75" aria-hidden="true" />General</span>
+        </Tab>
+        <Tab value="sign-in-providers">
+          <span class="flex items-center gap-2"><KeyRound :size="18" :stroke-width="1.75" aria-hidden="true" />Sign-in providers</span>
         </Tab>
         <Tab value="invitation-email">
           <span class="flex items-center gap-2"><Mail :size="18" :stroke-width="1.75" aria-hidden="true" />Invitation email</span>
@@ -83,6 +86,9 @@
             </div>
           </form>
         </TabPanel>
+        <TabPanel value="sign-in-providers">
+          <OidcConfigurationsPanel :key="applicationId" :application-id="applicationId" />
+        </TabPanel>
         <TabPanel value="invitation-email">
           <div class="pt-4">
             <InviteEmailTemplateEditor :key="applicationId" :application-id="applicationId" />
@@ -94,7 +100,7 @@
 </template>
 
 <script setup lang="ts">
-import { Info, Lock, Mail, SlidersHorizontal, UsersRound } from '@lucide/vue'
+import { Info, KeyRound, Lock, Mail, SlidersHorizontal, UsersRound } from '@lucide/vue'
 import { ref, computed, watch } from 'vue'
 import { showErrorToast } from '@kinotic-ai/frontend-common'
 import { Textarea, Button } from 'primevue'
@@ -107,6 +113,7 @@ import TabPanels from 'primevue/tabpanels'
 import Tabs from 'primevue/tabs'
 import { DashboardSection, PageHeader, TINTS } from '@kinotic-ai/frontend-common'
 import InviteEmailTemplateEditor from '@/components/InviteEmailTemplateEditor.vue'
+import OidcConfigurationsPanel from '@/components/OidcConfigurationsPanel.vue'
 import { useQueryTab } from '@/composables/useQueryTab'
 import { APPLICATION_STATE } from '@/states/IApplicationState'
 import { USER_STATE } from '@/states/IUserState'
@@ -122,7 +129,8 @@ const props = defineProps({
 })
 
 const toast = useToast()
-const activeTab = useQueryTab(['general', 'invitation-email'] as const)
+const TABS = ['general', 'sign-in-providers', 'invitation-email'] as const
+const activeTab = useQueryTab(TABS)
 const appDescription = ref('')
 const tenantManagement = ref<TenantManagement>(TenantManagement.TENANT_ADMINISTRATORS)
 const TENANT_MANAGEMENT_OPTIONS = [
@@ -184,7 +192,7 @@ function discard(): void {
 }
 
 function selectTab(value: string | number): void {
-  activeTab.value = value === 'invitation-email' ? 'invitation-email' : 'general'
+  activeTab.value = TABS.find(tab => tab === value) ?? 'general'
 }
 
 const saveSettings = async () => {

@@ -6,6 +6,7 @@ import io.vertx.ext.web.RoutingContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.kinotic.core.api.security.Participant;
+import org.kinotic.management.api.config.KinoticManagementApiProperties;
 import org.kinotic.domain.api.model.security.DelegateType;
 import org.kinotic.domain.api.rest.OAuthExtensionGrant;
 import org.kinotic.domain.api.rest.SuppliesGatewayRoutes;
@@ -47,6 +48,7 @@ public class DeviceAuthorizationHandler implements SuppliesGatewayRoutes, OAuthE
 
     private final AuthEndpointSupport authEndpointSupport;
     private final ManagementServerProperties properties;
+    private final KinoticManagementApiProperties managementApiProperties;
     private final DeviceCodeGrantService deviceCodeGrantService;
 
     @Override
@@ -80,7 +82,7 @@ public class DeviceAuthorizationHandler implements SuppliesGatewayRoutes, OAuthE
             authEndpointSupport.respondError(ctx, 400, "invalid_request");
             return;
         }
-        deviceCodeGrantService.poll(properties.resolveIssuerBaseUrl(), deviceCode)
+        deviceCodeGrantService.poll(issuer(), deviceCode)
               .onSuccess(result -> {
                   switch (result.status()) {
                       case AUTHORIZATION_PENDING -> authEndpointSupport.respondError(ctx, 400, "authorization_pending");
@@ -109,7 +111,7 @@ public class DeviceAuthorizationHandler implements SuppliesGatewayRoutes, OAuthE
     private void handleApprove(RoutingContext ctx) {
         Participant approver = authEndpointSupport.requireSessionUser(ctx);
         String userCode = authEndpointSupport.readJsonBody(ctx).getString("userCode");
-        deviceCodeGrantService.approve(properties.resolveIssuerBaseUrl(), userCode, approver)
+        deviceCodeGrantService.approve(issuer(), userCode, approver)
               .onSuccess(v -> ctx.response().setStatusCode(204).end())
               .onFailure(err -> authEndpointSupport.respondError(ctx, 400, err.getMessage()));
     }
@@ -125,7 +127,7 @@ public class DeviceAuthorizationHandler implements SuppliesGatewayRoutes, OAuthE
             authEndpointSupport.respondError(ctx, 400, "invalid_client");
             return;
         }
-        deviceCodeGrantService.start(properties.resolveIssuerBaseUrl(), ctx.request().getFormAttribute("device_name"))
+        deviceCodeGrantService.start(issuer(), ctx.request().getFormAttribute("device_name"))
               // /device is a kinotic-frontend SPA route (DeviceVerification.vue), not a gateway
               // route — hence the UI's URL, not the API's. The signed-in browser approves there
               // through handleApprove; this route only emits the URL.
@@ -145,4 +147,7 @@ public class DeviceAuthorizationHandler implements SuppliesGatewayRoutes, OAuthE
               });
     }
 
+    private String issuer() {
+        return properties.resolveIssuerBaseUrl(managementApiProperties.getManagementApi().getApiBaseUrl());
+    }
 }

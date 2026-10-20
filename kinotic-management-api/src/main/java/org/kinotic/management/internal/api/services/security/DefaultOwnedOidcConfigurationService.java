@@ -6,9 +6,13 @@ import org.apache.commons.lang3.Validate;
 import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.core.api.security.SecurityContext;
+import org.kinotic.domain.api.config.KinoticDomainProperties;
+import org.kinotic.domain.api.model.ApplicationScoped;
 import org.kinotic.domain.api.model.security.OwnedOidcConfiguration;
 import org.kinotic.domain.api.model.security.participant.OrganizationParticipant;
+import org.kinotic.domain.api.rest.support.OidcCallbacks;
 import org.kinotic.domain.api.services.security.OidcConfigurationService;
+import org.kinotic.management.api.config.KinoticManagementApiProperties;
 import org.kinotic.management.api.services.security.OwnedOidcConfigurationService;
 import org.springframework.stereotype.Component;
 
@@ -18,6 +22,8 @@ public class DefaultOwnedOidcConfigurationService implements OwnedOidcConfigurat
 
     private final OidcConfigurationService oidcConfigurationService;
     private final SecurityContext securityContext;
+    private final KinoticDomainProperties domainProperties;
+    private final KinoticManagementApiProperties managementApiProperties;
 
     @Override
     public Future<Page<OwnedOidcConfiguration>> findAll(Pageable pageable) {
@@ -31,10 +37,31 @@ public class DefaultOwnedOidcConfigurationService implements OwnedOidcConfigurat
     }
 
     @Override
+    public Future<String> findCallbackUrl(String id) {
+        return findById(id).map(configuration -> {
+            String ret = null;
+            if (configuration instanceof ApplicationScoped<?> scoped) {
+                ret = OidcCallbacks.applicationCallbackUrl(scoped.applicationKey(),
+                                                           domainProperties.getDomain().getAppApiBaseUrl(),
+                                                           configuration.getId());
+            } else if (configuration != null) {
+                ret = OidcCallbacks.ssoCallbackUrl(managementApiProperties.getManagementApi().getApiBaseUrl(),
+                                                   configuration.getId());
+            }
+            return ret;
+        });
+    }
+
+    @Override
     public Future<OwnedOidcConfiguration> save(OwnedOidcConfiguration configuration, String clientSecret) {
         Validate.notNull(configuration, "configuration is required");
         configuration.setOrganizationId(requireOrganizationId());
         return oidcConfigurationService.save(configuration, clientSecret);
+    }
+
+    @Override
+    public Future<OwnedOidcConfiguration> deleteClientSecret(String id) {
+        return oidcConfigurationService.deleteClientSecret(id);
     }
 
     @Override

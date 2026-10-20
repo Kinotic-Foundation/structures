@@ -44,6 +44,21 @@ public class DomainProperties {
     @Valid
     private PublishedSitesProperties publishedSites = new PublishedSitesProperties();
 
+    /**
+     * Base URL every application's API host is a label under, as a browser reaches it (scheme + domain + optional
+     * port, no trailing slash): with {@code https://apps-api.kinotic.io}, application {@code orders} of organization
+     * {@code acme} is served at {@code https://acme--orders.apps-api.kinotic.io}, which is also its OAuth issuer, the
+     * host its UIs are built against, and the host of the callback of each of its OIDC configurations. The base
+     * URL itself is the shared host a sign-in through one of the platform's social registrations returns to.
+     */
+    private String appApiBaseUrl;
+
+    /**
+     * Base URL of the portal as a browser reaches it (no trailing slash): where the management server's browser
+     * flows send the user, and the base of the verification, invite and sign-in links in the platform's emails.
+     */
+    private String portalBaseUrl;
+
     @NotNull
     private Duration elasticConnectionTimeout = Duration.ofSeconds(5);
 

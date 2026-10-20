@@ -4,7 +4,9 @@ import io.vertx.core.Future;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import lombok.extern.slf4j.Slf4j;
+import org.kinotic.management.api.config.KinoticManagementApiProperties;
 import org.kinotic.domain.api.rest.support.OidcCallbackException;
+import org.kinotic.domain.api.rest.support.OidcCallbacks;
 import org.kinotic.domain.api.rest.support.OidcErrorCodes;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.rest.SuppliesGatewayRoutes;
@@ -14,7 +16,6 @@ import org.kinotic.domain.api.rest.support.OidcFlowOrchestrator;
 import org.kinotic.domain.api.rest.support.OidcFlowPurpose;
 import org.kinotic.domain.api.rest.support.PendingFlow;
 import org.kinotic.domain.api.services.security.OidcConfigurationService;
-import org.kinotic.managementserver.api.config.ManagementServerProperties;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -36,25 +37,25 @@ public class OrganizationOidcCallbackHandler implements SuppliesGatewayRoutes {
     private final OidcFlowOrchestrator oidcFlowOrchestrator;
     private final OidcConfigurationService oidcConfigurationService;
     private final AuthEndpointSupport authEndpointSupport;
-    private final ManagementServerProperties properties;
+    private final KinoticManagementApiProperties managementApiProperties;
     private final Map<OidcFlowPurpose, OidcFlowCompleter> completers;
 
     public OrganizationOidcCallbackHandler(OidcFlowOrchestrator oidcFlowOrchestrator,
                                            OidcConfigurationService oidcConfigurationService,
                                            AuthEndpointSupport authEndpointSupport,
-                                           ManagementServerProperties properties,
+                                           KinoticManagementApiProperties managementApiProperties,
                                            List<OidcFlowCompleter> completers) {
         this.oidcFlowOrchestrator = oidcFlowOrchestrator;
         this.oidcConfigurationService = oidcConfigurationService;
         this.authEndpointSupport = authEndpointSupport;
-        this.properties = properties;
+        this.managementApiProperties = managementApiProperties;
         this.completers = completers.stream().collect(Collectors.toMap(OidcFlowCompleter::purpose, Function.identity()));
     }
 
     @Override
     public void mountRoutes(Router router) {
-        router.get(OrganizationOidcCallbacks.SOCIAL_CALLBACK_PATH + ":configId").handler(this::handleSocialCallback);
-        router.get(OrganizationOidcCallbacks.SSO_CALLBACK_PATH + ":configId").handler(this::handleSsoCallback);
+        router.get(OidcCallbacks.SOCIAL_CALLBACK_PATH + ":configId").handler(this::handleSocialCallback);
+        router.get(OidcCallbacks.SSO_CALLBACK_PATH + ":configId").handler(this::handleSsoCallback);
     }
 
     /**
@@ -63,7 +64,7 @@ public class OrganizationOidcCallbackHandler implements SuppliesGatewayRoutes {
      */
     private void handleSocialCallback(RoutingContext ctx) {
         String configId = ctx.pathParam("configId");
-        handle(ctx, configId, OrganizationOidcCallbacks.socialCallbackUrl(properties.getApiBaseUrl(), configId),
+        handle(ctx, configId, OidcCallbacks.socialCallbackUrl(managementApiProperties.getManagementApi().getApiBaseUrl(), configId),
                (_, _, _) -> oidcConfigurationService.findOrgSignupById(configId).map(signup -> signup));
     }
 
@@ -74,7 +75,7 @@ public class OrganizationOidcCallbackHandler implements SuppliesGatewayRoutes {
      */
     private void handleSsoCallback(RoutingContext ctx) {
         String configId = ctx.pathParam("configId");
-        handle(ctx, configId, OrganizationOidcCallbacks.ssoCallbackUrl(properties.getApiBaseUrl(), configId),
+        handle(ctx, configId, OidcCallbacks.ssoCallbackUrl(managementApiProperties.getManagementApi().getApiBaseUrl(), configId),
                (orgId, _, _) -> orgId == null
                        ? Future.succeededFuture()
                        : oidcConfigurationService.findOffered(configId, orgId, null));

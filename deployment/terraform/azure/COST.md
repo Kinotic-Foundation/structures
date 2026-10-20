@@ -18,7 +18,7 @@ Estimated monthly costs for `centralus` (the `location` in `cluster/terraform.tf
 | AKS Cluster | Azure Kubernetes Service (Free in beta, Standard in prod) | Free / $73 |
 | System Node Pool (3x VMs) | Virtual Machines | **Paid** |
 | System OS Disks | Managed Disks | **Paid** |
-| Platform zone (kinotic.ai) and customers' zone (kinotic.io) | Cloudflare DNS | Free plan |
+| Platform zone (kinotic.ai) | Cloudflare DNS | Free plan |
 | Sites Worker (published sites, portal, console) | Cloudflare Workers | Free tier, then $5/mo |
 | Load Balancer (STOMP only) | Standard LB + Public IP | **~$22/mo** |
 | Elasticsearch PVC(s) | Managed Disk (Premium ZRS) | **Paid** |
@@ -32,7 +32,7 @@ Estimated monthly costs for `centralus` (the `location` in `cluster/terraform.tf
 | Entra ID App Registration (Grafana) | Azure AD | Free |
 | Azure Key Vault (platform secrets) | Key Vault Standard | **~$1/mo** |
 | Azure Communication Services | Email | **Per-message** |
-| Cloudflare zone for the UI sites (`kinotic.io`) | Cloudflare Pro + Advanced Certificate Manager + Workers Paid | **~$40/mo** fixed ($25 + $10 + $5); no egress charge; Workers $0.30 per million requests past the ten million included; Azure egress on edge cache misses only |
+| Cloudflare zone for the UI sites (`kinotic.io`) | Cloudflare Pro + Advanced Certificate Manager + Workers Paid | **~$40/mo** fixed ($25 + $10 + $5); the Pro plan includes 100 custom hostnames, then $0.10 each; no egress charge; Workers $0.30 per million requests past the ten million included; Azure egress on edge cache misses only |
 | Organization storage resource group + private-endpoints subnet | Resource Manager, VNet | Free |
 | Private DNS zone (`privatelink.blob.core.windows.net`) + VNet link | Azure Private DNS | **~$0.50/mo** |
 | Per organization: storage account | Blob Storage (StorageV2, LRS, hot) | **~$0.02/GB/mo**; a published UI is a few MB, so cents |
@@ -85,13 +85,12 @@ Includes observability stack (Loki + Tempo + Mimir + Alloy + Grafana) and Entra 
 | Observability storage private endpoint | Private Endpoint (blob) | 1 | $7.30 | $7 |
 | Key Vault | Standard | 1 | ~$0.03/10K ops | $1 |
 | Azure Communication Services | Email | 1 | $0.00025/email | $0 |
-| DNS Zone | kinotic.ai | 1 | $0.50 | $1 |
 | State Storage | Blob (LRS) | 1 | $1 | $1 |
 | Cloudflare (UI sites) | Pro, certificates, Workers | 1 | $40 | $40 |
 | Private DNS Zone (blob) | privatelink.blob.core.windows.net | 1 | $0.50 | $1 |
 | Organization storage | Storage account + private endpoint | per org | ~$7.50 | +$7.50 per org |
 
-### Beta Total: ~$625/mo, plus ~$7.50 per organization
+### Beta Total: ~$624/mo, plus ~$7.50 per organization
 
 ### Beta Resource Utilization (48 GB across 3 nodes)
 
@@ -145,13 +144,12 @@ AKS Standard tier with uptime SLA.
 | Observability Blob Storage (Loki, Tempo, Mimir) | Azure Blob (hot tier) | — | ~$0.02/GB | $10 |
 | Observability storage private endpoint | Private Endpoint (blob) | 1 | $7.30 | $7 |
 | Grafana PVC | managed-csi-premium, 1 GB | 1 | $1 | $1 |
-| DNS Zone | kinotic.ai | 1 | $0.50 | $1 |
 | State Storage | Blob (LRS) | 1 | $1 | $1 |
 | Cloudflare (UI sites) | Pro, certificates, Workers | 1 | $40 | $40 |
 | Private DNS Zone (blob) | privatelink.blob.core.windows.net | 1 | $0.50 | $1 |
 | Organization storage | Storage account + private endpoint | per org | ~$7.50 | +$7.50 per org |
 
-### Production Total: ~$2,077/mo, plus ~$7.50 per organization
+### Production Total: ~$2,076/mo, plus ~$7.50 per organization
 
 The per-organization line is the private endpoint; the account itself is cents. At a
 thousand organizations that is ~$7,300/mo, which is where service endpoints or a shared
@@ -167,15 +165,15 @@ private endpoints, no cluster.
 
 | Line Item | Spec | Count | Unit cost | Total/mo |
 |---|---|---|---|---|
-| Cloudflare (UI sites) | Pro, certificates, Workers | 1 | $40 | $40 |
+| Cloudflare (UI sites) | The shared `kinotic.io` zone's plan, certificates and Workers | | included | $0 |
 | Organization storage accounts | Blob (LRS, hot), a few MB each | per org | cents | ~$0 |
 | Service principal, role assignments, resource group | | | $0 | $0 |
-| DNS records under `apps-<environment>` | In the shared `kinotic.ai` zone | | included | $0 |
+| DNS records under `<environment>` | In the shared `kinotic.io` zone | | included | $0 |
 
-### Developer Total: ~$35/mo while it exists
+### Developer Total: cents a month
 
-The base fee is billed by the hour, so `terraform destroy` between testing sessions stops
-it, and `terraform apply` brings the environment back in a few minutes.
+An environment adds nothing to the Cloudflare bill, and its storage is billed per GB stored, so
+it can be left in place between testing sessions.
 
 ---
 

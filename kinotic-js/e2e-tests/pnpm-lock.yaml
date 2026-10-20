@@ -18,8 +18,8 @@ importers:
         specifier: ^5.0.0-beta.24
         version: 5.0.0-beta.24
       '@kinotic-ai/management-api':
-        specifier: ^5.0.0-beta.57
-        version: 5.0.0-beta.57(@kinotic-ai/core@5.0.0-beta.24)
+        specifier: ^5.0.0-beta.58
+        version: 5.0.0-beta.58(@kinotic-ai/core@5.0.0-beta.24)
       '@kinotic-ai/persistence':
         specifier: ^5.0.0-beta.12
         version: 5.0.0-beta.12(@kinotic-ai/core@5.0.0-beta.24)
@@ -34,8 +34,8 @@ importers:
         specifier: ^5.0.0-beta.1
         version: 5.0.0-beta.1
       '@kinotic-ai/kinotic-cli':
-        specifier: ^5.2.0-beta.29
-        version: 5.2.0-beta.29(@types/node@25.9.5)(magicast@0.5.4)
+        specifier: ^5.2.0-beta.30
+        version: 5.2.0-beta.30(@types/node@25.9.5)(magicast@0.5.4)
       '@modelcontextprotocol/sdk':
         specifier: ^1.30.0
         version: 1.30.0(zod@4.4.3)
@@ -457,13 +457,13 @@ packages:
   '@kinotic-ai/idl@5.0.0-beta.1':
     resolution: {integrity: sha512-zM4NGbHQ5JMKYMh+SU/+Q4GL3UPZsJ5oQWbPAlzRvD9SiLzbnD9mVJpukRVbWnu7zxuk3Z6o3WNQ/7YAokEbDg==}
 
-  '@kinotic-ai/kinotic-cli@5.2.0-beta.29':
-    resolution: {integrity: sha512-VRbvvT2EOf23MUJFc0rb+Y7TZffaZRM48uxzA7aW2uQ2DQueXmHc02Bz6PnrGPqE1Rk2s3aGHDkjsB2rIbgHwQ==}
+  '@kinotic-ai/kinotic-cli@5.2.0-beta.30':
+    resolution: {integrity: sha512-KyW8NfUQ2qZZn2M4DJRdI1KLotNNtLAq+z1txZjR5uyf91Jv6YwGBBqUThSDj9HTTxSciol8RNK1PxxieE7Y4g==}
     engines: {node: '>=18.0.0'}
     hasBin: true
 
-  '@kinotic-ai/management-api@5.0.0-beta.57':
-    resolution: {integrity: sha512-wxk7FJrALBqu/Ik51kNcGUQbEU35H4RRxOLa2KXZc8V3BSYqYDOzxk8ZwGFk7B5rEOlkR+ZMUoT3htmdKqZXug==}
+  '@kinotic-ai/management-api@5.0.0-beta.58':
+    resolution: {integrity: sha512-MoVOGqGnKBVcVdGcvH2wBWqjJEAGLnO4Qq3F1SZ4NbXkc4NseuB9rUTavdauDQEKUFMeodlHI34hkVsRpaIIRQ==}
     peerDependencies:
       '@kinotic-ai/core': ^5.0.0-beta.24
 
@@ -2550,12 +2550,12 @@ snapshots:
 
   '@kinotic-ai/idl@5.0.0-beta.1': {}
 
-  '@kinotic-ai/kinotic-cli@5.2.0-beta.29(@types/node@25.9.5)(magicast@0.5.4)':
+  '@kinotic-ai/kinotic-cli@5.2.0-beta.30(@types/node@25.9.5)(magicast@0.5.4)':
     dependencies:
       '@inquirer/prompts': 8.5.2(@types/node@25.9.5)
       '@kinotic-ai/core': 5.0.0-beta.24
       '@kinotic-ai/idl': 5.0.0-beta.1
-      '@kinotic-ai/management-api': 5.0.0-beta.57(@kinotic-ai/core@5.0.0-beta.24)
+      '@kinotic-ai/management-api': 5.0.0-beta.58(@kinotic-ai/core@5.0.0-beta.24)
       '@kinotic-ai/persistence': 5.0.0-beta.12(@kinotic-ai/core@5.0.0-beta.24)
       '@kinotic-ai/spawn': 5.0.0-beta.1
       '@oclif/core': 4.13.3
@@ -2574,7 +2574,7 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@kinotic-ai/management-api@5.0.0-beta.57(@kinotic-ai/core@5.0.0-beta.24)':
+  '@kinotic-ai/management-api@5.0.0-beta.58(@kinotic-ai/core@5.0.0-beta.24)':
     dependencies:
       '@kinotic-ai/core': 5.0.0-beta.24
       '@kinotic-ai/idl': 5.0.0-beta.1

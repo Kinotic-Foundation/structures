@@ -29,6 +29,18 @@
   </form>
 </template>
 
+<script lang="ts">
+/** The name a provider kind is shown by, on its sign-in button and wherever the portal lists it. */
+export function providerDisplayName(provider: string): string {
+  switch (provider) {
+    case 'azure-ad': return 'Microsoft'
+    case 'github':   return 'GitHub'
+    case 'google':   return 'Google'
+    default:         return provider.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ')
+  }
+}
+</script>
+
 <script setup lang="ts">
 import { computed } from 'vue'
 import { isDark } from '@kinotic-ai/frontend-common'
@@ -76,16 +88,7 @@ const microsoftLabel = computed<string>(() => `${verb.value} Microsoft`)
 
 const githubLabel = computed<string>(() => `${verb.value} GitHub`)
 
-const providerDisplayName = computed<string>(() => {
-  switch (props.provider) {
-    case 'azure-ad': return 'Microsoft'
-    case 'github':   return 'GitHub'
-    case 'google':   return 'Google'
-    default:         return props.provider.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ')
-  }
-})
-
-const genericLabel = computed<string>(() => `${verb.value} ${props.name ?? providerDisplayName.value}`)
+const genericLabel = computed<string>(() => `${verb.value} ${props.name ?? providerDisplayName(props.provider)}`)
 
 const ariaLabel = genericLabel
 </script>

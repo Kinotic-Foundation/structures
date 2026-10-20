@@ -88,11 +88,6 @@ kubectl delete secret letsencrypt-prod-account-key -n cert-manager
 # Re-apply via terraform or kubectl with correct URL
 ```
 
-### cert-manager `ScopeLocked` cleaning up TXT records
-
-**Cause:** A `CanNotDelete` management lock on the DNS zone prevents cert-manager from deleting `_acme-challenge` TXT records after validation.
-**Fix:** Don't use management locks on the DNS zone. The zone is protected by being in a separate resource group (`rg-kinotic-global`).
-
 ### `Insufficient memory` — pods stuck in Pending
 
 **Cause:** Kubernetes reserves memory based on pod `requests`, not actual usage.

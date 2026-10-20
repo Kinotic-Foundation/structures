@@ -6,8 +6,8 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.kinotic.appserver.api.config.AppServerProperties;
 import org.kinotic.core.api.security.SessionBinding;
+import org.kinotic.domain.api.config.KinoticDomainProperties;
 import org.kinotic.domain.api.model.ApplicationKey;
 import org.kinotic.domain.api.model.TenantManagement;
 import org.kinotic.domain.api.model.security.ApplicationSocialOidcConfiguration;
@@ -18,6 +18,7 @@ import org.kinotic.domain.api.repositories.ApplicationRepository;
 import org.kinotic.domain.api.rest.SuppliesGatewayRoutes;
 import org.kinotic.domain.api.rest.support.CallbackResult;
 import org.kinotic.domain.api.rest.support.OidcCallbackException;
+import org.kinotic.domain.api.rest.support.OidcCallbacks;
 import org.kinotic.domain.api.rest.support.OidcErrorCodes;
 import org.kinotic.domain.api.rest.support.OidcFlowOrchestrator;
 import org.kinotic.domain.api.rest.support.PendingFlow;
@@ -25,7 +26,6 @@ import org.kinotic.domain.api.services.security.LocalAuthenticationService;
 import org.kinotic.domain.api.services.security.OidcConfigurationService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.utils.DomainUtil;
-import org.kinotic.domain.api.utils.HostLabelUtil;
 import org.springframework.stereotype.Component;
 
 /**
@@ -54,14 +54,14 @@ public class ApplicationLoginHandler implements SuppliesGatewayRoutes {
     private final LocalAuthenticationService localAuthenticationService;
     private final OidcFlowOrchestrator oidcFlowOrchestrator;
     private final ApplicationAuthEndpointSupport authEndpointSupport;
-    private final AppServerProperties properties;
+    private final KinoticDomainProperties domainProperties;
 
     @Override
     public void mountRoutes(Router router) {
         router.get("/api/auth/app/login/providers").handler(this::handleProviders);
         router.post("/api/auth/app/login/oidc/start/:configId").handler(this::handleStart);
         router.post("/api/auth/app/login").handler(this::handleLogin);
-        router.get("/api/auth/app/login/oidc/callback/:configId").handler(this::handleCallback);
+        router.get(OidcCallbacks.APPLICATION_CALLBACK_PATH + ":configId").handler(this::handleCallback);
     }
 
     /**
@@ -209,6 +209,6 @@ public class ApplicationLoginHandler implements SuppliesGatewayRoutes {
 
     // the application's API host is the callback's base, so the IdP returns the browser to the host it left
     private String callbackUrl(ApplicationKey applicationKey, String configId) {
-        return HostLabelUtil.apiUrl(applicationKey, properties.getApiBaseUrl()) + "/api/auth/app/login/oidc/callback/" + configId;
+        return OidcCallbacks.applicationCallbackUrl(applicationKey, domainProperties.getDomain().getAppApiBaseUrl(), configId);
     }
 }

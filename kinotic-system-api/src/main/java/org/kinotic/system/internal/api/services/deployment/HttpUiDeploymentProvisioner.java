@@ -8,11 +8,11 @@ import io.vertx.ext.web.client.WebClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.Validate;
+import org.kinotic.domain.api.config.KinoticDomainProperties;
+import org.kinotic.domain.api.config.PublishedSitesProperties;
 import org.kinotic.management.api.model.deployment.DeploymentStatus;
 import org.kinotic.management.api.model.deployment.DeploymentStatusType;
 import org.kinotic.management.api.model.deployment.UiDeployment;
-import org.kinotic.system.api.config.KinoticSystemApiProperties;
-import org.kinotic.system.api.config.UiDeploymentProperties;
 import org.kinotic.system.api.services.deployment.UiDeploymentProvisioner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
@@ -35,7 +35,7 @@ public class HttpUiDeploymentProvisioner implements UiDeploymentProvisioner {
     private static final long HTTP_TIMEOUT_MS = 10_000;
 
     private final Vertx vertx;
-    private final KinoticSystemApiProperties kinoticProperties;
+    private final KinoticDomainProperties domainProperties;
     // Built on first use rather than at startup, so a server that never publishes a UI opens no client
     private volatile WebClient web;
 
@@ -45,7 +45,7 @@ public class HttpUiDeploymentProvisioner implements UiDeploymentProvisioner {
     public Future<DeploymentStatus> check(UiDeployment deployment, String commitSha) {
         Validate.notNull(deployment, "deployment is required");
         Validate.notBlank(commitSha, "commitSha is required");
-        String site = properties().resolveSiteUrl(deployment.getId());
+        String site = publishedSites().resolveSiteUrl(deployment.getId());
         String versionUrl = site + "/" + VERSION_FILE;
         String rootUrl = site + "/";
         return web().getAbs(versionUrl).timeout(HTTP_TIMEOUT_MS).send()
@@ -96,8 +96,8 @@ public class HttpUiDeploymentProvisioner implements UiDeploymentProvisioner {
         return ret;
     }
 
-    private UiDeploymentProperties properties() {
-        return kinoticProperties.getSystemApi().getUiDeployment();
+    private PublishedSitesProperties publishedSites() {
+        return domainProperties.getDomain().getPublishedSites();
     }
 
 }

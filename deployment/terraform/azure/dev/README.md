@@ -68,7 +68,7 @@ cd ../../../..
 ./gradlew :kinotic-system-api:test --tests '*AzureProvisioningIntegrationTest*'
 ```
 
-It publishes the site `azure-it.apps-<environment>.kinotic.ai` and leaves it, so a second run
+It publishes the site `azure-it.<environment>.kinotic.io` and leaves it, so a second run
 is quick.
 
 ## Running the server

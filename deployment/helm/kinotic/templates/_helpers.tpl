@@ -91,10 +91,9 @@ KINOTIC_APIGATEWAY_WEBSERVER_PORT: "{{ $server.webServer.port }}"
 {{- end }}
 
 # ── Public URLs + email ───────────────────────────────────
+KINOTIC_DOMAIN_APPAPIBASEURL: "{{ $root.Values.kinotic.domain.appApiBaseUrl }}"
+KINOTIC_DOMAIN_PORTALBASEURL: "{{ $root.Values.kinotic.domain.portalBaseUrl }}"
 {{- with $server.managementServer }}
-KINOTIC_MANAGEMENTSERVER_APIBASEURL: "{{ .apiBaseUrl }}"
-KINOTIC_MANAGEMENTSERVER_PORTALBASEURL: "{{ .portalBaseUrl }}"
-KINOTIC_DOMAIN_EMAIL_LINKBASEURL: "{{ .portalBaseUrl }}"
 {{- with .turnstile }}
 KINOTIC_MANAGEMENTSERVER_TURNSTILE_SITEKEY: "{{ .siteKey }}"
 {{- end }}
@@ -102,18 +101,6 @@ KINOTIC_MANAGEMENTSERVER_TURNSTILE_SITEKEY: "{{ .siteKey }}"
 {{- with $server.systemServer }}
 KINOTIC_SYSTEMSERVER_APIBASEURL: "{{ .apiBaseUrl }}"
 KINOTIC_SYSTEMSERVER_CONSOLEBASEURL: "{{ .consoleBaseUrl }}"
-{{- end }}
-{{- with $server.deployment }}
-KINOTIC_SYSTEMAPI_DEPLOYMENT_APPAPIBASEURL: "{{ .appApiBaseUrl }}"
-{{- end }}
-{{- if $server.systemServer }}
-{{- with (index $root.Values.servers "kinotic-server-management").managementServer }}
-# invites the member service this server hosts sends are accepted in the portal
-KINOTIC_DOMAIN_EMAIL_LINKBASEURL: "{{ .portalBaseUrl }}"
-{{- end }}
-{{- end }}
-{{- with $server.appServer }}
-KINOTIC_APPSERVER_APIBASEURL: "{{ .apiBaseUrl }}"
 {{- end }}
 KINOTIC_DOMAIN_EMAIL_ENABLED: "{{ $root.Values.kinotic.domain.email.enabled }}"
 {{- if $root.Values.kinotic.domain.email.enabled }}
@@ -132,6 +119,7 @@ KINOTIC_DOMAIN_ELASTICCONNECTIONS_{{ $index }}_PORT: "{{ $value.port }}"
 {{- end }}
 
 # ── Loki, Tempo, Mimir (LogService, TelemetryService) ─────
+KINOTIC_MANAGEMENTAPI_APIBASEURL: "{{ $root.Values.kinotic.managementApi.apiBaseUrl }}"
 KINOTIC_MANAGEMENTAPI_LOKIURL: "{{ $root.Values.kinotic.managementApi.lokiUrl }}"
 KINOTIC_MANAGEMENTAPI_TEMPOURL: "{{ $root.Values.kinotic.managementApi.tempoUrl }}"
 KINOTIC_MANAGEMENTAPI_MIMIRURL: "{{ $root.Values.kinotic.managementApi.mimirUrl }}"

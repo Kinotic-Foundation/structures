@@ -1,6 +1,7 @@
 package org.kinotic.system.internal.api.services.deployment;
 
 import lombok.RequiredArgsConstructor;
+import org.kinotic.domain.api.config.KinoticDomainProperties;
 import org.kinotic.domain.api.utils.HostLabelUtil;
 import org.kinotic.domain.api.model.WatchedParent;
 import org.kinotic.domain.api.model.WatchedType;
@@ -30,6 +31,7 @@ import java.util.List;
 public class ProjectWorkloadFactory {
 
     private final KinoticSystemApiProperties properties;
+    private final KinoticDomainProperties domainProperties;
 
     /**
      * The sync workload of a deployment run: fetches the commit into the checkout mounted at
@@ -59,7 +61,7 @@ public class ProjectWorkloadFactory {
         // The UIs are built against the address a browser reaches their application on, which the
         // address the workload itself dials is not
         workload.getEnvironment().put("KINOTIC_UI_SERVER_URL",
-                                      HostLabelUtil.apiUrl(project.applicationKey(), deployment.getAppApiBaseUrl()));
+                                      HostLabelUtil.apiUrl(project.applicationKey(), domainProperties.getDomain().getAppApiBaseUrl()));
         putKinoticConnection(workload, deployment.getManagementServer(), credentials);
         workload.getSecrets().put("GIT_TOKEN", token.getToken());
         workload.getVolumeMounts().add(new VolumeMount().setHostPath(target.hostDir())

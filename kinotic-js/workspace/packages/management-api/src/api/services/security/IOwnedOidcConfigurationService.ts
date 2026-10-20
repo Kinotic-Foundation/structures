@@ -7,8 +7,8 @@ import type { OwnedOidcConfiguration } from '@/api/model/security/OwnedOidcConfi
  * The caller's organization's own OIDC configurations: the providers it offers at its own login, at one of its
  * applications' and at one tenant's, each a configuration of that scope's kind. Every operation acts for the
  * organization of the authenticated participant and reaches no other organization's configurations. A
- * configuration's client secret is given on save and held in the organization's scope of the secret storage;
- * nothing here reads it back.
+ * configuration's client secret is given on save and held in the organization's scope of the secret storage, where it
+ * stays until a save gives another or `deleteClientSecret` deletes it; nothing here reads it back.
  */
 export interface IOwnedOidcConfigurationService {
 
@@ -19,11 +19,27 @@ export interface IOwnedOidcConfigurationService {
     findById(id: string): Promise<OwnedOidcConfiguration | null>
 
     /**
-     * Saves a configuration of the organization, new or changed, and makes `clientSecret` the secret it sends its
-     * provider; null or blank makes a public client, whose stored secret is deleted. The configuration's
-     * `organizationId` is the caller's, whatever it carried. Returns the configuration as saved, with its id.
+     * The URL the configuration's provider must be given as its redirect URI before a sign-in through the
+     * configuration succeeds: the callback of the organization's login for an `ORGANIZATION` kind, and the callback
+     * on the application's own API host for an `APPLICATION` or `TENANT` kind. Null when the organization owns no
+     * configuration by that id.
+     */
+    findCallbackUrl(id: string): Promise<string | null>
+
+    /**
+     * Saves a configuration of the organization, new or changed, and makes `clientSecret`, when given, the secret it
+     * sends its provider; null or blank keeps the secret held for the configuration, if any, and a new configuration
+     * saved without one is a public client. The configuration's `organizationId` is the caller's and its
+     * `confidentialClient` says whether a secret is held, whatever either carried. Returns the configuration as
+     * saved, with its id.
      */
     save(configuration: OwnedOidcConfiguration, clientSecret: string | null): Promise<OwnedOidcConfiguration>
+
+    /**
+     * Deletes the client secret held for the organization's configuration, which from then on is a public client.
+     * Returns the configuration as saved, or null when the organization owns no configuration by that id.
+     */
+    deleteClientSecret(id: string): Promise<OwnedOidcConfiguration | null>
 
     /**
      * Creates a copy of the organization's configuration for another of its sign-in scopes: the login of
@@ -54,8 +70,16 @@ export class OwnedOidcConfigurationService implements IOwnedOidcConfigurationSer
         return this.serviceProxy.invoke('findById', [id])
     }
 
+    public findCallbackUrl(id: string): Promise<string | null> {
+        return this.serviceProxy.invoke('findCallbackUrl', [id])
+    }
+
     public save(configuration: OwnedOidcConfiguration, clientSecret: string | null): Promise<OwnedOidcConfiguration> {
         return this.serviceProxy.invoke('save', [configuration, clientSecret])
+    }
+
+    public deleteClientSecret(id: string): Promise<OwnedOidcConfiguration | null> {
+        return this.serviceProxy.invoke('deleteClientSecret', [id])
     }
 
     public copy(sourceId: string, applicationId: string | null): Promise<OwnedOidcConfiguration> {

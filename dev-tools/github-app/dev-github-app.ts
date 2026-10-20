@@ -214,26 +214,23 @@ function managementServerYml(origin: string, app: CreatedApp): string {
 # The github-platform sign-in row's OAuth client secret, resolved by EnvVarSecretReferenceResolver
 KINOTIC_AKV_GITHUB_PLATFORM: ${JSON.stringify(app.client_secret)}
 kinotic:
-  managementServer:
-    apiBaseUrl: ${origin}
-    portalBaseUrl: ${origin}
   domain:
-    email:
-      linkBaseUrl: ${origin}
-${githubYml(app)}`
+    portalBaseUrl: ${origin}
+${managementApiYml(app, origin)}`
 }
 
 // The system server keeps its own origins and mints deployments' fetch tokens as the App
 function systemServerYml(app: CreatedApp): string {
     return `# Written by dev-tools/github-app/dev-github-app.ts; imported by the system server's application-development.yml
 kinotic:
-${githubYml(app)}`
+${managementApiYml(app)}`
 }
 
-function githubYml(app: CreatedApp): string {
+// The managementApi block: the GitHub App, and for the management server its API's URL, the tunnel's origin
+function managementApiYml(app: CreatedApp, apiBaseUrl?: string): string {
     const pem = app.pem.trim().split('\n').map(line => `        ${line}`).join('\n')
     return `  managementApi:
-    github:
+${apiBaseUrl ? `    apiBaseUrl: ${apiBaseUrl}\n` : ''}    github:
       appId: "${app.id}"
       appSlug: ${app.slug}
       webhookSecret: ${JSON.stringify(app.webhook_secret)}

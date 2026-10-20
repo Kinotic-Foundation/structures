@@ -22,14 +22,9 @@ servers:
     webServer:
       enabled: true
       port: 9090
-    # kinotic.managementServer.*: the URLs this server is reached at (no trailing slashes)
+    # kinotic.managementServer.*: the Turnstile site this server's open routes are guarded by; the
+    # URLs of its API and the portal are kinotic.managementApi.apiBaseUrl and kinotic.domain.portalBaseUrl below
     managementServer:
-      # this server's REST endpoints, the base of its OIDC redirect_uris; the portal's own origin
-      # for a same-origin deploy
-      apiBaseUrl: "http://localhost:9090"
-      # the portal, where browser flows return and where the emailed verification and invite
-      # links open
-      portalBaseUrl: "http://localhost:9090"
       # kinotic.managementServer.turnstile.siteKey: the Cloudflare Turnstile site the portal's
       # find-my-organizations form presents; its secret is mounted with turnstile set below
       turnstile:
@@ -70,11 +65,6 @@ servers:
       apiBaseUrl: "http://localhost:58504"
       # the system console, where browser flows return
       consoleBaseUrl: "http://localhost:5174"
-    # kinotic.systemApi.deployment.appApiBaseUrl: the base every application's API host is a label
-    # under, as a browser reaches it, which each UI build is handed; the app server serves it under
-    # kinotic.appServer.apiBaseUrl
-    deployment:
-      appApiBaseUrl: "http://localhost:58505"
     tlsSecretName: kinotic-server-system-tls
     turnstile: false
     githubApp: true
@@ -96,10 +86,6 @@ servers:
     gatewayPort: 58505
     webServer:
       enabled: false
-    # kinotic.appServer.apiBaseUrl: the base every application's API host is a label under
-    # (https://<organizationId>--<applicationId>.<domain>); each host is its own OAuth issuer
-    appServer:
-      apiBaseUrl: "http://localhost:58505"
     tlsSecretName: kinotic-server-app-tls
     turnstile: false
     githubApp: false
@@ -133,14 +119,20 @@ otel:
   metricsEndpoint: "http://mimir.observability.svc:9009/otlp/v1/metrics"
 
 # What every server shares — mirrors the Spring property structure:
-#   kinotic.domain.*       → email, Elasticsearch
-#   kinotic.managementApi.* → the stores LogService and TelemetryService query
+#   kinotic.domain.*       → the app API and portal URLs, email, Elasticsearch
+#   kinotic.managementApi.* → the management API's URL, the stores LogService and TelemetryService query
 #   kinotic.ignite.*       → the cluster (set in each server's application-kubernetes.yml)
 kinotic:
   domain:
-    # kinotic.domain.email.* — outbound mail via Azure Communication Services. The links in the
-    # mail open in the portal, so each server that sends mail is handed the management server's
-    # portalBaseUrl as kinotic.domain.email.linkBaseUrl.
+    # kinotic.domain.appApiBaseUrl: the base every application's API host is a label under
+    # (https://<organizationId>--<applicationId>.<domain>), as a browser reaches it: what the app
+    # server serves, each host its own OAuth issuer; what the system server hands each UI build; and
+    # the host of the callback URL of an application's and a tenant's OIDC configurations
+    appApiBaseUrl: "http://localhost:58505"
+    # kinotic.domain.portalBaseUrl: the portal (no trailing slash), where the management server's
+    # browser flows return and where the emailed verification and invite links open
+    portalBaseUrl: "http://localhost:9090"
+    # kinotic.domain.email.* — outbound mail via Azure Communication Services
     email:
       # When false, EmailService logs verification URLs instead of sending. Required for
       # local/dev environments without a real ACS resource.
@@ -150,6 +142,10 @@ kinotic:
       managedIdentityClientId: ""
   # kinotic.managementApi.* — management-api configuration, loaded by the org and system servers
   managementApi:
+    # kinotic.managementApi.apiBaseUrl: the management server's REST endpoints as a browser
+    # reaches them (no trailing slash), the base of its OIDC redirect_uris and of the callback URL of
+    # an organization's own OIDC configurations; the portal's own origin for a same-origin deploy
+    apiBaseUrl: "http://localhost:9090"
     # Loki HTTP API backing the LogService
     lokiUrl: "http://loki.observability.svc:3100"
     # Tempo and Mimir HTTP APIs backing the TelemetryService
