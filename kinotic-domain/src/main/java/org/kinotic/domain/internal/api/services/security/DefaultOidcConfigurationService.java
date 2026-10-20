@@ -268,7 +268,8 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
                         : isSecretHeld(configuration))
                 .compose(confidential -> {
                     configuration.setConfidentialClient(confidential);
-                    return oidcRepository.save(configuration);
+                    // refreshed before returning, since the login's provider list and the portal's table search right after a save
+                    return oidcRepository.saveSync(configuration);
                 })
                 .map(saved -> {
                     @SuppressWarnings("unchecked")
@@ -292,7 +293,7 @@ public class DefaultOidcConfigurationService extends AbstractCrudService<OidcCon
                                      ? Future.succeededFuture()
                                      // the row is written once the vault no longer holds the secret, as in save
                                      : beforeSave(existing).compose(v -> secretStorageService.deleteSecret(orgId, id))
-                                                           .compose(v -> oidcRepository.save(existing.setConfidentialClient(false)))
+                                                           .compose(v -> oidcRepository.saveSync(existing.setConfidentialClient(false)))
                                                            .map(OwnedOidcConfiguration.class::cast));
     }
 
