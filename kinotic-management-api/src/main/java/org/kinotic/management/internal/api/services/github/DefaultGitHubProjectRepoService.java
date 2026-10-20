@@ -24,7 +24,6 @@ public class DefaultGitHubProjectRepoService implements GitHubProjectRepoService
     private final ProjectRepository projectRepository;
     private final GitHubAppInstallationRepository installationRepository;
     private final GitHubApiClient apiClient;
-    private final PlatformGitHubInstallation platformInstallation;
 
     @Override
     public Future<ProjectRepoToken> issueRepoToken(String organizationId, String projectId) {
@@ -70,8 +69,7 @@ public class DefaultGitHubProjectRepoService implements GitHubProjectRepoService
 
     // Callers are trusted in-process code (this service is not published), so authorization
     // is validation of the explicit organizationId: the org-scoped project lookup finds
-    // nothing for a project of another org, and the org must have a GitHub install of its own
-    // or a configured platform one.
+    // nothing for a project of another org, and the org must still have a GitHub install.
     // Participant enforcement returns with @Publish.
     private Future<RepoContext> resolve(String organizationId, String projectId) {
         return projectRepository.findById(projectId, organizationId).compose(project -> {
@@ -81,13 +79,12 @@ public class DefaultGitHubProjectRepoService implements GitHubProjectRepoService
             }
             return installationRepository.findAll(organizationId, Pageable.ofSize(1))
                     .map(Page::getContent)
-                    .compose(installs -> platformInstallation.orPlatform(installs.isEmpty() ? null : installs.getFirst()))
-                    .map(install -> {
-                        if (install == null) {
+                    .map(installs -> {
+                        if (installs.isEmpty()) {
                             throw new IllegalStateException(
                                     "GitHub install for organization " + organizationId + " no longer exists");
                         }
-                        return new RepoContext(project, install);
+                        return new RepoContext(project, installs.getFirst());
                     });
         });
     }

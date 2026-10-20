@@ -8,8 +8,6 @@ import io.vertx.core.buffer.Buffer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.Validate;
-import org.kinotic.core.api.security.SecurityContext;
-import org.kinotic.domain.api.model.security.participant.OrganizationParticipant;
 import org.kinotic.management.api.config.GithubProperties;
 import org.kinotic.management.api.model.github.GitHubAppInstallation;
 import org.kinotic.management.api.services.github.GitHubAppInstallationService;
@@ -50,9 +48,7 @@ import java.util.concurrent.TimeUnit;
  * passes the platform-side id-uniqueness check produces an identically-shaped
  * GitHub repo name. That slug is also exposed to the templates as
  * {@code projectSlug} for values that must be identifiers rather than the raw name;
- * the repo name is the same slug truncated to GitHub's repo-name length limit. An organization
- * that has not linked GitHub gets its repos in the {@link PlatformGitHubInstallation} when one is
- * configured, where the repo name is prefixed with the organization id.
+ * the repo name is the same slug truncated to GitHub's repo-name length limit.
  * <p>
  * Alongside the project's own values, the render context carries a version range for
  * every published {@code @kinotic-ai} npm package, keyed by the spawn global a template
@@ -74,8 +70,6 @@ public class GitHubProjectRepoProvisioner implements ProjectRepoProvisioner {
 
     private final Vertx vertx;
     private final GitHubAppInstallationService installationService;
-    private final PlatformGitHubInstallation platformInstallation;
-    private final SecurityContext securityContext;
     private final GitHubApiClient apiClient;
     private final GithubProperties githubProperties;
     private final GraalJsSpawnRenderer spawnRenderer;
@@ -83,11 +77,9 @@ public class GitHubProjectRepoProvisioner implements ProjectRepoProvisioner {
     @Override
     public Future<Project> provision(Project project) {
         Validate.notBlank(project.getName(), "Project name must not be blank");
+        String repoName = toRepoName(project.getName());
         return requireInstallation().compose(install -> {
             long installationId = install.getGithubInstallationId();
-            String repoName = platformInstallation.isPlatform(install)
-                    ? toRepoName(requireOrganizationId() + "-" + project.getName())
-                    : toRepoName(project.getName());
             // repoId is null — the repo doesn't exist yet, so we mint an
             // installation-wide CREATE_REPOSITORY token to create it. The generate
             // endpoint 404s when the token lacks administration:write.
@@ -124,16 +116,11 @@ public class GitHubProjectRepoProvisioner implements ProjectRepoProvisioner {
 
     private Future<GitHubAppInstallation> requireInstallation() {
         return installationService.findForCurrentOrg()
-                .compose(platformInstallation::orPlatform)
                 .compose(install -> install == null
                         ? Future.failedFuture(new IllegalStateException(
                                 "GitHub is not linked for this organization. "
                                 + "Link GitHub before creating a project."))
                         : Future.succeededFuture(install));
-    }
-
-    private String requireOrganizationId() {
-        return securityContext.requireParticipant(OrganizationParticipant.class).getOrganizationId();
     }
 
     /**

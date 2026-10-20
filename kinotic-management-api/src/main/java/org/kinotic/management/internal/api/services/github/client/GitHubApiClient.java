@@ -110,13 +110,6 @@ public interface GitHubApiClient {
     Future<String> exchangeUserAccessCode(String clientId, String clientSecret, String code);
 
     /**
-     * Returns the details of one of this App's installations.
-     *
-     * @param installationId GitHub-side installation id
-     */
-    Future<InstallationDetails> getInstallation(long installationId);
-
-    /**
      * Lists every installation the user behind {@code userAccessToken} has explicit
      * permission to access, paging until GitHub's collection is exhausted.
      */

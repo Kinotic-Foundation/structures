@@ -65,11 +65,4 @@ public class GithubProperties {
      */
     @NotBlank
     private String repoTemplate;
-
-    /**
-     * GitHub installation id of the App on the account that holds the project repositories of
-     * organizations that have not linked GitHub, named {@code <organizationId>-<project slug>}.
-     * When unset, an organization must link GitHub before it creates a project.
-     */
-    private Long platformInstallationId;
 }
