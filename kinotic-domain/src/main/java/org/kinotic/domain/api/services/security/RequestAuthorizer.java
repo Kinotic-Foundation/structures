@@ -53,5 +53,5 @@ public interface RequestAuthorizer {
      *         "Not authorized", followed by the reason when {@code kinotic.debug} is on, when it does not, and with
      *         the engine's failure when the check cannot be made
      */
-    Future<Void> authorize(Participant participant, String permission, String entityDefinitionId);
+    Future<Void> authorizeOnEntityDefinition(Participant participant, String permission, String entityDefinitionId);
 }

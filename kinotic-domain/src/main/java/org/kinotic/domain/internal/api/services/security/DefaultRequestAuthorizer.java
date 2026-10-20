@@ -122,7 +122,7 @@ public class DefaultRequestAuthorizer implements RequestAuthorizer {
     }
 
     @Override
-    public Future<Void> authorize(Participant participant, String permission, String entityDefinitionId) {
+    public Future<Void> authorizeOnEntityDefinition(Participant participant, String permission, String entityDefinitionId) {
         Validate.notBlank(permission, "permission cannot be blank");
         Validate.notBlank(entityDefinitionId, "entityDefinitionId cannot be blank");
         AuthzCheckC3Decorator check = new AuthzCheckC3Decorator().setResource(AuthzUtil.ENTITY_DEFINITION_TYPE)
