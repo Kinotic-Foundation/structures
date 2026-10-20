@@ -1,10 +1,21 @@
-import {AnyC3Type, AsyncC3Type, C3Type, FunctionDefinition, ServiceDefinition, StreamC3Type, VoidC3Type} from '@kinotic-ai/idl'
+import {
+    AnyC3Type,
+    AsyncC3Type,
+    C3Type,
+    FunctionDefinition,
+    type MetadataType,
+    ParameterDefinition,
+    ServiceDefinition,
+    StreamC3Type,
+    VoidC3Type
+} from '@kinotic-ai/idl'
 import {KinoticProjectConfig} from '@kinotic-ai/management-api'
 import fsPromises from 'fs/promises'
 import path from 'path'
 import {ClassDeclaration, Decorator, MethodDeclaration, Project, Type} from 'ts-morph'
 import {createConversionContext, IConversionContext} from './converter/IConversionContext'
 import {TypescriptConversionState} from './converter/typescript/TypescriptConversionState'
+import {ServiceValueToC3Type} from './converter/typescript/ServiceValueToC3Type'
 import {TypescriptConverterStrategy} from './converter/typescript/TypescriptConverterStrategy'
 import {Logger} from './Logger'
 import {createTsMorphProject, jsonStringifyReplacer, pathToTsGlobPath} from './Utils'
@@ -15,6 +26,9 @@ import {createTsMorphProject, jsonStringifyReplacer, pathToTsGlobPath} from './U
 export const SERVICE_DEFINITIONS_MODULE = 'ServiceDefinitions.ts'
 
 const IDENTIFIER = /^[A-Za-z_$][\w$]*$/
+
+// The metadata key of the warnings a parameter's or a function's return type raised, for the directory's readers to show
+const WARNINGS_METADATA_KEY = 'warnings'
 
 /**
  * Generates the definition of every service the project publishes, the classes decorated with @Publish under
@@ -97,7 +111,9 @@ export class ServiceDefinitionGenerationService {
 
         const state = new TypescriptConversionState(this.application)
         state.shouldAddSourcePathToMetadata = false
-        const conversionContext = createConversionContext(new TypescriptConverterStrategy(state, this.logger))
+        // a union with no name of its own is named for the service and the function or parameter carrying it
+        state.objectNameStack.push(name)
+        const conversion = createConversionContext(new TypescriptConverterStrategy(state, this.logger, [new ServiceValueToC3Type(this.logger)]))
         // the most specific declaration of a method wins, as the instance's prototype chain resolves it
         const converted = new Set<string>()
         let current: ClassDeclaration | undefined = declaration
@@ -106,7 +122,7 @@ export class ServiceDefinitionGenerationService {
                 // the runtime serves the methods on the prototype chain, which holds no ES private (#) method
                 if (!method.isOverload() && !method.getName().startsWith('#') && !converted.has(method.getName())) {
                     converted.add(method.getName())
-                    ret.addFunction(this.convertMethod(method, service, conversionContext))
+                    ret.addFunction(this.convertMethod(method, service, conversion))
                 }
             }
             current = current.getBaseClass()
@@ -116,7 +132,7 @@ export class ServiceDefinitionGenerationService {
 
     private convertMethod(method: MethodDeclaration,
                           service: string,
-                          conversionContext: IConversionContext<Type, C3Type, TypescriptConversionState>): FunctionDefinition {
+                          conversion: IConversionContext<Type, C3Type, TypescriptConversionState>): FunctionDefinition {
         const ret = new FunctionDefinition(method.getName())
         const where = `${method.getName()} on ${service}`
         const parameters = method.getParameters()
@@ -125,28 +141,35 @@ export class ServiceDefinitionGenerationService {
         carried.forEach((parameter, index) => {
             // a destructured parameter has no name of its own, so it is named for its position
             const parameterName = IDENTIFIER.test(parameter.getName()) ? parameter.getName() : `arg${index}`
-            ret.addParameter(parameterName, this.convertType(parameter.getType(), conversionContext, `parameter ${parameterName} of ${where}`))
+            const type = this.convertType(parameter.getType(),
+                                          conversion,
+                                          `${method.getName()}${capitalize(parameterName)}`,
+                                          `parameter ${parameterName} of ${where}`)
+            ret.parameters.push(new ParameterDefinition(parameterName, type, undefined, takeWarnings(conversion.state())))
         })
-        ret.returnType = this.convertReturnType(method.getReturnType(), conversionContext, where)
+        ret.returnType = this.convertReturnType(method.getReturnType(), conversion, method.getName(), where)
+        ret.metadata = takeWarnings(conversion.state())
         return ret
     }
 
-    // A Promise resolves to its value asynchronously and an Observable streams its values; any other type is
-    // returned as it is
+    // A Promise or PromiseLike resolves to its value asynchronously and an Observable streams its values; any
+    // other type is returned as it is
     private convertReturnType(returnType: Type,
-                              conversionContext: IConversionContext<Type, C3Type, TypescriptConversionState>,
+                              conversion: IConversionContext<Type, C3Type, TypescriptConversionState>,
+                              functionName: string,
                               where: string): C3Type {
         let ret: C3Type
         const symbolName = returnType.getSymbol()?.getName()
-        if (symbolName === 'Promise' || symbolName === 'Observable') {
+        const label = `${functionName}Result`
+        if (symbolName === 'Promise' || symbolName === 'PromiseLike' || symbolName === 'Observable') {
             const typeArguments = returnType.getTypeArguments()
             if (typeArguments.length !== 1) {
                 throw new Error(`The return type of ${where} must have exactly one type argument`)
             }
-            const valueType = this.convertType(typeArguments[0], conversionContext, `the return type of ${where}`)
-            ret = symbolName === 'Promise' ? new AsyncC3Type(valueType) : new StreamC3Type(valueType)
+            const valueType = this.convertType(typeArguments[0], conversion, label, `the return type of ${where}`)
+            ret = symbolName === 'Observable' ? new StreamC3Type(valueType) : new AsyncC3Type(valueType)
         } else {
-            ret = this.convertType(returnType, conversionContext, `the return type of ${where}`)
+            ret = this.convertType(returnType, conversion, label, `the return type of ${where}`)
         }
         return ret
     }
@@ -154,7 +177,8 @@ export class ServiceDefinitionGenerationService {
     // A type the schema places no constraint on converts to anything; void to void; the rest as an entity's
     // properties do, without the null or undefined an optional parameter or a nullable value carries
     private convertType(type: Type,
-                        conversionContext: IConversionContext<Type, C3Type, TypescriptConversionState>,
+                        conversion: IConversionContext<Type, C3Type, TypescriptConversionState>,
+                        label: string,
                         where: string): C3Type {
         let ret: C3Type
         if (type.isAny() || type.isUnknown() || type.isNever()) {
@@ -162,14 +186,29 @@ export class ServiceDefinitionGenerationService {
         } else if (type.isVoid() || type.isUndefined()) {
             ret = new VoidC3Type()
         } else {
+            const state = conversion.state()
+            state.unionPropertyNameStack.push(label)
             try {
-                ret = conversionContext.convert(type.getNonNullableType())
+                // NonNullable<T> of a type parameter is T & {}, which hides the parameter's constraint
+                ret = conversion.convert(type.isTypeParameter() ? type : type.getNonNullableType())
             } catch (e: any) {
                 throw new Error(`Could not convert ${where}: ${e?.message ?? e}`)
+            } finally {
+                state.unionPropertyNameStack.pop()
             }
         }
         return ret
     }
+}
+
+// The warnings a conversion raised, as the metadata of the parameter or function whose type raised them
+function takeWarnings(state: TypescriptConversionState): MetadataType | null {
+    const warnings = state.warnings.splice(0)
+    return warnings.length > 0 ? {[WARNINGS_METADATA_KEY]: warnings} : null
+}
+
+function capitalize(value: string): string {
+    return value.charAt(0).toUpperCase() + value.slice(1)
 }
 
 // A string literal argument's value, null for a null or undefined argument

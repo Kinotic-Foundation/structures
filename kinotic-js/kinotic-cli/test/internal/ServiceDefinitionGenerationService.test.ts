@@ -6,11 +6,17 @@ import {fileURLToPath} from 'node:url'
 import {
     AnyC3Type,
     ArrayC3Type,
+    C3Type,
+    DateC3Type,
     AsyncC3Type,
+    EnumC3Type,
+    IntC3Type,
+    MapC3Type,
     ObjectC3Type,
     ServiceDefinition,
     StreamC3Type,
     StringC3Type,
+    UnionC3Type,
     VoidC3Type
 } from '@kinotic-ai/idl'
 import {KinoticProjectConfig} from '@kinotic-ai/management-api'
@@ -93,6 +99,86 @@ export class HelperService {
 }
 `
 
+const SHAPES_SOURCE = `import {Publish} from '@kinotic-ai/core'
+
+export interface Report {
+    id: string
+    title: string
+}
+
+export interface Summary {
+    count: number
+}
+
+export interface Page<T> {
+    content: T[]
+    total: number
+}
+
+export enum Status {
+    Open = 'OPEN',
+    Closed = 'CLOSED'
+}
+
+export class ReportModel {
+    id = ''
+    describe(): string {
+        return this.id
+    }
+}
+
+@Publish('com.acme.shapes')
+export class ShapesService {
+    async page(page: number): Promise<Page<Report>> {
+        return {content: [], total: page}
+    }
+
+    async echo<T>(value: T): Promise<T> {
+        return value
+    }
+
+    async saveAll<T extends Summary>(value: T): Promise<T[]> {
+        return [value]
+    }
+
+    async partial(): Promise<Partial<Report>> {
+        return {}
+    }
+
+    async picked(): Promise<Pick<Report, 'id'>> {
+        return {id: ''}
+    }
+
+    async tagged(): Promise<Report & {tags: string[]}> {
+        return {id: '', title: '', tags: []}
+    }
+
+    async either(): Promise<Report | Summary> {
+        return {count: 0}
+    }
+
+    async byStatus(status: Status | null, order: 'asc' | 'desc'): Promise<number> {
+        return [status, order].length
+    }
+
+    async counts(): Promise<Record<string, number>> {
+        return {}
+    }
+
+    async since(from: Date): Promise<string> {
+        return from.toISOString()
+    }
+
+    async saveModel(model: ReportModel): Promise<ReportModel> {
+        return model
+    }
+
+    then(): PromiseLike<string> {
+        return Promise.resolve('')
+    }
+}
+`
+
 describe('ServiceDefinitionGenerationService', () => {
 
     const projectConfig = new KinoticProjectConfig()
@@ -131,8 +217,31 @@ describe('ServiceDefinitionGenerationService', () => {
         fs.rmSync(projectDir, {recursive: true, force: true})
     })
 
-    function generate(): Promise<ServiceDefinition[]> {
-        return new ServiceDefinitionGenerationService(projectConfig.applicationId, new ConsoleLogger()).generateAll(projectConfig, false)
+    function generate(warned: string[] = []): Promise<ServiceDefinition[]> {
+        const logger = new ConsoleLogger()
+        logger.warn = (input: string | Error) => {
+            warned.push(input instanceof Error ? input.message : input)
+            return input
+        }
+        return new ServiceDefinitionGenerationService(projectConfig.applicationId, logger).generateAll(projectConfig, false)
+    }
+
+    async function generateError(): Promise<string> {
+        let ret = ''
+        try {
+            await generate()
+        } catch (e) {
+            ret = (e as Error).message
+        }
+        return ret
+    }
+
+    function writeService(source: string, file = 'ShapesService.ts'): void {
+        fs.writeFileSync(path.join(projectDir, 'src/services', file), source)
+    }
+
+    function valueOf(definition: ServiceDefinition, name: string): C3Type {
+        return (fn(definition, name).returnType as AsyncC3Type).valueType
     }
 
     function fn(definition: ServiceDefinition, name: string) {
@@ -195,6 +304,89 @@ describe('ServiceDefinitionGenerationService', () => {
         expect(await generate()).to.deep.equal([])
         expect(fs.existsSync(path.join(projectDir, 'src/generated'))).to.equal(false)
     })
+
+    it('converts the generic, mapped, intersected and union types a service carries', async () => {
+        writeService(SHAPES_SOURCE)
+        const warned: string[] = []
+
+        const shapes = (await generate(warned)).find(d => d.name === 'ShapesService')!
+
+        const page = valueOf(shapes, 'page') as ObjectC3Type
+        expect(page).to.be.instanceOf(ObjectC3Type)
+        expect(page.name).to.equal('Page_Report')
+        const content = page.properties.find(p => p.name === 'content')!.type as ArrayC3Type
+        expect((content.contains as ObjectC3Type).name).to.equal('Report')
+        // a type parameter is what its constraint allows, anything when it has none
+        expect(fn(shapes, 'echo').parameters[0].type).to.be.instanceOf(AnyC3Type)
+        expect(valueOf(shapes, 'echo')).to.be.instanceOf(AnyC3Type)
+        expect((fn(shapes, 'saveAll').parameters[0].type as ObjectC3Type).name).to.equal('Summary')
+        expect(((valueOf(shapes, 'saveAll') as ArrayC3Type).contains as ObjectC3Type).name).to.equal('Summary')
+
+        expect((valueOf(shapes, 'partial') as ObjectC3Type).name).to.equal('Partial_Report')
+        const picked = valueOf(shapes, 'picked') as ObjectC3Type
+        expect(picked.properties.map(p => p.name)).to.deep.equal(['id'])
+        const tagged = valueOf(shapes, 'tagged') as ObjectC3Type
+        expect(tagged.properties.map(p => p.name)).to.deep.equal(['id', 'title', 'tags'])
+        const either = valueOf(shapes, 'either') as UnionC3Type
+        expect(either).to.be.instanceOf(UnionC3Type)
+        expect(either.types.map(t => t.name)).to.deep.equal(['Report', 'Summary'])
+
+        const byStatus = fn(shapes, 'byStatus')
+        expect(byStatus.parameters[0].type).to.be.instanceOf(EnumC3Type)
+        // a union of string literals is a string, as it is on an entity
+        expect(byStatus.parameters[1].type).to.be.instanceOf(StringC3Type)
+        const counts = valueOf(shapes, 'counts') as MapC3Type
+        expect(counts).to.be.instanceOf(MapC3Type)
+        expect(counts.key).to.be.instanceOf(StringC3Type)
+        expect(counts.value).to.be.instanceOf(IntC3Type)
+
+        // a class instance travels as its fields
+        expect((valueOf(shapes, 'saveModel') as ObjectC3Type).properties.map(p => p.name)).to.deep.equal(['id'])
+        expect(fn(shapes, 'then').returnType).to.be.instanceOf(AsyncC3Type)
+        expect(valueOf(shapes, 'then')).to.be.instanceOf(StringC3Type)
+    })
+
+    it('publishes a Date as a date with a warning in the log and the directory that it arrives as a string', async () => {
+        writeService(SHAPES_SOURCE)
+        const warned: string[] = []
+
+        const shapes = (await generate(warned)).find(d => d.name === 'ShapesService')!
+
+        const since = fn(shapes, 'since')
+        expect(since.parameters[0].type).to.be.instanceOf(DateC3Type)
+        expect(warned).to.have.length(1)
+        expect(warned[0]).to.contain('A Date in ShapesService.sinceFrom arrives as a string')
+                         .and.to.contain('ISO-8601')
+        expect(since.parameters[0].metadata).to.deep.equal({warnings: warned})
+        expect(since.metadata).to.be.null
+        expect(fn(shapes, 'page').parameters[0].metadata).to.be.null
+    })
+
+    for (const [declared, reason] of [
+        ['Map<string, number>', 'declare a Record or an array'],
+        ['Set<string>', 'declare an array'],
+        ['Uint8Array', 'declare a base64 string'],
+        ['bigint', 'declare a number or a string'],
+        ['[string, number]', 'declare an array or an object'],
+        ['(value: string) => void', 'a caller cannot send or receive one']
+    ]) {
+        it(`refuses a parameter typed ${declared}`, async () => {
+            writeService(`import {Publish} from '@kinotic-ai/core'
+
+@Publish('com.acme.shapes')
+export class RefusedService {
+    async take(value: ${declared}): Promise<void> {
+        void value
+    }
+}
+`)
+
+            const message = await generateError()
+
+            expect(message).to.contain('Could not convert parameter value of take on com.acme.shapes.RefusedService')
+                           .and.to.contain(reason)
+        })
+    }
 
     it('refuses services paths without a generated path', async () => {
         projectConfig.generatedPath = undefined
