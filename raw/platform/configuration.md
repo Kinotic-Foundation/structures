@@ -992,7 +992,7 @@ configures both under `kinotic.appServer.*`; the system server is handed the sam
     
     <td>
       Scheme, domain and optional port every application's API host is a label under: with <code>
-        https://apps-api.kinotic.ai
+        https://apps-api.kinotic.io
       </code>
       
       , application <code>
@@ -1004,7 +1004,7 @@ configures both under `kinotic.appServer.*`; the system server is handed the sam
       </code>
       
        is served at <code>
-        https://acme--orders.apps-api.kinotic.ai
+        https://acme--orders.apps-api.kinotic.io
       </code>
       
       , which is also its OAuth issuer. The development profile sets <code>

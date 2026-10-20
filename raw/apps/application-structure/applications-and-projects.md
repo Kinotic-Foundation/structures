@@ -317,7 +317,7 @@ pass them through itself:
     
     <td>
       e.g. <code>
-        acme--orders.apps-api.kinotic.ai
+        acme--orders.apps-api.kinotic.io
       </code>
     </td>
     
