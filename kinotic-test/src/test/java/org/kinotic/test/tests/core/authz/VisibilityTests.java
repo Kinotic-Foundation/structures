@@ -102,7 +102,7 @@ public class VisibilityTests extends KinoticTestBase {
         Project b = project(x);
         Application y = application();
         project(y);
-        UserParticipantIdentity sally = member();
+        UserParticipantIdentity sally = member(TEST_ORG_ID, "visible");
         await(runAsOrganization(() -> permissions.grant(new Subject(SubjectKind.USER, sally.getId()), "project.editor",
                                                         new Resource(ProjectService.RESOURCE_TYPE, a.getId()))));
         OrganizationParticipant caller = participant(sally.getId());
@@ -137,7 +137,7 @@ public class VisibilityTests extends KinoticTestBase {
         Project a = project(x);
         Project b = project(x);
         EntityDefinition definition = await(runAsOrganization(() -> entityDefinitionService.create(definition(x.getId(), a.getId()))));
-        UserParticipantIdentity sally = member();
+        UserParticipantIdentity sally = member(TEST_ORG_ID, "visible");
         await(runAsOrganization(() -> permissions.grant(new Subject(SubjectKind.USER, sally.getId()), "entity_definition.viewer",
                                                         new Resource(EntityDefinitionService.RESOURCE_TYPE, definition.getId()))));
         OrganizationParticipant caller = participant(sally.getId());
@@ -152,7 +152,7 @@ public class VisibilityTests extends KinoticTestBase {
     public void aMemberWithNoGrantSeesNothing() throws Exception {
         Application x = application();
         project(x);
-        OrganizationParticipant caller = participant(member().getId());
+        OrganizationParticipant caller = participant(member(TEST_ORG_ID, "visible").getId());
 
         assertTrue(ids(await(runAs(caller, () -> applicationService.findAll(FIRST_PAGE)))).isEmpty());
         assertEquals(0L, await(runAs(caller, applicationService::count)));
@@ -195,13 +195,6 @@ public class VisibilityTests extends KinoticTestBase {
         return definition;
     }
 
-    private UserParticipantIdentity member() throws Exception {
-        UserParticipantIdentity user = new UserParticipantIdentity();
-        user.setEmail("visible-" + suffix() + "@kinotic.test");
-        user.setDisplayName("Visibility User");
-        user.setOrganizationId(TEST_ORG_ID);
-        return await(identityService.createUser(user, "Visible-1"));
-    }
 
     private boolean reconciledTo(String hash) throws Exception {
         AuthzStore store = await(stores.findById(AuthzStore.PLATFORM));

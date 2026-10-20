@@ -134,8 +134,8 @@ public class GraphSyncTests extends KinoticTestBase {
 
     @Test
     public void aNewUserJoinsItsScope() throws Exception {
-        UserParticipantIdentity member = await(identityService.createUser(user(TEST_ORG_ID, null), "Graph-sync-1"));
-        assertTrue(holds(new RelationshipTuple(AuthzUtil.object(AuthzUtil.USER_TYPE, member.getId()),
+        UserParticipantIdentity member = member(TEST_ORG_ID, "graph-sync");
+        assertTrue(holds(new RelationshipTuple(DomainUtil.authzMember(member.getId(), TEST_ORG_ID),
                                                AuthzUtil.MEMBER_RELATION,
                                                AuthzUtil.object(AuthzUtil.ORGANIZATION_TYPE, TEST_ORG_ID))),
                    "an organization user is a member of its organization");

@@ -26,7 +26,10 @@ import org.kinotic.domain.api.model.security.participant.DefaultOrganizationPart
 import org.kinotic.domain.api.model.security.participant.OrganizationParticipant;
 import org.kinotic.domain.api.model.security.participant.ScopedParticipant;
 import org.kinotic.domain.api.model.security.participant.SystemParticipant;
+import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 import org.kinotic.domain.api.repositories.AuthzStoreRepository;
+import org.kinotic.domain.api.services.security.MembershipService;
+import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.services.security.RequestAuthorizer;
 import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.idl.api.schema.ServiceDefinition;
@@ -116,6 +119,12 @@ public abstract class KinoticTestBase {
 
     @Autowired
     private AuthzStoreRepository authzStores;
+
+    @Autowired
+    private ParticipantIdentityService participantIdentities;
+
+    @Autowired
+    private MembershipService memberships;
 
     /**
      * Waits for the platform store to run the model of every platform service in the directory, and makes
@@ -225,6 +234,23 @@ public abstract class KinoticTestBase {
     }
 
     /**
+     * Creates an account and its membership of an organization, or of the platform, as signing up or accepting an
+     * invitation does.
+     *
+     * @param organizationId the organization the account joins, or null for the platform's staff
+     * @param emailPrefix    the start of the account's email, which a random suffix makes unique
+     * @return the account
+     */
+    protected UserParticipantIdentity member(String organizationId, String emailPrefix) throws Exception {
+        UserParticipantIdentity account = new UserParticipantIdentity();
+        account.setEmail(emailPrefix + "-" + suffix() + "@kinotic.test");
+        account.setDisplayName(emailPrefix);
+        UserParticipantIdentity ret = await(participantIdentities.createUser(account, "Member-1"));
+        await(memberships.addMember(ret.getId(), organizationId));
+        return ret;
+    }
+
+    /**
      * Authorizes a request to a service's function as the gateway does when the caller sends it, with the
      * arguments in order as the JSON body.
      *
@@ -282,7 +308,7 @@ public abstract class KinoticTestBase {
 
     private static void assertRefusal(Executable authorization, String naming) {
         ExecutionException failure = assertThrows(ExecutionException.class, authorization);
-        AuthorizationException refused = assertInstanceOf(AuthorizationException.class, failure.getCause());
+        AuthorizationException refused = assertInstanceOf(AuthorizationException.class, failure.getCause(), String.valueOf(failure.getCause()));
         assertTrue(refused.getMessage().contains(naming), refused.getMessage());
     }
 

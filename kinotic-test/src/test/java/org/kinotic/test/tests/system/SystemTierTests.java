@@ -144,7 +144,7 @@ public class SystemTierTests extends KinoticTestBase {
 
     @Test
     public void supportReadsThePlatformAndIsRefusedItsWrites() throws Exception {
-        UserParticipantIdentity support = operatorIdentity();
+        UserParticipantIdentity support = member(null, "operator");
         Subject subject = new Subject(SubjectKind.USER, support.getId());
         Grant grant = await(access.grant(subject, AuthzUtil.PLATFORM_SUPPORT_ROLE));
         Organization organization = organization();
@@ -174,7 +174,7 @@ public class SystemTierTests extends KinoticTestBase {
 
     @Test
     public void anOperatorRunsThePlatformAndIsRefusedANodesReports() throws Exception {
-        UserParticipantIdentity operator = operatorIdentity();
+        UserParticipantIdentity operator = member(null, "operator");
         await(access.grant(new Subject(SubjectKind.USER, operator.getId()), AuthzUtil.PLATFORM_OPERATOR_ROLE));
         Participant caller = operator(operator.getId());
 
@@ -191,7 +191,7 @@ public class SystemTierTests extends KinoticTestBase {
     public void aRegistrarRegistersANodeAndReportsForItAlone() throws Exception {
         MachineParticipantIdentity registrar = machine("tier registrar");
         MachineParticipantIdentity other = machine("tier bystander");
-        UserParticipantIdentity operator = operatorIdentity();
+        UserParticipantIdentity operator = member(null, "operator");
         await(access.grant(new Subject(SubjectKind.USER, registrar.getId()), VmNodeOrchestrationService.REGISTRAR_ROLE));
         await(access.grant(new Subject(SubjectKind.USER, operator.getId()), AuthzUtil.PLATFORM_OPERATOR_ROLE));
         Participant registrarCaller = machineParticipant(registrar.getId());
@@ -234,8 +234,8 @@ public class SystemTierTests extends KinoticTestBase {
 
     @Test
     public void aPlatformGrantNamesOnlyThePlatformsStaff() throws Exception {
-        UserParticipantIdentity member = member();
-        UserParticipantIdentity operator = operatorIdentity();
+        UserParticipantIdentity member = member(TEST_ORG_ID, "member");
+        UserParticipantIdentity operator = member(null, "operator");
 
         assertInstanceOf(IllegalArgumentException.class,
                          failure(() -> access.grant(new Subject(SubjectKind.USER, member.getId()), AuthzUtil.PLATFORM_SUPPORT_ROLE)));
@@ -252,8 +252,8 @@ public class SystemTierTests extends KinoticTestBase {
 
     @Test
     public void theTelemetryTenantFollowsThePlatformGrant() throws Exception {
-        UserParticipantIdentity newcomer = operatorIdentity();
-        UserParticipantIdentity support = operatorIdentity();
+        UserParticipantIdentity newcomer = member(null, "operator");
+        UserParticipantIdentity support = member(null, "operator");
         await(access.grant(new Subject(SubjectKind.USER, support.getId()), AuthzUtil.PLATFORM_SUPPORT_ROLE));
         ServerLogQuery query = new ServerLogQuery().setTelemetryServiceName("kinotic-test").setStart(0).setEnd(1).setLimit(1);
 
@@ -291,21 +291,7 @@ public class SystemTierTests extends KinoticTestBase {
         return new DefaultSystemParticipant(id, Map.of(ParticipantConstants.PARTICIPANT_TYPE_METADATA_KEY, ParticipantConstants.PARTICIPANT_TYPE_MACHINE), List.of());
     }
 
-    // A platform operator is a user with no organization
-    private UserParticipantIdentity operatorIdentity() throws Exception {
-        UserParticipantIdentity user = new UserParticipantIdentity();
-        user.setEmail("operator-" + suffix() + "@kinotic.test");
-        user.setDisplayName("Tier Operator");
-        return await(identityService.createUser(user, "Operator-1"));
-    }
 
-    private UserParticipantIdentity member() throws Exception {
-        UserParticipantIdentity user = new UserParticipantIdentity();
-        user.setEmail("member-" + suffix() + "@kinotic.test");
-        user.setDisplayName("Tier Member");
-        user.setOrganizationId(TEST_ORG_ID);
-        return await(identityService.createUser(user, "Member-1"));
-    }
 
     // A platform machine is a machine with no organization, as the console provisions one
     private MachineParticipantIdentity machine(String displayName) throws Exception {

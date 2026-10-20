@@ -63,7 +63,7 @@ public class RequestAuthorizationTests extends KinoticTestBase {
     private static final String MEMBER_SERVICE = "management-api~org.kinotic.management.api.services.security.MemberService";
     private static final String PERMISSION_SERVICE = "management-api~org.kinotic.management.api.services.security.PermissionService";
     // the organization V2__kinotic_test_users seeds, and the user it names as the creator
-    private static final String SEEDED_ORGANIZATION_ID = "kinotic-test";
+    private static final String SEEDED_ORGANIZATION_ID = TEST_ORG_ID;
     private static final String SEEDED_CREATOR_ID = "00000000-0000-0000-0000-000000000002";
 
     @Autowired
@@ -113,7 +113,7 @@ public class RequestAuthorizationTests extends KinoticTestBase {
         Application application = application();
         Project a = project(application);
         Project b = project(application);
-        UserParticipantIdentity sally = member();
+        UserParticipantIdentity sally = member(TEST_ORG_ID, "request");
         await(runAsOrganization(() -> permissions.grant(new Subject(SubjectKind.USER, sally.getId()), "project.editor",
                                                         new Resource(ProjectService.RESOURCE_TYPE, a.getId()))));
         Participant caller = participant(sally.getId(), Map.of());
@@ -144,7 +144,7 @@ public class RequestAuthorizationTests extends KinoticTestBase {
     public void anEditorOfAnEntityDefinitionPublishesItAndIsRefusedUnPublishingIt() throws Exception {
         Application application = application();
         EntityDefinition definition = definition(application, project(application));
-        UserParticipantIdentity sally = member();
+        UserParticipantIdentity sally = member(TEST_ORG_ID, "request");
         await(runAsOrganization(() -> permissions.grant(new Subject(SubjectKind.USER, sally.getId()), "entity_definition.editor",
                                                         new Resource(EntityDefinitionService.RESOURCE_TYPE, definition.getId()))));
         Participant caller = participant(sally.getId(), Map.of());
@@ -164,7 +164,7 @@ public class RequestAuthorizationTests extends KinoticTestBase {
     @Test
     public void aDelegateActsWithItsOwnersAuthority() throws Exception {
         Project a = project(application());
-        UserParticipantIdentity sally = member();
+        UserParticipantIdentity sally = member(TEST_ORG_ID, "request");
         await(runAsOrganization(() -> permissions.grant(new Subject(SubjectKind.USER, sally.getId()), "project.editor",
                                                         new Resource(ProjectService.RESOURCE_TYPE, a.getId()))));
         Participant delegate = participant("cli-" + suffix(), Map.of(DomainUtil.ON_BEHALF_OF_METADATA_KEY, sally.getId()));
@@ -175,7 +175,7 @@ public class RequestAuthorizationTests extends KinoticTestBase {
 
     @Test
     public void theOrganizationsOwnFunctionsAreCheckedOnTheCallersOrganization() throws Exception {
-        UserParticipantIdentity member = member();
+        UserParticipantIdentity member = member(TEST_ORG_ID, "request");
         Participant caller = participant(member.getId(), Map.of());
         // every application's members: a null application id, then the page
         List<Object> listing = Arrays.asList(null, Map.of("pageNumber", 0, "pageSize", 10));
@@ -202,22 +202,19 @@ public class RequestAuthorizationTests extends KinoticTestBase {
     @Test
     public void theSeededOrganizationIsAdministeredByItsCreator() throws Exception {
         String organization = AuthzUtil.object(AuthzUtil.ORGANIZATION_TYPE, SEEDED_ORGANIZATION_ID);
-        RelationshipTuple manages = new RelationshipTuple(AuthzUtil.object(AuthzUtil.USER_TYPE, SEEDED_CREATOR_ID),
+        RelationshipTuple manages = new RelationshipTuple(DomainUtil.authzMember(SEEDED_CREATOR_ID, SEEDED_ORGANIZATION_ID),
                                                           AuthzUtil.permissionName(AuthzUtil.ORGANIZATION_TYPE, "can_manage_access"),
                                                           organization);
         assertTrue(awaitUntil(() -> await(relationships.check(AuthzStoreService.PLATFORM, modelId, manages, Consistency.HIGHER_CONSISTENCY))),
                    "the creator was never bound as the administrator");
 
         // every server that started swept the organization, and found it administered after the first
-        String adminRole = AuthzUtil.object(AuthzUtil.ROLE_TYPE, AuthzUtil.ORGANIZATION_ADMIN_ROLE);
-        int adminBindings = 0;
-        for (RelationshipTuple tuple : await(relationships.read(AuthzStoreService.PLATFORM, organization))) {
-            if (AuthzUtil.ROLE_BINDING_RELATION.equals(tuple.relation())
-                    && await(relationships.holds(AuthzStoreService.PLATFORM, new RelationshipTuple(adminRole, AuthzUtil.ROLE_RELATION, tuple.user())))) {
-                adminBindings++;
-            }
-        }
-        assertEquals(1, adminBindings);
+        Subject creator = new Subject(SubjectKind.USER, AuthzUtil.idOf(DomainUtil.authzMember(SEEDED_CREATOR_ID, SEEDED_ORGANIZATION_ID)));
+        long creatorBindings = await(relationships.findGrants(AuthzStoreService.PLATFORM, organization))
+                .stream()
+                .filter(grant -> AuthzUtil.ORGANIZATION_ADMIN_ROLE.equals(grant.roleId()) && creator.equals(grant.subject()))
+                .count();
+        assertEquals(1, creatorBindings);
     }
 
     private static Participant participant(String id, Map<String, String> metadata) {
@@ -249,13 +246,6 @@ public class RequestAuthorizationTests extends KinoticTestBase {
         return await(runAsOrganization(() -> entityDefinitionService.create(definition)));
     }
 
-    private UserParticipantIdentity member() throws Exception {
-        UserParticipantIdentity user = new UserParticipantIdentity();
-        user.setEmail("request-" + suffix() + "@kinotic.test");
-        user.setDisplayName("Request User");
-        user.setOrganizationId(TEST_ORG_ID);
-        return await(identityService.createUser(user, "Request-1"));
-    }
 
     private boolean reconciledTo(String hash) throws Exception {
         AuthzStore store = await(stores.findById(AuthzStore.PLATFORM));

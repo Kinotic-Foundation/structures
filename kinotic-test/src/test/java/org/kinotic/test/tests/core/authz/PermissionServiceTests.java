@@ -126,7 +126,7 @@ public class PermissionServiceTests extends KinoticTestBase {
         // a role a grant holds stays until the grant is revoked
         Application application = application();
         Resource onApplication = new Resource(AuthzUtil.APPLICATION_TYPE, application.getId());
-        Subject holder = user(member());
+        Subject holder = user(member(TEST_ORG_ID, "permission"));
         Grant grant = await(runAsOrganization(() -> permissions.grant(holder, saved.id(), onApplication)));
         assertThrows(ExecutionException.class, () -> await(runAsOrganization(() -> permissions.deleteRole(saved.id()))));
         await(runAsOrganization(() -> permissions.revoke(onApplication, grant.id())));
@@ -139,7 +139,7 @@ public class PermissionServiceTests extends KinoticTestBase {
     public void grantsReachDownTheTreeAndStopWhenRevoked() throws Exception {
         Application application = application();
         Project project = project(application);
-        UserParticipantIdentity member = member();
+        UserParticipantIdentity member = member(TEST_ORG_ID, "permission");
         Subject subject = user(member);
         Resource onApplication = new Resource(AuthzUtil.APPLICATION_TYPE, application.getId());
         Resource onProject = new Resource(ProjectService.RESOURCE_TYPE, project.getId());
@@ -173,7 +173,7 @@ public class PermissionServiceTests extends KinoticTestBase {
     @Test
     public void groupsGrantThroughTheirMembers() throws Exception {
         Group group = await(runAsOrganization(() -> permissions.saveGroup(new Group().setName("QA " + suffix()).setDescription("tests everything"))));
-        UserParticipantIdentity member = member();
+        UserParticipantIdentity member = member(TEST_ORG_ID, "permission");
         await(runAsOrganization(() -> permissions.addGroupMember(group.getId(), member.getId())));
         List<UserParticipantIdentity> members = await(runAsOrganization(() -> permissions.findGroupMembers(group.getId())));
         assertEquals(List.of(member.getId()), members.stream().map(UserParticipantIdentity::getId).toList());
@@ -204,7 +204,7 @@ public class PermissionServiceTests extends KinoticTestBase {
         Application application = application();
         Project granted = project(application);
         project(application);
-        UserParticipantIdentity member = member();
+        UserParticipantIdentity member = member(TEST_ORG_ID, "permission");
         await(runAsOrganization(() -> permissions.grant(user(member), "project.viewer", new Resource(ProjectService.RESOURCE_TYPE, granted.getId()))));
 
         DefaultOrganizationParticipant caller = new DefaultOrganizationParticipant(member.getId(), TEST_ORG_ID,
@@ -219,7 +219,7 @@ public class PermissionServiceTests extends KinoticTestBase {
 
     private boolean held(UserParticipantIdentity member, String permission, Resource resource) throws Exception {
         return await(relationships.check(AuthzStoreService.PLATFORM, modelId,
-                                         new RelationshipTuple(AuthzUtil.object(AuthzUtil.USER_TYPE, member.getId()), permission,
+                                         new RelationshipTuple(DomainUtil.authzMember(member.getId(), TEST_ORG_ID), permission,
                                                                DomainUtil.authzObject(TEST_ORG_ID, resource)),
                                          Consistency.HIGHER_CONSISTENCY));
     }
@@ -241,13 +241,6 @@ public class PermissionServiceTests extends KinoticTestBase {
         return await(runAsOrganization(() -> projectService.createProjectIfNotExist(project)));
     }
 
-    private UserParticipantIdentity member() throws Exception {
-        UserParticipantIdentity user = new UserParticipantIdentity();
-        user.setEmail("permission-" + suffix() + "@kinotic.test");
-        user.setDisplayName("Permission User");
-        user.setOrganizationId(TEST_ORG_ID);
-        return await(identityService.createUser(user, "Permission-1"));
-    }
 
     private static Subject user(UserParticipantIdentity member) {
         return new Subject(SubjectKind.USER, member.getId());

@@ -52,7 +52,7 @@ public class DeployMachineAccessTests extends KinoticTestBase {
     private static final String NAMED_QUERIES_SERVICE = "management-api~org.kinotic.management.api.services.NamedQueriesDefinitionService";
     private static final String MIGRATION_SERVICE = "management-api~org.kinotic.management.api.services.MigrationService";
     private static final String ARTIFACT_SERVICE = "management-api~org.kinotic.management.api.services.deployment.ProjectArtifactService";
-    private static final String DIRECTORY_SERVICE = "app-api~org.kinotic.app.api.services.ServiceDirectoryService";
+    private static final String DIRECTORY_SERVICE = "app-api~org.kinotic.app.api.services.ApplicationServiceDirectory";
     private static final String ENTITIES_SERVICE = "app-api~org.kinotic.persistence.api.services.JsonEntitiesRepository";
 
     @Autowired
