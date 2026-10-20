@@ -6,7 +6,7 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.kinotic.domain.api.config.KinoticDomainProperties;
+import org.kinotic.management.api.config.KinoticManagementApiProperties;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.PendingInvite;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
@@ -56,7 +56,7 @@ public class InviteHandler implements SuppliesGatewayRoutes, OidcFlowCompleter {
     private final OidcConfigurationService oidcConfigurationService;
     private final OidcFlowOrchestrator oidcFlowOrchestrator;
     private final AuthEndpointSupport authEndpointSupport;
-    private final KinoticDomainProperties domainProperties;
+    private final KinoticManagementApiProperties managementApiProperties;
 
     @Override
     public void mountRoutes(Router router) {
@@ -264,7 +264,7 @@ public class InviteHandler implements SuppliesGatewayRoutes, OidcFlowCompleter {
                              ret = Future.failedFuture(new OidcCallbackException(OidcErrorCodes.CONFIG_NOT_FOUND));
                          } else {
                              ret = oidcFlowOrchestrator.startInvitation(ctx, chosen,
-                                                                        OidcCallbacks.organizationCallbackUrl(domainProperties.getDomain().getManagementApiBaseUrl(), chosen),
+                                                                        OidcCallbacks.organizationCallbackUrl(managementApiProperties.getManagementApi().getApiBaseUrl(), chosen),
                                                                         invite.getOrganizationId(), token);
                          }
                          return ret;

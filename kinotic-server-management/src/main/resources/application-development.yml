@@ -11,6 +11,12 @@ kinotic:
     github:
       webhookSecret: "-"
       appPrivateKey: "-"
+    # Plain localhost dev (pnpm dev, no tunnel): vite serves the portal and proxies /api (REST and the STOMP
+    # WebSocket at /api/v1), /.well-known, and /mcp to 58503, so the API base is the portal's. A developer's
+    # ngrok tunnel and GitHub App replace it and the portal's URL from
+    # ~/.kinotic/dev-environment/kinotic-server-management/application.yml, imported below, so SPA links,
+    # OIDC/OAuth redirect_uris, GitHub callbacks, and the MCP surface all share the tunnel's one origin.
+    apiBaseUrl: http://localhost:5173
   managementServer:
     turnstile:
       # Cloudflare's always-passing test site: the find-my-organizations form renders the widget and every
@@ -18,12 +24,6 @@ kinotic:
       siteKey: 1x00000000000000000000AA
       secretKey: 1x0000000000000000000000000000000AA
   domain:
-    # Plain localhost dev (pnpm dev, no tunnel): vite serves the portal and proxies /api (REST and the STOMP
-    # WebSocket at /api/v1), /.well-known, and /mcp to 58503, so the API base is the portal's. A developer's
-    # ngrok tunnel and GitHub App replace it and the portal's URL from
-    # ~/.kinotic/dev-environment/kinotic-server-management/application.yml, imported below, so SPA links,
-    # OIDC/OAuth redirect_uris, GitHub callbacks, and the MCP surface all share the tunnel's one origin.
-    managementApiBaseUrl: http://localhost:5173
     # The portal's vite dev server, where browser flows return and the emailed links open
     portalBaseUrl: http://localhost:5173
     # The app server as `pnpm dev` runs it: the host of an application's or a tenant's OIDC callback

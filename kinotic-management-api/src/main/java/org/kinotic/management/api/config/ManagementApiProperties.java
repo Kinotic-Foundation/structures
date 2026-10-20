@@ -24,6 +24,13 @@ public class ManagementApiProperties {
     private EntityDefinitionProperties entityDefinition = new EntityDefinitionProperties();
 
     /**
+     * Base URL of the management server's API as a browser reaches it (no trailing slash): the base of the
+     * management server's OIDC {@code redirect_uri}s, including the callback of each organization's own OIDC
+     * configuration, and its OAuth issuer unless {@code kinotic.managementServer.issuerBaseUrl} is set.
+     */
+    private String apiBaseUrl;
+
+    /**
      * Base URL of the Loki HTTP API the {@code LogService} reads workload logs from; override per
      * environment via {@code kinotic.managementApi.lokiUrl} (env {@code KINOTIC_MANAGEMENTAPI_LOKIURL}).
      */

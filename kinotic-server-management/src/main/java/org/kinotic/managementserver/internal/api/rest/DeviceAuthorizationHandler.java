@@ -6,7 +6,7 @@ import io.vertx.ext.web.RoutingContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.kinotic.core.api.security.Participant;
-import org.kinotic.domain.api.config.KinoticDomainProperties;
+import org.kinotic.management.api.config.KinoticManagementApiProperties;
 import org.kinotic.domain.api.model.security.DelegateType;
 import org.kinotic.domain.api.rest.OAuthExtensionGrant;
 import org.kinotic.domain.api.rest.SuppliesGatewayRoutes;
@@ -48,7 +48,7 @@ public class DeviceAuthorizationHandler implements SuppliesGatewayRoutes, OAuthE
 
     private final AuthEndpointSupport authEndpointSupport;
     private final ManagementServerProperties properties;
-    private final KinoticDomainProperties domainProperties;
+    private final KinoticManagementApiProperties managementApiProperties;
     private final DeviceCodeGrantService deviceCodeGrantService;
 
     @Override
@@ -148,6 +148,6 @@ public class DeviceAuthorizationHandler implements SuppliesGatewayRoutes, OAuthE
     }
 
     private String issuer() {
-        return properties.resolveIssuerBaseUrl(domainProperties.getDomain().getManagementApiBaseUrl());
+        return properties.resolveIssuerBaseUrl(managementApiProperties.getManagementApi().getApiBaseUrl());
     }
 }

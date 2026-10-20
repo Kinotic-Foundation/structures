@@ -4,7 +4,7 @@ import io.vertx.core.Future;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import lombok.extern.slf4j.Slf4j;
-import org.kinotic.domain.api.config.KinoticDomainProperties;
+import org.kinotic.management.api.config.KinoticManagementApiProperties;
 import org.kinotic.domain.api.rest.support.OidcCallbackException;
 import org.kinotic.domain.api.rest.support.OidcCallbacks;
 import org.kinotic.domain.api.rest.support.OidcErrorCodes;
@@ -37,18 +37,18 @@ public class OrganizationOidcCallbackHandler implements SuppliesGatewayRoutes {
     private final OidcFlowOrchestrator oidcFlowOrchestrator;
     private final OidcConfigurationService oidcConfigurationService;
     private final AuthEndpointSupport authEndpointSupport;
-    private final KinoticDomainProperties domainProperties;
+    private final KinoticManagementApiProperties managementApiProperties;
     private final Map<OidcFlowPurpose, OidcFlowCompleter> completers;
 
     public OrganizationOidcCallbackHandler(OidcFlowOrchestrator oidcFlowOrchestrator,
                                            OidcConfigurationService oidcConfigurationService,
                                            AuthEndpointSupport authEndpointSupport,
-                                           KinoticDomainProperties domainProperties,
+                                           KinoticManagementApiProperties managementApiProperties,
                                            List<OidcFlowCompleter> completers) {
         this.oidcFlowOrchestrator = oidcFlowOrchestrator;
         this.oidcConfigurationService = oidcConfigurationService;
         this.authEndpointSupport = authEndpointSupport;
-        this.domainProperties = domainProperties;
+        this.managementApiProperties = managementApiProperties;
         this.completers = completers.stream().collect(Collectors.toMap(OidcFlowCompleter::purpose, Function.identity()));
     }
 
@@ -64,7 +64,7 @@ public class OrganizationOidcCallbackHandler implements SuppliesGatewayRoutes {
      */
     private void handleSocialCallback(RoutingContext ctx) {
         String configId = ctx.pathParam("configId");
-        handle(ctx, configId, OidcCallbacks.socialCallbackUrl(domainProperties.getDomain().getManagementApiBaseUrl(), configId),
+        handle(ctx, configId, OidcCallbacks.socialCallbackUrl(managementApiProperties.getManagementApi().getApiBaseUrl(), configId),
                (_, _, _) -> oidcConfigurationService.findOrgSignupById(configId).map(signup -> signup));
     }
 
@@ -75,7 +75,7 @@ public class OrganizationOidcCallbackHandler implements SuppliesGatewayRoutes {
      */
     private void handleSsoCallback(RoutingContext ctx) {
         String configId = ctx.pathParam("configId");
-        handle(ctx, configId, OidcCallbacks.ssoCallbackUrl(domainProperties.getDomain().getManagementApiBaseUrl(), configId),
+        handle(ctx, configId, OidcCallbacks.ssoCallbackUrl(managementApiProperties.getManagementApi().getApiBaseUrl(), configId),
                (orgId, _, _) -> orgId == null
                        ? Future.succeededFuture()
                        : oidcConfigurationService.findOffered(configId, orgId, null));

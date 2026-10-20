@@ -38,7 +38,7 @@ resource "helm_release" "kinotic" {
     # Where the portal and the console live — post-OIDC redirects and the emailed links — and
     # where each server's REST endpoints live, the OIDC redirect_uri
     { name = "kinotic.domain.portalBaseUrl", value = "https://portal.${local.global.dns_zone_name}" },
-    { name = "kinotic.domain.managementApiBaseUrl", value = "https://api.${local.global.dns_zone_name}" },
+    { name = "kinotic.managementApi.apiBaseUrl", value = "https://api.${local.global.dns_zone_name}" },
     # The Turnstile site the portal's find-my-organizations form presents; the management server verifies its
     # tokens with the secret the global root stores
     { name = "servers.kinotic-server-management.managementServer.turnstile.siteKey", value = var.turnstile_site_key },

@@ -91,7 +91,6 @@ KINOTIC_APIGATEWAY_WEBSERVER_PORT: "{{ $server.webServer.port }}"
 {{- end }}
 
 # ── Public URLs + email ───────────────────────────────────
-KINOTIC_DOMAIN_MANAGEMENTAPIBASEURL: "{{ $root.Values.kinotic.domain.managementApiBaseUrl }}"
 KINOTIC_DOMAIN_APPAPIBASEURL: "{{ $root.Values.kinotic.domain.appApiBaseUrl }}"
 KINOTIC_DOMAIN_PORTALBASEURL: "{{ $root.Values.kinotic.domain.portalBaseUrl }}"
 {{- with $server.managementServer }}
@@ -120,6 +119,7 @@ KINOTIC_DOMAIN_ELASTICCONNECTIONS_{{ $index }}_PORT: "{{ $value.port }}"
 {{- end }}
 
 # ── Loki, Tempo, Mimir (LogService, TelemetryService) ─────
+KINOTIC_MANAGEMENTAPI_APIBASEURL: "{{ $root.Values.kinotic.managementApi.apiBaseUrl }}"
 KINOTIC_MANAGEMENTAPI_LOKIURL: "{{ $root.Values.kinotic.managementApi.lokiUrl }}"
 KINOTIC_MANAGEMENTAPI_TEMPOURL: "{{ $root.Values.kinotic.managementApi.tempoUrl }}"
 KINOTIC_MANAGEMENTAPI_MIMIRURL: "{{ $root.Values.kinotic.managementApi.mimirUrl }}"

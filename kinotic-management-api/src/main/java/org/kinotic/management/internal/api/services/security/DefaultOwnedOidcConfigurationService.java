@@ -12,6 +12,7 @@ import org.kinotic.domain.api.model.security.OwnedOidcConfiguration;
 import org.kinotic.domain.api.model.security.participant.OrganizationParticipant;
 import org.kinotic.domain.api.rest.support.OidcCallbacks;
 import org.kinotic.domain.api.services.security.OidcConfigurationService;
+import org.kinotic.management.api.config.KinoticManagementApiProperties;
 import org.kinotic.management.api.services.security.OwnedOidcConfigurationService;
 import org.springframework.stereotype.Component;
 
@@ -22,6 +23,7 @@ public class DefaultOwnedOidcConfigurationService implements OwnedOidcConfigurat
     private final OidcConfigurationService oidcConfigurationService;
     private final SecurityContext securityContext;
     private final KinoticDomainProperties domainProperties;
+    private final KinoticManagementApiProperties managementApiProperties;
 
     @Override
     public Future<Page<OwnedOidcConfiguration>> findAll(Pageable pageable) {
@@ -43,7 +45,7 @@ public class DefaultOwnedOidcConfigurationService implements OwnedOidcConfigurat
                                                            domainProperties.getDomain().getAppApiBaseUrl(),
                                                            configuration.getId());
             } else if (configuration != null) {
-                ret = OidcCallbacks.ssoCallbackUrl(domainProperties.getDomain().getManagementApiBaseUrl(),
+                ret = OidcCallbacks.ssoCallbackUrl(managementApiProperties.getManagementApi().getApiBaseUrl(),
                                                    configuration.getId());
             }
             return ret;

@@ -10,10 +10,10 @@ kinotic:
       appPrivateKey: "-"
       webhookSecret: "-"
       repoTemplate: "-"
-  domain:
     # the bases of the callback URLs OwnedOidcConfigurationService gives and of the URL a UI build is
-    # handed; no test signs in through one or deploys a UI
-    managementApiBaseUrl: http://localhost:9090
+    # handed (appApiBaseUrl below); no test signs in through one or deploys a UI
+    apiBaseUrl: http://localhost:9090
+  domain:
     appApiBaseUrl: http://localhost:58505
     # the domain a UI's site is named under; no test deploys a UI
     publishedSites:

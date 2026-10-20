@@ -7,7 +7,7 @@ import io.vertx.ext.web.handler.HttpException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.kinotic.core.api.security.Participant;
-import org.kinotic.domain.api.config.KinoticDomainProperties;
+import org.kinotic.management.api.config.KinoticManagementApiProperties;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
 import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
@@ -47,7 +47,7 @@ public class AccountSignInMethodHandler implements SuppliesGatewayRoutes, OidcFl
     private final OidcConfigurationService oidcConfigurationService;
     private final OidcFlowOrchestrator oidcFlowOrchestrator;
     private final ParticipantIdentityService identityService;
-    private final KinoticDomainProperties domainProperties;
+    private final KinoticManagementApiProperties managementApiProperties;
 
     @Override
     public void mountRoutes(Router router) {
@@ -69,7 +69,7 @@ public class AccountSignInMethodHandler implements SuppliesGatewayRoutes, OidcFl
                   Future<String> ret;
                   if (config instanceof OrgSignupOidcConfiguration signup && signup.isEnabled()) {
                       ret = oidcFlowOrchestrator.startConnect(ctx, signup,
-                                                              OidcCallbacks.socialCallbackUrl(domainProperties.getDomain().getManagementApiBaseUrl(), signup.getId()),
+                                                              OidcCallbacks.socialCallbackUrl(managementApiProperties.getManagementApi().getApiBaseUrl(), signup.getId()),
                                                               null, account.getId());
                   } else if (config instanceof OrganizationOidcConfiguration owned && owned.isEnabled()) {
                       // an organization's configuration binds only for an account that may sign in there: the organization
@@ -78,7 +78,7 @@ public class AccountSignInMethodHandler implements SuppliesGatewayRoutes, OidcFl
                                            .compose(member -> member == null
                                                    ? Future.failedFuture(new HttpException(403))
                                                    : oidcFlowOrchestrator.startConnect(ctx, owned,
-                                                                                       OidcCallbacks.ssoCallbackUrl(domainProperties.getDomain().getManagementApiBaseUrl(), owned.getId()),
+                                                                                       OidcCallbacks.ssoCallbackUrl(managementApiProperties.getManagementApi().getApiBaseUrl(), owned.getId()),
                                                                                        owned.getOrganizationId(), account.getId()));
                   } else {
                       ret = Future.failedFuture(new IllegalArgumentException("Unknown or disabled configuration: " + configurationId));
