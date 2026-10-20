@@ -14,6 +14,7 @@ import org.kinotic.idl.api.schema.FunctionDefinition;
 import org.kinotic.idl.api.schema.NamespaceDefinition;
 import org.kinotic.idl.api.schema.ServiceDefinition;
 import org.kinotic.idl.api.schema.decorators.McpToolC3Decorator;
+import org.kinotic.idl.internal.directory.C3SchemaToC3Type;
 import org.kinotic.idl.internal.directory.DefaultResolvableTypeConverter;
 import org.kinotic.core.api.security.Participant;
 import org.kinotic.idl.internal.directory.DefaultSchemaService;
@@ -32,6 +33,7 @@ import org.kinotic.idl.internal.directory.jdk.IntegerToC3Type;
 import org.kinotic.idl.internal.directory.jdk.IterableToC3Type;
 import org.kinotic.idl.internal.directory.jdk.LongToC3Type;
 import org.kinotic.idl.internal.directory.jdk.MapToC3Type;
+import org.kinotic.idl.internal.directory.jdk.ObjectToC3Type;
 import org.kinotic.idl.internal.directory.jdk.OptionalToC3Type;
 import org.kinotic.idl.internal.directory.jdk.ShortToC3Type;
 import org.kinotic.idl.internal.directory.jdk.StringToC3Type;
@@ -168,6 +170,7 @@ public class McpServiceSchemaTest {
                                                            new IterableToC3Type(),
                                                            new LongToC3Type(),
                                                            new MapToC3Type(),
+                                                           new ObjectToC3Type(),
                                                            new OptionalToC3Type(),
                                                            new ShortToC3Type(),
                                                            new StringToC3Type(),
@@ -175,6 +178,7 @@ public class McpServiceSchemaTest {
                                                            new VoidToC3Type(),
                                                            new TokenBufferToC3Type(),
                                                            new JsonNodeToC3Type(),
+                                                           new C3SchemaToC3Type(),
                                                            new ReactiveToC3Type(registryProvider()));
         return new DefaultSchemaService(new DefaultResolvableTypeConverter(converters), Set.of(Participant.class));
     }
