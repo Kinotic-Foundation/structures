@@ -83,28 +83,30 @@ public class ApplicationStoreProvisioner {
     private Future<Void> provision(Application application, AuthzModel kernel) {
         String store = DomainUtil.authzApplicationId(application.getOrganizationId(), application.getId());
         return stores.ensureStore(store)
-                     // the kernel model and its roles admit the membership tuples written at user creation and the
-                     // grants made before any service of the application registers; a store already running a
-                     // model keeps it, since the reconciler's carries the application's services
-                     .compose(id -> stores.modelId(store).recover(none -> relationships.ensureModelWithRoles(store, kernel)))
-                     // the placement is ensured whatever model the store runs: a reconcile that ran while an
-                     // application of the same id was deleted creates the store again with a model and nothing else
-                     .compose(version -> relationships.ensure(store, List.of(placement(store))))
-                     .compose(v -> records.findById(store))
+                     .compose(id -> records.findById(store))
                      .compose(record -> {
                          Future<Void> ret;
                          if (record != null) {
-                             ret = Future.succeededFuture();
+                             // a store with a record runs the reconciler's model, which carries the application's
+                             // services, so only the placement is ensured
+                             ret = relationships.ensure(store, List.of(placement(store)));
                          } else {
                              AuthzStore created = new AuthzStore().setId(store)
                                                                   .setOrganizationId(application.getOrganizationId())
                                                                   .setApplicationId(application.getId());
-                             // created with the kernel model as its intent, so a service registered before the
-                             // worker's first run stamps a record that exists, and the master reconciles the
-                             // record to the model the services imply on its next look
-                             ret = records.updateDesired(store, new AuthzModelRevision(kernel.hash()), created, "application created")
-                                          .onSuccess(v -> log.info("Provisioned the authorization store of application {}", store))
-                                          .mapEmpty();
+                             // the kernel model and its roles admit the membership tuples written at user creation
+                             // and the grants made before any service of the application registers. It is written
+                             // over whatever model the store runs: a reconcile that ran while an application of the
+                             // same id was deleted creates the store again, and may leave it running the bridge
+                             // version ensureModelWithRoles writes first, which has no application type.
+                             // The record is created with the kernel model as its intent, so a service registered
+                             // before the worker's first run stamps a record that exists, and the master reconciles
+                             // the record to the model the services imply on its next look
+                             ret = relationships.ensureModelWithRoles(store, kernel)
+                                                .compose(version -> relationships.ensure(store, List.of(placement(store))))
+                                                .compose(v -> records.updateDesired(store, new AuthzModelRevision(kernel.hash()), created, "application created"))
+                                                .onSuccess(v -> log.info("Provisioned the authorization store of application {}", store))
+                                                .mapEmpty();
                          }
                          return ret;
                      });
