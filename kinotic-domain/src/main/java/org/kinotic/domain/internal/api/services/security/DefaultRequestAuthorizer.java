@@ -47,6 +47,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import static org.kinotic.authz.api.services.AuthzStoreService.PLATFORM;
@@ -120,18 +121,36 @@ public class DefaultRequestAuthorizer implements RequestAuthorizer {
         return authorize(cri, participant, reference -> named(arguments, reference));
     }
 
+    @Override
+    public Future<Void> authorize(Participant participant, String permission, String entityDefinitionId) {
+        Validate.notBlank(permission, "permission cannot be blank");
+        Validate.notBlank(entityDefinitionId, "entityDefinitionId cannot be blank");
+        AuthzCheckC3Decorator check = new AuthzCheckC3Decorator().setResource(AuthzUtil.ENTITY_DEFINITION_TYPE)
+                                                                 .setResourceId(entityDefinitionId)
+                                                                 .setPermissionResource(AuthzUtil.ENTITY_DEFINITION_TYPE)
+                                                                 .setPermission(permission);
+        // the id is literal, so the check reads no argument
+        return withStore(participant, (scoped, store) -> check(new FunctionSpec(check, List.of()), scoped, store, reference -> null));
+    }
+
     // Authorizes the request, reading a parameter the check names with the given function
     private Future<Void> authorize(CRI cri, Participant participant, Function<ParameterReference, String> arguments) {
         Validate.notNull(cri, "cri cannot be null");
+        return withStore(participant, (scoped, store) -> spec(cri).compose(spec -> spec.check() == null
+                ? Future.succeededFuture()
+                : check(spec, scoped, store, arguments)));
+    }
+
+    // Runs the authorization with the store answering for the caller: an application's own user's is the
+    // application's store, every other caller's the platform's
+    private Future<Void> withStore(Participant participant, BiFunction<ScopedParticipant, String, Future<Void>> authorization) {
         Validate.notNull(participant, "participant cannot be null");
         Future<Void> ret;
         if (participant instanceof ScopedParticipant scoped) {
             String store = participant instanceof ApplicationParticipant application
                     ? DomainUtil.authzApplicationId(application.getOrganizationId(), application.getApplicationId())
                     : PLATFORM;
-            ret = spec(cri).compose(spec -> spec.check() == null
-                    ? Future.succeededFuture()
-                    : check(spec, scoped, store, arguments));
+            ret = authorization.apply(scoped, store);
         } else {
             ret = Future.failedFuture(securityExceptions.notAuthorized("No store answers for participant of type {} with id {}",
                                                                        participant.getClass().getSimpleName(), participant.getId()));

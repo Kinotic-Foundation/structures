@@ -7,8 +7,10 @@ import org.kinotic.domain.api.model.persistence.EntityDescriptor;
 import org.kinotic.domain.api.model.persistence.NamedQueriesDefinition;
 import org.kinotic.domain.api.model.persistence.idl.decorators.QueryDecorator;
 import org.kinotic.domain.api.services.EntityStatementResolver;
+import org.kinotic.domain.api.services.security.RequestAuthorizer;
 import org.kinotic.domain.internal.api.services.CrudServiceTemplate;
 import org.kinotic.idl.api.schema.FunctionDefinition;
+import org.kinotic.idl.api.utils.AuthzUtil;
 import org.kinotic.persistence.api.model.NamedQueryOperation;
 import org.kinotic.persistence.api.services.security.AuthorizationService;
 import org.kinotic.persistence.api.services.security.AuthorizationServiceFactory;
@@ -52,6 +54,7 @@ public class DefaultQueryExecutorFactory implements QueryExecutorFactory {
     private final ReadPreProcessor readPreProcessor;
     private final ReadPostProcessor readPostProcessor;
     private final JsonMapper jsonMapper;
+    private final RequestAuthorizer requestAuthorizer;
 
     public QueryExecutor createQueryExecutor(EntityDescriptor entityDescriptor,
                                              String queryName,
@@ -96,7 +99,10 @@ public class DefaultQueryExecutorFactory implements QueryExecutorFactory {
                                                                             elasticVertxClient,
                                                                             ElasticsearchSqlWriter.write(aggregate),
                                                                             domainPersistenceProperties);
-            case InsertStatement _, UpdateStatement _, DeleteStatement _ -> write(entityDescriptor, statement);
+            // the caller's request was checked for can_read, which admits reading rows, not writing them
+            case InsertStatement _ -> write(entityDescriptor, statement, AuthzUtil.CAN_CREATE);
+            case UpdateStatement _ -> write(entityDescriptor, statement, AuthzUtil.CAN_EDIT);
+            case DeleteStatement _ -> write(entityDescriptor, statement, AuthzUtil.CAN_DELETE);
             default -> throw new IllegalArgumentException("Named query " + queryName
                                                                   + ": a named query is a SELECT, INSERT, UPDATE or DELETE, so "
                                                                   + statement.getClass().getSimpleName().replace("Statement", "")
@@ -113,12 +119,13 @@ public class DefaultQueryExecutorFactory implements QueryExecutorFactory {
     }
 
     @SuppressWarnings("unchecked")
-    private QueryExecutor write(EntityDescriptor entityDescriptor, Statement statement) {
+    private QueryExecutor write(EntityDescriptor entityDescriptor, Statement statement, String permission) {
         StatementExecutor<Statement, ?> executor = (StatementExecutor<Statement, ?>) statementExecutors
                 .stream()
                 .filter(candidate -> candidate.supports(statement))
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("No executor found for statement: " + statement.getClass().getSimpleName()));
-        return new StatementQueryExecutor(entityDescriptor, statement, entityStatementResolver, executor, jsonMapper);
+        return new StatementQueryExecutor(entityDescriptor, statement, permission, entityStatementResolver, executor,
+                                          requestAuthorizer, jsonMapper);
     }
 }

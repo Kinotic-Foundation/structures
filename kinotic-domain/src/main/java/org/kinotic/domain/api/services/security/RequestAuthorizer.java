@@ -41,4 +41,17 @@ public interface RequestAuthorizer {
      *         the engine's failure when the check cannot be made
      */
     Future<Void> authorize(CRI cri, Participant participant, ObjectNode arguments);
+
+    /**
+     * Authorizes a caller for a permission on an entity definition, for a function whose permission depends on
+     * what its arguments select, as a named query's depends on whether its statement reads or writes rows.
+     *
+     * @param participant        the caller the function runs for
+     * @param permission         the short permission name, such as {@code can_edit}
+     * @param entityDefinitionId the entity definition the permission is checked on
+     * @return completes when the caller holds the permission; fails with an {@link AuthorizationException} reading
+     *         "Not authorized", followed by the reason when {@code kinotic.debug} is on, when it does not, and with
+     *         the engine's failure when the check cannot be made
+     */
+    Future<Void> authorize(Participant participant, String permission, String entityDefinitionId);
 }
