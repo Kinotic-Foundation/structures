@@ -103,7 +103,8 @@ export class ServiceDefinitionGenerationService {
         let current: ClassDeclaration | undefined = declaration
         while (current) {
             for (const method of current.getInstanceMethods()) {
-                if (!method.isOverload() && !converted.has(method.getName())) {
+                // the runtime serves the methods on the prototype chain, which holds no ES private (#) method
+                if (!method.isOverload() && !method.getName().startsWith('#') && !converted.has(method.getName())) {
                     converted.add(method.getName())
                     ret.addFunction(this.convertMethod(method, service, conversionContext))
                 }
@@ -124,8 +125,7 @@ export class ServiceDefinitionGenerationService {
         carried.forEach((parameter, index) => {
             // a destructured parameter has no name of its own, so it is named for its position
             const parameterName = IDENTIFIER.test(parameter.getName()) ? parameter.getName() : `arg${index}`
-            // an optional parameter's type carries undefined, which a request never sends
-            ret.addParameter(parameterName, this.convertType(parameter.getType().getNonNullableType(), conversionContext, `parameter ${parameterName} of ${where}`))
+            ret.addParameter(parameterName, this.convertType(parameter.getType(), conversionContext, `parameter ${parameterName} of ${where}`))
         })
         ret.returnType = this.convertReturnType(method.getReturnType(), conversionContext, where)
         return ret
@@ -152,7 +152,7 @@ export class ServiceDefinitionGenerationService {
     }
 
     // A type the schema places no constraint on converts to anything; void to void; the rest as an entity's
-    // properties do
+    // properties do, without the null or undefined an optional parameter or a nullable value carries
     private convertType(type: Type,
                         conversionContext: IConversionContext<Type, C3Type, TypescriptConversionState>,
                         where: string): C3Type {
@@ -163,7 +163,7 @@ export class ServiceDefinitionGenerationService {
             ret = new VoidC3Type()
         } else {
             try {
-                ret = conversionContext.convert(type)
+                ret = conversionContext.convert(type.getNonNullableType())
             } catch (e: any) {
                 throw new Error(`Could not convert ${where}: ${e?.message ?? e}`)
             }

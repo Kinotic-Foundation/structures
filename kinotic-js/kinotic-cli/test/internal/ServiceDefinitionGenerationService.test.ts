@@ -77,6 +77,13 @@ export class ProbeService {
     hang(): Promise<never> {
         return new Promise(() => {})
     }
+
+    inspect(value: unknown, extra?: any): unknown {
+        return [value, extra, this.#audit()]
+    }
+
+    async #audit(): Promise<void> {
+    }
 }
 
 export class HelperService {
@@ -164,6 +171,10 @@ describe('ServiceDefinitionGenerationService', () => {
 
         const probe = definitions[1]
         expect(probe.namespace).to.be.null
+        // an ES private method is not served, so it is not a function of the service
+        expect(probe.functions.map(f => f.name)).to.deep.equal(['echo', 'hang', 'inspect'])
+        expect(fn(probe, 'inspect').parameters.map(p => p.type)).to.satisfy((types: unknown[]) => types.every(t => t instanceof AnyC3Type))
+        expect(fn(probe, 'inspect').returnType).to.be.instanceOf(AnyC3Type)
         expect(fn(probe, 'echo').returnType).to.be.instanceOf(StringC3Type)
         expect((fn(probe, 'hang').returnType as AsyncC3Type).valueType).to.be.instanceOf(AnyC3Type)
     })
