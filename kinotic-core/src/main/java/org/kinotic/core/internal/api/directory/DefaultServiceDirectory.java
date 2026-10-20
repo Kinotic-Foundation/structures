@@ -156,7 +156,7 @@ public class DefaultServiceDirectory implements ServiceDirectory, SmartInitializ
             synchronized (registrationLock) {
                 registered.add(serviceIdentifier);
             }
-            strategy.upsertEntry(entry)
+            strategy.upsertEntries(List.of(entry))
                     .compose(v -> refreshOnline(serviceIdentifier))
                     .onFailure(throwable -> log.error("Failed to register service {} in the directory", serviceIdentifier, throwable));
         }
@@ -283,7 +283,7 @@ public class DefaultServiceDirectory implements ServiceDirectory, SmartInitializ
                 .setAdvertised(entry.isAdvertised())
                 .setMcpExposed(!tools.isEmpty())
                 .setMcpTools(tools.isEmpty() ? null : tools);
-        return strategy.upsertEntry(stored)
+        return strategy.upsertEntries(List.of(stored))
                        .compose(v -> refreshOnline(entryId, serviceAddress));
     }
 
@@ -342,7 +342,7 @@ public class DefaultServiceDirectory implements ServiceDirectory, SmartInitializ
 
     private Future<Void> refreshOnline(String entryId, String serviceAddress) {
         Instant observed = Instant.now();
-        return anyInstanceListening(serviceAddress).compose(online -> strategy.setOnline(entryId, online, observed));
+        return anyInstanceListening(serviceAddress).compose(online -> strategy.setOnline(Map.of(entryId, online), observed));
     }
 
     // A service is reachable while any instance of it listens, on its shared address or under a scope, so

@@ -17,6 +17,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Verifies the MCP-exposed platform services land in the service directory when the full stack boots: schema
@@ -78,11 +79,11 @@ public class McpToolDirectoryTests extends KinoticTestBase {
 
         // an offline observation a node made before the snapshot, landing after it: the node whose
         // services stopped, answered by the node whose services started
-        directoryStrategy.setOnline(PROJECT_SERVICE, false, Instant.ofEpochMilli(verified.getLivenessVerifiedAt() - 1)).await();
+        directoryStrategy.setOnline(Map.of(PROJECT_SERVICE, false), Instant.ofEpochMilli(verified.getLivenessVerifiedAt() - 1)).await();
         Assertions.assertTrue(entry(PROJECT_SERVICE).isOnline(), "the earlier observation is not the last word");
 
         // an observation made after the snapshot is
-        directoryStrategy.setOnline(PROJECT_SERVICE, false, Instant.now()).await();
+        directoryStrategy.setOnline(Map.of(PROJECT_SERVICE, false), Instant.now()).await();
         Assertions.assertFalse(entry(PROJECT_SERVICE).isOnline());
         serviceDirectory.reconcileLiveness().await();
         Assertions.assertTrue(entry(PROJECT_SERVICE).isOnline(), "the cluster's registrations are the latest word");

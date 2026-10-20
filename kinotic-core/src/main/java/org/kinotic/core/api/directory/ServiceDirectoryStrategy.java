@@ -64,16 +64,6 @@ public interface ServiceDirectoryStrategy {
     Future<Void> reconcileLiveness(Set<String> activeAddresses, Instant when);
 
     /**
-     * Sets the liveness of the entry with the given id as observed at the given time; an observation
-     * earlier than the entry's last verification leaves the entry as it is.
-     * @param entryId the entry id
-     * @param online the liveness state
-     * @param when the time the liveness was observed
-     * @return a {@link Future} completing when the entry is updated
-     */
-    Future<Void> setOnline(String entryId, boolean online, Instant when);
-
-    /**
      * Sets the liveness of each entry to the state given for its id, as observed at the given time; an
      * observation earlier than an entry's last verification leaves that entry as it is, and an id naming no
      * entry is skipped.
@@ -94,15 +84,8 @@ public interface ServiceDirectoryStrategy {
     Future<Void> setOnlineByAddress(String serviceAddress, boolean online, Instant when);
 
     /**
-     * Upserts an entry, leaving the liveness fields ({@code online}, {@code lastStatusChange},
+     * Upserts the given entries, leaving their liveness fields ({@code online}, {@code lastStatusChange},
      * {@code livenessVerifiedAt}) untouched.
-     * @param entry the entry to upsert
-     * @return a {@link Future} completing when the entry is stored
-     */
-    Future<Void> upsertEntry(ServiceDirectoryEntry entry);
-
-    /**
-     * Upserts the given entries as {@link #upsertEntry(ServiceDirectoryEntry)} does each.
      * @param entries the entries to upsert
      * @return a {@link Future} completing when every entry is stored
      */
