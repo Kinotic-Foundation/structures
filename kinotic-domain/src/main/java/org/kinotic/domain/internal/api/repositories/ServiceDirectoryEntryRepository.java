@@ -11,7 +11,6 @@ import org.kinotic.core.api.crud.Sort;
 import org.kinotic.core.api.directory.McpToolDefinition;
 import org.kinotic.core.api.directory.McpToolDefinitionList;
 import org.kinotic.core.api.directory.ServiceDirectoryEntry;
-import co.elastic.clients.elasticsearch._types.Refresh;
 import org.kinotic.core.api.event.ZonePartitioningService;
 import org.kinotic.core.api.utils.ZoneUtil;
 import org.kinotic.domain.api.utils.DomainUtil;
@@ -26,6 +25,8 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
@@ -97,20 +98,27 @@ public class ServiceDirectoryEntryRepository extends AbstractRepository<ServiceD
      * as it is. Visible to search on completion.
      */
     public Future<Void> upsertEntry(ServiceDirectoryEntry entry) {
-        @SuppressWarnings("unchecked")
-        Map<String, Object> contract = objectMapper.convertValue(entry, Map.class);
-        contract.keySet().removeAll(LIVENESS_FIELDS);
-        Map<String, Object> params = Map.of("contract", contract, "contractHash", hash(contract));
-        // the caller reconciles liveness with a search right after this completes, so the write
+        return upsertEntries(List.of(entry));
+    }
+
+    /**
+     * Publishes the contracts of the given entries as {@link #upsertEntry(ServiceDirectoryEntry)} does each.
+     * Visible to search on completion.
+     */
+    public Future<Void> upsertEntries(Collection<ServiceDirectoryEntry> entries) {
+        Map<String, Map<String, Object>> paramsById = new HashMap<>();
+        for (ServiceDirectoryEntry entry : entries) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> contract = objectMapper.convertValue(entry, Map.class);
+            contract.keySet().removeAll(LIVENESS_FIELDS);
+            paramsById.put(entry.getId(), Map.of("contract", contract, "contractHash", hash(contract)));
+        }
+        // the caller reconciles liveness with a search right after this completes, so the writes
         // must be visible to search before the future does
-        return crudServiceTemplate.scriptedUpdate(indexName,
-                                                  entry.getId(),
-                                                  PUBLISH_CONTRACT,
-                                                  params,
-                                                  u -> u.scriptedUpsert(true)
-                                                        .upsert(Map.of())
-                                                        .refresh(Refresh.WaitFor))
-                                  .mapEmpty();
+        return crudServiceTemplate.bulkScriptedUpdateSync(indexName,
+                                                          PUBLISH_CONTRACT,
+                                                          paramsById,
+                                                          a -> a.scriptedUpsert(true).upsert(Map.of()));
     }
 
     // SHA-256 of the contract with its keys sorted at every level, so two writes of one contract hash the same
@@ -132,10 +140,20 @@ public class ServiceDirectoryEntryRepository extends AbstractRepository<ServiceD
      * search on completion.
      */
     public Future<Void> setOnline(String entryId, boolean online, Instant when) {
-        Map<String, Object> params = Map.of("online", online,
-                                            "lastStatusChange", when,
-                                            "verifiedAt", when.toEpochMilli());
-        return crudServiceTemplate.scriptedUpdateSync(indexName, entryId, SET_ONLINE, params).mapEmpty();
+        return setOnline(Map.of(entryId, online), when);
+    }
+
+    /**
+     * Sets the liveness of each existing entry to the state given for its id, as
+     * {@link #setOnline(String, boolean, Instant)} does one. An id naming no entry is skipped. Visible to search
+     * on completion.
+     */
+    public Future<Void> setOnline(Map<String, Boolean> onlineByEntryId, Instant when) {
+        Map<String, Map<String, Object>> paramsById = new HashMap<>();
+        onlineByEntryId.forEach((entryId, online) -> paramsById.put(entryId, Map.of("online", online,
+                                                                                    "lastStatusChange", when,
+                                                                                    "verifiedAt", when.toEpochMilli())));
+        return crudServiceTemplate.bulkScriptedUpdateSync(indexName, SET_ONLINE, paramsById, null);
     }
 
     /**
@@ -164,15 +182,15 @@ public class ServiceDirectoryEntryRepository extends AbstractRepository<ServiceD
         return findAll(Pageable.create(cursor, LIVENESS_PAGE_SIZE, Sort.by("id")),
                        b -> b.source(sc -> sc.filter(f -> f.includes("id", "serviceAddress", "online"))))
                 .compose(page -> {
-                    List<Future<Void>> updates = new ArrayList<>();
+                    Map<String, Boolean> corrections = new HashMap<>();
                     for (ServiceDirectoryEntry entry : page.getContent()) {
                         boolean desired = entry.getServiceAddress() != null
                                 && activeAddresses.contains(entry.getServiceAddress());
                         if (desired != entry.isOnline()) {
-                            updates.add(setOnline(entry.getId(), desired, when));
+                            corrections.put(entry.getId(), desired);
                         }
                     }
-                    Future<Void> written = Future.all(updates).mapEmpty();
+                    Future<Void> written = setOnline(corrections, when);
                     String next = page instanceof CursorPage<ServiceDirectoryRecord> cursorPage ? cursorPage.getCursor() : null;
                     return page.getContent().size() < LIVENESS_PAGE_SIZE || next == null
                             ? written

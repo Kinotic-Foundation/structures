@@ -51,7 +51,6 @@ import java.lang.reflect.Method;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -192,15 +191,15 @@ public class DefaultServiceDirectory implements ServiceDirectory, SmartInitializ
                 // registration query per service, and only this node's entries are written. The stamp is taken
                 // before the snapshot, so an observation that starts later always lands after this one
                 Instant observed = Instant.now();
-                upsertAll(batch.values())
+                strategy.upsertEntries(batch.values())
                         .compose(v -> eventBusService.activeServiceAddresses())
                         .compose(addresses -> {
                             Set<String> services = servicesOf(addresses);
-                            List<Future<Void>> writes = new ArrayList<>();
+                            Map<String, Boolean> onlineByEntryId = new HashMap<>();
                             for (ServiceDirectoryEntry entry : batch.values()) {
-                                writes.add(strategy.setOnline(entry.getId(), services.contains(entry.getServiceAddress()), observed));
+                                onlineByEntryId.put(entry.getId(), services.contains(entry.getServiceAddress()));
                             }
-                            return Future.all(writes).mapEmpty();
+                            return strategy.setOnline(onlineByEntryId, observed);
                         })
                         .onFailure(throwable -> log.error("Startup directory publish failed", throwable));
             } catch (Exception e) {
@@ -239,14 +238,6 @@ public class DefaultServiceDirectory implements ServiceDirectory, SmartInitializ
             ret.put(registration.getKey(), buildEntry(registration.getKey(), serviceInterface, definition, referenceResolver));
         }
         return ret;
-    }
-
-    private Future<Void> upsertAll(Collection<ServiceDirectoryEntry> entries) {
-        List<Future<Void>> writes = new ArrayList<>();
-        for (ServiceDirectoryEntry entry : entries) {
-            writes.add(strategy.upsertEntry(entry));
-        }
-        return Future.all(writes).mapEmpty();
     }
 
     @Override
