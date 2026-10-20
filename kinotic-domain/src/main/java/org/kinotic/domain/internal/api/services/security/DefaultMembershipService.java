@@ -6,6 +6,9 @@ import java.util.HashSet;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.Validate;
+import org.kinotic.authz.api.model.RelationshipTuple;
+import org.kinotic.authz.api.services.AuthzStoreService;
+import org.kinotic.authz.api.services.RelationshipService;
 import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.core.api.security.Participant;
@@ -23,8 +26,10 @@ import org.kinotic.domain.internal.api.repositories.IdentityCredentialRepository
 import org.kinotic.domain.internal.api.repositories.MembershipRepository;
 import org.kinotic.domain.internal.api.repositories.OidcBindingRepository;
 import org.kinotic.domain.internal.api.repositories.ParticipantIdentityRepository;
+import org.kinotic.idl.api.utils.AuthzUtil;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -42,6 +47,7 @@ public class DefaultMembershipService implements MembershipService {
     private final ParticipantIdentityRepository identityRepository;
     private final IdentityCredentialRepository credentialRepository;
     private final OidcBindingRepository bindingRepository;
+    private final RelationshipService relationships;
 
     @Override
     public Future<Membership> addMember(String identityId, String organizationId) {
@@ -60,7 +66,8 @@ public class DefaultMembershipService implements MembershipService {
                                                             .setCreated(now)
                                                             .setUpdated(now);
                     // sync so the member list a console re-queries at once shows the new member
-                    return membershipRepository.saveSync(membership);
+                    return membershipRepository.saveSync(membership)
+                                               .compose(saved -> joined(saved).map(saved));
                 });
             }
             return ret;
@@ -177,7 +184,7 @@ public class DefaultMembershipService implements MembershipService {
         return requireMembership(identityId, organizationId)
                 // sync so the console's immediate re-query sees the change
                 .compose(membership -> membershipRepository.saveSync(membership.setEnabled(enabled).setUpdated(new Date())))
-                .mapEmpty();
+                .compose(membership -> enabled ? joined(membership) : left(identityId, organizationId));
     }
 
     @Override
@@ -190,8 +197,42 @@ public class DefaultMembershipService implements MembershipService {
                                                           .map(DelegatingParticipantIdentity::getId)
                                                           .map(identityRepository::deleteById)
                                                           .toList()))
+                // the graph before the record: a removal that fails leaves the member to be removed again
+                .compose(v -> left(identityId, organizationId))
+                .compose(v -> withdrawn(DomainUtil.authzMember(identityId, organizationId)))
                 // sync so the console's immediate re-query no longer shows the member
                 .compose(v -> membershipRepository.deleteByIdSync(Membership.idOf(identityId, organizationId)));
+    }
+
+    // An enabled membership of an organization is a member of it in the graph, which a grant to the organization's
+    // members reaches; the platform has no such relation
+    private Future<Void> joined(Membership membership) {
+        return membership.getOrganizationId() == null || !membership.isEnabled()
+                ? Future.succeededFuture()
+                : relationships.ensure(AuthzStoreService.PLATFORM, List.of(memberOf(membership.getIdentityId(), membership.getOrganizationId())));
+    }
+
+    private Future<Void> left(String identityId, String organizationId) {
+        return organizationId == null
+                ? Future.succeededFuture()
+                : relationships.remove(AuthzStoreService.PLATFORM, List.of(memberOf(identityId, organizationId)));
+    }
+
+    // The membership's user leaves every group and every grant, so an account joining again starts with none
+    private Future<Void> withdrawn(String user) {
+        return Future.all(relationships.readByUser(AuthzStoreService.PLATFORM, user, AuthzUtil.GROUP_TYPE),
+                          relationships.readByUser(AuthzStoreService.PLATFORM, user, AuthzUtil.ROLE_BINDING_TYPE))
+                     .compose(held -> {
+                         List<RelationshipTuple> all = new ArrayList<>(held.<List<RelationshipTuple>>resultAt(0));
+                         all.addAll(held.<List<RelationshipTuple>>resultAt(1));
+                         return relationships.remove(AuthzStoreService.PLATFORM, all);
+                     });
+    }
+
+    private static RelationshipTuple memberOf(String identityId, String organizationId) {
+        return new RelationshipTuple(DomainUtil.authzMember(identityId, organizationId),
+                                     AuthzUtil.MEMBER_RELATION,
+                                     AuthzUtil.object(AuthzUtil.ORGANIZATION_TYPE, organizationId));
     }
 
     private Future<Membership> requireMembership(String identityId, String organizationId) {

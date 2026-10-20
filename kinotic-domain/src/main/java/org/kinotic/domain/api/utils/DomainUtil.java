@@ -7,6 +7,8 @@ import org.kinotic.authz.api.model.Grant;
 import org.kinotic.authz.api.model.RelationshipTuple;
 import org.kinotic.authz.api.model.Resource;
 import org.kinotic.authz.api.model.RoleDefinition;
+import org.kinotic.authz.api.model.Subject;
+import org.kinotic.authz.api.model.SubjectKind;
 import org.kinotic.core.api.security.Participant;
 import org.kinotic.core.api.security.ParticipantConstants;
 import org.kinotic.core.api.utils.ZoneUtil;
@@ -33,6 +35,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.HexFormat;
@@ -127,6 +130,18 @@ public class DomainUtil {
     }
 
     /**
+     * The identity a user id of the authorization stores names: the account of a membership's
+     * {@code <accountId>@<organizationId>}, and any other user id as it is.
+     *
+     * @param userId the id of a {@code user} object
+     * @return the identity's id
+     */
+    public static String accountOf(String userId) {
+        int at = userId.indexOf('@');
+        return at < 0 ? userId : userId.substring(0, at);
+    }
+
+    /**
      * The id an object of the type has in the authorization stores. An application's and a project's id is unique
      * only within its organization, so theirs is qualified as {@code <organizationId>.<id>}; every other type's id
      * is unique on its own and kept as it is.
@@ -183,6 +198,39 @@ public class DomainUtil {
     }
 
     /**
+     * The tuple naming an object's parent, which a grant made on the parent reaches the object through:
+     * {@code <parent> <parent type> <child>}.
+     *
+     * @param parent the parent object, in {@code type:id} form
+     * @param child  the child object, in {@code type:id} form
+     * @return the containment tuple
+     */
+    public static RelationshipTuple containment(String parent, String child) {
+        return new RelationshipTuple(parent, AuthzUtil.typeOf(parent), child);
+    }
+
+    /**
+     * The tuples an application's user holds in its application's own store: the user is an end user of the
+     * application, and, for a user of a tenant, the tenant is placed under the application with the user as a
+     * member. The platform's store holds the first of them, the end user tuple, alone.
+     *
+     * @param user an application's user
+     * @return the tuples, the end user tuple first
+     */
+    public static List<RelationshipTuple> applicationUserTuples(UserParticipantIdentity user) {
+        Validate.notBlank(user.getApplicationId(), "user %s is not an application's user", user.getId());
+        String me = AuthzUtil.object(AuthzUtil.USER_TYPE, user.getId());
+        String application = authzApplication(user.getOrganizationId(), user.getApplicationId());
+        List<RelationshipTuple> ret = new ArrayList<>(List.of(new RelationshipTuple(me, AuthzUtil.END_USER_RELATION, application)));
+        if (user.getTenantId() != null) {
+            String tenant = AuthzUtil.object(AuthzUtil.TENANT_TYPE, user.getTenantId());
+            ret.add(containment(application, tenant));
+            ret.add(new RelationshipTuple(me, AuthzUtil.MEMBER_RELATION, tenant));
+        }
+        return ret;
+    }
+
+    /**
      * The two edges of a definition within a tenant, the object a tenant's user is checked on for the definition's
      * rows: the definition's, and the tenant's. No store holds tuples for the object, so a check on it is given
      * the edges.
@@ -210,14 +258,19 @@ public class DomainUtil {
     }
 
     /**
-     * A grant read from the authorization stores, its resource named as the resource's organization knows it.
+     * A grant read from the authorization stores, named as the resource's organization knows it: its resource by
+     * the resource's local id, and a member holding it by the member's account.
      *
      * @param grant the grant as the stores hold it
-     * @return the grant with the resource's local id
+     * @return the grant with local ids
      */
     public static Grant localGrant(Grant grant) {
         Resource resource = grant.resource();
-        return new Grant(grant.id(), grant.roleId(), grant.subject(), new Resource(resource.type(), localId(resource.type(), resource.id())));
+        Subject subject = grant.subject();
+        if (subject.kind() == SubjectKind.USER) {
+            subject = new Subject(SubjectKind.USER, accountOf(subject.id()));
+        }
+        return new Grant(grant.id(), grant.roleId(), subject, new Resource(resource.type(), localId(resource.type(), resource.id())));
     }
 
     /**

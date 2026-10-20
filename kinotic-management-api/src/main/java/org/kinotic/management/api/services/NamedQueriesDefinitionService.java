@@ -5,11 +5,14 @@ import org.kinotic.core.api.annotations.Publish;
 import org.kinotic.domain.api.services.ProjectScopedCrudService;
 import org.kinotic.domain.api.model.persistence.EntityDefinition;
 import org.kinotic.domain.api.model.persistence.NamedQueriesDefinition;
+import org.kinotic.idl.api.annotations.AuthzResource;
+import org.kinotic.idl.api.utils.AuthzUtil;
 
 /**
  * Created by Navíd Mitchell 🤪on 4/23/24.
  */
 @Publish
+@AuthzResource(value = AuthzUtil.ENTITY_DEFINITION_TYPE, parent = AuthzUtil.APPLICATION_TYPE)
 public interface NamedQueriesDefinitionService extends ProjectScopedCrudService<NamedQueriesDefinition, String> {
 
     /**
