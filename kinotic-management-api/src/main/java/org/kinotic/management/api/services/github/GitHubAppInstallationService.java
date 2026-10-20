@@ -41,7 +41,9 @@ public interface GitHubAppInstallationService {
      *                 May carry query params (e.g. {@code /projects?openNewProject=1})
      *                 to signal "what to do on arrival" to the destination page, or be an
      *                 absolute http(s) URL that returns the browser to another UI, such as
-     *                 one built on Kinotic that started the install. May be null.
+     *                 one built on Kinotic that started the install, on an origin
+     *                 {@code kinotic.domain.cors.allowedOriginPattern} allows. May be null.
+     * @throws IllegalArgumentException when {@code returnTo} is neither a path nor a URL on an allowed origin
      */
     Future<String> startInstall(String returnTo);
 

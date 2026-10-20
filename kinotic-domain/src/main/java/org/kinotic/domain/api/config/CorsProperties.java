@@ -1,4 +1,4 @@
-package org.kinotic.gateway.api.config;
+package org.kinotic.domain.api.config;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -6,6 +6,7 @@ import lombok.Setter;
 import lombok.experimental.Accessors;
 
 import java.util.Set;
+import java.util.regex.Pattern;
 
 @Getter
 @Setter
@@ -39,4 +40,22 @@ public class CorsProperties {
      * If true then allowed origins must not contain a wildcard "*"
      */
     private Boolean allowCredentials = null;
+
+    /**
+     * Whether a browser origin is one of the allowed origins.
+     *
+     * @param origin the origin, scheme and authority with no path, such as {@code https://portal.kinotic.ai}
+     * @return true when the origin fully matches {@link #getAllowedOriginPattern()}
+     */
+    public boolean allowsOrigin(String origin) {
+        return origin != null && Pattern.matches(originRegex(), origin);
+    }
+
+    /**
+     * The regex an allowed origin fully matches: {@link #getAllowedOriginPattern()}, with {@code *} standing for any
+     * origin.
+     */
+    public String originRegex() {
+        return "*".equals(allowedOriginPattern) ? ".*" : allowedOriginPattern;
+    }
 }
