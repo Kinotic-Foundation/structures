@@ -166,7 +166,7 @@ async function handleSubmit() {
 }
 
 /**
- * Sends the tab to the GitHub App install page with the applications page as the
+ * Sends the tab to the GitHub App install page with the landing page as the
  * return destination, so the new org can create projects immediately.
  */
 async function continueToGithub(): Promise<void> {
@@ -175,12 +175,12 @@ async function continueToGithub(): Promise<void> {
     // Full-tab redirect — a popup can't work here: after the round-trip through
     // github.com, COOP severs window.opener (see NewProjectSidebar.linkGitHub).
     // startInstall requires the org-scoped session userState.login() just opened.
-    const url = await Kinotic.githubAppInstallations.startInstall('/applications')
+    const url = await Kinotic.githubAppInstallations.startInstall('/')
     window.location.href = url
   } catch (err) {
     // Signup must never dead-end here; the user can link GitHub later from Organization Settings.
     displayError(err instanceof Error ? err.message : 'Could not start the GitHub install')
-    await KINOTIC_UI.navigate('/applications')
+    await KINOTIC_UI.navigate('/')
   }
 }
 
