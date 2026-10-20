@@ -15,6 +15,7 @@ import dev.openfga.sdk.errors.FgaApiValidationError;
 import dev.openfga.sdk.errors.ApiException;
 import io.vertx.core.Future;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.kinotic.authz.api.model.AuthzModel;
 import org.kinotic.authz.api.model.Consistency;
 import org.kinotic.authz.api.model.Grant;
@@ -37,6 +38,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.UUID;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class DefaultRelationshipService implements RelationshipService {
@@ -275,11 +277,25 @@ public class DefaultRelationshipService implements RelationshipService {
         return check(store, modelId, key, contextual, consistency).recover(e -> {
             // the engine refuses a check for what it names: a version of the store deleted and re-created under its
             // name since the caller read it, or a relation the version lacked when it was read and the newest has;
-            // the newest version is read and answers once, and refusing too, fails as itself
+            // the newest version is read and answers once
             Future<Boolean> ret;
             if (e instanceof FgaApiValidationError) {
                 ret = stores.refreshModelId(store)
-                            .compose(newest -> newest.equals(modelId) ? Future.failedFuture(e) : check(store, newest, key, contextual, consistency));
+                            .compose(newest -> newest.equals(modelId)
+                                    ? Future.failedFuture(e)
+                                    : check(store, newest, key, contextual, consistency))
+                            // a relation or type the newest version lacks is held by no one: a permission of a type
+                            // another store models, or of a service whose model the reconciler has yet to write
+                            .recover(refused -> {
+                                Future<Boolean> held;
+                                if (refused instanceof FgaApiValidationError) {
+                                    log.warn("The model of store {} cannot answer {}: {}", store, relationship, refused.getMessage());
+                                    held = Future.succeededFuture(false);
+                                } else {
+                                    held = Future.failedFuture(refused);
+                                }
+                                return held;
+                            });
             } else {
                 ret = Future.failedFuture(e);
             }

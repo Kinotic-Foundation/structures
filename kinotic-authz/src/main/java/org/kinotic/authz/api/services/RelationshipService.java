@@ -203,7 +203,7 @@ public interface RelationshipService {
      * @param relationship the user, relation and object to check
      * @param consistency  how current the answer must be
      * @param context      tuples held for this check only
-     * @return true when the relation is held
+     * @return true when the relation is held; false when the store's newest model has no such relation or type
      */
     Future<Boolean> check(String store, String modelId, RelationshipTuple relationship, Consistency consistency, List<RelationshipTuple> context);
 

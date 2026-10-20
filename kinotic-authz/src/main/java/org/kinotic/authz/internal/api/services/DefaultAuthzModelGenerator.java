@@ -120,7 +120,7 @@ public class DefaultAuthzModelGenerator implements AuthzModelGenerator {
     }
 
     /**
-     * The built-in roles: per type a viewer of its reading permissions, an editor of all but deleting, an admin
+     * The built-in roles: per type a viewer of its reading permissions, an editor of all but deleting and managing access, an admin
      * of everything on it and inside it, and the roles its services declare; and for a platform store the
      * application developer, everything inside an application but the application's own, the platform operator,
      * the platform's own permissions and the reading ones of everything on it, and the platform support, the
@@ -135,6 +135,8 @@ public class DefaultAuthzModelGenerator implements AuthzModelGenerator {
             Set<String> own = modelNames(type, type.permissions.keySet());
             Set<String> editing = new TreeSet<>(own);
             editing.remove(AuthzUtil.permissionName(type.name, AuthzUtil.CAN_DELETE));
+            // managing access would let an editor grant itself any role, the type's admin included
+            editing.remove(AuthzUtil.permissionName(type.name, AuthzUtil.CAN_MANAGE_ACCESS));
             role(ret, AuthzUtil.roleId(type.name, AuthzUtil.VIEWER), reading(type));
             role(ret, AuthzUtil.roleId(type.name, AuthzUtil.EDITOR), editing);
             role(ret, AuthzUtil.roleId(type.name, AuthzUtil.ADMIN), inside(type, types, carried, true, false));

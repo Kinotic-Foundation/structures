@@ -254,10 +254,9 @@ class OpenFgaIntegrationTest {
         RelationshipTuple reads = new RelationshipTuple("user:bob", "report_can_read", "tenant:t1");
         assertTrue(await(relationshipsElsewhere.check(store, modelId, reads, Consistency.HIGHER_CONSISTENCY)));
         assertTrue(await(relationshipService.check(store, await(storeService.modelId(store)), reads, Consistency.HIGHER_CONSISTENCY)));
-        // a relation no version has fails as the engine refuses it
-        assertThrows(ExecutionException.class,
-                     () -> await(relationshipService.check(store, grownModelId, new RelationshipTuple("user:bob", "nothing_can_read", "tenant:t1"),
-                                                           Consistency.HIGHER_CONSISTENCY)));
+        // a relation no version has is held by no one
+        assertFalse(await(relationshipService.check(store, grownModelId, new RelationshipTuple("user:bob", "nothing_can_read", "tenant:t1"),
+                                                    Consistency.HIGHER_CONSISTENCY)));
         await(storeService.deleteStore(store));
     }
 
