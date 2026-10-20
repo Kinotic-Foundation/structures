@@ -6,21 +6,18 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * The URLs the management server is reached at and the Turnstile site its open routes are guarded by,
- * {@code kinotic.managementServer.*}, set per deployment.
+ * The portal and OAuth issuer the management server's browser flows use and the Turnstile site its open routes are
+ * guarded by, {@code kinotic.managementServer.*}, set per deployment. The URL the management server's API is reached
+ * at is {@code kinotic.domain.managementApiBaseUrl}.
  */
 @Getter
 @Setter
 public class ManagementServerProperties {
 
-    /** Base URL of the management server's API as a browser reaches it: the base of its OIDC {@code redirect_uri}s. */
-    @NotBlank
-    private String apiBaseUrl;
-
     /**
      * Base URL of the management server's OAuth 2.1 surface as the internet reaches it. Set only where that differs from
-     * {@link #apiBaseUrl}: a development gateway whose OAuth surface is tunnelled while its OIDC callbacks stay
-     * on {@code localhost}.
+     * {@code kinotic.domain.managementApiBaseUrl}: a development gateway whose OAuth surface is tunnelled while its OIDC
+     * callbacks stay on {@code localhost}.
      */
     private String issuerBaseUrl;
 
@@ -32,8 +29,12 @@ public class ManagementServerProperties {
     @Valid
     private TurnstileProperties turnstile = new TurnstileProperties();
 
-    /** The OAuth issuer: {@link #issuerBaseUrl} where set, otherwise {@link #apiBaseUrl}. */
-    public String resolveIssuerBaseUrl() {
-        return issuerBaseUrl != null && !issuerBaseUrl.isBlank() ? issuerBaseUrl : apiBaseUrl;
+    /**
+     * The OAuth issuer: {@link #issuerBaseUrl} where set, otherwise {@code managementApiBaseUrl}.
+     *
+     * @param managementApiBaseUrl the management server's API base URL, {@code kinotic.domain.managementApiBaseUrl}
+     */
+    public String resolveIssuerBaseUrl(String managementApiBaseUrl) {
+        return issuerBaseUrl != null && !issuerBaseUrl.isBlank() ? issuerBaseUrl : managementApiBaseUrl;
     }
 }

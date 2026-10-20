@@ -6,6 +6,7 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.kinotic.domain.api.config.KinoticDomainProperties;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.PendingInvite;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
@@ -27,7 +28,6 @@ import org.kinotic.domain.api.rest.support.OidcFlowOrchestrator;
 import org.kinotic.domain.api.rest.support.OidcFlowPurpose;
 import org.kinotic.domain.api.rest.support.PendingFlow;
 import org.kinotic.domain.api.rest.SuppliesGatewayRoutes;
-import org.kinotic.managementserver.api.config.ManagementServerProperties;
 import org.springframework.stereotype.Component;
 
 import java.net.URLEncoder;
@@ -56,7 +56,7 @@ public class InviteHandler implements SuppliesGatewayRoutes, OidcFlowCompleter {
     private final OidcConfigurationService oidcConfigurationService;
     private final OidcFlowOrchestrator oidcFlowOrchestrator;
     private final AuthEndpointSupport authEndpointSupport;
-    private final ManagementServerProperties properties;
+    private final KinoticDomainProperties domainProperties;
 
     @Override
     public void mountRoutes(Router router) {
@@ -264,7 +264,7 @@ public class InviteHandler implements SuppliesGatewayRoutes, OidcFlowCompleter {
                              ret = Future.failedFuture(new OidcCallbackException(OidcErrorCodes.CONFIG_NOT_FOUND));
                          } else {
                              ret = oidcFlowOrchestrator.startInvitation(ctx, chosen,
-                                                                        OidcCallbacks.organizationCallbackUrl(properties.getApiBaseUrl(), chosen),
+                                                                        OidcCallbacks.organizationCallbackUrl(domainProperties.getDomain().getManagementApiBaseUrl(), chosen),
                                                                         invite.getOrganizationId(), token);
                          }
                          return ret;

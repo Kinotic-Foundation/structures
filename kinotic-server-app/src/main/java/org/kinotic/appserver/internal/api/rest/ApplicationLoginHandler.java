@@ -6,8 +6,8 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.kinotic.appserver.api.config.AppServerProperties;
 import org.kinotic.core.api.security.SessionBinding;
+import org.kinotic.domain.api.config.KinoticDomainProperties;
 import org.kinotic.domain.api.model.ApplicationKey;
 import org.kinotic.domain.api.model.TenantManagement;
 import org.kinotic.domain.api.model.security.ApplicationSocialOidcConfiguration;
@@ -54,7 +54,7 @@ public class ApplicationLoginHandler implements SuppliesGatewayRoutes {
     private final LocalAuthenticationService localAuthenticationService;
     private final OidcFlowOrchestrator oidcFlowOrchestrator;
     private final ApplicationAuthEndpointSupport authEndpointSupport;
-    private final AppServerProperties properties;
+    private final KinoticDomainProperties domainProperties;
 
     @Override
     public void mountRoutes(Router router) {
@@ -209,6 +209,6 @@ public class ApplicationLoginHandler implements SuppliesGatewayRoutes {
 
     // the application's API host is the callback's base, so the IdP returns the browser to the host it left
     private String callbackUrl(ApplicationKey applicationKey, String configId) {
-        return OidcCallbacks.applicationCallbackUrl(applicationKey, properties.getApiBaseUrl(), configId);
+        return OidcCallbacks.applicationCallbackUrl(applicationKey, domainProperties.getDomain().getAppApiBaseUrl(), configId);
     }
 }

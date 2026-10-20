@@ -179,12 +179,9 @@ locals {
       hostnames   = [local.azure.api_hostname]
       description = "the organizations' API: the portal, the CLI, MCP hosts, the GitHub webhook"
       env = {
-        KINOTIC_MANAGEMENTSERVER_APIBASEURL     = "https://${local.azure.api_hostname}"
         KINOTIC_MANAGEMENTSERVER_PORTALBASEURL  = "https://${local.azure.portal_hostname}"
         # the emailed verification and invite links open in the portal
         KINOTIC_DOMAIN_EMAIL_LINKBASEURL = "https://${local.azure.portal_hostname}"
-        # an application's and a tenant's OIDC configurations return to the application's API host
-        KINOTIC_MANAGEMENTAPI_APPAPIBASEURL = "https://${local.azure.apps_api_domain}"
         KINOTIC_MANAGEMENTAPI_LOKIURL    = local.service_urls["http://loki:3100"]
         KINOTIC_MANAGEMENTAPI_TEMPOURL   = local.service_urls["http://tempo:3200"]
         KINOTIC_MANAGEMENTAPI_MIMIRURL   = local.service_urls["http://mimir:9009"]
@@ -199,8 +196,6 @@ locals {
       env = {
         KINOTIC_SYSTEMSERVER_APIBASEURL     = "https://${local.azure.system_api_hostname}"
         KINOTIC_SYSTEMSERVER_CONSOLEBASEURL = "https://${local.azure.console_hostname}"
-        # What a UI build is handed: the app server as a browser reaches it
-        KINOTIC_SYSTEMAPI_DEPLOYMENT_APPAPIBASEURL = "https://${local.azure.apps_api_domain}"
         # Invites the member service this server hosts sends are accepted in the portal
         KINOTIC_DOMAIN_EMAIL_LINKBASEURL = "https://${local.azure.portal_hostname}"
         # What a workload dials, by the name its certificate carries, and the one destination its
@@ -222,7 +217,6 @@ locals {
       hostnames   = [local.azure.apps_api_domain, "*.${local.azure.apps_api_domain}"]
       description = "every application's API, at <organizationId>--<applicationId>.${local.azure.apps_api_domain}"
       env = {
-        KINOTIC_APPSERVER_APIBASEURL = "https://${local.azure.apps_api_domain}"
         # the app server provisions no organization's record, and holds no DNS token to do it with
         KINOTIC_DOMAIN_PUBLISHEDSITES_CLOUDFLARE_ENABLED = "false"
       }
@@ -242,6 +236,10 @@ locals {
     JAVA_TOOL_OPTIONS            = "-XX:MaxDirectMemorySize=512m -javaagent:/workspace/BOOT-INF/classes/opentelemetry-javaagent.jar --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.lang.invoke=ALL-UNNAMED"
     KINOTIC_MAX_OFF_HEAP_MEMORY  = "419430400"
     KINOTIC_DOMAIN_EMAIL_ENABLED = "true"
+
+    # The management server's API and every application's API host, as a browser reaches them
+    KINOTIC_DOMAIN_MANAGEMENTAPIBASEURL = "https://${local.azure.api_hostname}"
+    KINOTIC_DOMAIN_APPAPIBASEURL        = "https://${local.azure.apps_api_domain}"
 
     # The servers find each other over their private addresses and form one Ignite cluster
     KINOTIC_IGNITE_DISCOVERYTYPE  = "LOCAL"

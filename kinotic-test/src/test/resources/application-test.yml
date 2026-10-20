@@ -10,8 +10,10 @@ kinotic:
       appPrivateKey: "-"
       webhookSecret: "-"
       repoTemplate: "-"
-    # the bases of the callback URLs OwnedOidcConfigurationService gives; no test signs in through one
-    managementServerApiBaseUrl: http://localhost:9090
+  domain:
+    # the bases of the callback URLs OwnedOidcConfigurationService gives and of the URL a UI build is
+    # handed; no test signs in through one or deploys a UI
+    managementApiBaseUrl: http://localhost:9090
     appApiBaseUrl: http://localhost:58505
   maxNumberOfCoresToUse: 4
   systemApi:
@@ -23,7 +25,6 @@ kinotic:
         host: localhost
       appServer:
         host: localhost
-      appApiBaseUrl: http://localhost:58505
     # placeholder site config, validated at boot; no test deploys a UI
     uiDeployment:
       sitesDomain: apps.localhost

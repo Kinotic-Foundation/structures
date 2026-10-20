@@ -11,8 +11,8 @@ kinotic:
       # The management server's dev key: SecretNameDeriver must derive the same storage names on every
       # server. Dev-only value — production supplies this via Azure Key Vault.
       masterKey: 0qWH2oHEp27LLD7iBHEiABqJFf1q5GRYK6OdMc5Wdv4=
+    appApiBaseUrl: http://localhost:58505
   appServer:
-    apiBaseUrl: http://localhost:58505
     # An application UI's vite dev server on any local port signs its users in to the application
     # whose API host its proxy addresses
     localUiOriginPattern: "http:\\/\\/localhost:\\d+"

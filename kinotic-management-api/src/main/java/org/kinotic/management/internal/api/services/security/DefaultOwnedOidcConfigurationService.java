@@ -6,12 +6,12 @@ import org.apache.commons.lang3.Validate;
 import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.core.api.security.SecurityContext;
+import org.kinotic.domain.api.config.KinoticDomainProperties;
 import org.kinotic.domain.api.model.ApplicationScoped;
 import org.kinotic.domain.api.model.security.OwnedOidcConfiguration;
 import org.kinotic.domain.api.model.security.participant.OrganizationParticipant;
 import org.kinotic.domain.api.rest.support.OidcCallbacks;
 import org.kinotic.domain.api.services.security.OidcConfigurationService;
-import org.kinotic.management.api.config.ManagementApiProperties;
 import org.kinotic.management.api.services.security.OwnedOidcConfigurationService;
 import org.springframework.stereotype.Component;
 
@@ -21,7 +21,7 @@ public class DefaultOwnedOidcConfigurationService implements OwnedOidcConfigurat
 
     private final OidcConfigurationService oidcConfigurationService;
     private final SecurityContext securityContext;
-    private final ManagementApiProperties properties;
+    private final KinoticDomainProperties domainProperties;
 
     @Override
     public Future<Page<OwnedOidcConfiguration>> findAll(Pageable pageable) {
@@ -40,10 +40,10 @@ public class DefaultOwnedOidcConfigurationService implements OwnedOidcConfigurat
             String ret = null;
             if (configuration instanceof ApplicationScoped<?> scoped) {
                 ret = OidcCallbacks.applicationCallbackUrl(scoped.applicationKey(),
-                                                           properties.getAppApiBaseUrl(),
+                                                           domainProperties.getDomain().getAppApiBaseUrl(),
                                                            configuration.getId());
             } else if (configuration != null) {
-                ret = OidcCallbacks.ssoCallbackUrl(properties.getManagementServerApiBaseUrl(),
+                ret = OidcCallbacks.ssoCallbackUrl(domainProperties.getDomain().getManagementApiBaseUrl(),
                                                    configuration.getId());
             }
             return ret;

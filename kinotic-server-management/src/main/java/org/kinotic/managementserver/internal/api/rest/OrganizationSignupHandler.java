@@ -6,6 +6,7 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.kinotic.domain.api.config.KinoticDomainProperties;
 import org.kinotic.domain.api.model.Organization;
 import org.kinotic.domain.api.rest.support.*;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
@@ -16,7 +17,6 @@ import org.kinotic.domain.api.rest.support.OidcCallbacks;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.services.security.SignUpService;
 import org.kinotic.domain.api.rest.SuppliesGatewayRoutes;
-import org.kinotic.managementserver.api.config.ManagementServerProperties;
 import org.springframework.stereotype.Component;
 
 import java.net.URLEncoder;
@@ -37,7 +37,7 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes, OidcFlo
     private final SignUpService signUpService;
     private final OidcFlowOrchestrator oidcFlowOrchestrator;
     private final AuthEndpointSupport authEndpointSupport;
-    private final ManagementServerProperties properties;
+    private final KinoticDomainProperties domainProperties;
 
     @Override
     public void mountRoutes(Router router) {
@@ -120,7 +120,7 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes, OidcFlo
      */
     private void handleSocialStart(RoutingContext ctx) {
         authEndpointSupport.handleSocialStart(ctx, config -> oidcFlowOrchestrator.startSignUp(
-                ctx, config, OidcCallbacks.socialCallbackUrl(properties.getApiBaseUrl(), config.getId())));
+                ctx, config, OidcCallbacks.socialCallbackUrl(domainProperties.getDomain().getManagementApiBaseUrl(), config.getId())));
     }
 
     @Override

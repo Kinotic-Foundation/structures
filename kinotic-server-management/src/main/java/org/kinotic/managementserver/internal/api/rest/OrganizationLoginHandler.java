@@ -9,6 +9,7 @@ import io.vertx.ext.web.handler.HttpException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.kinotic.core.api.security.SessionBinding;
+import org.kinotic.domain.api.config.KinoticDomainProperties;
 import org.kinotic.domain.api.exceptions.AccountDisabledException;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
@@ -65,6 +66,7 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
 
     private final AuthEndpointSupport authEndpointSupport;
     private final ManagementServerProperties properties;
+    private final KinoticDomainProperties domainProperties;
     private final ParticipantIdentityService identityService;
     private final MembershipService membershipService;
     private final OrganizationService organizationService;
@@ -278,7 +280,7 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
                   if (config == null) {
                       authEndpointSupport.respondError(ctx, 400, "The organization's login does not offer " + configId);
                   } else {
-                      authEndpointSupport.redirectToIdp(ctx, config, OidcCallbacks.organizationCallbackUrl(properties.getApiBaseUrl(), config), orgId, origin);
+                      authEndpointSupport.redirectToIdp(ctx, config, OidcCallbacks.organizationCallbackUrl(domainProperties.getDomain().getManagementApiBaseUrl(), config), orgId, origin);
                   }
               })
               .onFailure(err -> {
@@ -294,7 +296,7 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
      */
     private void handleSocialStart(RoutingContext ctx) {
         authEndpointSupport.handleSocialStart(ctx, config -> oidcFlowOrchestrator.startFlow(
-                ctx, config, OidcCallbacks.socialCallbackUrl(properties.getApiBaseUrl(), config.getId()), null, SessionBinding.origin(ctx)));
+                ctx, config, OidcCallbacks.socialCallbackUrl(domainProperties.getDomain().getManagementApiBaseUrl(), config.getId()), null, SessionBinding.origin(ctx)));
     }
 
     @Override

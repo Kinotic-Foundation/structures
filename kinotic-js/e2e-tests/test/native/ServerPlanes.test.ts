@@ -22,7 +22,7 @@ const OTHER_APP_ID = 'e2e-datastream'
 
 /**
  * The API host of one of the organization's applications, under the domain of the e2e stack's
- * kinotic.appServer.apiBaseUrl, which the stack's development profile sets to http://localhost:58505.
+ * kinotic.domain.appApiBaseUrl, which the e2e compose stack sets to http://localhost:58505.
  */
 function apiHost(applicationId: string): string {
     return `${E2E_ORGANIZATION_ID}--${applicationId}.localhost:58505`

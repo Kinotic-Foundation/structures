@@ -215,9 +215,9 @@ function managementServerYml(origin: string, app: CreatedApp): string {
 KINOTIC_AKV_GITHUB_PLATFORM: ${JSON.stringify(app.client_secret)}
 kinotic:
   managementServer:
-    apiBaseUrl: ${origin}
     portalBaseUrl: ${origin}
   domain:
+    managementApiBaseUrl: ${origin}
     email:
       linkBaseUrl: ${origin}
 ${githubYml(app)}`

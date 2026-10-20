@@ -4,9 +4,9 @@ import io.vertx.core.Future;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.net.HostAndPort;
 import lombok.RequiredArgsConstructor;
-import org.kinotic.appserver.api.config.AppServerProperties;
 import org.kinotic.core.api.security.Participant;
 import org.kinotic.core.api.security.SecurityService;
+import org.kinotic.domain.api.config.KinoticDomainProperties;
 import org.kinotic.domain.api.model.ApplicationKey;
 import org.kinotic.domain.api.utils.HostLabelUtil;
 import org.kinotic.domain.api.model.security.identity.MachineType;
@@ -31,7 +31,7 @@ import java.util.Map;
 public class ApplicationSecurityService implements SecurityService {
 
     private final CredentialAuthenticationService credentialAuthenticationService;
-    private final AppServerProperties properties;
+    private final KinoticDomainProperties domainProperties;
 
     @Override
     public Future<Participant> authenticate(Map<String, String> authenticationInfo) {
@@ -62,6 +62,6 @@ public class ApplicationSecurityService implements SecurityService {
                                         .findFirst()
                                         .orElse(null);
         HostAndPort authority = host != null ? HostAndPort.parseAuthority(host, -1) : null;
-        return authority != null ? HostLabelUtil.fromHost(authority.host(), properties.getApiBaseUrl()) : null;
+        return authority != null ? HostLabelUtil.fromHost(authority.host(), domainProperties.getDomain().getAppApiBaseUrl()) : null;
     }
 }
