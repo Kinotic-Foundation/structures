@@ -93,9 +93,17 @@ public class ServiceDirectoryEntryRepository extends AbstractRepository<ServiceD
     }
 
     /**
-     * Publishes the contracts of the given entries, leaving the liveness fields untouched so a re-registration
-     * never clobbers the {@code online} state the liveness owner maintains; a contract equal to the one stored
-     * leaves its entry as it is. Visible to search on completion.
+     * Publishes an entry's contract, leaving the liveness fields untouched so a re-registration never clobbers
+     * the {@code online} state the liveness owner maintains; a contract equal to the one stored leaves the entry
+     * as it is. Visible to search on completion.
+     */
+    public Future<Void> upsertEntry(ServiceDirectoryEntry entry) {
+        return upsertEntries(List.of(entry));
+    }
+
+    /**
+     * Publishes the contracts of the given entries as {@link #upsertEntry(ServiceDirectoryEntry)} does each.
+     * Visible to search on completion.
      */
     public Future<Void> upsertEntries(Collection<ServiceDirectoryEntry> entries) {
         Map<String, Map<String, Object>> paramsById = new HashMap<>();
@@ -127,9 +135,18 @@ public class ServiceDirectoryEntryRepository extends AbstractRepository<ServiceD
     }
 
     /**
-     * Sets the liveness of each existing entry to the state given for its id, as observed at the given time,
-     * touching only the liveness fields; an observation earlier than an entry's last verification leaves that
-     * entry as it is, and an id naming no entry is skipped. Visible to search on completion.
+     * Sets the liveness of an existing entry as observed at the given time, touching only the liveness
+     * fields; an observation earlier than the entry's last verification leaves it as it is. Visible to
+     * search on completion.
+     */
+    public Future<Void> setOnline(String entryId, boolean online, Instant when) {
+        return setOnline(Map.of(entryId, online), when);
+    }
+
+    /**
+     * Sets the liveness of each existing entry to the state given for its id, as
+     * {@link #setOnline(String, boolean, Instant)} does one. An id naming no entry is skipped. Visible to search
+     * on completion.
      */
     public Future<Void> setOnline(Map<String, Boolean> onlineByEntryId, Instant when) {
         Map<String, Map<String, Object>> paramsById = new HashMap<>();
@@ -148,7 +165,7 @@ public class ServiceDirectoryEntryRepository extends AbstractRepository<ServiceD
             b.source(sc -> sc.filter(f -> f.includes("id")));
         }).compose(entry -> entry == null
                 ? Future.succeededFuture()
-                : setOnline(Map.of(entry.getId(), online), when));
+                : setOnline(entry.getId(), online, when));
     }
 
     /**

@@ -27,8 +27,18 @@ public class ElasticServiceDirectoryStrategy implements ServiceDirectoryStrategy
     private final ServiceDirectoryEntryRepository repository;
 
     @Override
+    public Future<Void> upsertEntry(ServiceDirectoryEntry entry) {
+        return repository.upsertEntry(entry);
+    }
+
+    @Override
     public Future<Void> upsertEntries(Collection<ServiceDirectoryEntry> entries) {
         return repository.upsertEntries(entries);
+    }
+
+    @Override
+    public Future<Void> setOnline(String entryId, boolean online, Instant when) {
+        return repository.setOnline(entryId, online, when);
     }
 
     @Override
