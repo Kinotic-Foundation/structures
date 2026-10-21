@@ -8,13 +8,19 @@ import org.kinotic.grind.internal.model.RunCancelledException;
 import org.kinotic.grind.internal.model.SerializedState;
 import org.kinotic.grind.internal.model.JobNode;
 import org.kinotic.grind.internal.model.TaskNode;
+import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
+import io.vertx.core.internal.ContextInternal;
 import lombok.SneakyThrows;
+import org.apache.commons.lang3.Validate;
 import org.kinotic.grind.api.model.ExecutionStatus;
 import org.kinotic.grind.api.model.JobDefinition;
 import org.kinotic.grind.api.model.JobScope;
-import org.kinotic.grind.api.model.ProgressReporter;
+import org.kinotic.grind.api.model.TaskReporter;
+import org.kinotic.grind.api.model.TaskView;
+import org.kinotic.grind.api.model.ViewProducer;
 import org.kinotic.grind.api.model.TaskRecord;
 import org.kinotic.grind.api.model.Store;
 import org.kinotic.grind.api.model.StoreType;
@@ -23,6 +29,7 @@ import org.reactivestreams.Publisher;
 import org.springframework.context.ConfigurableApplicationContext;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
+import tools.jackson.databind.JsonNode;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,6 +37,7 @@ import java.util.Map;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -50,9 +58,6 @@ public class JobInterpreter {
     private final RunThreadFactory runThreads;
     // Serializes listener dispatch so parallel definitions cannot interleave callbacks
     private final Object dispatchLock = new Object();
-    // The task path executing on each thread, stamped around Task.execute so the scope's
-    // ProgressReporter can attribute reports; parallel children stamp their own threads
-    private final ThreadLocal<String> executingTaskPath = new ThreadLocal<>();
 
     public JobInterpreter(ConfigurableApplicationContext applicationContext,
                           String runId,
@@ -81,7 +86,6 @@ public class JobInterpreter {
             List<TaskRecord> staticTree = new ArrayList<>();
             collectRecords("", new DefinitionNode(0, rootDefinition), staticTree);
             notifyTasksDiscovered("0", staticTree, false);
-            rootScope.storeBean("progressReporter", progressReporter());
             seedInputs(rootScope);
             executeDefinition("0", rootScope, rootDefinition);
             notifyRunCompleted();
@@ -101,7 +105,7 @@ public class JobInterpreter {
     }
 
     private void executeDefinition(String path, DefaultJobContext parentScope, DefaultJobDefinition definition) {
-        notifyTaskStarted(path, definition.getDescription());
+        notifyTaskStarted(path, definition.getDescription(), null);
         boolean destroyOnExit = definition.getScope() == JobScope.CHILD;
         DefaultJobContext scope = destroyOnExit ? parentScope.createChild() : parentScope;
         try {
@@ -112,7 +116,7 @@ public class JobInterpreter {
                     executeChild(path, scope, child);
                 }
             }
-            notifyTaskCompleted(path, Store.none(), null, null, null);
+            notifyTaskCompleted(path, Store.none(), null, null, null, null);
         } catch (Throwable t) {
             handleTaskFailure(path, t);
         } finally {
@@ -141,65 +145,142 @@ public class JobInterpreter {
         boolean completedInOriginal = entry != null && !entry.dynamicTasks();
 
         if (completedInOriginal && node.store().getType() == StoreType.NONE) {
-            notifyTaskStarted(path, node.description());
-            notifyTaskCompleted(path, node.store(), null, null, null);
+            // a skipped task keeps what it showed and what it published when the original run completed it
+            SerializedState wired = entry.wireValue() != null ? new SerializedState(null, entry.wireValue()) : null;
+            notifyTaskStarted(path, node.description(), null);
+            notifyTaskCompleted(path, node.store(), null, null, wired, entry.view());
             return;
         }
-        if (completedInOriginal && node.store().getType() == StoreType.STATE && entry.value() != null) {
-            notifyTaskStarted(path, node.description());
-            String storedName = ScopeWriter.store(scope, node.store().getType(), node.store().getName(), entry.value());
-            SerializedState state = stateSerializer.serialize(node.description(), entry.value());
-            notifyTaskCompleted(path, node.store(), storedName, entry.value(), state);
-            return;
-        }
-
-        // RESULT reloads from its source of truth: the declared reload task when there is one,
-        // otherwise the task itself, which must then be safe to re-run
-        Task<?> taskToRun = completedInOriginal && node.store().getReloadTask() != null
-                ? node.store().getReloadTask() : node.task();
-        notifyTaskStarted(path, node.description());
         try {
-            Object raw = executeOnPath(path, taskToRun, scope);
-            if (raw instanceof Task<?> dynamicTask) {
-                // The dynamic task carries this task's store, so it stores the value
-                TaskNode dynamicNode = new TaskNode(1, dynamicTask, node.store());
-                discoverDynamic(path, dynamicNode);
-                executeTask(path + "/1", scope, dynamicNode);
-                notifyTaskCompleted(path, Store.none(), null, null, null);
-            } else if (raw instanceof JobDefinition dynamicDefinition) {
-                DefinitionNode dynamicNode = new DefinitionNode(1, (DefaultJobDefinition) dynamicDefinition);
-                discoverDynamic(path, dynamicNode);
-                executeDefinition(path + "/1", scope, dynamicNode.definition());
-                notifyTaskCompleted(path, Store.none(), null, null, null);
+            if (completedInOriginal && node.store().getType() == StoreType.STATE && entry.value() != null) {
+                replayState(path, scope, node, entry);
             } else {
-                Object value = awaitValue(raw);
-                String storedName = ScopeWriter.store(scope, node.store().getType(), node.store().getName(), value);
-                notifyTaskCompleted(path, node.store(), storedName, value, serializeIfNeeded(node, value));
+                runTask(path, scope, node, completedInOriginal);
             }
         } catch (Throwable t) {
             handleTaskFailure(path, t);
         }
     }
 
-    private Object executeOnPath(String path, Task<?> task, DefaultJobContext scope) throws Exception {
-        executingTaskPath.set(path);
+    /**
+     * Restores a completed task's durable state instead of executing it. Its declared views are
+     * built as an execution would build them, from the scope and the replayed value; a task that
+     * declares no result view ends on what it showed last when the original run completed it.
+     */
+    private void replayState(String path, DefaultJobContext scope, TaskNode node, ReplayEntry entry) {
+        startTask(path, scope, node);
+        String storedName = ScopeWriter.store(scope, node.store().getType(), node.store().getName(), entry.value());
+        SerializedState state = stateSerializer.serialize(node.description(), entry.value());
+        JsonNode view = node.resultView() != null
+                ? buildView(node, node.resultView(), entry.value(), scope)
+                : entry.view();
+        notifyTaskCompleted(path, node.store(), storedName, entry.value(), state, view);
+    }
+
+    private void runTask(String path, DefaultJobContext scope, TaskNode node, boolean completedInOriginal) throws Exception {
+        // RESULT reloads from its source of truth: the declared reload task when there is one,
+        // otherwise the task itself, which must then be safe to re-run
+        Task<?> taskToRun = completedInOriginal && node.store().getReloadTask() != null
+                ? node.store().getReloadTask() : node.task();
+        startTask(path, scope, node);
+        // the task executes in a scope of its own holding its TaskReporter, which stays in flight until
+        // the result is awaited so callbacks of the task's futures report for it; only a Task or
+        // JobDefinition the task returns directly is dynamic work, one a future completes with is a value
+        AtomicBoolean inFlight = new AtomicBoolean(true);
+        Object raw;
+        Object result;
         try {
-            return task.execute(scope);
+            raw = taskToRun.execute(scope.createTaskScope(taskReporter(path, node.description(), runContext(), inFlight)));
+            result = raw instanceof Task<?> || raw instanceof JobDefinition ? raw : awaitValue(raw);
         } finally {
-            executingTaskPath.remove();
+            inFlight.set(false);
+        }
+        if (raw instanceof Task<?> dynamicTask) {
+            // A dynamic task that declares no store of its own keeps the value as this task's store does
+            Store dynamicStore = dynamicTask.getStore() != null ? dynamicTask.getStore() : node.store();
+            TaskNode dynamicNode = new TaskNode(1, dynamicTask, dynamicStore);
+            discoverDynamic(path, dynamicNode);
+            executeTask(path + "/1", scope, dynamicNode);
+            notifyTaskCompleted(path, Store.none(), null, null, null, null);
+        } else if (raw instanceof JobDefinition dynamicDefinition) {
+            DefinitionNode dynamicNode = new DefinitionNode(1, (DefaultJobDefinition) dynamicDefinition);
+            discoverDynamic(path, dynamicNode);
+            executeDefinition(path + "/1", scope, dynamicNode.definition());
+            notifyTaskCompleted(path, Store.none(), null, null, null, null);
+        } else {
+            JsonNode view = buildView(node, node.resultView(), result, scope);
+            String storedName = ScopeWriter.store(scope, node.store().getType(), node.store().getName(), result);
+            notifyTaskCompleted(path, node.store(), storedName, result, serializeIfNeeded(node, result), view);
         }
     }
 
     /**
-     * The {@link ProgressReporter} every job scope carries: reports attach to the task
-     * executing on the calling thread, and a report from a thread no task is executing on -
-     * one the task spawned itself - is dropped.
+     * Reports the task started, with the view it declares for its start. A view that cannot be
+     * built fails the task once it is reported started, so its record shows where it failed.
      */
-    private ProgressReporter progressReporter() {
-        return (percentageComplete, message) -> {
-            String path = executingTaskPath.get();
-            if (path != null) {
-                notifyTaskProgress(path, percentageComplete, message);
+    private void startTask(String path, DefaultJobContext scope, TaskNode node) {
+        JsonNode view;
+        try {
+            view = buildView(node, node.startView(), null, scope);
+        } catch (RuntimeException e) {
+            notifyTaskStarted(path, node.description(), null);
+            throw e;
+        }
+        notifyTaskStarted(path, node.description(), view);
+    }
+
+    /**
+     * Builds a declared view as JSON, or returns null for none.
+     * @throws IllegalStateException when the scope holds no value of the view's source type, or the
+     *         view does not serialize
+     */
+    private JsonNode buildView(TaskNode node, ViewProducer producer, Object result, DefaultJobContext scope) {
+        JsonNode ret = null;
+        if (producer != null) {
+            Object source = null;
+            if (producer.source() != null) {
+                source = scope.getBeanOrNull(producer.source());
+                if (source == null) {
+                    throw new IllegalStateException("Task '" + node.description() + "' shows a view built from a "
+                            + producer.source().getSimpleName() + " but nothing in the job scope provides one");
+                }
+            }
+            ret = stateSerializer.serializeView(node.description(), producer.producer().apply(result, source));
+        }
+        return ret;
+    }
+
+    // A duplicate of the run context shares the run's task, so it resolves to the context it wraps
+    private Context runContext() {
+        Context current = Vertx.currentContext();
+        return current instanceof ContextInternal internal ? internal.unwrap() : current;
+    }
+
+    /**
+     * The {@link TaskReporter} one task is given: its reports attach to that task while it is in
+     * flight, from its body or a callback dispatched on the run context it executes on.
+     */
+    private TaskReporter taskReporter(String path, String description, Context context, AtomicBoolean inFlight) {
+        return new TaskReporter() {
+            @Override
+            public void progress(int percentageComplete, String message) {
+                if (accepts()) {
+                    notifyTaskProgress(path, percentageComplete, message);
+                }
+            }
+
+            @Override
+            public void view(TaskView<?> view) {
+                Validate.notNull(view, "view cannot be null");
+                if (accepts()) {
+                    notifyTaskViewed(path, stateSerializer.serializeView(description, view));
+                }
+            }
+
+            // a report blocks the caller on the ledger write, which only the run's own virtual-thread
+            // context may do, so a report from a thread the task spawned is dropped
+            private boolean accepts() {
+                return inFlight.get() && runContext() == context;
             }
         };
     }
@@ -331,6 +412,11 @@ public class JobInterpreter {
      */
     @SneakyThrows
     private void handleTaskFailure(String path, Throwable error) {
+        // a task whose blocking call the cancellation interrupted fails with an exception of its own,
+        // and is cancelled all the same
+        if (!(error instanceof RunCancelledException) && RunThread.cancelled()) {
+            throw new RunCancelledException();
+        }
         if (!(error instanceof RunCancelledException)) {
             notifyTaskFailed(path, error);
         }
@@ -356,11 +442,14 @@ public class JobInterpreter {
                                             .setTaskPath(path)
                                             .setDescription(node.description())
                                             .setStatus(ExecutionStatus.PENDING);
-        // A store named in the definition is a fact of the task, not of its completion:
-        // recorded now so a watcher can tell the tasks apart by what they will store
-        if (node instanceof TaskNode taskNode && taskNode.store().getName() != null) {
-            record.setStoreType(taskNode.store().getType())
-                  .setStoredName(taskNode.store().getName());
+        if (node instanceof TaskNode taskNode) {
+            record.setIcon(taskNode.icon());
+            // A store named in the definition is a fact of the task, not of its completion:
+            // recorded now so a watcher can tell the tasks apart by what they will store
+            if (taskNode.store().getName() != null) {
+                record.setStoreType(taskNode.store().getType())
+                      .setStoredName(taskNode.store().getName());
+            }
         }
         collected.add(record);
         if (node instanceof DefinitionNode definitionNode) {
@@ -382,9 +471,9 @@ public class JobInterpreter {
         }
     }
 
-    private void notifyTaskStarted(String taskPath, String description) {
+    private void notifyTaskStarted(String taskPath, String description, JsonNode view) {
         synchronized (dispatchLock) {
-            listeners.forEach(listener -> listener.taskStarted(taskPath, description));
+            listeners.forEach(listener -> listener.taskStarted(taskPath, description, view));
         }
     }
 
@@ -394,11 +483,17 @@ public class JobInterpreter {
         }
     }
 
+    private void notifyTaskViewed(String taskPath, JsonNode view) {
+        synchronized (dispatchLock) {
+            listeners.forEach(listener -> listener.taskViewed(taskPath, view));
+        }
+    }
+
     private void notifyTaskCompleted(String taskPath, Store store, String storedName,
-                                     Object storedValue, SerializedState serializedState) {
+                                     Object storedValue, SerializedState serializedState, JsonNode view) {
         synchronized (dispatchLock) {
             listeners.forEach(listener -> listener.taskCompleted(taskPath, store, storedName,
-                                                                 storedValue, serializedState));
+                                                                 storedValue, serializedState, view));
         }
     }
 

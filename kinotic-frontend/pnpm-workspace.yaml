@@ -8,9 +8,9 @@ packages:
 catalog:
   '@kinotic-ai/core': ^5.0.0-beta.24
   '@kinotic-ai/idl': ^5.0.0-beta.1
-  '@kinotic-ai/management-api': ^5.0.0-beta.58
+  '@kinotic-ai/management-api': ^5.0.0-beta.60
   '@kinotic-ai/persistence': ^5.0.0-beta.10
-  '@kinotic-ai/system-api': ^5.0.0-beta.26
+  '@kinotic-ai/system-api': ^5.0.0-beta.27
 
 allowBuilds:
   '@tailwindcss/oxide': true

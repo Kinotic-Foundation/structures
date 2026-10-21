@@ -112,12 +112,13 @@ public class Store {
 
     /**
      * Publishes the completed value to watchers of the run, serialized as JSON onto the run's
-     * {@code TaskCompletedEvent}. Publication rides the event stream only - a watcher joining
-     * while the run executes replays it, and what outlives the run is decided by the
-     * {@link StoreType} alone. Independent of that axis: a result store can publish without
-     * being durable, durable state stays private unless it opts in, and a {@link #none()}
-     * store can publish a value that exists only for observers - never entering the job
-     * scope, and gone when a resume skips the task. The value must be JSON-serializable.
+     * {@code TaskCompletedEvent} and kept on the task's {@link TaskRecord} as its
+     * {@code wireValue}, so watchers read it while the run executes and after it has ended; a
+     * resume that skips the task publishes it again. Independent of the {@link StoreType}, which
+     * decides what a resume replays: a result store can publish without being durable, durable
+     * state reaches watchers only when it opts in, and a {@link #none()} store can publish a value
+     * that exists only for observers, never entering the job scope. The value must be
+     * JSON-serializable, and reaches every watcher of the run.
      * @return a store that publishes its value
      */
     public Store wire() {

@@ -37,6 +37,14 @@ public class RunThread {
     }
 
     /**
+     * @return true when the run body executing on the calling thread has been cancelled
+     */
+    public static boolean cancelled() {
+        Future<Void> cancellation = CANCELLATION.get();
+        return cancellation != null && cancellation.failed();
+    }
+
+    /**
      * Awaits the given future on the calling run thread, parking the thread until the future
      * completes or the run is cancelled.
      * @param future to await

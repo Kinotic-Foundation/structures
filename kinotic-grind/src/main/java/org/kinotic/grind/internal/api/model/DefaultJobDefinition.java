@@ -68,14 +68,8 @@ public class DefaultJobDefinition implements JobDefinition {
 
     @Override
     public JobDefinition task(Task<?> task) {
-        tasks.add(new TaskNode(tasks.size() + 1, task, Store.none()));
-        return this;
-    }
-
-    @Override
-    public JobDefinition task(Task<?> task, Store store) {
-        Validate.notNull(store, "store cannot be null");
-        tasks.add(new TaskNode(tasks.size() + 1, task, store));
+        Validate.notNull(task, "task cannot be null");
+        tasks.add(new TaskNode(tasks.size() + 1, task, task.getStore() != null ? task.getStore() : Store.none()));
         return this;
     }
 
