@@ -36,8 +36,8 @@ function stompHandshake(url: string, token: string): Promise<number | 'open'> {
  * endpoint enforces on a client_id, and the device grant the CLI logs in with.
  *
  * Set KINOTIC_E2E_CODEX_OAUTH=true to exercise authorization-code consent and PKCE using
- * Codex's public metadata document. This requires outbound HTTPS access to chatgpt.com
- * from the server, with the Codex client enabled in its OAuth allowlist.
+ * Codex's public metadata document against the management server, the one server whose OAuth
+ * allowlist admits Codex. This requires outbound HTTPS access to chatgpt.com from that server.
  */
 describe('Kinotic JS', () => {
 

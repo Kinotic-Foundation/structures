@@ -5,8 +5,6 @@ kinotic:
       # Clients permitted to start an authorization-code flow, by Client ID Metadata Document URL.
       # Listing any client closes the endpoint to every client not listed.
       allowedClientIds:
-        # Codex
-        - https://chatgpt.com/oauth/codex/client.json
         # Claude Code
         - https://claude.ai/oauth/claude-code-client-metadata
         # Claude web, desktop, and mobile custom connectors
