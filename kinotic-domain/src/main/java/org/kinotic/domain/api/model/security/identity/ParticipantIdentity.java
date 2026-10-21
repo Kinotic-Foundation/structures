@@ -13,13 +13,13 @@ import java.util.Date;
 /**
  * A persisted identity that can authenticate and become a Participant, at any scope layer of
  * the IAM system. The concrete subtype states what kind of principal it is —
- * {@link UserParticipantIdentity} for a person, {@link DelegatingParticipantIdentity} for a
- * client acting on a person's behalf, {@link MachineParticipantIdentity} for a non-human
+ * a {@link UserParticipantIdentity} subtype for a person of one scope, {@link DelegatingParticipantIdentity}
+ * for a client acting on a person's behalf, {@link MachineParticipantIdentity} for a non-human
  * caller with its own credential — and carries the fields only that kind has. The scope
  * is encoded structurally by which of {@link #organizationId} / {@link #applicationId} is set:
  * <ul>
- *   <li>both null → SYSTEM for a machine or delegate (the platform's own); for a person, an account
- *       with no scope of its own, which acts in the scopes its {@link Membership}s name</li>
+ *   <li>both null → SYSTEM, the platform's own; an {@link OrganizationUserParticipantIdentity} too carries
+ *       neither, since it acts in the organizations its {@link OrganizationMembership}s name</li>
  *   <li>{@code organizationId} set, {@code applicationId} null → ORGANIZATION</li>
  *   <li>both set → APPLICATION (a user of an Application owned by an Organization)</li>
  * </ul>
@@ -32,7 +32,9 @@ import java.util.Date;
 @NoArgsConstructor
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXISTING_PROPERTY, property = "type")
 @JsonSubTypes({
-        @JsonSubTypes.Type(value = UserParticipantIdentity.class, name = "USER"),
+        @JsonSubTypes.Type(value = SystemUserParticipantIdentity.class, name = "SYSTEM_USER"),
+        @JsonSubTypes.Type(value = OrganizationUserParticipantIdentity.class, name = "ORGANIZATION_USER"),
+        @JsonSubTypes.Type(value = ApplicationUserParticipantIdentity.class, name = "APPLICATION_USER"),
         @JsonSubTypes.Type(value = DelegatingParticipantIdentity.class, name = "DELEGATE"),
         @JsonSubTypes.Type(value = MachineParticipantIdentity.class, name = "MACHINE")
 })

@@ -52,7 +52,7 @@ describe('Organization login routes', () => {
 
     it('refuses the member at an organization it does not belong to, with the generic 401', async () => {
         expect((await login('nobody')).status).toBe(401)
-        // the platform membership's slot is no organization's
+        // the platform's own id names no organization
         expect((await login('system')).status).toBe(401)
         expect((await login(E2E_ORGANIZATION_ID, E2E_ORG_USER_EMAIL, 'wrong-password')).status).toBe(401)
     })

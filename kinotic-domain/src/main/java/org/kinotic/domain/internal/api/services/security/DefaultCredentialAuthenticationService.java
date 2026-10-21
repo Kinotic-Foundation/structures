@@ -9,6 +9,7 @@ import org.kinotic.core.api.exceptions.AuthenticationException;
 import org.kinotic.core.api.security.Participant;
 import org.kinotic.domain.api.model.security.identity.MachineParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.ParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 import org.kinotic.domain.api.services.security.CredentialAuthenticationService;
 import org.kinotic.domain.api.services.security.LocalAuthenticationService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
@@ -28,9 +29,8 @@ import java.util.function.BiPredicate;
  * <ol>
  *   <li><b>Client credentials</b> — {@code clientId}/{@code clientSecret} upgrade headers. A {@code clientId}
  *       containing {@code @} is a user email: with an {@code applicationId} header, an application user's,
- *       checked in that application; without one, an account's, which acts in the organization the
- *       {@code organizationId} header names, or in the platform when there is none, through its membership
- *       there. Any other {@code clientId} is a {@link MachineParticipantIdentity} id, whose scope comes from
+ *       checked in that application; with an {@code organizationId} header alone, an organization user's, which
+ *       acts in that organization through its membership there; with neither, a system user's. Any other {@code clientId} is a {@link MachineParticipantIdentity} id, whose scope comes from
  *       the identity itself and must agree with the scope headers when they are supplied. Both verify the
  *       bcrypt secret hash.</li>
  *   <li><b>Kinotic JWT</b> — {@code Authorization: Bearer <jwt>} header. The JWT was minted by
@@ -117,10 +117,10 @@ public class DefaultCredentialAuthenticationService implements CredentialAuthent
 
     /**
      * Authenticates a user via email and password: an application's user within the application the headers
-     * select, otherwise an account, which then acts through its membership of the organization the header
-     * names, or of the platform. Every failure — unknown email, wrong password, disabled account, no
-     * password, no membership — is the same generic error, matching the machine path: the upgrade headers
-     * get no account oracle.
+     * select, an organization user, which then acts through its membership of the organization the header
+     * names, or a system user when the headers name no scope. Every failure — unknown email, wrong password,
+     * disabled user, no password, no membership — is the same generic error, matching the machine path: the
+     * upgrade headers get no account oracle.
      */
     private Future<AuthenticatedIdentity> authenticateEmailPassword(String organizationId,
                                                             String applicationId,
@@ -130,9 +130,15 @@ public class DefaultCredentialAuthenticationService implements CredentialAuthent
             return Future.failedFuture(new AuthenticationException("clientId and clientSecret headers are required for credential authentication"));
         }
 
-        // an account is looked up without scope; the organization header selects its membership
-        String userOrganizationId = applicationId != null ? organizationId : null;
-        return localAuthenticationService.authenticateLocal(email, password, userOrganizationId, applicationId)
+        Future<? extends UserParticipantIdentity> verified;
+        if (applicationId != null) {
+            verified = localAuthenticationService.authenticateApplicationUser(email, password, organizationId, applicationId);
+        } else if (organizationId != null) {
+            verified = localAuthenticationService.authenticateOrganizationUser(email, password);
+        } else {
+            verified = localAuthenticationService.authenticateSystemUser(email, password);
+        }
+        return verified
                      .compose(user -> user == null
                              ? Future.succeededFuture()
                              : identityService.resolveParticipant(user, organizationId, applicationId)

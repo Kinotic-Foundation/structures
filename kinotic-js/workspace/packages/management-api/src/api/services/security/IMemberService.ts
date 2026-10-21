@@ -29,15 +29,15 @@ export interface IMemberService {
     searchMembers(searchText: string, applicationId: string | null, pageable: Pageable): Promise<IterablePage<Member>>
 
     /**
-     * Adds a person to the organization by email. An address with no account yet gets one, with no sign-in method,
-     * and its membership at once, so the person is listed as pending; with sendInvitation an invitation is emailed,
-     * whose acceptance claims the account, and without one the person signs in through one of the organization's own
-     * providers, which claims the account on the first sign-in, so the organization must have one. An address that
-     * already has an account is emailed an invitation whatever sendInvitation says, since joining needs its holder's
-     * acceptance, and joins once accepted. Rejects an address that is already a member, one an invitation is already
-     * pending for, or an address with no account when no invitation is sent and the organization has no provider of
-     * its own. Returns the member as listed, pending until they first sign in; for an address that already had an
-     * account, a pending member with no id yet.
+     * Adds a person to the organization by email. An address with no organization user yet gets one, with no sign-in
+     * method, and its membership at once, so the person is listed as pending; with sendInvitation an invitation is
+     * emailed, whose acceptance claims the organization user, and without one the person signs in through one of the
+     * organization's own providers, which claims the organization user on the first sign-in, so the organization must
+     * have one. An address that already has an organization user is emailed an invitation whatever sendInvitation
+     * says, since joining needs its holder's acceptance, and joins once accepted. Rejects an address that is already a
+     * member, one an invitation is already pending for, or an address with no organization user when no invitation is
+     * sent and the organization has no provider of its own. Returns the member as listed, pending until they first
+     * sign in; for an address that already had an organization user, a pending member with no id yet.
      */
     addMember(email: string, displayName: string | null, sendInvitation: boolean): Promise<Member>
 
@@ -61,8 +61,8 @@ export interface IMemberService {
     setMemberEnabled(userId: string, enabled: boolean): Promise<void>
 
     /**
-     * Removes a member of the caller's organization: the account's membership, and the account itself when no
-     * sign-in method signs it in and no other membership remains; or an application user with its stored credential.
+     * Removes a member of the caller's organization: the organization user's membership, and the organization user
+     * itself when no sign-in method signs it in and no other membership remains; or an application user with its stored credential.
      * Callers cannot remove themselves.
      */
     removeMember(userId: string): Promise<void>

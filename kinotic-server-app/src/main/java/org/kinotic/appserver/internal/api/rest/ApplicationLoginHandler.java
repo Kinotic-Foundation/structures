@@ -13,7 +13,7 @@ import org.kinotic.domain.api.model.TenantManagement;
 import org.kinotic.domain.api.model.security.ApplicationSocialOidcConfiguration;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.TenantOidcConfiguration;
-import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.ApplicationUserParticipantIdentity;
 import org.kinotic.domain.api.repositories.ApplicationRepository;
 import org.kinotic.domain.api.rest.SuppliesGatewayRoutes;
 import org.kinotic.domain.api.rest.support.CallbackResult;
@@ -31,7 +31,7 @@ import org.springframework.stereotype.Component;
 /**
  * Login routes for end-users of an application built on Kinotic, served at the application's own API host.
  * Distinct from the org-login handler: the user is logging into an application's own user base (an
- * APP-scope {@link UserParticipantIdentity} — {@code organizationId} + {@code applicationId} both set),
+ * {@link ApplicationUserParticipantIdentity} — {@code organizationId} + {@code applicationId} both set),
  * not into the platform-managed org admin surface. The application is the one whose API host the request
  * was addressed to, a login is made only from a page that is one of that application's UIs, and a login
  * from one of a tenant's sites, or one naming a tenant, is to that tenant: it admits the tenant's users and
@@ -134,7 +134,7 @@ public class ApplicationLoginHandler implements SuppliesGatewayRoutes {
         String tenantId = authEndpointSupport.readJsonBody(ctx).getString("tenantId");
         authEndpointSupport.loginScope(ctx, tenantId)
               .onSuccess(scope -> authEndpointSupport.handlePasswordLogin(ctx,
-                      (email, password) -> localAuthenticationService.authenticateLocal(
+                      (email, password) -> localAuthenticationService.authenticateApplicationUser(
                               email, password, scope.application().organizationId(), scope.application().applicationId())
                                                                        .map(user -> scope.memberOf(user) == null ? null : DomainUtil.createParticipant(user))))
               .onFailure(err -> fail(ctx, err, "Failed to sign in"));
@@ -168,17 +168,17 @@ public class ApplicationLoginHandler implements SuppliesGatewayRoutes {
                                   CallbackResult<OidcConfiguration> result,
                                   LoginScope scope) {
         authEndpointSupport.completeOidcLogin(ctx, result,
-                sub -> identityService.findByOidcIdentity(result.config().getId(), sub, scope.application().organizationId(),
-                                                         scope.application().applicationId())
+                sub -> identityService.findApplicationUserByOidcIdentity(result.config().getId(), sub, scope.application().organizationId(),
+                                                                        scope.application().applicationId())
                                       .map(scope::memberOf),
                 () -> newUserOf(scope, result.config()));
     }
 
     // the unsaved user an unknown identity becomes, or null when the scope admits no new user: a tenant admits one
     // through its own configuration only, and an application only while the platform assigns the user's tenant
-    private Future<UserParticipantIdentity> newUserOf(LoginScope scope, OidcConfiguration config) {
+    private Future<ApplicationUserParticipantIdentity> newUserOf(LoginScope scope, OidcConfiguration config) {
         ApplicationKey applicationKey = scope.application();
-        Future<UserParticipantIdentity> ret;
+        Future<ApplicationUserParticipantIdentity> ret;
         if (scope.tenantId() != null) {
             ret = Future.succeededFuture(config instanceof TenantOidcConfiguration ? newUser(applicationKey, scope.tenantId()) : null);
         } else {
@@ -189,8 +189,8 @@ public class ApplicationLoginHandler implements SuppliesGatewayRoutes {
         return ret;
     }
 
-    private static UserParticipantIdentity newUser(ApplicationKey applicationKey, String tenantId) {
-        UserParticipantIdentity ret = new UserParticipantIdentity();
+    private static ApplicationUserParticipantIdentity newUser(ApplicationKey applicationKey, String tenantId) {
+        ApplicationUserParticipantIdentity ret = new ApplicationUserParticipantIdentity();
         ret.setOrganizationId(applicationKey.organizationId())
            .setApplicationId(applicationKey.applicationId())
            .setTenantId(tenantId);

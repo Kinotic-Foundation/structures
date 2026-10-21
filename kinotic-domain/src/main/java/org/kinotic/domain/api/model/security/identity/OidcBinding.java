@@ -9,11 +9,12 @@ import org.kinotic.core.api.crud.Identifiable;
 import java.util.Date;
 
 /**
- * A sign-in method of a {@link UserParticipantIdentity}: the identity a provider asserts for the person,
- * the {@code sub} claim under one OIDC configuration, bound to the user it signs in. A user may hold any
- * number of bindings beside its password. A provider identity is bound to at most one account, and to at
- * most one user of each application, so a person signs in to several applications with the same Google
- * identity while the platform's registration for Google is one configuration for all of them.
+ * A sign-in method of an {@link OrganizationUserParticipantIdentity} or an {@link ApplicationUserParticipantIdentity}:
+ * the identity a provider asserts for the person, the {@code sub} claim under one OIDC configuration, bound to the
+ * user it signs in. A user may hold any number of bindings beside its password. A provider identity is bound to at
+ * most one organization user, and to at most one user of each application, so a person signs in to several
+ * applications with the same Google identity while the platform's registration for Google is one configuration for
+ * all of them. A system user signs in with a password alone and holds no binding.
  *
  * <p>The id is derived from the configuration, the subject and the user's scope ({@link #idOf}), so a
  * callback resolves a binding by a get, which sees a binding the moment it is written.
@@ -29,10 +30,10 @@ public class OidcBinding implements Identifiable<String> {
     /** The user the provider identity signs in. */
     private String identityId;
 
-    /** The organization of the application whose user is bound, or {@code null} for an account. */
+    /** The organization of the application whose user is bound, or {@code null} for an organization user. */
     private String organizationId;
 
-    /** The application whose user is bound, or {@code null} for an account. */
+    /** The application whose user is bound, or {@code null} for an organization user. */
     private String applicationId;
 
     /** The OIDC configuration the provider identity was asserted under. */
@@ -45,7 +46,7 @@ public class OidcBinding implements Identifiable<String> {
 
     /**
      * The id of the binding of {@code subject} under configuration {@code oidcConfigId} to a user of the
-     * scope {@code (organizationId, applicationId)}: {@code <oidcConfigId>:<subject>} for an account, with
+     * scope {@code (organizationId, applicationId)}: {@code <oidcConfigId>:<subject>} for an organization user, with
      * {@code <organizationId>/<applicationId>/} in front for an application's user.
      */
     public static String idOf(String oidcConfigId, String subject, String organizationId, String applicationId) {

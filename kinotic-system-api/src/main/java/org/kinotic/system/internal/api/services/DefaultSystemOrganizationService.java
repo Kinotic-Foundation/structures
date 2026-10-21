@@ -8,7 +8,7 @@ import org.kinotic.domain.api.model.Application;
 import org.kinotic.domain.api.model.Organization;
 import org.kinotic.management.api.model.Project;
 import org.kinotic.domain.api.model.security.Member;
-import org.kinotic.domain.api.services.security.MembershipService;
+import org.kinotic.domain.api.services.security.OrganizationMembershipService;
 import org.kinotic.domain.api.services.OrganizationService;
 import org.kinotic.domain.api.services.security.InviteService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
@@ -25,7 +25,7 @@ public class DefaultSystemOrganizationService implements SystemOrganizationServi
     private final ApplicationRepository applicationRepository;
     private final ProjectRepository projectRepository;
     private final ParticipantIdentityService identityService;
-    private final MembershipService membershipService;
+    private final OrganizationMembershipService membershipService;
     private final InviteService inviteService;
     private final OrganizationService organizationService;
 
@@ -66,7 +66,7 @@ public class DefaultSystemOrganizationService implements SystemOrganizationServi
         // an application's members are its users
         return applicationId == null
                 ? membershipService.findMembers(organizationId, pageable)
-                : identityService.findUsersByScope(organizationId, applicationId, pageable).map(page -> page.map(Member::of));
+                : identityService.findApplicationUsers(organizationId, applicationId, pageable).map(page -> page.map(Member::of));
     }
 
     @Override
@@ -76,7 +76,7 @@ public class DefaultSystemOrganizationService implements SystemOrganizationServi
                                               Pageable pageable) {
         return applicationId == null
                 ? membershipService.searchMembers(searchText, organizationId, pageable)
-                : identityService.searchUsersByScope(searchText, organizationId, applicationId, pageable).map(page -> page.map(Member::of));
+                : identityService.searchApplicationUsers(searchText, organizationId, applicationId, pageable).map(page -> page.map(Member::of));
     }
 
     @Override

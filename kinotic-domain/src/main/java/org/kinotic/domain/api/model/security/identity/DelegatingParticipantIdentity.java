@@ -8,8 +8,8 @@ import org.kinotic.domain.api.model.security.DelegateType;
 
 /**
  * A client (a CLI install, an MCP host such as an LLM) a user has authorized to act on
- * their behalf. Carries the scope the user was signed in to when authorizing it, the membership
- * for an account, is unique by {@code (ownerId, clientKey)} within that scope, and authenticates
+ * their behalf. Carries the scope the user was signed in to when authorizing it, the organization
+ * of its membership for an organization user, is unique by {@code (ownerId, clientKey)} within that scope, and authenticates
  * with the tokens minted when its owner authorized it, holding no credential of its own. Disabling
  * a delegate revokes that client's access without touching the owner.
  */
@@ -20,8 +20,8 @@ import org.kinotic.domain.api.model.security.DelegateType;
 public final class DelegatingParticipantIdentity extends ParticipantIdentity {
 
     /**
-     * Id of the {@link UserParticipantIdentity} this delegate acts on behalf of; for an account, the
-     * delegate acts in the one scope its own {@code organizationId} names.
+     * Id of the {@link UserParticipantIdentity} this delegate acts on behalf of; for an organization user, the
+     * delegate acts in the one organization its own {@code organizationId} names.
      */
     private String ownerId;
 

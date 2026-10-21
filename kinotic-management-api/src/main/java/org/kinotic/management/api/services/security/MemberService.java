@@ -18,8 +18,8 @@ import org.kinotic.management.api.model.PendingInviteSummary;
 public interface MemberService {
 
     /**
-     * Lists the members of the scope: the accounts holding a membership of the caller's organization, or
-     * the users of one of its applications.
+     * Lists the members of the scope: the organization users holding a membership of the caller's organization,
+     * or the users of one of its applications.
      */
     Future<Page<Member>> findMembers(String applicationId, Pageable pageable);
 
@@ -30,20 +30,20 @@ public interface MemberService {
     Future<Page<Member>> searchMembers(String searchText, String applicationId, Pageable pageable);
 
     /**
-     * Adds a person to the caller's organization by email. An address with no account yet gets one, with no
-     * sign-in method, and its membership at once, so the person appears among the members as pending. With
-     * {@code sendInvitation} an invitation is emailed, whose acceptance claims the account with a password or
-     * through one of the organization's providers; without one the person signs in through one of the
-     * organization's own providers, which claims the account on the first sign-in, so the organization must have
-     * one. An address that already has an account is emailed an invitation whatever {@code sendInvitation} says,
-     * since joining an account to an organization needs its holder's acceptance, and joins once accepted. Fails for
-     * an address that is already a member, one an invitation is already pending for, or an address with no account
-     * when no invitation is sent and the organization has no provider of its own.
+     * Adds a person to the caller's organization by email. An address with no organization user yet gets one,
+     * with no sign-in method, and its membership at once, so the person appears among the members as pending. With
+     * {@code sendInvitation} an invitation is emailed, whose acceptance claims the organization user with a password
+     * or through one of the organization's providers; without one the person signs in through one of the
+     * organization's own providers, which claims the organization user on the first sign-in, so the organization
+     * must have one. An address that already has an organization user is emailed an invitation whatever
+     * {@code sendInvitation} says, since joining it to an organization needs its holder's acceptance, and joins once
+     * accepted. Fails for an address that is already a member, one an invitation is already pending for, or an
+     * address with no organization user when no invitation is sent and the organization has no provider of its own.
      *
      * @param email          the address the person signs in with
      * @param displayName    optional display name
      * @param sendInvitation whether to email an invitation
-     * @return the member as listed, pending until they first sign in; for an address that already has an account,
+     * @return the member as listed, pending until they first sign in; for an address that already has an organization user,
      *         a pending member with no id yet, which the list shows once the invitation is accepted
      */
     Future<Member> addMember(String email, String displayName, boolean sendInvitation);
@@ -68,8 +68,8 @@ public interface MemberService {
     Future<PendingInviteSummary> inviteMember(String email, String displayName, String applicationId);
 
     /**
-     * Enables or disables a member of the caller's organization or of one of its applications: an account's
-     * membership of the organization, or an application user. Disabling gates future logins to that scope;
+     * Enables or disables a member of the caller's organization or of one of its applications: an organization
+     * user's membership of the organization, or an application user. Disabling gates future logins to that scope;
      * established sessions last until they expire. Callers cannot disable themselves.
      *
      * @param identityId the member's id, as {@link Member#id()} names it
@@ -77,9 +77,9 @@ public interface MemberService {
     Future<Void> setMemberEnabled(String identityId, boolean enabled);
 
     /**
-     * Removes a member: an account's membership of the caller's organization, leaving the account and its other
-     * memberships as they are, unless no sign-in method signs the account in and no other membership remains,
-     * when the account goes too, along with the invitation it never accepted; or an application user, with its
+     * Removes a member: an organization user's membership of the caller's organization, leaving the organization
+     * user and its other memberships as they are, unless no sign-in method signs it in and no other membership
+     * remains, when it goes too, along with the invitation it never accepted; or an application user, with its
      * stored credential. Callers cannot remove themselves.
      *
      * @param identityId the member's id, as {@link Member#id()} names it
@@ -88,7 +88,7 @@ public interface MemberService {
 
     /**
      * Lists the scope's live (unexpired) pending invitations: for the organization, those of people who already
-     * had an account and of pending members sent one; for an application, those of its invited users.
+     * had an organization user and of pending members sent one; for an application, those of its invited users.
      */
     Future<Page<PendingInviteSummary>> findPendingInvites(String applicationId, Pageable pageable);
 

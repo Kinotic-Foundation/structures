@@ -2,13 +2,13 @@ import { ParticipantIdentity } from '@/api/model/security/ParticipantIdentity'
 import { ParticipantIdentityType } from '@/api/model/security/ParticipantIdentityType'
 
 /**
- * A person. An account, with no organizationId or applicationId, is the person's single identity on the
- * platform, unique by email, signing in with a password and any number of provider bindings and acting
- * in the scopes its memberships name. An application's user, with organizationId and applicationId set,
- * belongs to that application's own user base.
+ * A person, at any scope: what every kind of user has, an email and sign-in methods of its own. The concrete
+ * subtype is the scope the person signs in to — {@link SystemUserParticipantIdentity},
+ * {@link OrganizationUserParticipantIdentity} or {@link ApplicationUserParticipantIdentity} — and one email may
+ * be a user of each, each with its own sign-in methods.
  */
-export class UserParticipantIdentity extends ParticipantIdentity {
-    public readonly type: ParticipantIdentityType.USER = ParticipantIdentityType.USER
-    /** Email address, unique among accounts, or within the application for an application's user. */
+export abstract class UserParticipantIdentity extends ParticipantIdentity {
+    public abstract override readonly type: ParticipantIdentityType.SYSTEM_USER | ParticipantIdentityType.ORGANIZATION_USER | ParticipantIdentityType.APPLICATION_USER
+    /** Email address, unique among the users of the same scope. */
     public email: string = ''
 }

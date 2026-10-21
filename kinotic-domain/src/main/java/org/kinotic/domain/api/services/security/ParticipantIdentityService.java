@@ -13,41 +13,39 @@ import org.kinotic.domain.api.model.security.identity.MachineParticipantIdentity
 import org.kinotic.domain.api.model.security.identity.MachineProvisionResult;
 import org.kinotic.domain.api.model.security.identity.OidcBinding;
 import org.kinotic.domain.api.model.security.identity.ParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.ApplicationUserParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.OrganizationUserParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.SystemUserParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 
 import java.util.List;
 
 public interface ParticipantIdentityService extends IdentifiableCrudService<ParticipantIdentity, String> {
 
-    /**
-     * Finds the user with the given email within the given scope, identified structurally
-     * by {@code (organizationId, applicationId)}:
-     * <ul>
-     *   <li>both null → SYSTEM</li>
-     *   <li>{@code organizationId} only → ORGANIZATION (in that org)</li>
-     *   <li>both set → APPLICATION (in that app within that org)</li>
-     * </ul>
-     * Passing only {@code applicationId} (no {@code organizationId}) is an error and is
-     * rejected at the service layer.
-     *
-     * @param email the email address to look up
-     * @param organizationId the owning org id, or null for SYSTEM
-     * @param applicationId the owning app id, or null for SYSTEM/ORGANIZATION
-     * @return {@link Future} emitting the matching user, or {@code null} if no user matches
-     */
-    Future<UserParticipantIdentity> findByEmail(String email, String organizationId, String applicationId);
+    /** The system user with the email, or {@code null}. */
+    Future<SystemUserParticipantIdentity> findSystemUserByEmail(String email);
+
+    /** The organization user with the email, or {@code null}. */
+    Future<OrganizationUserParticipantIdentity> findOrganizationUserByEmail(String email);
+
+    /** The user of application {@code applicationId} of organization {@code organizationId} with the email, or {@code null}. */
+    Future<ApplicationUserParticipantIdentity> findApplicationUserByEmail(String email, String organizationId, String applicationId);
 
     /**
-     * Finds the user of the scope {@code (organizationId, applicationId)} the OIDC identity
-     * {@code (oidcConfigId, subject)} is bound to, with the same null conventions as
-     * {@link #findByEmail(String, String, String)}: both null finds an account. A provider identity binds to
-     * one account and to one user of each application, so {@code null} says it is bound to no user of that
-     * scope.
+     * The organization user the OIDC identity {@code (oidcConfigId, subject)} is bound to, or {@code null}. A provider
+     * identity binds to one organization user, which signs in to each organization it holds a membership of.
      */
-    Future<UserParticipantIdentity> findByOidcIdentity(String oidcConfigId,
-                                                       String subject,
-                                                       String organizationId,
-                                                       String applicationId);
+    Future<OrganizationUserParticipantIdentity> findOrganizationUserByOidcIdentity(String oidcConfigId, String subject);
+
+    /**
+     * The user of application {@code applicationId} of organization {@code organizationId} the OIDC identity
+     * {@code (oidcConfigId, subject)} is bound to, or {@code null}. A provider identity binds to one user of each
+     * application.
+     */
+    Future<ApplicationUserParticipantIdentity> findApplicationUserByOidcIdentity(String oidcConfigId,
+                                                                                 String subject,
+                                                                                 String organizationId,
+                                                                                 String applicationId);
 
     /**
      * Binds the OIDC identity {@code (oidcConfigId, subject)} to user {@code identityId} as one of its sign-in
@@ -55,7 +53,8 @@ public interface ParticipantIdentityService extends IdentifiableCrudService<Part
      * the same user changes nothing.
      *
      * @return the binding, readable at once; fails with {@link IllegalArgumentException} when the identity is
-     *         bound to another user of the same scope, or {@code identityId} is not a user
+     *         bound to another user of the same scope, or {@code identityId} is not an organization's or an
+     *         application's user, since a system user signs in with a password alone
      */
     Future<OidcBinding> bindOidcIdentity(String identityId, String oidcConfigId, String subject);
 
@@ -64,26 +63,26 @@ public interface ParticipantIdentityService extends IdentifiableCrudService<Part
 
     /**
      * Whether a sign-in method signs user {@code identityId} in: a password, or a provider identity bound to it.
-     * An account an administrator added as a member that nobody has signed in as yet has none.
+     * An organization user an administrator added as a member that nobody has signed in as yet has none.
      */
     Future<Boolean> hasSignInMethod(String identityId);
 
     /**
      * Signs the identity {@code (oidcConfigId, subject)}, verified by one of organization {@code organizationId}'s
-     * own providers, in as the member the organization added under {@code verifiedEmail}: an account that holds a
-     * membership of the organization and that no sign-in method signs in yet, which the identity is bound to as
-     * its first. {@code null} when the organization has no such member: no account under the email, no membership
-     * of the organization, or an account someone already signs in to, which only its holder may bind the identity
-     * to.
+     * own providers, in as the member the organization added under {@code verifiedEmail}: an organization user that
+     * holds a membership of the organization and that no sign-in method signs in yet, which the identity is bound to
+     * as its first. {@code null} when the organization has no such member: no organization user under the email, no
+     * membership of the organization, or an organization user someone already signs in as, which only its holder may
+     * bind the identity to.
      *
      * @param oidcConfigId   the organization's own configuration that verified the identity
      * @param subject        the provider's {@code sub} claim for the identity
      * @param verifiedEmail  the email the provider verified for the identity
      * @param organizationId the organization whose login the identity signs in at
      * @return the member's participant, or {@code null}; fails with {@link AccountDisabledException} when the
-     *         account or its membership is disabled
+     *         organization user or its membership is disabled
      */
-    Future<Participant> claimProvisionedAccount(String oidcConfigId, String subject, String verifiedEmail, String organizationId);
+    Future<Participant> claimProvisionedOrganizationUser(String oidcConfigId, String subject, String verifiedEmail, String organizationId);
 
     /**
      * Removes binding {@code bindingId} from user {@code identityId}'s sign-in methods.
@@ -103,50 +102,52 @@ public interface ParticipantIdentityService extends IdentifiableCrudService<Part
      */
     Future<Void> setPassword(String identityId, String password);
 
-    /**
-     * Finds all users (never delegates) within the given scope, identified structurally by
-     * {@code (organizationId, applicationId)} with the same null conventions as
-     * {@link #findByEmail(String, String, String)}.
-     */
-    Future<Page<UserParticipantIdentity>> findUsersByScope(String organizationId, String applicationId, Pageable pageable);
+    /** The system users. */
+    Future<Page<SystemUserParticipantIdentity>> findSystemUsers(Pageable pageable);
+
+    /** The system users whose email or display name matches {@code searchText}; blank text lists them all. */
+    Future<Page<SystemUserParticipantIdentity>> searchSystemUsers(String searchText, Pageable pageable);
+
+    /** The users of application {@code applicationId} of organization {@code organizationId}. */
+    Future<Page<ApplicationUserParticipantIdentity>> findApplicationUsers(String organizationId, String applicationId, Pageable pageable);
 
     /**
-     * Searches users (never delegates) within the given scope by free text over email and
-     * display name. A blank {@code searchText} returns every user in scope, equivalent to
-     * {@link #findUsersByScope(String, String, Pageable)}.
+     * The users of the application whose email or display name matches {@code searchText}; blank text lists them
+     * all, as {@link #findApplicationUsers} does.
      */
-    Future<Page<UserParticipantIdentity>> searchUsersByScope(String searchText,
-                                                             String organizationId,
-                                                             String applicationId,
-                                                             Pageable pageable);
+    Future<Page<ApplicationUserParticipantIdentity>> searchApplicationUsers(String searchText,
+                                                                           String organizationId,
+                                                                           String applicationId,
+                                                                           Pageable pageable);
 
     /**
-     * Creates a user, assigning id and dates and enabling it: an account when the user carries no scope,
-     * an application's user when it carries one. A password given becomes the user's credential;
-     * {@code null} creates a user that signs in by an OIDC binding, added with
-     * {@link #bindOidcIdentity} or by {@link #createOidcUser}. One user holds an email within a scope: the id
-     * minted for the user is derived from its scope and email, and a creation under an email the scope already
-     * holds fails with {@link org.kinotic.domain.api.exceptions.ExistingAccountException}, two at once included.
+     * Creates a user of the kind {@code user} is, assigning id and dates and enabling it. A password given becomes
+     * the user's credential; {@code null} creates a user that signs in by an OIDC binding, added with
+     * {@link #bindOidcIdentity} or by {@link #createOidcUser}. One user of each kind holds an email, and of an
+     * application's users one per application: the id minted for the user is derived from its kind, its scope and
+     * its email, and a creation under an email already held fails with
+     * {@link org.kinotic.domain.api.exceptions.ExistingAccountException}, two at once included.
      * For APPLICATION-scope users whose application's tenants are {@code TenantManagement.PLATFORM} managed, a
      * unique {@code tenantId} is auto-generated unless one was supplied.
      *
      * @param user     the unsaved user carrying email, scope, and optional display name
      * @param password the password for a user that signs in with one, or null
-     * @return a future emitting the created user, which {@link #findByEmail} finds from then on
+     * @return a future emitting the created user, which the lookup by email of its kind finds from then on
      */
-    Future<UserParticipantIdentity> createUser(UserParticipantIdentity user, String password);
+    <T extends UserParticipantIdentity> Future<T> createUser(T user, String password);
 
     /**
      * {@link #createUser(UserParticipantIdentity, String)} for a user that signs in by the OIDC identity
      * {@code (oidcConfigId, subject)}, which the new user is bound to. Fails with
-     * {@link IllegalArgumentException} when the identity is bound to a user of the new user's scope already.
+     * {@link IllegalArgumentException} when the identity is bound to a user of the new user's scope already, or for a
+     * system user, which signs in with a password alone.
      */
-    Future<UserParticipantIdentity> createOidcUser(UserParticipantIdentity user, String oidcConfigId, String subject);
+    <T extends UserParticipantIdentity> Future<T> createOidcUser(T user, String oidcConfigId, String subject);
 
     /**
      * The participant identity {@code identityId} acts as in the scope {@code (organizationId, applicationId)},
-     * or {@code null} when it may not: an account acts in a scope through its enabled membership of it; a
-     * scoped identity acts in its own scope only; a delegate acts while its owner may act in the delegate's
+     * or {@code null} when it may not: an organization user acts in an organization through its enabled
+     * membership of it; any other identity acts in its own scope only; a delegate acts while its owner may act in the delegate's
      * scope. A disabled identity acts nowhere.
      *
      * @param identityId     the identity, as a session or token names it
@@ -163,8 +164,8 @@ public interface ParticipantIdentityService extends IdentifiableCrudService<Part
 
     /**
      * Resolves the delegate for {@code (owner, clientKey)} in the scope {@code owner} acts in, creating it on
-     * first approval. The delegate carries that scope — the membership an account was signed in to when it
-     * approved — and authenticates with DELEGATED tokens only. A re-approval refreshes {@code displayName}
+     * first approval. The delegate carries that scope — for an organization user, the organization it was signed
+     * in to when it approved — and authenticates with DELEGATED tokens only. A re-approval refreshes {@code displayName}
      * from the latest client metadata and re-enables a previously revoked delegate — the owner just consented
      * again.
      *
@@ -197,8 +198,8 @@ public interface ParticipantIdentityService extends IdentifiableCrudService<Part
 
     /**
      * Finds all machines within the given scope, identified structurally by
-     * {@code (organizationId, applicationId)} with the same null conventions as
-     * {@link #findByEmail(String, String, String)}.
+     * {@code (organizationId, applicationId)}: both null for SYSTEM, {@code organizationId} alone for
+     * ORGANIZATION, both set for APPLICATION.
      */
     Future<Page<MachineParticipantIdentity>> findMachinesByScope(String organizationId, String applicationId, Pageable pageable);
 

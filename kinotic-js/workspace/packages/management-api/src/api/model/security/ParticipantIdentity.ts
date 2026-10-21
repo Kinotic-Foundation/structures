@@ -2,12 +2,13 @@ import type { Identifiable } from '@kinotic-ai/core'
 import { ParticipantIdentityType } from '@/api/model/security/ParticipantIdentityType'
 
 /**
- * A persisted identity that can authenticate — a person ({@link UserParticipantIdentity}) or a
- * client acting on a person's behalf ({@link DelegatingParticipantIdentity}), discriminated by
- * {@link type}. Scope is encoded structurally by which of {@link organizationId} /
- * {@link applicationId} is set:
+ * A persisted identity that can authenticate — a person of one scope ({@link UserParticipantIdentity}),
+ * a client acting on a person's behalf ({@link DelegatingParticipantIdentity}) or a machine
+ * ({@link MachineParticipantIdentity}), discriminated by {@link type}. Scope is encoded structurally by
+ * which of {@link organizationId} / {@link applicationId} is set:
  *
- * - both null → SYSTEM
+ * - both null → SYSTEM; an {@link OrganizationUserParticipantIdentity} too carries neither, since it acts
+ *   in the organizations its memberships name
  * - {@link organizationId} only → ORGANIZATION
  * - both set → APPLICATION, with {@link tenantId} identifying the end-user data slice
  */

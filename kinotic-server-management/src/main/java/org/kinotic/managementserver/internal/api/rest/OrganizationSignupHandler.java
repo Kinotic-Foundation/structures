@@ -10,7 +10,7 @@ import org.kinotic.core.api.security.SessionBinding;
 import org.kinotic.management.api.config.KinoticManagementApiProperties;
 import org.kinotic.domain.api.model.Organization;
 import org.kinotic.domain.api.rest.support.*;
-import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.OrganizationUserParticipantIdentity;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.exceptions.ExistingAccountException;
 import org.kinotic.domain.api.model.security.PendingSignUp;
@@ -26,8 +26,8 @@ import java.util.Map;
 
 /**
  * Organization sign-up routes — the sign-up counterpart to {@link OrganizationLoginHandler}.
- * Both email/password and social (OIDC) sign-up create a new {@link Organization}, its founder's account
- * ({@link UserParticipantIdentity}) and the founder's membership; each handler method documents its own step.
+ * Both email/password and social (OIDC) sign-up create a new {@link Organization}, its founder's organization user
+ * ({@link OrganizationUserParticipantIdentity}) and the founder's membership; each handler method documents its own step.
  */
 @Slf4j
 @Component
@@ -137,7 +137,7 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes, OidcFlo
     }
 
     /**
-     * Turns a verified social identity into a pending sign-up: refuses if an {@link UserParticipantIdentity}
+     * Turns a verified social identity into a pending sign-up: refuses if an {@link OrganizationUserParticipantIdentity}
      * already exists for this identity or its verified email (they should log in, not sign up), otherwise
      * stores a {@link PendingSignUp} carrying the verified identity and redirects the browser to the
      * org-naming page of the UI the sign-up started from, which posts back to {@link #handleSocialCompleteOrg}.
@@ -160,9 +160,9 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes, OidcFlo
             return;
         }
 
-        // the identity, or its verified email, with an account already signs in instead of founding another
-        identityService.findByOidcIdentity(config.getId(), sub, null, null)
-              .compose(bound -> bound != null ? Future.succeededFuture(bound) : identityService.findByEmail(email, null, null))
+        // the identity, or its verified email, with an organization user already signs in instead of founding another
+        identityService.findOrganizationUserByOidcIdentity(config.getId(), sub)
+              .compose(bound -> bound != null ? Future.succeededFuture(bound) : identityService.findOrganizationUserByEmail(email))
               .compose(existing -> {
                   if (existing != null) {
                       return Future.failedFuture(new ExistingAccountException("An account for this identity already exists. Sign in instead."));
@@ -187,7 +187,7 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes, OidcFlo
 
     /**
      * {@code POST /api/auth/org/signup/social/complete} — finish social sign-up. The user has named their org;
-     * creates the organization, the founder's account bound to the verified identity, and the membership, from
+     * creates the organization, the founder's organization user bound to the verified identity, and the membership, from
      * the pending sign-up identified by the token.
      */
     private void handleSocialCompleteOrg(RoutingContext ctx) {

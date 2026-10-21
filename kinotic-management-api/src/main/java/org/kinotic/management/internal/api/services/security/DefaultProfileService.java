@@ -10,12 +10,13 @@ import org.kinotic.domain.api.model.security.LoginProviderSummary;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
 import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
-import org.kinotic.domain.api.model.security.identity.Membership;
+import org.kinotic.domain.api.model.security.identity.OrganizationMembership;
+import org.kinotic.domain.api.model.security.identity.OrganizationUserParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.OidcBinding;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 import org.kinotic.domain.api.services.OrganizationService;
 import org.kinotic.domain.api.services.security.LocalAuthenticationService;
-import org.kinotic.domain.api.services.security.MembershipService;
+import org.kinotic.domain.api.services.security.OrganizationMembershipService;
 import org.kinotic.domain.api.services.security.OidcConfigurationService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.utils.DomainUtil;
@@ -38,7 +39,7 @@ public class DefaultProfileService implements ProfileService {
     private final ParticipantIdentityService identityService;
     private final OidcConfigurationService oidcConfigurationService;
     private final LocalAuthenticationService localAuthenticationService;
-    private final MembershipService membershipService;
+    private final OrganizationMembershipService membershipService;
     private final OrganizationService organizationService;
 
     @Override
@@ -87,12 +88,18 @@ public class DefaultProfileService implements ProfileService {
 
     @Override
     public Future<List<LoginProviderSummary>> findConnectableProviders(Participant participant) {
-        DomainUtil.requireUserParticipant(participant);
-        Future<Set<String>> bound = identityService.findOidcBindings(participant.getId())
+        return loadCallingUser(participant).compose(user -> user instanceof OrganizationUserParticipantIdentity organizationUser
+                ? findConnectableProviders(organizationUser)
+                // a system user signs in with a password alone
+                : Future.succeededFuture(List.of()));
+    }
+
+    private Future<List<LoginProviderSummary>> findConnectableProviders(OrganizationUserParticipantIdentity user) {
+        Future<Set<String>> bound = identityService.findOidcBindings(user.getId())
                                                    .map(bindings -> bindings.stream().map(OidcBinding::getOidcConfigId).collect(Collectors.toSet()));
-        Future<List<OidcConfiguration>> offered = membershipService.findMemberships(participant.getId())
+        Future<List<OidcConfiguration>> offered = membershipService.findMemberships(user.getId())
                 .compose(memberships -> Future.all(memberships.stream()
-                                                              .filter(m -> m.getOrganizationId() != null && m.isEnabled())
+                                                              .filter(OrganizationMembership::isEnabled)
                                                               .map(m -> oidcConfigurationService.findEnabledForScope(m.getOrganizationId(), null))
                                                               .toList()))
                 .map(cf -> {
@@ -103,7 +110,7 @@ public class DefaultProfileService implements ProfileService {
                     }
                     return List.copyOf(byId.values());
                 })
-                // an account of no organization still connects the platform's registrations
+                // an organization user of no organization still connects the platform's registrations
                 .compose(configurations -> configurations.isEmpty()
                         ? oidcConfigurationService.findEnabledOrgSignupProviders().map(signup -> List.<OidcConfiguration>copyOf(signup))
                         : Future.succeededFuture(configurations));
@@ -120,13 +127,13 @@ public class DefaultProfileService implements ProfileService {
                 .compose(user -> identityService.hasPassword(user.getId()).compose(hasPassword -> {
                     Future<Void> proven;
                     if (!hasPassword) {
-                        // the session is proof enough for an account with no password yet
+                        // the session is proof enough for a user with no password yet
                         proven = Future.succeededFuture();
                     } else {
                         Validate.notBlank(currentPassword, "currentPassword is required");
-                        proven = localAuthenticationService.authenticateLocal(user.getEmail(), currentPassword, null, null)
-                                                           .map(authenticated -> {
-                                                               Validate.isTrue(authenticated != null, "The current password is incorrect.");
+                        proven = localAuthenticationService.verifyPassword(user, currentPassword)
+                                                           .map(verified -> {
+                                                               Validate.isTrue(verified, "The current password is incorrect.");
                                                                return null;
                                                            });
                     }
@@ -142,7 +149,7 @@ public class DefaultProfileService implements ProfileService {
         DomainUtil.requireUserParticipant(participant);
         Future<Boolean> hasPassword = identityService.hasPassword(participant.getId());
         Future<List<OidcBinding>> bindings = identityService.findOidcBindings(participant.getId());
-        Future<List<Membership>> memberships = membershipService.findMemberships(participant.getId());
+        Future<List<OrganizationMembership>> memberships = membershipService.findMemberships(participant.getId());
         return Future.all(hasPassword, bindings, memberships).compose(cf -> {
             Validate.isTrue(bindings.result().stream().anyMatch(binding -> binding.getId().equals(methodId)), "Sign-in method not found.");
             List<String> remaining = bindings.result().stream()
@@ -158,10 +165,10 @@ public class DefaultProfileService implements ProfileService {
         });
     }
 
-    // a binding signs the account in where its configuration is offered: at every organization's login for one of
-    // the platform's registrations, and at its organization's for one of the organization's own while the account
-    // is a member there
-    private static boolean signsIn(OidcConfiguration configuration, List<Membership> memberships) {
+    // a binding signs the organization user in where its configuration is offered: at every organization's login for
+    // one of the platform's registrations, and at its organization's for one of the organization's own while the
+    // user is a member there
+    private static boolean signsIn(OidcConfiguration configuration, List<OrganizationMembership> memberships) {
         boolean ret;
         if (!configuration.isEnabled()) {
             ret = false;
@@ -178,17 +185,17 @@ public class DefaultProfileService implements ProfileService {
         DomainUtil.requireUserParticipant(participant);
         return membershipService.findMemberships(participant.getId())
                                 .compose(memberships -> organizationService.findAllById(memberships.stream()
-                                                                                                  .filter(m -> m.getOrganizationId() != null && m.isEnabled())
-                                                                                                  .map(Membership::getOrganizationId)
+                                                                                                  .filter(OrganizationMembership::isEnabled)
+                                                                                                  .map(OrganizationMembership::getOrganizationId)
                                                                                                   .toList()));
     }
 
-    /** Loads the account behind the calling participant. */
+    /** Loads the user behind the calling participant. */
     private Future<UserParticipantIdentity> loadCallingUser(Participant participant) {
         DomainUtil.requireUserParticipant(participant);
         return identityService.findById(participant.getId())
                               .map(identity -> {
-                                  // a session outlives its row when the account is deleted mid-session
+                                  // a session outlives its row when the user is deleted mid-session
                                   if (!(identity instanceof UserParticipantIdentity user)) {
                                       throw new IllegalArgumentException("Profile not found.");
                                   }

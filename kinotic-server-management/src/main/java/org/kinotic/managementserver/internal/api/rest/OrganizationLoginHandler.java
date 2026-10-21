@@ -15,13 +15,13 @@ import org.kinotic.domain.api.exceptions.AccountDisabledException;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
 import org.kinotic.domain.api.model.security.OwnedOidcConfiguration;
-import org.kinotic.domain.api.model.security.identity.Membership;
+import org.kinotic.domain.api.model.security.identity.OrganizationMembership;
 import org.kinotic.domain.api.rest.support.OAuth2Util;
 import org.kinotic.domain.api.rest.support.OidcCallbackException;
 import org.kinotic.domain.api.rest.support.OidcCallbacks;
-import org.kinotic.domain.api.services.security.MembershipService;
+import org.kinotic.domain.api.services.security.OrganizationMembershipService;
 import org.kinotic.core.api.security.Participant;
-import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
+import org.kinotic.domain.api.model.security.identity.OrganizationUserParticipantIdentity;
 import org.kinotic.domain.api.rest.SuppliesGatewayRoutes;
 import org.kinotic.domain.api.rest.support.AuthEndpointSupport;
 import org.kinotic.domain.api.rest.support.CallbackResult;
@@ -49,7 +49,7 @@ import java.util.Set;
  * slug of the portal's {@code /login/<orgId>} page, since an email or a social identity may be a member
  * of any number of organizations: the page offers the methods that organization's login supports,
  * email and password and the configurations {@code GET /api/auth/org/login/:orgId/providers} lists,
- * without asking about an email first, so no route tells whether an email has an account. The portal's
+ * without asking about an email first, so no route tells whether an email has a user. The portal's
  * landing page, which knows no organization yet, offers the platform's social registrations: a
  * sign-in there finds the one organization the identity is a member of, and emails a person who does
  * not remember their organizations the list. On success each login establishes the browser session;
@@ -57,8 +57,8 @@ import java.util.Set;
  * handles a token. OIDC flows started here return to {@link OrganizationOidcCallbackHandler}, which hands
  * a login's callback back here to complete.
  *
- * <p>A member is an account with a membership of the organization: the login finds the account by its
- * email or by the identity its provider asserts, then signs it in through that membership.
+ * <p>A member is an organization user with a membership of the organization: the login finds the organization
+ * user by its email or by the identity its provider asserts, then signs it in through that membership.
  */
 @Slf4j
 @Component
@@ -70,7 +70,7 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
     private final KinoticDomainProperties domainProperties;
     private final KinoticManagementApiProperties managementApiProperties;
     private final ParticipantIdentityService identityService;
-    private final MembershipService membershipService;
+    private final OrganizationMembershipService membershipService;
     private final OrganizationService organizationService;
     private final LocalAuthenticationService localAuthenticationService;
     private final OidcConfigurationService oidcConfigurationService;
@@ -96,14 +96,14 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
         router.post("/api/auth/org/login/:orgId/start/:configId").handler(this::handleStart);
         // a link, as from a provider's own tile of applications, starts the same flow
         router.get("/api/auth/org/login/:orgId/start/:configId").handler(this::handleStart);
-        // a signed-in account moves between the organizations it is a member of
+        // a signed-in organization user moves between the organizations it is a member of
         router.post("/api/auth/org/switch").handler(this::handleSwitch);
     }
 
     /**
-     * {@code POST /api/auth/org/switch {organizationId}} — signs the page's signed-in account in to another
-     * organization it is a member of, replacing the page's login; {@code 204} once switched, {@code 403} for an
-     * organization the account may not sign in to, {@code 400} without one, {@code 401} without a signed-in user.
+     * {@code POST /api/auth/org/switch {organizationId}} — signs the page's signed-in organization user in to
+     * another organization it is a member of, replacing the page's login; {@code 204} once switched, {@code 403} for an
+     * organization the user may not sign in to, {@code 400} without one, {@code 401} without a signed-in user.
      */
     private void handleSwitch(RoutingContext ctx) {
         Participant current = authEndpointSupport.requireSessionUser(ctx);
@@ -258,10 +258,10 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
         String orgId = ctx.pathParam("orgId");
         endOffer(ctx);
         authEndpointSupport.handlePasswordLogin(ctx,
-                (email, password) -> localAuthenticationService.authenticateLocal(email, password, null, null)
-                                                               .compose(account -> account == null
+                (email, password) -> localAuthenticationService.authenticateOrganizationUser(email, password)
+                                                               .compose(user -> user == null
                                                                        ? Future.succeededFuture()
-                                                                       : identityService.resolveParticipant(account, orgId, null)));
+                                                                       : identityService.resolveParticipant(user, orgId, null)));
     }
 
     /**
@@ -309,7 +309,7 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
     /**
      * Signs the identity the callback verified in: to the organization the flow names, or, for a flow the
      * landing page started through one of the platform's registrations, to the one organization the identity's
-     * account is a member of. An account that is a member of several is sent back with
+     * organization user is a member of. An organization user that is a member of several is sent back with
      * {@link OidcErrorCodes#MULTIPLE_ORGANIZATIONS} and those organizations, to choose one and sign in at its
      * own login.
      */
@@ -330,64 +330,63 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
     private void completeLandingLogin(RoutingContext ctx, CallbackResult<OidcConfiguration> result) {
         String sub = authEndpointSupport.verifiedSubject(ctx, result);
         if (sub != null) {
-            Future<UserParticipantIdentity> account = identityService.findByOidcIdentity(result.config().getId(), sub, null, null);
-            account.compose(found -> found == null
-                           ? Future.succeededFuture(List.<Membership>of())
-                           : membershipService.findMemberships(found.getId()).map(memberships -> organizationMemberships(found, memberships)))
-                   .onSuccess(memberships -> signInOrOffer(ctx, result.origin(), account.result(), memberships))
+            Future<OrganizationUserParticipantIdentity> user = identityService.findOrganizationUserByOidcIdentity(result.config().getId(), sub);
+            user.compose(found -> found == null
+                        ? Future.succeededFuture(List.<OrganizationMembership>of())
+                        : membershipService.findMemberships(found.getId()).map(memberships -> enabledMemberships(found, memberships)))
+                .onSuccess(memberships -> signInOrOffer(ctx, result.origin(), user.result(), memberships))
                    .onFailure(err -> authEndpointSupport.completeLogin(ctx, result.origin(), Future.failedFuture(err)));
         }
     }
 
-    // the enabled memberships of organizations the account may sign in to; an account that is disabled, or whose
-    // every organization membership is, has none and is told so, as the organization's own login would tell it
-    private static List<Membership> organizationMemberships(UserParticipantIdentity account, List<Membership> memberships) {
-        List<Membership> organizations = memberships.stream().filter(m -> m.getOrganizationId() != null).toList();
-        List<Membership> enabled = account.isEnabled() ? organizations.stream().filter(Membership::isEnabled).toList() : List.of();
-        if (enabled.isEmpty() && !organizations.isEmpty()) {
+    // the enabled memberships of organizations the user may sign in to; a user that is disabled, or whose every
+    // membership is, has none and is told so, as the organization's own login would tell it
+    private static List<OrganizationMembership> enabledMemberships(OrganizationUserParticipantIdentity user, List<OrganizationMembership> memberships) {
+        List<OrganizationMembership> enabled = user.isEnabled() ? memberships.stream().filter(OrganizationMembership::isEnabled).toList() : List.of();
+        if (enabled.isEmpty() && !memberships.isEmpty()) {
             throw new OidcCallbackException(OidcErrorCodes.ACCOUNT_DISABLED);
         }
         return enabled;
     }
 
-    // an account that is a member of several organizations has proven who it is, so the landing page may
+    // an organization user that is a member of several organizations has proven who it is, so the landing page may
     // offer those organizations for the person to choose from, where a stranger learns nothing; the page
     // that started the sign-in reads them from handleChoices, so the redirect itself carries no ids
-    private void signInOrOffer(RoutingContext ctx, String origin, UserParticipantIdentity account, List<Membership> memberships) {
+    private void signInOrOffer(RoutingContext ctx, String origin, OrganizationUserParticipantIdentity user, List<OrganizationMembership> memberships) {
         if (memberships.size() > 1) {
             // read without being removed, since a concurrent request on the session would make the removal
             // unreliable: the offer expires by its timestamp and ends when the page starts an organization's login
             JsonObject offer = new JsonObject()
-                    .put("organizations", new JsonArray(memberships.stream().map(Membership::getOrganizationId).toList()))
+                    .put("organizations", new JsonArray(memberships.stream().map(OrganizationMembership::getOrganizationId).toList()))
                     .put("at", System.currentTimeMillis());
             ctx.session().put(choicesKey(origin), offer);
             authEndpointSupport.redirectToContinue(ctx, origin, OidcErrorCodes.MULTIPLE_ORGANIZATIONS);
         } else {
             authEndpointSupport.completeLogin(ctx, origin, memberships.isEmpty()
                     ? Future.succeededFuture()
-                    : memberOf(account, memberships.getFirst().getOrganizationId()));
+                    : memberOf(user, memberships.getFirst().getOrganizationId()));
         }
     }
 
     /**
-     * Logs the account bound to the identity into the organization the flow names. An identity bound to no account
-     * signs in, through one of the organization's own configurations, the member the organization added under the
-     * identity's verified email that nobody has signed in as yet, and is bound to that account as its first sign-in
-     * method; through a platform registration, or for an email that is no such member's, there is no account to
-     * sign in.
+     * Logs the organization user bound to the identity into the organization the flow names. An identity bound to no
+     * organization user signs in, through one of the organization's own configurations, the member the organization
+     * added under the identity's verified email that nobody has signed in as yet, and is bound to that organization
+     * user as its first sign-in method; through a platform registration, or for an email that is no such member's,
+     * there is no one to sign in.
      */
     private void completeOrganizationLogin(RoutingContext ctx, CallbackResult<OidcConfiguration> result) {
         String sub = authEndpointSupport.verifiedSubject(ctx, result);
         if (sub != null) {
             String email = OAuth2Util.stringClaim(result.claims(), "email");
-            Future<Participant> participant = identityService.findByOidcIdentity(result.config().getId(), sub, null, null)
-                    .compose(account -> {
+            Future<Participant> participant = identityService.findOrganizationUserByOidcIdentity(result.config().getId(), sub)
+                    .compose(user -> {
                         Future<Participant> ret;
-                        if (account != null) {
-                            ret = memberOf(account, result.orgId());
+                        if (user != null) {
+                            ret = memberOf(user, result.orgId());
                         } else if (result.config() instanceof OwnedOidcConfiguration && email != null) {
                             // only the organization's own directory may claim the member the organization provisioned
-                            ret = refusingDisabled(identityService.claimProvisionedAccount(result.config().getId(), sub, email, result.orgId()));
+                            ret = refusingDisabled(identityService.claimProvisionedOrganizationUser(result.config().getId(), sub, email, result.orgId()));
                         } else {
                             ret = Future.succeededFuture();
                         }
@@ -398,14 +397,14 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
     }
 
     /**
-     * The participant {@code account} signs in to organization {@code orgId} as, or {@code null} when it is not a
-     * member; a disabled account or membership fails the sign-in with {@link OidcErrorCodes#ACCOUNT_DISABLED}.
+     * The participant {@code user} signs in to organization {@code orgId} as, or {@code null} when it is not a
+     * member; a disabled user or membership fails the sign-in with {@link OidcErrorCodes#ACCOUNT_DISABLED}.
      */
-    private Future<Participant> memberOf(UserParticipantIdentity account, String orgId) {
-        return account == null ? Future.succeededFuture() : refusingDisabled(membershipService.resolveMember(account, orgId));
+    private Future<Participant> memberOf(OrganizationUserParticipantIdentity user, String orgId) {
+        return user == null ? Future.succeededFuture() : refusingDisabled(membershipService.resolveParticipant(user, orgId));
     }
 
-    // a refused account fails the sign-in with the error code the login page names
+    // a refused user fails the sign-in with the error code the login page names
     private static Future<Participant> refusingDisabled(Future<Participant> participant) {
         return participant.recover(err -> Future.failedFuture(err instanceof AccountDisabledException
                 ? new OidcCallbackException(OidcErrorCodes.ACCOUNT_DISABLED) : err));

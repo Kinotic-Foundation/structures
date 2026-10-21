@@ -19,7 +19,7 @@ import org.kinotic.domain.api.model.security.Member;
 public interface SystemMemberService {
 
     /**
-     * Returns the system users: the accounts holding a membership of the platform.
+     * Returns the system users.
      *
      * @param pageable the page settings to use
      * @return a page of system users
