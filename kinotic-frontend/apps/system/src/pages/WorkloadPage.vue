@@ -263,7 +263,7 @@ const stats = computed<Stat[]>(() => {
     {
       label: 'Status',
       value: w.status,
-      detail: w.exitCode !== null ? `exit code ${w.exitCode}` : `since ${formatDateTime(w.updated ?? w.created)}`,
+      detail: w.exitCode !== null ? `exit code ${w.exitCode}` : DatetimeUtil.formatRelativeDate(w.updated ?? w.created),
       tag: workloadSeverity(w.status),
       heartbeat: workloadHeartbeat(w.status),
       tint: HEARTBEAT_TINTS[workloadHeartbeat(w.status)]

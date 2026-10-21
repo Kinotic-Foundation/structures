@@ -23,7 +23,7 @@ export default class DatetimeUtil {
  * last hour, then the clock time: "today at 2:54 AM", "yesterday at 11:02 PM", "Oct 16 at 3:10 PM".
  * Returns an empty string when the timestamp is absent or unreadable.
  */
-public static formatRelativeDate(dateStr: string | number | Date, nowMs: number = Date.now()): string {
+public static formatRelativeDate(dateStr: string | number | Date | null | undefined, nowMs: number = Date.now()): string {
     if (!dateStr) return ''
 
     const date = new Date(dateStr)
