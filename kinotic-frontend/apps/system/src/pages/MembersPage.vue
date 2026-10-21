@@ -95,7 +95,7 @@ import {
 import { scopeTint, type Scope } from '@/util/scope'
 
 /**
- * The platform's operators when no scope is given, otherwise the people with access to an
+ * The system users when no scope is given, otherwise the people with access to an
  * organization or the users of one of its applications, with pending invitations inline.
  * Read-only: an organization's people are the organization's to manage, and the platform's are
  * the identity provider's.
@@ -121,7 +121,7 @@ const title = computed(() => props.organizationId && !props.applicationId ? 'Mem
 const description = computed(() => {
   let ret: string
   if (!props.organizationId) {
-    ret = 'Platform operators who sign in to this console.'
+    ret = 'System users who sign in to this console.'
   } else if (props.applicationId) {
     ret = 'Everyone who signs in to this application, including pending invitations. Inviting, disabling and removing are the organization\'s to do.'
   } else {
@@ -146,13 +146,13 @@ async function load(pageable: Pageable, searchText: string | null): Promise<Iter
   const organizationId = props.organizationId
   const page = organizationId
       ? await organizationMembers(organizationId, pageable, searchText)
-      : await platformOperators(pageable, searchText)
+      : await systemUsers(pageable, searchText)
 
   return new FunctionalIterablePage(pageable, page, (next: Pageable) => load(next, searchText))
 }
 
-/** The platform's operators; SYSTEM scope is not invited into, so there is nothing to fold in. */
-async function platformOperators(pageable: Pageable, searchText: string | null): Promise<Page<DescriptiveIdentifiable>> {
+/** The system users; SYSTEM scope is not invited into, so there is nothing to fold in. */
+async function systemUsers(pageable: Pageable, searchText: string | null): Promise<Page<DescriptiveIdentifiable>> {
   const users = searchText
       ? await Kinotic.systemMembers.searchUsers(searchText, pageable)
       : await Kinotic.systemMembers.findUsers(pageable)

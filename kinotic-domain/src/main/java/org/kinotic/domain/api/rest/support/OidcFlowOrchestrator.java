@@ -517,8 +517,8 @@ public class OidcFlowOrchestrator {
 
     /**
      * The client secret {@code config} sends its provider, or null for a public client, read from where
-     * its kind of configuration keeps it: the platform's secret storage, under the name the operator
-     * gave a managed registration, or the owning organization's scope of the secret storage for a
+     * its kind of configuration keeps it: the platform's secret storage, under the name a managed
+     * registration's {@code secretNameRef} gives, or the owning organization's scope of the secret storage for a
      * configuration an organization saved.
      */
     private Future<String> clientSecretOf(OidcConfiguration config) {

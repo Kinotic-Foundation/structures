@@ -10,7 +10,7 @@ import java.util.Date;
  * condition of each type.
  *
  * @param type    what was inferred
- * @param message why, for an operator
+ * @param message why, for a system user
  * @param since   when the inference was first made
  */
 public record StatusCondition(StatusConditionType type, String message, Date since) {

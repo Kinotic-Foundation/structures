@@ -5,7 +5,7 @@ import { SYSTEM_API_ZONE,
 import type { IKinotic, IServiceProxy, Page, Pageable } from '@kinotic-ai/core'
 
 /**
- * The platform's own members: the operators who sign in to the system console, and the
+ * The platform's own members: the system users who sign in to the system console, and the
  * SYSTEM-scope machines that connect as platform daemons, such as a worker node's vm-manager.
  * Published in the system zone, which only SYSTEM participants may address; every method works
  * on SYSTEM scope alone, so an organization's users and machines stay that organization's to

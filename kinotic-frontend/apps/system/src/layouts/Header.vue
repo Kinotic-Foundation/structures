@@ -175,7 +175,7 @@ const emit = defineEmits<{
 /** How many of each the switchers list. */
 const PICKER_PAGE_SIZE = 200
 
-/** The operator documentation, opened from Help and the search dialog. */
+/** The system user documentation, opened from Help and the search dialog. */
 const DOCUMENTATION_URL = 'https://kinotic.ai/platform/architecture'
 
 const route = useRoute()

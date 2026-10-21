@@ -1,9 +1,9 @@
 <template>
   <DashboardSection :icon="Bell" :tint="items.length > 0 ? TINTS.red : TINTS.green" title="Needs attention"
-                    :count="items.length" description="What an operator has to look at, each leading to where it is handled.">
+                    :count="items.length" description="What a system user has to look at, each leading to where it is handled.">
     <div v-if="items.length === 0" class="flex items-center gap-2 px-5 py-4 text-sm text-green-700 dark:text-green-300">
       <CircleCheck :size="16" :stroke-width="1.75" aria-hidden="true" />
-      Nothing needs an operator right now
+      Nothing needs a system user right now
     </div>
 
     <section v-for="group in groups" :key="group.kind" class="border-b border-surface-200 last:border-b-0 dark:border-surface-700">
@@ -63,7 +63,7 @@ import type { AttentionItem } from '@/util/attention'
 import { AttentionType } from '@/util/AttentionType'
 
 /**
- * The list of what an operator has to look at, grouped by kind with failures first, each row
+ * The list of what a system user has to look at, grouped by kind with failures first, each row
  * leading to the page where it is handled.
  */
 const props = defineProps<{

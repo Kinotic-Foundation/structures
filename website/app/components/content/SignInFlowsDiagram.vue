@@ -8,7 +8,7 @@ defineProps<{ figure: 'owners' | 'model' | 'offering' | 'paths' | 'identity' | '
   <div class="sign-in-diagram-wrap">
 
     <!-- ═══════════════════════════ OWNERS: two owners, two keys into one vault ═══════════════════════════ -->
-    <svg v-if="figure === 'owners'" class="sign-in-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1140 440" role="img" aria-label="The platform operator seeds a managed registration, which names its secret in the vault and is read by that name at sign-in. An organization administrator saves its own configuration together with the client secret; the row has no secret field, and the service stores the secret in the organization's scope keyed by the configuration id, reading it back at sign-in. A crossed-out arrow shows that an organization's row cannot reach the platform's named secrets. Clients only ever receive a summary: id, name, provider, type.">
+    <svg v-if="figure === 'owners'" class="sign-in-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1140 440" role="img" aria-label="A system user seeds a managed registration, which names its secret in the vault and is read by that name at sign-in. An organization administrator saves its own configuration together with the client secret; the row has no secret field, and the service stores the secret in the organization's scope keyed by the configuration id, reading it back at sign-in. A crossed-out arrow shows that an organization's row cannot reach the platform's named secrets. Clients only ever receive a summary: id, name, provider, type.">
       <defs>
         <marker id="si1-ind" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><polygon class="mk-ind" points="0,0 10,5 0,10"></polygon></marker>
         <marker id="si1-grn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><polygon class="mk-grn" points="0,0 10,5 0,10"></polygon></marker>
@@ -16,7 +16,7 @@ defineProps<{ figure: 'owners' | 'model' | 'offering' | 'paths' | 'identity' | '
 
       <!-- actors -->
       <rect class="chip" x="60" y="30" width="220" height="44" rx="8"></rect>
-      <text class="t-name" x="170" y="49" text-anchor="middle">Platform operator</text>
+      <text class="t-name" x="170" y="49" text-anchor="middle">System user</text>
       <text class="t-sub" x="170" y="65" text-anchor="middle">system participant</text>
 
       <rect class="chip" x="860" y="30" width="220" height="44" rx="8"></rect>
@@ -44,7 +44,7 @@ defineProps<{ figure: 'owners' | 'model' | 'offering' | 'paths' | 'identity' | '
       <text class="t-tag" x="570" y="274" text-anchor="middle">SECRET STORAGE · ONE VAULT</text>
 
       <rect class="chip-ind" x="356" y="290" width="200" height="72" rx="8"></rect>
-      <text class="t-chip" x="456" y="312" text-anchor="middle">named by the operator</text>
+      <text class="t-chip" x="456" y="312" text-anchor="middle">named by the system user</text>
       <text class="t-mono" x="456" y="330" text-anchor="middle">google-platform</text>
       <text class="t-mono" x="456" y="344" text-anchor="middle">github-platform …</text>
 
@@ -535,7 +535,7 @@ defineProps<{ figure: 'owners' | 'model' | 'offering' | 'paths' | 'identity' | '
 
       <rect class="chip-ghost" x="830" y="174" width="270" height="48" rx="8"></rect>
       <text class="t-sub" x="965" y="194" text-anchor="middle">platform</text>
-      <text class="t-tiny" x="965" y="210" text-anchor="middle">no u-jane:system row · not an operator</text>
+      <text class="t-tiny" x="965" y="210" text-anchor="middle">no u-jane:system row · not a system user</text>
 
       <line class="flow-grn" x1="720" y1="100" x2="830" y2="74" marker-end="url(#si6-grn)"></line>
       <line class="flow-grn" x1="720" y1="136" x2="830" y2="136" marker-end="url(#si6-grn)"></line>

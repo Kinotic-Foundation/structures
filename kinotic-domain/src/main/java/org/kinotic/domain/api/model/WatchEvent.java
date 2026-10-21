@@ -17,10 +17,10 @@ import java.util.Date;
  *                     it: its organization for a record an organization owns, null for a node
  * @param parent       what the record belongs to, null for a record the platform made on its own
  * @param eventType    what happened
- * @param source       what caused it: the node that reported, the operator, the orchestrator's inference
+ * @param source       what caused it: the node that reported, a system user, the orchestrator's inference
  * @param serverNodeId the server node that wrote it
  * @param generation   the record's generation when written, null for a record that carries none
- * @param message      why, for an operator
+ * @param message      why, for a system user
  * @param value        what was written, as JSON
  */
 public record WatchEvent(@JsonProperty("@timestamp") Date timestamp,

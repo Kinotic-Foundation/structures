@@ -16,7 +16,7 @@ import java.util.Date;
  * may sign in to. A person has one account and any number of memberships, so one email, one password and
  * one GitHub binding reach every organization the person belongs to. A membership can be disabled or
  * removed by the organization without touching the account or the person's other memberships. An account's
- * memberships are all of one kind: a platform operator's account holds the platform membership and signs in to the
+ * memberships are all of one kind: a system user's account holds the platform membership and signs in to the
  * system console, an organization member's holds organizations' and signs in to their portals, and
  * {@link org.kinotic.domain.api.services.security.MembershipService#addMember} refuses the other kind.
  *
@@ -39,7 +39,7 @@ public class Membership implements Identifiable<String> {
 
     /**
      * The organization the account is a member of, or {@code null} for a membership of the platform: a
-     * platform operator, who signs in to the system console.
+     * system user, who signs in to the system console.
      */
     private String organizationId;
 
