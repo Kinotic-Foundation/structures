@@ -18,6 +18,7 @@ import org.kinotic.core.api.security.Participant;
 import org.kinotic.domain.api.model.Application;
 import org.kinotic.domain.api.model.ApplicationKey;
 import org.kinotic.domain.api.model.AuthzStore;
+import org.kinotic.domain.api.model.Tenant;
 import org.kinotic.domain.api.model.persistence.EntityDefinition;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 import org.kinotic.domain.api.repositories.AuthzStoreRepository;
@@ -25,6 +26,7 @@ import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.idl.api.utils.AuthzUtil;
 import org.kinotic.management.api.services.ApplicationService;
+import org.kinotic.management.api.services.TenantService;
 import org.kinotic.management.api.services.security.ApplicationAccessService;
 import org.kinotic.test.support.kinotic.KinoticTestBase;
 import org.kinotic.test.support.sample.TestDataService;
@@ -91,6 +93,9 @@ public class ApplicationStoreTests extends KinoticTestBase {
 
     @Autowired
     private AuthzModelGenerator generator;
+
+    @Autowired
+    private TenantService tenantService;
 
     @Test
     public void theStoreRunsTheFixedModelAndHoldsTheDefinitionsCreated() throws Exception {
@@ -224,6 +229,29 @@ public class ApplicationStoreTests extends KinoticTestBase {
                                                     new Resource(AuthzUtil.TENANT_DEFINITION_TYPE, AuthzUtil.tenantDefinitionId(person.getId(), bob.getTenantId())))));
         // a grant in an application of another organization, or of none
         assertInstanceOf(IllegalArgumentException.class, failure(() -> access.grant("no-such-application", subject, editor, tenant)));
+    }
+
+    @Test
+    public void deletingATenantTakesItsGrantsAndMembershipsOutOfTheStore() throws Exception {
+        EntityDefinition person = await(runAsOrganization(() -> testData.createPersonEntityDefinitionIfNotExists())).getLeft();
+        Tenant tenant = await(runAsOrganization(() -> tenantService.createTenantIfNotExist(TEST_APP_ID, "Hooli " + suffix(), "A customer")));
+        UserParticipantIdentity bob = endUser(TEST_APP_ID, tenant.getId());
+        Subject subject = new Subject(SubjectKind.USER, bob.getId());
+        String store = DomainUtil.authzApplicationId(TEST_ORG_ID, TEST_APP_ID);
+        String tenantObject = AuthzUtil.object(AuthzUtil.TENANT_TYPE, tenant.getId());
+        String withinObject = AuthzUtil.object(AuthzUtil.TENANT_DEFINITION_TYPE, AuthzUtil.tenantDefinitionId(person.getId(), tenant.getId()));
+        Grant onTenant = await(runAsOrganization(() -> access.grant(TEST_APP_ID, subject, AuthzUtil.roleId(AuthzUtil.TENANT_TYPE, AuthzUtil.ADMIN),
+                                                                    new Resource(AuthzUtil.TENANT_TYPE, tenant.getId()))));
+        Grant onRows = await(runAsOrganization(() -> access.grant(TEST_APP_ID, subject, AuthzUtil.roleId(AuthzUtil.ENTITY_DEFINITION_TYPE, AuthzUtil.VIEWER),
+                                                                  new Resource(AuthzUtil.TENANT_DEFINITION_TYPE, AuthzUtil.idOf(withinObject)))));
+        assertTrue(await(relationships.holds(store, new RelationshipTuple(AuthzUtil.object(AuthzUtil.USER_TYPE, bob.getId()), AuthzUtil.MEMBER_RELATION, tenantObject))));
+
+        await(runAsOrganization(() -> tenantService.deleteById(tenant.getId())));
+
+        assertTrue(await(relationships.read(store, tenantObject)).isEmpty());
+        assertTrue(await(relationships.read(store, withinObject)).isEmpty());
+        assertTrue(await(relationships.read(store, AuthzUtil.bindingObject(tenantObject, onTenant.id()))).isEmpty());
+        assertTrue(await(relationships.read(store, AuthzUtil.bindingObject(withinObject, onRows.id()))).isEmpty());
     }
 
     @Test

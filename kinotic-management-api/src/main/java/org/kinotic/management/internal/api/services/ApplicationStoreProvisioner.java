@@ -14,6 +14,8 @@ import org.kinotic.core.api.directory.ServiceDirectory;
 import org.kinotic.domain.api.model.Application;
 import org.kinotic.domain.api.model.AuthzModelRevision;
 import org.kinotic.domain.api.model.AuthzStore;
+import org.kinotic.domain.api.model.Tenant;
+import org.kinotic.domain.api.model.persistence.EntityDefinition;
 import org.kinotic.domain.api.repositories.AuthzStoreRepository;
 import org.kinotic.domain.api.repositories.EntityDefinitionRepository;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
@@ -66,6 +68,44 @@ public class ApplicationStoreProvisioner {
                             .compose(kernel -> provision(application, kernel))
                             .compose(v -> placeHoldings(application))
                             .map(application);
+    }
+
+    /**
+     * Takes a tenant out of its application's store: every grant made on it or on a definition within it, the
+     * memberships of its users and its place under the application, so a tenant created again under its id starts
+     * with none of them.
+     *
+     * @param tenant the tenant, as stored
+     * @return a future completing once the store holds nothing of the tenant
+     */
+    public Future<Void> removeTenant(Tenant tenant) {
+        String store = DomainUtil.authzApplicationId(tenant.getOrganizationId(), tenant.getApplicationId());
+        String tenantObject = AuthzUtil.object(AuthzUtil.TENANT_TYPE, tenant.getId());
+        return eachPage(pageable -> entityDefinitions.findAllForApplication(tenant.getApplicationId(), tenant.getOrganizationId(), pageable),
+                        page -> {
+                            Future<Void> ret = Future.succeededFuture();
+                            for (EntityDefinition definition : page) {
+                                String within = AuthzUtil.object(AuthzUtil.TENANT_DEFINITION_TYPE,
+                                                                 AuthzUtil.tenantDefinitionId(definition.getId(), tenant.getId()));
+                                ret = ret.compose(v -> unbindAll(store, within));
+                            }
+                            return ret;
+                        })
+                .compose(v -> unbindAll(store, tenantObject))
+                .compose(v -> relationships.read(store, tenantObject))
+                .compose(held -> relationships.remove(store, held));
+    }
+
+    private Future<Void> unbindAll(String store, String object) {
+        return relationships.read(store, object).compose(held -> {
+            Future<Void> ret = Future.succeededFuture();
+            for (RelationshipTuple tuple : held) {
+                if (AuthzUtil.ROLE_BINDING_RELATION.equals(tuple.relation())) {
+                    ret = ret.compose(v -> relationships.unbind(store, AuthzUtil.idOf(tuple.user()), object));
+                }
+            }
+            return ret;
+        });
     }
 
     /**
