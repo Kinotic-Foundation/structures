@@ -42,6 +42,7 @@ import tools.jackson.databind.util.TokenBuffer;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
@@ -161,6 +162,46 @@ public class RpcTests {
                     .expectNext(PARTICIPANT_ID + suffix)
                     .expectComplete()
                     .verify();
+    }
+
+    @Test
+    public void testCallAsSendsTheParticipantFromAThreadWithNoContext() throws Exception {
+        String suffix = " Wat";
+        Participant participant = new Participant() {
+            @Override
+            public String getId() { return "called-as"; }
+            @Override
+            public Map<String, String> getMetadata() { return Map.of(); }
+            @Override
+            public List<String> getRoles() { return List.of(); }
+        };
+
+        String result = securityContext.callAs(participant, () -> rpcTestServiceProxy.firstArgParticipant(suffix).toFuture())
+                                       .get(10, TimeUnit.SECONDS);
+
+        Assertions.assertEquals("called-as" + suffix, result);
+        Assertions.assertNull(securityContext.currentParticipant());
+    }
+
+    @Test
+    public void testCallWithoutParticipantSendsNoParticipantFromAContextBoundToOne() {
+        Participant participant = new Participant() {
+            @Override
+            public String getId() { return "called-as"; }
+            @Override
+            public Map<String, String> getMetadata() { return Map.of(); }
+            @Override
+            public List<String> getRoles() { return List.of(); }
+        };
+
+        // the service resolves its participant argument from the call's sender, so it fails for a call sent for none
+        ExecutionException thrown = Assertions.assertThrows(ExecutionException.class,
+                () -> securityContext.callAs(participant,
+                                             () -> securityContext.callWithoutParticipant(
+                                                     () -> rpcTestServiceProxy.firstArgParticipant(" Wat").toFuture()))
+                                     .get(10, TimeUnit.SECONDS));
+
+        Assertions.assertTrue(thrown.getCause().getMessage().contains("No Participant is bound"), thrown.getCause().getMessage());
     }
 
     @Test
@@ -576,6 +617,29 @@ public class RpcTests {
         Mono<List<String>> mono = rpcTestServiceProxy.getListOfStrings();
         StepVerifier.create(mono)
                     .expectNext(RpcTestService.LIST_OF_STRINGS)
+                    .expectComplete()
+                    .verify();
+    }
+
+    @Test
+    public void testPageOfObjects(){
+        StepVerifier.create(rpcTestServiceProxy.getPageOfSimpleObjects())
+                    .assertNext(page -> {
+                        Assertions.assertEquals(1L, page.getTotalElements());
+                        Assertions.assertEquals(List.of(RpcTestService.STATIC_SIMPLE_OBJECT), page.getContent());
+                    })
+                    .expectComplete()
+                    .verify();
+    }
+
+    @Test
+    public void testCursorPageOfObjects(){
+        StepVerifier.create(rpcTestServiceProxy.getCursorPageOfSimpleObjects())
+                    .assertNext(page -> {
+                        Assertions.assertEquals("next", page.getCursor());
+                        Assertions.assertEquals(2L, page.getTotalElements());
+                        Assertions.assertEquals(List.of(RpcTestService.STATIC_SIMPLE_OBJECT), page.getContent());
+                    })
                     .expectComplete()
                     .verify();
     }

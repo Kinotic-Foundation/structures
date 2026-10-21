@@ -174,7 +174,7 @@ function manifestPage(origin: string, name: string, redirectUrl: string, state: 
         // With request_oauth_on_install GitHub sends the post-install redirect to the first
         // callback URL, carrying the user-authorization code completeInstall verifies.
         callback_urls: [
-            `${origin}/github/install/callback`,
+            `${origin}/api/github/install/callback`,
             // every sign-in flow through the registration returns to its one login callback
             `${origin}/api/auth/org/login/social/callback/${SIGN_IN_CONFIG_ID}`,
         ],

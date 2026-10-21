@@ -80,12 +80,15 @@ public class EmailService {
      * @param email             the recipient's email address
      * @param displayName       the recipient's display name for the greeting
      * @param verificationToken the token to include in the verification URL
+     * @param origin            the origin of the UI whose verification page the link opens, or {@code null} for
+     *                          the portal's
      * @return a future that completes once the send has finished (or fails if ACS rejects it)
      */
     public Future<Void> sendVerificationEmail(String email,
                                               String displayName,
-                                              String verificationToken) {
-        String verificationUrl = portalBaseUrl() + VERIFICATION_PATH + verificationToken;
+                                              String verificationToken,
+                                              String origin) {
+        String verificationUrl = (origin != null ? origin : portalBaseUrl()) + VERIFICATION_PATH + verificationToken;
 
         if (!properties.getDomain().getEmail().isEnabled()) {
             log.warn("Email sending is disabled; verification URL for {} <{}>: {}",
