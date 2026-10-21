@@ -99,6 +99,8 @@ ProjectService.findByRepoFullName                       → "Project Service Fin
 
 Carrying the service half on every tool is what keeps a title recognizable when many services expose a function of the same name (`save`, `findById`), so a method's `title` replaces only its own half. The title never affects the tool name.
 
+The served description leads with the title and a colon — `Application Service Count: Returns the number of entities available.` Many MCP hosts show the model only a tool's name and description, and functions inherited from a generic CRUD base share one Javadoc across every service, so the title is what tells `ApplicationService.count` from `TenantService.count`.
+
 The input schema's property names are the service interface's Java parameter names (`orderId` above), retained in the class file at compile time — the same declaration the invocation binds against, so the published schema and the runtime binding cannot drift even when an implementation renames a parameter in its override. A single parameter can carry a different name in the schema with `@Name("...")`, declared on the interface.
 
 `@McpTool` is honored in three places, mirroring how `@Publish` marks the interface while the implementation supplies the methods:
@@ -459,7 +461,7 @@ app.acme-org.orders-app~com.acme.OrderService/findById
 
 Because a qualified name is unique system wide, so is its hash — every caller scope, including system participants who see every zone, gets an unambiguous listing. Names are never parsed back apart: resolution is a caller-scoped directory query, and authorization reads the zone from the tool's stored CRI.
 
-A name is opaque, so `title` and `description` are what an LLM has to work with, and both are always served. Base 36 also bounds a name at 25 characters however long the service's package is, well inside the 128-character MCP limit.
+A name is opaque, so `title` and `description` are what an LLM has to work with, and both are always served — the description leading with the title, for hosts that show the model nothing else. Base 36 also bounds a name at 25 characters however long the service's package is, well inside the 128-character MCP limit.
 
 `KinoticUtil.mcpToolName(qualifiedName, functionName)` mints the name, so anything that needs to name a tool it did not read from a listing computes the same value the directory stored:
 
