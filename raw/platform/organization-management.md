@@ -163,47 +163,33 @@ Eight persistent entities carry the auth state, and one short-lived entity bridg
   <tr>
     <td>
       <code>
-        UserParticipantIdentity
+        OrganizationParticipantIdentity
       </code>
     </td>
     
     <td>
-      A person. An <strong>
-        account
-      </strong>
-      
-       carries neither <code>
-        organizationId
+      A person who signs in to organizations (type <code>
+        ORGANIZATION_USER
       </code>
       
-       nor <code>
-        applicationId
-      </code>
-      
-       and is unique by email; an application user carries both and belongs to that application alone
+      ), unique by email among organization users
     </td>
     
     <td>
-      An account is created at signup, by an administrator adding a member, or by invitation; application users by an admin, invitation, or <code>
-        createUserOnSignIn
-      </code>
+      Created at signup, by an administrator adding a member, or by invitation
     </td>
   </tr>
   
   <tr>
     <td>
       <code>
-        Membership
+        OrganizationMembership
       </code>
     </td>
     
     <td>
-      An account's membership of one organization (<code>
-        <identityId>:<organizationId>
-      </code>
-      
-      ), or of the platform for a system user (<code>
-        <identityId>:system
+      An organization user's membership of one organization (<code>
+        <organizationUserId>:<organizationId>
       </code>
       
       ), with its own <code>
@@ -221,6 +207,40 @@ Eight persistent entities carry the auth state, and one short-lived entity bridg
   <tr>
     <td>
       <code>
+        ApplicationParticipantIdentity
+      </code>
+    </td>
+    
+    <td>
+      A user of one application (type <code>
+        APPLICATION_USER
+      </code>
+      
+      ): carries <code>
+        organizationId
+      </code>
+      
+      , <code>
+        applicationId
+      </code>
+      
+       and, for an application with tenants, <code>
+        tenantId
+      </code>
+      
+      , and belongs to that application alone
+    </td>
+    
+    <td>
+      Created by an admin, invitation, or <code>
+        createUserOnSignIn
+      </code>
+    </td>
+  </tr>
+  
+  <tr>
+    <td>
+      <code>
         OidcBinding
       </code>
     </td>
@@ -230,7 +250,7 @@ Eight persistent entities carry the auth state, and one short-lived entity bridg
         (oidcConfigId, subject)
       </code>
       
-       → identity id, once among accounts and once per application among the application's users. With the optional password these are the user's sign-in methods
+       → identity id, once among organization users and once per application among the application's users. With the optional password these are the user's sign-in methods
     </td>
     
     <td>
@@ -438,9 +458,11 @@ There are two entry points, both producing an `Organization` and an admin `Parti
 1. User loads /signup, enters email + displayName
 2. POST /api/auth/org/signup
 3. SignUpService.initiateLocalSignUp:
-   - rejects if a sign-up is already pending for this email, or if a ParticipantIdentity
+   - rejects if a sign-up is already pending for this email, or if an organization user
      already exists for this email: a person founds one organization at most, and joins
-     others by invitation
+     others by invitation. When that organization user is a member an administrator added
+     that nobody signs in as yet, the refusal (PendingMemberException) says to accept the
+     invitation or sign in on that organization's sign-in page
    - creates a PendingSignUp with a 24h verification token
    - EmailService sends the verification link (logs it instead when email is disabled), on
      the UI the request came from when kinotic.domain.cors.allowedOriginPattern names that
@@ -451,17 +473,17 @@ There are two entry points, both producing an `Organization` and an admin `Parti
 7. SignUpService.completeLocalSignUp:
    - validates token, rejects if expired
    - creates Organization (auto-derived id from name)
-   - creates the founder's account (UserParticipantIdentity with no organizationId or
-     applicationId, enabled=true) with an IdentityCredential (bcrypt hash, separate index
-     keyed by the account id)
-   - creates the founder's Membership of the organization
-   - links Organization.createdBy = account.id
+   - creates the founder's organization user (OrganizationParticipantIdentity,
+     enabled=true) with an IdentityCredential (bcrypt hash, separate index keyed by the
+     organization user's id)
+   - creates the founder's OrganizationMembership of the organization
+   - links Organization.createdBy = the organization user's id
    - deletes the PendingSignUp
 8. The gateway establishes the browser session (204 + Set-Cookie); the frontend then calls
    userState.login() to open the realtime connection, authenticated by that session cookie.
 ```
 
-Email verification is the security gate — no `Organization`, account or membership exists until the link is clicked. With `KINOTIC_EMAIL_ENABLED=false` (the local default) the verification URL is logged to the management server's console instead of sent; copy it into the browser to finish the flow.
+Email verification is the security gate — no `Organization`, organization user or membership exists until the link is clicked. With `KINOTIC_EMAIL_ENABLED=false` (the local default) the verification URL is logged to the management server's console instead of sent; copy it into the browser to finish the flow.
 
 ### Social-IdP signup
 
@@ -479,11 +501,14 @@ Email verification is the security gate — no `Organization`, account or member
 6. OrganizationOidcCallbackHandler → OrganizationSignupHandler.complete:
    - validates state/nonce/PKCE, exchanges code for id_token + access_token
    - rejects if email_verified=false in the id_token
-   - rejects with account_exists if an account is already bound to (configId, sub) or holds
-     the verified email: a person founds one organization at most, and joins others by
-     invitation; SignUpService checks again at completion, so two sign-ups of one identity in
-     flight at once cannot both found an organization, and the organization is never created
-     for an account that cannot be
+   - SignUpService.createOidcPending rejects with user_exists if an organization user is
+     already bound to (configId, sub) or holds the verified email: a person founds one
+     organization at most, and joins others by invitation. It rejects with user_pending when
+     that organization user is a member an administrator added that nobody signs in as yet,
+     who gets in through their invitation or the organization's own provider. SignUpService
+     checks again at completion, so two sign-ups of one identity
+     in flight at once cannot both found an organization, and the organization is never
+     created for an organization user that cannot be
    - creates a PendingSignUp with the verified subject, configId, email, displayName
    - 302 to /register?token=<verificationToken> on the UI the sign-up started from
 7. /register prompts for orgName (CompleteOrg.vue)
@@ -491,9 +516,9 @@ Email verification is the security gate — no `Organization`, account or member
 9. SignUpService.completeOidcWithNewOrg:
    - validates the pending token
    - creates Organization
-   - creates the founder's account (no organizationId or applicationId, enabled=true) with an
-     OidcBinding of (configId, sub) to it
-   - creates the founder's Membership of the organization
+   - creates the founder's organization user (enabled=true) with an OidcBinding of
+     (configId, sub) to it
+   - creates the founder's OrganizationMembership of the organization
    - links Organization.createdBy
    - deletes the PendingSignUp
 10. The gateway establishes the browser session (204 + Set-Cookie). CompleteOrg.vue then
@@ -533,21 +558,23 @@ GitHub follows the same flow with one difference in step 6: GitHub is OAuth 2.0 
 
 An organization's administrators add its members on the Members page, one action for every case: **Add member**, with the person's email, an optional display name and a switch, on by default, that sends them an invitation email (`MemberService.addMember(email, displayName, sendInvitation)`, `Kinotic.members.addMember`).
 
-- **An address with no account yet** gets one, with no sign-in method, and its membership at once, so the person appears among the members as *Pending*. With the switch on, the invitation they receive claims the account: they set a password, or sign in through one of the organization's providers under the same address. With the switch off, nothing is sent and the person signs in through one of the organization's own providers (`OrganizationOidcConfiguration`), whose first sign-in under the invited address claims the account — so the switch can only be off when the organization has one, and the server refuses the request otherwise, revealing nothing about the address.
-- **An address that already has an account** is emailed an invitation whatever the switch says, since joining someone's account to an organization needs their acceptance; they appear once they accept, and the administrator is told an invitation was sent. Accepting with the account's password, or through one of the organization's providers whose verified email is the invited one, joins the account.
-- **Pending members** are listed with the invitations alike, each with *Send invitation* (`MemberService.sendInvitation(email)`, which sends the one they have again or a new one for a member added without) and *Remove*. Removing a pending member deletes the account nobody signed in to and the invitation it never accepted; removing a member who has signed in leaves their account and other organizations as they are.
+- **An address with no organization user yet** gets one, with no sign-in method, and its membership at once, so the person appears among the members as *Pending*. With the switch on, the invitation they receive claims the organization user: they set a password, or sign in through one of the organization's providers under the same address. With the switch off, nothing is sent and the person signs in through one of the organization's own providers (`OrganizationOidcConfiguration`), whose first sign-in under the invited address claims the organization user — so the switch can only be off when the organization has one, and the server refuses the request otherwise, revealing nothing about the address.
+- **An address that already has an organization user** is emailed an invitation whatever the switch says, since joining someone's organization user to an organization needs their acceptance; they appear once they accept, and the administrator is told an invitation was sent. Accepting with that organization user's password, or through one of the organization's providers whose verified email is the invited one, joins it. A system user or an application's user with the same address is a different identity, which neither the invitation nor the member list sees: the address joins as a new organization user with a password of its own.
+- **Pending members** are listed with the invitations alike, each with *Send invitation* (`MemberService.sendInvitation(email)`, which sends the one they have again or a new one for a member added without) and *Remove*. Removing a pending member deletes the organization user nobody signed in as and the invitation it never accepted; removing a member who has signed in leaves their organization user and other organizations as they are.
 - **An application's users** are still invited (`MemberService.inviteMember(email, displayName, applicationId)`), since their rows belong to the application and are created when the invitation is accepted.
 
-An organization's own provider therefore signs in only the members its administrators added: a person the provider verifies whose address no pending member holds gets `no_account`, and `createUserOnSignIn` is refused on an `OrganizationOidcConfiguration`. Nothing an organization's provider asserts can reach an account the organization did not create, and an account someone already signs in to joins only by its holder's acceptance.
+The Members page lists the organization's members as `OrganizationMember` rows (`MemberService.findMembers` / `searchMembers`): each joins an organization user with its membership, so `enabled` is the membership's standing, `joined` its creation, and `pending` marks a member who has not signed in yet. An application's Users page lists the application's users themselves, `ApplicationParticipantIdentity` rows (`MemberService.findApplicationUsers` / `searchApplicationUsers`), whose standing is the user's own.
+
+An organization's own provider therefore signs in only the members its administrators added: a person the provider verifies whose address no pending member holds gets `no_user`, and `createUserOnSignIn` is refused on an `OrganizationOidcConfiguration`. Nothing an organization's provider asserts can reach an organization user the organization did not create, and an organization user someone already signs in as joins only by its holder's acceptance.
 
 ## User Login
 
-A login is addressed to an organization. An account may be a member of any number of organizations, each a `Membership` of its own, so nothing about the person alone says where they are signing in; the organization's id, the slug of its hostnames (see [Applications and Projects](/apps/application-structure/applications-and-projects#applications)), is what every login route and page is addressed by. The portal has two login pages:
+A login is addressed to an organization. An organization user may be a member of any number of organizations, each an `OrganizationMembership` of its own, so nothing about the person alone says where they are signing in; the organization's id, the slug of its hostnames (see [Applications and Projects](/apps/application-structure/applications-and-projects#applications)), is what every login route and page is addressed by. The portal has two login pages:
 
 - `/login`, the landing page, for someone whose organization is not yet known: the platform's social buttons, which sign in without naming an organization when the identity belongs to exactly one and otherwise offer the ones it belongs to; an organization field that leads to that organization's page (prefilled with the organization this browser last signed in to); and a "Don't know your organization?" link that emails the person the organizations their address belongs to.
 - `/login/<organizationId>`, the organization's page (`OrganizationLoginPage.vue`), which offers exactly what that organization's login supports: one button per configuration `GET /api/auth/org/login/<organizationId>/providers` lists — the platform's org sign-up registrations (GitHub) followed by the organization's own `OrganizationOidcConfiguration`s — and an email + password form. The organization's own host, `<organizationId>.<sitesDomain>`, redirects here.
 
-No route asks about an email first: the page offers every method up front, and the password login answers a generic `401`, so nothing tells whether an email has an account anywhere. What the page does disclose, to anyone who knows an organization's id, is that the organization exists and the names and provider kinds of the configurations its login offers, as any SSO login page does; the id is already public as the organization's hostname, and the configurations are the buttons the page shows. A signed-in member of several organizations switches between them without signing in again: the account menu's **Organizations** list posts `POST /api/auth/org/switch { organizationId }`, which re-establishes the session for the chosen membership and reloads the portal.
+No route asks about an email first: the page offers every method up front, and the password login answers a generic `401`, so nothing tells whether an email has a user anywhere. What the page does disclose, to anyone who knows an organization's id, is that the organization exists and the names and provider kinds of the configurations its login offers, as any SSO login page does; the id is already public as the organization's hostname, and the configurations are the buttons the page shows. A signed-in member of several organizations switches between them without signing in again: the account menu's **Organizations** list posts `POST /api/auth/org/switch { organizationId }`, which re-establishes the session for the chosen membership and reloads the portal.
 
 ### Password
 
@@ -556,19 +583,19 @@ The form posts email + password to the organization's login route, which verifie
 ```text
 1. POST /api/auth/org/login/<organizationId> { email, password }   (credentials: 'include')
 2. OrganizationLoginHandler.handleLogin → AuthEndpointSupport.handlePasswordLogin:
-   - LocalAuthenticationService.authenticateLocal(email, password, null, null)
-       finds the account with that email (an application user with the same email is
-       another row and never signs in here), requires it enabled, loads its
-       IdentityCredential and verifies the bcrypt hash; an account with no password
-       fails here
-   - ParticipantIdentityService.resolveParticipant(account.id, organizationId, null)
-       requires the account's enabled Membership of that organization and makes the
-       OrganizationParticipant from the two
+   - LocalAuthenticationService.authenticateOrganizationUser(email, password)
+       finds the organization user with that email (a system user or an application
+       user with the same email is another row and never signs in here), requires it
+       enabled, loads its IdentityCredential and verifies the bcrypt hash; an
+       organization user with no password fails here
+   - ParticipantIdentityService.resolveParticipant(user.id, organizationId, null)
+       requires the organization user's enabled OrganizationMembership of that
+       organization and makes the OrganizationParticipant from the two
    - on success: establishSession(ctx, participant) puts it on the Vert.x session
                  (regenerating the session id), then 204 + Set-Cookie
    - on any failure: 401 "Invalid credentials"
                      (deliberately generic — covers unknown email, wrong password,
-                      no password, disabled account or membership, not a member)
+                      no password, disabled user or membership, not a member)
 3. OrganizationLoginPage.vue calls userState.login() → Kinotic.connect().
    The default resolution supplies no auth headers in a browser, so the
    WebSocket upgrade is authenticated by the session cookie set in step 2.
@@ -599,15 +626,16 @@ Each button on the organization's page is a form posting to the organization's s
      GET /api/auth/org/login/sso/callback/<configId>      the organization's own configuration
 4. OrganizationLoginHandler → AuthEndpointSupport.completeOidcLogin:
    - validates state/nonce, exchanges code, validates id_token (sub + email_verified)
-   - looks up the account bound to (configId, sub) (ParticipantIdentityService.
-     findByOidcIdentity) and its Membership of the stashed organization
-   - no account bound to the identity: through the organization's own configuration, the
-                 member an administrator added under the identity's verified email that
-                 nobody has signed in as yet is claimed — the identity is bound to that
-                 account as its first sign-in method and it signs in; otherwise 302
-                 /login?error=no_account
-   - no membership: 302 /login?error=no_account
-   - a disabled account or membership: 302 /login?error=account_disabled
+   - looks up the organization user bound to (configId, sub) (ParticipantIdentityService.
+     findOrganizationUserByOidcIdentity) and its OrganizationMembership of the stashed
+     organization
+   - no organization user bound to the identity: through the organization's own
+                 configuration, the member an administrator added under the identity's
+                 verified email that nobody has signed in as yet is claimed — the identity
+                 is bound to that organization user as its first sign-in method and it
+                 signs in; otherwise 302 /login?error=no_user
+   - no membership: 302 /login?error=no_user
+   - a disabled organization user or membership: 302 /login?error=user_disabled
    - otherwise: establishSession(ctx, participant), then redirectSuccess → 302 to the
        stored referer, or the SPA root when the flow stored none, with Set-Cookie.
        No token travels in the URL.
@@ -627,14 +655,14 @@ The landing page's buttons are populated from `GET /api/auth/org/login/providers
    - same flow-session setup as above, with no organization stashed, then 302 to the IdP
 3. IdP returns to GET /api/auth/org/login/social/callback/<configId>
 4. OrganizationLoginHandler.handleSocialCallback → completeOidcLogin:
-   - finds the account bound to (configId, sub) and its enabled Memberships
-     (MembershipService.findMemberships)
+   - finds the organization user bound to (configId, sub) and its enabled memberships
+     (OrganizationMembershipService.findMemberships)
    - exactly one: signs in to that organization as above
-   - no account, or no organization membership: 302 /login?error=no_account
-   - a disabled account, or one whose every organization membership is disabled:
-     302 /login?error=account_disabled
+   - no organization user, or no membership: 302 /login?error=no_user
+   - a disabled organization user, or one whose every membership is disabled:
+     302 /login?error=user_disabled
    - several: their ids are kept in the session for the page that started the flow and
-     302 /login?error=multiple_organizations&referer=<spa-path> — the account has proven who
+     302 /login?error=multiple_organizations&referer=<spa-path> — the user has proven who
      it is, so the landing page reads the ids from GET /api/auth/org/login/choices, answered
      for two minutes and until the page starts a login at an organization, and offers those
      organizations to choose from; the person signs in at the chosen one's own page, which
@@ -644,28 +672,28 @@ The landing page's buttons are populated from `GET /api/auth/org/login/providers
 
 ### Finding one's organizations
 
-`POST /api/auth/org/login/find { email, turnstileToken }` emails the address every organization its account holds an enabled membership of, each with a link to that organization's login page (`OrganizationService.sendMembershipsEmail`); a disabled account is told of none, as it can sign in to none. The route always answers `204` and the email is sent whether or not the address belongs to any organization — one that belongs to none says so — so the request reveals nothing about the address. With `KINOTIC_EMAIL_ENABLED=false` the links are logged to the management server's console instead of sent.
+`POST /api/auth/org/login/find { email, turnstileToken }` emails the address every organization its organization user holds an enabled membership of, each with a link to that organization's login page (`OrganizationService.sendMembershipsEmail`); a disabled organization user is told of none, as it can sign in to none. The route always answers `204` and the email is sent whether or not the address belongs to any organization — one that belongs to none says so — so the request reveals nothing about the address. With `KINOTIC_EMAIL_ENABLED=false` the links are logged to the management server's console instead of sent.
 
 The route is open to anyone and sends an email on every call, so it requires a person at the browser: a Cloudflare Turnstile token earned on the page, verified by the management server with the site's secret (`TurnstileVerifier`, configured under `kinotic.managementServer.turnstile.*`). `GET /api/auth/org/login/find` answers `{turnstileSiteKey}`, the site whose challenge the landing page renders before it enables the button, and a request whose token is missing, already verified or refused answers `400`. An environment with no Turnstile site, such as the e2e stack, turns the requirement off with `kinotic.managementServer.turnstile.enabled=false`, and the `GET` answers `{}`; development uses Cloudflare's always-passing test site.
 
 ### System users (SYSTEM scope)
 
-A system user is an account holding the platform membership (`Membership` with no `organizationId`, id `<identityId>:system`). They sign in through a separate, password-only route used by the system console (there is no signup, SSO, or social path for SYSTEM scope):
+A system user is a `SystemParticipantIdentity` (type `SYSTEM_USER`): unique by email among system users, acting in the system scope alone. The same email may also be an organization user and a user of any application, each with its own password. System users sign in through a separate, password-only route used by the system console (there is no signup, SSO, or social path for SYSTEM scope):
 
 ```text
 1. POST /api/auth/system/login { email, password }   (credentials: 'include')
 2. SystemLoginHandler.handleLogin → AuthEndpointSupport.handlePasswordLogin:
-   - LocalAuthenticationService.authenticateLocal(email, password, null, null)
-       verifies the account's password, then resolveParticipant(account.id, null, null)
-       requires its enabled platform membership — an account without one, however
-       many organizations it belongs to, can never authenticate here
+   - LocalAuthenticationService.authenticateSystemUser(email, password)
+       verifies the system user's password, then resolveParticipant(user.id, null, null)
+       makes its SystemParticipant — an organization user or an application user, even
+       with the same email, is another row and can never authenticate here
    - success/failure behave exactly like the org password branch:
      204 + Set-Cookie, or a generic 401
 ```
 
 The session established here is the same browser-session mechanism as every other login path; `/api/auth/me` and `/api/auth/logout` apply unchanged.
 
-The console lists them at **Members → Users**, read-only, from `SystemMemberService.findUsers` in the system zone, which lists the accounts holding the platform membership. Operators are created outside the console — by the migration fixtures, or by the identity provider once SYSTEM scope is behind Entra — so the page reports who holds access rather than granting it.
+The console lists them at **Members → Users**, read-only, from `SystemMemberService.findUsers` in the system zone, which lists the `SystemParticipantIdentity` rows. System users are created outside the console — by the migration fixtures, or by the identity provider once SYSTEM scope is behind Entra — so the page reports who holds access rather than granting it.
 
 ### The WebSocket upgrade (the final step in every path)
 
@@ -1041,8 +1069,8 @@ OIDC is a standard, but providers diverge on a few details. The validation helpe
 
 An `OrganizationOidcConfiguration` is offered at the org's own login page, `/login/<organizationId>`, by existing. An organization admin manages the organization's configurations in the portal under **Organization settings → Authentication providers**, or through the published `OwnedOidcConfigurationService` the page calls (`Kinotic.ownedOidcConfigurations` in `@kinotic-ai/management-api`, and an MCP tool), which acts for the caller's organization alone.
 
-1. **Add provider** opens the form in a drawer on the right. Pick the provider (Google, Microsoft or Okta) and enter the display name the login page prints on its button, the organization's account at the provider where the kind takes one (the **Directory (tenant) ID** for Microsoft Entra ID, the **Okta domain** on `okta.com`, `oktapreview.com` or `okta-emea.com` for Okta), the client ID and the client secret, or tick **Public client (no secret)**. The form checks the account against the kind's pattern before it saves, and shows the server's message when the server still refuses. The audience is optional, under **Advanced**. Saving calls `OwnedOidcConfigurationService.save(configuration, clientSecret)`: the authority is derived from the kind's template, so no URL is given, and the `organizationId` is the caller's whatever was sent. A secret is held in the organization's own scope of the secret storage — the row itself never names one, and nothing reads it back through the service; `confidentialClient` says whether one is held. `createUserOnSignIn` is refused on an organization's configuration, and the form does not offer it: the organization's administrators add its members (see [Members](#members)), and the provider signs in the member it verifies under a pending member's address, claiming the account on the first sign-in, or the account its identity is already bound to. A person the provider verifies whose address is no member's gets `no_account`; one whose address already has an account that someone signs in to is not claimed, and joins by accepting the invitation the administrator's Add member sent.
-2. Once saved, the form shows the configuration's **callback URL**, `<kinotic.managementApi.apiBaseUrl>/api/auth/org/login/sso/callback/<configId>`, which `OwnedOidcConfigurationService.findCallbackUrl(configId)` returns. Add it to the IdP app registration as a redirect URI; sign-ins through the configuration fail until it is there. It is the only one the configuration needs: a login, an invitation accepted through the provider, and a member connecting the provider to their account from the Profile page all return to it, and the flow's purpose, recorded on the session when it starts, says which it is. For a same-origin deploy that base is the portal's own origin; for a split-origin deploy (the SPA on the sites Worker, the backend on AKS) it is the backend's hostname, so the IdP returns the browser to the management server, not the SPA. The provider's row, its **Edit** form and its details all show the same URL again.
+1. **Add provider** opens the form in a drawer on the right. Pick the provider (Google, Microsoft or Okta) and enter the display name the login page prints on its button, the organization's account at the provider where the kind takes one (the **Directory (tenant) ID** for Microsoft Entra ID, the **Okta domain** on `okta.com`, `oktapreview.com` or `okta-emea.com` for Okta), the client ID and the client secret, or tick **Public client (no secret)**. The form checks the account against the kind's pattern before it saves, and shows the server's message when the server still refuses. The audience is optional, under **Advanced**. Saving calls `OwnedOidcConfigurationService.save(configuration, clientSecret)`: the authority is derived from the kind's template, so no URL is given, and the `organizationId` is the caller's whatever was sent. A secret is held in the organization's own scope of the secret storage — the row itself never names one, and nothing reads it back through the service; `confidentialClient` says whether one is held. `createUserOnSignIn` is refused on an organization's configuration, and the form does not offer it: the organization's administrators add its members (see [Members](#members)), and the provider signs in the member it verifies under a pending member's address, claiming that organization user on the first sign-in, or the organization user its identity is already bound to. A person the provider verifies whose address is no member's gets `no_user`; one whose address already has an organization user that someone signs in as is not claimed, and joins by accepting the invitation the administrator's Add member sent.
+2. Once saved, the form shows the configuration's **callback URL**, `<kinotic.managementApi.apiBaseUrl>/api/auth/org/login/sso/callback/<configId>`, which `OwnedOidcConfigurationService.findCallbackUrl(configId)` returns. Add it to the IdP app registration as a redirect URI; sign-ins through the configuration fail until it is there. It is the only one the configuration needs: a login, an invitation accepted through the provider, and a member connecting the provider to their organization user from the Profile page all return to it, and the flow's purpose, recorded on the session when it starts, says which it is. For a same-origin deploy that base is the portal's own origin; for a split-origin deploy (the SPA on the sites Worker, the backend on AKS) it is the backend's hostname, so the IdP returns the browser to the management server, not the SPA. The provider's row, its **Edit** form and its details all show the same URL again.
 3. Editing a configuration leaves its kind fixed, since the kind is the scope it is offered at and the server refuses a save that changes it. The client secret field starts empty: a save with it empty keeps the secret held (`save` with a null or blank secret keeps it), and a secret entered replaces it. **Make this a public client**, which asks for confirmation, deletes the held secret with `OwnedOidcConfigurationService.deleteClientSecret(configId)`.
 4. The row menu also enables or disables the configuration (a disabled one is listed on no login page and signs no one in), deletes it after a confirmation (sign-ins through it stop at once and its held secret is deleted), and copies it to an application: **Copy to application** calls `OwnedOidcConfigurationService.copy(configurationId, applicationId)`, which makes an `ApplicationOidcConfiguration` with the source's provider, account, client ID and secret, and shows the copy's own callback URL, `<the application's API host>/api/auth/app/login/oidc/callback/<copyId>`, to register with the provider as well. The application's API host is its label under `kinotic.domain.appApiBaseUrl`.
 
@@ -1050,7 +1078,7 @@ A user who logs in via this path lands at the `/api/auth/org/login/sso/callback/
 
 ## System Authentication
 
-System users are accounts holding the platform membership and no organization's, since an account's memberships are all of one kind; they sign in to the system server with an email and password, `POST /api/auth/system/login`, and the plan is to move it to Microsoft Entra, separate from the routes documented above. An organization's member holds no platform membership, so the system login refuses them as it refuses a wrong password, and a system user holds no organization's, so every organization login refuses them the same way. The curated social providers are intentionally limited to end-user self-service signup and grant org-scoped access only, so no organization route can produce a `SYSTEM`-scoped session.
+System users (`SystemParticipantIdentity`) sign in to the system server with an email and password, `POST /api/auth/system/login`, and the plan is to move it to Microsoft Entra, separate from the routes documented above. The system login authenticates system users alone, so an organization user is refused there as a wrong password is, and every organization login authenticates organization users alone, so a system user is refused there the same way. A person who is both signs in to each with that scope's own user and password. The curated social providers are intentionally limited to end-user self-service signup and grant org-scoped access only, so no organization route can produce a `SYSTEM`-scoped session.
 
 ## Endpoint Reference
 
@@ -1097,7 +1125,7 @@ Each handler is a component of the module that serves it, so a server mounts the
       </code>
       
       , <code>
-        AccountSignInMethodHandler
+        OrganizationUserSignInMethodHandler
       </code>
       
       , <code>
@@ -1582,7 +1610,7 @@ Routes are namespaced under `/api/auth/...`. Organization login and signup are t
         {organizationId}
       </code>
       
-      ; re-establishes the signed-in account's session for another of its enabled memberships (204); <code>
+      ; re-establishes the signed-in organization user's session for another of its enabled memberships (204); <code>
         401
       </code>
       
@@ -1607,18 +1635,18 @@ Routes are namespaced under `/api/auth/...`. Organization login and signup are t
     
     <td>
       <code>
-        /api/auth/account/methods/start/:configurationId
+        /api/auth/org/methods/start/:configurationId
       </code>
     </td>
     
     <td>
       <code>
-        AccountSignInMethodHandler
+        OrganizationUserSignInMethodHandler
       </code>
     </td>
     
     <td>
-      Connect a configuration to the signed-in account: a platform registration, or an organization's own configuration when the account may sign in there (<code>
+      Connect a configuration to the signed-in organization user: a platform registration, or an organization's own configuration when the user may sign in there (<code>
         403
       </code>
       
@@ -1630,7 +1658,7 @@ Routes are namespaced under `/api/auth/...`. Organization login and signup are t
         ?error=<code>
       </code>
       
-       when it is bound to another account (<code>
+       when it is bound to another organization user (<code>
         identity_in_use
       </code>
       
@@ -1690,7 +1718,7 @@ Routes are namespaced under `/api/auth/...`. Organization login and signup are t
     </td>
     
     <td>
-      Verify token + orgName + password; creates Organization, the founder's account and membership; establishes session
+      Verify token + orgName + password; creates Organization, the founder's organization user and membership; establishes session
     </td>
   </tr>
   
@@ -1738,7 +1766,7 @@ Routes are namespaced under `/api/auth/...`. Organization login and signup are t
     </td>
     
     <td>
-      Consume PendingSignUp; create Org, the founder's account bound to the GitHub identity, and membership; establishes session
+      Consume PendingSignUp; create Org, the founder's organization user bound to the GitHub identity, and membership; establishes session
     </td>
   </tr>
   
@@ -2313,14 +2341,14 @@ Routes are namespaced under `/api/auth/...`. Organization login and signup are t
     
     <td>
       Invitation details, the organization's live provider list (empty for an application invitation), <code>
-        accountExists
+        organizationUserExists
       </code>
       
-       — whether the invited email already has an account that a sign-in method signs in; a pending member's account, which none does yet, is the invitee's to claim and counts as none — and <code>
-        accountHasPassword
+       — whether the invited email already has an organization user that a sign-in method signs in; a pending member, whom none does yet, is the invitee's to claim and counts as none — and <code>
+        organizationUserHasPassword
       </code>
       
-      , without which that account joins through a provider it is bound to
+      , without which that organization user joins through a provider it is bound to
     </td>
   </tr>
   
@@ -2344,11 +2372,11 @@ Routes are namespaced under `/api/auth/...`. Organization login and signup are t
     </td>
     
     <td>
-      Accept with a password: sets it on the new account or user, or on a pending member's account as its first sign-in method, or, when the invited email already has an account someone signs in to, must be that account's password (<code>
+      Accept with a password: sets it on the new organization user or application user, or on a pending member as its first sign-in method, or, when the invited email already has an organization user someone signs in as, must be that user's password (<code>
         401
       </code>
       
-       otherwise), and the account and its membership of the organization must be enabled (<code>
+       otherwise), and the organization user and its membership of the organization must be enabled (<code>
         403
       </code>
       
@@ -2384,15 +2412,15 @@ Routes are namespaced under `/api/auth/...`. Organization login and signup are t
     </td>
     
     <td>
-      Accept an organization invitation through a configuration the organization's login offers; redirects to the IdP, whose callback completes the acceptance: the identity's verified email must be the invited one; it joins the account it is bound to, binds a pending member's account as its first sign-in method, or creates and binds one, and establishes an organization member's session; <code>
-        account_exists
+      Accept an organization invitation through a configuration the organization's login offers; redirects to the IdP, whose callback completes the acceptance: the identity's verified email must be the invited one; it joins the organization user it is bound to, binds a pending member as its first sign-in method, or creates and binds one, and establishes an organization member's session; <code>
+        user_exists
       </code>
       
-       when the email's account is one someone already signs in to and has no binding for the identity, so the holder accepts with the password instead; <code>
-        account_disabled
+       when the email's organization user is one someone already signs in as and has no binding for the identity, so the holder accepts with the password instead; <code>
+        user_disabled
       </code>
       
-       when the account or its membership is disabled. An application invitation is accepted with a password
+       when the organization user or its membership is disabled. An application invitation is accepted with a password
     </td>
   </tr>
   
