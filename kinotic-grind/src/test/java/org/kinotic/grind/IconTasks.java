@@ -1,14 +1,14 @@
 package org.kinotic.grind;
 
 import org.kinotic.grind.api.annotations.Task;
-import org.kinotic.grind.api.model.TaskIcon;
+import org.kinotic.grind.api.model.TaskIcons;
 
 /**
  * Tasks class declaring an icon on one task and leaving the other at the console's default.
  */
 public class IconTasks {
 
-    @Task(order = 1, value = "checkout", icon = TaskIcon.GIT)
+    @Task(order = 1, value = "checkout", icon = TaskIcons.GIT)
     public void checkout() {
     }
 

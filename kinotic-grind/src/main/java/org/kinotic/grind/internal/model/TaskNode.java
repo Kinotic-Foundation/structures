@@ -2,7 +2,6 @@ package org.kinotic.grind.internal.model;
 
 import org.kinotic.grind.api.model.Store;
 import org.kinotic.grind.api.model.Task;
-import org.kinotic.grind.api.model.TaskIcon;
 import org.kinotic.grind.api.model.ViewProducer;
 
 /**
@@ -23,9 +22,9 @@ public record TaskNode(int sequence,
     }
 
     /**
-     * @return the icon a console shows for the task
+     * @return the key of the icon a console shows for the task, or null for its default
      */
-    public TaskIcon icon() {
+    public String icon() {
         return task.getIcon();
     }
 

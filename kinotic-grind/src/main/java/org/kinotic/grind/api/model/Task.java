@@ -26,9 +26,10 @@ public interface Task<T> {
     Store getStore();
 
     /**
-     * @return the icon a console shows for this {@link Task}
+     * @return the key of the icon a console shows for this {@link Task}, one of {@link TaskIcons}
+     *         or another the console knows, or null for its default
      */
-    TaskIcon getIcon();
+    String getIcon();
 
     /**
      * @return the view a console shows for this {@link Task} from its start, as
@@ -51,10 +52,10 @@ public interface Task<T> {
     Task<T> store(Store store);
 
     /**
-     * @param icon the icon a console shows for the task
+     * @param icon the key of the icon a console shows for the task, see {@link #getIcon()}
      * @return a copy of this {@link Task} shown with the given icon
      */
-    Task<T> icon(TaskIcon icon);
+    Task<T> icon(String icon);
 
     /**
      * Declares the view a console shows for the task from the moment it starts, for following

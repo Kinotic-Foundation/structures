@@ -60,7 +60,7 @@ public class TaskClassCompiler {
             String description = meta.value().isEmpty() ? method.getName() : meta.value();
             Class<?> produced = producedType(method);
             Task<Object> task = methodTask(taskClass, method, description).store(effectiveStore(taskClass, method, meta, produced));
-            ret.task(task.icon(meta.icon()));
+            ret.task(meta.icon().isEmpty() ? task : task.icon(meta.icon()));
         }
         return ret;
     }

@@ -43,10 +43,10 @@ public class TaskRecord implements Identifiable<String> {
     private String description;
 
     /**
-     * The icon a console shows for the task, recorded from discovery; null for a nested definition,
-     * which declares none.
+     * The key of the icon a console shows for the task, or null for its default. Recorded from
+     * discovery.
      */
-    private TaskIcon icon;
+    private String icon;
 
     /**
      * Current status of the task.

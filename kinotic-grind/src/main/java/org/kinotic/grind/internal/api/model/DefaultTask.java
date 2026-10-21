@@ -6,7 +6,6 @@ import org.apache.commons.lang3.Validate;
 import org.kinotic.grind.api.model.JobContext;
 import org.kinotic.grind.api.model.Store;
 import org.kinotic.grind.api.model.Task;
-import org.kinotic.grind.api.model.TaskIcon;
 import org.kinotic.grind.api.model.TaskView;
 import org.kinotic.grind.internal.model.TaskBody;
 import org.kinotic.grind.api.model.ViewProducer;
@@ -30,7 +29,7 @@ public final class DefaultTask<R> implements Task<R> {
     private final Store store;
 
     @Getter
-    private final TaskIcon icon;
+    private final String icon;
 
     @Getter
     private final ViewProducer startView;
@@ -49,7 +48,7 @@ public final class DefaultTask<R> implements Task<R> {
      */
     public static <R> DefaultTask<R> of(String description, TaskBody<R> body) {
         Validate.notNull(body, "body cannot be null");
-        return new DefaultTask<>(description, null, TaskIcon.DEFAULT, null, null, body);
+        return new DefaultTask<>(description, null, null, null, null, body);
     }
 
     @Override
@@ -59,8 +58,7 @@ public final class DefaultTask<R> implements Task<R> {
     }
 
     @Override
-    public Task<R> icon(TaskIcon icon) {
-        Validate.notNull(icon, "icon cannot be null");
+    public Task<R> icon(String icon) {
         return new DefaultTask<>(description, store, icon, startView, resultView, body);
     }
 
