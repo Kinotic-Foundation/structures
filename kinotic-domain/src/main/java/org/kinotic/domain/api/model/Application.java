@@ -38,13 +38,14 @@ public class Application implements OrganizationScoped<String> {
 
     /**
      * Name of the UI whose site this application's browser flows return to, such as its OAuth consent
-     * page: one of the application's published UIs, or {@code null} until the owner designates one.
+     * page: one of the application's published UIs, or {@code null} while none is designated. A UI whose site is
+     * minted while none is designated becomes the primary UI; the owner can designate another.
      */
     private String primaryUiId;
 
     /**
      * Where the {@link #primaryUiId primary UI}'s site is served, or {@code null} while none is designated. Set
-     * by the platform when the owner designates the primary UI; a value a caller saves is replaced.
+     * by the platform when the primary UI is designated; a value a caller saves is replaced.
      */
     private String primaryUiUrl;
 
