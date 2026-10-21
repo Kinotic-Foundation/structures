@@ -25,7 +25,7 @@
       </template>
 
       <template #item.created="{ item }">
-        {{ formatDate(item.created) }}
+        <TimePill :date="item.created" />
       </template>
 
     </CrudTable>
@@ -125,12 +125,11 @@ import type { Member, PendingInviteSummary } from '@kinotic-ai/management-api'
 
 import { CrudTable, FormDrawer, MemberDetail, SteppingDrawer, TINTS, useSteppingDrawer,
          type MemberSummary } from '@kinotic-ai/frontend-common'
-import { PageHeader } from '@kinotic-ai/frontend-common'
+import { PageHeader, TimePill } from '@kinotic-ai/frontend-common'
 import { statusSeverity, useCrudTablePage } from '@kinotic-ai/frontend-common'
 import type { CrudHeader } from '@kinotic-ai/frontend-common'
 import type { DescriptiveIdentifiable } from '@kinotic-ai/frontend-common'
 import { KinoticStates } from '@/states'
-import { DatetimeUtil } from '@kinotic-ai/frontend-common'
 import { apiUrl, showErrorToast } from '@kinotic-ai/frontend-common'
 import { createDebug } from '@kinotic-ai/frontend-common'
 
@@ -195,7 +194,6 @@ const shownMembers = computed(() => shownRows.value as MemberRow[])
 const { selected: selectedMember, visible: drawerVisible, position, open: openMember, step: stepMember,
         highlighted: highlightedMember, hover: hoverMember } = useSteppingDrawer(shownMembers, member => member.id)
 
-const formatDate = DatetimeUtil.formatLocaleDate
 
 // An application's members are its users, which tells them apart from the organization's members
 const title = computed<string>(() => props.applicationId !== null ? 'Users' : 'Members')

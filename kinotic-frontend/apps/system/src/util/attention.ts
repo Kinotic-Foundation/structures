@@ -29,7 +29,7 @@ const FULL_SHA = /\b[0-9a-f]{40}\b/
 const MAX_PER_KIND = 5
 
 function relative(timestamp: string | null): string {
-    return timestamp ? DatetimeUtil.formatRelativeDate(timestamp).toLowerCase() : ''
+    return timestamp ? DatetimeUtil.formatRelativeDate(timestamp) : ''
 }
 
 /** The short form of the commit sha a run's description names, or null when it names none. */

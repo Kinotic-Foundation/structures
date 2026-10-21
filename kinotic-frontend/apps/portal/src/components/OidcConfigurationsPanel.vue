@@ -37,7 +37,7 @@
       </template>
 
       <template #item.created="{ item }">
-        {{ formatDate(item.created) }}
+        <TimePill :date="item.created" />
       </template>
     </CrudTable>
 
@@ -112,6 +112,7 @@ import {
   FactList,
   FormDrawer,
   SteppingDrawer,
+  TimePill,
   showErrorToast,
   useCrudTablePage,
   useSteppingDrawer,

@@ -26,7 +26,7 @@
       </template>
 
       <template #item.created="{ item }">
-        {{ formatDate(item.created) }}
+        <TimePill :date="item.created" />
       </template>
     </CrudTable>
 
@@ -38,7 +38,7 @@
           <div class="flex flex-col gap-1">
             <span class="font-medium">{{ session.label || 'Unnamed session' }}</span>
             <span class="text-sm text-muted-color">
-              Last active {{ formatDateTime(session.lastRefreshedAt) }} · expires {{ formatDate(session.expiresAt) }}
+              Last active {{ formatRelativeDate(session.lastRefreshedAt) }} · expires {{ formatDate(session.expiresAt) }}
             </span>
           </div>
           <Button label="End session" severity="danger" outlined size="small"
@@ -69,6 +69,7 @@ import { filteredPageLoader, statusSeverity, useCrudTablePage } from './useCrudT
 import type { CrudHeader } from '../types/CrudHeader'
 import type { DescriptiveIdentifiable } from '../types/DescriptiveIdentifiable'
 import DatetimeUtil from '../util/DatetimeUtil'
+import TimePill from './TimePill.vue'
 import { showErrorToast } from '../util/helpers'
 import EmptyChartCharacter from './EmptyChartCharacter.vue'
 
@@ -108,7 +109,7 @@ const { tableSearch, dataSource, refreshTable, removeRow } = useCrudTablePage(
 )
 
 const formatDate = DatetimeUtil.formatLocaleDate
-const formatDateTime = DatetimeUtil.formatDateTime
+const formatRelativeDate = DatetimeUtil.formatRelativeDate
 
 function toRow(delegate: DelegatingParticipantIdentity): DelegateRow {
   return {
