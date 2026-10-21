@@ -1,5 +1,8 @@
 package org.kinotic.core.api.crud;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.List;
 import java.util.function.Function;
 
@@ -11,9 +14,10 @@ public class CursorPage<T> extends Page<T> {
 
     private final String cursor;
 
-    public CursorPage(List<T> content,
-                      String cursor,
-                      Long totalElements) {
+    @JsonCreator
+    public CursorPage(@JsonProperty("content") List<T> content,
+                      @JsonProperty("cursor") String cursor,
+                      @JsonProperty("totalElements") Long totalElements) {
         super(content, totalElements);
         this.cursor = cursor;
     }

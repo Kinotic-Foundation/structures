@@ -34,9 +34,9 @@ abstract class ParticipantCallTest {
 
     @BeforeAll
     static void startVertx() {
-        // SecurityContext registers its ContextLocal at class load, which must happen
+        // No Vertx provider, since callAs is unused. SecurityContext registers its ContextLocal at class load, which must happen
         // before any Vertx instance is created
-        securityContext = new SecurityContext();
+        securityContext = new SecurityContext(null);
         tenantAccess = new TenantAccess(securityContext);
         vertx = Vertx.vertx();
     }

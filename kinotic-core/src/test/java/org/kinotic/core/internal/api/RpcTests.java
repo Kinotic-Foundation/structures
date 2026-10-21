@@ -164,6 +164,25 @@ public class RpcTests {
     }
 
     @Test
+    public void testCallAsSendsTheParticipantFromAThreadWithNoContext() throws Exception {
+        String suffix = " Wat";
+        Participant participant = new Participant() {
+            @Override
+            public String getId() { return "called-as"; }
+            @Override
+            public Map<String, String> getMetadata() { return Map.of(); }
+            @Override
+            public List<String> getRoles() { return List.of(); }
+        };
+
+        String result = securityContext.callAs(participant, () -> rpcTestServiceProxy.firstArgParticipant(suffix).toFuture())
+                                       .get(10, TimeUnit.SECONDS);
+
+        Assertions.assertEquals("called-as" + suffix, result);
+        Assertions.assertNull(securityContext.currentParticipant());
+    }
+
+    @Test
     public void testGetByteArray(){
         Mono<byte[]> mono = rpcTestServiceProxy.getByteArray();
 
@@ -576,6 +595,29 @@ public class RpcTests {
         Mono<List<String>> mono = rpcTestServiceProxy.getListOfStrings();
         StepVerifier.create(mono)
                     .expectNext(RpcTestService.LIST_OF_STRINGS)
+                    .expectComplete()
+                    .verify();
+    }
+
+    @Test
+    public void testPageOfObjects(){
+        StepVerifier.create(rpcTestServiceProxy.getPageOfSimpleObjects())
+                    .assertNext(page -> {
+                        Assertions.assertEquals(1L, page.getTotalElements());
+                        Assertions.assertEquals(List.of(RpcTestService.STATIC_SIMPLE_OBJECT), page.getContent());
+                    })
+                    .expectComplete()
+                    .verify();
+    }
+
+    @Test
+    public void testCursorPageOfObjects(){
+        StepVerifier.create(rpcTestServiceProxy.getCursorPageOfSimpleObjects())
+                    .assertNext(page -> {
+                        Assertions.assertEquals("next", page.getCursor());
+                        Assertions.assertEquals(2L, page.getTotalElements());
+                        Assertions.assertEquals(List.of(RpcTestService.STATIC_SIMPLE_OBJECT), page.getContent());
+                    })
                     .expectComplete()
                     .verify();
     }

@@ -5,6 +5,8 @@ package org.kinotic.core.internal.api.support;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import org.kinotic.core.api.annotations.Proxy;
+import org.kinotic.core.api.crud.CursorPage;
+import org.kinotic.core.api.crud.Page;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import tools.jackson.databind.util.TokenBuffer;
@@ -48,6 +50,10 @@ public interface RpcTestServiceProxy {
     Flux<Integer> getLimitedFlux();
 
     Mono<List<String>> getListOfStrings();
+
+    Mono<CursorPage<SimpleObject>> getCursorPageOfSimpleObjects();
+
+    Mono<Page<SimpleObject>> getPageOfSimpleObjects();
 
     Mono<String> getMissingRemoteMethodFailure();
 

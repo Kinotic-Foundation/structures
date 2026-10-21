@@ -316,6 +316,23 @@ CREATE TABLE IF NOT EXISTS kinotic_oidc_configuration (
     updated DATE
 );
 
+-- LLM configuration: a large language model the platform's services call, which platform operators
+-- manage in the system console (LlmConfigurationService) and a service selects by its unique name.
+-- The row names no API key: LlmConfigurationService.save(configuration, apiKey) holds the key in the
+-- platform's scope of the secret storage, keyed by the row's id, and apiKeyHeld records that one is held.
+CREATE TABLE IF NOT EXISTS kinotic_llm_configuration (
+    id KEYWORD,
+    name KEYWORD,
+    provider KEYWORD,
+    model KEYWORD NOT INDEXED,
+    endpoint KEYWORD NOT INDEXED,
+    maxTokens INTEGER NOT INDEXED,
+    temperature DOUBLE NOT INDEXED,
+    apiKeyHeld BOOLEAN,
+    created DATE,
+    updated DATE
+);
+
 -- Organization: orgs developing applications on the platform.
 CREATE TABLE IF NOT EXISTS kinotic_organization (
     id KEYWORD,
@@ -572,7 +589,7 @@ INSERT INTO kinotic_oidc_configuration (id, type, name, provider, clientId, secr
 -- users in AND verifies installation ownership at link time (see the Defense in Depth
 -- doc). Required App settings: a client secret (AKV name = secretNameRef); "Request
 -- user authorization (OAuth) during installation" checked; callback URLs under
--- "Identifying and authorizing users" = <portalBaseUrl>/github/install/callback FIRST
+-- "Identifying and authorizing users" = <managementApiBaseUrl>/api/github/install/callback FIRST
 -- (install redirects go to the first callback URL) plus the ORG_SIGNUP URL above; the
 -- "Email addresses: read-only" account permission. Scopes are inert for GitHub Apps.
 

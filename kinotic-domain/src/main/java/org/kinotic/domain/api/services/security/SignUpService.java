@@ -15,8 +15,15 @@ public interface SignUpService {
     /**
      * Starts an email/password sign-up: validates and stores a pending record and emails a
      * verification link. The organization name and password are collected later, at completion.
+     *
+     * @param email       the email to verify
+     * @param displayName the founder's display name
+     * @param origin      the origin of the UI the sign-up started from, whose {@code /signup/verify} page the
+     *                    link opens when {@code kinotic.domain.cors.allowedOriginPattern} names it other than
+     *                    through {@code *}; the link
+     *                    opens the portal's page for any other origin or {@code null}
      */
-    Future<Void> initiateLocalSignUp(String email, String displayName);
+    Future<Void> initiateLocalSignUp(String email, String displayName, String origin);
 
     /**
      * Stores a pending sign-up for an identity already verified by an OIDC provider, returning it

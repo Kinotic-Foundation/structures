@@ -16,6 +16,7 @@ import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.core.api.exceptions.AuthorizationException;
 import org.kinotic.core.api.secret.SecretReferenceResolver;
 import org.kinotic.core.api.security.SecurityContext;
+import org.kinotic.domain.api.config.KinoticDomainProperties;
 import org.kinotic.domain.api.model.security.OidcProviderType;
 import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
 import org.kinotic.domain.api.model.security.participant.OrganizationParticipant;
@@ -99,6 +100,9 @@ class DefaultGitHubAppInstallationServiceTest {
 
         GithubProperties githubProperties = new GithubProperties().setAppId(APP_ID);
 
+        KinoticDomainProperties domainProperties = new KinoticDomainProperties();
+        domainProperties.getDomain().getCors().setAllowedOriginPattern("https:\\/\\/(portal|builder)\\.example\\.com");
+
         // Real state store so staging + single-use consumption are exercised
         stateService = new GitHubInstallStateService(ignite);
 
@@ -123,7 +127,28 @@ class DefaultGitHubAppInstallationServiceTest {
                                                           stateService,
                                                           apiClient,
                                                           oidcConfigurationService,
-                                                          secretReferenceResolver);
+                                                          secretReferenceResolver,
+                                                          domainProperties);
+    }
+
+    @Test
+    void startsAnInstallReturningToAPathOrAnAllowedOrigin() {
+        service.startInstall("/projects?openNewProject=1").await();
+        service.startInstall("https://builder.example.com/").await();
+        service.startInstall(null).await();
+    }
+
+    @Test
+    void refusesAReturnToOutsideTheAllowedOrigins() {
+        for (String returnTo : List.of("https://evil.example.com/",
+                                       "https://builder.example.com.evil.com/",
+                                       "https://user@builder.example.com/",
+                                       "//evil.example.com/",
+                                       "/\\evil.example.com/",
+                                       "javascript:alert(1)",
+                                       "projects")) {
+            assertThrows(IllegalArgumentException.class, () -> service.startInstall(returnTo).await(), returnTo);
+        }
     }
 
     @Test
