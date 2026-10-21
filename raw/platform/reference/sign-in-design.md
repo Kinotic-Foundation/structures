@@ -1,0 +1,113 @@
+# Sign-In Design
+
+> How OIDC configurations, scoped logins and the one-account-many-memberships model fit together, in seven figures.
+
+## Overview
+
+Seven pictures of how sign-up and sign-in fit together: who owns a provider configuration and where its secret lives, the configuration classes, how a configuration's kind decides which login offers it, the two routes a browser can take through the app server, the identity and participant classes, what one person's account is made of, and the doors on the management server. [Organization Management](/platform/organization-management) walks the same flows endpoint by endpoint and [System Security](/platform/system-security) states the rules they enforce; this page is the map.
+
+## Two owners, two keys into one vault
+
+The platform operator and an organization administrator each write their own kind of configuration. Only the operator's kind can name a secret in the vault. An organization's kind has no such field at all: its secret is handed to the service at save time and stored under the organization's own scope, so nothing an organization writes can reach a platform secret.
+
+<sign-in-flows-diagram figure="owners">
+
+
+
+</sign-in-flows-diagram>
+
+Each owner's kind reaches the vault by its own key. The red path is the point of the design: an organization's row has nowhere to write a platform secret's name.
+
+- `OidcConfiguration` is sealed: `ManagedOidcConfiguration` (`ORG_SIGNUP` for GitHub sign-up, `APP_SOCIAL` for Google and Microsoft) and `OwnedOidcConfiguration`, whose concrete kind is the scope it is offered at: `ORGANIZATION`, `APPLICATION`, `TENANT`. All are documents in one index, `kinotic_oidc_configuration`, read back by their `type`.
+- An organization names its account at a provider, never a URL. The issuer is derived from the provider's template on every save, so the server only ever connects to the provider's own hosts. The organization's configurations are managed on the Authentication providers tab of its settings page, an application's and a tenant's on the application's settings page, or through `OwnedOidcConfigurationService`.
+- Deleting an organization's configuration deletes its secret. A save without a secret keeps the one held; `deleteClientSecret` removes it, which makes the configuration a public client whose sign-in never reads the vault. A copy to another scope (`copy`) gets its own callback URL and its own copy of the secret.
+
+## The configuration model
+
+One sealed hierarchy. The abstract root carries what every provider needs; the two abstract branches carry what distinguishes the platform's registrations from an organization's own; and each leaf adds only the ids that name the scope it is offered at. The leaf type is the `type` discriminator the index stores.
+
+<sign-in-flows-diagram figure="model">
+
+
+
+</sign-in-flows-diagram>
+
+The leaf a configuration is saved as is its scope: a leaf with no scope id is the organization's own login, `applicationId` names an application's, `applicationId` plus `tenantId` a tenant's. `Application.socialProviders` is the only reference to a managed registration an organization ever holds.
+
+- Only a managed registration can name a secret (`secretNameRef`) or set the explicit endpoint fields GitHub needs instead of discovery. An owned configuration derives its authority from `provider` and `providerAccount` on every save.
+- The hierarchy is sealed on both levels, so every `switch` over a configuration's kind is exhaustive, and a new scope is a new leaf plus a new `OidcConfigurationType` constant.
+
+## Which login offers a configuration
+
+Nothing is embedded in an organization or an application, and there is no join row. An owned configuration is offered at exactly the scope its kind names; an organization that wants the same Okta tenant at its own login and at an application's copies the configuration into the application's scope. The platform's GitHub registration is offered at every organization's login by right. The platform's social registrations are offered at an application's login when the application names their provider kind in `socialProviders`, and never at an organization's own login. A tenant's login offers the tenant's configurations first, then everything the application's login offers.
+
+<sign-in-flows-diagram figure="offering">
+
+
+
+</sign-in-flows-diagram>
+
+What reaches each login and why: an org sign-up registration by right, an owned configuration at the one scope its kind names, a social registration when the application names it, and never at the organization's own login.
+
+- Every read and write of an owned configuration is held to the caller's organization, and a copy is refused for an application or tenant the organization does not have.
+- A `createUserOnSignIn` flag on an application's or a tenant's configuration creates the identity its provider verifies as a user of that scope on the first sign-in: a user of the application, with a tenant of its own while the platform manages the application's tenants, or a user of the tenant for a `TENANT` kind. An organization's configuration refuses the flag: its members are added by administrators, and its provider then signs them in.
+
+## Where the provider sends the browser back
+
+An application's login page offers every method up front: the password form and a button per offered configuration. No endpoint takes an email before the user has chosen. The two kinds of configuration then differ in exactly one thing: where the provider returns the browser. An organization's own provider returns to the application's host. A shared platform registration can only return to one place for every application, so it returns to the app server's shared host, which hands the verified identity to the application's host under a single-use code.
+
+<sign-in-flows-diagram figure="paths">
+
+
+
+</sign-in-flows-diagram>
+
+Same start, same ending. Path B adds the shared host between the provider and the application's host, and nothing else. A sign-in from a tenant's site takes the same paths with the tenant stashed on the flow. Black arrows are the browser calling a host; green, the application's host answering; violet, the shared host; amber, the provider.
+
+- The start is `POST /api/auth/app/login/oidc/start/:configId` on the application's host. It refuses a page that is not one of the application's UIs, a page that is a site of another tenant, and a configuration the login does not offer, then answers `{redirect}`.
+- In path B the shared host runs the provider round-trip on its own session. The application's host accepts the code once, only if it was staged for that very application, and then establishes the session exactly as path A does.
+- Either callback finds the application's user through the binding `(configId, sub)`, then checks the user belongs to the login's scope (`LoginScope.memberOf`): a tenant's login admits that tenant's users only. The code is random, dies on first use or after a minute, and carries no identity itself.
+- The password form posts to `POST /api/auth/app/login` and answers 204 with the cookie, or a generic 401.
+
+## The identity and participant model
+
+Three kinds of identity share one sealed root that carries the scope structurally. A user's sign-in methods and memberships are rows of their own that point back at the user. What a request runs as is a `Participant`, which an identity becomes only together with a scope: an application user's own, or for an account the membership the login resolved.
+
+<sign-in-flows-diagram figure="identity">
+
+
+
+</sign-in-flows-diagram>
+
+An identity row says who; a participant says who, acting where. For a scoped row the two coincide and `createParticipant(identity)` suffices; for an account the scope comes from a membership, which is why `createParticipant(account)` refuses and the login resolves the pair.
+
+- The index mappings follow the classes one to one: `kinotic_participant_identity` for the sealed root with its subclass fields, `kinotic_identity_credential`, `kinotic_oidc_binding` and `kinotic_membership`.
+- `ParticipantIdentityType` {USER, DELEGATE, MACHINE} is the discriminator the index stores for the root, as `OidcConfigurationType` is for configurations. A delegate and a machine authenticate as their type says; an account's methods are its credential and binding rows, and `AuthType` {PASSWORD, OIDC} names one of them on the Profile page.
+
+## One account, many memberships
+
+A person who uses the portal holds one account, unique by email. Its sign-in methods prove which account is signing in; its memberships say where that account may sign in. Every login is addressed to a scope, and one method, `resolveParticipant`, turns the proven account plus the addressed scope into the participant for the session. The account's id is the participant's id in every organization it belongs to.
+
+<sign-in-flows-diagram figure="account">
+
+
+
+</sign-in-flows-diagram>
+
+Three rows of three: what proves the account, the account, and where it belongs. Each login below reads one binding or credential and one membership, so nothing in the login path waits on an index refresh.
+
+- Disabling a membership removes one organization from the account; disabling the account removes them all. Removing a member deletes the membership and the delegates approved in that organization, and an account nobody has signed in to that is left with no membership is deleted with it.
+- A delegate (the CLI, an MCP host) is unique per owner, client and organization, and authenticates only while its owner may still act in that organization.
+- The system console's login is the same mechanism with `organizationId` null: an account signs in there only with an enabled `u-jane:system` membership.
+
+## The doors on the management server
+
+Organization users sign up and in on the management server. Every door produces or finds an account and a membership; none of them asks about an email before a method is chosen, and a signed-in account manages its own methods and organizations from the Profile page. An administrator adds a member from the Members page: the account and its membership exist at once, pending, until an invitation or the organization's own provider claims it.
+
+<sign-in-flows-diagram figure="doors">
+
+
+
+</sign-in-flows-diagram>
+
+Four doors on one host. A new account appears through the first three: founded at sign-up, added by an administrator, or created by an invitation. The fourth is where a signed-in account adds a method; the only other way a provider identity joins an account that already exists is the organization's own provider claiming a pending member.
