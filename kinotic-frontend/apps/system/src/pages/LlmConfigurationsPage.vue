@@ -12,7 +12,7 @@
       empty-state-text="No LLM configurations"
       :row-actions="rowActions"
       @update:search="tableSearch = $event"
-      @add-item="openDialog(null)"
+      @add-item="openDrawer(null)"
     >
       <template #item.name="{ item }">
         <span class="font-mono text-sm">{{ item.name }}</span>
@@ -31,7 +31,7 @@
       </template>
     </CrudTable>
 
-    <LlmConfigurationDialog v-model:visible="dialogVisible" :configuration="editing" @saved="refreshTable()" />
+    <LlmConfigurationDrawer v-model:visible="drawerVisible" :configuration="editing" @saved="refreshTable()" />
   </div>
 </template>
 
@@ -52,7 +52,7 @@ import {
   type DescriptiveIdentifiable
 } from '@kinotic-ai/frontend-common'
 
-import LlmConfigurationDialog from '@/components/LlmConfigurationDialog.vue'
+import LlmConfigurationDrawer from '@/components/LlmConfigurationDrawer.vue'
 import { LLM_PROVIDER_NAMES } from '@/util/LlmProviderNames'
 
 /** One row: a configuration and the columns it is listed by. */
@@ -81,7 +81,7 @@ const { tableSearch, dataSource, refreshTable, run, removeRow } = useCrudTablePa
                      row => [row.name, row.model, row.provider])
 )
 
-const dialogVisible = ref(false)
+const drawerVisible = ref(false)
 const editing = ref<LlmConfiguration | null>(null)
 
 function toRow(configuration: LlmConfiguration): ConfigurationRow {
@@ -96,14 +96,14 @@ function toRow(configuration: LlmConfiguration): ConfigurationRow {
   }
 }
 
-function openDialog(configuration: LlmConfiguration | null): void {
+function openDrawer(configuration: LlmConfiguration | null): void {
   editing.value = configuration
-  dialogVisible.value = true
+  drawerVisible.value = true
 }
 
 function rowActions(row: ConfigurationRow): MenuItem[] {
   return [
-    { label: 'Edit', icon: 'pi pi-pencil', command: () => openDialog(row.configuration) },
+    { label: 'Edit', icon: 'pi pi-pencil', command: () => openDrawer(row.configuration) },
     { label: 'Delete', icon: 'pi pi-trash', command: () => confirmDelete(row.configuration) }
   ]
 }

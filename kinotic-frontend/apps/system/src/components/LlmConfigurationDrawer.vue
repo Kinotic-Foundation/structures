@@ -1,8 +1,7 @@
 <template>
-  <FormDialog :visible="visible" :icon="BrainCircuit" :title="isNew ? 'Add LLM configuration' : 'Edit LLM configuration'"
-              description="A model the platform's services call, selected by its name."
-              @update:visible="emit('update:visible', $event)" @submit="submit">
-    <div class="flex flex-col gap-5">
+  <FormDrawer :visible="visible" :title="isNew ? 'Add LLM configuration' : 'Edit LLM configuration'"
+              description="A model the platform's services call, selected by its name." @close="emit('update:visible', false)">
+    <form id="llm-configuration-form" class="flex flex-col gap-5" @submit.prevent="submit">
       <div>
         <label for="llm-name" class="mb-2 block text-sm font-medium">Name</label>
         <InputText id="llm-name" v-model="name" placeholder="app-builder" autocomplete="off" class="w-full font-mono" />
@@ -56,13 +55,13 @@
           </p>
         </div>
       </div>
-    </div>
+    </form>
 
     <template #footer>
       <Button type="button" label="Cancel" severity="secondary" outlined @click="emit('update:visible', false)" />
-      <Button type="submit" :label="isNew ? 'Add configuration' : 'Save'" :loading="saving" :disabled="!complete" />
+      <Button type="submit" form="llm-configuration-form" :label="isNew ? 'Add configuration' : 'Save'" :loading="saving" :disabled="!complete" />
     </template>
-  </FormDialog>
+  </FormDrawer>
 </template>
 
 <script setup lang="ts">
@@ -73,10 +72,9 @@ import InputText from 'primevue/inputtext'
 import Password from 'primevue/password'
 import Select from 'primevue/select'
 import { useToast } from 'primevue/usetoast'
-import { BrainCircuit } from '@lucide/vue'
 import { Kinotic } from '@kinotic-ai/core'
 import { LlmConfiguration, LlmProviderType } from '@kinotic-ai/system-api'
-import { FormDialog, showErrorToast } from '@kinotic-ai/frontend-common'
+import { FormDrawer, showErrorToast } from '@kinotic-ai/frontend-common'
 import { LLM_PROVIDER_NAMES } from '@/util/LlmProviderNames'
 
 /**
@@ -120,7 +118,7 @@ const isNew = computed(() => !props.configuration?.id)
 const temperatureInRange = computed(() => temperature.value === null || temperature.value <= MAX_TEMPERATURES[provider.value])
 const complete = computed(() => name.value.trim() !== '' && model.value.trim() !== '' && temperatureInRange.value)
 
-// the fields start from the configuration being edited each time the dialog opens, and the typed key is dropped when it closes
+// the fields start from the configuration being edited each time the drawer opens, and the typed key is dropped when it closes
 watch(() => props.visible, visible => {
   if (visible) {
     const configuration = props.configuration
