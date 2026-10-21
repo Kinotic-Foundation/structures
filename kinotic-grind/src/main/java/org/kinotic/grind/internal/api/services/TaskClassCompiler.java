@@ -1,5 +1,6 @@
 package org.kinotic.grind.internal.api.services;
 
+import org.kinotic.grind.internal.api.model.DefaultJobContext;
 import org.kinotic.grind.internal.api.model.DefaultJobDefinition;
 import org.kinotic.grind.internal.api.model.DefaultTask;
 import io.vertx.core.Future;
@@ -59,7 +60,7 @@ public class TaskClassCompiler {
             String description = meta.value().isEmpty() ? method.getName() : meta.value();
             Class<?> produced = producedType(method);
             Task<Object> task = methodTask(taskClass, method, description).store(effectiveStore(taskClass, method, meta, produced));
-            ret.task(meta.icon().isEmpty() ? task : task.icon(meta.icon()));
+            ret.task(task.icon(meta.icon()));
         }
         return ret;
     }
@@ -192,14 +193,17 @@ public class TaskClassCompiler {
 
     /**
      * The tasks class is instantiated once per run: the first task to need it constructs it
-     * through the scope, with constructor arguments resolved against the application context,
-     * and stores it for the later tasks.
+     * through the scope its tasks share, with constructor arguments resolved against the
+     * application context, and stores it for the later tasks.
      */
     private static Object tasksInstance(JobContext context, Class<?> taskClass) {
-        Object ret = context.getBeanOrNull(taskClass);
+        // built in the shared scope rather than the first task's own, so nothing injected into the
+        // instance, a JobContext included, resolves to that task's TaskReporter
+        DefaultJobContext shared = ((DefaultJobContext) context).sharedScope();
+        Object ret = shared.getBeanOrNull(taskClass);
         if (ret == null) {
-            ret = context.instantiate(taskClass);
-            context.storeBean(taskClass.getName(), ret);
+            ret = shared.instantiate(taskClass);
+            shared.storeBean(taskClass.getName(), ret);
         }
         return ret;
     }

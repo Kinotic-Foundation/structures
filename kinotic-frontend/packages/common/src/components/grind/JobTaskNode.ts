@@ -1,4 +1,4 @@
-import type { ExecutionStatus, TaskView } from '@kinotic-ai/management-api'
+import type { ExecutionStatus, TaskIcon, TaskView } from '@kinotic-ai/management-api'
 import type { JobTaskProgress } from './JobTaskProgress'
 
 /**
@@ -11,8 +11,8 @@ export interface JobTaskNode {
   /** The node's position within its parent: the last taskPath segment, 0 for the run's root. */
   sequence: number
   description: string
-  /** The key of the task's icon, one of TaskIcons, or null for the default. */
-  icon: string | null
+  /** The task's icon, or null for a nested definition, which declares none. */
+  icon: TaskIcon | null
   status: ExecutionStatus
   /** True once the task revealed dynamically generated child tasks. */
   dynamicTasks: boolean

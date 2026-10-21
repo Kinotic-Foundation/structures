@@ -18,7 +18,6 @@ import org.kinotic.grind.api.model.events.TaskStartedEvent;
 import org.springframework.beans.factory.annotation.Autowired;
 import tools.jackson.databind.JsonNode;
 
-import java.lang.reflect.Proxy;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -26,7 +25,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -242,15 +240,6 @@ public class TaskViewTest extends AbstractGrindTest {
         assertNull(result.error());
         assertEquals("seen", completionOf(result, "0/1").wireValue().get("name").stringValue());
         assertEquals("seen", recordAt(resumed, "0/1").getWireValue().get("name").stringValue());
-    }
-
-    @Test
-    public void aTaskMustBeBuiltByTheTasksFactories() {
-        @SuppressWarnings("unchecked")
-        Task<Void> foreign = (Task<Void>) Proxy.newProxyInstance(Task.class.getClassLoader(), new Class<?>[]{Task.class},
-                                                                 (proxy, method, args) -> null);
-
-        assertThrows(IllegalArgumentException.class, () -> JobDefinition.create("foreign").task(foreign));
     }
 
     private JobDefinition reportedStateJob(AtomicBoolean fail) {

@@ -2,6 +2,7 @@ package org.kinotic.grind.api.annotations;
 
 import org.kinotic.grind.api.model.JobDefinition;
 import org.kinotic.grind.api.model.StoreType;
+import org.kinotic.grind.api.model.TaskIcon;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -36,10 +37,9 @@ public @interface Task {
     String value() default "";
 
     /**
-     * The key of the icon a console shows for the task, see
-     * {@link org.kinotic.grind.api.model.Task#getIcon()}. Defaults to the console's own.
+     * The icon a console shows for the task. Defaults to the console's default icon.
      */
-    String icon() default "";
+    TaskIcon icon() default TaskIcon.DEFAULT;
 
     /**
      * How the task's return value is kept. Defaults to {@link StoreType#RESULT} for methods

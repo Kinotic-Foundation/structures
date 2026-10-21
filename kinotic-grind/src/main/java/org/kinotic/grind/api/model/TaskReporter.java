@@ -15,7 +15,7 @@ import org.kinotic.grind.api.model.events.TaskProgressEvent;
 public interface TaskReporter {
 
     /**
-     * Reports the calling task's progress. Progress reaches watchers only; it is not recorded.
+     * Reports the calling task's progress to watchers of the run, as a {@link TaskProgressEvent}.
      * @param percentageComplete how close the task is to completion, 0 to 100
      * @param message what the task is currently doing, or null
      */

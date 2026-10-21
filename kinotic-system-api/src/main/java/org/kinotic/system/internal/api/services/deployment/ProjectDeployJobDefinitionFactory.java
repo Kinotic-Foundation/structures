@@ -29,7 +29,7 @@ import org.kinotic.management.api.services.ProjectRepoTokenProvider;
 import org.kinotic.system.api.config.KinoticSystemApiProperties;
 import org.kinotic.grind.api.model.JobDefinition;
 import org.kinotic.grind.api.model.Store;
-import org.kinotic.grind.api.model.TaskIcons;
+import org.kinotic.grind.api.model.TaskIcon;
 import org.kinotic.grind.api.model.Tasks;
 import org.kinotic.system.api.services.workload.VmNodeOrchestrationService;
 import org.kinotic.system.api.services.workload.WorkloadOrchestrationService;
@@ -108,7 +108,7 @@ public class ProjectDeployJobDefinitionFactory {
                                          () -> resolveTarget(projectId, existing)
                                                  .compose(target -> recordTarget(project, target))
                                                  .toCompletionStage().toCompletableFuture())
-                           .icon(TaskIcons.TARGET)
+                           .icon(TaskIcon.TARGET)
                            .store(Store.state(ProjectDeployResultNames.DEPLOY_TARGET)))
                 .task(Tasks.fromCallable("Sync project source", new Callable<CompletableFuture<String>>() {
 
@@ -120,14 +120,14 @@ public class ProjectDeployJobDefinitionFactory {
                         return syncSource(project, target, commitSha);
                     }
                 })
-                           .icon(TaskIcons.GIT)
+                           .icon(TaskIcon.GIT)
                            .startView(DeployTarget.class, target -> TaskViews.WORKLOAD_LOG.of(new WorkloadLog(target.syncWorkloadId()))))
                 // Store.state: what the sync workload found in the commit, injected by every later
                 // task, so a resume replays it alongside the skipped sync
                 .task(Tasks.fromCallable("Resolve artifacts",
                                          () -> resolveArtifacts(project, commitSha)
                                                  .toCompletionStage().toCompletableFuture())
-                           .icon(TaskIcons.PACKAGE)
+                           .icon(TaskIcon.PACKAGE)
                            .store(Store.state(ProjectDeployResultNames.ARTIFACTS))
                            .resultView(TaskViews.PROJECT_ARTIFACTS::of))
                 .task(Tasks.fromCallable("Ensure runtime workloads", new Callable<CompletableFuture<MicroserviceDeployments>>() {
@@ -141,7 +141,7 @@ public class ProjectDeployJobDefinitionFactory {
                                 .toCompletionStage().toCompletableFuture();
                     }
                 })
-                           .icon(TaskIcons.SERVER))
+                           .icon(TaskIcon.SERVER))
                 .task(Tasks.fromCallable("Publish UIs", new Callable<CompletableFuture<UiDeployments>>() {
 
                     @Autowired
@@ -155,7 +155,7 @@ public class ProjectDeployJobDefinitionFactory {
                         return publishUis(project, target, artifacts, commitSha).toCompletionStage().toCompletableFuture();
                     }
                 })
-                           .icon(TaskIcons.GLOBE)
+                           .icon(TaskIcon.GLOBE)
                            .startView(DeployTarget.class, target -> TaskViews.WORKLOAD_LOG.of(new WorkloadLog(target.uiPublishWorkloadId()))))
                 .task(Tasks.fromCallable("Generate SBOM", new Callable<CompletableFuture<Boolean>>() {
 
@@ -170,7 +170,7 @@ public class ProjectDeployJobDefinitionFactory {
                         return generateSbom(project, target, artifacts).toCompletionStage().toCompletableFuture();
                     }
                 })
-                           .icon(TaskIcons.SBOM)
+                           .icon(TaskIcon.SBOM)
                            .startView(DeployTarget.class, target -> TaskViews.SBOM_GENERATION.of(
                                    new SbomGeneration(target.sbomWorkloadId(), null)))
                            .resultView(DeployTarget.class, (Boolean generated, DeployTarget target) -> TaskViews.SBOM_GENERATION.of(

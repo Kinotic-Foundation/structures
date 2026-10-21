@@ -13,7 +13,7 @@ import org.apache.ignite.services.Service;
 import org.kinotic.core.api.event.ZonePartitioningService;
 import org.kinotic.domain.api.utils.DomainUtil;
 
-import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 
 /**
  * Runs the {@link WorkloadRetentionSweeper} as one HA cluster singleton on the Ignite service grid,
@@ -83,12 +83,16 @@ public class WorkloadCleanupService implements Service, WorkloadRetentionService
 
     @Override
     public void sweep() {
-        // the calling thread blocks until the sweep it started or joined has ended
+        // the calling thread blocks until the sweep it started or joined has ended, or until it is
+        // interrupted, which leaves the sweep running
         try {
-            startSweep().toCompletionStage().toCompletableFuture().join();
-        } catch (CompletionException e) {
+            startSweep().toCompletionStage().toCompletableFuture().get();
+        } catch (ExecutionException e) {
             // the exception travels back to the calling node, so it carries the cause as text, which always serializes
             throw new IllegalStateException("Workload cleanup failed: " + e.getCause());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted while waiting for the workload cleanup to end");
         }
     }
 

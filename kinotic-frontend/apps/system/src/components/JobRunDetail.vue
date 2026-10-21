@@ -1,17 +1,15 @@
 <template>
-  <JobRunProgress :key="jobRunId" :job-run-id="jobRunId" :failure-of="ProjectDeployResultNames.failureOf" />
+  <JobRunProgress :key="jobRunId" :job-run-id="jobRunId" :failure-of="ProjectDeployResultNames.failureOf"
+                  @loaded="emitOwningOrganization" />
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
-import { Kinotic } from '@kinotic-ai/core'
-import { JobRunProgress, ProjectDeployResultNames, createDebug } from '@kinotic-ai/frontend-common'
-
-const debug = createDebug('job-run-detail')
+import type { JobRun } from '@kinotic-ai/management-api'
+import { JobRunProgress, ProjectDeployResultNames } from '@kinotic-ai/frontend-common'
 
 /**
  * One job run's progress, step by step, with each step's detail. Without the organization the run
- * belongs to, it looks the run up and emits that organization once known.
+ * belongs to, it emits that organization once the run is loaded.
  */
 const props = defineProps<{
   jobRunId: string
@@ -22,21 +20,9 @@ const emit = defineEmits<{
   (e: 'organization', organizationId: string | null): void
 }>()
 
-const owningOrganizationId = ref<string | null>(null)
-
-watch(() => props.jobRunId, loadOwningOrganization, { immediate: true })
-
-async function loadOwningOrganization(): Promise<void> {
-  owningOrganizationId.value = null
-  if (props.organizationId) {
-    return
+function emitOwningOrganization(run: JobRun): void {
+  if (!props.organizationId) {
+    emit('organization', run.organizationId)
   }
-  try {
-    const run = await Kinotic.jobMonitoring.findJobRun(props.jobRunId)
-    owningOrganizationId.value = run.organizationId
-  } catch (error) {
-    debug('Failed to load job run %s: %O', props.jobRunId, error)
-  }
-  emit('organization', owningOrganizationId.value)
 }
 </script>

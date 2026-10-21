@@ -26,7 +26,7 @@ public class DefaultJobContext implements JobContext {
 
     private final DefaultJobContext parent;
     // The scope stored values and managed instances belong to: this one, or for a task scope the
-    // scope the task executes in, so nothing a task stores ends with the task
+    // scope the task executes in, which outlives the task
     private final DefaultJobContext owner;
     // Non-null only on the root scope, so property lookups end at the application configuration
     private final Environment fallbackEnvironment;
@@ -126,6 +126,14 @@ public class DefaultJobContext implements JobContext {
      */
     public DefaultJobContext createChild() {
         return new DefaultJobContext(this, beanFactory, null);
+    }
+
+    /**
+     * @return the scope the values this scope stores belong to: this scope, or for a task's scope
+     *         the scope the task executes in, shared with the tasks beside it
+     */
+    public DefaultJobContext sharedScope() {
+        return owner;
     }
 
     /**

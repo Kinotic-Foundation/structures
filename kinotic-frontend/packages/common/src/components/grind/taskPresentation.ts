@@ -1,23 +1,24 @@
 import { markRaw, type Component } from 'vue'
 import { Crosshair, FolderGit2, Globe, ListTree, Package, Server } from '@lucide/vue'
-import { TaskIcons, TaskViews } from '@kinotic-ai/management-api'
+import { TaskIcon, TaskViews } from '@kinotic-ai/management-api'
 import WorkloadLogTaskView from '../WorkloadLogTaskView.vue'
 import ProjectArtifactsTaskView from '../deploy/ProjectArtifactsTaskView.vue'
 import SbomGenerationTaskView from '../deploy/SbomGenerationTaskView.vue'
 import type { JobTaskNode } from './JobTaskNode'
 
 /**
- * How the job run views render what tasks declare: the icon for each TaskIcons key, and the
- * component for each TaskViews kind. Every view component takes the view's data, the task's node
- * and the run. A key or kind missing here renders the default icon, or no detail pane.
+ * How the job run views render what tasks declare: the icon for each TaskIcon, and the component
+ * for each TaskViews kind. Every view component takes the view's data, the task's node and the
+ * run. TaskIcon.DEFAULT, absent here, renders the default icon, and a kind missing here renders no
+ * detail pane.
  */
-export const TASK_ICONS: Record<string, Component> = {
-  [TaskIcons.TARGET]: markRaw(Crosshair),
-  [TaskIcons.GIT]: markRaw(FolderGit2),
-  [TaskIcons.PACKAGE]: markRaw(Package),
-  [TaskIcons.SERVER]: markRaw(Server),
-  [TaskIcons.GLOBE]: markRaw(Globe),
-  [TaskIcons.SBOM]: markRaw(ListTree)
+export const TASK_ICONS: Partial<Record<TaskIcon, Component>> = {
+  [TaskIcon.TARGET]: markRaw(Crosshair),
+  [TaskIcon.GIT]: markRaw(FolderGit2),
+  [TaskIcon.PACKAGE]: markRaw(Package),
+  [TaskIcon.SERVER]: markRaw(Server),
+  [TaskIcon.GLOBE]: markRaw(Globe),
+  [TaskIcon.SBOM]: markRaw(ListTree)
 }
 
 export const TASK_VIEWS: Record<string, Component> = {

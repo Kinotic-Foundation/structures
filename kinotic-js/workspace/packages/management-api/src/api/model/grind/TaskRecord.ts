@@ -1,6 +1,7 @@
 import type { Identifiable } from '@kinotic-ai/core'
 import { ExecutionStatus } from '@/api/model/grind/ExecutionStatus'
 import { StoreType } from '@/api/model/grind/StoreType'
+import type { TaskIcon } from '@/api/model/grind/TaskIcon'
 import type { TaskView } from '@/api/model/grind/TaskView'
 
 /**
@@ -32,10 +33,10 @@ export class TaskRecord implements Identifiable<string> {
     public description: string | null = null
 
     /**
-     * The key of the icon a console shows for the task, one of TaskIcons, or null for its default.
-     * Recorded from discovery.
+     * The icon a console shows for the task, recorded from discovery; null for a nested definition,
+     * which declares none.
      */
-    public icon: string | null = null
+    public icon: TaskIcon | null = null
 
     /**
      * Current status of the task.

@@ -42,7 +42,9 @@ public class Tasks {
 
     /**
      * Creates a {@link Task} that injects the given instance's annotated members against the
-     * job scope, then invokes {@link Callable#call()} for the result.
+     * job scope, then invokes {@link Callable#call()} for the result. The instance is injected on
+     * each execution, so it serves one execution at a time; a task that runs concurrently, in
+     * parallel definitions or concurrent runs, is built per execution with {@link #fromClass(String, Class)}.
      * @param description of the task
      * @param callable to inject and invoke
      * @param <R> the result type
@@ -58,7 +60,9 @@ public class Tasks {
 
     /**
      * Creates a {@link Task} that injects the given instance's annotated members against the
-     * job scope, then invokes {@link Supplier#get()} for the result.
+     * job scope, then invokes {@link Supplier#get()} for the result. The instance is injected on
+     * each execution, so it serves one execution at a time, as {@link #fromCallable(String, Callable)}
+     * describes.
      * @param description of the task
      * @param supplier to inject and invoke
      * @param <R> the result type
@@ -74,7 +78,8 @@ public class Tasks {
 
     /**
      * Creates a {@link Task} that injects the given instance's annotated members against the
-     * job scope, then invokes {@link Runnable#run()}.
+     * job scope, then invokes {@link Runnable#run()}. The instance is injected on each execution,
+     * so it serves one execution at a time, as {@link #fromCallable(String, Callable)} describes.
      * @param description of the task
      * @param runnable to inject and invoke
      * @return the task

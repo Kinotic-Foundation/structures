@@ -8,7 +8,6 @@ import org.kinotic.grind.internal.model.RunCancelledException;
 import org.kinotic.grind.internal.model.SerializedState;
 import org.kinotic.grind.internal.model.JobNode;
 import org.kinotic.grind.internal.model.TaskNode;
-import org.kinotic.grind.internal.model.ViewProducer;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -21,6 +20,7 @@ import org.kinotic.grind.api.model.JobDefinition;
 import org.kinotic.grind.api.model.JobScope;
 import org.kinotic.grind.api.model.TaskReporter;
 import org.kinotic.grind.api.model.TaskView;
+import org.kinotic.grind.api.model.ViewProducer;
 import org.kinotic.grind.api.model.TaskRecord;
 import org.kinotic.grind.api.model.Store;
 import org.kinotic.grind.api.model.StoreType;
@@ -190,7 +190,7 @@ public class JobInterpreter {
         Object raw;
         Object result;
         try {
-            raw = taskToRun.execute(scope.createTaskScope(taskReporter(path, runContext(), inFlight)));
+            raw = taskToRun.execute(scope.createTaskScope(taskReporter(path, node.description(), runContext(), inFlight)));
             result = raw instanceof Task<?> || raw instanceof JobDefinition ? raw : awaitValue(raw);
         } finally {
             inFlight.set(false);
@@ -260,7 +260,7 @@ public class JobInterpreter {
      * The {@link TaskReporter} one task is given: its reports attach to that task while it is in
      * flight, from its body or a callback dispatched on the run context it executes on.
      */
-    private TaskReporter taskReporter(String path, Context context, AtomicBoolean inFlight) {
+    private TaskReporter taskReporter(String path, String description, Context context, AtomicBoolean inFlight) {
         return new TaskReporter() {
             @Override
             public void progress(int percentageComplete, String message) {
@@ -273,7 +273,7 @@ public class JobInterpreter {
             public void view(TaskView<?> view) {
                 Validate.notNull(view, "view cannot be null");
                 if (accepts()) {
-                    notifyTaskViewed(path, stateSerializer.serializeView(path, view));
+                    notifyTaskViewed(path, stateSerializer.serializeView(description, view));
                 }
             }
 
@@ -412,6 +412,11 @@ public class JobInterpreter {
      */
     @SneakyThrows
     private void handleTaskFailure(String path, Throwable error) {
+        // a task whose blocking call the cancellation interrupted fails with an exception of its own,
+        // and is cancelled all the same
+        if (!(error instanceof RunCancelledException) && RunThread.cancelled()) {
+            throw new RunCancelledException();
+        }
         if (!(error instanceof RunCancelledException)) {
             notifyTaskFailed(path, error);
         }

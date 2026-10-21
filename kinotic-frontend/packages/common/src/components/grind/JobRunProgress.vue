@@ -89,13 +89,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, markRaw, onUnmounted, ref, type Component } from 'vue'
+import { computed, markRaw, onUnmounted, ref, watch, type Component } from 'vue'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
 import ProgressBar from 'primevue/progressbar'
 import Tag from 'primevue/tag'
 import { CalendarCheck, CalendarClock, CircleAlert, History, ShieldAlert, Timer } from '@lucide/vue'
-import { ExecutionStatus } from '@kinotic-ai/management-api'
+import { ExecutionStatus, type JobRun } from '@kinotic-ai/management-api'
 import DatetimeUtil from '../../util/DatetimeUtil'
 import JobTaskPipeline from './JobTaskPipeline.vue'
 import JobTaskTree from './JobTaskTree.vue'
@@ -119,10 +119,21 @@ const props = defineProps<{
   nextStep?: string
 }>()
 
+const emit = defineEmits<{
+  /** The run, each time it is loaded. */
+  (e: 'loaded', run: JobRun): void
+}>()
+
 const formatDateTime = DatetimeUtil.formatDateTime
 const formatDuration = DatetimeUtil.formatDuration
 
 const { run, root, percentComplete, loading, error, live } = useJobRunProgress(props.jobRunId)
+
+watch(run, current => {
+  if (current) {
+    emit('loaded', current)
+  }
+})
 
 const tree = ref<InstanceType<typeof JobTaskTree> | null>(null)
 const detailsOpen = ref(false)

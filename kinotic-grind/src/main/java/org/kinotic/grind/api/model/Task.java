@@ -6,7 +6,7 @@ import java.util.function.Function;
 /**
  * A unit of work executed as one task of a {@link JobDefinition}, and how a console presents it:
  * its icon and the {@link TaskView} it shows as it starts, runs and completes; while it runs, the
- * view is replaced through the scope's {@link TaskReporter}, and the latest view is the one its
+ * view is replaced through the task's {@link TaskReporter}, and the latest view is the one its
  * record keeps. A task is an immutable value:
  * the fluent methods return copies, so one instance can serve several definitions, or a step and
  * another step's {@link Store#reload(Task) reload task}, without either seeing the other's settings.
@@ -26,10 +26,21 @@ public interface Task<T> {
     Store getStore();
 
     /**
-     * @return the key of the icon a console shows for this {@link Task}, one of {@link TaskIcons}
-     *         or another the console knows, or null for its default
+     * @return the icon a console shows for this {@link Task}
      */
-    String getIcon();
+    TaskIcon getIcon();
+
+    /**
+     * @return the view a console shows for this {@link Task} from its start, as
+     *         {@link #startView(Class, Function)} declares it, or null when it declares none
+     */
+    ViewProducer getStartView();
+
+    /**
+     * @return the view a console shows for this {@link Task} once it completes with a value, as
+     *         {@link #resultView(Function)} declares it, or null when it declares none
+     */
+    ViewProducer getResultView();
 
     /**
      * @param store how the result is kept: its {@link StoreType} governs resume behavior, its name
@@ -40,10 +51,10 @@ public interface Task<T> {
     Task<T> store(Store store);
 
     /**
-     * @param icon the key of the icon a console shows for the task, see {@link #getIcon()}
+     * @param icon the icon a console shows for the task
      * @return a copy of this {@link Task} shown with the given icon
      */
-    Task<T> icon(String icon);
+    Task<T> icon(TaskIcon icon);
 
     /**
      * Declares the view a console shows for the task from the moment it starts, for following
