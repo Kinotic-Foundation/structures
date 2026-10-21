@@ -84,7 +84,7 @@
         </DashboardSection>
 
         <DashboardSection :icon="Server" :tint="TINTS.purple" title="Runtime workloads" :count="services.length"
-                          description="The microservice VMs this project's deployments have left running, where the platform placed them, and what an operator can do about each.">
+                          description="The microservice VMs this project's deployments have left running, where the platform placed them, and what a system user can do about each.">
           <WorkloadsTable v-if="services.length > 0" :workloads="services" :scope="scope" :node-names="nodeNames" @changed="load" />
           <EmptyChartCharacter v-else class="py-6" title="No microservice workload is running" />
         </DashboardSection>

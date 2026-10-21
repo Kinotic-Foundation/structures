@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Verifies who may read a configuration's API key: a cluster member calling as itself reads it, while a call made for
- * an organization's user or for a platform operator is refused.
+ * an organization's user or for a system user is refused.
  */
 @SpringBootTest
 public class LlmConfigurationServiceTests extends KinoticTestBase {
@@ -58,10 +58,10 @@ public class LlmConfigurationServiceTests extends KinoticTestBase {
     }
 
     @Test
-    public void aCallForAPlatformOperatorIsRefused() {
-        DefaultSystemParticipant operator = new DefaultSystemParticipant("operator-" + suffix(), Map.of(), List.of());
+    public void aCallForASystemUserIsRefused() {
+        DefaultSystemParticipant systemUser = new DefaultSystemParticipant("system-user-" + suffix(), Map.of(), List.of());
         ExecutionException thrown = assertThrows(ExecutionException.class,
-                                                 () -> securityContext.callAs(operator,
+                                                 () -> securityContext.callAs(systemUser,
                                                                               () -> llmConfigurations.findApiKey(configuration.getId())
                                                                                                      .toCompletionStage())
                                                                       .get(30, TimeUnit.SECONDS));

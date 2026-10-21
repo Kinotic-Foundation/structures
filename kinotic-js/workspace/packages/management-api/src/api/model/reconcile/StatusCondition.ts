@@ -7,7 +7,7 @@ import type { StatusConditionType } from './StatusConditionType'
 export interface StatusCondition {
     /** What was inferred. */
     type: StatusConditionType
-    /** Why, for an operator. */
+    /** Why, for a system user. */
     message: string
     /** When the inference was first made, as an ISO-8601 timestamp. */
     since: string

@@ -7,7 +7,7 @@ import { Application,
 import type { IKinotic, IServiceProxy, Page, Pageable } from '@kinotic-ai/core'
 
 /**
- * Cross-organization reads for platform operators. Published in the system zone, which only
+ * Cross-organization reads for system users. Published in the system zone, which only
  * SYSTEM participants may address, so every method takes the target organization explicitly
  * instead of resolving it from the caller's scope.
  */

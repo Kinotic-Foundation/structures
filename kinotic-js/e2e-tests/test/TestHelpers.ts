@@ -81,7 +81,7 @@ export function managementServer(): ServerInfo {
     return kinoticServer('kinotic-server-management')
 }
 
-/** The system server, where platform operators connect. */
+/** The system server, where system users connect. */
 export function systemServer(): ServerInfo {
     return kinoticServer('kinotic-server-system')
 }

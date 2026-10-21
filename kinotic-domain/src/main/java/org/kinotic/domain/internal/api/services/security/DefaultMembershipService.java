@@ -67,14 +67,14 @@ public class DefaultMembershipService implements MembershipService {
         });
     }
 
-    // an account is a platform operator's or an organization member's, never both, so an operator signs in to
+    // an account is a system user's or an organization member's, never both, so a system user signs in to
     // the system console alone and a member to their organizations alone
     private Future<Void> requireMembershipsOfOneKind(String identityId, String organizationId) {
         boolean platform = organizationId == null;
         return findMemberships(identityId).map(memberships -> {
             Validate.isTrue(memberships.stream().allMatch(membership -> (membership.getOrganizationId() == null) == platform),
-                            platform ? "An organization's member cannot become a platform operator"
-                                     : "A platform operator cannot become an organization's member");
+                            platform ? "An organization's member cannot become a system user"
+                                     : "A system user cannot become an organization's member");
             return null;
         });
     }

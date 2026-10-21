@@ -10,8 +10,8 @@ import lombok.experimental.Accessors;
  * sign-in: an application offers it by naming the registration's provider kind in its
  * {@code Application.socialProviders}, and the application's users then sign in with Kinotic's
  * registration, under Kinotic's name on the provider's consent screen, with no registration of the
- * application's own. Belongs to no organization. Seeded via SQL migration and saved by the platform
- * operator only.
+ * application's own. Belongs to no organization. Seeded via SQL migration and saved by a system
+ * user only.
  */
 @Getter
 @Setter

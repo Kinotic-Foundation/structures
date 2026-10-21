@@ -59,7 +59,7 @@
                 <div :class="ROW_CLASS">
                   <div>
                     <label for="app-primary-ui" :class="LABEL_CLASS">Primary UI</label>
-                    <p :class="HELP_CLASS">The published UI this application's browser flows, such as OAuth consent, return to.</p>
+                    <p :class="HELP_CLASS">The published UI this application's browser flows, such as OAuth consent, return to. The first UI a deployment publishes is chosen until you pick another.</p>
                   </div>
                   <div>
                     <Select input-id="app-primary-ui" v-model="primaryUiId" :options="uiOptions" placeholder="Not set" show-clear class="w-full"

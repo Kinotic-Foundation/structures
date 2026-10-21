@@ -10,12 +10,13 @@ import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.util.Base64;
+import java.util.HexFormat;
 
 /**
  * Derives opaque, deterministic secret names using a two-level HKDF chain (HMAC-SHA256).
  * <p>
  * Level 1: scopeKey = HMAC(masterKey, secretScope)
- * Level 2: derivedName = HMAC(scopeKey, key)  → base64url (43 chars, no padding)
+ * Level 2: derivedName = HMAC(scopeKey, key)  → lowercase hex (64 chars)
  * <p>
  */
 @Slf4j
@@ -36,22 +37,23 @@ public class SecretNameDeriver {
     }
 
     /**
-     * Derives an opaque, deterministic 43-character base64url name for the given scope and key.
+     * Derives an opaque, deterministic 64-character lowercase hex name for the given scope and key.
      * <p>
      * The derivation is a two-level HMAC chain:
      * <ol>
      *   <li>scopeKey = HMAC-SHA256(masterKey, secretScope)</li>
-     *   <li>derivedName = base64url(HMAC-SHA256(scopeKey, key))</li>
+     *   <li>derivedName = hex(HMAC-SHA256(scopeKey, key))</li>
      * </ol>
      *
      * @param secretScope the isolation scope (e.g. tenant ID)
      * @param key         the logical secret key within the scope
-     * @return a 43-character base64url string (no padding) suitable as a storage key
+     * @return a 64-character lowercase hex string suitable as a storage key
      */
     public String derive(String secretScope, String key) {
         byte[] scopeKey = hmac(masterKey, secretScope.getBytes(StandardCharsets.UTF_8));
         byte[] hash = hmac(scopeKey, key.getBytes(StandardCharsets.UTF_8));
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(hash);
+        // Hex, because Azure Key Vault names allow only [0-9a-zA-Z-] and base64url emits '_'
+        return HexFormat.of().formatHex(hash);
     }
 
     private static byte[] hmac(byte[] key, byte[] data) {

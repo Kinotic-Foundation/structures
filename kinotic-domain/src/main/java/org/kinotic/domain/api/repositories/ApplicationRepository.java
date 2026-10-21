@@ -3,12 +3,27 @@ package org.kinotic.domain.api.repositories;
 import io.vertx.core.Future;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.domain.api.model.Application;
+import org.kinotic.domain.api.model.ApplicationKey;
 import org.kinotic.domain.internal.api.repositories.AbstractOrganizationScopedRepository;
 import org.kinotic.domain.internal.api.services.CrudServiceTemplate;
 import org.springframework.stereotype.Component;
 
+import java.util.Date;
+import java.util.Map;
+
 @Component
 public class ApplicationRepository extends AbstractOrganizationScopedRepository<Application> {
+
+    private static final String CLAIM_PRIMARY_UI_SCRIPT = """
+            def app = ctx._source;
+            if (app.primaryUiId != null) {
+                ctx.op = 'noop';
+            } else {
+                app.primaryUiId = params.primaryUiId;
+                app.primaryUiUrl = params.primaryUiUrl;
+                app.updated = params.updated;
+            }
+            """;
 
     public ApplicationRepository(CrudServiceTemplate crudServiceTemplate) {
         super("kinotic_application", Application.class, crudServiceTemplate);
@@ -32,5 +47,24 @@ public class ApplicationRepository extends AbstractOrganizationScopedRepository<
                     }
                     return app;
                 });
+    }
+
+    /**
+     * Designates the UI as the application's primary UI when the application has none, leaving a
+     * designated primary UI as it is.
+     *
+     * @param applicationKey the application whose primary UI to designate
+     * @param uiName         the name of the published UI
+     * @param uiUrl          where the UI's site is served
+     * @return a future emitting true when the UI became the primary UI, false when one was already designated
+     */
+    public Future<Boolean> claimPrimaryUi(ApplicationKey applicationKey, String uiName, String uiUrl) {
+        Validate.notBlank(uiName, "uiName cannot be blank");
+        Validate.notBlank(uiUrl, "uiUrl cannot be blank");
+        return crudServiceTemplate.scriptedUpdate(indexName,
+                                                  composeDocumentId(applicationKey.applicationId(), applicationKey.organizationId()),
+                                                  CLAIM_PRIMARY_UI_SCRIPT,
+                                                  Map.of("primaryUiId", uiName, "primaryUiUrl", uiUrl, "updated", new Date()),
+                                                  b -> b.routing(applicationKey.organizationId()));
     }
 }

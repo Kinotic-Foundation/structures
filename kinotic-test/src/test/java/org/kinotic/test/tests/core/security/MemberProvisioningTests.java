@@ -46,7 +46,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * the pending member it verifies under that address, once, and no one else; an invitation claims a pending member
  * with a password or a provider identity; an address that already has an account is invited to accept instead;
  * removing a pending member removes the account nobody signed in to; an address added twice at once is one
- * member; and an account is a platform operator's or an organization member's, never both.
+ * member; and an account is a system user's or an organization member's, never both.
  */
 @SpringBootTest
 public class MemberProvisioningTests extends KinoticTestBase {
@@ -154,19 +154,19 @@ public class MemberProvisioningTests extends KinoticTestBase {
     }
 
     @Test
-    public void anAccountIsAnOperatorsOrAMembersNeverBoth() throws Exception {
-        String operatorEmail = "operator-" + suffix() + "@example.test";
-        UserParticipantIdentity operator = await(identities.createUser(account(operatorEmail, "Olive Operator"), PASSWORD));
-        assertNull(await(memberships.addMember(operator.getId(), null)).getOrganizationId());
+    public void anAccountIsASystemUserOrAMemberNeverBoth() throws Exception {
+        String systemUserEmail = "system-user-" + suffix() + "@example.test";
+        UserParticipantIdentity systemUser = await(identities.createUser(account(systemUserEmail, "Sam System"), PASSWORD));
+        assertNull(await(memberships.addMember(systemUser.getId(), null)).getOrganizationId());
 
-        // an administrator may add the operator's address, but the acceptance that would make the membership is refused
-        assertInstanceOf(IllegalArgumentException.class, failure(() -> memberships.addMember(operator.getId(), organization.getId())));
-        await(asAdministrator(() -> members.addMember(operatorEmail, "Olive Operator", true)));
+        // an administrator may add the system user's address, but the acceptance that would make the membership is refused
+        assertInstanceOf(IllegalArgumentException.class, failure(() -> memberships.addMember(systemUser.getId(), organization.getId())));
+        await(asAdministrator(() -> members.addMember(systemUserEmail, "Sam System", true)));
         await(identities.syncIndex());
-        PendingInvite invite = await(invites.findPendingInvite(operatorEmail, organization.getId()));
+        PendingInvite invite = await(invites.findPendingInvite(systemUserEmail, organization.getId()));
         assertInstanceOf(IllegalArgumentException.class,
                          assertThrows(ExecutionException.class, () -> await(invites.acceptLocalInvite(invite.getVerificationToken(), PASSWORD, null))).getCause());
-        assertNull(await(memberships.findMembership(operator.getId(), organization.getId())));
+        assertNull(await(memberships.findMembership(systemUser.getId(), organization.getId())));
 
         // and a member's account never takes the platform membership
         Member member = await(asAdministrator(() -> members.addMember("member-" + suffix() + "@example.test", "Max Member", false)));

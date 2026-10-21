@@ -52,7 +52,7 @@ public class DefaultJobMonitoringService implements JobMonitoringService {
         ParticipantScope scope = currentParticipant().getScope();
         Future<Page<JobRun>> ret;
         if(scope.organizationId() == null){
-            // operators troubleshoot every run, not only the platform-owned ones findAllForOwner would give
+            // system users troubleshoot every run, not only the platform-owned ones findAllForOwner would give
             ret = jobRunRepository.findAll(pageable);
         }else if(scope.applicationId() != null){
             ret = jobRunRepository.findAllForOwner(JobOwner.ofApplication(scope.organizationId(), scope.applicationId(), null),

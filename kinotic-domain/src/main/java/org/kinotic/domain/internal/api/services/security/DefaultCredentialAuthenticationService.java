@@ -62,7 +62,7 @@ public class DefaultCredentialAuthenticationService implements CredentialAuthent
                         ret = Future.succeededFuture(authenticated.participant());
                     } else {
                         // valid credentials of an identity another server serves, such as a system
-                        // operator's on the management server; the caller gets the answer a wrong password gets
+                        // user's on the management server; the caller gets the answer a wrong password gets
                         log.debug("Credentials of identity {} acting as {} are not admitted by this server",
                                   authenticated.identity().getId(), authenticated.participant());
                         ret = Future.failedFuture(new AuthenticationException("Invalid credentials"));

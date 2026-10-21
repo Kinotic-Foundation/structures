@@ -7,7 +7,7 @@ import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.system.api.model.llm.LlmConfiguration;
 
 /**
- * The large language models the platform's services call, each an {@link LlmConfiguration} that platform operators
+ * The large language models the platform's services call, each an {@link LlmConfiguration} that system users
  * manage and a service selects by name. A configuration's API key is given on save and held in the platform's scope
  * of the secret storage until a save gives another or the configuration is deleted.
  * <p>

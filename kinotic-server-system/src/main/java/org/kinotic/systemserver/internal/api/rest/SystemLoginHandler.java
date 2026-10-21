@@ -11,8 +11,8 @@ import org.kinotic.domain.api.rest.SuppliesGatewayRoutes;
 import org.springframework.stereotype.Component;
 
 /**
- * Login route for platform operators: an account holding a membership of the platform. Password-only:
- * operators are provisioned by Kinotic, so there is no signup, SSO, or social path. On success the browser
+ * Login route for system users: an account holding a membership of the platform. Password-only:
+ * system users are provisioned by Kinotic, so there is no signup, SSO, or social path. On success the browser
  * session is established; the STOMP WebSocket handshake then authenticates from that session cookie.
  */
 @Component

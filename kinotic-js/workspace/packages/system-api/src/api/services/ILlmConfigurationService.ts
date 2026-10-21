@@ -3,7 +3,7 @@ import type { IKinotic, IServiceProxy, Page, Pageable } from '@kinotic-ai/core'
 import type { LlmConfiguration } from '@/api/model/llm/LlmConfiguration'
 
 /**
- * The large language models the platform's services call, each an LlmConfiguration that platform operators
+ * The large language models the platform's services call, each an LlmConfiguration that system users
  * manage and a service selects by name. A configuration's API key is given on save and held in the platform's
  * scope of the secret storage until a save gives another or the configuration is deleted. Published in the
  * system zone, which only SYSTEM participants and the platform's own cluster members may address.

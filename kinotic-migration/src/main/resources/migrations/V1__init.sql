@@ -245,7 +245,7 @@ CREATE TABLE IF NOT EXISTS kinotic_identity_credential (
 );
 
 -- Membership: an account's membership of an organization, or of the platform when organizationId
--- is null (a platform operator). id is <identityId>:<organizationId or "system">, so a login reads
+-- is null (a system user). id is <identityId>:<organizationId or "system">, so a login reads
 -- it by a get and an account is a member of a scope at most once. enabled is the account's standing
 -- in that scope alone.
 CREATE TABLE IF NOT EXISTS kinotic_membership (
@@ -316,7 +316,7 @@ CREATE TABLE IF NOT EXISTS kinotic_oidc_configuration (
     updated DATE
 );
 
--- LLM configuration: a large language model the platform's services call, which platform operators
+-- LLM configuration: a large language model the platform's services call, which system users
 -- manage in the system console (LlmConfigurationService) and a service selects by its unique name.
 -- The row names no API key: LlmConfigurationService.save(configuration, apiKey) holds the key in the
 -- platform's scope of the secret storage, keyed by the row's id, and apiKeyHeld records that one is held.

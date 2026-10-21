@@ -90,7 +90,7 @@ public class DefaultLlmConfigurationService implements LlmConfigurationService {
 
     @Override
     public Future<String> findApiKey(String id) {
-        // operators manage the key but never read it back; every gateway binds the connection's participant to the
+        // system users manage the key but never read it back; every gateway binds the connection's participant to the
         // calls it forwards, so a call without one comes from a cluster member's own code
         if (securityContext.currentParticipant() != null) {
             throw new AuthorizationException("Access denied");
