@@ -494,7 +494,7 @@ you create get their repositories. It carries:
     
     <td>
       <code>
-        https://<domain>/github/install/callback
+        https://<domain>/api/github/install/callback
       </code>
       
        first, then the <code>
@@ -581,7 +581,7 @@ callbacks, the GitHub webhook and the MCP endpoint all answer on `https://you.ng
 
 Open that origin and sign in as `kinotic@kinotic.local` with the password `kinotic`. The first
 time, link GitHub when creating a project: GitHub installs your App, returns to
-`/github/install/callback`, and the management server verifies the installation belongs to you before
+`/api/github/install/callback`, which forwards to the portal's `/github/install/callback`, and the management server verifies the installation belongs to you before
 storing it; after a wipe, `sync-es` restores that link. Projects you create get a repository
 under the account the App is installed on, and pushes to them reach your management server through the
 webhook.

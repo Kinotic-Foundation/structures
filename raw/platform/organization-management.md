@@ -442,7 +442,9 @@ There are two entry points, both producing an `Organization` and an admin `Parti
      already exists for this email: a person founds one organization at most, and joins
      others by invitation
    - creates a PendingSignUp with a 24h verification token
-   - EmailService sends the verification link (logs it instead when email is disabled)
+   - EmailService sends the verification link (logs it instead when email is disabled), on
+     the UI the request came from when kinotic.domain.cors.allowedOriginPattern names that
+     origin other than through `*`, and on the portal otherwise
 4. User clicks /signup/verify?token=<verificationToken> in their inbox
 5. /signup/verify form (VerifyEmail.vue) prompts for orgName + password + confirm
 6. POST /api/auth/org/signup/complete  { token, orgName, orgDescription?, password }
@@ -483,7 +485,7 @@ Email verification is the security gate — no `Organization`, account or member
      flight at once cannot both found an organization, and the organization is never created
      for an account that cannot be
    - creates a PendingSignUp with the verified subject, configId, email, displayName
-   - 302 to /register?token=<verificationToken>
+   - 302 to /register?token=<verificationToken> on the UI the sign-up started from
 7. /register prompts for orgName (CompleteOrg.vue)
 8. POST /api/auth/org/signup/social/complete  { token, orgName, orgDescription? }
 9. SignUpService.completeOidcWithNewOrg:
@@ -502,9 +504,10 @@ Email verification is the security gate — no `Organization`, account or member
     proved identity). Clicking "Continue to GitHub" calls
     githubAppInstallations.startInstall("/") and redirects the whole tab to
     the returned GitHub install URL. The App requests user authorization (OAuth) during
-    installation, so GitHub returns to /github/install/callback — the App's first
-    registered callback URL — with code, installation_id, and the state minted by
-    startInstall. The callback runs completeInstall, which consumes the state, exchanges
+    installation, so GitHub returns to the management server's /api/github/install/callback
+    — the App's first registered callback URL — with code, installation_id, and the state
+    minted by startInstall, and that route forwards them to the portal's
+    /github/install/callback. The callback runs completeInstall, which consumes the state, exchanges
     the code with the github-platform credential for the authorizing user's access
     token, and binds the installation only when GitHub's /user/installations reports
     that user can access it (see [Defense in Depth](/platform/defense-in-depth)). It
@@ -513,6 +516,14 @@ Email verification is the security gate — no `Organization`, account or member
     opens the Quickstart until the organization has its first project, and Applications
     after that.
 ```
+
+Another UI signed in through the management server, such as one built on Kinotic, links GitHub
+without the portal: it calls `startInstall` with the absolute URL of one of its own pages as
+`returnTo`, which must be on an origin `kinotic.domain.cors.allowedOriginPattern` names (a pattern of
+`*` names none);
+`startInstall` refuses any other URL, and a network-path reference (a `returnTo` starting with `//`
+or `/\`). After the install, `/api/github/install/callback` forwards GitHub's `installation_id`,
+`state` and `code` to that page as query parameters, and the page calls `completeInstall` itself.
 
 The `PendingSignUp` is consumed once. The `?token=` in the redirect to `/register` is the short-lived `PendingSignUp` verification token, not an auth credential — the actual login is established by the session cookie set when the org-naming POST succeeds.
 

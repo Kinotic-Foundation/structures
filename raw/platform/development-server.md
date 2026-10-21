@@ -990,7 +990,7 @@ What differs between the three:
   <tr>
     <td>
       <code>
-        kinotic.apiGateway.cors.allowedOriginPattern
+        kinotic.domain.cors.allowedOriginPattern
       </code>
     </td>
     
@@ -1257,7 +1257,7 @@ What the three share:
   <tr>
     <td>
       <code>
-        kinotic.apiGateway.cors.allowCredentials
+        kinotic.domain.cors.allowCredentials
       </code>
     </td>
     

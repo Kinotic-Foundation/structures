@@ -1068,7 +1068,15 @@ management-api. The Helm chart sets all three from the same paths in its values:
     </td>
     
     <td>
-      The portal as a browser reaches it: where the management server's browser flows send the user, and the base of the verification, invite and sign-in links in the platform's emails, which every server that sends mail reads. The development profiles set <code>
+      The portal as a browser reaches it: where the management server's browser flows send the user, and the base of the verification, invite and sign-in links in the platform's emails, which every server that sends mail reads. A sign-up started from another UI the management server's <code>
+        kinotic.domain.cors.allowedOriginPattern
+      </code>
+      
+       names, other than through <code>
+        *
+      </code>
+      
+      , returns to that UI instead: its verification link and its social sign-up's org-naming page are on the UI's origin. The development profiles set <code>
         http://localhost:5173
       </code>
       
@@ -1079,6 +1087,32 @@ management-api. The Helm chart sets all three from the same paths in its values:
        profile <code>
         http://localhost:9090
       </code>
+    </td>
+  </tr>
+  
+  <tr>
+    <td>
+      <code>
+        kinotic.domain.cors.allowedOriginPattern
+      </code>
+    </td>
+    
+    <td>
+      <code>
+        http://localhost(:\d+)?
+      </code>
+    </td>
+    
+    <td>
+      A regex of the origins a server's browser-facing routes accept CORS requests from; <code>
+        *
+      </code>
+      
+       admits every origin. The origins it names, other than through <code>
+        *
+      </code>
+      
+      , are also the UIs the management server's browser flows return to, trusted with sign-up verification links and GitHub App install codes, so name only origins you control. The local development profile's ngrok wildcard is the one exception, acceptable only on a developer's machine
     </td>
   </tr>
   
@@ -1364,6 +1398,129 @@ request and verifies it with the site's secret, under `kinotic.managementServer.
 
 The `development` and `dev-server` profiles use Cloudflare's always-passing test site, so the form
 works with no site of one's own.
+
+## LLM configurations
+
+The large language models the platform's services call are configured at runtime rather than in a
+property file: a platform operator adds them on the system console's **Platform → LLM configurations**
+page, and a service selects one by its name through `LlmConfigurationService.findByName`, published
+in the `system-api` zone.
+
+<table>
+<thead>
+  <tr>
+    <th>
+      Field
+    </th>
+    
+    <th>
+      Meaning
+    </th>
+  </tr>
+</thead>
+
+<tbody>
+  <tr>
+    <td>
+      <code>
+        name
+      </code>
+    </td>
+    
+    <td>
+      The name a service selects the configuration by, unique on the platform
+    </td>
+  </tr>
+  
+  <tr>
+    <td>
+      <code>
+        provider
+      </code>
+    </td>
+    
+    <td>
+      <code>
+        ANTHROPIC
+      </code>
+      
+       or <code>
+        OPENAI
+      </code>
+    </td>
+  </tr>
+  
+  <tr>
+    <td>
+      <code>
+        model
+      </code>
+    </td>
+    
+    <td>
+      The provider's id of the model, such as <code>
+        claude-opus-5-5
+      </code>
+    </td>
+  </tr>
+  
+  <tr>
+    <td>
+      <code>
+        endpoint
+      </code>
+    </td>
+    
+    <td>
+      The base URL of the provider's API, or none for the provider's public API
+    </td>
+  </tr>
+  
+  <tr>
+    <td>
+      <code>
+        maxTokens
+      </code>
+      
+      , <code>
+        temperature
+      </code>
+    </td>
+    
+    <td>
+      The options each request carries, or none for the defaults; <code>
+        temperature
+      </code>
+      
+       is from 0 to 1 for <code>
+        ANTHROPIC
+      </code>
+      
+       and from 0 to 2 for <code>
+        OPENAI
+      </code>
+    </td>
+  </tr>
+  
+  <tr>
+    <td>
+      <code>
+        apiKeyHeld
+      </code>
+    </td>
+    
+    <td>
+      Whether an API key is held, set by the server on every save
+    </td>
+  </tr>
+</tbody>
+</table>
+
+The API key is given on save, `LlmConfigurationService.save(configuration, apiKey)`, and held through
+`SecretStorageService` in the platform's scope, keyed by the configuration's id; a save without one
+keeps the key held, and deleting the configuration deletes its key. `findApiKey(id)` reads it back for
+a service that calls the model for an organization's user, acting as that user's `OrganizationParticipant`;
+SYSTEM participants, the system console's operators among them, cannot read it.
 
 ## Without Azure storage
 
