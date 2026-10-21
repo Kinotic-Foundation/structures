@@ -19,7 +19,7 @@ public interface SecretStorageBackend {
      * Stores a secret value under the given HKDF-derived name, replacing the value the name held, and
      * under a name whose secret was deleted as well.
      *
-     * @param derivedName the opaque derived name (base64url, 43 chars)
+     * @param derivedName the opaque derived name (lowercase hex, 64 chars)
      * @param value       the secret value to store
      * @return a future that completes when the secret has been persisted
      */
