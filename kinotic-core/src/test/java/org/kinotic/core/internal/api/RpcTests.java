@@ -42,6 +42,7 @@ import tools.jackson.databind.util.TokenBuffer;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
@@ -180,6 +181,27 @@ public class RpcTests {
 
         Assertions.assertEquals("called-as" + suffix, result);
         Assertions.assertNull(securityContext.currentParticipant());
+    }
+
+    @Test
+    public void testCallWithoutParticipantSendsNoParticipantFromAContextBoundToOne() {
+        Participant participant = new Participant() {
+            @Override
+            public String getId() { return "called-as"; }
+            @Override
+            public Map<String, String> getMetadata() { return Map.of(); }
+            @Override
+            public List<String> getRoles() { return List.of(); }
+        };
+
+        // the service resolves its participant argument from the call's sender, so it fails for a call sent for none
+        ExecutionException thrown = Assertions.assertThrows(ExecutionException.class,
+                () -> securityContext.callAs(participant,
+                                             () -> securityContext.callWithoutParticipant(
+                                                     () -> rpcTestServiceProxy.firstArgParticipant(" Wat").toFuture()))
+                                     .get(10, TimeUnit.SECONDS));
+
+        Assertions.assertTrue(thrown.getCause().getMessage().contains("No Participant is bound"), thrown.getCause().getMessage());
     }
 
     @Test

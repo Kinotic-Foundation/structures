@@ -3,13 +3,17 @@ package org.kinotic.management.internal.api.services.github;
 import io.vertx.core.Future;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.Validate;
 import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
+import org.kinotic.core.api.security.SecurityContext;
+import org.kinotic.domain.api.model.security.participant.OrganizationParticipant;
 import org.kinotic.management.api.model.Project;
 import org.kinotic.management.api.model.ProjectRepoToken;
 import org.kinotic.management.api.repositories.ProjectRepository;
 import org.kinotic.management.api.model.github.GitHubAppInstallation;
 import org.kinotic.management.api.services.github.GitHubProjectRepoService;
+import org.kinotic.management.api.services.github.ProjectRepoCredentialService;
 import org.kinotic.management.internal.api.repositories.GitHubAppInstallationRepository;
 import org.kinotic.management.internal.api.services.github.client.GitHubApiClient;
 import org.springframework.stereotype.Component;
@@ -19,11 +23,12 @@ import java.util.Map;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class DefaultGitHubProjectRepoService implements GitHubProjectRepoService {
+public class DefaultGitHubProjectRepoService implements GitHubProjectRepoService, ProjectRepoCredentialService {
 
     private final ProjectRepository projectRepository;
     private final GitHubAppInstallationRepository installationRepository;
     private final GitHubApiClient apiClient;
+    private final SecurityContext securityContext;
 
     @Override
     public Future<ProjectRepoToken> issueRepoToken(String organizationId, String projectId) {
@@ -31,8 +36,10 @@ public class DefaultGitHubProjectRepoService implements GitHubProjectRepoService
     }
 
     @Override
-    public Future<ProjectRepoToken> issueRepoWriteToken(String organizationId, String projectId) {
-        return issueToken(organizationId, projectId, GitHubApiClient.WRITE_CONTENTS);
+    public Future<ProjectRepoToken> issueWriteToken(String projectId) {
+        Validate.notBlank(projectId, "projectId is required");
+        OrganizationParticipant participant = securityContext.requireParticipant(OrganizationParticipant.class);
+        return issueToken(participant.getOrganizationId(), projectId, GitHubApiClient.WRITE_CONTENTS);
     }
 
     private Future<ProjectRepoToken> issueToken(String organizationId, String projectId, Map<String, String> permissions) {
@@ -67,10 +74,10 @@ public class DefaultGitHubProjectRepoService implements GitHubProjectRepoService
                                                                refName, sha)));
     }
 
-    // Callers are trusted in-process code (this service is not published), so authorization
-    // is validation of the explicit organizationId: the org-scoped project lookup finds
-    // nothing for a project of another org, and the org must still have a GitHub install.
-    // Participant enforcement returns with @Publish.
+    // GitHubProjectRepoService callers are trusted in-process code passing the organizationId, and
+    // issueWriteToken passes its caller's, so authorization is validation of that organizationId:
+    // the org-scoped project lookup finds nothing for a project of another org, and the org must
+    // still have a GitHub install.
     private Future<RepoContext> resolve(String organizationId, String projectId) {
         return projectRepository.findById(projectId, organizationId).compose(project -> {
             if (project == null || project.getRepoFullName() == null || project.getRepoId() == null) {
