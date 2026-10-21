@@ -43,8 +43,8 @@ public class TaskRecord implements Identifiable<String> {
     private String description;
 
     /**
-     * The key of the icon a console shows for the task, or null for its default. Recorded from
-     * discovery.
+     * The name of the Lucide icon a console shows for the task, such as {@code folder-git-2}, or
+     * null for its default. Recorded from discovery.
      */
     private String icon;
 

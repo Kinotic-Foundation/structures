@@ -4,7 +4,6 @@ import org.junit.jupiter.api.Test;
 import org.kinotic.grind.api.model.JobDefinition;
 import org.kinotic.grind.api.model.JobOwner;
 import org.kinotic.grind.api.model.JobRunHandle;
-import org.kinotic.grind.api.model.TaskIcons;
 import org.kinotic.grind.api.model.TaskRecord;
 import org.kinotic.grind.api.model.Tasks;
 import org.kinotic.grind.api.model.events.TasksDiscoveredEvent;
@@ -25,7 +24,7 @@ public class TaskIconTest extends AbstractGrindTest {
     public void iconsAreRecordedFromDiscovery() throws Exception {
         JobDefinition job = JobDefinition.create("iconic")
                 .name("iconic").version("1")
-                .task(Tasks.fromValue("checkout", "sha").icon(TaskIcons.GIT))
+                .task(Tasks.fromValue("checkout", "sha").icon("folder-git-2"))
                 .jobDefinition(JobDefinition.create("publish")
                                             .task(Tasks.noop("upload")))
                 .task(Tasks.noop("plain"));
@@ -38,8 +37,8 @@ public class TaskIconTest extends AbstractGrindTest {
         Map<String, String> discoveredIcons = discovered.tasks().stream()
                                                         .filter(record -> record.getIcon() != null)
                                                         .collect(Collectors.toMap(TaskRecord::getTaskPath, TaskRecord::getIcon));
-        assertEquals(Map.of("0/1", TaskIcons.GIT), discoveredIcons);
-        assertEquals(TaskIcons.GIT, repository.taskAt(handle.getJobRunId(), "0/1").getIcon());
+        assertEquals(Map.of("0/1", "folder-git-2"), discoveredIcons);
+        assertEquals("folder-git-2", repository.taskAt(handle.getJobRunId(), "0/1").getIcon());
         assertNull(repository.taskAt(handle.getJobRunId(), "0/2").getIcon());
         assertNull(repository.taskAt(handle.getJobRunId(), "0/3").getIcon());
     }
@@ -48,13 +47,13 @@ public class TaskIconTest extends AbstractGrindTest {
     public void aDynamicTaskIsRecordedWithItsIcon() throws Exception {
         JobDefinition job = JobDefinition.create("dynamic icon")
                 .name("dynamic-icon").version("1")
-                .task(Tasks.fromCallable("decide", () -> Tasks.noop("decided").icon(TaskIcons.SERVER)));
+                .task(Tasks.fromCallable("decide", () -> Tasks.noop("decided").icon("server")));
 
         JobRunHandle handle = jobService.run(job, JobOwner.system());
         RunResult result = await(handle);
 
         assertNull(result.error());
-        assertEquals(TaskIcons.SERVER, repository.taskAt(handle.getJobRunId(), "0/1/1").getIcon());
+        assertEquals("server", repository.taskAt(handle.getJobRunId(), "0/1/1").getIcon());
     }
 
     @Test
@@ -65,14 +64,14 @@ public class TaskIconTest extends AbstractGrindTest {
         RunResult result = await(handle);
 
         assertNull(result.error());
-        assertEquals(TaskIcons.GIT, repository.taskAt(handle.getJobRunId(), "0/1").getIcon());
+        assertEquals("folder-git-2", repository.taskAt(handle.getJobRunId(), "0/1").getIcon());
         assertNull(repository.taskAt(handle.getJobRunId(), "0/2").getIcon());
     }
 
     @Test
     public void transformingATaskKeepsItsIcon() {
-        assertEquals(TaskIcons.PACKAGE,
-                     Tasks.transformResult(Tasks.fromValue("count", 1).icon(TaskIcons.PACKAGE), count -> count + 1).getIcon());
+        assertEquals("package",
+                     Tasks.transformResult(Tasks.fromValue("count", 1).icon("package"), count -> count + 1).getIcon());
     }
 
 }

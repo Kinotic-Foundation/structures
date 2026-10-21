@@ -32,8 +32,8 @@ export class TaskRecord implements Identifiable<string> {
     public description: string | null = null
 
     /**
-     * The key of the icon a console shows for the task, one of TaskIcons, or null for its default.
-     * Recorded from discovery.
+     * The name of the Lucide icon a console shows for the task, such as `folder-git-2`
+     * (https://lucide.dev/icons), or null for its default. Recorded from discovery.
      */
     public icon: string | null = null
 

@@ -11,7 +11,7 @@ export interface JobTaskNode {
   /** The node's position within its parent: the last taskPath segment, 0 for the run's root. */
   sequence: number
   description: string
-  /** The key of the task's icon, one of TaskIcons, or null for the default. */
+  /** The name of the Lucide icon the task shows, such as `folder-git-2`, or null for the default. */
   icon: string | null
   status: ExecutionStatus
   /** True once the task revealed dynamically generated child tasks. */

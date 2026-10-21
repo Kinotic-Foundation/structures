@@ -26,8 +26,9 @@ public interface Task<T> {
     Store getStore();
 
     /**
-     * @return the key of the icon a console shows for this {@link Task}, one of {@link TaskIcons}
-     *         or another the console knows, or null for its default
+     * @return the name of the <a href="https://lucide.dev/icons">Lucide</a> icon a console shows for
+     *         this {@link Task}, in Lucide's kebab-case form such as {@code folder-git-2}, or null for
+     *         its default
      */
     String getIcon();
 

@@ -109,7 +109,7 @@ import type { JobTaskNode } from './JobTaskNode'
  * The progress of one grind job run: header with status and timing, the top-level tasks as
  * a pipeline, and the full task ledger as a tree. Live-updates while the run executes and
  * renders the persisted history once it is terminal. Each task shows the icon and the view it
- * declares, as TASK_ICONS and TASK_VIEWS render them.
+ * declares, the views as TASK_VIEWS renders them.
  */
 const props = defineProps<{
   jobRunId: string
