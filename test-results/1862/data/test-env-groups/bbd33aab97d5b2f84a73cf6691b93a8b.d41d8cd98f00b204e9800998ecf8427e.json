@@ -1,0 +1,1 @@
+{"id":"bbd33aab97d5b2f84a73cf6691b93a8b.d41d8cd98f00b204e9800998ecf8427e","fullName":"org.kinotic.test.tests.core.authz.PermissionServiceTests.grantsReachDownTheTreeAndStopWhenRevoked","name":"grantsReachDownTheTreeAndStopWhenRevoked()","status":"passed","testResultsByEnv":{"default":"b2b589bf8c522ea72d2a5d8fcc617334"}}
