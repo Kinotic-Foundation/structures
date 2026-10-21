@@ -1,8 +1,10 @@
 package org.kinotic.system.internal.api.services.workload;
 
+import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.core.internal.VertxInternal;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteServices;
@@ -32,6 +34,9 @@ public class WorkloadCleanupService implements Service, WorkloadRetentionService
     private transient Vertx vertx;
 
     private transient long timerId;
+    // The context sweeps run on: one of the singleton's own, since a caller of sweep() blocks its thread
+    // until the sweep ends, and a sweep queued on that caller's context would wait behind it forever
+    private transient Context sweepContext;
     // The sweep in progress, null between sweeps; guarded by this
     private transient Future<Void> inFlight;
 
@@ -60,6 +65,7 @@ public class WorkloadCleanupService implements Service, WorkloadRetentionService
     @Override
     public void init() {
         log.info("Starting workload cleanup singleton");
+        sweepContext = ((VertxInternal) vertx).createEventLoopContext();
         startSweep();
         timerId = vertx.setPeriodic(SWEEP_MS, id -> startSweep());
     }
@@ -77,7 +83,7 @@ public class WorkloadCleanupService implements Service, WorkloadRetentionService
 
     @Override
     public void sweep() {
-        // called on an Ignite service thread, which blocks until the sweep it started or joined has ended
+        // the calling thread blocks until the sweep it started or joined has ended
         try {
             startSweep().toCompletionStage().toCompletableFuture().join();
         } catch (CompletionException e) {
@@ -92,7 +98,7 @@ public class WorkloadCleanupService implements Service, WorkloadRetentionService
             // assigned before the sweep starts, so its completion always finds it to clear
             inFlight = sweep.future();
             inFlight.onComplete(result -> sweepEnded(sweep.future()));
-            vertx.runOnContext(v -> sweeper.sweep()
+            sweepContext.runOnContext(v -> sweeper.sweep()
                                            .onFailure(error -> log.error("Workload cleanup failed; what it left is taken by the next run", error))
                                            .onComplete(sweep));
         }
