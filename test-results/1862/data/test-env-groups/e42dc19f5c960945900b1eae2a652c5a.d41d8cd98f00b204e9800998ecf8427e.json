@@ -1,1 +1,0 @@
-{"id":"e42dc19f5c960945900b1eae2a652c5a.d41d8cd98f00b204e9800998ecf8427e","fullName":"org.kinotic.test.tests.core.authz.ApplicationStoreTests.deletingATenantTakesItsGrantsAndMembershipsOutOfTheStore","name":"deletingATenantTakesItsGrantsAndMembershipsOutOfTheStore()","status":"passed","testResultsByEnv":{"default":"fb6b21c08649d1eeb1e5577dadf1c9d6"}}

@@ -1,1 +1,0 @@
-{"id":"dab7dcedefda6cd80179a83e0ad40427.d41d8cd98f00b204e9800998ecf8427e","fullName":"org.kinotic.test.tests.core.authz.NamedQueryAuthorizationTests.aNamedQueryThatUpdatesRowsIsRunOnlyForAnEditor","name":"aNamedQueryThatUpdatesRowsIsRunOnlyForAnEditor()","status":"passed","testResultsByEnv":{"default":"21c8b10819f649c0c48db229845709fa"}}
