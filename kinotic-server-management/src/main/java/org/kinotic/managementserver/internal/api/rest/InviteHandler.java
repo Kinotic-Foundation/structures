@@ -16,6 +16,7 @@ import org.kinotic.domain.api.exceptions.AccountDisabledException;
 import org.kinotic.domain.api.exceptions.ExistingAccountException;
 import org.kinotic.domain.api.exceptions.InviteEmailMismatchException;
 import org.kinotic.domain.api.model.security.participant.ApplicationParticipant;
+import org.kinotic.domain.api.repositories.ApplicationRepository;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.services.security.InviteService;
 import org.kinotic.domain.api.services.security.OidcConfigurationService;
@@ -54,6 +55,7 @@ public class InviteHandler implements SuppliesGatewayRoutes, OidcFlowCompleter {
     private final ParticipantIdentityService identityService;
     private final OrganizationService organizationService;
     private final OidcConfigurationService oidcConfigurationService;
+    private final ApplicationRepository applicationRepository;
     private final OidcFlowOrchestrator oidcFlowOrchestrator;
     private final AuthEndpointSupport authEndpointSupport;
     private final KinoticManagementApiProperties managementApiProperties;
@@ -119,8 +121,8 @@ public class InviteHandler implements SuppliesGatewayRoutes, OidcFlowCompleter {
     /**
      * {@code POST /api/auth/invite/accept {token, password, displayName?}} — accept by setting a
      * password. Org invitees get a browser session, same as logging in, and a {@code 204}; app
-     * invitees get a payload identifying the application, which the accept page uses for its
-     * confirmation state, and sign in at the application's own UI.
+     * invitees get a payload identifying the application and its {@code primaryUiUrl}, where they
+     * sign in, which is {@code null} while the application has no primary UI.
      */
     private void handleLocalAccept(RoutingContext ctx) {
         JsonObject body = authEndpointSupport.readJsonBody(ctx);
@@ -135,14 +137,7 @@ public class InviteHandler implements SuppliesGatewayRoutes, OidcFlowCompleter {
         inviteService.acceptLocalInvite(token, password, displayName)
               .onSuccess(member -> {
                   if (member instanceof ApplicationParticipant user) {
-                      // the management server holds organization logins only, so an application member
-                      // signs in at the application; the payload names it for the accept page
-                      ctx.response().putHeader("Content-Type", "application/json")
-                         .end(new JsonObject()
-                                 .put("scope", "APPLICATION")
-                                 .put("organizationId", user.getOrganizationId())
-                                 .put("applicationId", user.getApplicationId())
-                                 .encode());
+                      respondApplicationAccepted(ctx, user);
                   } else {
                       authEndpointSupport.respondSuccess(ctx, member);
                   }
@@ -157,6 +152,26 @@ public class InviteHandler implements SuppliesGatewayRoutes, OidcFlowCompleter {
                       respondInviteFailure(ctx, err, "Failed to accept invitation");
                   }
               });
+    }
+
+    // the management server holds organization logins only, so an application member signs in at the
+    // application's primary UI; the payload names it for the accept page to send the browser to
+    private void respondApplicationAccepted(RoutingContext ctx, ApplicationParticipant user) {
+        applicationRepository.findById(user.getApplicationId(), user.getOrganizationId())
+                             .map(application -> application != null ? application.getPrimaryUiUrl() : null)
+                             // the invitation is already consumed, so a failed lookup still answers the acceptance
+                             .otherwise(err -> {
+                                 log.warn("Failed to load application {} for its primary UI: {}",
+                                          user.getApplicationId(), err.getMessage());
+                                 return null;
+                             })
+                             .onSuccess(primaryUiUrl -> ctx.response().putHeader("Content-Type", "application/json")
+                                                           .end(new JsonObject()
+                                                                   .put("scope", "APPLICATION")
+                                                                   .put("organizationId", user.getOrganizationId())
+                                                                   .put("applicationId", user.getApplicationId())
+                                                                   .put("primaryUiUrl", primaryUiUrl)
+                                                                   .encode()));
     }
 
     /**

@@ -135,8 +135,9 @@ type Phase = 'loading' | 'ready' | 'appAccepted' | 'invalid'
  * The unauthenticated invitation-accept page, reached from the emailed accept link
  * (`/invite/accept?token=…`). Shows who invited the visitor and into what, then lets them
  * accept with a password or, into an organization, any provider the organization's login
- * offers; an application invitee sets a password and sees a confirmation, since this web app
- * is not their UI. The OIDC route returns here with `?error=<code>` on failure.
+ * offers; an application invitee sets a password and is sent to the application's primary UI,
+ * or sees a confirmation while the application has none. The OIDC route returns here with
+ * `?error=<code>` on failure.
  */
 const phase = ref<Phase>('loading')
 const details = ref<InviteDetails>({ email: '', displayName: null, organizationName: null, applicationId: null, invitedByName: '', accountExists: false, accountHasPassword: false, providers: [] })
@@ -247,6 +248,11 @@ async function handleAccept() {
       return
     }
     const data = await res.json()
+    if (data.primaryUiUrl) {
+      // replace, so Back does not return to the consumed invitation
+      window.location.replace(data.primaryUiUrl)
+      return
+    }
     acceptedApplicationId.value = data.applicationId || 'the application'
     phase.value = 'appAccepted'
   } catch (err) {
