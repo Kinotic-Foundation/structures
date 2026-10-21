@@ -151,9 +151,10 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
     }
 
     private static ExistingUserException emailTaken(UserParticipantIdentity user) {
-        ParticipantScope scope = DomainUtil.scopeOf(user);
-        return new ExistingUserException("A " + user.getType() + " with email " + user.getEmail() + " already exists in scope "
-                                            + DomainUtil.describeScope(scope.organizationId(), scope.applicationId()));
+        String scope = user instanceof ApplicationParticipantIdentity application
+                ? " of application " + application.getApplicationId()
+                : "";
+        return new ExistingUserException("A user" + scope + " with email " + user.getEmail() + " already exists.");
     }
 
     // a name-based UUID of the kind of user, its scope and its email, so the users of one email of one kind in one

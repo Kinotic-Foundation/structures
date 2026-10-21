@@ -165,7 +165,7 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes, OidcFlo
               .compose(bound -> bound != null ? Future.succeededFuture(bound) : identityService.findOrganizationUserByEmail(email))
               .compose(existing -> {
                   if (existing != null) {
-                      return Future.failedFuture(new ExistingUserException("This identity already signs in to Kinotic organizations. Sign in instead."));
+                      return Future.failedFuture(new ExistingUserException("This identity or email is already registered with Kinotic organizations. Sign in instead."));
                   }
                   PendingSignUp pending = new PendingSignUp();
                   pending.setOidcSubject(sub);

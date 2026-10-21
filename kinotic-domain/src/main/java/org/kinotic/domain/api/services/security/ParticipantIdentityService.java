@@ -54,7 +54,7 @@ public interface ParticipantIdentityService extends IdentifiableCrudService<Part
      *
      * @return the binding, readable at once; fails with {@link IllegalArgumentException} when the identity is
      *         bound to another user of the same scope, or {@code identityId} is not an organization's or an
-     *         application's user, since a system user signs in with a password alone
+     *         application's user
      */
     Future<OidcBinding> bindOidcIdentity(String identityId, String oidcConfigId, String subject);
 
@@ -140,7 +140,7 @@ public interface ParticipantIdentityService extends IdentifiableCrudService<Part
      * {@link #createUser(UserParticipantIdentity, String)} for a user that signs in by the OIDC identity
      * {@code (oidcConfigId, subject)}, which the new user is bound to. Fails with
      * {@link IllegalArgumentException} when the identity is bound to a user of the new user's scope already, or for a
-     * system user, which signs in with a password alone.
+     * system user.
      */
     <T extends UserParticipantIdentity> Future<T> createOidcUser(T user, String oidcConfigId, String subject);
 

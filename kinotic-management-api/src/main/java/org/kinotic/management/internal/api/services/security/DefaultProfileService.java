@@ -11,7 +11,7 @@ import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
 import org.kinotic.domain.api.model.security.OrganizationOidcConfiguration;
 import org.kinotic.domain.api.model.security.identity.OrganizationMembership;
-import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
+import org.kinotic.domain.api.model.security.participant.OrganizationParticipant;
 import org.kinotic.domain.api.model.security.identity.OidcBinding;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 import org.kinotic.domain.api.services.OrganizationService;
@@ -88,16 +88,17 @@ public class DefaultProfileService implements ProfileService {
 
     @Override
     public Future<List<LoginProviderSummary>> findConnectableProviders(Participant participant) {
-        return loadCallingUser(participant).compose(user -> user instanceof OrganizationParticipantIdentity organizationUser
-                ? findConnectableProviders(organizationUser)
-                // a system user signs in with a password alone
-                : Future.succeededFuture(List.of()));
+        DomainUtil.requireUserParticipant(participant);
+        // a system user signs in with a password alone
+        return participant instanceof OrganizationParticipant
+                ? findConnectableProviders(participant.getId())
+                : Future.succeededFuture(List.of());
     }
 
-    private Future<List<LoginProviderSummary>> findConnectableProviders(OrganizationParticipantIdentity user) {
-        Future<Set<String>> bound = identityService.findOidcBindings(user.getId())
+    private Future<List<LoginProviderSummary>> findConnectableProviders(String organizationUserId) {
+        Future<Set<String>> bound = identityService.findOidcBindings(organizationUserId)
                                                    .map(bindings -> bindings.stream().map(OidcBinding::getOidcConfigId).collect(Collectors.toSet()));
-        Future<List<OidcConfiguration>> offered = membershipService.findMemberships(user.getId())
+        Future<List<OidcConfiguration>> offered = membershipService.findMemberships(organizationUserId)
                 .compose(memberships -> Future.all(memberships.stream()
                                                               .filter(OrganizationMembership::isEnabled)
                                                               .map(m -> oidcConfigurationService.findEnabledForScope(m.getOrganizationId(), null))

@@ -39,9 +39,8 @@ public interface InviteService {
      * Accepts an invitation with a password and consumes it. An invitation into an organization makes the
      * organization user with the invited email a member: when none exists, it is created with {@code password};
      * when one exists, {@code password} must be its password, which proves the acceptor owns it, and a mismatch
-     * fails with {@link ExistingUserException} without consuming the invitation. A system user or an
-     * application's user with the same email is another identity, which the invitation never sees. An
-     * invitation into an application creates the application's user with {@code password}.
+     * fails with {@link ExistingUserException} without consuming the invitation. An invitation into an
+     * application creates the application's user with {@code password}.
      *
      * @param token       the accept token from the invitation email
      * @param password    the password chosen by a new member, or the existing organization user's
