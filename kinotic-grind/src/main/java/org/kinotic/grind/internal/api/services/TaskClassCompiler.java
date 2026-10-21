@@ -67,10 +67,12 @@ public class TaskClassCompiler {
     // One instance serves every task of the class while each task is given a reporter of its own, so
     // a reporter the instance holds would report for the first of its tasks only
     private static void validateReporterInjection(Class<?> taskClass) {
-        for (Field field : taskClass.getDeclaredFields()) {
-            Validate.isTrue(field.getType() != TaskReporter.class,
-                            "%s holds a TaskReporter in field %s; a tasks class takes it as a @Task method parameter",
-                            taskClass.getName(), field.getName());
+        for (Class<?> type = taskClass; type != null && type != Object.class; type = type.getSuperclass()) {
+            for (Field field : type.getDeclaredFields()) {
+                Validate.isTrue(field.getType() != TaskReporter.class,
+                                "%s holds a TaskReporter in field %s; a tasks class takes it as a @Task method parameter",
+                                taskClass.getName(), field.getName());
+            }
         }
         for (Constructor<?> constructor : taskClass.getDeclaredConstructors()) {
             Validate.isTrue(!Arrays.asList(constructor.getParameterTypes()).contains(TaskReporter.class),

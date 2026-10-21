@@ -183,15 +183,26 @@ public class JobInterpreter {
         Task<?> taskToRun = completedInOriginal && node.store().getReloadTask() != null
                 ? node.store().getReloadTask() : node.task();
         startTask(path, scope, node);
-        Object result = executeOnPath(path, taskToRun, scope);
-        if (result instanceof Task<?> dynamicTask) {
+        // the task executes in a scope of its own holding its TaskReporter, which stays in flight until
+        // the result is awaited so callbacks of the task's futures report for it; only a Task or
+        // JobDefinition the task returns directly is dynamic work, one a future completes with is a value
+        AtomicBoolean inFlight = new AtomicBoolean(true);
+        Object raw;
+        Object result;
+        try {
+            raw = taskToRun.execute(scope.createTaskScope(taskReporter(path, runContext(), inFlight)));
+            result = raw instanceof Task<?> || raw instanceof JobDefinition ? raw : awaitValue(raw);
+        } finally {
+            inFlight.set(false);
+        }
+        if (raw instanceof Task<?> dynamicTask) {
             // A dynamic task that declares no store of its own keeps the value as this task's store does
             Store dynamicStore = dynamicTask.getStore() != null ? dynamicTask.getStore() : node.store();
             TaskNode dynamicNode = new TaskNode(1, dynamicTask, dynamicStore);
             discoverDynamic(path, dynamicNode);
             executeTask(path + "/1", scope, dynamicNode);
             notifyTaskCompleted(path, Store.none(), null, null, null, null);
-        } else if (result instanceof JobDefinition dynamicDefinition) {
+        } else if (raw instanceof JobDefinition dynamicDefinition) {
             DefinitionNode dynamicNode = new DefinitionNode(1, (DefaultJobDefinition) dynamicDefinition);
             discoverDynamic(path, dynamicNode);
             executeDefinition(path + "/1", scope, dynamicNode.definition());
@@ -237,21 +248,6 @@ public class JobInterpreter {
             ret = stateSerializer.serializeView(node.description(), producer.producer().apply(result, source));
         }
         return ret;
-    }
-
-    /**
-     * Executes the task in a scope of its own holding its {@link TaskReporter}, in flight until its
-     * result is awaited, returning a dynamic {@link Task} or {@link JobDefinition} as it is and
-     * awaiting any other result.
-     */
-    private Object executeOnPath(String path, Task<?> task, DefaultJobContext scope) throws Exception {
-        AtomicBoolean inFlight = new AtomicBoolean(true);
-        try {
-            Object raw = task.execute(scope.createTaskScope(taskReporter(path, runContext(), inFlight)));
-            return raw instanceof Task<?> || raw instanceof JobDefinition ? raw : awaitValue(raw);
-        } finally {
-            inFlight.set(false);
-        }
     }
 
     // A duplicate of the run context shares the run's task, so it resolves to the context it wraps

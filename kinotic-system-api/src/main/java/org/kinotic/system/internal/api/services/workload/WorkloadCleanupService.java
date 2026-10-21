@@ -98,9 +98,11 @@ public class WorkloadCleanupService implements Service, WorkloadRetentionService
             // assigned before the sweep starts, so its completion always finds it to clear
             inFlight = sweep.future();
             inFlight.onComplete(result -> sweepEnded(sweep.future()));
-            sweepContext.runOnContext(v -> sweeper.sweep()
-                                           .onFailure(error -> log.error("Workload cleanup failed; what it left is taken by the next run", error))
-                                           .onComplete(sweep));
+            // Future.future fails the sweep when sweeper.sweep() throws instead of returning a failed future,
+            // so inFlight is always cleared
+            sweepContext.runOnContext(v -> Future.<Void>future(promise -> sweeper.sweep().onComplete(promise))
+                                                 .onFailure(error -> log.error("Workload cleanup failed; what it left is taken by the next run", error))
+                                                 .onComplete(sweep));
         }
         return inFlight;
     }

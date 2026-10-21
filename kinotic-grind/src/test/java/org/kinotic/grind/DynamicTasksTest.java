@@ -11,8 +11,10 @@ import org.kinotic.grind.api.model.Tasks;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -37,6 +39,22 @@ public class DynamicTasksTest extends AbstractGrindTest {
         assertEquals(List.of("decided"), seen);
         assertEquals(ExecutionStatus.COMPLETED, repository.taskAt(handle.getJobRunId(), "0/1/1").getStatus());
         assertTrue(repository.taskAt(handle.getJobRunId(), "0/1").isDynamicTasks());
+    }
+
+    @Test
+    public void aTaskAFutureCompletesWithIsStoredAsAValue() throws Exception {
+        JobDefinition job = JobDefinition.create("future task")
+                .name("future-task").version("1")
+                .task(Tasks.fromCallable("plan", () -> CompletableFuture.completedFuture(Tasks.noop("planned")))
+                           .store(Store.result("plan")));
+
+        JobRunHandle handle = jobService.run(job, JobOwner.system());
+        RunResult result = await(handle);
+
+        assertNull(result.error());
+        assertEquals("plan", repository.taskAt(handle.getJobRunId(), "0/1").getStoredName());
+        assertFalse(repository.taskAt(handle.getJobRunId(), "0/1").isDynamicTasks());
+        assertNull(repository.taskAt(handle.getJobRunId(), "0/1/1"));
     }
 
     @Test

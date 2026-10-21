@@ -2,6 +2,8 @@ package org.kinotic.system.internal.api.services;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.grind.api.model.JobDefinition;
@@ -23,32 +25,29 @@ import java.util.Map;
 
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class DefaultSystemJobService implements SystemJobService {
 
+    private final List<SystemJob> systemJobs;
     private final JobService jobService;
     private final JobRunRepository jobRunRepository;
     private final Vertx vertx;
     private final Map<String, SystemJob> jobsByName = new HashMap<>();
-    private final List<SystemJobDescriptor> descriptors;
+    private final List<SystemJobDescriptor> descriptors = new ArrayList<>();
 
     // A system job's name, version and description are facts of its bean, so each definition is built
     // once here to read them, and the names are checked unique before any is listed or started
-    public DefaultSystemJobService(List<SystemJob> systemJobs, JobService jobService,
-                                   JobRunRepository jobRunRepository, Vertx vertx) {
-        this.jobService = jobService;
-        this.jobRunRepository = jobRunRepository;
-        this.vertx = vertx;
-        List<SystemJobDescriptor> described = new ArrayList<>();
+    @PostConstruct
+    void describeJobs() {
         for (SystemJob job : systemJobs) {
             JobDefinition definition = job.createJobDefinition();
             SystemJob other = jobsByName.put(definition.getName(), job);
             if (other != null) {
                 throw new IllegalStateException("Two system jobs named " + definition.getName() + ": " + other + " and " + job);
             }
-            described.add(new SystemJobDescriptor(definition.getName(), definition.getVersion(), definition.getDescription()));
+            descriptors.add(new SystemJobDescriptor(definition.getName(), definition.getVersion(), definition.getDescription()));
         }
-        described.sort(Comparator.comparing(SystemJobDescriptor::getName));
-        this.descriptors = List.copyOf(described);
+        descriptors.sort(Comparator.comparing(SystemJobDescriptor::getName));
     }
 
     @Override

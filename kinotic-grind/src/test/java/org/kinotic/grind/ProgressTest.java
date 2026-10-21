@@ -173,6 +173,13 @@ public class ProgressTest extends AbstractGrindTest {
         assertTrue(error.getMessage().contains("TaskReporter"));
     }
 
+    @Test
+    public void aTasksClassMayNotInheritAReporter() {
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                                                      () -> JobDefinition.fromTasks(InheritedReporterFieldTasks.class));
+        assertTrue(error.getMessage().contains("TaskReporter"));
+    }
+
     private org.kinotic.grind.api.model.Task<Void> reportingTask(String message, int percentage) {
         return Tasks.fromCallable(message, new Callable<>() {
 

@@ -58,7 +58,7 @@ public interface Task<T> {
     <S> Task<T> startView(Class<S> source, Function<S, TaskView<?>> producer);
 
     /**
-     * Declares the view a console shows for the task once it completes, built from its result: the
+     * Declares the view a console shows for the task once it completes with a value, built from it: the
      * value it returns, or the value a returned {@code Future}, {@code CompletionStage} or
      * {@code Publisher} completes with. The view is reported as the task's last view, as
      * {@link TaskReporter#view(TaskView)} reports one, and the task then completes with its result
