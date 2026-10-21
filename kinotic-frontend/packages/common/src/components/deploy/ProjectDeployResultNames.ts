@@ -27,8 +27,10 @@ export default class ProjectDeployResultNames {
       ret = { explanation: ProjectDeployResultNames.TARGET_FAILURE, platform: true }
     } else if (node.view?.kind === TaskViews.SBOM_GENERATION) {
       ret = { explanation: ProjectDeployResultNames.SBOM_FAILURE, platform: true }
+    } else if (node.view) {
+      ret = { explanation: 'Open the step\'s detail to see what went wrong.', platform: false }
     } else {
-      ret = { explanation: 'Open the step\'s log to see what went wrong.', platform: false }
+      ret = { explanation: 'Open the technical details to see what went wrong.', platform: false }
     }
     return ret
   }

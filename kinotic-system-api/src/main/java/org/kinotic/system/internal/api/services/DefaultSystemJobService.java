@@ -13,7 +13,6 @@ import org.kinotic.grind.api.model.JobRunHandle;
 import org.kinotic.grind.api.repositories.JobRunRepository;
 import org.kinotic.grind.api.services.JobService;
 import org.kinotic.system.api.model.SystemJobDescriptor;
-import org.kinotic.system.api.services.SystemJob;
 import org.kinotic.system.api.services.SystemJobService;
 import org.springframework.stereotype.Component;
 

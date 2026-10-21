@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.apache.ignite.Ignite;
 import org.kinotic.grind.api.model.JobDefinition;
 import org.kinotic.grind.api.model.Tasks;
-import org.kinotic.system.api.services.SystemJob;
+import org.kinotic.system.internal.api.services.SystemJob;
 import org.springframework.stereotype.Component;
 
 /**

@@ -1,8 +1,8 @@
 package org.kinotic.system.internal.api.services.workload;
 
 /**
- * The workload retention sweep as the cluster singleton runs it. Ignite routes a service proxy's
- * calls through an interface, so callers on any node reach the singleton through this one.
+ * The workload retention sweep as the cluster singleton runs it, called on any node through the
+ * proxy {@link WorkloadCleanupService#proxy(org.apache.ignite.Ignite)} returns.
  */
 public interface WorkloadRetentionService {
 

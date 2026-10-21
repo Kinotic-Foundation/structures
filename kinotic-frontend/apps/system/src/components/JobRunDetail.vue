@@ -4,6 +4,7 @@
 </template>
 
 <script setup lang="ts">
+import { watch } from 'vue'
 import type { JobRun } from '@kinotic-ai/management-api'
 import { JobRunProgress, ProjectDeployResultNames } from '@kinotic-ai/frontend-common'
 
@@ -19,6 +20,13 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'organization', organizationId: string | null): void
 }>()
+
+// another run's organization is cleared at once, so a run that fails to load never shows the last one's
+watch(() => props.jobRunId, () => {
+  if (!props.organizationId) {
+    emit('organization', null)
+  }
+})
 
 function emitOwningOrganization(run: JobRun): void {
   if (!props.organizationId) {

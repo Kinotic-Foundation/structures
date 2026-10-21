@@ -55,6 +55,7 @@ public class WorkloadCleanupService implements Service, WorkloadRetentionService
      * @return a proxy calling the singleton wherever it is hosted
      */
     static WorkloadRetentionService proxy(Ignite ignite) {
+        // Ignite proxies a service only through an interface the service implements, here WorkloadRetentionService
         return services(ignite).serviceProxy(SINGLETON_NAME, WorkloadRetentionService.class, false);
     }
 

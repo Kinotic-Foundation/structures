@@ -1,6 +1,7 @@
-package org.kinotic.system.api.services;
+package org.kinotic.system.internal.api.services;
 
 import org.kinotic.grind.api.model.JobDefinition;
+import org.kinotic.system.api.services.SystemJobService;
 
 /**
  * A grind job the platform's operators can start on demand through {@link SystemJobService}. Every
