@@ -9,7 +9,7 @@ import org.apache.commons.lang3.Validate;
 import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.core.api.security.Participant;
-import org.kinotic.domain.api.exceptions.AccountDisabledException;
+import org.kinotic.domain.api.exceptions.UserDisabledException;
 import org.kinotic.domain.api.model.security.Member;
 import org.kinotic.domain.api.model.security.identity.DelegatingParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.OidcBinding;
@@ -140,7 +140,7 @@ public class DefaultOrganizationMembershipService implements OrganizationMembers
             Participant participant = null;
             if (membership != null) {
                 if (!user.isEnabled() || !membership.isEnabled()) {
-                    throw new AccountDisabledException("This account cannot sign in to the organization.");
+                    throw new UserDisabledException("This user cannot sign in to the organization.");
                 }
                 participant = DomainUtil.createParticipant(user, membership);
             }

@@ -38,7 +38,7 @@ import org.springframework.stereotype.Component;
  * offers the tenant's own providers as well as the application's (see
  * {@link ApplicationAuthEndpointSupport#loginScope}). A page offers the methods the login supports — email
  * and password, and the configurations {@code GET /api/auth/app/login/providers} lists — without asking
- * about an email first, so no endpoint tells whether an email has an account. An OIDC flow started here
+ * about an email first, so no endpoint tells whether an email has a user. An OIDC flow started here
  * returns to this handler's own callback at the application's API host; a sign-in through one of the
  * platform's social registrations, whose callback every application shares, runs through
  * {@link ApplicationSocialLoginHandler}.

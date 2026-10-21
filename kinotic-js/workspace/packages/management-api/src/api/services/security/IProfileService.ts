@@ -23,7 +23,7 @@ export interface IProfileService {
      * The configurations an organization user may connect as further sign-in methods and has not yet: the platform's
      * registrations and the own configurations of the organizations it may sign in to; none for a system user,
      * which signs in with a password alone. Connecting one
-     * is a form POST to `/api/auth/account/methods/start/<configurationId>`.
+     * is a form POST to `/api/auth/org/methods/start/<configurationId>`.
      */
     findConnectableProviders(): Promise<LoginProviderSummary[]>
 

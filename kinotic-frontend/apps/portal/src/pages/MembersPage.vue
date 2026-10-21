@@ -67,9 +67,9 @@
               <label for="member-send-invitation" class="text-sm font-medium text-surface-950 dark:text-surface-0">Send an invitation email</label>
               <p class="text-[0.8125rem] text-muted-color">
                 {{ sendInvitation
-                    ? 'They accept it to claim their account, with a password or one of the sign-in methods below.'
+                    ? 'They accept it to sign in for the first time, with a password or one of the sign-in methods below.'
                     : 'They sign in through one of your organization\'s own sign-in providers, which admits them the first time.' }}
-                People who already have a Kinotic account always receive an invitation, since joining needs their acceptance.
+                People who already sign in to Kinotic organizations always receive an invitation, since joining needs their acceptance.
               </p>
             </div>
           </div>
@@ -138,7 +138,7 @@ const debug = createDebug('members')
 
 /**
  * One table row — a member, pending while nobody has signed in as them yet, or, when {@link invite} is true, a
- * pending invitation to someone who already had an account.
+ * pending invitation to someone who already had an organization user.
  */
 interface MemberRow extends MemberSummary {
   enabled?: boolean
@@ -327,9 +327,9 @@ async function submitMember() {
       toast.add({ severity: 'success', summary: 'Invitation sent', detail: `Invited ${email}`, life: 5000 })
     } else {
       const added = await Kinotic.members.addMember(email, displayName, sendInvitation.value)
-      // an address that already had an account is invited to accept, whatever the switch said
+      // an address that already had an organization user is invited to accept, whatever the switch said
       const detail = added.id === null
-          ? `${email} already has a Kinotic account, so an invitation was emailed for them to accept`
+          ? `${email} already signs in to Kinotic organizations, so an invitation was emailed for them to accept`
           : sendInvitation.value
               ? `Added ${email} and emailed an invitation`
               : `Added ${email}; they sign in through your organization's provider`
@@ -418,8 +418,8 @@ function confirmRemove(item: MemberRow) {
   const message = props.applicationId !== null
       ? `Permanently remove ${item.email}? Their sign-in and stored credential are deleted.`
       : item.pending
-          ? `Remove ${item.email} from your organization? The account nobody has signed in to goes with it.`
-          : `Remove ${item.email} from your organization? Their account and other organizations stay as they are.`
+          ? `Remove ${item.email} from your organization? Nobody has signed in as them yet, so they are deleted entirely.`
+          : `Remove ${item.email} from your organization? Their other organizations stay as they are.`
   confirm.require({
     header: 'Remove member',
     message,

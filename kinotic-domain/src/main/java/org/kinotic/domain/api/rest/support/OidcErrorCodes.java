@@ -27,8 +27,8 @@ public final class OidcErrorCodes {
     /** Auth code → token exchange at the IdP failed. Generic catch-all for callback failures not otherwise classified. */
     public static final String EXCHANGE_FAILED = "exchange_failed";
 
-    /** Verified IdP identity has no ParticipantIdentity in the target scope — login refuses to auto-create. */
-    public static final String NO_ACCOUNT = "no_account";
+    /** Verified IdP identity has no user in the target scope — login refuses to auto-create. */
+    public static final String NO_USER = "no_user";
 
     /**
      * A sign-in through a platform social registration that named no organization found the identity a
@@ -37,14 +37,14 @@ public final class OidcErrorCodes {
      */
     public static final String MULTIPLE_ORGANIZATIONS = "multiple_organizations";
 
-    /** Found ParticipantIdentity but {@code enabled=false}. */
-    public static final String ACCOUNT_DISABLED = "account_disabled";
+    /** Found the user, but it or its membership of the organization has {@code enabled=false}. */
+    public static final String USER_DISABLED = "user_disabled";
 
     /** ParticipantIdentity lookup failed at the persistence layer — distinct from "not found". */
     public static final String LOOKUP_FAILED = "lookup_failed";
 
-    /** Signup callback found an existing ParticipantIdentity for the IdP identity — caller should log in instead. */
-    public static final String ACCOUNT_EXISTS = "account_exists";
+    /** Signup or invitation callback found an existing user for the IdP identity or its email — caller should log in instead. */
+    public static final String USER_EXISTS = "user_exists";
 
     /** Signup failed during pending sign-up creation. */
     public static final String SIGNUP_FAILED = "signup_failed";

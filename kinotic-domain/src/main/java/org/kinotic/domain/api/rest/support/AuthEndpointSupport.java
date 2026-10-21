@@ -12,7 +12,7 @@ import org.kinotic.core.api.exceptions.AuthenticationException;
 import org.kinotic.core.api.security.ConnectedInfo;
 import org.kinotic.core.api.security.Participant;
 import org.kinotic.core.api.security.SessionBinding;
-import org.kinotic.domain.api.exceptions.ExistingAccountException;
+import org.kinotic.domain.api.exceptions.ExistingUserException;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
 import org.kinotic.domain.api.model.security.OwnedOidcConfiguration;
@@ -455,8 +455,8 @@ public abstract class AuthEndpointSupport {
      * one an organization made for the scope and it creates users on sign-in, and {@code newUser} supplies
      * the unsaved user carrying the scope, the identity's verified email and name become that user, bound
      * to the identity, and the user is signed in. An email the scope already holds under another method is
-     * refused with {@link OidcErrorCodes#ACCOUNT_EXISTS}; a scope that supplies no user refuses the
-     * identity with {@link OidcErrorCodes#NO_ACCOUNT} as a plain login does. An organization user, which signs
+     * refused with {@link OidcErrorCodes#USER_EXISTS}; a scope that supplies no user refuses the
+     * identity with {@link OidcErrorCodes#NO_USER} as a plain login does. An organization user, which signs
      * in through a membership, is signed in by {@link #completeLogin} instead.
      *
      * @param userLookup takes the OIDC {@code sub} claim and returns the application's user, or null
@@ -486,11 +486,11 @@ public abstract class AuthEndpointSupport {
 
     /**
      * The participant an application's user signs in as, itself; a disabled user fails the sign-in with
-     * {@link OidcErrorCodes#ACCOUNT_DISABLED}.
+     * {@link OidcErrorCodes#USER_DISABLED}.
      */
     public static Participant participantOf(ApplicationUserParticipantIdentity user) {
         if (!user.isEnabled()) {
-            throw new OidcCallbackException(OidcErrorCodes.ACCOUNT_DISABLED);
+            throw new OidcCallbackException(OidcErrorCodes.USER_DISABLED);
         }
         return DomainUtil.createParticipant(user);
     }
@@ -499,7 +499,7 @@ public abstract class AuthEndpointSupport {
      * Creates the user an identity the provider verified becomes on its first sign-in: {@code template},
      * carrying only its scope, given the identity's verified email and name and bound to the identity. A
      * scope that already holds the email under another method refuses the identity with
-     * {@link OidcErrorCodes#ACCOUNT_EXISTS}, and an identity whose provider asserts no email with
+     * {@link OidcErrorCodes#USER_EXISTS}, and an identity whose provider asserts no email with
      * {@link OidcErrorCodes#INVALID_TOKEN}.
      */
     public Future<ApplicationUserParticipantIdentity> createUserFromClaims(ApplicationUserParticipantIdentity template,
@@ -514,8 +514,8 @@ public abstract class AuthEndpointSupport {
             template.setEmail(email)
                     .setDisplayName(OAuth2Util.firstPresent(claims, "name", "preferred_username", "email"));
             ret = identityService.createOidcUser(template, result.config().getId(), sub)
-                                 .recover(err -> Future.failedFuture(err instanceof ExistingAccountException
-                                         ? new OidcCallbackException(OidcErrorCodes.ACCOUNT_EXISTS) : err));
+                                 .recover(err -> Future.failedFuture(err instanceof ExistingUserException
+                                         ? new OidcCallbackException(OidcErrorCodes.USER_EXISTS) : err));
         }
         return ret;
     }
@@ -556,7 +556,7 @@ public abstract class AuthEndpointSupport {
     /**
      * Finishes a sign-in from the participant a verified identity resolves to: the participant is signed
      * in, bound to the page at {@code origin}, and the browser sent back to it; no participant sends the
-     * browser to that page's error page with {@link OidcErrorCodes#NO_ACCOUNT}, and a failed resolution
+     * browser to that page's error page with {@link OidcErrorCodes#NO_USER}, and a failed resolution
      * with the {@link OidcCallbackException}'s code, or {@link OidcErrorCodes#LOOKUP_FAILED} for any
      * other failure.
      *
@@ -566,7 +566,7 @@ public abstract class AuthEndpointSupport {
     public void completeLogin(RoutingContext ctx, String origin, Future<Participant> participant) {
         participant.onSuccess(found -> {
                   if (found == null) {
-                      redirectError(ctx, origin, OidcErrorCodes.NO_ACCOUNT);
+                      redirectError(ctx, origin, OidcErrorCodes.NO_USER);
                   } else {
                       redirectSuccess(ctx, origin, found);
                   }

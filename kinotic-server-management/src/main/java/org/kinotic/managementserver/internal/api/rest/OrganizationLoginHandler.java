@@ -11,7 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.kinotic.core.api.security.SessionBinding;
 import org.kinotic.domain.api.config.KinoticDomainProperties;
 import org.kinotic.management.api.config.KinoticManagementApiProperties;
-import org.kinotic.domain.api.exceptions.AccountDisabledException;
+import org.kinotic.domain.api.exceptions.UserDisabledException;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.model.security.OrgSignupOidcConfiguration;
 import org.kinotic.domain.api.model.security.OwnedOidcConfiguration;
@@ -344,7 +344,7 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
     private static List<OrganizationMembership> enabledMemberships(OrganizationUserParticipantIdentity user, List<OrganizationMembership> memberships) {
         List<OrganizationMembership> enabled = user.isEnabled() ? memberships.stream().filter(OrganizationMembership::isEnabled).toList() : List.of();
         if (enabled.isEmpty() && !memberships.isEmpty()) {
-            throw new OidcCallbackException(OidcErrorCodes.ACCOUNT_DISABLED);
+            throw new OidcCallbackException(OidcErrorCodes.USER_DISABLED);
         }
         return enabled;
     }
@@ -398,7 +398,7 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
 
     /**
      * The participant {@code user} signs in to organization {@code orgId} as, or {@code null} when it is not a
-     * member; a disabled user or membership fails the sign-in with {@link OidcErrorCodes#ACCOUNT_DISABLED}.
+     * member; a disabled user or membership fails the sign-in with {@link OidcErrorCodes#USER_DISABLED}.
      */
     private Future<Participant> memberOf(OrganizationUserParticipantIdentity user, String orgId) {
         return user == null ? Future.succeededFuture() : refusingDisabled(membershipService.resolveParticipant(user, orgId));
@@ -406,8 +406,8 @@ public class OrganizationLoginHandler implements SuppliesGatewayRoutes, OidcFlow
 
     // a refused user fails the sign-in with the error code the login page names
     private static Future<Participant> refusingDisabled(Future<Participant> participant) {
-        return participant.recover(err -> Future.failedFuture(err instanceof AccountDisabledException
-                ? new OidcCallbackException(OidcErrorCodes.ACCOUNT_DISABLED) : err));
+        return participant.recover(err -> Future.failedFuture(err instanceof UserDisabledException
+                ? new OidcCallbackException(OidcErrorCodes.USER_DISABLED) : err));
     }
 
     // the origin of the portal's pages, which a start reached by a link belongs to

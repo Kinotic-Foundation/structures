@@ -16,11 +16,11 @@
         </p>
         <p class="login-form__subtitle">
           {{ pending.clientName }} is requesting access to Kinotic OS as
-          <strong>{{ accountLabel }}</strong>, and will be able to call the MCP tools that
-          account can call.
+          <strong>{{ userLabel }}</strong>, and will be able to call the MCP tools that
+          user can call.
         </p>
-        <Message v-if="systemAccount" severity="warn" :closable="false" class="consent-warning">
-          This is a system user account. It is not scoped to an organization, so
+        <Message v-if="systemUser" severity="warn" :closable="false" class="consent-warning">
+          This is a system user. It is not scoped to an organization, so
           {{ pending.clientName }} would reach the MCP tools of every organization on this
           platform. To authorize it for one organization, connect it to the organization API's
           <code>/mcp</code> endpoint instead and approve there as a member of that organization.
@@ -89,13 +89,13 @@ const deciding = ref<Decision | null>(null)
 
 const route = useRoute()
 
-// the session already carries who is signed in on this page, so the account being authorized is
+// the session already carries who is signed in on this page, so the user being authorized is
 // named without asking the server again
 const participant = computed(() => props.session.connectedInfo?.participant ?? null)
 
-const accountLabel = computed<string>(() => participant.value?.metadata?.email ?? 'your account')
+const userLabel = computed<string>(() => participant.value?.metadata?.email ?? 'you')
 
-const systemAccount = computed<boolean>(() =>
+const systemUser = computed<boolean>(() =>
     participant.value !== null && isSystemParticipant(participant.value))
 
 const requestId = computed<string | null>(() => {

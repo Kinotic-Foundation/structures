@@ -47,7 +47,7 @@ public interface OrganizationMembershipService {
      * or {@code null} when it holds none. Every login, invitation and token that admits an organization user to an
      * organization resolves it here.
      *
-     * @return fails with {@link org.kinotic.domain.api.exceptions.AccountDisabledException} when the user or its
+     * @return fails with {@link org.kinotic.domain.api.exceptions.UserDisabledException} when the user or its
      *         membership is disabled
      */
     Future<Participant> resolveParticipant(OrganizationUserParticipantIdentity user, String organizationId);

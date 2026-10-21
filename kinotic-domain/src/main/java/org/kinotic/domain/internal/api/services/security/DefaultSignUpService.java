@@ -57,7 +57,7 @@ public class DefaultSignUpService implements SignUpService {
                 .compose(user -> {
                     if (user != null) {
                         return Future.failedFuture(new IllegalArgumentException(
-                                "An account with this email already exists."));
+                                "This email already signs in to Kinotic organizations. Sign in instead."));
                     }
                     String token = UUID.randomUUID().toString();
                     Date now = new Date();
@@ -125,7 +125,7 @@ public class DefaultSignUpService implements SignUpService {
         return bound.compose(found -> found != null ? Future.succeededFuture(found) : identityService.findOrganizationUserByEmail(pending.getEmail()))
                     .compose(found -> found == null
                             ? Future.succeededFuture()
-                            : Future.failedFuture(new IllegalArgumentException("An account for this identity already exists. Sign in instead.")));
+                            : Future.failedFuture(new IllegalArgumentException("This identity already signs in to Kinotic organizations. Sign in instead.")));
     }
 
     /**

@@ -12,6 +12,6 @@ public enum OidcFlowPurpose {
     SIGN_UP,
     /** Accepts the invitation whose token the flow carries, as the identity. */
     INVITATION,
-    /** Binds the identity to the account the flow carries, as a further sign-in method. */
+    /** Binds the identity to the organization user the flow carries, as a further sign-in method. */
     CONNECT
 }

@@ -12,8 +12,8 @@ import org.kinotic.domain.api.model.security.PendingInvite;
 import org.kinotic.domain.api.model.security.identity.OrganizationUserParticipantIdentity;
 import org.kinotic.domain.api.rest.support.OidcCallbacks;
 import org.kinotic.domain.api.services.OrganizationService;
-import org.kinotic.domain.api.exceptions.AccountDisabledException;
-import org.kinotic.domain.api.exceptions.ExistingAccountException;
+import org.kinotic.domain.api.exceptions.UserDisabledException;
+import org.kinotic.domain.api.exceptions.ExistingUserException;
 import org.kinotic.domain.api.exceptions.InviteEmailMismatchException;
 import org.kinotic.domain.api.model.security.participant.ApplicationParticipant;
 import org.kinotic.domain.api.repositories.ApplicationRepository;
@@ -110,8 +110,8 @@ public class InviteHandler implements SuppliesGatewayRoutes, OidcFlowCompleter {
                                        .put("invitedByName", invite.getInvitedByName())
                                        .put("expiresAt", invite.getExpiresAt().toInstant())
                                        .put("localEnabled", true)
-                                       .put("accountExists", userClaimed.result())
-                                       .put("accountHasPassword", userHasPassword.result())
+                                       .put("organizationUserExists", userClaimed.result())
+                                       .put("organizationUserHasPassword", userHasPassword.result())
                                        .put("providers", authEndpointSupport.providersJson(providers.result())));
               })
               .onSuccess(json -> ctx.response().putHeader("Content-Type", "application/json").end(json.encode()))
@@ -143,10 +143,10 @@ public class InviteHandler implements SuppliesGatewayRoutes, OidcFlowCompleter {
                   }
               })
               .onFailure(err -> {
-                  if (err instanceof ExistingAccountException) {
+                  if (err instanceof ExistingUserException) {
                       // the invitation stays valid: the page asks for the existing organization user's password
                       authEndpointSupport.respondError(ctx, 401, err.getMessage());
-                  } else if (err instanceof AccountDisabledException) {
+                  } else if (err instanceof UserDisabledException) {
                       authEndpointSupport.respondError(ctx, 403, err.getMessage());
                   } else {
                       respondInviteFailure(ctx, err, "Failed to accept invitation");
@@ -245,11 +245,11 @@ public class InviteHandler implements SuppliesGatewayRoutes, OidcFlowCompleter {
                       // The invite is NOT consumed on mismatch — keep the token so the
                       // invitee can retry with another provider or a password.
                       redirectInviteError(ctx, OidcErrorCodes.EMAIL_MISMATCH, token);
-                  } else if (err instanceof ExistingAccountException) {
+                  } else if (err instanceof ExistingUserException) {
                       // nor here: the organization user's holder accepts with its password
-                      redirectInviteError(ctx, OidcErrorCodes.ACCOUNT_EXISTS, token);
-                  } else if (err instanceof AccountDisabledException) {
-                      redirectInviteError(ctx, OidcErrorCodes.ACCOUNT_DISABLED, token);
+                      redirectInviteError(ctx, OidcErrorCodes.USER_EXISTS, token);
+                  } else if (err instanceof UserDisabledException) {
+                      redirectInviteError(ctx, OidcErrorCodes.USER_DISABLED, token);
                   } else {
                       log.warn("Invite acceptance failed: {}", err.getMessage());
                       redirectInviteError(ctx, OidcErrorCodes.INVITE_INVALID, null);

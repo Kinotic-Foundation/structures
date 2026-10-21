@@ -225,7 +225,7 @@ public class DefaultMemberService implements MemberService {
         Validate.notBlank(identityId, "identityId is required");
         if (identityId.equals(participant.getId())) {
             return Future.failedFuture(
-                    new IllegalArgumentException("You cannot perform this action on your own account."));
+                    new IllegalArgumentException("You cannot perform this action on yourself."));
         }
         return identityService.findById(identityId)
                 .compose(identity -> {

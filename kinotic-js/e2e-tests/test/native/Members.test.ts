@@ -28,7 +28,7 @@ describe('Members', () => {
         return (pending.content ?? []).some(i => i.email === email)
     }
 
-    it('lists the organization\'s members, the signed-in account among them', async () => {
+    it('lists the organization\'s members, the signed-in user among them', async () => {
         const page = await Kinotic.members.findMembers(null, Pageable.create(0, 50))
         const me = page.content?.find(m => m.email === E2E_ORG_USER_EMAIL)
         expect(me).toBeDefined()
@@ -56,7 +56,7 @@ describe('Members', () => {
 
         await Kinotic.members.sendInvitation(email)
 
-        // the member goes, and with them the account nobody signed in to and the invitation they never accepted
+        // the member goes, and with them the organization user nobody signed in as and the invitation they never accepted
         await Kinotic.members.removeMember(added.id!)
         const afterRemoval = await Kinotic.members.searchMembers(email, null, Pageable.create(0, 10))
         expect(afterRemoval.content?.some(m => m.id === added.id)).toBe(false)

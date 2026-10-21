@@ -5,7 +5,7 @@ import org.kinotic.core.api.crud.IdentifiableCrudService;
 import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.core.api.security.Participant;
-import org.kinotic.domain.api.exceptions.AccountDisabledException;
+import org.kinotic.domain.api.exceptions.UserDisabledException;
 import org.kinotic.domain.api.model.security.DelegateType;
 import org.kinotic.domain.api.model.security.identity.DelegatingParticipantIdentity;
 import org.kinotic.domain.api.model.security.identity.MachineType;
@@ -79,7 +79,7 @@ public interface ParticipantIdentityService extends IdentifiableCrudService<Part
      * @param subject        the provider's {@code sub} claim for the identity
      * @param verifiedEmail  the email the provider verified for the identity
      * @param organizationId the organization whose login the identity signs in at
-     * @return the member's participant, or {@code null}; fails with {@link AccountDisabledException} when the
+     * @return the member's participant, or {@code null}; fails with {@link UserDisabledException} when the
      *         organization user or its membership is disabled
      */
     Future<Participant> claimProvisionedOrganizationUser(String oidcConfigId, String subject, String verifiedEmail, String organizationId);
@@ -126,7 +126,7 @@ public interface ParticipantIdentityService extends IdentifiableCrudService<Part
      * {@link #bindOidcIdentity} or by {@link #createOidcUser}. One user of each kind holds an email, and of an
      * application's users one per application: the id minted for the user is derived from its kind, its scope and
      * its email, and a creation under an email already held fails with
-     * {@link org.kinotic.domain.api.exceptions.ExistingAccountException}, two at once included.
+     * {@link org.kinotic.domain.api.exceptions.ExistingUserException}, two at once included.
      * For APPLICATION-scope users whose application's tenants are {@code TenantManagement.PLATFORM} managed, a
      * unique {@code tenantId} is auto-generated unless one was supplied.
      *

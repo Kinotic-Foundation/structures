@@ -34,8 +34,8 @@ public interface SignUpService {
 
     /**
      * Completes an email/password sign-up: validates the token, creates the organization with the
-     * given name (failing if it is taken), the founder's account with its password and its membership
-     * of the organization, then deletes the pending record.
+     * given name (failing if it is taken), the founder's organization user with its password and its
+     * membership of the organization, then deletes the pending record.
      *
      * @return the founder as the new organization's participant, for the session to sign in
      */
@@ -43,7 +43,7 @@ public interface SignUpService {
 
     /**
      * Completes an OIDC sign-up by creating a new organization with the given name (failing if it is
-     * taken), the founder's account bound to the verified identity and its membership of the
+     * taken), the founder's organization user bound to the verified identity and its membership of the
      * organization, then deleting the pending record.
      *
      * @return the founder as the new organization's participant, for the session to sign in

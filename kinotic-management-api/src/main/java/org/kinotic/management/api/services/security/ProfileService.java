@@ -39,7 +39,7 @@ public interface ProfileService {
      * The configurations an organization user may connect as further sign-in methods and has not yet: the
      * platform's org sign-up registrations, and the own configurations of every organization it may sign in
      * to; none for a system user, which signs in with a password alone. Connecting one starts at
-     * {@code POST /api/auth/account/methods/start/<configurationId>}.
+     * {@code POST /api/auth/org/methods/start/<configurationId>}.
      */
     Future<List<LoginProviderSummary>> findConnectableProviders(Participant participant);
 

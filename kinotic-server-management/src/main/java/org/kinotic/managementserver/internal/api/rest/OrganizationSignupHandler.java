@@ -12,7 +12,7 @@ import org.kinotic.domain.api.model.Organization;
 import org.kinotic.domain.api.rest.support.*;
 import org.kinotic.domain.api.model.security.identity.OrganizationUserParticipantIdentity;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
-import org.kinotic.domain.api.exceptions.ExistingAccountException;
+import org.kinotic.domain.api.exceptions.ExistingUserException;
 import org.kinotic.domain.api.model.security.PendingSignUp;
 import org.kinotic.domain.api.rest.support.OidcCallbacks;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
@@ -165,7 +165,7 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes, OidcFlo
               .compose(bound -> bound != null ? Future.succeededFuture(bound) : identityService.findOrganizationUserByEmail(email))
               .compose(existing -> {
                   if (existing != null) {
-                      return Future.failedFuture(new ExistingAccountException("An account for this identity already exists. Sign in instead."));
+                      return Future.failedFuture(new ExistingUserException("This identity already signs in to Kinotic organizations. Sign in instead."));
                   }
                   PendingSignUp pending = new PendingSignUp();
                   pending.setOidcSubject(sub);
@@ -176,8 +176,8 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes, OidcFlo
               })
               .onSuccess(pending -> redirectToCompleteOrg(ctx, result.origin(), pending.getVerificationToken()))
               .onFailure(ex -> {
-                  if (ex instanceof ExistingAccountException) {
-                      authEndpointSupport.redirectError(ctx, result.origin(), OidcErrorCodes.ACCOUNT_EXISTS);
+                  if (ex instanceof ExistingUserException) {
+                      authEndpointSupport.redirectError(ctx, result.origin(), OidcErrorCodes.USER_EXISTS);
                   } else {
                       log.warn("Signup resolution failed: {}", ex.getMessage());
                       authEndpointSupport.redirectError(ctx, result.origin(), OidcErrorCodes.SIGNUP_FAILED);

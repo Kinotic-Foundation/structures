@@ -19,8 +19,8 @@ import org.kinotic.domain.api.model.security.identity.OidcBinding;
 import org.kinotic.domain.api.model.security.participant.ParticipantScope;
 import org.kinotic.domain.api.model.security.identity.UserParticipantIdentity;
 import org.kinotic.core.api.exceptions.AlreadyExistsException;
-import org.kinotic.domain.api.exceptions.AccountDisabledException;
-import org.kinotic.domain.api.exceptions.ExistingAccountException;
+import org.kinotic.domain.api.exceptions.UserDisabledException;
+import org.kinotic.domain.api.exceptions.ExistingUserException;
 import org.kinotic.domain.api.services.security.OrganizationMembershipService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.internal.api.model.IdentityCredential;
@@ -153,8 +153,8 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
         };
     }
 
-    private static ExistingAccountException emailTaken(UserParticipantIdentity user) {
-        return new ExistingAccountException("A " + user.getType() + " with email " + user.getEmail() + " already exists in scope "
+    private static ExistingUserException emailTaken(UserParticipantIdentity user) {
+        return new ExistingUserException("A " + user.getType() + " with email " + user.getEmail() + " already exists in scope "
                                             + DomainUtil.describeScope(user.getOrganizationId(), user.getApplicationId()));
     }
 
@@ -408,7 +408,7 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
         return bindingRepository.findById(OidcBinding.idOf(oidcConfigId, subject, user.getOrganizationId(), user.getApplicationId()))
                                 .compose(existing -> {
                                     if (existing != null) {
-                                        throw new ExistingAccountException("This identity already signs in another user");
+                                        throw new ExistingUserException("This identity already signs in another user");
                                     }
                                     return createUser(user, null);
                                 })
@@ -432,7 +432,7 @@ public class DefaultParticipantIdentityService extends AbstractCrudService<Parti
             ret = organizationId == null || applicationId != null
                     ? Future.succeededFuture()
                     : membershipService.resolveParticipant(user, organizationId)
-                                       .recover(err -> err instanceof AccountDisabledException ? Future.succeededFuture() : Future.failedFuture(err));
+                                       .recover(err -> err instanceof UserDisabledException ? Future.succeededFuture() : Future.failedFuture(err));
         } else if (!Objects.equals(identity.getOrganizationId(), organizationId)
                 || !Objects.equals(identity.getApplicationId(), applicationId)) {
             ret = Future.succeededFuture();

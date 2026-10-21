@@ -51,7 +51,7 @@ import googleSignUpLight from '@/assets/social/google/web_light_rd_SU.svg'
 import googleSignUpDark  from '@/assets/social/google/web_dark_rd_SU.svg'
 import microsoftLogoUrl  from '@/assets/social/entra/ms-symbollockup_mssymbol_19.svg'
 
-/** What the button does: signs in, signs up, or connects the provider to the signed-in account. */
+/** What the button does: signs in, signs up, or connects the provider to the signed-in user. */
 export type Intent = 'sign-in' | 'sign-up' | 'connect'
 
 const props = defineProps<{

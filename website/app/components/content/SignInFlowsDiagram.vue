@@ -585,7 +585,7 @@ defineProps<{ figure: 'owners' | 'model' | 'offering' | 'paths' | 'identity' | '
       <line class="sep" x1="416" y1="326" x2="724" y2="326"></line>
       <text class="t-mono-ink" x="416" y="346">binding github-platform:7781 → u-jane</text>
       <text class="t-mono-ink" x="416" y="364">enabled memberships → acme, globex</text>
-      <text class="t-mono-ink" x="416" y="382">  one → sign in there · none → no_account</text>
+      <text class="t-mono-ink" x="416" y="382">  one → sign in there · none → no_user</text>
       <text class="t-lbl-ind" x="416" y="400">→ two: offer both, sign in at the chosen one's page</text>
 
       <rect class="gw gw-org" x="760" y="292" width="340" height="118" rx="8"></rect>
@@ -608,7 +608,7 @@ defineProps<{ figure: 'owners' | 'model' | 'offering' | 'paths' | 'identity' | '
     </svg>
 
     <!-- ═══════════════════════════ DOORS: the management server ═══════════════════════════ -->
-    <svg v-else-if="figure === 'doors'" class="sign-in-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1140 400" role="img" aria-label="Four doors on the management server. Sign up with GitHub produces a new organization, the founder's organization user bound to the GitHub identity, and the founder's membership; it is refused when the identity or its email already has an organization user. Log in has a landing page with a GitHub button, an organization field and a link that emails the person their organizations, and an organization page at /login/<org> with GitHub, the organization's own SSO and a password form. Invited or added: an administrator adds a member from the Members page, which creates the organization user and its membership pending until the organization's own provider claims it on first sign-in; an invitation lets a new email set a password or use a provider the organization offers, which claims the pending organization user or creates one; an organization user already in use joins with its password or a provider it is bound to, and an unbound identity is refused with account_exists; an application invitee becomes a user of that application. Profile, once signed in, connects GitHub or the organization's SSO, sets or changes the password, removes a method while another remains, and switches organization.">
+    <svg v-else-if="figure === 'doors'" class="sign-in-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1140 400" role="img" aria-label="Four doors on the management server. Sign up with GitHub produces a new organization, the founder's organization user bound to the GitHub identity, and the founder's membership; it is refused when the identity or its email already has an organization user. Log in has a landing page with a GitHub button, an organization field and a link that emails the person their organizations, and an organization page at /login/<org> with GitHub, the organization's own SSO and a password form. Invited or added: an administrator adds a member from the Members page, which creates the organization user and its membership pending until the organization's own provider claims it on first sign-in; an invitation lets a new email set a password or use a provider the organization offers, which claims the pending organization user or creates one; an organization user already in use joins with its password or a provider it is bound to, and an unbound identity is refused with user_exists; an application invitee becomes a user of that application. Profile, once signed in, connects GitHub or the organization's SSO, sets or changes the password, removes a method while another remains, and switches organization.">
       <defs>
         <marker id="si7-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><polygon class="mk-ink" points="0,0 10,5 0,10"></polygon></marker>
       </defs>
@@ -627,7 +627,7 @@ defineProps<{ figure: 'owners' | 'model' | 'offering' | 'paths' | 'identity' | '
       <text class="t-chip" x="165" y="212" text-anchor="middle">+ founder + membership</text>
       <text class="t-tiny" x="165" y="228" text-anchor="middle">an organization user bound to GitHub</text>
       <rect class="note-red" x="56" y="246" width="218" height="42" rx="8"></rect>
-      <text class="t-tiny" x="165" y="263" text-anchor="middle">account_exists when the identity or</text>
+      <text class="t-tiny" x="165" y="263" text-anchor="middle">user_exists when the identity or</text>
       <text class="t-tiny" x="165" y="277" text-anchor="middle">email already has an organization user</text>
 
       <!-- log in -->
@@ -661,7 +661,7 @@ defineProps<{ figure: 'owners' | 'model' | 'offering' | 'paths' | 'identity' | '
       <rect class="note-amb" x="636" y="216" width="218" height="50" rx="8"></rect>
       <text class="t-chip" x="745" y="234" text-anchor="middle">an organization user in use:</text>
       <text class="t-chip" x="745" y="250" text-anchor="middle">its password or its bound provider</text>
-      <text class="t-tiny" x="745" y="262" text-anchor="middle">an unbound identity: account_exists</text>
+      <text class="t-tiny" x="745" y="262" text-anchor="middle">an unbound identity: user_exists</text>
       <rect class="chip-vio" x="636" y="274" width="218" height="50" rx="8"></rect>
       <text class="t-chip" x="745" y="292" text-anchor="middle">invited into an application:</text>
       <text class="t-chip" x="745" y="308" text-anchor="middle">a user of that application</text>

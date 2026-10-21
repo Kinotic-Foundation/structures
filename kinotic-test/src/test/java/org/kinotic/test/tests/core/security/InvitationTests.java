@@ -6,8 +6,8 @@ import org.junit.jupiter.api.Test;
 import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.core.api.security.Participant;
-import org.kinotic.domain.api.exceptions.AccountDisabledException;
-import org.kinotic.domain.api.exceptions.ExistingAccountException;
+import org.kinotic.domain.api.exceptions.UserDisabledException;
+import org.kinotic.domain.api.exceptions.ExistingUserException;
 import org.kinotic.domain.api.model.Organization;
 import org.kinotic.domain.api.model.security.Member;
 import org.kinotic.domain.api.model.security.PendingInvite;
@@ -91,8 +91,8 @@ public class InvitationTests extends KinoticTestBase {
         await(memberships.setMembershipEnabled(user.getId(), organization.getId(), false));
 
         String token = invite.getVerificationToken();
-        assertInstanceOf(ExistingAccountException.class, failure(() -> invites.acceptLocalInvite(token, "not-the-password", null)));
-        assertInstanceOf(AccountDisabledException.class, failure(() -> invites.acceptLocalInvite(token, PASSWORD, null)));
+        assertInstanceOf(ExistingUserException.class, failure(() -> invites.acceptLocalInvite(token, "not-the-password", null)));
+        assertInstanceOf(UserDisabledException.class, failure(() -> invites.acceptLocalInvite(token, PASSWORD, null)));
         // a refused acceptance does not consume the invitation
         assertNotNull(await(invites.getValidInvite(token)));
     }

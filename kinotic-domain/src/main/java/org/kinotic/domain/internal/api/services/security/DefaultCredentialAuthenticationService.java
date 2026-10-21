@@ -120,7 +120,7 @@ public class DefaultCredentialAuthenticationService implements CredentialAuthent
      * select, an organization user, which then acts through its membership of the organization the header
      * names, or a system user when the headers name no scope. Every failure — unknown email, wrong password,
      * disabled user, no password, no membership — is the same generic error, matching the machine path: the
-     * upgrade headers get no account oracle.
+     * upgrade headers tell no one which emails have users.
      */
     private Future<AuthenticatedIdentity> authenticateEmailPassword(String organizationId,
                                                             String applicationId,

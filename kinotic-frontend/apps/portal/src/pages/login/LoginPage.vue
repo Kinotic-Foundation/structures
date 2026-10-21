@@ -14,7 +14,7 @@
 
       <!-- The organizations a social sign-in found the identity a member of; the person picks one. -->
       <div v-if="memberships.length > 0" class="login-memberships">
-        <p class="login-memberships__hint">Your account belongs to several organizations. Choose one to sign in to.</p>
+        <p class="login-memberships__hint">You are a member of several organizations. Choose one to sign in to.</p>
         <Button
           v-for="membership in memberships"
           :key="membership"
@@ -78,7 +78,7 @@
 
       <div class="login-signup-link">
         <span>New to Kinotic?</span>
-        <router-link to="/signup">Create Account</router-link>
+        <router-link to="/signup">Create Organization</router-link>
       </div>
     </div>
   </AuthPageShell>
@@ -278,10 +278,10 @@ async function loadChoices(): Promise<string[] | null> {
 
 function errorCodeToMessage(code: string): string {
   switch (code) {
-    case 'no_account':             return 'No account is linked to that identity. Please sign up first.'
-    case 'multiple_organizations': return 'Your account belongs to several organizations, but the choice has expired. Please sign in again.'
-    case 'account_exists':         return 'An account already exists for this email or identity, and an account founds one organization. Sign in to it, then connect this provider under Sign-in methods on your profile.'
-    case 'account_disabled':       return 'This account cannot sign in to the organization. Ask an administrator to enable it.'
+    case 'no_user':                return 'That identity signs in to no Kinotic organization. Please sign up first.'
+    case 'multiple_organizations': return 'You are a member of several organizations, but the choice has expired. Please sign in again.'
+    case 'user_exists':            return 'This email or identity already signs in to Kinotic organizations, and a person founds one organization. Sign in, then connect this provider under Sign-in methods on your profile.'
+    case 'user_disabled':          return 'You cannot sign in to this organization. Ask an administrator to enable your access.'
     case 'email_not_verified':     return 'Your identity provider has not verified your email address.'
     case 'state_mismatch':         return 'Login session expired or was tampered with. Please try again.'
     case 'access_denied':          return 'You declined to authorize Kinotic. Please try again to continue.'

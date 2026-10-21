@@ -12,8 +12,8 @@ import org.kinotic.domain.api.model.security.identity.OrganizationUserParticipan
 import org.kinotic.domain.api.model.security.PendingInvite;
 import org.kinotic.domain.api.services.OrganizationService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
-import org.kinotic.domain.api.exceptions.AccountDisabledException;
-import org.kinotic.domain.api.exceptions.ExistingAccountException;
+import org.kinotic.domain.api.exceptions.UserDisabledException;
+import org.kinotic.domain.api.exceptions.ExistingUserException;
 import org.kinotic.domain.api.exceptions.InviteEmailMismatchException;
 import org.kinotic.domain.api.services.security.LocalAuthenticationService;
 import org.kinotic.domain.api.services.security.OrganizationMembershipService;
@@ -179,8 +179,8 @@ public class DefaultInviteService implements InviteService {
                                                                  .compose(created -> join(created, invite));
                                         } else {
                                             ret = identityService.hasSignInMethod(user.getId()).compose(claimed -> claimed
-                                                    ? Future.failedFuture(new ExistingAccountException(
-                                                            "An account already exists for this email. Sign in with its password to accept."))
+                                                    ? Future.failedFuture(new ExistingUserException(
+                                                            "This email already signs in to Kinotic organizations. Accept with its password instead."))
                                                     // an organization user an administrator added that nobody signs in as yet is the
                                                     // invited address's to claim: the identity becomes its first sign-in method
                                                     : requireEnabled(user)
@@ -262,14 +262,14 @@ public class DefaultInviteService implements InviteService {
     private static Future<Void> requireEnabled(OrganizationUserParticipantIdentity user) {
         return user.isEnabled()
                 ? Future.succeededFuture()
-                : Future.failedFuture(new AccountDisabledException("This account cannot sign in to the organization."));
+                : Future.failedFuture(new UserDisabledException("This user cannot sign in to the organization."));
     }
 
     // an existing organization user is joined only by someone who knows its password
     private Future<Void> requireOrganizationUserPassword(OrganizationUserParticipantIdentity user, String password) {
         return localAuthenticationService.verifyPassword(user, password)
                                          .compose(verified -> !verified
-                                                 ? Future.failedFuture(new ExistingAccountException(
+                                                 ? Future.failedFuture(new ExistingUserException(
                                                          "That password does not match the one this email signs in to Kinotic organizations with."))
                                                  : Future.succeededFuture());
     }
