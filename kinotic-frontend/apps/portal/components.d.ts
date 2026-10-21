@@ -36,7 +36,7 @@ declare module 'vue' {
     MicroserviceDeploymentsTable: typeof import('./src/components/MicroserviceDeploymentsTable.vue')['default']
     NewProjectSidebar: typeof import('./src/components/NewProjectSidebar.vue')['default']
     ObjectNode: typeof import('./src/components/nodes/ObjectNode.vue')['default']
-    OidcConfigurationDialog: typeof import('./src/components/OidcConfigurationDialog.vue')['default']
+    OidcConfigurationDrawer: typeof import('./src/components/OidcConfigurationDrawer.vue')['default']
     OidcConfigurationsPanel: typeof import('./src/components/OidcConfigurationsPanel.vue')['default']
     ProjectList: typeof import('./src/components/ProjectList.vue')['default']
     PropertyType: typeof import('./src/components/entity-definitions/flow-components/PropertyType.vue')['default']

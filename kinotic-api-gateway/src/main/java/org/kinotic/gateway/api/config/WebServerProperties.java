@@ -9,7 +9,7 @@ import lombok.experimental.Accessors;
  * Configuration for the static-file web server that serves the kinotic-frontend SPA.
  * <p>
  * In dev (docker-compose, local) this is enabled and serves {@code resources/webroot}.
- * In KinD / Azure deployments the SPA is hosted separately (e.g. Azure Storage Account)
+ * In Azure deployments the SPA is hosted separately (e.g. Azure Storage Account)
  * so this verticle is disabled and only the api-gateway port (58503) is exposed.
  */
 @Getter

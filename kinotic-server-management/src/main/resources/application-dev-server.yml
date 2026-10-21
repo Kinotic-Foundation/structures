@@ -39,9 +39,8 @@ kinotic:
       allowedOriginPattern: "https:\\/\\/${DEV_SERVER_PORTAL_HOSTNAME}"
       allowCredentials: true
   platformSecrets:
-    # Generated once when the server is built (generate-secrets.sh in deployment/terraform/proxmox),
-    # in the shape deployment/kind/terraform/platform-secrets.tf produces: an activeKeyId and a
-    # keys list, so a key can be added to the set at migration time
+    # Generated once when the server is built (generate-secrets.sh in deployment/terraform/proxmox):
+    # an activeKeyId and a keys list, so a key can be added to the set at migration time
     jwtSigningKeysPath: /etc/kinotic/platform-secrets/jwt-signing-keys
   domain:
     secretStorage:

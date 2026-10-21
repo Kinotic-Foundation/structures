@@ -14,6 +14,10 @@ export class TypescriptConversionState extends BaseConversionState {
      */
     public unionPropertyNameStack: string[] = []
     /**
+     * Warnings about the types converted, for the caller to read and clear.
+     */
+    public warnings: string[] = []
+    /**
      * Boolean to indicate if the source path should be added to the metadata for the {@link C3Type}s created.
      */
     public shouldAddSourcePathToMetadata: boolean = true

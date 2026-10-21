@@ -15,6 +15,9 @@ import co.elastic.clients.elasticsearch._types.mapping.Property;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import co.elastic.clients.elasticsearch._types.query_dsl.TermQuery;
 import co.elastic.clients.elasticsearch.core.*;
+import co.elastic.clients.elasticsearch.core.bulk.BulkOperation;
+import co.elastic.clients.elasticsearch.core.bulk.BulkResponseItem;
+import co.elastic.clients.elasticsearch.core.bulk.UpdateAction;
 import co.elastic.clients.elasticsearch.core.get.GetResult;
 import co.elastic.clients.elasticsearch.core.mget.MultiGetOperation;
 import co.elastic.clients.elasticsearch.core.mget.MultiGetResponseItem;
@@ -679,6 +682,58 @@ public class CrudServiceTemplate {
     }
 
     /**
+     * As {@link #scriptedUpdateSync(String, String, String, Map)} for many documents in one bulk request: the
+     * same script runs against each document with that document's params, and the changes are visible to
+     * search when the future completes. An id naming no document is skipped.
+     *
+     * @param indexName      name of the index
+     * @param source         the Painless source, reading its inputs from {@code params}
+     * @param paramsById     the values the script reads as {@code params.<name>}, by the id of the document
+     * @param actionConsumer to customize each {@link UpdateAction}, such as a scripted upsert, or null if no
+     *                       customization is needed
+     * @return a {@link Future} that will complete when every document is updated, or fail with the reasons the
+     * updates that failed give
+     */
+    @SuppressWarnings("rawtypes")
+    public Future<Void> bulkScriptedUpdateSync(String indexName,
+                                               String source,
+                                               Map<String, Map<String, Object>> paramsById,
+                                               Consumer<UpdateAction.Builder<Map, Map<String, Object>>> actionConsumer) {
+        if (paramsById.isEmpty()) {
+            // Elasticsearch rejects a bulk request with no operations
+            return Future.succeededFuture();
+        }
+        List<BulkOperation> operations = new ArrayList<>(paramsById.size());
+        paramsById.forEach((id, params) -> operations.add(BulkOperation.of(b -> b.<Map, Map<String, Object>>update(u -> u
+                .index(indexName)
+                .id(id)
+                .retryOnConflict(UPDATE_CONFLICT_RETRIES)
+                .action(a -> {
+                    a.script(sc -> sc.source(src -> src.scriptString(source))
+                                     .params(scriptParams(params)));
+                    if (actionConsumer != null) {
+                        actionConsumer.accept(a);
+                    }
+                    return a;
+                })))));
+        // one request with refresh=wait_for holds one refresh listener per shard, where a request per document
+        // holds one each and, past index.max_refresh_listeners, forces a refresh
+        return KinoticUtil.toFuture(esAsyncClient.bulk(br -> br.operations(operations).refresh(Refresh.WaitFor)))
+                          .compose(response -> {
+                              List<String> failures = new ArrayList<>();
+                              for (BulkResponseItem item : response.items()) {
+                                  if (item.error() != null && item.status() != 404) {
+                                      failures.add(item.id() + ": " + item.error().reason());
+                                  }
+                              }
+                              return failures.isEmpty()
+                                      ? Future.<Void>succeededFuture()
+                                      : Future.<Void>failedFuture(new IllegalStateException("Bulk update of " + indexName
+                                                                                                    + " failed for " + failures));
+                          });
+    }
+
+    /**
      * As {@link #scriptedUpdateSync(String, String, String, Map)}, and completes with the document as the
      * script left it, or null when the script declined.
      *
@@ -753,15 +808,11 @@ public class CrudServiceTemplate {
                                                        boolean returnSource,
                                                        Refresh refresh,
                                                        Consumer<UpdateRequest.Builder<Map, Map<String, Object>>> builderConsumer) {
-        Map<String, JsonData> scriptParams = new HashMap<>();
-        // JsonData.of(null) has no serializer to look up and throws; a jakarta JsonValue is written as it
-        // is, so a null parameter reaches the script as JSON null
-        params.forEach((name, value) -> scriptParams.put(name, JsonData.of(value == null ? JsonValue.NULL : value)));
         return KinoticUtil.toFuture(esAsyncClient.update((UpdateRequest.Builder<Map, Map<String, Object>> u) -> {
             u.index(indexName)
              .id(id)
              .script(s -> s.source(src -> src.scriptString(source))
-                           .params(scriptParams))
+                           .params(scriptParams(params)))
              .retryOnConflict(UPDATE_CONFLICT_RETRIES)
              .refresh(refresh);
             if (returnSource) {
@@ -772,6 +823,14 @@ public class CrudServiceTemplate {
             }
             return u;
         }, Map.class));
+    }
+
+    private static Map<String, JsonData> scriptParams(Map<String, Object> params) {
+        Map<String, JsonData> ret = new HashMap<>();
+        // JsonData.of(null) has no serializer to look up and throws; a jakarta JsonValue is written as it
+        // is, so a null parameter reaches the script as JSON null
+        params.forEach((name, value) -> ret.put(name, JsonData.of(value == null ? JsonValue.NULL : value)));
+        return ret;
     }
 
     /**

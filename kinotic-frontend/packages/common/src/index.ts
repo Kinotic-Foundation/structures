@@ -52,7 +52,6 @@ export { default as MachineSecretDialog } from './components/MachineSecretDialog
 export type { MachineSecret } from './components/MachineSecretDialog.vue'
 export { default as MachinesTable } from './components/MachinesTable.vue'
 export type { MachineOperations } from './components/MachinesTable.vue'
-export { default as FormDialog } from './components/FormDialog.vue'
 export { default as FormDrawer } from './components/FormDrawer.vue'
 export { default as DeleteConfirmDialog } from './components/DeleteConfirmDialog.vue'
 export { default as HeartbeatIcon } from './components/HeartbeatIcon.vue'
