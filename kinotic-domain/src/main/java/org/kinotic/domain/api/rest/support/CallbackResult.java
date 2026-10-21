@@ -18,6 +18,6 @@ public record CallbackResult<C extends OidcConfiguration>(
         String applicationId,
         String tenantId,
         String inviteToken,
-        String accountId,
+        String organizationUserId,
         String origin) {
 }

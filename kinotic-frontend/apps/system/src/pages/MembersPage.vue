@@ -75,7 +75,7 @@ import {
   type IterablePage,
   type Page
 } from '@kinotic-ai/core'
-import type { Member, PendingInviteSummary } from '@kinotic-ai/management-api'
+import type { ApplicationParticipantIdentity, OrganizationMember, PendingInviteSummary, SystemParticipantIdentity } from '@kinotic-ai/management-api'
 import {
   CrudTable,
   InitialsTile,
@@ -162,7 +162,7 @@ async function systemUsers(pageable: Pageable, searchText: string | null): Promi
     inviteTotal.value = 0
   }
   return {
-    content: (users.content ?? []).map(user => toMemberSummary(user)),
+    content: (users.content ?? []).map(user => toUserSummary(user)),
     totalElements: users.totalElements ?? 0,
     cursor: undefined
   }
@@ -174,9 +174,7 @@ async function organizationMembers(organizationId: string,
                                    pageable: Pageable,
                                    searchText: string | null): Promise<Page<DescriptiveIdentifiable>> {
   const applicationId = props.applicationId ?? null
-  const membersPage = searchText
-      ? await Kinotic.systemOrganizations.searchMembers(searchText, organizationId, applicationId, pageable)
-      : await Kinotic.systemOrganizations.findMembers(organizationId, applicationId, pageable)
+  const membersPage = await scopeMembers(organizationId, applicationId, pageable, searchText)
 
   const invites = await Kinotic.systemOrganizations.findPendingInvites(organizationId, applicationId, Pageable.create(0, INVITE_PAGE_SIZE, null))
   let inviteRows = (invites.content ?? []).map(invite => toInviteRow(invite))
@@ -198,10 +196,30 @@ async function organizationMembers(organizationId: string,
   }
 
   return {
-    content: [...inviteRows, ...(membersPage.content ?? []).map(user => toMemberSummary(user))],
+    content: [...inviteRows, ...(membersPage.content ?? [])],
     totalElements: (membersPage.totalElements ?? 0) + inviteCount,
     cursor: undefined
   }
+}
+
+/** The organization's members, or the users of one of its applications. */
+async function scopeMembers(organizationId: string,
+                            applicationId: string | null,
+                            pageable: Pageable,
+                            searchText: string | null): Promise<Page<MemberSummary>> {
+  let ret: Page<MemberSummary>
+  if (applicationId === null) {
+    const page = searchText
+        ? await Kinotic.systemOrganizations.searchMembers(searchText, organizationId, pageable)
+        : await Kinotic.systemOrganizations.findMembers(organizationId, pageable)
+    ret = { ...page, content: (page.content ?? []).map(member => toMemberSummary(member)) }
+  } else {
+    const page = searchText
+        ? await Kinotic.systemOrganizations.searchApplicationUsers(searchText, organizationId, applicationId, pageable)
+        : await Kinotic.systemOrganizations.findApplicationUsers(organizationId, applicationId, pageable)
+    ret = { ...page, content: (page.content ?? []).map(user => toUserSummary(user)) }
+  }
+  return ret
 }
 
 function toInviteRow(invite: PendingInviteSummary): MemberSummary {
@@ -215,13 +233,23 @@ function toInviteRow(invite: PendingInviteSummary): MemberSummary {
   }
 }
 
-function toMemberSummary(member: Member): MemberSummary {
+function toMemberSummary(member: OrganizationMember): MemberSummary {
   return {
     id: member.id ?? '',
     email: member.email,
     displayName: member.displayName,
     status: member.enabled ? 'Active' : 'Disabled',
     created: member.joined
+  }
+}
+
+function toUserSummary(user: SystemParticipantIdentity | ApplicationParticipantIdentity): MemberSummary {
+  return {
+    id: user.id ?? '',
+    email: user.email,
+    displayName: user.displayName,
+    status: user.enabled ? 'Active' : 'Disabled',
+    created: user.created
   }
 }
 

@@ -8,10 +8,10 @@ import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.core.api.exceptions.AuthorizationException;
 import org.kinotic.core.api.security.SecurityContext;
-import org.kinotic.domain.api.model.security.identity.Membership;
 import org.kinotic.domain.api.services.SecretStorageService;
 import org.kinotic.system.api.model.llm.LlmConfiguration;
 import org.kinotic.system.api.services.LlmConfigurationService;
+import org.kinotic.domain.api.utils.DomainUtil;
 import org.kinotic.system.internal.api.repositories.LlmConfigurationRepository;
 import org.springframework.stereotype.Component;
 
@@ -23,7 +23,7 @@ import java.util.UUID;
 public class DefaultLlmConfigurationService implements LlmConfigurationService {
 
     // no organization can take the platform's id, so the API keys never share a secret scope with an organization's
-    private static final String SECRET_SCOPE = Membership.PLATFORM;
+    private static final String SECRET_SCOPE = DomainUtil.PLATFORM_ID;
 
     private final LlmConfigurationRepository repository;
     private final SecretStorageService secretStorageService;

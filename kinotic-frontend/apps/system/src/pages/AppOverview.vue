@@ -213,7 +213,7 @@ async function load() {
     const [apps, orgProjects, users, invites, workloadList, runList] = await Promise.all([
       Kinotic.systemOrganizations.findApplications(orgId, Pageable.create(0, PAGE_SIZE)),
       Kinotic.systemOrganizations.findProjects(orgId, Pageable.create(0, PAGE_SIZE)),
-      Kinotic.systemOrganizations.findMembers(orgId, appId, firstPage),
+      Kinotic.systemOrganizations.findApplicationUsers(orgId, appId, firstPage),
       Kinotic.systemOrganizations.findPendingInvites(orgId, appId, firstPage),
       scanWorkloads({ organizationId: orgId, applicationId: appId }),
       scanJobRuns({ organizationId: orgId, applicationId: appId })

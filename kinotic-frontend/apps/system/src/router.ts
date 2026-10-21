@@ -9,7 +9,7 @@ import { SYSTEM_USER_STATE } from './states/SystemUserState'
 
 /**
  * The console has five scopes, each with its own sidebar group: the platform, one organization,
- * one of its applications, one of its projects, and the signed-in system user's own account. A page
+ * one of its applications, one of its projects, and the signed-in system user's own settings. A page
  * opened from a list (a node, a workload, a job run, a trace) nests under the list's path and
  * declares the group alone, so the sidebar keeps the list highlighted and the page header can
  * point back to it.

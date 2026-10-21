@@ -6,7 +6,7 @@ import org.kinotic.domain.api.model.security.OidcProviderType;
 import java.util.Date;
 
 /**
- * One way the signed-in account authenticates, as the profile page lists them: the account's password, or a
+ * One way the signed-in user authenticates, as the profile page lists them: the user's password, or a
  * provider identity bound to it. Nothing of the credential itself travels.
  *
  * @param id       what names the method to {@code ProfileService.removeSignInMethod}: the binding's id for a
@@ -18,6 +18,6 @@ import java.util.Date;
  */
 public record SignInMethod(String id, AuthType type, String name, OidcProviderType provider, Date created) {
 
-    /** The id of the account's password as a sign-in method. */
+    /** The id of the user's password as a sign-in method. */
     public static final String PASSWORD_ID = "password";
 }

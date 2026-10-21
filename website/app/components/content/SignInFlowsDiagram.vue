@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // One component, seven figures, so the page's diagrams share one palette and one vocabulary.
-defineProps<{ figure: 'owners' | 'model' | 'offering' | 'paths' | 'identity' | 'account' | 'doors' }>()
+defineProps<{ figure: 'owners' | 'model' | 'offering' | 'paths' | 'identity' | 'organization-user' | 'doors' }>()
 </script>
 
 <template>
@@ -361,7 +361,7 @@ defineProps<{ figure: 'owners' | 'model' | 'offering' | 'paths' | 'identity' | '
     </svg>
 
     <!-- ═══════════════════════════ IDENTITY: the identity and participant classes ═══════════════════════════ -->
-    <svg v-else-if="figure === 'identity'" class="sign-in-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 760" role="img" aria-label="UML class diagram. ParticipantIdentity, sealed and abstract, holds id, displayName, organizationId, applicationId, tenantId, enabled and timestamps, and getType returns the ParticipantIdentityType discriminator. Three final subclasses: UserParticipantIdentity with email, DelegatingParticipantIdentity with ownerId, clientKey and delegateType, and MachineParticipantIdentity with machineType. A delegate's ownerId points at a user. A user has zero or one IdentityCredential, zero or more OidcBinding rows and, when it is an account, zero or more Membership rows. Below, the sealed ScopedParticipant interface extending the core Participant, with SystemParticipant, OrganizationParticipant and ApplicationParticipant, and the arrow from identity plus scope to participant through resolveParticipant.">
+    <svg v-else-if="figure === 'identity'" class="sign-in-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 884" role="img" aria-label="UML class diagram. ParticipantIdentity, sealed and abstract, holds id, displayName, enabled and timestamps, and getType returns the ParticipantIdentityType discriminator. ApplicationParticipantIdentity, DelegatingParticipantIdentity and MachineParticipantIdentity implement the sealed ScopedParticipantIdentity interface and carry organizationId and applicationId, and an application user and a delegate a tenantId too. Three subclasses: UserParticipantIdentity, sealed and abstract, with email; DelegatingParticipantIdentity with ownerId, clientKey and delegateType; and MachineParticipantIdentity with machineType. A delegate's ownerId points at a user. UserParticipantIdentity has three final subclasses, one per scope: SystemParticipantIdentity, OrganizationParticipantIdentity and ApplicationParticipantIdentity. Every user has zero or one IdentityCredential, organization and application users zero or more OidcBinding rows, and an organization user zero or more OrganizationMembership rows. Below, the sealed ScopedParticipant interface extending the core Participant, with SystemParticipant, OrganizationParticipant and ApplicationParticipant, and the arrow from identity plus scope to participant through resolveParticipant.">
       <defs>
         <marker id="si5-gen" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="12" markerHeight="12" orient="auto"><polygon class="mk-gen" points="1,1 11,6 1,11"></polygon></marker>
         <marker id="si5-mut" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><polygon class="mk-mut" points="0,0 10,5 0,10"></polygon></marker>
@@ -374,14 +374,12 @@ defineProps<{ figure: 'owners' | 'model' | 'offering' | 'paths' | 'identity' | '
       <text class="t-name" x="590" y="64" text-anchor="middle">ParticipantIdentity</text>
       <line class="sep" x1="440" y1="72" x2="740" y2="72"></line>
       <text class="t-attr" x="452" y="90">id: String · displayName: String</text>
-      <text class="t-attr" x="452" y="106">organizationId: String</text>
-      <text class="t-attr" x="452" y="122">applicationId: String</text>
-      <text class="t-attr" x="452" y="138">tenantId: String</text>
-      <text class="t-attr" x="452" y="154">enabled: boolean · created, updated: Date</text>
-      <line class="sep" x1="440" y1="164" x2="740" y2="164"></line>
-      <text class="t-attr" x="452" y="182">getType(): ParticipantIdentityType</text>
-      <text class="t-attr-mut" x="452" y="198">scope is structural: none → system,</text>
-      <text class="t-attr-mut" x="452" y="214">org → organization, org + app → application</text>
+      <text class="t-attr" x="452" y="106">enabled: boolean · created, updated: Date</text>
+      <line class="sep" x1="440" y1="116" x2="740" y2="116"></line>
+      <text class="t-attr" x="452" y="134">getType(): ParticipantIdentityType</text>
+      <text class="t-attr-mut" x="452" y="166">a «ScopedParticipantIdentity» carries its</text>
+      <text class="t-attr-mut" x="452" y="182">scope: none → system, org → organization,</text>
+      <text class="t-attr-mut" x="452" y="198">org + app → application; scope() returns it</text>
 
       <text class="t-attr-mut" x="760" y="100">the sign-in methods are rows of</text>
       <text class="t-attr-mut" x="760" y="116">their own: a credential, bindings;</text>
@@ -389,15 +387,15 @@ defineProps<{ figure: 'owners' | 'model' | 'offering' | 'paths' | 'identity' | '
       <text class="t-attr-mut" x="760" y="148">one on the Profile page, never the row</text>
 
       <!-- subclasses -->
-      <rect class="cls" x="60" y="290" width="300" height="122" rx="4"></rect>
-      <text class="t-ster" x="210" y="308" text-anchor="middle">«final»</text>
+      <rect class="cls-abs" x="60" y="290" width="300" height="122" rx="4"></rect>
+      <text class="t-ster" x="210" y="308" text-anchor="middle">«sealed, abstract»</text>
       <text class="t-name" x="210" y="324" text-anchor="middle">UserParticipantIdentity</text>
       <line class="sep" x1="60" y1="332" x2="360" y2="332"></line>
       <text class="t-attr" x="72" y="350">email: String</text>
       <line class="sep" x1="60" y1="358" x2="360" y2="358"></line>
-      <text class="t-attr-mut" x="72" y="374">isAccount(): no organizationId,</text>
-      <text class="t-attr-mut" x="72" y="390">  no applicationId</text>
-      <text class="t-attr-mut" x="72" y="406">both set: a user of that application</text>
+      <text class="t-attr-mut" x="72" y="374">a person; the concrete type is the</text>
+      <text class="t-attr-mut" x="72" y="390">scope it signs in to, unique by</text>
+      <text class="t-attr-mut" x="72" y="406">email within that scope</text>
 
       <rect class="cls" x="420" y="290" width="340" height="122" rx="4"></rect>
       <text class="t-ster" x="590" y="308" text-anchor="middle">«final»</text>
@@ -406,7 +404,7 @@ defineProps<{ figure: 'owners' | 'model' | 'offering' | 'paths' | 'identity' | '
       <text class="t-attr" x="432" y="350">ownerId: String · clientKey: String</text>
       <text class="t-attr" x="432" y="366">delegateType: DelegateType</text>
       <text class="t-attr" x="432" y="382">  {CLI, MCP_CLIENT}</text>
-      <text class="t-attr-mut" x="432" y="402">scope = the approving login</text>
+      <text class="t-attr" x="432" y="398">organizationId, applicationId, tenantId</text>
 
       <rect class="cls" x="800" y="290" width="340" height="122" rx="4"></rect>
       <text class="t-ster" x="970" y="308" text-anchor="middle">«final»</text>
@@ -414,6 +412,7 @@ defineProps<{ figure: 'owners' | 'model' | 'offering' | 'paths' | 'identity' | '
       <line class="sep" x1="800" y1="332" x2="1140" y2="332"></line>
       <text class="t-attr" x="812" y="350">machineType: MachineType</text>
       <text class="t-attr" x="812" y="366">  {CLIENT, PROJECT_SYNC, APP_RUNTIME}</text>
+      <text class="t-attr" x="812" y="382">organizationId, applicationId</text>
       <text class="t-attr-mut" x="812" y="402">credential: id + provisioned secret</text>
 
       <polyline class="gen" points="210,290 210,258 590,258 590,226" marker-end="url(#si5-gen)"></polyline>
@@ -423,75 +422,102 @@ defineProps<{ figure: 'owners' | 'model' | 'offering' | 'paths' | 'identity' | '
       <line class="link" x1="420" y1="344" x2="360" y2="344" marker-end="url(#si5-mut)"></line>
       <text class="t-tiny" x="390" y="338" text-anchor="middle">ownerId</text>
 
+      <!-- one kind of user per scope -->
+      <rect class="cls" x="40" y="460" width="340" height="92" rx="4"></rect>
+      <text class="t-ster" x="210" y="478" text-anchor="middle">«final»</text>
+      <text class="t-name" x="210" y="494" text-anchor="middle">SystemParticipantIdentity</text>
+      <line class="sep" x1="40" y1="502" x2="380" y2="502"></line>
+      <text class="t-attr" x="52" y="520">SYSTEM_USER</text>
+      <text class="t-attr-mut" x="52" y="538">the system console, password only</text>
+
+      <rect class="cls" x="420" y="460" width="340" height="92" rx="4"></rect>
+      <text class="t-ster" x="590" y="478" text-anchor="middle">«final»</text>
+      <text class="t-name" x="590" y="494" text-anchor="middle">OrganizationParticipantIdentity</text>
+      <line class="sep" x1="420" y1="502" x2="760" y2="502"></line>
+      <text class="t-attr" x="432" y="520">ORGANIZATION_USER</text>
+      <text class="t-attr-mut" x="432" y="538">acts through its memberships</text>
+
+      <rect class="cls" x="800" y="460" width="340" height="92" rx="4"></rect>
+      <text class="t-ster" x="970" y="478" text-anchor="middle">«final»</text>
+      <text class="t-name" x="970" y="494" text-anchor="middle">ApplicationParticipantIdentity</text>
+      <line class="sep" x1="800" y1="502" x2="1140" y2="502"></line>
+      <text class="t-attr" x="812" y="520">APPLICATION_USER · organizationId,</text>
+      <text class="t-attr" x="812" y="536">applicationId, tenantId</text>
+      <text class="t-attr-mut" x="812" y="548">acts in its application only</text>
+
+      <polyline class="gen" points="210,460 210,436 210,412" marker-end="url(#si5-gen)"></polyline>
+      <polyline class="gen" points="590,460 590,436 210,436"></polyline>
+      <polyline class="gen" points="970,460 970,436 590,436"></polyline>
+
       <!-- rows that point at a user -->
-      <rect class="cls" x="40" y="466" width="200" height="76" rx="4"></rect>
-      <text class="t-name" x="140" y="486" text-anchor="middle">IdentityCredential</text>
-      <line class="sep" x1="40" y1="494" x2="240" y2="494"></line>
-      <text class="t-attr" x="52" y="512">id = identity id</text>
-      <text class="t-attr" x="52" y="528">secretHash: String</text>
+      <rect class="cls" x="40" y="590" width="200" height="76" rx="4"></rect>
+      <text class="t-name" x="140" y="610" text-anchor="middle">IdentityCredential</text>
+      <line class="sep" x1="40" y1="618" x2="240" y2="618"></line>
+      <text class="t-attr" x="52" y="636">id = identity id</text>
+      <text class="t-attr" x="52" y="652">secretHash: String</text>
 
-      <rect class="cls" x="260" y="466" width="270" height="124" rx="4"></rect>
-      <text class="t-name" x="395" y="486" text-anchor="middle">OidcBinding</text>
-      <line class="sep" x1="260" y1="494" x2="530" y2="494"></line>
-      <text class="t-attr" x="272" y="512">id = oidcConfigId:subject</text>
-      <text class="t-attr-mut" x="272" y="528">  app user: org/app/ in front</text>
-      <text class="t-attr" x="272" y="544">identityId: String</text>
-      <text class="t-attr" x="272" y="560">organizationId, applicationId</text>
-      <text class="t-attr" x="272" y="576">oidcConfigId, subject · created</text>
+      <rect class="cls" x="260" y="590" width="270" height="124" rx="4"></rect>
+      <text class="t-name" x="395" y="610" text-anchor="middle">OidcBinding</text>
+      <line class="sep" x1="260" y1="618" x2="530" y2="618"></line>
+      <text class="t-attr" x="272" y="636">id = oidcConfigId:subject</text>
+      <text class="t-attr-mut" x="272" y="652">  app user: org/app/ in front</text>
+      <text class="t-attr" x="272" y="668">identityId: String</text>
+      <text class="t-attr" x="272" y="684">organizationId, applicationId</text>
+      <text class="t-attr" x="272" y="700">oidcConfigId, subject · created</text>
 
-      <rect class="cls" x="560" y="466" width="300" height="124" rx="4"></rect>
-      <text class="t-name" x="710" y="486" text-anchor="middle">Membership</text>
-      <line class="sep" x1="560" y1="494" x2="860" y2="494"></line>
-      <text class="t-attr" x="572" y="512">id = identityId:organizationId</text>
-      <text class="t-attr" x="572" y="528">  or identityId:system</text>
-      <text class="t-attr" x="572" y="544">identityId, organizationId: String</text>
-      <text class="t-attr" x="572" y="560">enabled: boolean · created, updated</text>
-      <text class="t-attr-mut" x="572" y="578">organizationId null = the platform</text>
+      <rect class="cls" x="560" y="590" width="300" height="124" rx="4"></rect>
+      <text class="t-name" x="710" y="610" text-anchor="middle">OrganizationMembership</text>
+      <line class="sep" x1="560" y1="618" x2="860" y2="618"></line>
+      <text class="t-attr" x="572" y="636">id = organizationUserId:organizationId</text>
+      <text class="t-attr" x="572" y="652">organizationUserId: String</text>
+      <text class="t-attr" x="572" y="668">organizationId: String</text>
+      <text class="t-attr" x="572" y="684">enabled: boolean · created, updated</text>
+      <text class="t-attr-mut" x="572" y="702">the user's standing in that org alone</text>
 
-      <line class="link" x1="140" y1="412" x2="140" y2="466" marker-start="url(#si5-mut)"></line>
-      <text class="t-tiny" x="148" y="444">0..1 password</text>
-      <line class="link" x1="300" y1="412" x2="300" y2="466" marker-start="url(#si5-mut)"></line>
-      <text class="t-tiny" x="308" y="428">0..* bindings</text>
-      <polyline class="link" points="350,412 350,440 710,440 710,466" marker-start="url(#si5-mut)"></polyline>
-      <text class="t-tiny" x="560" y="434">0..* memberships · accounts only</text>
+      <line class="link" x1="140" y1="552" x2="140" y2="590" marker-start="url(#si5-mut)"></line>
+      <text class="t-tiny" x="148" y="576">0..1 password · every user</text>
+      <polyline class="link" points="470,552 470,570 395,570 395,590" marker-start="url(#si5-mut)"></polyline>
+      <text class="t-tiny" x="300" y="584">0..* bindings</text>
+      <line class="link" x1="710" y1="552" x2="710" y2="590" marker-start="url(#si5-mut)"></line>
+      <text class="t-tiny" x="718" y="576">0..* memberships</text>
 
-      <text class="t-attr-mut" x="884" y="486">a user and an application user</text>
-      <text class="t-attr-mut" x="884" y="502">both hold a credential and</text>
-      <text class="t-attr-mut" x="884" y="518">bindings; only an account holds</text>
-      <text class="t-attr-mut" x="884" y="534">memberships. deleting an identity</text>
-      <text class="t-attr-mut" x="884" y="550">cascades to all three and to</text>
-      <text class="t-attr-mut" x="884" y="566">its delegates.</text>
+      <text class="t-attr-mut" x="884" y="610">every user holds a credential;</text>
+      <text class="t-attr-mut" x="884" y="626">organization and application users</text>
+      <text class="t-attr-mut" x="884" y="642">hold bindings; only an organization</text>
+      <text class="t-attr-mut" x="884" y="658">user holds memberships. deleting an</text>
+      <text class="t-attr-mut" x="884" y="674">identity cascades to all three and</text>
+      <text class="t-attr-mut" x="884" y="690">to its delegates.</text>
 
       <!-- participants -->
-      <rect class="wall" x="40" y="626" width="1100" height="118" rx="8"></rect>
-      <text class="t-tag" x="56" y="646">«SEALED» ScopedParticipant extends Participant (kinotic-core)</text>
-      <text class="t-tiny" x="56" y="662">getId() · getRoles() · getScope(): ParticipantScope(organizationId, applicationId, tenantId)</text>
+      <rect class="wall" x="40" y="750" width="1100" height="118" rx="8"></rect>
+      <text class="t-tag" x="56" y="770">«SEALED» ScopedParticipant extends Participant (kinotic-core)</text>
+      <text class="t-tiny" x="56" y="786">getId() · getRoles() · getScope(): ParticipantScope(organizationId, applicationId, tenantId)</text>
 
-      <rect class="chip-ind" x="56" y="676" width="336" height="52" rx="6"></rect>
-      <text class="t-name" x="224" y="696" text-anchor="middle">SystemParticipant</text>
-      <text class="t-tiny" x="224" y="714" text-anchor="middle">account + platform membership · system machine</text>
+      <rect class="chip-ind" x="56" y="800" width="336" height="52" rx="6"></rect>
+      <text class="t-name" x="224" y="820" text-anchor="middle">SystemParticipant</text>
+      <text class="t-tiny" x="224" y="838" text-anchor="middle">a system user · system machine</text>
 
-      <rect class="chip-ind" x="404" y="676" width="356" height="52" rx="6"></rect>
-      <text class="t-name" x="582" y="696" text-anchor="middle">OrganizationParticipant · getOrganizationId()</text>
-      <text class="t-tiny" x="582" y="714" text-anchor="middle">account + membership of that org · org delegate</text>
+      <rect class="chip-ind" x="404" y="800" width="356" height="52" rx="6"></rect>
+      <text class="t-name" x="582" y="820" text-anchor="middle">OrganizationParticipant · getOrganizationId()</text>
+      <text class="t-tiny" x="582" y="838" text-anchor="middle">organization user + membership of that org · org delegate</text>
 
-      <rect class="chip-ind" x="772" y="676" width="356" height="52" rx="6"></rect>
-      <text class="t-name" x="950" y="696" text-anchor="middle">ApplicationParticipant · org, app, tenant ids</text>
-      <text class="t-tiny" x="950" y="714" text-anchor="middle">an application user's row · application machine</text>
+      <rect class="chip-ind" x="772" y="800" width="356" height="52" rx="6"></rect>
+      <text class="t-name" x="950" y="820" text-anchor="middle">ApplicationParticipant · org, app, tenant ids</text>
+      <text class="t-tiny" x="950" y="838" text-anchor="middle">an application user · application machine</text>
 
-      <line class="flow-ind" x1="710" y1="590" x2="710" y2="626" marker-end="url(#si5-ind)"></line>
-      <text class="t-lbl-ind" x="722" y="612">resolveParticipant(identityId, orgId, appId) → id stays the identity's id</text>
+      <line class="flow-ind" x1="710" y1="714" x2="710" y2="750" marker-end="url(#si5-ind)"></line>
+      <text class="t-lbl-ind" x="722" y="736">resolveParticipant(identityId, orgId, appId) → id stays the identity's id</text>
     </svg>
 
-    <!-- ═══════════════════════════ ACCOUNT: one account, many memberships ═══════════════════════════ -->
-    <svg v-else-if="figure === 'account'" class="sign-in-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1140 560" role="img" aria-label="Left: three sign-in methods, a password and two provider bindings, each pointing at one account in the middle, Jane's, which carries no organization and no application. Right: two membership rows, acme and globex, both enabled, and a dashed empty slot for the platform membership Jane does not hold. Below, three logins: the password login at acme resolves the account and its acme membership into an organization participant; the landing page's GitHub button finds the account by its binding, sees two enabled memberships and offers both; a signed-in session switches to globex by re-resolving the same account there. At the bottom, a separate row for Jane as a user of the orders application, with its own methods and no memberships, and a red note that a provider's email never selects an account.">
+    <!-- ═══════════════════════════ ORGANIZATION USER: one organization user, many memberships ═══════════════════════════ -->
+    <svg v-else-if="figure === 'organization-user'" class="sign-in-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1140 560" role="img" aria-label="Left: three sign-in methods, a password and two provider bindings, each pointing at one organization user in the middle, Jane's, which carries no organization and no application. Right: two membership rows, acme and globex, both enabled, and a dashed slot for the system console, which no membership reaches. Below, three logins: the password login at acme resolves the organization user and its acme membership into an organization participant; the landing page's GitHub button finds the organization user by its binding, sees two enabled memberships and offers both; a signed-in session switches to globex by re-resolving the same organization user there. At the bottom, separate rows for Jane as a system user and as a user of the orders application, each with its own methods and no memberships, and a red note that a provider's email never selects a user.">
       <defs>
         <marker id="si6-grn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><polygon class="mk-grn" points="0,0 10,5 0,10"></polygon></marker>
         <marker id="si6-amb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><polygon class="mk-amb" points="0,0 10,5 0,10"></polygon></marker>
       </defs>
 
-      <text class="t-tag" x="40" y="30">SIGN-IN METHODS · PROVE WHICH ACCOUNT</text>
-      <text class="t-tag" x="570" y="30" text-anchor="middle">ONE ACCOUNT</text>
+      <text class="t-tag" x="40" y="30">SIGN-IN METHODS · PROVE WHICH ORGANIZATION USER</text>
+      <text class="t-tag" x="570" y="30" text-anchor="middle">ONE ORGANIZATION USER</text>
       <text class="t-tag" x="1100" y="30" text-anchor="end">MEMBERSHIPS · SAY WHERE IT MAY SIGN IN</text>
 
       <!-- methods -->
@@ -507,14 +533,14 @@ defineProps<{ figure: 'owners' | 'model' | 'offering' | 'paths' | 'identity' | '
       <text class="t-chip" x="175" y="194" text-anchor="middle">Acme Okta</text>
       <text class="t-tiny" x="175" y="210" text-anchor="middle">OidcBinding acme-okta:jane.d → u-jane</text>
 
-      <!-- account -->
+      <!-- organization user -->
       <rect class="chip-ind" x="420" y="50" width="300" height="172" rx="8"></rect>
-      <text class="t-name" x="570" y="76" text-anchor="middle">Jane's account</text>
-      <text class="t-sub" x="570" y="94" text-anchor="middle">UserParticipantIdentity u-jane</text>
+      <text class="t-name" x="570" y="76" text-anchor="middle">Jane's organization user</text>
+      <text class="t-sub" x="570" y="94" text-anchor="middle">OrganizationParticipantIdentity u-jane</text>
       <line class="sep" x1="436" y1="106" x2="704" y2="106"></line>
       <text class="t-mono-ink" x="570" y="128" text-anchor="middle">organizationId: null · applicationId: null</text>
       <text class="t-mono-ink" x="570" y="146" text-anchor="middle">email: jane@acme.com</text>
-      <text class="t-tiny" x="570" y="164" text-anchor="middle">unique among accounts</text>
+      <text class="t-tiny" x="570" y="164" text-anchor="middle">unique among organization users</text>
       <text class="t-mono-ink" x="570" y="188" text-anchor="middle">enabled: true</text>
       <text class="t-tiny" x="570" y="206" text-anchor="middle">no sign-in field · methods are rows of their own</text>
 
@@ -527,15 +553,15 @@ defineProps<{ figure: 'owners' | 'model' | 'offering' | 'paths' | 'identity' | '
       <!-- memberships -->
       <rect class="chip-grn" x="830" y="50" width="270" height="48" rx="8"></rect>
       <text class="t-chip" x="965" y="70" text-anchor="middle">acme</text>
-      <text class="t-tiny" x="965" y="86" text-anchor="middle">Membership u-jane:acme · enabled</text>
+      <text class="t-tiny" x="965" y="86" text-anchor="middle">OrganizationMembership u-jane:acme · enabled</text>
 
       <rect class="chip-grn" x="830" y="112" width="270" height="48" rx="8"></rect>
       <text class="t-chip" x="965" y="132" text-anchor="middle">globex</text>
-      <text class="t-tiny" x="965" y="148" text-anchor="middle">Membership u-jane:globex · enabled</text>
+      <text class="t-tiny" x="965" y="148" text-anchor="middle">OrganizationMembership u-jane:globex · enabled</text>
 
       <rect class="chip-ghost" x="830" y="174" width="270" height="48" rx="8"></rect>
-      <text class="t-sub" x="965" y="194" text-anchor="middle">platform</text>
-      <text class="t-tiny" x="965" y="210" text-anchor="middle">no u-jane:system row · not a system user</text>
+      <text class="t-sub" x="965" y="194" text-anchor="middle">system console</text>
+      <text class="t-tiny" x="965" y="210" text-anchor="middle">no membership reaches it · a system user is its own row</text>
 
       <line class="flow-grn" x1="720" y1="100" x2="830" y2="74" marker-end="url(#si6-grn)"></line>
       <line class="flow-grn" x1="720" y1="136" x2="830" y2="136" marker-end="url(#si6-grn)"></line>
@@ -544,12 +570,12 @@ defineProps<{ figure: 'owners' | 'model' | 'offering' | 'paths' | 'identity' | '
 
       <!-- logins -->
       <line class="sep" x1="40" y1="250" x2="1100" y2="250"></line>
-      <text class="t-tag" x="40" y="276">A LOGIN IS ADDRESSED TO A SCOPE · resolveParticipant(account, organizationId, applicationId)</text>
+      <text class="t-tag" x="40" y="276">A LOGIN IS ADDRESSED TO A SCOPE · resolveParticipant(user, organizationId, applicationId)</text>
 
       <rect class="gw gw-org" x="40" y="292" width="340" height="118" rx="8"></rect>
       <text class="t-name" x="210" y="316" text-anchor="middle">/login/acme · email + password</text>
       <line class="sep" x1="56" y1="326" x2="364" y2="326"></line>
-      <text class="t-mono-ink" x="56" y="346">authenticateLocal(email, pw, null, null) → u-jane</text>
+      <text class="t-mono-ink" x="56" y="346">authenticateOrganizationUser(email, pw) → u-jane</text>
       <text class="t-mono-ink" x="56" y="364">resolveParticipant(u-jane, acme, null)</text>
       <text class="t-mono-ink" x="56" y="382">  → needs u-jane:acme, enabled</text>
       <text class="t-lbl-ind" x="56" y="400">→ OrganizationParticipant { sub u-jane, org acme }</text>
@@ -559,7 +585,7 @@ defineProps<{ figure: 'owners' | 'model' | 'offering' | 'paths' | 'identity' | '
       <line class="sep" x1="416" y1="326" x2="724" y2="326"></line>
       <text class="t-mono-ink" x="416" y="346">binding github-platform:7781 → u-jane</text>
       <text class="t-mono-ink" x="416" y="364">enabled memberships → acme, globex</text>
-      <text class="t-mono-ink" x="416" y="382">  one → sign in there · none → no_account</text>
+      <text class="t-mono-ink" x="416" y="382">  one → sign in there · none → no_user</text>
       <text class="t-lbl-ind" x="416" y="400">→ two: offer both, sign in at the chosen one's page</text>
 
       <rect class="gw gw-org" x="760" y="292" width="340" height="118" rx="8"></rect>
@@ -570,19 +596,19 @@ defineProps<{ figure: 'owners' | 'model' | 'offering' | 'paths' | 'identity' | '
       <text class="t-mono-ink" x="776" y="382">  → needs u-jane:globex, enabled · else 403</text>
       <text class="t-lbl-ind" x="776" y="400">→ the session re-established as globex's participant</text>
 
-      <!-- application user -->
+      <!-- the other scopes' users -->
       <rect class="chip-vio" x="40" y="432" width="1060" height="54" rx="8"></rect>
-      <text class="t-chip" x="56" y="454">Jane as a user of acme--orders is another row: UserParticipantIdentity jane@acme.com · organizationId acme · applicationId orders</text>
-      <text class="t-tiny" x="56" y="472">its own password and bindings, no memberships; it signs in at acme--orders.apps-api.kinotic.io only, through the application paths, and the portal account grants nothing there</text>
+      <text class="t-chip" x="56" y="454">Jane as a system user, or as a user of acme--orders, is another row each: SystemParticipantIdentity · ApplicationParticipantIdentity acme/orders</text>
+      <text class="t-tiny" x="56" y="472">each with its own password, no memberships; one signs in at the system console only, the other at acme--orders.apps-api.kinotic.io only, and the organization user grants nothing at either</text>
 
       <!-- the rule -->
       <rect class="note-red" x="40" y="500" width="1060" height="44" rx="8"></rect>
-      <text class="t-lbl-red" x="56" y="520">A provider's email never selects an account. Only the binding (configId, sub) does.</text>
+      <text class="t-lbl-red" x="56" y="520">A provider's email never selects a user. Only the binding (configId, sub) does.</text>
       <text class="t-tiny" x="56" y="536">read once, when the binding is created: sign-up, an invitation, the org's provider claiming a pending member, createUserOnSignIn, or a connect from the Profile page</text>
     </svg>
 
     <!-- ═══════════════════════════ DOORS: the management server ═══════════════════════════ -->
-    <svg v-else-if="figure === 'doors'" class="sign-in-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1140 400" role="img" aria-label="Four doors on the management server. Sign up with GitHub produces a new organization, the founder's account bound to the GitHub identity, and the founder's membership; it is refused when the identity or its email already has an account. Log in has a landing page with a GitHub button, an organization field and a link that emails the person their organizations, and an organization page at /login/<org> with GitHub, the organization's own SSO and a password form. Invited or added: an administrator adds a member from the Members page, which creates the account and its membership pending until the organization's own provider claims it on first sign-in; an invitation lets a new email set a password or use a provider the organization offers, which claims the pending account or creates one; an account already in use joins with its password or a provider it is bound to, and an unbound identity is refused with account_exists; an application invitee becomes a user of that application. Profile, once signed in, connects GitHub or the organization's SSO, sets or changes the password, removes a method while another remains, and switches organization.">
+    <svg v-else-if="figure === 'doors'" class="sign-in-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1140 400" role="img" aria-label="Four doors on the management server. Sign up with GitHub produces a new organization, the founder's organization user bound to the GitHub identity, and the founder's membership; it is refused when the identity or its email already has an organization user. Log in has a landing page with a GitHub button, an organization field and a link that emails the person their organizations, and an organization page at /login/<org> with GitHub, the organization's own SSO and a password form. Invited or added: an administrator adds a member from the Members page, which creates the organization user and its membership pending until the organization's own provider claims it on first sign-in; an invitation lets a new email set a password or use a provider the organization offers, which claims the pending organization user or creates one; an organization user already in use joins with its password or a provider it is bound to, and an unbound identity is refused with user_exists; an application invitee becomes a user of that application. Profile, once signed in, connects GitHub or the organization's SSO, sets or changes the password, removes a method while another remains, and switches organization.">
       <defs>
         <marker id="si7-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><polygon class="mk-ink" points="0,0 10,5 0,10"></polygon></marker>
       </defs>
@@ -598,11 +624,11 @@ defineProps<{ figure: 'owners' | 'model' | 'offering' | 'paths' | 'identity' | '
       <line class="flow" x1="165" y1="140" x2="165" y2="176" marker-end="url(#si7-ink)"></line>
       <rect class="chip" x="56" y="176" width="218" height="60" rx="8"></rect>
       <text class="t-chip" x="165" y="196" text-anchor="middle">new organization</text>
-      <text class="t-chip" x="165" y="212" text-anchor="middle">+ founder's account + membership</text>
-      <text class="t-tiny" x="165" y="228" text-anchor="middle">account bound to the GitHub identity</text>
+      <text class="t-chip" x="165" y="212" text-anchor="middle">+ founder + membership</text>
+      <text class="t-tiny" x="165" y="228" text-anchor="middle">an organization user bound to GitHub</text>
       <rect class="note-red" x="56" y="246" width="218" height="42" rx="8"></rect>
-      <text class="t-tiny" x="165" y="263" text-anchor="middle">account_exists when the identity or</text>
-      <text class="t-tiny" x="165" y="277" text-anchor="middle">its email already has an account</text>
+      <text class="t-tiny" x="165" y="263" text-anchor="middle">user_exists when the identity or</text>
+      <text class="t-tiny" x="165" y="277" text-anchor="middle">email already has an organization user</text>
 
       <!-- log in -->
       <rect class="gw gw-org" x="310" y="50" width="290" height="300" rx="8"></rect>
@@ -626,16 +652,16 @@ defineProps<{ figure: 'owners' | 'model' | 'offering' | 'paths' | 'identity' | '
       <line class="sep" x1="636" y1="84" x2="854" y2="84"></line>
       <rect class="chip" x="636" y="100" width="218" height="50" rx="8"></rect>
       <text class="t-chip" x="745" y="118" text-anchor="middle">added on the Members page:</text>
-      <text class="t-chip" x="745" y="134" text-anchor="middle">account + membership, pending</text>
+      <text class="t-chip" x="745" y="134" text-anchor="middle">a pending organization user</text>
       <text class="t-tiny" x="745" y="146" text-anchor="middle">its provider claims it on first sign-in</text>
       <rect class="chip" x="636" y="158" width="218" height="50" rx="8"></rect>
       <text class="t-chip" x="745" y="176" text-anchor="middle">invited: set a password or use</text>
       <text class="t-chip" x="745" y="192" text-anchor="middle">a provider the org offers</text>
-      <text class="t-tiny" x="745" y="204" text-anchor="middle">claims the account, or creates one</text>
+      <text class="t-tiny" x="745" y="204" text-anchor="middle">claims the user, or creates one</text>
       <rect class="note-amb" x="636" y="216" width="218" height="50" rx="8"></rect>
-      <text class="t-chip" x="745" y="234" text-anchor="middle">an account already in use:</text>
+      <text class="t-chip" x="745" y="234" text-anchor="middle">an organization user in use:</text>
       <text class="t-chip" x="745" y="250" text-anchor="middle">its password or its bound provider</text>
-      <text class="t-tiny" x="745" y="262" text-anchor="middle">an unbound identity: account_exists</text>
+      <text class="t-tiny" x="745" y="262" text-anchor="middle">an unbound identity: user_exists</text>
       <rect class="chip-vio" x="636" y="274" width="218" height="50" rx="8"></rect>
       <text class="t-chip" x="745" y="292" text-anchor="middle">invited into an application:</text>
       <text class="t-chip" x="745" y="308" text-anchor="middle">a user of that application</text>
@@ -657,7 +683,7 @@ defineProps<{ figure: 'owners' | 'model' | 'offering' | 'paths' | 'identity' | '
       <text class="t-chip" x="995" y="259" text-anchor="middle">Switch → /api/auth/org/switch</text>
       <text class="t-tiny" x="995" y="276" text-anchor="middle">one enabled membership per row</text>
 
-      <text class="t-tiny" x="24" y="380">Every callback is checked against its flow session; every configuration passes findOffered (which login offers it); every account passes resolveParticipant (one account, many memberships).</text>
+      <text class="t-tiny" x="24" y="380">Every callback is checked against its flow session; every configuration passes findOffered (which login offers it); every organization user passes resolveParticipant (one organization user, many memberships).</text>
     </svg>
 
   </div>
