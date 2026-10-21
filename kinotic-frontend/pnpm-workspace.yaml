@@ -12,6 +12,15 @@ catalog:
   '@kinotic-ai/persistence': ^5.0.0-beta.10
   '@kinotic-ai/system-api': ^5.0.0-beta.26
 
+# Branch-only: resolves the first-party packages to their sources in kinotic-js/workspace, which
+# Gradle builds before the frontend, so this branch needs no npm publish. Never merge into develop.
+overrides:
+  '@kinotic-ai/core': link:../kinotic-js/workspace/packages/core
+  '@kinotic-ai/idl': link:../kinotic-js/workspace/packages/idl
+  '@kinotic-ai/management-api': link:../kinotic-js/workspace/packages/management-api
+  '@kinotic-ai/persistence': link:../kinotic-js/workspace/packages/persistence
+  '@kinotic-ai/system-api': link:../kinotic-js/workspace/packages/system-api
+
 allowBuilds:
   '@tailwindcss/oxide': true
   esbuild: true
