@@ -1,6 +1,8 @@
 package org.kinotic.domain.api.services.security;
 
 import io.vertx.core.Future;
+import org.kinotic.domain.api.exceptions.ExistingUserException;
+import org.kinotic.domain.api.exceptions.PendingMemberException;
 import org.kinotic.core.api.security.Participant;
 import org.kinotic.domain.api.model.security.PendingSignUp;
 
@@ -14,7 +16,9 @@ public interface SignUpService {
 
     /**
      * Starts an email/password sign-up: validates and stores a pending record and emails a
-     * verification link. The organization name and password are collected later, at completion.
+     * verification link. The organization name and password are collected later, at completion. Fails with
+     * {@link ExistingUserException} when the email has an organization user someone signs in as, and with
+     * {@link PendingMemberException} when it has one an administrator added that nobody signs in as yet.
      *
      * @param email       the email to verify
      * @param displayName the founder's display name
@@ -28,7 +32,8 @@ public interface SignUpService {
     /**
      * Stores a pending sign-up for an identity already verified by an OIDC provider, returning it
      * with its {@code id} and {@code verificationToken} populated. The caller supplies the verified
-     * identity (and, for an existing-org registration, the {@code organizationId}).
+     * identity (and, for an existing-org registration, the {@code organizationId}). Fails as
+     * {@link #initiateLocalSignUp} does when the identity, or its verified email, has an organization user.
      */
     Future<PendingSignUp> createOidcPending(PendingSignUp pending);
 

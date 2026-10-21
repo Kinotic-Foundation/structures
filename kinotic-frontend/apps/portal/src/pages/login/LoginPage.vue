@@ -281,6 +281,7 @@ function errorCodeToMessage(code: string): string {
     case 'no_user':                return 'That identity signs in to no Kinotic organization. Please sign up first.'
     case 'multiple_organizations': return 'You are a member of several organizations, but the choice has expired. Please sign in again.'
     case 'user_exists':            return 'This email or identity is already registered with Kinotic organizations, and a person founds one organization. Sign in, then connect this provider under Sign-in methods on your profile.'
+    case 'user_pending':           return 'An administrator added this email to an organization. Accept the invitation emailed to you, or sign in on that organization\'s sign-in page.'
     case 'user_disabled':          return 'You cannot sign in to this organization. Ask an administrator to enable your access.'
     case 'email_not_verified':     return 'Your identity provider has not verified your email address.'
     case 'state_mismatch':         return 'Login session expired or was tampered with. Please try again.'

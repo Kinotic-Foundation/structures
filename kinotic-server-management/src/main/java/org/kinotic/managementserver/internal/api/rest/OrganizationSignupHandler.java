@@ -1,6 +1,5 @@
 package org.kinotic.managementserver.internal.api.rest;
 
-import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -13,9 +12,9 @@ import org.kinotic.domain.api.rest.support.*;
 import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
 import org.kinotic.domain.api.model.security.OidcConfiguration;
 import org.kinotic.domain.api.exceptions.ExistingUserException;
+import org.kinotic.domain.api.exceptions.PendingMemberException;
 import org.kinotic.domain.api.model.security.PendingSignUp;
 import org.kinotic.domain.api.rest.support.OidcCallbacks;
-import org.kinotic.domain.api.services.security.ParticipantIdentityService;
 import org.kinotic.domain.api.services.security.SignUpService;
 import org.kinotic.domain.api.rest.SuppliesGatewayRoutes;
 import org.springframework.stereotype.Component;
@@ -34,7 +33,6 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class OrganizationSignupHandler implements SuppliesGatewayRoutes, OidcFlowCompleter {
 
-    private final ParticipantIdentityService identityService;
     private final SignUpService signUpService;
     private final OidcFlowOrchestrator oidcFlowOrchestrator;
     private final AuthEndpointSupport authEndpointSupport;
@@ -138,7 +136,8 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes, OidcFlo
 
     /**
      * Turns a verified social identity into a pending sign-up: refuses if an {@link OrganizationParticipantIdentity}
-     * already exists for this identity or its verified email (they should log in, not sign up), otherwise
+     * already exists for this identity or its verified email, with {@code user_exists} when someone signs in as it
+     * and {@code user_pending} when it is a member an administrator added that nobody signs in as yet, otherwise
      * stores a {@link PendingSignUp} carrying the verified identity and redirects the browser to the
      * org-naming page of the UI the sign-up started from, which posts back to {@link #handleSocialCompleteOrg}.
      */
@@ -160,23 +159,17 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes, OidcFlo
             return;
         }
 
-        // the identity, or its verified email, with an organization user already signs in instead of founding another
-        identityService.findOrganizationUserByOidcIdentity(config.getId(), sub)
-              .compose(bound -> bound != null ? Future.succeededFuture(bound) : identityService.findOrganizationUserByEmail(email))
-              .compose(existing -> {
-                  if (existing != null) {
-                      return Future.failedFuture(new ExistingUserException("This identity or email is already registered with Kinotic organizations. Sign in instead."));
-                  }
-                  PendingSignUp pending = new PendingSignUp();
-                  pending.setOidcSubject(sub);
-                  pending.setOidcConfigId(config.getId());
-                  pending.setEmail(email);
-                  pending.setDisplayName(displayName);
-                  return signUpService.createOidcPending(pending);
-              })
-              .onSuccess(pending -> redirectToCompleteOrg(ctx, result.origin(), pending.getVerificationToken()))
+        PendingSignUp pending = new PendingSignUp();
+        pending.setOidcSubject(sub);
+        pending.setOidcConfigId(config.getId());
+        pending.setEmail(email);
+        pending.setDisplayName(displayName);
+        signUpService.createOidcPending(pending)
+              .onSuccess(created -> redirectToCompleteOrg(ctx, result.origin(), created.getVerificationToken()))
               .onFailure(ex -> {
-                  if (ex instanceof ExistingUserException) {
+                  if (ex instanceof PendingMemberException) {
+                      authEndpointSupport.redirectError(ctx, result.origin(), OidcErrorCodes.USER_PENDING);
+                  } else if (ex instanceof ExistingUserException) {
                       authEndpointSupport.redirectError(ctx, result.origin(), OidcErrorCodes.USER_EXISTS);
                   } else {
                       log.warn("Signup resolution failed: {}", ex.getMessage());

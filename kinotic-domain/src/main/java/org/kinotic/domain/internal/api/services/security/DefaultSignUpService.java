@@ -5,6 +5,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.domain.api.config.KinoticDomainProperties;
+import org.kinotic.domain.api.exceptions.ExistingUserException;
+import org.kinotic.domain.api.exceptions.PendingMemberException;
 import org.kinotic.domain.api.model.Organization;
 import org.kinotic.domain.api.model.security.AuthType;
 import org.kinotic.domain.api.model.security.identity.OrganizationParticipantIdentity;
@@ -46,32 +48,26 @@ public class DefaultSignUpService implements SignUpService {
         // the origin can come from a Referer the requester chose, so only an allowed UI's origin may host the link
         String linkOrigin = domainProperties.getDomain().getCors().trustsOrigin(origin) ? origin : null;
 
+        String token = UUID.randomUUID().toString();
+        Date now = new Date();
+        PendingSignUp pending = new PendingSignUp()
+                .setId(UUID.randomUUID().toString())
+                .setEmail(email)
+                .setDisplayName(displayName)
+                .setAuthType(AuthType.PASSWORD)
+                .setVerificationToken(token)
+                .setCreated(now)
+                .setExpiresAt(new Date(now.getTime() + LOCAL_TTL_MS));
         return pendingSignUpRepository.findByEmail(email)
                 .compose(existing -> {
                     if (existing != null) {
                         return Future.failedFuture(new IllegalArgumentException(
                                 "A sign-up is already pending for this email. Check your inbox for the verification link."));
                     }
-                    return identityService.findOrganizationUserByEmail(email);
+                    return requireNoOrganizationUser(pending);
                 })
-                .compose(user -> {
-                    if (user != null) {
-                        return Future.failedFuture(new IllegalArgumentException(
-                                "This email is already registered with Kinotic organizations. Sign in instead."));
-                    }
-                    String token = UUID.randomUUID().toString();
-                    Date now = new Date();
-                    PendingSignUp pending = new PendingSignUp()
-                            .setId(UUID.randomUUID().toString())
-                            .setEmail(email)
-                            .setDisplayName(displayName)
-                            .setAuthType(AuthType.PASSWORD)
-                            .setVerificationToken(token)
-                            .setCreated(now)
-                            .setExpiresAt(new Date(now.getTime() + LOCAL_TTL_MS));
-                    return pendingSignUpRepository.save(pending)
-                            .compose(saved -> emailService.sendVerificationEmail(email, displayName, token, linkOrigin));
-                });
+                .compose(v -> pendingSignUpRepository.save(pending))
+                .compose(saved -> emailService.sendVerificationEmail(email, displayName, token, linkOrigin));
     }
 
     @Override
@@ -86,7 +82,7 @@ public class DefaultSignUpService implements SignUpService {
                .setVerificationToken(UUID.randomUUID().toString())
                .setCreated(now)
                .setExpiresAt(new Date(now.getTime() + OIDC_TTL_MS));
-        return pendingSignUpRepository.saveSync(pending);
+        return requireNoOrganizationUser(pending).compose(v -> pendingSignUpRepository.saveSync(pending));
     }
 
     @Override
@@ -112,12 +108,9 @@ public class DefaultSignUpService implements SignUpService {
                                 .map(founder)));
     }
 
-    /**
-     * Fails when the identity of {@code pending}, or its verified email, already has an organization user: a
-     * person founds one organization at most, by signing up once, and joins others by invitation. Checked here, at
-     * completion, as well as when the sign-up starts, so the organization is never created for an organization
-     * user that cannot be.
-     */
+    // a person founds one organization at most, by signing up once, and joins others by invitation; checked when the
+    // sign-up starts and again at completion, so the organization is never created for an organization user that
+    // cannot be. A member an administrator added that nobody signs in as yet is told how that member gets in.
     private Future<Void> requireNoOrganizationUser(PendingSignUp pending) {
         Future<OrganizationParticipantIdentity> bound = pending.getAuthType() == AuthType.OIDC
                 ? identityService.findOrganizationUserByOidcIdentity(pending.getOidcConfigId(), pending.getOidcSubject())
@@ -125,7 +118,10 @@ public class DefaultSignUpService implements SignUpService {
         return bound.compose(found -> found != null ? Future.succeededFuture(found) : identityService.findOrganizationUserByEmail(pending.getEmail()))
                     .compose(found -> found == null
                             ? Future.succeededFuture()
-                            : Future.failedFuture(new IllegalArgumentException("This identity or email is already registered with Kinotic organizations. Sign in instead.")));
+                            : identityService.hasSignInMethod(found.getId()).compose(claimed -> Future.failedFuture(claimed
+                                    ? new ExistingUserException("This email or identity is already registered with Kinotic organizations. Sign in instead.")
+                                    : new PendingMemberException("An administrator added this email to an organization. Accept the invitation"
+                                                                 + " emailed to you, or sign in on that organization's sign-in page."))));
     }
 
     /**

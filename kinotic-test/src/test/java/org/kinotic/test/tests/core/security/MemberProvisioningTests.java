@@ -8,6 +8,8 @@ import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
 import org.kinotic.core.api.security.Participant;
 import org.kinotic.core.api.security.ParticipantConstants;
+import org.kinotic.domain.api.exceptions.ExistingUserException;
+import org.kinotic.domain.api.exceptions.PendingMemberException;
 import org.kinotic.domain.api.model.Organization;
 import org.kinotic.domain.api.model.security.OrganizationMember;
 import org.kinotic.domain.api.model.security.OidcProviderType;
@@ -23,6 +25,7 @@ import org.kinotic.domain.api.services.security.InviteService;
 import org.kinotic.domain.api.services.security.OrganizationMembershipService;
 import org.kinotic.domain.api.services.security.OidcConfigurationService;
 import org.kinotic.domain.api.services.security.ParticipantIdentityService;
+import org.kinotic.domain.api.services.security.SignUpService;
 import org.kinotic.management.api.services.security.MemberService;
 import org.kinotic.management.api.services.security.OwnedOidcConfigurationService;
 import org.kinotic.test.support.kinotic.KinoticTestBase;
@@ -76,6 +79,9 @@ public class MemberProvisioningTests extends KinoticTestBase {
 
     @Autowired
     private OrganizationService organizations;
+
+    @Autowired
+    private SignUpService signUps;
 
     // an invitation names an organization that exists, so each test adds members to one of its own, as its administrator
     private Organization organization;
@@ -131,6 +137,20 @@ public class MemberProvisioningTests extends KinoticTestBase {
         // once claimed, no other identity under the same email takes the member, and no stranger's email finds one
         assertNull(await(identities.claimProvisionedOrganizationUser(okta.getId(), "sub-" + suffix(), email, organization.getId())));
         assertNull(await(identities.claimProvisionedOrganizationUser(okta.getId(), "sub-" + suffix(), "nobody-" + suffix() + "@example.test", organization.getId())));
+    }
+
+    @Test
+    public void aPendingMembersSignUpIsToldToAcceptTheInvitationUntilTheMemberIsClaimed() throws Exception {
+        String email = "signs-up-" + suffix() + "@example.test";
+        OrganizationMember added = await(asAdministrator(() -> members.addMember(email, "Pat Signs Up", false)));
+        // the sign-up finds the organization user by a search, which sees it once the index has refreshed
+        await(identities.syncIndex());
+
+        assertInstanceOf(PendingMemberException.class, failure(() -> signUps.initiateLocalSignUp(email, "Pat Signs Up", null)));
+
+        await(identities.claimProvisionedOrganizationUser(okta.getId(), "sub-" + suffix(), email, organization.getId()));
+        assertTrue(await(identities.hasSignInMethod(added.id())));
+        assertInstanceOf(ExistingUserException.class, failure(() -> signUps.initiateLocalSignUp(email, "Pat Signs Up", null)));
     }
 
     @Test
