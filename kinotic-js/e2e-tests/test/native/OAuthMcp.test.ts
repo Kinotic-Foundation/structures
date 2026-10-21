@@ -35,11 +35,9 @@ function stompHandshake(url: string, token: string): Promise<number | 'open'> {
  * reads to find the authorization server, the Client ID Metadata Document rules the authorize
  * endpoint enforces on a client_id, and the device grant the CLI logs in with.
  *
- * The authorization-code happy path is not covered here: a client_id must be an https URL whose
- * host does not resolve to a special-use address, which no host reachable from this suite
- * satisfies. Covering it needs a public HTTPS fixture serving a metadata document, or the Client ID
- * Metadata Document Service that draft-ietf-oauth-client-id-metadata-document Section 4.2
- * recommends authorization servers offer for exactly this reason.
+ * Set KINOTIC_E2E_CODEX_OAUTH=true to exercise authorization-code consent and PKCE using
+ * Codex's public metadata document. This requires outbound HTTPS access to chatgpt.com
+ * from the server, with the Codex client enabled in its OAuth allowlist.
  */
 describe('Kinotic JS', () => {
 
@@ -74,6 +72,7 @@ describe('Kinotic JS', () => {
         expect(asMetadata.code_challenge_methods_supported).toEqual(['S256'])
         // clients identify themselves by metadata document; there is nothing to register with
         expect(asMetadata.client_id_metadata_document_supported).toBe(true)
+        expect(asMetadata.authorization_response_iss_parameter_supported).toBe(true)
         expect(asMetadata.registration_endpoint).toBeUndefined()
     })
 
@@ -85,6 +84,56 @@ describe('Kinotic JS', () => {
         })
         expect(response.status).toBe(404)
     })
+
+    it.runIf(process.env.KINOTIC_E2E_CODEX_OAUTH === 'true')(
+        'binds Codex approval and denial callbacks to the advertised issuer', async () => {
+        const clientId = 'https://chatgpt.com/oauth/codex/client.json'
+        const redirectUri = 'http://127.0.0.1:33418/callback'
+        const metadata = await (await fetch(`${restBase()}/.well-known/oauth-authorization-server`)).json()
+        const login = await fetch(`${restBase()}/api/auth/org/login/${E2E_ORGANIZATION_ID}`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({email: E2E_ORG_USER_EMAIL, password: E2E_FIXTURE_PASSWORD})
+        })
+        expect(login.status).toBe(204)
+        const cookie = login.headers.getSetCookie().find(c => c.startsWith('__Host-kinotic-'))!.split(';')[0]
+
+        for (const decision of ['deny', 'approve']) {
+            const verifier = randomBytes(48).toString('base64url')
+            const state = randomBytes(32).toString('base64url')
+            const params = new URLSearchParams({
+                client_id: clientId, redirect_uri: redirectUri, response_type: 'code',
+                code_challenge: createHash('sha256').update(verifier).digest('base64url'),
+                code_challenge_method: 'S256', state
+            })
+            const authorization = await fetch(`${restBase()}/api/auth/oauth/authorize?${params}`, {redirect: 'manual'})
+            expect(authorization.status).toBe(302)
+            const requestId = new URL(authorization.headers.get('Location')!).searchParams.get('request_id')
+            expect(requestId).toBeTruthy()
+            const consent = await fetch(`${restBase()}/api/auth/oauth/${decision}`, {
+                method: 'POST', headers: {'Content-Type': 'application/json', Cookie: cookie},
+                body: JSON.stringify({requestId})
+            })
+            expect(consent.status).toBe(200)
+            const callback = new URL((await consent.json()).redirectUrl)
+            expect(callback.origin + callback.pathname).toBe(redirectUri)
+            expect(callback.searchParams.get('iss')).toBe(metadata.issuer)
+            expect(callback.searchParams.get('state')).toBe(state)
+            if (decision === 'deny') {
+                expect(callback.searchParams.get('error')).toBe('access_denied')
+                expect(callback.searchParams.has('code')).toBe(false)
+            } else {
+                const code = callback.searchParams.get('code')
+                expect(code).toBeTruthy()
+                const exchange = await postForm(metadata.token_endpoint, {
+                    grant_type: 'authorization_code', client_id: clientId,
+                    redirect_uri: redirectUri, code: code!, code_verifier: verifier
+                })
+                expect(exchange.status).toBe(200)
+                expect((await exchange.json()).access_token).toBeTruthy()
+            }
+        }
+    }, 60000)
 
     it('rejects a client_id that is not a usable metadata document URL', async () => {
         const challenge = createHash('sha256').update(randomBytes(48).toString('base64url')).digest('base64url')
