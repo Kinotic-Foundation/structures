@@ -11,16 +11,16 @@ catalogs:
       version: 5.0.0-beta.24
     '@kinotic-ai/idl':
       specifier: ^5.0.0-beta.1
-      version: 5.0.0-beta.1
+      version: 5.0.0-beta.5
     '@kinotic-ai/management-api':
-      specifier: ^5.0.0-beta.60
-      version: 5.0.0-beta.60
+      specifier: ^5.0.0-beta.61
+      version: 5.0.0-beta.61
     '@kinotic-ai/persistence':
       specifier: ^5.0.0-beta.10
       version: 5.0.0-beta.12
     '@kinotic-ai/system-api':
-      specifier: ^5.0.0-beta.27
-      version: 5.0.0-beta.27
+      specifier: ^5.0.0-beta.28
+      version: 5.0.0-beta.28
 
 importers:
 
@@ -45,10 +45,10 @@ importers:
         version: link:../../packages/common
       '@kinotic-ai/idl':
         specifier: 'catalog:'
-        version: 5.0.0-beta.1
+        version: 5.0.0-beta.5
       '@kinotic-ai/management-api':
         specifier: 'catalog:'
-        version: 5.0.0-beta.60(@kinotic-ai/core@5.0.0-beta.24)
+        version: 5.0.0-beta.61(@kinotic-ai/core@5.0.0-beta.24)
       '@kinotic-ai/persistence':
         specifier: 'catalog:'
         version: 5.0.0-beta.12(@kinotic-ai/core@5.0.0-beta.24)
@@ -172,10 +172,10 @@ importers:
         version: link:../../packages/common
       '@kinotic-ai/management-api':
         specifier: 'catalog:'
-        version: 5.0.0-beta.60(@kinotic-ai/core@5.0.0-beta.24)
+        version: 5.0.0-beta.61(@kinotic-ai/core@5.0.0-beta.24)
       '@kinotic-ai/system-api':
         specifier: 'catalog:'
-        version: 5.0.0-beta.27(@kinotic-ai/core@5.0.0-beta.24)(@kinotic-ai/management-api@5.0.0-beta.60(@kinotic-ai/core@5.0.0-beta.24))
+        version: 5.0.0-beta.28(@kinotic-ai/core@5.0.0-beta.24)(@kinotic-ai/management-api@5.0.0-beta.61(@kinotic-ai/core@5.0.0-beta.24))
       '@lucide/vue':
         specifier: ^1.48.0
         version: 1.48.0(vue@3.5.41(typescript@5.8.3))
@@ -242,7 +242,7 @@ importers:
         version: 5.0.0-beta.24
       '@kinotic-ai/management-api':
         specifier: 'catalog:'
-        version: 5.0.0-beta.60(@kinotic-ai/core@5.0.0-beta.24)
+        version: 5.0.0-beta.61(@kinotic-ai/core@5.0.0-beta.24)
       '@lucide/vue':
         specifier: ^1.48.0
         version: 1.48.0(vue@3.5.41(typescript@5.8.3))
@@ -361,8 +361,8 @@ packages:
   '@kinotic-ai/idl@5.0.0-beta.5':
     resolution: {integrity: sha512-i1aNnpDKOqD0yf56w3YmZsoK4a2tM3JBjXxrF+DP0tBrf2RTvuj5wURMrKuacKaeLMkHvuWD9Kyq8s9TFcBRmQ==}
 
-  '@kinotic-ai/management-api@5.0.0-beta.60':
-    resolution: {integrity: sha512-L4eFq663X2HlL5L4EfUNUadd5bSUC9mNX96M1hYCy965tqpmeCt8COq5XaBYwEtiWWfqUJ5S1WNoLw6gcKDlEw==}
+  '@kinotic-ai/management-api@5.0.0-beta.61':
+    resolution: {integrity: sha512-GJf/bXcK2UP4qazo+xi3h3iR4oBmV4QDM+/D6zay+mgWaF1Ze+e98KPqyWamF6unw2uyoYmqvmaAnC9j+oDyUw==}
     peerDependencies:
       '@kinotic-ai/core': ^5.0.0-beta.25
 
@@ -371,11 +371,11 @@ packages:
     peerDependencies:
       '@kinotic-ai/core': ^5.0.0-beta.17
 
-  '@kinotic-ai/system-api@5.0.0-beta.27':
-    resolution: {integrity: sha512-8HAX3DQ74w6Rqdcauwj8NSfjq+ezpatbDxtc52hjE6idCT558eiOpxIBncyWOaS63rTvN6G+SUsNTgknv1mvrQ==}
+  '@kinotic-ai/system-api@5.0.0-beta.28':
+    resolution: {integrity: sha512-HYvISJkUdQ0vt023XZYPcR5dQ5KkTsujOYVCWWq9tk2/QYmJkFOT9J2tGl+yM3RRLZO/Jy6D+LkEQYPxYkO3LA==}
     peerDependencies:
       '@kinotic-ai/core': ^5.0.0-beta.25
-      '@kinotic-ai/management-api': ^5.0.0-beta.60
+      '@kinotic-ai/management-api': ^5.0.0-beta.61
 
   '@lucide/vue@1.48.0':
     resolution: {integrity: sha512-3/Nwx/RsqQ4ZrrSML1GNsSWCSDyLnBgoF/eEr1q9G6iZymn3+WKtzIj7Dbc/Nxrt9WOPuGrJ58S+CBiamK+36w==}
@@ -1724,7 +1724,7 @@ snapshots:
 
   '@kinotic-ai/idl@5.0.0-beta.5': {}
 
-  '@kinotic-ai/management-api@5.0.0-beta.60(@kinotic-ai/core@5.0.0-beta.24)':
+  '@kinotic-ai/management-api@5.0.0-beta.61(@kinotic-ai/core@5.0.0-beta.24)':
     dependencies:
       '@kinotic-ai/core': 5.0.0-beta.24
       '@kinotic-ai/idl': 5.0.0-beta.5
@@ -1737,10 +1737,10 @@ snapshots:
       '@kinotic-ai/idl': 5.0.0-beta.1
       rxjs: 7.8.2
 
-  '@kinotic-ai/system-api@5.0.0-beta.27(@kinotic-ai/core@5.0.0-beta.24)(@kinotic-ai/management-api@5.0.0-beta.60(@kinotic-ai/core@5.0.0-beta.24))':
+  '@kinotic-ai/system-api@5.0.0-beta.28(@kinotic-ai/core@5.0.0-beta.24)(@kinotic-ai/management-api@5.0.0-beta.61(@kinotic-ai/core@5.0.0-beta.24))':
     dependencies:
       '@kinotic-ai/core': 5.0.0-beta.24
-      '@kinotic-ai/management-api': 5.0.0-beta.60(@kinotic-ai/core@5.0.0-beta.24)
+      '@kinotic-ai/management-api': 5.0.0-beta.61(@kinotic-ai/core@5.0.0-beta.24)
 
   '@lucide/vue@1.48.0(vue@3.5.41(typescript@5.8.3))':
     dependencies:
