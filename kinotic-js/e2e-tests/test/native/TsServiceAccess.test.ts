@@ -82,7 +82,9 @@ describe('Kinotic JS', () => {
     }, 60000)
 
     it('admits what the viewer role of the type reaches and refuses the declared permission', async () => {
-        const grant = await admin.applicationAccess.grant(APP_ID, subject, 'report.viewer', tenant)
+        // the directory lists the type's roles a moment before the store runs the model that holds them, and
+        // the store refuses a grant of a role its model has yet to define
+        const grant = await untilAdmitted(() => admin.applicationAccess.grant(APP_ID, subject, 'report.viewer', tenant))
         await until(async () => (await admin.applicationAccess.explain(APP_ID, subject, 'report_can_read', tenant)).allowed)
 
         await expect(untilAdmitted(() => reports.invoke('findReports'))).resolves.toEqual(['quarterly'])

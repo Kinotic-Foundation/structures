@@ -207,7 +207,7 @@ public interface RelationshipService {
      * @param relation    the relation held
      * @param type        the type of object to list
      * @param consistency how current the answer must be
-     * @return the objects, in {@code type:id} form
+     * @return the objects, in {@code type:id} form; none when the store's newest model has no such relation or type
      */
     Future<List<String>> listObjects(String store, String modelId, String user, String relation, String type, Consistency consistency);
 }

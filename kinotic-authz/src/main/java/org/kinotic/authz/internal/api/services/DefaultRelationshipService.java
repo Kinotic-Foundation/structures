@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.Set;
 import java.util.TreeMap;
@@ -260,33 +261,40 @@ public class DefaultRelationshipService implements RelationshipService {
         for (RelationshipTuple tuple : context) {
             contextual.add(new TupleKey().user(tuple.user()).relation(tuple.relation())._object(tuple.object()));
         }
-        return check(store, modelId, key, contextual, consistency).recover(e -> {
-            // the engine refuses a check for what it names: a version of the store deleted and re-created under its
-            // name since the caller read it, or a relation the version lacked when it was read and the newest has;
-            // the newest version is read and answers once
-            Future<Boolean> ret;
-            if (e instanceof FgaApiValidationError) {
-                ret = stores.refreshModelId(store)
-                            .compose(newest -> newest.equals(modelId)
-                                    ? Future.failedFuture(e)
-                                    : check(store, newest, key, contextual, consistency))
-                            // a relation or type the newest version lacks is held by no one: a permission of a type
-                            // another store models, or of a service whose model the reconciler has yet to write
-                            .recover(refused -> {
-                                Future<Boolean> held;
-                                if (refused instanceof FgaApiValidationError) {
-                                    log.warn("The model of store {} cannot answer {}: {}", store, relationship, refused.getMessage());
-                                    held = Future.succeededFuture(false);
-                                } else {
-                                    held = Future.failedFuture(refused);
-                                }
-                                return held;
-                            });
-            } else {
-                ret = Future.failedFuture(e);
-            }
-            return ret;
-        });
+        return check(store, modelId, key, contextual, consistency)
+                .recover(e -> onNewestModel(store, modelId, e, newest -> check(store, newest, key, contextual, consistency),
+                                            false, relationship));
+    }
+
+    // The engine refuses a request for what it names: a version of the store deleted and re-created under its name
+    // since the caller read it, or a relation the version lacked when it was read and the newest has; the newest
+    // version is read and answers once
+    private <T> Future<T> onNewestModel(String store,
+                                        String modelId,
+                                        Throwable refusal,
+                                        Function<String, Future<T>> request,
+                                        T heldByNone,
+                                        Object asked) {
+        Future<T> ret;
+        if (refusal instanceof FgaApiValidationError) {
+            ret = stores.refreshModelId(store)
+                        .compose(newest -> newest.equals(modelId) ? Future.failedFuture(refusal) : request.apply(newest))
+                        // a relation or type the newest version lacks is held by no one: a permission of a type
+                        // another store models, or of a service whose model the reconciler has yet to write
+                        .recover(refused -> {
+                            Future<T> held;
+                            if (refused instanceof FgaApiValidationError) {
+                                log.warn("The model of store {} cannot answer {}: {}", store, asked, refused.getMessage());
+                                held = Future.succeededFuture(heldByNone);
+                            } else {
+                                held = Future.failedFuture(refused);
+                            }
+                            return held;
+                        });
+        } else {
+            ret = Future.failedFuture(refusal);
+        }
+        return ret;
     }
 
     private Future<Boolean> check(String store, String modelId, CheckRequestTupleKey key, List<TupleKey> contextual, Consistency consistency) {
@@ -299,9 +307,16 @@ public class DefaultRelationshipService implements RelationshipService {
 
     @Override
     public Future<List<String>> listObjects(String store, String modelId, String user, String relation, String type, Consistency consistency) {
+        return listObjects(store, modelId, user, relation, type, preference(consistency))
+                .recover(e -> onNewestModel(store, modelId, e,
+                                            newest -> listObjects(store, newest, user, relation, type, preference(consistency)),
+                                            List.of(), user + " " + relation + " " + type));
+    }
+
+    private Future<List<String>> listObjects(String store, String modelId, String user, String relation, String type, ConsistencyPreference consistency) {
         ListObjectsRequest request = new ListObjectsRequest()
                 .authorizationModelId(modelId)
-                .consistency(preference(consistency))
+                .consistency(consistency)
                 .user(user)
                 .relation(relation)
                 .type(type);

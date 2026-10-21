@@ -216,14 +216,19 @@ export async function grantTenantAdmin(applicationId: string, tenantId: string, 
 
 /**
  * Grants the machine the runtime role on one of the e2e organization's applications, as deploying a project of
- * the application grants its runtime machine, so the machine may register the application's services.
+ * the application grants its runtime machine, and waits until the machine may register the application's
+ * services.
  *
  * @param kinotic a client connected as an administrator of the e2e organization
  * @return the grant's id, which revokes it
  */
 export async function grantRuntime(kinotic: KinoticSingleton, machineId: string, applicationId: string): Promise<string> {
-    const grant = await kinotic.permissions.grant({kind: SubjectKind.USER, id: machineId}, 'application.runtime',
-                                                  {type: 'application', id: applicationId})
+    const subject: Subject = {kind: SubjectKind.USER, id: machineId}
+    const application: Resource = {type: 'application', id: applicationId}
+    const grant = await kinotic.permissions.grant(subject, 'application.runtime', application)
+    // the permission is in the platform store's model once the reconciler writes the services an app server
+    // registers as it starts, a moment after the server is up
+    await until(async () => (await kinotic.permissions.explain(subject, 'can_register_services', application)).allowed)
     return grant.id
 }
 
