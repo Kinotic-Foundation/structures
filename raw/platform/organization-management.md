@@ -6,7 +6,7 @@
 
 A Kinotic deployment hosts many customer organizations. Each org has its own users, applications, and (optionally) its own enterprise SSO configuration. This page describes how an org is created, who can log in to it, and how the OIDC plumbing is shared across orgs without leaking access between them.
 
-System-level platform operators sign in to the system server, separately from everything described here; see [System Authentication](#system-authentication).
+System users sign in to the system server, separately from everything described here; see [System Authentication](#system-authentication).
 
 ## Mental Model
 
@@ -202,7 +202,7 @@ Eight persistent entities carry the auth state, and one short-lived entity bridg
         <identityId>:<organizationId>
       </code>
       
-      ), or of the platform for an operator (<code>
+      ), or of the platform for a system user (<code>
         <identityId>:system
       </code>
       
@@ -648,9 +648,9 @@ The landing page's buttons are populated from `GET /api/auth/org/login/providers
 
 The route is open to anyone and sends an email on every call, so it requires a person at the browser: a Cloudflare Turnstile token earned on the page, verified by the management server with the site's secret (`TurnstileVerifier`, configured under `kinotic.managementServer.turnstile.*`). `GET /api/auth/org/login/find` answers `{turnstileSiteKey}`, the site whose challenge the landing page renders before it enables the button, and a request whose token is missing, already verified or refused answers `400`. An environment with no Turnstile site, such as the e2e stack, turns the requirement off with `kinotic.managementServer.turnstile.enabled=false`, and the `GET` answers `{}`; development uses Cloudflare's always-passing test site.
 
-### Platform operators (SYSTEM scope)
+### System users (SYSTEM scope)
 
-A platform operator is an account holding the platform membership (`Membership` with no `organizationId`, id `<identityId>:system`). They sign in through a separate, password-only route used by the system console (there is no signup, SSO, or social path for SYSTEM scope):
+A system user is an account holding the platform membership (`Membership` with no `organizationId`, id `<identityId>:system`). They sign in through a separate, password-only route used by the system console (there is no signup, SSO, or social path for SYSTEM scope):
 
 ```text
 1. POST /api/auth/system/login { email, password }   (credentials: 'include')
@@ -1050,7 +1050,7 @@ A user who logs in via this path lands at the `/api/auth/org/login/sso/callback/
 
 ## System Authentication
 
-System-level operators are accounts holding the platform membership and no organization's, since an account's memberships are all of one kind; they sign in to the system server with an email and password, `POST /api/auth/system/login`, and the plan is to move it to Microsoft Entra, separate from the routes documented above. An organization's member holds no platform membership, so the system login refuses them as it refuses a wrong password, and an operator holds no organization's, so every organization login refuses them the same way. The curated social providers are intentionally limited to end-user self-service signup and grant org-scoped access only, so no organization route can produce a `SYSTEM`-scoped session.
+System users are accounts holding the platform membership and no organization's, since an account's memberships are all of one kind; they sign in to the system server with an email and password, `POST /api/auth/system/login`, and the plan is to move it to Microsoft Entra, separate from the routes documented above. An organization's member holds no platform membership, so the system login refuses them as it refuses a wrong password, and a system user holds no organization's, so every organization login refuses them the same way. The curated social providers are intentionally limited to end-user self-service signup and grant org-scoped access only, so no organization route can produce a `SYSTEM`-scoped session.
 
 ## Endpoint Reference
 
@@ -1762,7 +1762,7 @@ Routes are namespaced under `/api/auth/...`. Organization login and signup are t
     </td>
     
     <td>
-      System operator email + password; establishes session
+      System user email + password; establishes session
     </td>
   </tr>
   

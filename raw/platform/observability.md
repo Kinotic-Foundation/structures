@@ -296,7 +296,7 @@ Every log stream carries these labels:
 </tbody>
 </table>
 
-Loki runs multi-tenant. A workload's logs are stored in its organization's tenant (`X-Scope-OrgID` = the organization id), so one organization's queries can never see another's streams. Platform workloads with no organization ship to the reserved `kinotic-system` tenant — organization ids beginning with `kinotic` are reserved for the platform. Platform operators can query across tenants with pipe-separated ids (for example `acme|kinotic-system`).
+Loki runs multi-tenant. A workload's logs are stored in its organization's tenant (`X-Scope-OrgID` = the organization id), so one organization's queries can never see another's streams. Platform workloads with no organization ship to the reserved `kinotic-system` tenant — organization ids beginning with `kinotic` are reserved for the platform. System users can query across tenants with pipe-separated ids (for example `acme|kinotic-system`).
 
 ### Reading workload logs
 

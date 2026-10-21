@@ -110,7 +110,7 @@ We welcome contributions to Kinotic OS. This guide covers the repository structu
         apps/system
       </code>
       
-       (the platform-operator console), <code>
+       (the system console), <code>
         packages/common
       </code>
       
