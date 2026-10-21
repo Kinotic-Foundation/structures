@@ -31,7 +31,8 @@ public class McpToolDefinition {
     private String title;
 
     /**
-     * The LLM-facing description of what the tool does.
+     * The LLM-facing description of what the tool does, led by the {@link #title} when the tool has one, so the
+     * description alone identifies the service a tool belongs to.
      */
     private String description;
 
