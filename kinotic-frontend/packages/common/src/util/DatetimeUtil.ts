@@ -18,20 +18,50 @@ export default class DatetimeUtil {
         }
         return ret
     }
-public static formatRelativeDate(dateStr: string | number | Date): string {
+/**
+ * How long ago a timestamp was, measured against nowMs: "just now", "10 min ago", "1 hr 30 min ago",
+ * "1 day ago", "3 days ago". Returns an empty string when the timestamp is absent or unreadable.
+ */
+public static formatRelativeDate(dateStr: string | number | Date, nowMs: number = Date.now()): string {
     if (!dateStr) return ''
 
     const date = new Date(dateStr)
     if (isNaN(date.getTime())) return ''
 
-    const now = new Date()
-    const diffTime = now.getTime() - date.getTime()
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
-
-    if (diffDays === 0) return 'Today'
-    if (diffDays === 1) return '1 day ago'
-    return `${diffDays} days ago`
+    // a timestamp slightly ahead of this clock reads as just now
+    const totalMinutes = Math.max(0, Math.floor((nowMs - date.getTime()) / 60000))
+    const hours = Math.floor(totalMinutes / 60)
+    const minutes = totalMinutes % 60
+    const days = Math.floor(hours / 24)
+    let ret: string
+    if (totalMinutes === 0) {
+        ret = 'just now'
+    } else if (hours === 0) {
+        ret = `${minutes} min ago`
+    } else if (days === 0) {
+        ret = minutes > 0 ? `${hours} hr ${minutes} min ago` : `${hours} hr ago`
+    } else {
+        ret = days === 1 ? '1 day ago' : `${days} days ago`
+    }
+    return ret
 }
+
+/** The calendar day of a timestamp, in words for today and yesterday: "Today", "Yesterday", "Sep 30". */
+public static formatDayLabel(timestamp: number | string | Date): string {
+    const day = new Date(timestamp)
+    const today = new Date()
+    const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1)
+    let ret: string
+    if (day.toDateString() === today.toDateString()) {
+        ret = 'Today'
+    } else if (day.toDateString() === yesterday.toDateString()) {
+        ret = 'Yesterday'
+    } else {
+        ret = day.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+    }
+    return ret
+}
+
 /** Renders a timestamp (epoch millis or an ISO-8601 string) as the 24-hour locale time of day. */
 public static formatTime(timestamp: number | string): string {
     return new Date(timestamp).toLocaleTimeString('en-US', { hour12: false })

@@ -42,7 +42,7 @@
             </div>
 
             <Message v-if="unreachable" severity="warn" :closable="false">
-              {{ unreachable.message }}, {{ DatetimeUtil.formatRelativeDate(unreachable.since).toLowerCase() }}. The status is the last the node
+              {{ unreachable.message }}, {{ DatetimeUtil.formatRelativeDate(unreachable.since) }}. The status is the last the node
               reported; the VM may still be running, so its room stays held. The node's next report of the workload settles it.
             </Message>
             <Message v-if="workload.status === WorkloadStatus.FAILED" severity="error" :closable="false">

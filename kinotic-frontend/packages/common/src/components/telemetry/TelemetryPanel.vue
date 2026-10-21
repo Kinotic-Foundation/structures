@@ -77,26 +77,11 @@ const props = defineProps<{
 }>()
 
 const formatDateFromEpoch = DatetimeUtil.formatDateFromEpoch
+const dayLabel = DatetimeUtil.formatDayLabel
 
 /** An instant's hour and minute on the 24-hour clock: "09:59". */
 function formatTime(epochMillis: number): string {
   return new Date(epochMillis).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
-}
-
-/** The calendar day of an instant, in words for today and yesterday: "Today", "Yesterday", "Sep 30". */
-function dayLabel(epochMillis: number): string {
-  const day = new Date(epochMillis)
-  const today = new Date()
-  const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1)
-  let ret: string
-  if (day.toDateString() === today.toDateString()) {
-    ret = 'Today'
-  } else if (day.toDateString() === yesterday.toDateString()) {
-    ret = 'Yesterday'
-  } else {
-    ret = day.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-  }
-  return ret
 }
 
 const traceSearch = ref<InstanceType<typeof TraceSearch> | null>(null)
