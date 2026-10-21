@@ -6,7 +6,7 @@ This is a pnpm workspace:
 
 - `apps/portal` — the Kinotic OS dashboard (organization users). Built into the management server's
   `webroot` for docker-compose; deployed to Azure static hosting in production.
-- `apps/system` — the platform-operator console (system users). Deployed to VPN-restricted
+- `apps/system` — the system console (system users). Deployed to VPN-restricted
   static hosting only; never baked into the server jar.
 - `packages/common` — shared UI code (`@kinotic-ai/frontend-common`): theme preset, auth page
   shell, session state, utils. Consumed as source via `workspace:*` — no build step.

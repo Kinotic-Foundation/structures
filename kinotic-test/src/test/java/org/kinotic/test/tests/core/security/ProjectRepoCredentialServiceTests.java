@@ -26,10 +26,10 @@ public class ProjectRepoCredentialServiceTests extends KinoticTestBase {
     private ProjectRepoCredentialService repoCredentials;
 
     @Test
-    public void aCallForAPlatformOperatorIsRefused() {
-        DefaultSystemParticipant operator = new DefaultSystemParticipant("operator-" + suffix(), Map.of(), List.of());
+    public void aCallForASystemUserIsRefused() {
+        DefaultSystemParticipant systemUser = new DefaultSystemParticipant("system-user-" + suffix(), Map.of(), List.of());
         ExecutionException thrown = assertThrows(ExecutionException.class,
-                                                 () -> securityContext.callAs(operator,
+                                                 () -> securityContext.callAs(systemUser,
                                                                               () -> repoCredentials.issueWriteToken("project-" + suffix())
                                                                                                    .toCompletionStage())
                                                                       .get(30, TimeUnit.SECONDS));

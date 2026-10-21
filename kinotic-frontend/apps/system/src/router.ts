@@ -9,7 +9,7 @@ import { SYSTEM_USER_STATE } from './states/SystemUserState'
 
 /**
  * The console has five scopes, each with its own sidebar group: the platform, one organization,
- * one of its applications, one of its projects, and the signed-in operator's own account. A page
+ * one of its applications, one of its projects, and the signed-in system user's own account. A page
  * opened from a list (a node, a workload, a job run, a trace) nests under the list's path and
  * declares the group alone, so the sidebar keeps the list highlighted and the page header can
  * point back to it.
@@ -162,7 +162,7 @@ const routes: RouteRecordRaw[] = [
                 component: () => import('./pages/OrganizationsPage.vue'),
                 meta: { sidebar: consoleItem('Organizations', Building2, 70, 'Tenants') }
             },
-            // The platform's own members: MembersPage with no scope lists the operators
+            // The platform's own members: MembersPage with no scope lists the system users
             {
                 name: 'platform-users',
                 path: 'members/users',

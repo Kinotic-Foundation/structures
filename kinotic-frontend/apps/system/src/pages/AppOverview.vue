@@ -81,7 +81,7 @@ import { applicationPath, organizationPath, projectPath } from '@/util/scope'
 import { scanWorkloads } from '@/util/workloads'
 
 /**
- * The landing page of one application, built from what a platform operator may read: the
+ * The landing page of one application, built from what a system user may read: the
  * application record and its projects, its users, its workloads and its runs. Each tile leads
  * to the page with the detail.
  */

@@ -5,7 +5,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 /**
- * The system server: the system console's API, the system-api services platform operators and the
+ * The system server: the system console's API, the system-api services system users and the
  * vm-managers call, and the deployment of every organization's projects.
  */
 @SpringBootApplication()

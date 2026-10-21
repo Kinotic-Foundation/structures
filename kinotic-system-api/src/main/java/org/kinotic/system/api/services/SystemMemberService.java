@@ -9,7 +9,7 @@ import org.kinotic.domain.api.model.security.identity.MachineProvisionResult;
 import org.kinotic.domain.api.model.security.Member;
 
 /**
- * The platform's own members: the operators who sign in to the system console, and the
+ * The platform's own members: the system users who sign in to the system console, and the
  * SYSTEM-scope machines that connect as platform daemons, such as a worker node's vm-manager.
  * Published in the system zone, which only SYSTEM participants may address; every method works
  * on SYSTEM scope alone, so an organization's users and machines stay that organization's to
@@ -19,19 +19,19 @@ import org.kinotic.domain.api.model.security.Member;
 public interface SystemMemberService {
 
     /**
-     * Returns the platform's operators: the accounts holding a membership of the platform.
+     * Returns the system users: the accounts holding a membership of the platform.
      *
      * @param pageable the page settings to use
-     * @return a page of operators
+     * @return a page of system users
      */
     Future<Page<Member>> findUsers(Pageable pageable);
 
     /**
-     * Searches the platform's operators by email and display name.
+     * Searches the system users by email and display name.
      *
-     * @param searchText the text to match operators against
+     * @param searchText the text to match system users against
      * @param pageable the page settings to use
-     * @return a page of matching operators
+     * @return a page of matching system users
      */
     Future<Page<Member>> searchUsers(String searchText, Pageable pageable);
 
