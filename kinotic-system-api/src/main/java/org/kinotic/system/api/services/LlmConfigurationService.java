@@ -38,8 +38,8 @@ public interface LlmConfigurationService {
 
     /**
      * The API key held for the configuration {@code id}: the secret a platform service calls the provider with. Only
-     * a cluster member calling as itself, as {@code SecurityContext.callAsMember} sends a call, may read it; a call
-     * made for any participant, SYSTEM participants included, is refused.
+     * a cluster member calling as itself, as {@code SecurityContext.callWithoutParticipant} sends a call, may read
+     * it; a call made for any participant, SYSTEM participants included, is refused.
      *
      * @return the key, or {@code null} when no configuration has that id or none is held for it
      */

@@ -44,9 +44,10 @@ public class LlmConfigurationServiceTests extends KinoticTestBase {
 
     @Test
     public void aClusterMemberCallingAsItselfReadsTheKey() throws Exception {
-        assertEquals(apiKey, securityContext.callAsMember(() -> llmConfigurations.findApiKey(configuration.getId())
-                                                                                  .toCompletionStage())
-                                            .get(30, TimeUnit.SECONDS));
+        String read = securityContext.callWithoutParticipant(() -> llmConfigurations.findApiKey(configuration.getId())
+                                                                                    .toCompletionStage())
+                                     .get(30, TimeUnit.SECONDS);
+        assertEquals(apiKey, read);
     }
 
     @Test

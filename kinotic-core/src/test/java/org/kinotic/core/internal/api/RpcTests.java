@@ -184,7 +184,7 @@ public class RpcTests {
     }
 
     @Test
-    public void testCallAsMemberSendsNoParticipantFromAContextBoundToOne() {
+    public void testCallWithoutParticipantSendsNoParticipantFromAContextBoundToOne() {
         Participant participant = new Participant() {
             @Override
             public String getId() { return "called-as"; }
@@ -197,8 +197,8 @@ public class RpcTests {
         // the service resolves its participant argument from the call's sender, so it fails for a call sent for none
         ExecutionException thrown = Assertions.assertThrows(ExecutionException.class,
                 () -> securityContext.callAs(participant,
-                                             () -> securityContext.callAsMember(() -> rpcTestServiceProxy.firstArgParticipant(" Wat")
-                                                                                                         .toFuture()))
+                                             () -> securityContext.callWithoutParticipant(
+                                                     () -> rpcTestServiceProxy.firstArgParticipant(" Wat").toFuture()))
                                      .get(10, TimeUnit.SECONDS));
 
         Assertions.assertTrue(thrown.getCause().getMessage().contains("No Participant is bound"), thrown.getCause().getMessage());
