@@ -16,8 +16,8 @@ import { Clock } from '@lucide/vue'
 import DatetimeUtil from '../util/DatetimeUtil'
 
 /**
- * A timestamp as a soft pill with a clock, reading relatively ("just now", "1 hr 30 min ago",
- * "3 days ago") and kept current while shown; the exact date and time show on hover. A missing
+ * A timestamp as a soft pill with a clock, reading to the minute ("5 minutes ago", "Today at 2:54 AM",
+ * "Oct 16 at 3:10 PM") and kept current while shown; the exact date and time show on hover. A missing
  * timestamp renders as a dash.
  */
 const props = defineProps<{
@@ -29,6 +29,9 @@ const now = ref(Date.now())
 const ticker = setInterval(() => { now.value = Date.now() }, 30000)
 onUnmounted(() => clearInterval(ticker))
 
-const label = computed(() => props.date ? DatetimeUtil.formatRelativeDate(props.date, now.value) : '')
+const label = computed(() => {
+  const relative = props.date ? DatetimeUtil.formatRelativeDate(props.date, now.value) : ''
+  return relative.charAt(0).toUpperCase() + relative.slice(1)
+})
 const exact = computed(() => props.date ? new Date(props.date).toLocaleString() : undefined)
 </script>
