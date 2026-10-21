@@ -97,9 +97,33 @@ public class SecurityContext {
     public <T> CompletableFuture<T> callAs(Participant participant, Supplier<? extends CompletionStage<T>> call) {
         Validate.notNull(participant, "participant must not be null");
         Validate.notNull(call, "call must not be null");
-        // a duplicated context holds its own locals, so binding the participant leaves the context it came from untouched
-        ContextInternal context = ((ContextInternal) vertx.getObject().getOrCreateContext()).duplicate();
+        ContextInternal context = newContext();
         setParticipant(context, participant);
+        return callOn(context, call);
+    }
+
+    /**
+     * Runs {@code call} on a Vert.x context with no participant bound, so every service proxy invocation {@code call}
+     * starts synchronously is sent as this cluster member itself, for no participant, whatever participant the
+     * calling context carries. As with {@link #callAs(Participant, Supplier)}, each invocation that must be sent this
+     * way is started by its own {@code callAsMember}.
+     *
+     * @param call starts the work and returns its completion
+     * @param <T>  the type of the call's result
+     * @return a future completed with the call's result or failure, on whichever thread completes the call; a caller
+     *         on a Vert.x context bridges it with {@code Future.fromCompletionStage(stage, context)}
+     */
+    public <T> CompletableFuture<T> callAsMember(Supplier<? extends CompletionStage<T>> call) {
+        Validate.notNull(call, "call must not be null");
+        return callOn(newContext(), call);
+    }
+
+    // duplicate() starts with empty locals, so the new context carries no participant whatever the current one binds
+    private ContextInternal newContext() {
+        return ((ContextInternal) vertx.getObject().getOrCreateContext()).duplicate();
+    }
+
+    private <T> CompletableFuture<T> callOn(ContextInternal context, Supplier<? extends CompletionStage<T>> call) {
         CompletableFuture<T> ret = new CompletableFuture<>();
         context.runOnContext(v -> {
             try {

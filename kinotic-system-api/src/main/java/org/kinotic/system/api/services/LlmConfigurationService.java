@@ -37,9 +37,9 @@ public interface LlmConfigurationService {
     Future<LlmConfiguration> save(LlmConfiguration configuration, String apiKey);
 
     /**
-     * The API key held for the configuration {@code id}: the secret a service calls the provider with. The caller
-     * must act as an {@code OrganizationParticipant}, as a platform service calling the model for an organization's
-     * user does; any other caller, SYSTEM participants included, is refused.
+     * The API key held for the configuration {@code id}: the secret a platform service calls the provider with. Only
+     * a cluster member calling as itself, as {@code SecurityContext.callAsMember} sends a call, may read it; a call
+     * made for any participant, SYSTEM participants included, is refused.
      *
      * @return the key, or {@code null} when no configuration has that id or none is held for it
      */

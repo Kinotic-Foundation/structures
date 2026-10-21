@@ -6,9 +6,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
 import org.kinotic.core.api.crud.Page;
 import org.kinotic.core.api.crud.Pageable;
+import org.kinotic.core.api.exceptions.AuthorizationException;
 import org.kinotic.core.api.security.SecurityContext;
 import org.kinotic.domain.api.model.security.identity.Membership;
-import org.kinotic.domain.api.model.security.participant.OrganizationParticipant;
 import org.kinotic.domain.api.services.SecretStorageService;
 import org.kinotic.system.api.model.llm.LlmConfiguration;
 import org.kinotic.system.api.services.LlmConfigurationService;
@@ -90,8 +90,11 @@ public class DefaultLlmConfigurationService implements LlmConfigurationService {
 
     @Override
     public Future<String> findApiKey(String id) {
-        // operators manage the key but never read it back; a service reads it to call the model for an organization's user
-        securityContext.requireParticipant(OrganizationParticipant.class);
+        // operators manage the key but never read it back; every gateway binds the connection's participant to the
+        // calls it forwards, so a call without one comes from a cluster member's own code
+        if (securityContext.currentParticipant() != null) {
+            throw new AuthorizationException("Access denied");
+        }
         return findById(id).compose(configuration -> configuration != null && configuration.isApiKeyHeld()
                 ? secretStorageService.getSecret(SECRET_SCOPE, id)
                 : Future.succeededFuture());
