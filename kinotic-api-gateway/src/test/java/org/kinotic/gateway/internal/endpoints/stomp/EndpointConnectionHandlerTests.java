@@ -129,7 +129,7 @@ public class EndpointConnectionHandlerTests {
         services.apiGatewayProperties.setSessionTimeout(SESSION_TIMEOUT_MS);
         services.jsonMapper = jsonMapper;
         services.exceptionConverter = new JacksonExceptionConverter(new KinoticProperties(), jsonMapper);
-        services.stompAuthorizerFactory = new StompAuthorizerFactory(ZonePartitioningService.everyZone("test"), services.apiGatewayProperties);
+        services.stompAuthorizerFactory = new StompAuthorizerFactory(ZonePartitioningService.everyZone("test"));
         services.securityService = mock(SecurityService.class);
         when(services.securityService.authenticate(any())).thenReturn(Future.succeededFuture(participant()));
         services.eventBusService = eventBusService;

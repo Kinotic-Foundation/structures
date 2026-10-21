@@ -2,13 +2,11 @@ package org.kinotic.managementserver.internal.config;
 
 import org.kinotic.core.api.event.ZonePartitioningService;
 import org.kinotic.domain.api.utils.DomainUtil;
-import org.kinotic.gateway.api.config.ApiGatewayProperties;
 import org.kinotic.managementserver.api.config.KinoticManagementServerProperties;
 import org.kinotic.managementserver.api.config.ManagementServerProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.util.HashSet;
 import java.util.Set;
 
 /**
@@ -18,14 +16,14 @@ import java.util.Set;
 public class ManagementServerConfiguration {
 
 	/**
-	 * Hosts the management-api services, and reaches the system-api services deployments run through, the
-	 * app-api services the portal's entity browser calls, and the organization service zones its connections call.
+	 * Hosts the management-api services, and reaches the system-api services deployments run through and the
+	 * app-api services the portal's entity browser calls.
 	 */
 	@Bean
-	public ZonePartitioningService zonePartitioningService(ApiGatewayProperties apiGatewayProperties) {
-		Set<String> reachableZones = new HashSet<>(apiGatewayProperties.getOrganizationServiceZones());
-		reachableZones.addAll(Set.of(DomainUtil.MANAGEMENT_API_ZONE, DomainUtil.SYSTEM_API_ZONE, DomainUtil.APP_API_ZONE));
-		return ZonePartitioningService.of("management", Set.of(DomainUtil.MANAGEMENT_API_ZONE), reachableZones);
+	public ZonePartitioningService zonePartitioningService() {
+		return ZonePartitioningService.of("management",
+								          Set.of(DomainUtil.MANAGEMENT_API_ZONE),
+								          Set.of(DomainUtil.MANAGEMENT_API_ZONE, DomainUtil.SYSTEM_API_ZONE, DomainUtil.APP_API_ZONE));
 	}
 
 	/**

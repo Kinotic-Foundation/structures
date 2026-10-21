@@ -5,9 +5,6 @@ package org.kinotic.gateway.api.config;
 import io.vertx.core.http.CookieSameSite;
 import lombok.Getter;
 import lombok.Setter;
-import org.kinotic.domain.api.utils.DomainUtil;
-
-import java.util.Set;
 
 /**
  * Created by Navid Mitchell on 7/19/17.
@@ -37,14 +34,6 @@ public class ApiGatewayProperties {
     private int stompPort = DEFAULT_STOMP_PORT;
 
     /**
-     * Zones of services, beyond Kinotic's own, that the organizations' users connected to this gateway may call,
-     * such as those of an application that joins the cluster to serve the platform's users. Each zone covers its
-     * sub-zones, and none may be, fall under, or cover a zone of the platform's own. The management server reaches
-     * these zones, so its connections can call them.
-     */
-    private Set<String> organizationServiceZones = Set.of();
-
-    /**
      * Static-file web server configuration. Disabled in Azure where the SPA
      * is hosted outside the cluster.
      */
@@ -54,11 +43,5 @@ public class ApiGatewayProperties {
      * SSL/TLS configuration for all Vert.x HTTP servers.
      */
     private SslProperties ssl = new SslProperties();
-
-    public void setOrganizationServiceZones(Set<String> organizationServiceZones) {
-        // a zone overlapping the platform's would let every organization's users reach system or other organizations' services
-        organizationServiceZones.forEach(DomainUtil::validateOrganizationServiceZone);
-        this.organizationServiceZones = organizationServiceZones;
-    }
 
 }

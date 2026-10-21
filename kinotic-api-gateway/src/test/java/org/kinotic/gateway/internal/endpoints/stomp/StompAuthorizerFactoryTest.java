@@ -7,7 +7,6 @@ import org.kinotic.core.api.security.ConnectedInfo;
 import org.kinotic.domain.api.model.security.participant.DefaultApplicationParticipant;
 import org.kinotic.domain.api.model.security.participant.DefaultOrganizationParticipant;
 import org.kinotic.domain.api.model.security.participant.DefaultSystemParticipant;
-import org.kinotic.gateway.api.config.ApiGatewayProperties;
 
 import java.util.List;
 import java.util.Map;
@@ -26,7 +25,7 @@ public class StompAuthorizerFactoryTest {
 
     private static final String REPLY_TO_ID = "reply-to-1";
 
-    private StompAuthorizerFactory factory = new StompAuthorizerFactory(ZonePartitioningService.everyZone("test"), new ApiGatewayProperties());
+    private StompAuthorizerFactory factory = new StompAuthorizerFactory(ZonePartitioningService.everyZone("test"));
 
     private StompAuthorizer applicationAuthorizer(String organizationId, String applicationId) {
         DefaultApplicationParticipant participant = DefaultApplicationParticipant.builder()
@@ -191,8 +190,7 @@ public class StompAuthorizerFactoryTest {
     public void theManagementServerRoutesOnlyToZonesItReaches() {
         factory = new StompAuthorizerFactory(ZonePartitioningService.of("management",
                                                                         Set.of("management-api"),
-                                                                        Set.of("management-api", "system-api", "app-api")),
-                                             new ApiGatewayProperties());
+                                                                        Set.of("management-api", "system-api", "app-api")));
         StompAuthorizer organization = organizationAuthorizer("acme-org");
 
         assertTrue(organization.sendAllowed(CRI.create("srv://management-api~org.kinotic.management.api.services.iam.MemberService/findMembers#1.0.0")));
@@ -206,29 +204,8 @@ public class StompAuthorizerFactoryTest {
     }
 
     @Test
-    public void organizationParticipantsSendToTheConfiguredOrganizationServiceZones() {
-        ApiGatewayProperties properties = new ApiGatewayProperties();
-        properties.setOrganizationServiceZones(Set.of("builder"));
-        factory = new StompAuthorizerFactory(ZonePartitioningService.of("management",
-                                                                        Set.of("management-api"),
-                                                                        Set.of("management-api", "system-api", "app-api", "builder")),
-                                             properties);
-
-        StompAuthorizer organization = organizationAuthorizer("acme-org");
-        assertTrue(organization.sendAllowed(CRI.create("srv://builder~com.example.BuilderService/chat#1.0.0")));
-        assertTrue(organization.sendAllowed(CRI.create("srv://builder.eu~com.example.BuilderService/chat#1.0.0")));
-        assertFalse(organization.sendAllowed(CRI.create("srv://builder-2~com.example.BuilderService/chat#1.0.0")));
-        assertFalse(organization.subscribeAllowed(CRI.create("srv://builder~com.example.BuilderService#1.0.0")));
-        assertFalse(organization.sendAllowed(CRI.create("srv://system-api~org.kinotic.system.api.services.workload.VmNodeOrchestrationService/query#1.0.0")));
-
-        // the zones are the organization's alone
-        assertFalse(applicationAuthorizer("acme-org", "orders-app").sendAllowed(CRI.create("srv://builder~com.example.BuilderService/chat#1.0.0")));
-    }
-
-    @Test
     public void theAppServerHostsApplicationZonesOnly() {
-        factory = new StompAuthorizerFactory(ZonePartitioningService.of("app", Set.of("app-api", "app"), Set.of("app-api", "app")),
-                                             new ApiGatewayProperties());
+        factory = new StompAuthorizerFactory(ZonePartitioningService.of("app", Set.of("app-api", "app"), Set.of("app-api", "app")));
         StompAuthorizer organization = organizationAuthorizer("acme-org");
 
         assertTrue(organization.subscribeAllowed(CRI.create("srv://app.acme-org.orders-app~OrderService#1.0.0")));
