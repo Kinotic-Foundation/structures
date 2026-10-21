@@ -28,6 +28,8 @@ kinotic:
       # The portal, however dev runs it: the vite dev server (pnpm dev, 5173), this server's own
       # webroot (9090), and an ngrok tunnel (pnpm dev:tunnel). The tunnel is same-origin but still
       # CORS-checked, because the social login forms POST and browsers send Origin on a POST navigation.
+      # The allowlist is also trusted with sign-up links and GitHub install codes, and the ngrok wildcard admits
+      # anyone's tunnel, so it belongs in this local profile only.
       allowedOriginPattern: "http:\\/\\/localhost:(5173|9090)|https:\\/\\/[a-zA-Z0-9-]+\\.ngrok(-free)?\\.(app|dev|io)"
       allowCredentials: true
     # The portal's vite dev server, where browser flows return and the emailed links open

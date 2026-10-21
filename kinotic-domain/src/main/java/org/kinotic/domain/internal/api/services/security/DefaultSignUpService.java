@@ -44,7 +44,7 @@ public class DefaultSignUpService implements SignUpService {
         Validate.notBlank(email, "Email is required");
         Validate.notBlank(displayName, "Display name is required");
         // the origin can come from a Referer the requester chose, so only an allowed UI's origin may host the link
-        String linkOrigin = domainProperties.getDomain().getCors().allowsOrigin(origin) ? origin : null;
+        String linkOrigin = domainProperties.getDomain().getCors().trustsOrigin(origin) ? origin : null;
 
         return pendingSignUpRepository.findByEmail(email)
                 .compose(existing -> {

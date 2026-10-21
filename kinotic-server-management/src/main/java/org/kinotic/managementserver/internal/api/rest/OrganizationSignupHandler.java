@@ -53,7 +53,8 @@ public class OrganizationSignupHandler implements SuppliesGatewayRoutes, OidcFlo
     /**
      * {@code POST /api/auth/org/signup} — start email/password sign-up. Validates the request, stores a
      * pending sign-up, and emails a verification link to the verification page of the UI that sent the request
-     * when {@code kinotic.domain.cors.allowedOriginPattern} admits its origin, and to the portal's otherwise.
+     * when {@code kinotic.domain.cors.allowedOriginPattern} names its origin other than through {@code *}, and to the
+     * portal's otherwise.
      * The org name and password are collected later, at {@link #handleLocalComplete}.
      */
     private void handleLocalSignUp(RoutingContext ctx) {

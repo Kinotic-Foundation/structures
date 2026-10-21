@@ -86,7 +86,7 @@ public class DefaultGitHubAppInstallationService
             // "//host" and "/\host" are network-path references a browser resolves to another origin
             ret = !returnTo.startsWith("//") && !returnTo.startsWith("/\\");
         } else {
-            ret = domainProperties.getDomain().getCors().allowsOrigin(originOf(returnTo));
+            ret = domainProperties.getDomain().getCors().trustsOrigin(originOf(returnTo));
         }
         return ret;
     }

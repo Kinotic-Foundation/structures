@@ -19,6 +19,11 @@ public class CorsProperties {
      * Defaults to "http://localhost(:\\d+)?", any port on localhost
      * If you want to allow all origins use "*"
      * Internally uses Java Regex Patterns to match
+     * <p>
+     * Security: the origins this pattern names, other than through "*", are also the sites trusted with the server's
+     * sign-up verification links and GitHub App install codes (see {@link #trustsOrigin(String)}), so name only
+     * origins you control. The local development profile's ngrok wildcard is the one exception: it admits anyone's
+     * ngrok tunnel, which is acceptable only on a developer's machine.
      * @see java.util.regex.Pattern
      */
     private String allowedOriginPattern = "http://localhost(:\\d+)?";
@@ -42,13 +47,15 @@ public class CorsProperties {
     private Boolean allowCredentials = null;
 
     /**
-     * Whether a browser origin is one of the allowed origins.
+     * Whether a browser flow may hand the origin a sign-up verification link or a GitHub App install code, which is
+     * whether {@link #getAllowedOriginPattern()} names it. A pattern of "*", which opens CORS to every site, trusts no
+     * origin.
      *
      * @param origin the origin, scheme and authority with no path, such as {@code https://portal.kinotic.ai}
-     * @return true when the origin fully matches {@link #getAllowedOriginPattern()}
+     * @return true when the pattern is not "*" and the origin fully matches it
      */
-    public boolean allowsOrigin(String origin) {
-        return origin != null && Pattern.matches(originRegex(), origin);
+    public boolean trustsOrigin(String origin) {
+        return origin != null && !"*".equals(allowedOriginPattern) && Pattern.matches(allowedOriginPattern, origin);
     }
 
     /**
